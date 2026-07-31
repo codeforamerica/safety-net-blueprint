@@ -95,3 +95,10 @@ if (doBuild('event-catalog')) {
 if (doBuild('api-reference')) {
   execFileSync(node, [resolve(__dirname, 'tools', 'api-reference', 'build.js')], { stdio: 'inherit' });
 }
+
+if (doBuild('client-reference')) {
+  execFileSync(node, [resolve(__dirname, 'tools', 'client-reference', 'build.js')], { stdio: 'inherit' });
+}
+
+// Hub is always rebuilt last so it can scan all tool output directories
+execFileSync(node, [resolve(__dirname, 'build-hub.js')], { stdio: 'inherit' });

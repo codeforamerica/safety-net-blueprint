@@ -6,58 +6,102 @@
   <title>Safety Net Blueprint — Scheduling Service API</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; }
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; display: flex; flex-direction: column; }
+    html, body { height: 100%; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
     details summary::-webkit-details-marker { display: none; }
+
+    /* Full-viewport layout: header pinned, sidebar + content fill remaining height */
+    #page-header { flex-shrink: 0; }
+    .page-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+    #sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: #2B1A78;
+      color: white;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #sidebar-nav { padding: 0.5rem 0; overflow-y: auto; flex: 1; min-height: 0; }
+    #content { flex: 1; min-width: 0; padding: 2rem 2.5rem 4rem; overflow-y: auto; }
+    mark.search-hl { background: #fff176; color: inherit; border-radius: 2px; padding: 0 1px; }
+    #content [id]:target { scroll-margin-top: 1rem; outline: none; box-shadow: none; }
+
+    /* Nav links */
+    a.nav-link {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 4px 0.75rem; font-size: 11px;
+      color: rgba(255,255,255,0.65); text-decoration: none;
+      transition: background 0.1s;
+    }
+    a.nav-link:hover { background: rgba(255,255,255,0.08); color: white; }
+    a.nav-link.nav-active { background: rgba(255,255,255,0.15); color: white; font-weight: 700; }
+    /* Make inline code readable on the dark sidebar */
+    #sidebar a.nav-link code {
+      color: rgba(255,255,255,0.55); background: transparent; border: none; font-size: 10px;
+    }
+    .nav-section-label {
+      font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35); padding: 0.75rem 0.75rem 0.2rem;
+    }
+    .nav-count {
+      font-size: 0.65rem; font-weight: 400;
+      background: rgba(255,255,255,0.15); border-radius: 8px;
+      padding: 0.1rem 0.35rem; margin-left: auto;
+    }
+    
   </style>
 </head>
 <body>
-
-  <!-- Non-scrollable header: breadcrumb + compact title bar -->
-  <div style="flex-shrink:0;z-index:50;">
-    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../../../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">API Reference</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Scheduling Service API</a></div>
-    <div style="background:#2B1A78;color:#FFFFFF;padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+  <div id="page-header">
+    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">API Reference</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Scheduling Service API</a></div>
+    <div style="background:#2B1A78;color:#FFFFFF;">
+    <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <span style="font-size:0.9375rem;font-weight:800;">Scheduling Service API</span>
       <span style="font-size:11px;font-family:monospace;color:rgba(255,255,255,0.45);background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:3px;">v0.1.0</span>
-      
+      <span style="font-size:9px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;padding:1px 6px;border-radius:100px;flex-shrink:0;background:rgba(194,192,232,0.12);color:#b0a8d8;border:1px solid rgba(194,192,232,0.2);">Alpha</span>
       <span style="font-size:11px;color:rgba(255,255,255,0.35);margin-left:auto;">5 endpoints</span>
     </div>
+    <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">scheduling</code> · API spec: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">packages/resolved/scheduling-openapi.yaml</code></div>
   </div>
-
-  <!-- Scrollable body: sidebar + main content scroll independently -->
-  <div style="flex:1;display:flex;overflow:hidden;">
-
-    <!-- Sidebar -->
-    <nav style="width:260px;flex-shrink:0;overflow-y:auto;background:#FFFFFF;border-right:1px solid #E9CCBE;padding:1rem 0.75rem;">
-      <div style="margin-bottom:12px;">
-      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#aaa;padding:4px 8px 2px;">Appointments</div>
-      <a href="#op-get-appointments" style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:11px;color:#444;text-decoration:none;border-radius:3px;transition:background 0.1s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background=''"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span><code style="font-size:10px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">/appointments</code></a><a href="#op-post-appointments" style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:11px;color:#444;text-decoration:none;border-radius:3px;transition:background 0.1s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background=''"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span><code style="font-size:10px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">/appointments</code></a><a href="#op-get-appointments-appointmentId" style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:11px;color:#444;text-decoration:none;border-radius:3px;transition:background 0.1s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background=''"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span><code style="font-size:10px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">/appointments/{appointmentId}</code></a><a href="#op-patch-appointments-appointmentId" style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:11px;color:#444;text-decoration:none;border-radius:3px;transition:background 0.1s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background=''"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span><code style="font-size:10px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">/appointments/{appointmentId}</code></a><a href="#op-delete-appointments-appointmentId" style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:11px;color:#444;text-decoration:none;border-radius:3px;transition:background 0.1s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background=''"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#F9C8CB;color:#7B0A11;border:1px solid #AF121D;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">DELETE</span><code style="font-size:10px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">/appointments/{appointmentId}</code></a>
-    </div>
-    </nav>
-
-    <!-- Main content -->
-    <main style="flex:1;overflow-y:auto;padding:2rem 2.5rem;min-width:0;">
-
-      <!-- API description + server info -->
-      <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
-        <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">REST API for managing scheduling entities such as appointments.</p><p style="margin:0 0 6px;">An appointment is a scheduled interaction between a staff member and a person at a given time.</p><blockquote style="border-left:3px solid #ddd;padding:4px 10px;margin:6px 0;color:#666;font-style:italic;"><strong>Status: Alpha</strong> — Breaking changes expected.</blockquote></div></div>
-        <div style="margin-top:10px;font-size:11px;color:#888;">Base URL: <code style="font-size:11px;color:#555;background:#f0f0f0;padding:1px 5px;border-radius:3px;">https://api.example.com/scheduling</code></div>
+  </div>
+  <div class="page-layout">
+    <nav id="sidebar">
+      
+      <div style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;">
+        <input id="nav-search" type="search" placeholder="Filter…"
+          style="width:100%;padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.2);border-radius:4px;background:rgba(255,255,255,0.1);color:white;font-size:0.75rem;outline:none;"
+          aria-label="Filter navigation" />
       </div>
-
-      <!-- Endpoint sections -->
-      <section style="margin-bottom:2.5rem;">
+      <div id="sidebar-nav">
+        <a href="#section-appointments" class="nav-link">Appointments <span class="nav-count">5</span></a>
+      </div>
+    </nav>
+    <main id="content">
+      
+    <div style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #E9CCBE;">
+      <div style="max-width:720px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">REST API for managing scheduling entities such as appointments.</p><p style="margin:0 0 6px;">An appointment is a scheduled interaction between a staff member and a person at a given time.</p><blockquote style="border-left:3px solid #ddd;padding:4px 10px;margin:6px 0;color:#666;font-style:italic;"><strong>Status: Alpha</strong> — Breaking changes expected.</blockquote></div></div>
+      <div style="margin-top:10px;font-size:11px;color:#888;">Base URL: <code style="font-size:11px;color:#555;background:#f0f0f0;padding:1px 5px;border-radius:3px;">https://api.example.com/scheduling</code></div>
+    </div>
+    <section id="section-appointments" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
         <h2 style="font-size:1rem;font-weight:800;color:#2B1A78;margin-bottom:0.25rem;">Appointments</h2>
         <p style="font-size:12px;color:#666;">Manage appointments.</p>
       </div>
-      <div id="op-get-appointments" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
+      <div id="op-get-appointments" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
   <details>
-    <summary style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-      <code style="font-size:13px;font-weight:600;color:#1a1a1a;flex:1;">/appointments</code>
-      <span style="font-size:12px;color:#666;">List appointments</span>
-      
+    <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
+      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
+      <span style="flex:1;min-width:0;">
+        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/appointments</code>
+        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">List appointments</span>
+      </span>
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+        
+        
+      </span>
     </summary>
     <div style="padding:12px 16px;">
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Retrieve a paginated list of appointments.</p></div></div>
@@ -72,30 +116,30 @@
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
       </tr></thead>
       <tbody><tr>
-      <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">q</td>
-      <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
-      <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
-      <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Search query using field:value syntax. Multiple conditions separated by spaces are ANDed together.</p><p style="margin:0 0 6px;"><strong>URL Encoding:</strong> This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples in this documentation show human-readable syntax for clarity.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text exact match</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>term</em></code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text contains</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>john</em></code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*smith</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exact match on field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:<em>value</em></code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Contains (case-insensitive)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:<em>john</em></code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:"value"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Quoted value (for spaces)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:"john doe"</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field.nested:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field (dot notation)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">address.state:CA</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;=5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:val1,val2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Match any value (OR)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exclude / negate</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field exists (not null)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field does not exist</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code> — exact match for "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>john</em></code> — contains "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:<em>smith</em></code> — name contains "smith" (case-insensitive)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code> — email ends with "@example.com"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code> — exact match on status field</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code> — status is "approved" OR "pending"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code> — income greater than or equal to 1000</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">created:&gt;2024-01-01</code> — created after January 1, 2024</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved income:&gt;=1000</code> — approved AND income &gt;= 1000 (multiple conditions)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code> — exclude records with status "denied"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code> — only records where deletedAt does not exist</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">applicant.state:CA</code> — nested field filter</li></ul><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">URL Encoding Reference</h3><p style="margin:0 0 6px;">When manually constructing URLs, encode these characters:</p><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Character</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Encoded</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">(space)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%20</code> or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">+</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%22</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">:</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3A</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&gt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3E</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&lt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3C</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">,</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%2C</code></td></tr></tbody></table></div><p style="margin:0 0 6px;"><strong>Example:</strong> ``<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"> Human-readable: q=status:approved income:&gt;=1000 URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000 </code>``</p></div></td>
-    </tr><tr>
-      <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">limit</td>
-      <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span></td>
-      <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
-      <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Maximum number of items to return (1-100).</p></div></td>
-    </tr><tr>
-      <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">offset</td>
-      <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span></td>
-      <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
-      <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Number of items to skip before collecting results.</p></div></td>
-    </tr><tr>
-      <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">sort</td>
-      <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
-      <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
-      <td style="padding:5px 12px;text-align:center;"></td>
-      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Comma-separated list of fields to sort the response by. Prefix a field with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-</code> for descending order. The first field is the primary sort; subsequent fields are tie-breakers in declaration order.</p><p style="margin:0 0 6px;"><strong>URL Encoding:</strong> This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples below show human-readable syntax for clarity.</p><p style="margin:0 0 6px;">Which fields a given list endpoint allows is declared in the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.fields</code> extension. Sending a field name not present in that list returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 FIELD_NOT_SORTABLE</code>. Sending a field name that doesn't exist on the resource schema returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 INVALID_SORT_FIELD</code>. When this parameter is omitted, the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.default</code> (if declared) is applied; otherwise no client-driven sort is applied. A configured tie-breaker (default <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">id</code>) is always appended for stable pagination.</p><p style="margin:0 0 6px;">See <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">api-patterns.yaml#sorting</code> for the full convention and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">docs/architecture/x-extensions.md</code> for the extension shape.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ascending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Descending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field1,field2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Multi-field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=status,-priority</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">nested.field</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field via dot notation</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code> — oldest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code> — newest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-priority,dueDate</code> — highest priority first, then oldest due date</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName,name.firstName</code> — alphabetical by surname, then given name</li></ul></div></td>
-    </tr></tbody>
+        <td style="padding:5px 12px;white-space:nowrap;"><details><summary style="list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>q</summary><div style="margin-top:6px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:4px;background:#fff;font-size:12px;color:#555;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Search query using field:value syntax. Multiple conditions separated by spaces are ANDed together.</p><p style="margin:0 0 6px;"><strong>URL Encoding:</strong> This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples in this documentation show human-readable syntax for clarity.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text exact match</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>term</em></code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text contains</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>john</em></code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">term*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*term</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Full-text ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">*smith</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exact match on field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:<em>value</em></code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Contains (case-insensitive)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:<em>john</em></code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:value*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Starts with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:john*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ends with</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:"value"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Quoted value (for spaces)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:"john doe"</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field.nested:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field (dot notation)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">address.state:CA</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&gt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Greater than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:&lt;=value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Less than or equal</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&lt;=5000</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:val1,val2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Match any value (OR)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:value</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Exclude / negate</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field exists (not null)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-field:*</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Field does not exist</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">john</code> — exact match for "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"><em>john</em></code> — contains "john" in searchable fields</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">name:<em>smith</em></code> — name contains "smith" (case-insensitive)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">email:*@example.com</code> — email ends with "@example.com"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved</code> — exact match on status field</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved,pending</code> — status is "approved" OR "pending"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">income:&gt;=1000</code> — income greater than or equal to 1000</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">created:&gt;2024-01-01</code> — created after January 1, 2024</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">status:approved income:&gt;=1000</code> — approved AND income &gt;= 1000 (multiple conditions)</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-status:denied</code> — exclude records with status "denied"</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-deletedAt:*</code> — only records where deletedAt does not exist</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">applicant.state:CA</code> — nested field filter</li></ul><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">URL Encoding Reference</h3><p style="margin:0 0 6px;">When manually constructing URLs, encode these characters:</p><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Character</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Encoded</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">(space)</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%20</code> or <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">+</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">"</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%22</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">:</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3A</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&gt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3E</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">&lt;</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%3C</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">,</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">%2C</code></td></tr></tbody></table></div><p style="margin:0 0 6px;"><strong>Example:</strong> ``<code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;"> Human-readable: q=status:approved income:&gt;=1000 URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000 </code>``</p></div></div></details></td>
+        <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
+        <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
+        <td style="padding:5px 12px;text-align:center;"></td>
+        <td style="padding:5px 12px;color:#999;font-size:11px;font-style:italic;">Search query using field:value syntax. Multiple conditions separated by</td>
+      </tr><tr>
+        <td style="padding:5px 12px;white-space:nowrap;"><details><summary style="list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>limit</summary><div style="margin-top:6px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:4px;background:#fff;font-size:12px;color:#555;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Maximum number of items to return (1-100).</p></div></div></details></td>
+        <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span></td>
+        <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
+        <td style="padding:5px 12px;text-align:center;"></td>
+        <td style="padding:5px 12px;color:#999;font-size:11px;font-style:italic;">Maximum number of items to return (1-100).</td>
+      </tr><tr>
+        <td style="padding:5px 12px;white-space:nowrap;"><details><summary style="list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>offset</summary><div style="margin-top:6px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:4px;background:#fff;font-size:12px;color:#555;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Number of items to skip before collecting results.</p></div></div></details></td>
+        <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span></td>
+        <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
+        <td style="padding:5px 12px;text-align:center;"></td>
+        <td style="padding:5px 12px;color:#999;font-size:11px;font-style:italic;">Number of items to skip before collecting results.</td>
+      </tr><tr>
+        <td style="padding:5px 12px;white-space:nowrap;"><details><summary style="list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>sort</summary><div style="margin-top:6px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:4px;background:#fff;font-size:12px;color:#555;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Comma-separated list of fields to sort the response by. Prefix a field with <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-</code> for descending order. The first field is the primary sort; subsequent fields are tie-breakers in declaration order.</p><p style="margin:0 0 6px;"><strong>URL Encoding:</strong> This parameter must be URL-encoded when sent over HTTP. Most HTTP clients handle this automatically. Examples below show human-readable syntax for clarity.</p><p style="margin:0 0 6px;">Which fields a given list endpoint allows is declared in the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.fields</code> extension. Sending a field name not present in that list returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 FIELD_NOT_SORTABLE</code>. Sending a field name that doesn't exist on the resource schema returns <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">400 INVALID_SORT_FIELD</code>. When this parameter is omitted, the operation's <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">x-sortable.default</code> (if declared) is applied; otherwise no client-driven sort is applied. A configured tie-breaker (default <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">id</code>) is always appended for stable pagination.</p><p style="margin:0 0 6px;">See <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">api-patterns.yaml#sorting</code> for the full convention and <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">docs/architecture/x-extensions.md</code> for the extension shape.</p><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Syntax</h3><div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;font-size:11px;"><thead><tr><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Pattern</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Description</th><th style="padding:4px 8px;font-size:10px;font-weight:700;text-align:left;background:#f5f5f5;border:1px solid #e0e0e0;white-space:nowrap;">Example</th></tr></thead><tbody><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Ascending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">-fieldName</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Descending</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">field1,field2</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Multi-field</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=status,-priority</code></td></tr><tr><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">nested.field</code></td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;">Nested field via dot notation</td><td style="padding:4px 8px;font-size:11px;border:1px solid #e0e0e0;"><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName</code></td></tr></tbody></table></div><h3 style="font-size:13px;font-weight:800;color:#333;margin:14px 0 4px;">Examples</h3><ul style="margin:6px 0;padding-left:1.25rem;"><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=createdAt</code> — oldest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-createdAt</code> — newest first</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=-priority,dueDate</code> — highest priority first, then oldest due date</li><li><code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">sort=name.lastName,name.firstName</code> — alphabetical by surname, then given name</li></ul></div></div></details></td>
+        <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
+        <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
+        <td style="padding:5px 12px;text-align:center;"></td>
+        <td style="padding:5px 12px;color:#999;font-size:11px;font-style:italic;">Comma-separated list of fields to sort the response by. Prefix a field</td>
+      </tr></tbody>
     </table>
   </div>
       
@@ -106,7 +150,12 @@
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#006152;">200</span>
         <span style="font-size:11px;color:#555;">A paginated collection of appointments.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">AppointmentList</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">total</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
@@ -258,12 +307,18 @@
       
     </div>
     </div>
+      </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">400</span>
         <span style="font-size:11px;color:#555;">The request is malformed or contains invalid parameters.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">BadRequest</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -294,12 +349,18 @@
       
     </div>
     </div>
+      </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>
         <span style="font-size:11px;color:#555;">An unexpected error occurred on the server.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">InternalError</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -330,18 +391,24 @@
       
     </div>
     </div>
+      </details>
     </div></div>
   </div>
     </div>
   </details>
-</div><div id="op-post-appointments" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
+</div><div id="op-post-appointments" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
   <details>
-    <summary style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span>
-      <code style="font-size:13px;font-weight:600;color:#1a1a1a;flex:1;">/appointments</code>
-      <span style="font-size:12px;color:#666;">Create an appointment</span>
-      
+    <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
+      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #5650BE;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">POST</span></span>
+      <span style="flex:1;min-width:0;">
+        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/appointments</code>
+        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Create an appointment</span>
+      </span>
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+        
+        
+      </span>
     </summary>
     <div style="padding:12px 16px;">
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Create a new appointment record.</p></div></div>
@@ -350,7 +417,12 @@
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
       Request body <span style="color:#AF121D;font-weight:700;">required</span>
     </div>
-    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    <details style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">
+      <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+        <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">AppointmentCreate</span>
+      </summary>
+      <div style="border-top:1px solid #eee;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">startAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -422,6 +494,7 @@
       
     </div>
     </div>
+    </details>
   </div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
@@ -430,7 +503,12 @@
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#006152;">201</span>
         <span style="font-size:11px;color:#555;">Appointment created successfully.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">Appointment</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">startAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -532,12 +610,18 @@
       
     </div>
     </div>
+      </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">400</span>
         <span style="font-size:11px;color:#555;">The request is malformed or contains invalid parameters.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">BadRequest</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -568,12 +652,18 @@
       
     </div>
     </div>
+      </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">422</span>
         <span style="font-size:11px;color:#555;">The request was well-formed but contained semantic errors.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">UnprocessableEntity</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -604,12 +694,18 @@
       
     </div>
     </div>
+      </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>
         <span style="font-size:11px;color:#555;">An unexpected error occurred on the server.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">InternalError</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -640,18 +736,24 @@
       
     </div>
     </div>
+      </details>
     </div></div>
   </div>
     </div>
   </details>
-</div><div id="op-get-appointments-appointmentId" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
+</div><div id="op-get-appointments-appointmentId" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
   <details>
-    <summary style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span>
-      <code style="font-size:13px;font-weight:600;color:#1a1a1a;flex:1;">/appointments/{appointmentId}</code>
-      <span style="font-size:12px;color:#666;">Get an appointment</span>
-      
+    <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
+      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#E2F9F6;color:#006152;border:1px solid #00AD93;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">GET</span></span>
+      <span style="flex:1;min-width:0;">
+        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/appointments/{appointmentId}</code>
+        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Get an appointment</span>
+      </span>
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+        
+        
+      </span>
     </summary>
     <div style="padding:12px 16px;">
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Retrieve a single appointment by identifier.</p></div></div>
@@ -666,12 +768,12 @@
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
       </tr></thead>
       <tbody><tr>
-      <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">appointmentId</td>
-      <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
-      <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
-      <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Unique identifier of the appointment.</p></div></td>
-    </tr></tbody>
+        <td style="padding:5px 12px;white-space:nowrap;"><details><summary style="list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>appointmentId</summary><div style="margin-top:6px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:4px;background:#fff;font-size:12px;color:#555;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Unique identifier of the appointment.</p></div></div></details></td>
+        <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
+        <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
+        <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
+        <td style="padding:5px 12px;color:#999;font-size:11px;font-style:italic;">Unique identifier of the appointment.</td>
+      </tr></tbody>
     </table>
   </div>
       
@@ -682,7 +784,12 @@
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#006152;">200</span>
         <span style="font-size:11px;color:#555;">Appointment retrieved successfully.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">Appointment</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">startAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -784,12 +891,18 @@
       
     </div>
     </div>
+      </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">404</span>
         <span style="font-size:11px;color:#555;">The requested resource was not found.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">NotFound</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -820,12 +933,18 @@
       
     </div>
     </div>
+      </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>
         <span style="font-size:11px;color:#555;">An unexpected error occurred on the server.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">InternalError</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -856,18 +975,24 @@
       
     </div>
     </div>
+      </details>
     </div></div>
   </div>
     </div>
   </details>
-</div><div id="op-patch-appointments-appointmentId" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
+</div><div id="op-patch-appointments-appointmentId" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
   <details>
-    <summary style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span>
-      <code style="font-size:13px;font-weight:600;color:#1a1a1a;flex:1;">/appointments/{appointmentId}</code>
-      <span style="font-size:12px;color:#666;">Update an appointment</span>
-      
+    <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
+      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#FFF3E0;color:#7A4800;border:1px solid #FFB446;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">PATCH</span></span>
+      <span style="flex:1;min-width:0;">
+        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/appointments/{appointmentId}</code>
+        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Update an appointment</span>
+      </span>
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+        
+        
+      </span>
     </summary>
     <div style="padding:12px 16px;">
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Apply partial updates to an existing appointment.</p></div></div>
@@ -882,19 +1007,24 @@
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
       </tr></thead>
       <tbody><tr>
-      <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">appointmentId</td>
-      <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
-      <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
-      <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Unique identifier of the appointment.</p></div></td>
-    </tr></tbody>
+        <td style="padding:5px 12px;white-space:nowrap;"><details><summary style="list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>appointmentId</summary><div style="margin-top:6px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:4px;background:#fff;font-size:12px;color:#555;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Unique identifier of the appointment.</p></div></div></details></td>
+        <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
+        <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
+        <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
+        <td style="padding:5px 12px;color:#999;font-size:11px;font-style:italic;">Unique identifier of the appointment.</td>
+      </tr></tbody>
     </table>
   </div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">
       Request body <span style="color:#AF121D;font-weight:700;">required</span>
     </div>
-    <div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    <details style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">
+      <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+        <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">AppointmentUpdate</span>
+      </summary>
+      <div style="border-top:1px solid #eee;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">startAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -966,6 +1096,7 @@
       
     </div>
     </div>
+    </details>
   </div>
       <div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Responses</div>
@@ -974,7 +1105,12 @@
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#006152;">200</span>
         <span style="font-size:11px;color:#555;">Appointment updated successfully.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">Appointment</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">startAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -1076,12 +1212,18 @@
       
     </div>
     </div>
+      </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">400</span>
         <span style="font-size:11px;color:#555;">The request is malformed or contains invalid parameters.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">BadRequest</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -1112,12 +1254,18 @@
       
     </div>
     </div>
+      </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">404</span>
         <span style="font-size:11px;color:#555;">The requested resource was not found.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">NotFound</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -1148,12 +1296,18 @@
       
     </div>
     </div>
+      </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">422</span>
         <span style="font-size:11px;color:#555;">The request was well-formed but contained semantic errors.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">UnprocessableEntity</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -1184,12 +1338,18 @@
       
     </div>
     </div>
+      </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>
         <span style="font-size:11px;color:#555;">An unexpected error occurred on the server.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">InternalError</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -1220,18 +1380,24 @@
       
     </div>
     </div>
+      </details>
     </div></div>
   </div>
     </div>
   </details>
-</div><div id="op-delete-appointments-appointmentId" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
+</div><div id="op-delete-appointments-appointmentId" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:10px;overflow:hidden;">
   <details>
-    <summary style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#F9C8CB;color:#7B0A11;border:1px solid #AF121D;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">DELETE</span>
-      <code style="font-size:13px;font-weight:600;color:#1a1a1a;flex:1;">/appointments/{appointmentId}</code>
-      <span style="font-size:12px;color:#666;">Delete an appointment</span>
-      
+    <summary style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;margin-top:3px;" class="chevron">▶</span>
+      <span style="flex-shrink:0;margin-top:1px;"><span style="font-size:9.5px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:#F9C8CB;color:#7B0A11;border:1px solid #AF121D;flex-shrink:0;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">DELETE</span></span>
+      <span style="flex:1;min-width:0;">
+        <code style="font-size:13px;font-weight:600;color:#1a1a1a;word-break:break-all;">/appointments/{appointmentId}</code>
+        <span style="display:block;font-size:12px;color:#666;margin-top:2px;">Delete an appointment</span>
+      </span>
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+        
+        
+      </span>
     </summary>
     <div style="padding:12px 16px;">
       <div style="padding:12px 16px;border-top:1px solid #f0f0f0;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Permanently remove an appointment record.</p></div></div>
@@ -1246,12 +1412,12 @@
         <th style="padding:5px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
       </tr></thead>
       <tbody><tr>
-      <td style="padding:5px 12px;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;white-space:nowrap;">appointmentId</td>
-      <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
-      <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
-      <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
-      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Unique identifier of the appointment.</p></div></td>
-    </tr></tbody>
+        <td style="padding:5px 12px;white-space:nowrap;"><details><summary style="list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>appointmentId</summary><div style="margin-top:6px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:4px;background:#fff;font-size:12px;color:#555;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Unique identifier of the appointment.</p></div></div></details></td>
+        <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
+        <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">path</td>
+        <td style="padding:5px 12px;text-align:center;"><span style="font-size:9px;font-weight:700;color:#AF121D;">✓</span></td>
+        <td style="padding:5px 12px;color:#999;font-size:11px;font-style:italic;">Unique identifier of the appointment.</td>
+      </tr></tbody>
     </table>
   </div>
       
@@ -1268,7 +1434,12 @@
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#AF121D;">404</span>
         <span style="font-size:11px;color:#555;">The requested resource was not found.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">NotFound</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -1299,12 +1470,18 @@
       
     </div>
     </div>
+      </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
         <span style="font-size:11px;font-weight:700;font-family:monospace;color:#7A4800;">500</span>
         <span style="font-size:11px;color:#555;">An unexpected error occurred on the server.</span>
       </div>
-      <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <details style="border-top:1px solid #f0f0f0;">
+        <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
+          <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#5650BE;">InternalError</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">code</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -1335,34 +1512,132 @@
       
     </div>
     </div>
+      </details>
     </div></div>
   </div>
     </div>
   </details>
 </div>
     </section>
-
     </main>
   </div>
-
   <script>
-    // Rotate chevron icons when details open/close
+    // Chevron toggle for <details> — set initial state and keep in sync on toggle
     document.querySelectorAll('details').forEach(d => {
+      const ch = d.querySelector('.chevron');
+      if (ch) ch.textContent = d.open ? '▼' : '▶';
       d.addEventListener('toggle', () => {
         const ch = d.querySelector('.chevron');
         if (ch) ch.textContent = d.open ? '▼' : '▶';
       });
     });
-
-    // Breadcrumb current-page link scrolls main content to top
-    // (body has overflow:hidden here; main is the scrollable container)
-    document.querySelectorAll('a[href="#"]').forEach(a => {
-      a.addEventListener('click', e => {
-        e.preventDefault();
-        document.querySelector('main').scrollTop = 0;
+    // Active nav highlighting — click sets immediately; IntersectionObserver keeps it current on scroll
+    (function () {
+      const links = Array.from(document.querySelectorAll('#sidebar a.nav-link[href^="#"]'));
+      if (!links.length) return;
+      function setActive(id) {
+        links.forEach(a => a.classList.toggle('nav-active', a.getAttribute('href') === '#' + id));
+      }
+      // Highlight immediately on click so there's instant feedback
+      links.forEach(a => a.addEventListener('click', () => setActive(a.getAttribute('href').slice(1))));
+      const sections = links
+        .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+        .filter(Boolean);
+      if (!sections.length) return;
+      const io = new IntersectionObserver(entries => {
+        const hit = entries.find(e => e.isIntersecting);
+        if (hit) setActive(hit.target.id);
+      }, { root: document.getElementById('content'), rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      sections.forEach(s => io.observe(s));
+      setActive(sections[0].id);
+    })();
+    
+    (function () {
+      // Returns only text that is currently visible — skips content inside closed <details>
+      function visibleText(node) {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+        if (node.tagName === 'DETAILS' && !node.open) {
+          const summary = node.querySelector('summary');
+          return summary ? summary.textContent : '';
+        }
+        return [...node.childNodes].map(visibleText).join('');
+      }
+      function clearHighlights() {
+        document.querySelectorAll('#content mark.search-hl').forEach(el => {
+          const parent = el.parentNode;
+          el.replaceWith(document.createTextNode(el.textContent));
+          parent?.normalize();
+        });
+      }
+      // Only highlight text in visible nodes (skip closed <details> bodies)
+      function highlightInElement(root, q) {
+        function walk(node) {
+          if (node.tagName === 'DETAILS' && !node.open) {
+            // Only walk the summary
+            const summary = node.querySelector('summary');
+            if (summary) walk(summary);
+            return;
+          }
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            const lower = text.toLowerCase();
+            if (!lower.includes(q)) return;
+            const frag = document.createDocumentFragment();
+            let last = 0, idx = lower.indexOf(q);
+            while (idx !== -1) {
+              if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+              const mark = document.createElement('mark');
+              mark.className = 'search-hl';
+              mark.textContent = text.slice(idx, idx + q.length);
+              frag.appendChild(mark);
+              last = idx + q.length;
+              idx = lower.indexOf(q, last);
+            }
+            if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+            node.parentNode.replaceChild(frag, node);
+            return;
+          }
+          for (const child of [...node.childNodes]) walk(child);
+        }
+        walk(root);
+      }
+      document.getElementById('nav-search')?.addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        clearHighlights();
+        document.querySelectorAll('#sidebar .nav-link[href^="#"]').forEach(a => {
+          const id = a.getAttribute('href').slice(1);
+          const el = document.getElementById(id);
+          const items = el ? [...el.querySelectorAll('.content-item')] : [];
+          const navMatches = !q || a.textContent.toLowerCase().includes(q);
+          const anyItemMatches = q && items.some(item => visibleText(item).toLowerCase().includes(q));
+          // Section visible if nav label matches, any item matches, or (no items) visible section text matches
+          const sectionMatches = !q || navMatches || anyItemMatches ||
+            (el && !items.length && visibleText(el).toLowerCase().includes(q));
+          a.style.display = sectionMatches ? '' : 'none';
+          if (el) {
+            el.style.display = sectionMatches ? '' : 'none';
+            if (items.length > 0) {
+              items.forEach(item => {
+                // Show all items when nav label matched; otherwise filter by visible text only
+                item.style.display = (!q || navMatches || visibleText(item).toLowerCase().includes(q)) ? '' : 'none';
+              });
+            }
+          }
+        });
+        document.querySelectorAll('#sidebar .nav-section').forEach(sec => {
+          const any = [...sec.querySelectorAll('.nav-link')].some(a => a.style.display !== 'none');
+          sec.style.display = any ? '' : 'none';
+        });
+        if (q) {
+          // Highlight within visible content items; fall back to top-level id'd sections without content items
+          document.querySelectorAll('#content .content-item:not([style*="display: none"])').forEach(el => highlightInElement(el, q));
+          document.querySelectorAll('#content > *[id]:not([style*="display: none"])').forEach(el => {
+            if (!el.querySelector('.content-item')) highlightInElement(el, q);
+          });
+        }
       });
-    });
+    })();
+    
   </script>
-
 </body>
 </html>

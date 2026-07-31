@@ -8,23 +8,24 @@
  */
 
 import { readdirSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { resolve, dirname, join } from 'path';
+import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { load } from 'js-yaml';
 import { buildEventIndex } from '../state-machine-docs/src/generate.js';
 import { COLORS, FONT } from '../../lib/theme.js';
 import { esc as h, titleCase, breadcrumb } from '../../lib/html.js';
+import { singleColumnPage } from '../../lib/layout.js';
+import { resolvedDir } from '../../lib/paths.js';
 
-const __dirname   = dirname(fileURLToPath(import.meta.url));
-const contractsDir = resolve(__dirname, '../../../contracts');
-const outputDir    = join(__dirname);
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const outputDir = join(__dirname);
 mkdirSync(outputDir, { recursive: true });
 
 // ── Load state machines ───────────────────────────────────────────────────────
 
-const files = readdirSync(contractsDir)
+const files = readdirSync(resolvedDir)
   .filter(f => f.endsWith('-state-machine.yaml'))
-  .map(f => join(contractsDir, f));
+  .map(f => join(resolvedDir, f));
 
 const allStateMachines = files
   .map(f => load(readFileSync(f, 'utf8')))
@@ -68,27 +69,10 @@ const orphanSection = noPublisher.length ? `
 
 // ── HTML page ─────────────────────────────────────────────────────────────────
 
-const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Safety Net Blueprint — Event Catalog</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: ${FONT}; background: ${COLORS.bg}; color: ${COLORS.text}; font-size: 14px; line-height: 1.6; }
-    a { color: ${COLORS.midBlue}; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12px; background: ${COLORS.sandMid}; padding: 1px 5px; border-radius: 3px; border: 1px solid ${COLORS.sandDark}; color: #2a2a2a; }
-    table { border-collapse: collapse; width: 100%; }
-    th { background: ${COLORS.sandMid}; color: ${COLORS.text}; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 8px 12px; text-align: left; border-bottom: 2px solid ${COLORS.sandDark}; }
-    td { padding: 10px 12px; border-bottom: 1px solid ${COLORS.sandDark}; vertical-align: top; font-size: 13px; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: ${COLORS.sandMid}; }
-  </style>
-</head>
-<body>
-  ${breadcrumb([{ label: 'Explorer', href: '../../index.html' }, { label: 'Event Catalog' }])}
+const html = singleColumnPage({
+  title: 'Safety Net Blueprint \u2014 Event Catalog',
+  breadcrumbs: [{ label: 'Explorer', href: '../../index.html' }, { label: 'Event Catalog' }],
+  bodyHtml: `
   <div style="max-width:960px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
     <h1 style="font-size:1.5rem;font-weight:800;color:${COLORS.darkBlue};margin-bottom:0.375rem;">Event Catalog</h1>
     <p style="color:#666;margin-bottom:2rem;font-size:13px;">Cross-domain event reference auto-generated from state machine <code>emit</code> and subscription declarations.</p>
@@ -101,9 +85,8 @@ const html = `<!DOCTYPE html>
       </table>
     </div>
     ${orphanSection}
-  </div>
-</body>
-</html>`;
+  </div>`,
+});
 
 writeFileSync(join(outputDir, 'index.html'), html, 'utf8');
 console.log('  wrote event-catalog/index.html');
