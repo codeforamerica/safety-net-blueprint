@@ -25,8 +25,12 @@ import { twoColumnPage, singleColumnPage } from '../../lib/layout.js';
 import { resolvedDir, resolvedSourcePairs } from '../../lib/paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const generatedClientsDir = resolve(__dirname, '..', '..', '..', 'clients', 'generated');
-const clientsUtilityDir   = resolve(__dirname, '..', '..', '..', 'clients', 'utility');
+const clientsArg = process.argv.find(a => a.startsWith('--clients='));
+const clientsBase = clientsArg
+  ? resolve(process.cwd(), clientsArg.slice('--clients='.length))
+  : resolve(__dirname, '..', '..', '..', 'clients');
+const generatedClientsDir = resolve(clientsBase, 'generated');
+const clientsUtilityDir   = resolve(clientsBase, 'utility');
 const outputDir = __dirname;
 readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(join(outputDir, f)));
 
@@ -406,7 +410,7 @@ function buildDomainPage(d) {
   const typesNavSection = d.types.length
     ? `<div class="nav-section">
         <div class="nav-section-label">Types</div>
-        <a href="#section-types" class="nav-link">All types <span class="nav-count">${d.types.length}</span></a>
+        ${d.types.map(t => `<a href="#type-${esc(t.name)}" class="nav-link">${esc(t.name)}</a>`).join('')}
       </div>`
     : '';
 

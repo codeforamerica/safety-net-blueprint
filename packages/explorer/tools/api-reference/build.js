@@ -394,15 +394,22 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
     // Detect named component params via: (1) raw $ref name, or (2) name:in reverse lookup
     const componentParamName = localParamRef(rawP) ?? (p.name && p.in ? paramNameByKey.get(`${p.name}:${p.in}`) : undefined);
     if (componentParamName) {
-      const expandContent = `${renderMarkdown(p.description ?? '')}${schema.enum ? `<div style="margin-top:4px;font-size:10px;color:#666;">One of: ${schema.enum.map(v => `<code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">${esc(String(v))}</code>`).join(', ')}</div>` : ''}`;
-      const nameCell = `<details><summary style="list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.midBlue};"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>${esc(p.name ?? '')}</summary><div style="margin-top:6px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:4px;background:#fff;font-size:12px;color:#555;">${expandContent}</div></details>`;
-      return `<tr>
-        <td style="padding:5px 12px;white-space:nowrap;">${nameCell}</td>
-        <td style="padding:5px 12px;">${typeCell}</td>
-        <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">${esc(p.in ?? '')}</td>
-        <td style="padding:5px 12px;text-align:center;">${p.required ? `<span style="font-size:9px;font-weight:700;color:${COLORS.richRed};">✓</span>` : ''}</td>
-        <td style="padding:5px 12px;color:#999;font-size:11px;font-style:italic;">${esc((p.description ?? '').split('\n')[0].slice(0, 80))}</td>
-      </tr>`;
+      const desc = p.description ?? '';
+      // Only expand if the expanded panel would show something beyond a short description:
+      // long description, enum values, default, or example.
+      const shouldExpand = desc.length > 80 || schema.enum?.length > 0
+        || schema.default !== undefined || schema.example !== undefined;
+      if (shouldExpand) {
+        const expandContent = `${renderMarkdown(desc)}${schema.enum ? `<div style="margin-top:4px;font-size:10px;color:#666;">One of: ${schema.enum.map(v => `<code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">${esc(String(v))}</code>`).join(', ')}</div>` : ''}`;
+        const nameCell = `<details><summary style="list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.midBlue};"><span class="chevron" style="font-size:9px;opacity:0.6;">&#x25B6;</span>${esc(p.name ?? '')}</summary><div style="margin-top:6px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:4px;background:#fff;font-size:12px;color:#555;">${expandContent}</div></details>`;
+        return `<tr>
+          <td style="padding:5px 12px;white-space:nowrap;">${nameCell}</td>
+          <td style="padding:5px 12px;">${typeCell}</td>
+          <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">${esc(p.in ?? '')}</td>
+          <td style="padding:5px 12px;text-align:center;">${p.required ? `<span style="font-size:9px;font-weight:700;color:${COLORS.richRed};">✓</span>` : ''}</td>
+          <td style="padding:5px 12px;color:#999;font-size:11px;font-style:italic;">${esc(desc.split('\n')[0].slice(0, 80))}</td>
+        </tr>`;
+      }
     }
     const descCell = `${renderMarkdown(p.description ?? '')}${enumVals}`;
     return `<tr>

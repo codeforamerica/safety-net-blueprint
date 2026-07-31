@@ -8,8 +8,12 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-/** Absolute path to packages/resolved/ — the authoritative source for all explorer builds. */
-export const resolvedDir = resolve(__dirname, '../../resolved');
+/** Absolute path to the resolved contracts directory.
+ *  Defaults to packages/resolved/ but can be overridden with --resolved=<path>. */
+const resolvedArg = process.argv.find(a => a.startsWith('--resolved='));
+export const resolvedDir = resolvedArg
+  ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length))
+  : resolve(__dirname, '../../resolved');
 
 const LABEL_MAP = {
   'openapi':       'API spec',
