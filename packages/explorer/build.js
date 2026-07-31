@@ -13,7 +13,7 @@
  *   node build.js --only=adoption-model
  */
 
-import { readFileSync, readdirSync } from 'fs';
+import { readFileSync, readdirSync, rmSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
@@ -67,6 +67,13 @@ if (buildSeqDiagrams) {
 // ── Data explorer (reads contracts directly — subprocess) ─────────────────────
 
 if (doBuild('data-dictionaries')) {
+  // Clean stale field inventories before regenerating — build.js reads these,
+  // so they must be cleaned before the generator runs, not inside build.js itself.
+  const ddDir = resolve(__dirname, 'tools', 'data-dictionaries');
+  readdirSync(ddDir)
+    .filter(f => f.endsWith('-field-inventory.yaml'))
+    .forEach(f => rmSync(resolve(ddDir, f)));
+
   const contractsDir = resolve(__dirname, '..', 'contracts');
   const domains = readdirSync(contractsDir)
     .filter(f => f.endsWith('-openapi.yaml'))

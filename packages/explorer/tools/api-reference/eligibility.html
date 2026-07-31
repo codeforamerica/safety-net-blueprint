@@ -50,6 +50,14 @@
       background: rgba(255,255,255,0.15); border-radius: 8px;
       padding: 0.1rem 0.35rem; margin-left: auto;
     }
+
+    /* Interactive element hover states — applied centrally so all tools get consistent behavior */
+    .content-item { transition: border-color 0.1s, background 0.1s; }
+    .content-item:hover { border-color: #5650BE; background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
     
   </style>
 </head>
@@ -201,17 +209,17 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">items</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">items</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">array[Determination]</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
@@ -231,18 +239,20 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle status of the determination. `pending` — created at submission, awaiting processing. `in_progress` — at least one Decision has been resolved. `completed` — all Decisions have reached a terminal state. `withdrawn` — the application was withdrawn before determination completed.
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DeterminationStatus</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle status of the determination. `pending` — created at submission, awaiting processing. `in_progress` — at least one Decision has been resolved. `completed` — all Decisions have reached a terminal state. `withdrawn` — the application was withdrawn before determination completed.
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">in_progress</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">completed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">withdrawn</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+          </summary>
+          <div style="padding:6px 12px 6px 52px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">expeditedFlagged</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
@@ -274,6 +284,8 @@
       
     </div>
     </div>
+        </details>
+      </div></div>
       </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
@@ -431,18 +443,20 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle status of the determination. `pending` — created at submission, awaiting processing. `in_progress` — at least one Decision has been resolved. `completed` — all Decisions have reached a terminal state. `withdrawn` — the application was withdrawn before determination completed.
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DeterminationStatus</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle status of the determination. `pending` — created at submission, awaiting processing. `in_progress` — at least one Decision has been resolved. `completed` — all Decisions have reached a terminal state. `withdrawn` — the application was withdrawn before determination completed.
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">in_progress</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">completed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">withdrawn</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">expeditedFlagged</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
@@ -669,17 +683,17 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">items</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">items</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">array[Decision]</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
@@ -729,28 +743,32 @@
       </div>
       <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">snap</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">medicaid</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">chip</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">tanf</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">aca</code></div>
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Outcome status of a single program eligibility decision. `pending` — not yet evaluated, or deferred to caseworker review by the rules engine. `approved` — member meets program requirements. `denied` — member does not meet requirements based on provided information. `ineligible` — member cannot qualify for this program (e.g., citizenship bar, age limit).
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DecisionStatus</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Outcome status of a single program eligibility decision. `pending` — not yet evaluated, or deferred to caseworker review by the rules engine. `approved` — member meets program requirements. `denied` — member does not meet requirements based on provided information. `ineligible` — member cannot qualify for this program (e.g., citizenship bar, age limit).
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">approved</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">denied</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">ineligible</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the decision was made automatically or by a caseworker.</span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">auto</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">manual</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+          </summary>
+          <div style="padding:6px 12px 6px 52px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DecisionPath</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Whether the decision was made automatically or by a caseworker.</span>
+          </summary>
+          <div style="padding:6px 12px 6px 52px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">decidedAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -770,17 +788,17 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">electronicChecks</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Summary of electronic checks that informed this decision.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">electronicChecks</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">array[ElectronicCheckSummary]</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Summary of electronic checks that informed this decision.</span>
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -810,7 +828,9 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -831,6 +851,8 @@
       
     </div>
     </div>
+        </details>
+      </div></div>
       </details>
     </div><div style="border-top:1px solid #eee;">
       <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:#fafafa;">
@@ -1024,28 +1046,32 @@
       </div>
       <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">snap</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">medicaid</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">chip</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">tanf</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">aca</code></div>
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Outcome status of a single program eligibility decision. `pending` — not yet evaluated, or deferred to caseworker review by the rules engine. `approved` — member meets program requirements. `denied` — member does not meet requirements based on provided information. `ineligible` — member cannot qualify for this program (e.g., citizenship bar, age limit).
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DecisionStatus</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Outcome status of a single program eligibility decision. `pending` — not yet evaluated, or deferred to caseworker review by the rules engine. `approved` — member meets program requirements. `denied` — member does not meet requirements based on provided information. `ineligible` — member cannot qualify for this program (e.g., citizenship bar, age limit).
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">approved</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">denied</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">ineligible</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the decision was made automatically or by a caseworker.</span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">auto</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">manual</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">path</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DecisionPath</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Whether the decision was made automatically or by a caseworker.</span>
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">decidedAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -1065,17 +1091,17 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">electronicChecks</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Summary of electronic checks that informed this decision.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">electronicChecks</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">array[ElectronicCheckSummary]</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Summary of electronic checks that informed this decision.</span>
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">serviceType</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
@@ -1105,7 +1131,9 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">createdAt</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
@@ -1283,18 +1311,20 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle status of the determination. `pending` — created at submission, awaiting processing. `in_progress` — at least one Decision has been resolved. `completed` — all Decisions have reached a terminal state. `withdrawn` — the application was withdrawn before determination completed.
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DeterminationStatus</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle status of the determination. `pending` — created at submission, awaiting processing. `in_progress` — at least one Decision has been resolved. `completed` — all Decisions have reached a terminal state. `withdrawn` — the application was withdrawn before determination completed.
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">in_progress</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">completed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">withdrawn</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">expeditedFlagged</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
@@ -1567,18 +1597,20 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle status of the determination. `pending` — created at submission, awaiting processing. `in_progress` — at least one Decision has been resolved. `completed` — all Decisions have reached a terminal state. `withdrawn` — the application was withdrawn before determination completed.
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DeterminationStatus</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle status of the determination. `pending` — created at submission, awaiting processing. `in_progress` — at least one Decision has been resolved. `completed` — all Decisions have reached a terminal state. `withdrawn` — the application was withdrawn before determination completed.
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">in_progress</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">completed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">withdrawn</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">expeditedFlagged</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
@@ -1851,18 +1883,20 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle status of the determination. `pending` — created at submission, awaiting processing. `in_progress` — at least one Decision has been resolved. `completed` — all Decisions have reached a terminal state. `withdrawn` — the application was withdrawn before determination completed.
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DeterminationStatus</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle status of the determination. `pending` — created at submission, awaiting processing. `in_progress` — at least one Decision has been resolved. `completed` — all Decisions have reached a terminal state. `withdrawn` — the application was withdrawn before determination completed.
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">in_progress</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">completed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">withdrawn</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">expeditedFlagged</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
@@ -2156,18 +2190,20 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle status of the determination. `pending` — created at submission, awaiting processing. `in_progress` — at least one Decision has been resolved. `completed` — all Decisions have reached a terminal state. `withdrawn` — the application was withdrawn before determination completed.
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DeterminationStatus</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle status of the determination. `pending` — created at submission, awaiting processing. `in_progress` — at least one Decision has been resolved. `completed` — all Decisions have reached a terminal state. `withdrawn` — the application was withdrawn before determination completed.
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">in_progress</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">completed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">withdrawn</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">expeditedFlagged</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
@@ -2471,18 +2507,20 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle status of the determination. `pending` — created at submission, awaiting processing. `in_progress` — at least one Decision has been resolved. `completed` — all Decisions have reached a terminal state. `withdrawn` — the application was withdrawn before determination completed.
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DeterminationStatus</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle status of the determination. `pending` — created at submission, awaiting processing. `in_progress` — at least one Decision has been resolved. `completed` — all Decisions have reached a terminal state. `withdrawn` — the application was withdrawn before determination completed.
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">in_progress</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">completed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">withdrawn</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">expeditedFlagged</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
@@ -2786,18 +2824,20 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle status of the determination. `pending` — created at submission, awaiting processing. `in_progress` — at least one Decision has been resolved. `completed` — all Decisions have reached a terminal state. `withdrawn` — the application was withdrawn before determination completed.
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">status</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DeterminationStatus</span>
+            <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">Lifecycle status of the determination. `pending` — created at submission, awaiting processing. `in_progress` — at least one Decision has been resolved. `completed` — all Decisions have reached a terminal state. `withdrawn` — the application was withdrawn before determination completed.
 </span>
-      </div>
-      <div style="margin-top:3px;font-size:10px;color:#666;">One of: <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pending</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">in_progress</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">completed</code>, <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">withdrawn</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+          </summary>
+          <div style="padding:6px 12px 6px 32px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">expeditedFlagged</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
