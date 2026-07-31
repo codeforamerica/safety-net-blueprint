@@ -62,11 +62,7 @@ let errors = 0;
 
 for (const f of configFiles) {
   const cfg = yaml.load(readFileSync(resolve(configDir, f), 'utf8'));
-  if (!cfg?.domain) {
-    console.error(`[validate-config] ${f}: missing 'domain' field`);
-    errors++;
-    continue;
-  }
+  if (!cfg?.domain) continue; // index/overview configs have no domain — skip
 
   const domain = cfg.domain;
   const smExists = smByDomain.has(domain);
