@@ -21,9 +21,14 @@ export function loadAnnotations(domain, dir = contractsRoot) {
   const merged = { schema: {}, operations: {}, events: {} };
   for (const file of files) {
     const data = yaml.load(readFileSync(join(dir, file), 'utf8'));
-    Object.assign(merged.schema, data.schema || {});
-    Object.assign(merged.operations, data.operations || {});
-    Object.assign(merged.events, data.events || {});
+    // Deep-merge per entry key so that structured annotations (programs, policies)
+    // and docs annotations (reason, modeling) for the same path are combined, not overwritten.
+    for (const [key, val] of Object.entries(data.schema || {}))
+      merged.schema[key] = { ...(merged.schema[key] ?? {}), ...val };
+    for (const [key, val] of Object.entries(data.operations || {}))
+      merged.operations[key] = { ...(merged.operations[key] ?? {}), ...val };
+    for (const [key, val] of Object.entries(data.events || {}))
+      merged.events[key] = { ...(merged.events[key] ?? {}), ...val };
   }
   return merged;
 }
