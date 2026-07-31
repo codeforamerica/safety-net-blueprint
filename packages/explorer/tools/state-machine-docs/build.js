@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'fs';
+import { readdirSync, readFileSync, rmSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { load } from 'js-yaml';
@@ -8,6 +8,7 @@ import { resolvedDir } from '../../lib/paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const outputDir   = join(__dirname);
+readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(join(outputDir, f)));
 
 const files = readdirSync(resolvedDir)
   .filter(f => f.endsWith('-state-machine.yaml'))

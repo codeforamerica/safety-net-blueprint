@@ -7,7 +7,7 @@
  * subscribers, linking to the state machine docs for each domain.
  */
 
-import { readdirSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { load } from 'js-yaml';
@@ -20,6 +20,7 @@ import { resolvedDir } from '../../lib/paths.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const outputDir = join(__dirname);
 mkdirSync(outputDir, { recursive: true });
+readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(join(outputDir, f)));
 
 // ── Load state machines ───────────────────────────────────────────────────────
 
