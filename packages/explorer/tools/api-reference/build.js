@@ -425,7 +425,14 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
 
   return `<div style="margin-top:16px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;padding:5px 12px;background:#fafafa;border:1px solid #eee;border-bottom:none;border-radius:4px 4px 0 0;">Parameters</div>
-    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;">
+    <table style="width:100%;border-collapse:collapse;border:1px solid #eee;table-layout:fixed;">
+      <colgroup>
+        <col style="width:140px;">
+        <col style="width:130px;">
+        <col style="width:55px;">
+        <col style="width:40px;">
+        <col>
+      </colgroup>
       <thead><tr>
         <th style="${thStyle}">Name</th>
         <th style="${thStyle}">Type</th>
