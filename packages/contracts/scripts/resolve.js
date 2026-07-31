@@ -952,13 +952,9 @@ async function main() {
     const overlayInput = resolve(options.overlay);
 
     if (!existsSync(overlayInput)) {
-      // A missing file is always an error. A missing directory means no overlays
-      // to apply — skip silently so an empty or absent overlays/ dir is valid.
-      if (/\.(ya?ml)$/i.test(overlayInput)) {
-        console.error(`Error: Overlay path does not exist: ${overlayInput}`);
-        process.exit(1);
-      }
-    } else {
+      console.error(`Error: Overlay path does not exist: ${overlayInput}`);
+      process.exit(1);
+    }
 
     const overlayIsFile = statSync(overlayInput).isFile();
     const overlayFiles = overlayIsFile ? [overlayInput] : discoverOverlayFiles(overlayInput);
@@ -1014,7 +1010,6 @@ async function main() {
         currentResults = overlayResults;
       }
     }
-    } // end else (overlay path exists)
   }
 
   // Generate RPC and composition endpoints after explicit overlays.
