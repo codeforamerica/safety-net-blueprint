@@ -16,7 +16,10 @@ import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 
 const __dirname  = dirname(fileURLToPath(import.meta.url));
-const contractsDir = resolve(__dirname, '../../../../contracts');
+const resolvedArg  = process.argv.find(a => a.startsWith('--resolved='));
+const contractsDir = resolvedArg
+  ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length))
+  : resolve(__dirname, '../../../../resolved');
 const configPath   = resolve(__dirname, '../config/index-config.yaml');
 
 const phaseId = process.argv[2];

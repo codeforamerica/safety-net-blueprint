@@ -317,6 +317,18 @@ q(search.eq(&quot;status&quot;, &quot;approved&quot;), search.gte(&quot;income&q
       </div>
     </div>
   </div>
-  
+  <script>
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    
+  </script>
 </body>
 </html>

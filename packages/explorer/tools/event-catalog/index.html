@@ -237,6 +237,18 @@
     <li><code>client_management.person.match_resolved</code></li><li><code>communication.notice.sent</code></li><li><code>data_exchange.call.completed</code></li><li><code>document_management.document_version.uploaded</code></li><li><code>eligibility.decision.created</code></li><li><code>eligibility.determination.created</code></li><li><code>intake.application_member.created</code></li><li><code>intake.member_income.created</code></li><li><code>intake.verification.created</code></li><li><code>scheduling.appointment.scheduled</code></li><li><code>workflow.client_timeout</code></li><li><code>workflow.creation_deadline</code></li><li><code>workflow.sla_breach</code></li><li><code>workflow.sla_warning</code></li><li><code>workflow.task.created</code></li><li><code>workflow.task.updated</code></li><li><code>workflow.verification_timeout</code></li>
   </ul>
   </div>
-  
+  <script>
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    
+  </script>
 </body>
 </html>
