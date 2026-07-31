@@ -50,14 +50,6 @@ rm -rf packages/mock-server/tests/functional/resolved
 rm -rf packages/mock-server/tests/functional/generated
 pass "Cleared packages/resolved, tests/integration/generated, and functional resolved/generated"
 
-step "Validating sequence diagram config files"
-if node packages/explorer/diagrams/sequence-diagrams/src/validate-config.js 2>&1; then
-  pass "Sequence diagram config valid"
-else
-  fail "Sequence diagram config validation failed"
-fi
-bail_if_failed
-
 step "Validating base specs"
 if npm run validate 2>&1; then
   pass "Base specs valid"
@@ -80,6 +72,14 @@ if npm run resolve 2>&1; then
 else
   fail "Overlay resolution failed"
 fi
+
+step "Validating sequence diagram config files"
+if node packages/explorer/diagrams/sequence-diagrams/src/validate-config.js 2>&1; then
+  pass "Sequence diagram config valid"
+else
+  fail "Sequence diagram config validation failed"
+fi
+bail_if_failed
 
 step "Validating resolved specs"
 if npm run validate:resolved 2>&1; then
