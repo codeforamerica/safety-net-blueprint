@@ -5,15 +5,30 @@
  * Consolidated explorer build. Resolves config + contracts annotations once
  * and passes the enriched config to all sub-tools that depend on it.
  *
+ * If packages/resolved is missing or empty, the resolve step runs automatically.
+ *
  * Usage:
  *   node build.js                              # build everything
  *   node build.js --only=context-map
  *   node build.js --only=data-dictionaries
  *   node build.js --only=state-machine-docs
- *   node build.js --only=adoption-model
+ *   node build.js --only=event-catalog
+ *   node build.js --only=api-reference
+ *   node build.js --only=client-reference
+ *   node build.js --only=sequence-diagrams
+ *
+ * State customization (overlay-aware build):
+ *   node build.js --resolved=/path/to/state/resolved
+ *                 --clients=/path/to/state/clients
+ *
+ *   --resolved  Path to a directory of resolved OpenAPI + state machine files
+ *               (output of the contracts resolve pipeline with state overlays applied).
+ *               Defaults to packages/resolved. When provided, auto-resolve is skipped.
+ *   --clients   Path to the root clients directory containing generated/ and utility/
+ *               subdirectories. Defaults to packages/clients.
  */
 
-import { readFileSync, readdirSync, rmSync } from 'fs';
+import { readFileSync, readdirSync, rmSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
@@ -31,6 +46,14 @@ const onlyArg     = args.find(a => a.startsWith('--only='));
 const only        = onlyArg ? onlyArg.slice('--only='.length) : null;
 const resolvedArg = args.find(a => a.startsWith('--resolved='));
 const clientsArg  = args.find(a => a.startsWith('--clients='));
+
+// ── Self-heal: resolve contracts if packages/resolved is missing or empty ─────
+
+if (!resolvedArg && (!existsSync(resolvedDir) || readdirSync(resolvedDir).length === 0)) {
+  console.log('packages/resolved is missing — running resolve step first...');
+  const resolveScript = resolve(__dirname, '../../packages/contracts/scripts/resolve.js');
+  execFileSync(node, [resolveScript], { stdio: 'inherit' });
+}
 
 // Args forwarded to all subprocesses that respect them.
 const fwdResolved = resolvedArg ? [resolvedArg] : [];

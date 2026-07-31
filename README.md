@@ -66,6 +66,8 @@ This installs a hook that runs before every push. The hook rebuilds explorer out
 | `npm run mock:start:all` | Start mock server + Swagger UI |
 | `npm run validate` | Validate OpenAPI specs |
 | `npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>` | Resolve overlays against base specs |
+| `npm run build --workspace=packages/explorer` | Build all explorer reference tools |
+| `node packages/explorer/build.js --resolved=<dir> --clients=<dir>` | Build explorer from state-specific resolved specs |
 | `npm run api:new` | Scaffold a new API spec |
 | `npm run mock:reset` | Reset database to example data |
 | `npm test` | Run unit tests |
