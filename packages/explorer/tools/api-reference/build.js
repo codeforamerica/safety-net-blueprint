@@ -23,6 +23,7 @@ import { esc, titleCase, breadcrumb, statusBadge, methodBadge, typeBadge, nextEi
 import { inlineMd, renderMarkdown } from '../../lib/markdown.js';
 import { twoColumnPage, singleColumnPage } from '../../lib/layout.js';
 import { resolvedDir, resolvedSourcePairs } from '../../lib/paths.js';
+import { resolveExternalDefRef } from '@codeforamerica/safety-net-blueprint-contracts';
 
 const __dirname  = dirname(fileURLToPath(import.meta.url));
 const outDir      = __dirname;
@@ -44,6 +45,29 @@ const sharedResponses = (() => {
     const raw = load(readFileSync(resolve(resolvedDir, 'components/responses.yaml'), 'utf8')) ?? {};
     return Object.fromEntries(Object.entries(raw).filter(([, v]) => v?.description && !v?.type));
   } catch { return {}; }
+})();
+
+// ── Domain schema file map — used by resolveExternalDefRef to follow allOf $refs ──
+// Keyed by relative path matching the $ref file part (e.g. 'schemas/domain/intake.yaml').
+// Loaded from resolved/ so overlay-applied schemas are reflected.
+
+const domainSchemaFileMap = (() => {
+  const map = new Map();
+  const schemasDir = resolve(resolvedDir, 'schemas');
+  try {
+    for (const subdir of readdirSync(schemasDir)) {
+      const subdirPath = resolve(schemasDir, subdir);
+      try {
+        for (const f of readdirSync(subdirPath).filter(f => f.endsWith('.yaml'))) {
+          try {
+            const rel = `schemas/${subdir}/${f}`;
+            map.set(rel, load(readFileSync(resolve(subdirPath, f), 'utf8')));
+          } catch { /* skip unreadable files */ }
+        }
+      } catch { /* skip unreadable subdirs */ }
+    }
+  } catch { /* schemas dir absent — resolveExternalDefRef will return {} for all refs */ }
+  return map;
 })();
 
 // ── Load + dereference all OpenAPI specs ──────────────────────────────────
@@ -122,15 +146,78 @@ function typeStr(schema) {
 //
 // Renders a schema as a nested property tree. depth guards against cycles
 // in self-referential schemas (e.g. recursive tree nodes).
+//
+// rawSchemas: raw.components.schemas — used to detect named $ref chips at
+//             each level so that composition is visible instead of a flat dump.
+// rawSchema:  the raw (pre-dereference) counterpart of `schema` at this level,
+//             used to read property-level $ref names before they were resolved.
 
-function renderProps(schema, depth = 0) {
+const SCHEMA_PREFIX = '#/components/schemas/';
+
+/** Collect raw property definitions from a raw schema, flattening allOf parts.
+ *  Handles the common pattern of allOf: [{ $ref: BaseSchema }, { properties: {...} }]
+ *  where properties are split across allOf entries.
+ *  When fileMap is provided, external $defs refs (e.g. ./schemas/domain/foo.yaml#/$defs/Bar)
+ *  are followed via resolveExternalDefRef so their properties are included. */
+function getRawProps(rawSchema, fileMap = null) {
+  if (!rawSchema || typeof rawSchema !== 'object') return {};
+  if (rawSchema.properties) return rawSchema.properties;
+  if (Array.isArray(rawSchema.allOf)) {
+    return Object.assign({}, ...rawSchema.allOf.map(s => {
+      if (typeof s?.['$ref'] === 'string' && !s['$ref'].startsWith('#') && fileMap) {
+        const { sourceSchema } = resolveExternalDefRef(s['$ref'], fileMap);
+        return getRawProps(sourceSchema, fileMap);
+      }
+      return getRawProps(s, fileMap);
+    }));
+  }
+  return {};
+}
+
+/** Extract a named component schema ref from a raw property definition.
+ *  Returns { name, isArray } when the property references a named schema,
+ *  or null when it is an anonymous/inline type.
+ *  Handles both #/components/schemas/Name and external file#/$defs/Name refs. */
+function namedPropRef(rawProp) {
+  if (!rawProp || typeof rawProp !== 'object') return null;
+
+  function extractRef(ref) {
+    if (typeof ref !== 'string') return null;
+    if (ref.startsWith(SCHEMA_PREFIX)) return ref.slice(SCHEMA_PREFIX.length);
+    const defsMatch = ref.match(/#\/\$defs\/(.+)$/);
+    if (defsMatch) return defsMatch[1];
+    return null;
+  }
+
+  // Direct object ref
+  const directName = extractRef(rawProp['$ref']);
+  if (directName) return { name: directName, isArray: false };
+
+  // allOf wrapping a single ref (common OAS pattern for description overrides)
+  if (Array.isArray(rawProp.allOf)) {
+    for (const s of rawProp.allOf) {
+      const n = extractRef(s?.['$ref']);
+      if (n) return { name: n, isArray: false };
+    }
+  }
+
+  // Array of named schema items: { type: 'array', items: { $ref: '...' } }
+  if (rawProp.type === 'array') {
+    const itemName = extractRef(rawProp.items?.['$ref']);
+    if (itemName) return { name: itemName, isArray: true };
+  }
+
+  return null;
+}
+
+function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fileMap = null) {
   if (depth > 8 || !schema || typeof schema !== 'object') return '';
 
   // Merge allOf into a single view
   if (schema.allOf) {
     return schema.allOf
       .filter(s => s && typeof s === 'object')
-      .map(s => renderProps(s, depth))
+      .map(s => renderProps(s, depth, rawSchemas, rawSchema, fileMap))
       .join('');
   }
 
@@ -140,7 +227,7 @@ function renderProps(schema, depth = 0) {
     const pad = 12 + depth * 20;
     return variants.map((v, i) => {
       const title = v.title ?? `Variant ${i + 1}`;
-      const inner = renderProps(v, depth);
+      const inner = renderProps(v, depth, rawSchemas, null, fileMap);
       return `<div style="border-top:1px solid #ede8f5;background:rgba(124,92,191,0.03);">
         <div style="padding:3px ${pad}px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#7c5cbf;">${esc(title)}</div>
         ${inner || `<div style="padding:4px ${pad}px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>`}
@@ -148,16 +235,47 @@ function renderProps(schema, depth = 0) {
     }).join('');
   }
 
-  const props = schema.properties ?? {};
-  const reqs  = new Set(schema.required ?? []);
-  const pad   = 12 + depth * 20;
+  const props    = schema.properties ?? {};
+  const reqs     = new Set(schema.required ?? []);
+  const rawProps = getRawProps(rawSchema, fileMap);
+  const pad      = 12 + depth * 20;
 
   return Object.entries(props).map(([name, prop]) => {
     if (!prop || typeof prop !== 'object') return '';
 
     const isReq    = reqs.has(name);
-    const type     = typeStr(prop);
     const desc     = prop.description ?? '';
+    const rawProp  = rawProps[name] ?? null;
+    const named    = rawSchemas ? namedPropRef(rawProp) : null;
+
+    // Named schema ref — render as an expandable chip showing the schema name.
+    // The expanded content is the dereferenced schema so readers can inspect fields.
+    if (named) {
+      const { name: refName, isArray } = named;
+      const typeLabel = isArray ? `array[${refName}]` : refName;
+      const innerSchema = isArray ? prop.items : prop;
+      const innerRaw    = rawSchemas?.[refName] ?? null;
+      const innerHtml   = renderProps(innerSchema, depth + 1, rawSchemas, innerRaw, fileMap);
+      const readOnly    = prop.readOnly  ? `<span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>` : '';
+      const writeOnly   = prop.writeOnly ? `<span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">write-only</span>` : '';
+      return `<div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px ${pad}px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.text};">${esc(name)}</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:${COLORS.midBlue};background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:4px;padding:1px 6px;">${esc(typeLabel)}</span>
+            ${isReq ? `<span style="font-size:9px;font-weight:700;color:${COLORS.richRed};letter-spacing:0.04em;text-transform:uppercase;">required</span>` : ''}
+            ${readOnly}${writeOnly}
+            ${desc ? `<span style="font-size:11px;color:#555;margin-left:2px;">${esc(desc)}</span>` : ''}
+          </summary>
+          ${innerHtml
+            ? `<div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);">${innerHtml}</div>`
+            : `<div style="padding:6px 12px 6px ${pad + 20}px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>`}
+        </details>
+      </div>`;
+    }
+
+    const type     = typeStr(prop);
     const enumVals = prop.enum
       ? `<div style="margin-top:3px;font-size:10px;color:#666;">One of: ${prop.enum.map(v => `<code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">${esc(String(v))}</code>`).join(', ')}</div>`
       : '';
@@ -166,7 +284,7 @@ function renderProps(schema, depth = 0) {
     const readOnly  = prop.readOnly  ? `<span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>` : '';
     const writeOnly = prop.writeOnly ? `<span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">write-only</span>` : '';
 
-    // Determine what to recurse into
+    // Determine what to recurse into (inline anonymous objects)
     let inner = null;
     if (prop.type === 'object' || prop.properties || prop.allOf) inner = prop;
     else if (prop.type === 'array' && prop.items && typeof prop.items === 'object') {
@@ -174,7 +292,7 @@ function renderProps(schema, depth = 0) {
       if (items.type === 'object' || items.properties || items.allOf) inner = items;
     }
 
-    const children = inner ? renderProps(inner, depth + 1) : '';
+    const children = inner ? renderProps(inner, depth + 1, rawSchemas, null, fileMap) : '';
     const hasCh = children.trim().length > 0;
 
     return `<div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px ${pad}px;${hasCh ? 'background:rgba(0,0,0,0.015);' : ''}">
@@ -191,18 +309,18 @@ function renderProps(schema, depth = 0) {
   }).join('');
 }
 
-function renderSchema(schema) {
+function renderSchema(schema, rawSchemas = null, rawSchema = null, fileMap = null) {
   if (!schema || typeof schema !== 'object') return '';
 
   if (schema.type === 'array' && schema.items) {
-    const itemsBody = renderProps(schema.items);
+    const itemsBody = renderProps(schema.items, 0, rawSchemas, rawSchema, fileMap);
     const itemsDesc = itemsBody.trim()
       ? `<div style="font-size:10px;font-weight:700;letter-spacing:0.04em;color:#888;padding:5px 12px;background:#fafafa;border-bottom:1px solid #f0f0f0;">Array items:</div>${itemsBody}`
       : typeBadge(typeStr(schema));
     return itemsDesc;
   }
 
-  const body = renderProps(schema);
+  const body = renderProps(schema, 0, rawSchemas, rawSchema, fileMap);
   if (body.trim()) return body;
   return `<div style="padding:8px 12px;">${typeBadge(typeStr(schema))}</div>`;
 }
@@ -315,7 +433,7 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
 
 // ── Request body ──────────────────────────────────────────────────────────
 
-function renderRequestBody(reqBody, rawReqBody) {
+function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = null) {
   if (!reqBody) return '';
   const content    = reqBody.content ?? {};
   const mediaType  = content['application/json'] ?? Object.values(content)[0] ?? {};
@@ -325,15 +443,16 @@ function renderRequestBody(reqBody, rawReqBody) {
   const refName = localRef(rawReqBody);
   let bodyContent;
   if (refName) {
+    const rawSchema = rawSchemas?.[refName] ?? null;
     bodyContent = `<details style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">
       <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
         <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.midBlue};">${esc(refName)}</span>
       </summary>
-      <div style="border-top:1px solid #eee;">${renderSchema(schema)}</div>
+      <div style="border-top:1px solid #eee;">${renderSchema(schema, rawSchemas, rawSchema, fileMap)}</div>
     </details>`;
   } else {
-    bodyContent = `<div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">${renderSchema(schema)}</div>`;
+    bodyContent = `<div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">${renderSchema(schema, rawSchemas, null, fileMap)}</div>`;
   }
 
   return `<div style="margin-top:16px;">
@@ -346,7 +465,7 @@ function renderRequestBody(reqBody, rawReqBody) {
 
 // ── Response section ──────────────────────────────────────────────────────
 
-function renderResponses(responses, rawResponses = {}) {
+function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMap = null) {
   if (!responses || !Object.keys(responses).length) return '';
 
   const entries = Object.entries(responses).map(([status, resp]) => {
@@ -365,7 +484,9 @@ function renderResponses(responses, rawResponses = {}) {
     const schemaRefName   = !responseRefName ? localRef(rawResponses[status]) : null;
     let schemaHtml = '';
     if (responseRefName) {
-      const inner = schema ? renderSchema(schema) : `<div style="padding:8px 12px;font-size:12px;color:#555;">${esc(resp.description ?? '')}</div>`;
+      const inner = schema
+        ? renderSchema(schema, rawSchemas, null, fileMap)
+        : `<div style="padding:8px 12px;font-size:12px;color:#555;">${esc(resp.description ?? '')}</div>`;
       schemaHtml = `<details style="border-top:1px solid #f0f0f0;">
         <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
           <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
@@ -374,15 +495,16 @@ function renderResponses(responses, rawResponses = {}) {
         <div style="border-top:1px solid #f0f0f0;">${inner}</div>
       </details>`;
     } else if (schemaRefName) {
+      const rawSchema = rawSchemas?.[schemaRefName] ?? null;
       schemaHtml = `<details style="border-top:1px solid #f0f0f0;">
         <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
           <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
           <span style="font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.midBlue};">${esc(schemaRefName)}</span>
         </summary>
-        <div style="border-top:1px solid #f0f0f0;">${renderSchema(schema)}</div>
+        <div style="border-top:1px solid #f0f0f0;">${renderSchema(schema, rawSchemas, rawSchema, fileMap)}</div>
       </details>`;
     } else if (schema) {
-      schemaHtml = `<div style="border-top:1px solid #f0f0f0;">${renderSchema(schema)}</div>`;
+      schemaHtml = `<div style="border-top:1px solid #f0f0f0;">${renderSchema(schema, rawSchemas, null, fileMap)}</div>`;
     }
 
     return `<div style="border-top:1px solid #eee;">
@@ -406,7 +528,7 @@ function endpointId(path, method) {
   return `op-${method}-${path.replace(/\//g, '-').replace(/[{}]/g, '').replace(/--+/g, '-').replace(/^-|-$/g, '')}`;
 }
 
-function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()) {
+function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map(), rawSchemas = null, fileMap = null) {
   const id       = endpointId(path, method);
   const params   = op.parameters ?? [];
   const descHtml = op.description
@@ -436,8 +558,8 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
     <div style="padding:12px 16px;">
       ${descHtml}
       ${renderParams(params, paramNameByKey, rawOp?.parameters ?? [])}
-      ${renderRequestBody(op.requestBody, rawOp?.requestBody)}
-      ${renderResponses(op.responses, rawOp?.responses ?? {})}
+      ${renderRequestBody(op.requestBody, rawOp?.requestBody, rawSchemas, fileMap)}
+      ${renderResponses(op.responses, rawOp?.responses ?? {}, rawSchemas, fileMap)}
     </div>
   </details>
 </div>`;
@@ -448,10 +570,12 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
 function buildDomainPage({ slug, spec, raw }) {
   const metaSubtitle = headerMetaSubtitle(slug, resolvedSourcePairs(slug, { include: SOURCE_SUFFIXES }));
 
-  const info    = spec.info ?? {};
-  const paths   = spec.paths ?? {};
-  const tags    = spec.tags ?? [];
-  const tagMap  = new Map(tags.map(t => [t.name, t.description ?? '']));
+  const info       = spec.info ?? {};
+  const paths      = spec.paths ?? {};
+  const tags       = spec.tags ?? [];
+  const tagMap     = new Map(tags.map(t => [t.name, t.description ?? '']));
+  // Raw (pre-dereference) component schemas — used to detect named $ref chips in renderProps.
+  const rawSchemas = raw?.components?.schemas ?? null;
 
   // Merge spec-local and shared (external file) component parameters.
   // sharedParams covers SearchQueryParam, LimitParam, OffsetParam, SortParam which
@@ -540,7 +664,7 @@ function buildDomainPage({ slug, spec, raw }) {
   // Main content sections — nav links point to tag sections; endpoint cards are content-items within
   const sections = [...byTag.entries()].map(([tag, ops]) => {
     const tagDesc = tagMap.get(tag) ?? '';
-    const endpoints = ops.map(({ path, method, op, rawOp }) => renderEndpoint(path, method, op, rawOp, paramNameByKey)).join('');
+    const endpoints = ops.map(({ path, method, op, rawOp }) => renderEndpoint(path, method, op, rawOp, paramNameByKey, rawSchemas, domainSchemaFileMap)).join('');
     return `<section id="${sectionId(tag)}" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
         <h2 style="font-size:1rem;font-weight:800;color:${COLORS.darkBlue};margin-bottom:0.25rem;">${esc(tag)}</h2>
