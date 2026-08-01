@@ -10,6 +10,8 @@ The decision rules DSL defines named, derived values — eligibility determinati
 
 It is additive to the OpenAPI specs and the behavioral contract DSL in the same way the state machine DSL is: it does not replace field definitions or lifecycle states, it defines derived values computed from them.
 
+**Why not just use IRS Fact Graph as-is?** Its structural model (facts, dependency graph, completeness) is what this DSL borrows — see [Decision 1](#decision-1-dependency-graph-model-for-partial-evaluation). Whether to adopt its actual runtime, or build a new engine on the same ideas, is a separate question — see [Decision 2](#decision-2-build-a-new-engine-vs-adopting-fact-graphs-actual-runtime).
+
 ## Scope: the rules engine, not the whole eligibility domain
 
 This DSL covers one component of a larger picture: **the rules engine** — a stateless computation that, given a set of known and unknown facts, returns outcomes and identifies what's still needed. It does not cover:
@@ -26,7 +28,7 @@ The rules engine is invoked repeatedly, in different modes, by whatever owns tha
 |---|---|---|
 | `*-decision-rules.yaml` | Named fact declarations (writable and derived), their types, dependencies, and completeness behavior | `packages/contracts/schemas/decision-rules-schema.yaml` *(not yet written — scoped to the implementation issue)* |
 
-Like the state machine DSL, **the decision rules DSL is the specification, not the runtime.** States and adopters implement the actual evaluation engine themselves — the blueprint does not mandate a specific runtime. The mock server carries a reference implementation for development and testing only. See [Decision 4](#decision-4-engine-boundary-specification-vs-runtime).
+Like the state machine DSL, **the decision rules DSL is the specification, not the runtime.** States and adopters implement the actual evaluation engine themselves — the blueprint does not mandate a specific runtime. The mock server carries a reference implementation for development and testing only. See [Decision 5](#decision-5-engine-boundary-specification-vs-runtime).
 
 ## Structural model
 
@@ -34,10 +36,10 @@ Like the state machine DSL, **the decision rules DSL is the specification, not t
 
 A **Fact** is a named, typed, path-addressable value. Every fact is either:
 
-- **Writable** — supplied directly (an applicant's answer, a caseworker's entry). Analogous to a plain field on a resource, but addressable within the dependency graph.
-- **Derived** — computed from other facts via a CEL expression. See [Decision 2](#decision-2-cel-as-the-derivation-expression-language).
+- **Writable** — supplied directly (an applicant's answer, a caseworker's entry). Analogous to a plain field on a resource, but addressable within the dependency graph. A Writable fact may also declare a **placeholder** (a default value used when the fact hasn't been set — facts derived from it stay marked incomplete even though a computed value is available), an **override** (a condition under which a different value supersedes what was submitted), and **limits** (min/max bounds on the value).
+- **Derived** — computed from other facts via a CEL expression. See [Decision 3](#decision-3-cel-as-the-derivation-expression-language).
 
-Facts are typed (string, number, boolean, date, dollar/currency, enum) and declared once; both the type and the derivation (if any) live in the same declaration.
+Facts are typed and declared once; both the type and the derivation (if any) live in the same declaration. The type registry is not a fixed enum baked into the schema — it's extensible, so a type can be added later without a breaking schema change. The starting set carries over the full type system observed in Fact Graph's actual implementation, not a hand-picked subset: `boolean`, `int`, `string`, `dollar`, `day`, `days` (date difference), `rational`, `enum`, `multiEnum`, `address`, `bankAccount`, `phoneNumber`, `email`, `ein`, `tin`, `pin`/`ipPin`, plus `collection` for repeating structures (see [Collection](#collection) below). Some of these (`ein`, `tin`, `pin`) are IRS/tax-identity-specific and may never see real use in this domain, but nothing is excluded on the assumption it won't be needed — the type registry being extensible means there's no cost to carrying a type forward that turns out to be unused, and no schema migration required if one turns out to be needed after all.
 
 ### Dependency path
 
@@ -74,7 +76,7 @@ The last two rows are why the completeness model needs to be a genuine per-fact 
 
 ## Expression layer
 
-Every Derived fact's computation is a single CEL expression string — the same expression language already used for guards, SLA conditions, and metric filters (`behavioral-contract-dsl.md`, Decision 1). See [Decision 2](#decision-2-cel-as-the-derivation-expression-language) for the choice of CEL itself, and [Decision 3](#decision-3-currency-precision-in-cel-expressions) for how currency arithmetic is handled given CEL's native numeric types.
+Every Derived fact's computation is a single CEL expression string — the same expression language already used for guards, SLA conditions, and metric filters (`behavioral-contract-dsl.md`, Decision 1). See [Decision 3](#decision-3-cel-as-the-derivation-expression-language) for the choice of CEL itself, and [Decision 4](#decision-4-currency-precision-in-cel-expressions) for how currency arithmetic is handled given CEL's native numeric types.
 
 ```yaml
 facts:
@@ -91,12 +93,13 @@ facts:
 | # | Decision | Summary |
 |---|---|---|
 | 1 | [Dependency graph model for partial evaluation](#decision-1-dependency-graph-model-for-partial-evaluation) | A Fact Graph-inspired dependency graph with three-valued completeness, not a decision-table or forward-chaining model, because eligibility screening needs answers from partial data — and existing open-source backward-chaining engines don't fit this problem's shape either. |
-| 2 | [CEL as the derivation expression language](#decision-2-cel-as-the-derivation-expression-language) | Every Derived fact's body is a CEL expression, not a bespoke operator tree — keeps one expression language across the whole blueprint. |
-| 3 | [Currency precision in CEL expressions](#decision-3-currency-precision-in-cel-expressions) | CEL has no native arbitrary-precision decimal type; dollar arithmetic is handled via custom CEL functions/types rather than native floating-point operators, chosen for its extensibility to other gaps found later. |
-| 4 | [Engine boundary: specification vs. runtime](#decision-4-engine-boundary-specification-vs-runtime) | The blueprint owns the DSL schema and a mock-server reference implementation; the production evaluation engine is not a blueprint contract artifact. |
-| 5 | [Implementation language for the reference engine](#decision-5-implementation-language-for-the-reference-engine) | TypeScript, for zero-cross-compilation parity between server and browser execution. |
-| 6 | [Client-side vs. server-side execution model](#decision-6-client-side-vs-server-side-execution-model) | Client-side evaluation is advisory only; the server re-runs the same fact dictionary as the authoritative determination. |
-| 7 | [Single engine vs. coexisting with an existing engine](#decision-7-single-engine-vs-coexisting-with-an-existing-engine) | The blueprint doesn't require replacing a state's existing rules engine wholesale — running the new engine for partial/what-if/pre-screening modes alongside an existing forward-chaining engine for formal determinations is a legitimate adoption path. |
+| 2 | [Build a new engine vs. adopting Fact Graph's actual runtime](#decision-2-build-a-new-engine-vs-adopting-fact-graphs-actual-runtime) | Borrow Fact Graph's semantics, not its code, syntax, or runtime — its main asset (tax-law hardening) doesn't transfer to this domain, while its toolchain, leaky API, and XML syntax would all be inherited costs. |
+| 3 | [CEL as the derivation expression language](#decision-3-cel-as-the-derivation-expression-language) | Every Derived fact's body is a CEL expression, not a bespoke operator tree — keeps one expression language across the whole blueprint. |
+| 4 | [Currency precision in CEL expressions](#decision-4-currency-precision-in-cel-expressions) | CEL has no native arbitrary-precision decimal type; dollar arithmetic is handled via custom CEL functions/types rather than native floating-point operators, chosen for its extensibility to other gaps found later. |
+| 5 | [Engine boundary: specification vs. runtime](#decision-5-engine-boundary-specification-vs-runtime) | The blueprint owns the DSL schema and a mock-server reference implementation; the production evaluation engine is not a blueprint contract artifact. |
+| 6 | [Implementation language for the reference engine](#decision-6-implementation-language-for-the-reference-engine) | TypeScript, for zero-cross-compilation parity between server and browser execution. |
+| 7 | [Client-side vs. server-side execution model](#decision-7-client-side-vs-server-side-execution-model) | Client-side evaluation is advisory only; the server re-runs the same fact dictionary as the authoritative determination. |
+| 8 | [Single engine vs. coexisting with an existing engine](#decision-8-single-engine-vs-coexisting-with-an-existing-engine) | The blueprint doesn't require replacing a state's existing rules engine wholesale — running the new engine for partial/what-if/pre-screening modes alongside an existing forward-chaining engine for formal determinations is a legitimate adoption path. |
 
 ---
 
@@ -114,24 +117,46 @@ facts:
 
 **Considerations:**
 - Of the vendors researched, JSM, ServiceNow, and Salesforce Government Cloud all use null-check-style condition/decision-table logic with no first-class "pending" or "placeholder" value — missing data is either a fallback branch or a value the rule author must explicitly check for. None has a native eligibility/benefits-determination product with genuine partial-evaluation support.
-- **IBM Cúram** is the closest domain analog and the one real counter-example among the forward-chaining products: its Evidence model supports "provisional determinations" (IBM's own documentation: "any result presented is provisional, dependent upon the client providing supporting documentation") plus e-verification and an evidence-completeness "concerns" list. Critically, this capability lives in the *orchestration/evidence layer wrapping CER*, not in the rules engine itself — CER is still a forward-chaining engine with no native completeness propagation through derived calculations. This is a legitimate, decades-proven alternative architecture: keep a simpler engine, put completeness-tracking in the surrounding system. See [Decision 7](#decision-7-single-engine-vs-coexisting-with-an-existing-engine) for why this doesn't have to be an either/or choice for adopters.
+- **IBM Cúram** is the closest domain analog and the one real counter-example among the forward-chaining products: its Evidence model supports "provisional determinations" (IBM's own documentation: "any result presented is provisional, dependent upon the client providing supporting documentation") plus e-verification and an evidence-completeness "concerns" list. Critically, this capability lives in the *orchestration/evidence layer wrapping CER*, not in the rules engine itself — CER is still a forward-chaining engine with no native completeness propagation through derived calculations. This is a legitimate, decades-proven alternative architecture: keep a simpler engine, put completeness-tracking in the surrounding system. See [Decision 8](#decision-8-single-engine-vs-coexisting-with-an-existing-engine) for why this doesn't have to be an either/or choice for adopters.
 - **Progress Corticon** (decision tables / Rulesheets, single-pass dependency-ordered execution) explicitly recommends the opposite pattern in its own documentation: validation Rulesheets that terminate execution if data is incomplete, rather than attempting a provisional result. It also is not open source.
 - **Oracle Intelligent Advisor** (formerly Oracle Policy Automation) is genuine backward-chaining — confirmed via its own documentation: a two-phase cycle that traces the dependency tree backward from a goal attribute to find what's unknown, then forward once facts resolve, with an API that returns "what information is needed to determine the value (if unknown)." This is real, production-proven prior art for exactly the mechanism this DSL wants. It is commercial/proprietary, ruling it out directly, but it validates that the underlying approach works at scale.
 - **Open Policy Agent (OPA/Rego)** is a genuine, mature, open-source, backward-chaining engine with an explicit unknown-inputs model — the closest open-source match on architecture. It doesn't fit this problem well regardless: it's built for boolean authorization/policy decisions, not typed numeric calculations with dollar amounts and dependency chains over collections, and it returns residual rule expressions (an abstract syntax tree) rather than caseworker-facing blocking-factor descriptions — which reintroduces the same translation-layer cost that using a backward-chaining engine was supposed to avoid.
 - **IRS Fact Graph** is open source (CC0), purpose-built for exactly this shape of problem (typed derived facts, dependency graph, three-state completeness), and reduces the translation-layer burden other engines carry because rules are authored once and consumed directly by both JVM and JavaScript runtimes with no separate translation step.
 
 **Options:**
-- **(A)** Forward-chaining engine + orchestration-layer completeness tracking (Cúram's proven pattern) — decades of production use in benefits eligibility, but completeness logic lives outside the engine and must be independently maintained in the orchestrator (explicit rules, an adapter manifest, or both — see Decision 4's discussion of translation-layer cost)
+- **(A)** Forward-chaining engine + orchestration-layer completeness tracking (Cúram's proven pattern) — decades of production use in benefits eligibility, but completeness logic lives outside the engine and must be independently maintained in the orchestrator (explicit rules, an adapter manifest, or both — see Decision 5's discussion of translation-layer cost)
 - **(B) ✓** Dependency-graph engine with native three-valued completeness (Fact Graph-inspired) — completeness is a property of the engine itself, not bolted on; no open-source product already does this for typed calculation (as opposed to authorization) use cases
 - **(C)** Adopt an existing backward-chaining engine directly — Oracle Intelligent Advisor is commercial (ruled out), OPA/Rego is open source but a capability and output-shape mismatch (authorization-boolean vs. typed calculation; AST output requires the same translation layer we're trying to avoid)
 
 **Decision:** Dependency graph, native completeness (B). Not because no other product has ever solved partial evaluation — Cúram and Oracle Intelligent Advisor both prove the underlying need is real and solvable — but because among the options that fit this DSL's actual requirements (open source, typed calculation rather than boolean authorization, completeness as an engine property rather than an externally-maintained concern), none of the existing products are a fit. This is a deliberate, evaluated departure from the dominant commercial pattern (forward-chaining/decision-table), not an uninformed one.
 
-**Customization:** A state with an existing forward-chaining engine already embedded in their case management platform is not required to replace it — see [Decision 7](#decision-7-single-engine-vs-coexisting-with-an-existing-engine).
+**Customization:** A state with an existing forward-chaining engine already embedded in their case management platform is not required to replace it — see [Decision 8](#decision-8-single-engine-vs-coexisting-with-an-existing-engine).
 
 ---
 
-### Decision 2: CEL as the derivation expression language
+### Decision 2: Build a new engine vs. adopting Fact Graph's actual runtime
+
+**Status:** Decided: B
+
+**What's being decided:** Given that IRS Fact Graph already exists, is open source (CC0), and fits the architecture family chosen in Decision 1, whether to adopt its actual Scala/Scala.js runtime directly — rather than building a new engine that borrows its semantics but not its code.
+
+**Considerations:**
+- Fact Graph's biggest practical asset — years of production hardening against tax-law edge cases — is domain-specific to tax and doesn't transfer to safety-net eligibility rules. Adopting it would mean carrying its Scala/JVM/Scala.js toolchain as an ongoing dependency without the one benefit that would justify that cost.
+- Fact Graph's own maintainers describe its Java/JavaScript consumption API as leaky and undocumented (e.g., `DollarWrapper` vs. `Dollar` exposed as separate types) — an acknowledged wart in their own architecture decision record, not a hypothetical concern.
+- Its XML authoring format is a nested operator tree — the same verbosity problem CEL was chosen elsewhere in this blueprint specifically to avoid (see [Decision 3](#decision-3-cel-as-the-derivation-expression-language)).
+- Its Scala.js browser target requires a cross-compilation step; a new TypeScript implementation gets browser + server parity natively, with no separate compile step at all (see [Decision 6](#decision-6-implementation-language-for-the-reference-engine)).
+- Fact Graph's architecture assumes it's the one engine in the system — it doesn't natively address running alongside another engine for different workloads, which this design explicitly wants to support (see [Decision 8](#decision-8-single-engine-vs-coexisting-with-an-existing-engine)).
+- The risk of building new rather than adopting: losing Fact Graph's own hardening around subtle mechanics — collection/wildcard path resolution has needed a bug fix as recently as their own March 2026 release, evidence this is a genuinely tricky area even for the original team. Mitigated by a one-time bootstrap validation against the real Fact Graph engine before any real rule authoring begins (see [Next steps](#next-steps-informal--not-a-substitute-for-plan)), rather than an ongoing dependency.
+
+**Options:**
+- **(A)** Adopt Fact Graph's actual runtime (Scala/Scala.js), directly or via a thin wrapper — inherits its production hardening, but that hardening is tax-specific and doesn't transfer; carries a permanent JVM/Scala.js toolchain dependency; inherits its acknowledged leaky API and XML verbosity
+- **(B) ✓** Build a new engine borrowing Fact Graph's semantics (the fact/dependency/completeness model) but not its code, syntax, or runtime — no ongoing foreign-toolchain dependency, a clean API designed from scratch, CEL instead of XML, native browser/server parity, and explicit support for coexisting with another engine; validated once against the real Fact Graph engine as a bootstrap correctness check rather than an ongoing dependency
+
+**Decision:** Build new (B). What's being adopted from Fact Graph is the *idea* — a dependency graph of typed facts with native completeness tracking — not the artifact. Everything Fact Graph would bring along with itself (a foreign toolchain, an acknowledged-leaky API, an XML authoring format inconsistent with the rest of this blueprint, an architecture that assumes it's the only engine) is friction without a matching benefit once the domain isn't tax.
+
+---
+
+### Decision 3: CEL as the derivation expression language
 
 **Status:** Decided: B
 
@@ -143,7 +168,7 @@ facts:
 - A second expression syntax in the blueprint would recreate the exact problem Decision 1 in the behavioral contract DSL was written to prevent — parallel constructs for the same concept.
 - CEL already handles arithmetic, comparisons, and list operations cleanly (`totalWages + interestIncome`), with no loss of expressiveness for the arithmetic/comparison operations a Derived fact needs.
 - The structural parts of Fact Graph's model worth keeping (facts, dependencies, completeness, collections) are independent of what expression syntax computes a value — adopting the structure doesn't require adopting the syntax.
-- CEL's native type system doesn't cover everything Fact Graph's own type system does (most notably currency precision) — see [Decision 3](#decision-3-currency-precision-in-cel-expressions) for how that gap is closed without abandoning CEL.
+- CEL's native type system doesn't cover everything Fact Graph's own type system does (most notably currency precision) — see [Decision 4](#decision-4-currency-precision-in-cel-expressions) for how that gap is closed without abandoning CEL.
 
 **Options:**
 - **(A)** Bespoke operator tree (Fact Graph's own XML shape, translated to JSON) — matches the reference implementation directly, but reintroduces the verbosity problem CEL was chosen to avoid
@@ -153,13 +178,13 @@ facts:
 
 ---
 
-### Decision 3: Currency precision in CEL expressions
+### Decision 4: Currency precision in CEL expressions
 
 **Status:** Decided: B
 
 **What's being decided:** How Derived facts express dollar-amount arithmetic, given that CEL's native numeric types (`int64`, `uint64`, `double`) don't include an arbitrary-precision decimal type, while Fact Graph's own `Dollar` type is deliberately implemented as a `BigDecimal` specifically to avoid floating-point rounding error in benefit calculations.
 
-**Background:** This is the one place where adopting CEL (Decision 2) doesn't get full parity with Fact Graph's type system for free. Doing dollar arithmetic in CEL's native `double` risks the same cumulative rounding error BigDecimal exists to prevent — a real concern for a system computing benefit amounts to the cent.
+**Background:** This is the one place where adopting CEL (Decision 3) doesn't get full parity with Fact Graph's type system for free. Doing dollar arithmetic in CEL's native `double` risks the same cumulative rounding error BigDecimal exists to prevent — a real concern for a system computing benefit amounts to the cent.
 
 **Considerations:**
 - Representing money as integer cents keeps arithmetic exact using CEL's native `int64` type, with no extension work required. But it puts a silent unit-convention burden on every rule author and consumer (is this value dollars or cents?), and doesn't generalize — it only solves the currency case, not any other precision- or type-specific gap between CEL and Fact Graph's type system that turns up later.
@@ -170,11 +195,11 @@ facts:
 - **(A)** Represent money as integer cents, relying only on CEL's native `int64` arithmetic — simplest, no extension work, but a silent unit-convention burden on every rule author and doesn't generalize to other gaps
 - **(B) ✓** Register custom CEL functions/types for decimal-safe currency arithmetic — more upfront implementation work, but matches Fact Graph's actual `Dollar` semantics precisely and establishes a reusable extension pattern for whatever else comes up
 
-**Decision:** Custom CEL extensions (B), chosen specifically for the extensibility: this doesn't just solve currency precision, it establishes how any future CEL-vs-Fact-Graph type gap gets closed, rather than needing a bespoke workaround each time one is found.
+**Decision:** Custom CEL extensions (B), chosen specifically for the extensibility: this doesn't just solve currency precision, it establishes how any future CEL-vs-Fact-Graph type gap gets closed, rather than needing a bespoke workaround each time one is found. This is the same extensibility principle behind the fact type registry itself (see [Fact](#fact) in the Structural Model) — types and their CEL-level operations are both meant to grow as gaps are found, not to be fixed at design time.
 
 ---
 
-### Decision 4: Engine boundary — specification vs. runtime
+### Decision 5: Engine boundary — specification vs. runtime
 
 **Status:** Decided: B
 
@@ -191,13 +216,13 @@ facts:
 
 **Decision:** Specification only (B), consistent with the existing state machine DSL precedent.
 
-**Customization:** States/adopters may implement the decision-rules DSL with any engine that honors the schema and completeness semantics — this is the intended extensibility point, not a gap. See also [Decision 7](#decision-7-single-engine-vs-coexisting-with-an-existing-engine) for running this alongside an existing engine rather than replacing it.
+**Customization:** States/adopters may implement the decision-rules DSL with any engine that honors the schema and completeness semantics — this is the intended extensibility point, not a gap. See also [Decision 8](#decision-8-single-engine-vs-coexisting-with-an-existing-engine) for running this alongside an existing engine rather than replacing it.
 
 ---
 
-### Decision 5: Implementation language for the reference engine
+### Decision 6: Implementation language for the reference engine
 
-**Status:** Decided: B *(applies to the reference implementation this design work produces, not a blueprint contract requirement — see Decision 4)*
+**Status:** Decided: B *(applies to the reference implementation this design work produces, not a blueprint contract requirement — see Decision 5)*
 
 **What's being decided:** What language the reference/production evaluation engine (built outside the blueprint's own contract artifacts) should be implemented in, given a requirement to run identically server-side and client-side for live partial-result UI during intake.
 
@@ -214,7 +239,7 @@ facts:
 
 ---
 
-### Decision 6: Client-side vs. server-side execution model
+### Decision 7: Client-side vs. server-side execution model
 
 **Status:** Decided: B
 
@@ -233,7 +258,7 @@ facts:
 
 ---
 
-### Decision 7: Single engine vs. coexisting with an existing engine
+### Decision 8: Single engine vs. coexisting with an existing engine
 
 **Status:** Decided: B
 
@@ -260,13 +285,13 @@ facts:
 | Element | Reason | Decision |
 |---|---|---|
 | Three-valued completeness propagation | The one capability decision-table and forward-chaining engines can't provide without an external orchestration layer; removing it collapses this DSL back into a decision table with extra ceremony | [Decision 1](#decision-1-dependency-graph-model-for-partial-evaluation) |
-| CEL as the sole derivation expression language | Keeps one expression language across the whole blueprint contract surface | [Decision 2](#decision-2-cel-as-the-derivation-expression-language) |
-| Client-side-advisory / server-side-authoritative rule | Prevents a tampered or stale client result from being treated as a real eligibility determination | [Decision 6](#decision-6-client-side-vs-server-side-execution-model) |
-| Rule-set versioning at the fact-dictionary level | Required for both QC re-determination replay and client/server consistency — the same mechanism serves both | [Decision 6](#decision-6-client-side-vs-server-side-execution-model) |
+| CEL as the sole derivation expression language | Keeps one expression language across the whole blueprint contract surface | [Decision 3](#decision-3-cel-as-the-derivation-expression-language) |
+| Client-side-advisory / server-side-authoritative rule | Prevents a tampered or stale client result from being treated as a real eligibility determination | [Decision 7](#decision-7-client-side-vs-server-side-execution-model) |
+| Rule-set versioning at the fact-dictionary level | Required for both QC re-determination replay and client/server consistency — the same mechanism serves both | [Decision 7](#decision-7-client-side-vs-server-side-execution-model) |
 
 ### Engine choice
 
-The blueprint does not mandate an evaluation engine (Decision 4). States/adopters may implement the DSL's completeness and dependency semantics with any engine of their choosing, including running it alongside an existing forward-chaining engine rather than replacing it (Decision 7).
+The blueprint does not mandate an evaluation engine (Decision 5). States/adopters may implement the DSL's completeness and dependency semantics with any engine of their choosing, including running it alongside an existing forward-chaining engine rather than replacing it (Decision 8).
 
 ## Out of scope
 
@@ -283,8 +308,8 @@ The blueprint does not mandate an evaluation engine (Decision 4). States/adopter
 |---|---|---|
 | Decision-table / rulesheet authoring | Dominant commercial pattern across JSM, ServiceNow, Salesforce Government Cloud, and Progress Corticon | **Not in scope** — baseline authoring model is a dependency graph, not a decision table; see Decision 1 |
 | Partial/incomplete-input evaluation as an engine property | Not native to any decision-table/forward-chaining product researched; IBM Cúram achieves a similar outcome via an orchestration layer over a forward-chaining engine, not the engine itself; Oracle Intelligent Advisor achieves it natively but is commercial | **Planned** — the core capability this DSL exists to provide, achieved as a native engine property rather than bolted on; see #386 |
-| Vendor-neutral rules specification format | Vendors generally couple rule authoring to their own engine | **Planned** — this DSL is JSON/CEL-based and engine-agnostic; see Decision 4 |
-| Coexistence with an existing case-management-embedded rules engine | Common in practice (e.g., ACA-era MAGI/non-MAGI engine splits) | **Planned** — explicit adoption path, not required to replace an existing engine; see Decision 7 |
+| Vendor-neutral rules specification format | Vendors generally couple rule authoring to their own engine | **Planned** — this DSL is JSON/CEL-based and engine-agnostic; see Decision 5 |
+| Coexistence with an existing case-management-embedded rules engine | Common in practice (e.g., ACA-era MAGI/non-MAGI engine splits) | **Planned** — explicit adoption path, not required to replace an existing engine; see Decision 8 |
 
 ## Next steps (informal — not a substitute for `/plan`)
 
@@ -292,7 +317,7 @@ Once this design doc is out of draft, the anticipated implementation sequence is
 
 1. Finalize this architecture doc (deepen vendor research further if needed, resolve any open design questions from #386).
 2. Design the domain orchestrator concern (blocking-factor lifecycle, state machine, event-driven re-evaluation, invocation-mode routing) as its own follow-on design — likely an extension of the existing state machine DSL rather than this one.
-3. Write the JSON Schema for the decision-rules artifact (`packages/contracts/schemas/decision-rules-schema.yaml`), including the custom CEL currency-arithmetic functions/types from Decision 3.
+3. Write the JSON Schema for the decision-rules artifact (`packages/contracts/schemas/decision-rules-schema.yaml`), including the custom CEL currency-arithmetic functions/types from Decision 4.
 4. One-time bootstrap validation: mine `IRS-Public/fact-graph`'s per-operator test specs and its `exampleAgiFacts.xml`/`ExampleAgiSpec.scala` example for input/expected-output cases, build a narrow JSON-to-their-XML transpiler, and run both engines against the same case matrix (including partial-input cases) as a correctness check before trusting the new engine's mechanics — with extra coverage on collection/wildcard path resolution. Drop the Scala oracle once parity is confirmed. **Note: this transpiler is scoped only to the operators exercised by mined test cases and is not the same tool as item 5 below — it's throwaway, not an authoring aid.**
 5. Consider a general-purpose, bidirectional XML ↔ JSON converter as a separate, ongoing tool (not the throwaway one in item 4) — this would let someone already fluent in Fact Graph's XML fact-dictionary syntax author or read rules in a familiar format without learning our JSON DSL from scratch. Unlike the bootstrap transpiler, this needs to cover the full syntax surface anyone might reasonably author with, handle edge cases gracefully, and give useful error messages, since real people would depend on it rather than an internal test harness alone. Whether this is worth building — and whether it should be bidirectional or one-directional — is an open question, not yet decided; it's a convenience/onboarding tool, not a structural requirement of the DSL itself.
 6. Build the TypeScript reference engine (dependency evaluator, completeness propagation, CEL integration including the currency extensions, collections).
