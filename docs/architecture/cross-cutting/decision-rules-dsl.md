@@ -99,7 +99,7 @@ facts:
 | 5 | [Engine boundary: specification vs. runtime](#decision-5-engine-boundary-specification-vs-runtime) | The blueprint owns the DSL schema and a mock-server reference implementation; the production evaluation engine is not a blueprint contract artifact. |
 | 6 | [Implementation language for the reference engine](#decision-6-implementation-language-for-the-reference-engine) | TypeScript, for zero-cross-compilation parity between server and browser execution. |
 | 7 | [Client-side vs. server-side execution model](#decision-7-client-side-vs-server-side-execution-model) | Client-side evaluation is advisory only; the server re-runs the same fact dictionary as the authoritative determination. |
-| 8 | [Single engine vs. coexisting with an existing engine](#decision-8-single-engine-vs-coexisting-with-an-existing-engine) | The blueprint doesn't require replacing a state's existing rules engine wholesale — running the new engine for partial/what-if/pre-screening modes alongside an existing forward-chaining engine for formal determinations is a legitimate adoption path. |
+| 8 | [Is full engine replacement required to adopt this DSL?](#decision-8-is-full-engine-replacement-required-to-adopt-this-dsl) | Not required as a prerequisite — the one well-justified reason for temporary coexistence is using the existing engine to vet the new engine's determinations during migration, not a permanent workload split. |
 
 ---
 
@@ -117,7 +117,7 @@ facts:
 
 **Considerations:**
 - Of the vendors researched, JSM, ServiceNow, and Salesforce Government Cloud all use null-check-style condition/decision-table logic with no first-class "pending" or "placeholder" value — missing data is either a fallback branch or a value the rule author must explicitly check for. None has a native eligibility/benefits-determination product with genuine partial-evaluation support.
-- **IBM Cúram** is the closest domain analog and the one real counter-example among the forward-chaining products: its Evidence model supports "provisional determinations" (IBM's own documentation: "any result presented is provisional, dependent upon the client providing supporting documentation") plus e-verification and an evidence-completeness "concerns" list. Critically, this capability lives in the *orchestration/evidence layer wrapping CER*, not in the rules engine itself — CER is still a forward-chaining engine with no native completeness propagation through derived calculations. This is a legitimate, decades-proven alternative architecture: keep a simpler engine, put completeness-tracking in the surrounding system. See [Decision 8](#decision-8-single-engine-vs-coexisting-with-an-existing-engine) for why this doesn't have to be an either/or choice for adopters.
+- **IBM Cúram** is the closest domain analog and the one real counter-example among the forward-chaining products: its Evidence model supports "provisional determinations" (IBM's own documentation: "any result presented is provisional, dependent upon the client providing supporting documentation") plus e-verification and an evidence-completeness "concerns" list. Critically, this capability lives in the *orchestration/evidence layer wrapping CER*, not in the rules engine itself — CER is still a forward-chaining engine with no native completeness propagation through derived calculations. This is a legitimate, decades-proven alternative architecture: keep a simpler engine, put completeness-tracking in the surrounding system. See [Decision 8](#decision-8-is-full-engine-replacement-required-to-adopt-this-dsl) for the narrow, performance-driven case where an adopter might keep both approaches running rather than a full switch.
 - **Progress Corticon** (decision tables / Rulesheets, single-pass dependency-ordered execution) explicitly recommends the opposite pattern in its own documentation: validation Rulesheets that terminate execution if data is incomplete, rather than attempting a provisional result. It also is not open source.
 - **Oracle Intelligent Advisor** (formerly Oracle Policy Automation) is genuine backward-chaining — confirmed via its own documentation: a two-phase cycle that traces the dependency tree backward from a goal attribute to find what's unknown, then forward once facts resolve, with an API that returns "what information is needed to determine the value (if unknown)." This is real, production-proven prior art for exactly the mechanism this DSL wants. It is commercial/proprietary, ruling it out directly, but it validates that the underlying approach works at scale.
 - **Open Policy Agent (OPA/Rego)** is a genuine, mature, open-source, backward-chaining engine with an explicit unknown-inputs model — the closest open-source match on architecture. It doesn't fit this problem well regardless: it's built for boolean authorization/policy decisions, not typed numeric calculations with dollar amounts and dependency chains over collections, and it returns residual rule expressions (an abstract syntax tree) rather than caseworker-facing blocking-factor descriptions — which reintroduces the same translation-layer cost that using a backward-chaining engine was supposed to avoid.
@@ -130,7 +130,7 @@ facts:
 
 **Decision:** Dependency graph, native completeness (B). Not because no other product has ever solved partial evaluation — Cúram and Oracle Intelligent Advisor both prove the underlying need is real and solvable — but because among the options that fit this DSL's actual requirements (open source, typed calculation rather than boolean authorization, completeness as an engine property rather than an externally-maintained concern), none of the existing products are a fit. This is a deliberate, evaluated departure from the dominant commercial pattern (forward-chaining/decision-table), not an uninformed one.
 
-**Customization:** A state with an existing forward-chaining engine already embedded in their case management platform is not required to replace it — see [Decision 8](#decision-8-single-engine-vs-coexisting-with-an-existing-engine).
+**Customization:** A state with an existing forward-chaining engine already embedded in their case management platform is not required to replace it before adopting this DSL — see [Decision 8](#decision-8-is-full-engine-replacement-required-to-adopt-this-dsl), which narrows this to a specific, conditional case rather than a general dual-engine recommendation.
 
 ---
 
@@ -145,7 +145,7 @@ facts:
 - Fact Graph's own maintainers describe its Java/JavaScript consumption API as leaky and undocumented (e.g., `DollarWrapper` vs. `Dollar` exposed as separate types) — an acknowledged wart in their own architecture decision record, not a hypothetical concern.
 - Its XML authoring format is a nested operator tree — the same verbosity problem CEL was chosen elsewhere in this blueprint specifically to avoid (see [Decision 3](#decision-3-cel-as-the-derivation-expression-language)).
 - Its Scala.js browser target requires a cross-compilation step; a new TypeScript implementation gets browser + server parity natively, with no separate compile step at all (see [Decision 6](#decision-6-implementation-language-for-the-reference-engine)).
-- Fact Graph's architecture assumes it's the one engine in the system — it doesn't natively address running alongside another engine for different workloads, which this design explicitly wants to support (see [Decision 8](#decision-8-single-engine-vs-coexisting-with-an-existing-engine)).
+- Fact Graph itself doesn't restrict a system to a single engine — nothing in its code prevents running another engine alongside it. But Direct File's use of it never needed to address coexistence with another rules engine, so Fact Graph has no native concept of routing between engines or reconciling two engines' results. That's an absence in what it was built for, not a constraint it imposes. This design doesn't need to *require* multi-engine support either — it just shouldn't foreclose it by mandating a single engine as a baseline requirement (see [Decision 8](#decision-8-is-full-engine-replacement-required-to-adopt-this-dsl)).
 - The risk of building new rather than adopting: losing Fact Graph's own hardening around subtle mechanics — collection/wildcard path resolution has needed a bug fix as recently as their own March 2026 release, evidence this is a genuinely tricky area even for the original team. Mitigated by a one-time bootstrap validation against the real Fact Graph engine before any real rule authoring begins (see [Next steps](#next-steps-informal--not-a-substitute-for-plan)), rather than an ongoing dependency.
 
 **Options:**
@@ -216,7 +216,7 @@ facts:
 
 **Decision:** Specification only (B), consistent with the existing state machine DSL precedent.
 
-**Customization:** States/adopters may implement the decision-rules DSL with any engine that honors the schema and completeness semantics — this is the intended extensibility point, not a gap. See also [Decision 8](#decision-8-single-engine-vs-coexisting-with-an-existing-engine) for running this alongside an existing engine rather than replacing it.
+**Customization:** States/adopters may implement the decision-rules DSL with any engine that honors the schema and completeness semantics — this is the intended extensibility point, not a gap. See also [Decision 8](#decision-8-is-full-engine-replacement-required-to-adopt-this-dsl) for the narrow, temporary case where running this alongside an existing engine is justified (migration-time shadow-validation), rather than a general license to run two engines indefinitely.
 
 ---
 
@@ -258,23 +258,25 @@ facts:
 
 ---
 
-### Decision 8: Single engine vs. coexisting with an existing engine
+### Decision 8: Is full engine replacement required to adopt this DSL?
 
 **Status:** Decided: B
 
-**What's being decided:** Whether adopting this DSL requires a state to replace their existing rules engine entirely, or whether it can run alongside one.
+**What's being decided:** Whether a state must fully replace their existing rules engine before they can start adopting this DSL at all — not whether running two engines long-term is good architecture. Those are separate questions, and this decision only answers the first one.
 
-**Background:** Many states already have a forward-chaining engine embedded in their case management platform (Cúram's CER, or similar). Requiring wholesale replacement to get partial/progressive-evaluation support would be a significant, possibly unjustified, migration cost.
+**Background:** Many states already have a forward-chaining engine embedded in their case management platform (Cúram's CER, or similar). The real-world precedent for long-term dual-engine operation — the ACA-era MAGI/non-MAGI split (e.g., CalHEERS for MAGI/marketplace, CalSAWS for everything else) — is a cautionary example, not a validating one: states mostly ended up there by accident (forced by the MAGI/non-MAGI split), not by deliberate design, and it carries documented, serious risk.
 
 **Considerations:**
-- A workload-based split is a reasonable adoption path: backward-chaining (this DSL's engine) for pre-screening, what-if projections, and partial/progressive determination during intake or caseworker review; the existing forward-chaining engine stays for official determinations, batch redetermination, and ongoing renewal/lifecycle processing, where forward-chaining's efficient incremental-fact-update model and mature case-lifecycle tooling are genuine strengths.
-- Running two engines has real risks: keeping rule content in sync between them (e.g., annual FPL threshold updates must land in both), and resolving which engine's result is authoritative if they ever disagree at a fair hearing. Any adopter choosing this path needs an explicit answer to both before going live.
+- Requiring full replacement before any adoption can begin is a real barrier — a state with significant existing investment in an engine can't reasonably be asked to rip it out on day one just to get partial/progressive-evaluation support.
+- Running two engines *permanently* is not something this design should recommend. The real risks are serious for a system determining legally binding benefits: rule content can drift out of sync between engines (e.g., an annual FPL threshold update landing in one but not the other), and there's no inherent answer for which engine's result is authoritative if they disagree at a fair hearing. These aren't hypothetical — they're the documented failure modes of the precedent this decision is drawing on.
+- There is, however, one well-justified reason for *temporary* coexistence, distinct from either general migration reluctance or an assumed batch-performance need: using a state's existing, trusted, production engine as an oracle to vet the new engine's determinations before relying on it — the same class of technique as golden-master/parity testing generally, and the same pattern Decision 2 uses the actual Fact Graph engine for as a one-time correctness check on the new engine's core mechanics. Two complementary checks serve this: **(1)** partial-vs-partial — comparing the new engine's partial/progressive result against whatever interim logic the existing engine produces from the same known facts, catching mismatches as soon as they're computable; and **(2)** partial-vs-eventual-full — retroactively checking whether the new engine's earlier partial result, computed while a case was still incomplete, was consistent with what the case's existing-engine-computed full determination eventually resolved to, catching a different class of drift (an assumption that looked locally correct but wasn't once more facts arrived). This has the clean exit condition general "keep it around" reasoning lacks: once the new engine's outputs are shown trustworthy across enough real cases by both checks, the comparison stops and the existing engine is no longer needed for this purpose. The specific harness for running these checks is adopter-specific migration tooling, out of scope for this document (see [Out of scope](#out-of-scope)) — what belongs here is the principle that this is the legitimate reason to allow temporary coexistence at all.
+- A second possible reason sometimes raised — the new engine not scaling to batch/bulk workloads (mass redeterminations across a whole caseload) — is speculative and shouldn't be assumed. It's a performance-engineering problem to solve within a single engine first (parallelizing across independent cases, incremental/memoized re-evaluation rather than full graph recomputation per run) rather than a default reason to plan for a second engine.
 
 **Options:**
-- **(A)** Require full replacement of any existing rules engine to adopt this DSL
-- **(B) ✓** Allow coexistence — this DSL's engine handles the invocation modes it's suited for (partial/progressive, what-if, pre-screening); an existing engine can continue handling formal/official determinations, with an explicit adopter-level answer for rule-sync and disagreement-authority questions
+- **(A)** Require full replacement of any existing rules engine before adopting this DSL — avoids all coexistence risk, but blocks incremental adoption and forecloses shadow-validation as a migration strategy entirely
+- **(B) ✓** Don't require full replacement as a prerequisite to adopt this DSL — but the only well-justified reason for temporary coexistence is shadow-validation during migration (with an explicit exit condition once trust is established across both partial-vs-partial and partial-vs-eventual-full checks), not a permanent workload split and not an assumed batch-performance limitation
 
-**Decision:** Allow coexistence (B), consistent with the blueprint's extensibility principle — mandating full replacement would impose migration cost this design doesn't need to require.
+**Decision:** Don't require full replacement (B), narrowed specifically to migration-time shadow-validation as the legitimate case for temporary coexistence. This is not an endorsement of dual-engine operation as good architecture, and not a workload-split design. Batch-scale performance is treated as an engine-design problem to solve first, not a reason to plan for a second engine — see [Decision 6](#decision-6-implementation-language-for-the-reference-engine).
 
 ---
 
@@ -291,7 +293,7 @@ facts:
 
 ### Engine choice
 
-The blueprint does not mandate an evaluation engine (Decision 5). States/adopters may implement the DSL's completeness and dependency semantics with any engine of their choosing, including running it alongside an existing forward-chaining engine rather than replacing it (Decision 8).
+The blueprint does not mandate an evaluation engine (Decision 5). States/adopters may implement the DSL's completeness and dependency semantics with any engine of their choosing. Full replacement of an existing engine is not required before adoption can begin — the one well-justified reason to temporarily run both is migration-time shadow-validation, not a permanent split (Decision 8).
 
 ## Out of scope
 
@@ -309,7 +311,8 @@ The blueprint does not mandate an evaluation engine (Decision 5). States/adopter
 | Decision-table / rulesheet authoring | Dominant commercial pattern across JSM, ServiceNow, Salesforce Government Cloud, and Progress Corticon | **Not in scope** — baseline authoring model is a dependency graph, not a decision table; see Decision 1 |
 | Partial/incomplete-input evaluation as an engine property | Not native to any decision-table/forward-chaining product researched; IBM Cúram achieves a similar outcome via an orchestration layer over a forward-chaining engine, not the engine itself; Oracle Intelligent Advisor achieves it natively but is commercial | **Planned** — the core capability this DSL exists to provide, achieved as a native engine property rather than bolted on; see #386 |
 | Vendor-neutral rules specification format | Vendors generally couple rule authoring to their own engine | **Planned** — this DSL is JSON/CEL-based and engine-agnostic; see Decision 5 |
-| Coexistence with an existing case-management-embedded rules engine | Common in practice (e.g., ACA-era MAGI/non-MAGI engine splits) | **Planned** — explicit adoption path, not required to replace an existing engine; see Decision 8 |
+| Permanent coexistence with an existing case-management-embedded rules engine | Common in practice, but mostly by accident rather than design (e.g., ACA-era MAGI/non-MAGI engine splits), with documented rule-sync and fair-hearing-authority risks | **Not in scope** — not a recommended architecture; see Decision 8 |
+| Migration-time shadow-validation against an existing engine | Not a named industry pattern, but the same class of technique as golden-master/parity testing generally | **Planned** — the one justified reason for temporary coexistence, with an explicit exit condition; see Decision 8 |
 
 ## Next steps (informal — not a substitute for `/plan`)
 
