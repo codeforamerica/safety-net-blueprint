@@ -20,6 +20,8 @@ The Eligibility domain has also already made this DSL's Decision 5 for its own s
 
 What genuinely isn't covered yet by the Eligibility domain as designed: live, client-side partial/progressive evaluation during active data entry (as opposed to caseworker-triggered evaluate calls), and pre-application pre-screening. Those are this DSL's actual incremental contribution — see [Invocation modes](#invocation-modes) for how they relate to what already exists.
 
+**Two different contracts, two different adoption obligations.** `eligibility-openapi.yaml` and `eligibility-state-machine.yaml` are the one thing every adopter implements — fixed, blueprint-owned, the same regardless of what's behind them. `eligibility-adapter-openapi.yaml` sits behind that boundary; it stays a single contract too, not forked per engine architecture, but what a given adapter implementation actually populates within it varies by what rules engine is there. The current baseline (expedited screening, ex parte, final determination) works for any engine, forward- or backward-chaining, with no changes needed. The richer capabilities this DSL wants — a field carrying "still unknown, here's what's needed," a pre-screening call, QC replay against a pinned rule version — are inherently engine-dependent to populate: a backward-chaining engine produces them naturally, a forward-chaining one needs deliberate compensating work to populate them at all, or may only ever manage a coarse answer. This isn't a concern specific to this DSL or the eligibility adapter — it's the general problem of one adapter contract sitting in front of backends with genuinely different capability, addressed as a cross-cutting principle in [Adapter Pattern: Handling backend implementations with varying capability](adapters.md#handling-backend-implementations-with-varying-capability). See [Gap analysis against the existing adapter contract](#gap-analysis-against-the-existing-adapter-contract) for what specifically needs to change in `eligibility-adapter-openapi.yaml` to apply that principle here.
+
 ## Contract structure
 
 | Artifact | Purpose | Schema |
@@ -299,6 +301,22 @@ facts:
 
 The blueprint does not mandate an evaluation engine (Decision 5). States/adopters may implement the DSL's completeness and dependency semantics with any engine of their choosing. Full replacement of an existing engine is not required before adoption can begin — the one well-justified reason to temporarily run both is migration-time shadow-validation, not a permanent split (Decision 8).
 
+## Gap analysis against the existing adapter contract
+
+Checked against the actual `eligibility-adapter-openapi.yaml` rather than assumed:
+
+**Already adequate, no changes needed:**
+- **Formal determination** — `/evaluate/determination` exists, returns `ProgramDecision` (status/path/denialReasonCode).
+- **Constrained at-submission evaluation** — `/evaluate/expedited-screening` and `/evaluate/medicaid-ex-parte` are real, working examples of this shape already.
+- **What-if / trial runs** — the adapter is stateless; whether a call is "trial" or "official" is an orchestration-level decision (whether the caller persists the result), not something the adapter contract itself needs to represent.
+
+**Real gaps:**
+1. **No way to represent "unknown, here's what's needed."** `ProgramDecision` only has a closed `status` enum, `path`, and `denialReasonCode` — no field for the adapter to say which specific inputs are still missing. This is the central gap, since it's the entire value proposition of partial/progressive evaluation.
+2. **No pre-screening endpoint.** All three existing endpoints are application-scoped; nothing supports evaluation before an Application/Determination record exists at all.
+3. **No rule-set version field, and no QC re-determination mechanism.** Nothing lets a caller pin evaluation to the rule set as it existed on a historical date, or pass an immutable snapshot for replay.
+
+Extending the contract to close these gaps is governed by the general principle in [Adapter Pattern: Handling backend implementations with varying capability](adapters.md#handling-backend-implementations-with-varying-capability) — the new fields must be optional, with absence read as "no information," and paired with a capability-declaration mechanism, since a forward-chaining-backed adapter can't populate them the same way a backward-chaining one can.
+
 ## Out of scope
 
 | Capability | Notes |
@@ -332,7 +350,12 @@ Once this design doc is out of draft, the anticipated implementation sequence is
 
 **Open question, not yet decided:** how do we notice if `IRS-Public/fact-graph` fixes something (e.g., a bug in collection/wildcard path resolution) after our own bootstrap validation (item 3) is done and the Scala oracle is dropped? Once we stop running their engine, we lose the natural signal that would otherwise surface a mismatch. Options worth evaluating: their repo's commit Atom feed, a scheduled check against their latest commit SHA (possibly scoped to just the `compnodes`/`types` directories to cut noise), or a GitHub Actions workflow that opens a tracking issue when their `main` moves. Not resolved here — needs a decision before or shortly after item 3.
 
-**Independent of the sequence above:** the stateful orchestration this DSL depends on isn't a from-scratch design — it substantially already exists as the [Eligibility domain](../domains/eligibility.md) (`Determination`/`Decision` entities, `eligibility-state-machine.yaml`, the `eligibility-adapter-openapi.yaml` adapter contract). The real follow-on work is *extending* that existing domain to support the two genuinely new invocation modes (live partial/progressive evaluation, pre-screening) — not designing an orchestrator that doesn't exist yet. Nothing in steps 1–7 depends on that extension being done first, since this DSL's schema and engine are self-contained; it can be scheduled independently, not as a blocking prerequisite.
+**Independent of the sequence above:** the stateful orchestration this DSL depends on isn't a from-scratch design — it substantially already exists as the [Eligibility domain](../domains/eligibility.md) (`Determination`/`Decision` entities, `eligibility-state-machine.yaml`, the `eligibility-adapter-openapi.yaml` adapter contract). The real follow-on work, concretely, is two extensions to that existing domain, neither yet scoped as an issue:
+
+- **Extend `eligibility-openapi.yaml`/`eligibility-state-machine.yaml`** with new external-facing capability for the two genuinely new invocation modes: a pre-screening endpoint, and a way to request a live partial/progressive estimate during active data entry (as opposed to today's caseworker-triggered evaluate calls).
+- **Extend `eligibility-adapter-openapi.yaml`** per the [gap analysis](#gap-analysis-against-the-existing-adapter-contract) above — a field for "still unknown, here's what's needed," a pre-screening request/response shape, and rule-set version pinning for QC replay — designed per the general varying-backend-capability principle in `adapters.md` so both forward- and backward-chaining-backed adapters can honestly implement it.
+
+Nothing in steps 1–7 depends on either extension being done first, since this DSL's schema and engine are self-contained; both can be scheduled independently, not as a blocking prerequisite.
 
 This list is a placeholder for continuity across sessions — the actual phase breakdown should be produced by `/plan` once the design is finalized, not treated as authoritative from here.
 

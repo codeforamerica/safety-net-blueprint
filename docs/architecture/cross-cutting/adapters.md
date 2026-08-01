@@ -6,6 +6,17 @@ An adapter is a stateless HTTP service that connects the blueprint to an externa
 
 Adapters are a first-class architectural element of the blueprint. They are the primary integration point between the blueprint and state-managed or vendor systems.
 
+## Two kinds of contract: domain API and adapter
+
+This is an instance of a named, standard pattern — **Ports and Adapters**, also called **Hexagonal Architecture** (Alistair Cockburn, 2005). The pattern's value is decoupling: a domain's core logic depends only on the interfaces (ports) it defines, never on a specific external implementation, so either side can change without touching the other. Concretely here, that's what already lets a mock server stand in for a real state-provided adapter behind the same contract for development and testing, and what lets a state swap Cúram for Corticon (or vice versa) without the Eligibility domain's own logic or API changing at all.
+
+A domain sits between two different kinds of interface:
+
+- **The domain's own API and state machine** (e.g., `eligibility-openapi.yaml`, `eligibility-state-machine.yaml`) is a **primary port** — how the rest of the system (other domains, the front end) calls *into* the domain. This is fixed and universal: every adopter implements it identically, regardless of what's behind it.
+- **The adapter contract** (e.g., `eligibility-adapter-openapi.yaml`) is a **secondary port** — how the domain calls *out* to an external system it doesn't control. When the blueprint defines this contract (see [Who defines the adapter contract](#who-defines-the-adapter-contract) below), it is *also* fixed and universal in shape — not one contract per backend vendor or engine architecture.
+
+**What varies is neither contract — it's the concrete implementation behind the secondary port.** Different states can put Cúram, Corticon, or any other rules engine behind the same `eligibility-adapter-openapi.yaml` contract; the contract's shape doesn't change to accommodate them. This is the entire point of the pattern: the domain's own logic and its primary-facing API stay stable while whatever's behind the secondary port is swapped freely. See [Handling backend implementations with varying capability](#handling-backend-implementations-with-varying-capability) for what to do when different backends behind the same secondary port have genuinely different capabilities, not just different implementations of the same capability.
+
 ## Who defines the adapter contract
 
 The blueprint, the state, or the open source community can define an adapter contract.
@@ -70,6 +81,17 @@ The blueprint is responsible for:
 3. Reading `metadata` from the response to update internal records
 
 For state-defined adapter contracts, the state defines both sides of the contract and is responsible for all of the above. Using the base schemas is optional but recommended — the metadata passthrough pattern is useful for any adapter that needs to correlate responses to internal records.
+
+## Handling backend implementations with varying capability
+
+A single adapter contract can sit in front of genuinely different backend systems — different vendors, different products, sometimes different architectures entirely (see, for example, the eligibility adapter's forward-chaining and backward-chaining rules-engine backends, [Decision Rules DSL](decision-rules-dsl.md)). Those backends don't always have the same ability to answer a given request. A contract that implicitly assumes every backend can produce the same level of detail forces one of two bad outcomes: an implementation fakes a capability it doesn't actually have, or the contract silently only works honestly for one kind of backend.
+
+Two rules keep the contract honest across backends of varying capability:
+
+1. **Capability-dependent response fields must be optional, and their absence must mean "no information available" — never "fully resolved."** An adapter backed by a system that can't populate a field must be able to omit it without that omission being misread as a positive claim (e.g., "nothing is missing" when the backend simply didn't say). Getting this backwards turns a capability gap into a correctness bug for whoever calls the adapter.
+2. **Some form of capability declaration is needed** so the calling side doesn't attempt or expose functionality a given adapter can't honor — either the adapter states what it supports, or the caller's own per-deployment configuration records what its configured adapter can do. Without this, the calling side has to discover a capability gap by trial and error (an empty response) rather than knowing in advance.
+
+This is the same "adapter is a black box" principle already established above, extended to the case where different black boxes behind the same contract vary not just in *how* they answer, but in *what* they're honestly able to answer at all.
 
 ## Contract artifacts
 
