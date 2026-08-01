@@ -14,13 +14,11 @@ It is additive to the OpenAPI specs and the behavioral contract DSL in the same 
 
 ## Scope: the rules engine, not the whole eligibility domain
 
-This DSL covers one component of a larger picture: **the rules engine** — a stateless computation that, given a set of known and unknown facts, returns outcomes and identifies what's still needed. It does not cover:
+This DSL covers one component of a larger picture: **the rules engine** — a stateless computation that, given a set of known and unknown facts, returns outcomes and identifies what's still needed. It does not cover the stateful orchestration around it — state and lifecycle, blocking-factor composition, event-driven re-evaluation. That orchestration is not a hypothetical future concern: it substantially already exists as the [Eligibility domain](../domains/eligibility.md) — the `Determination`/`Decision` entity model, `eligibility-state-machine.yaml`, and the evaluate endpoints that trigger trial and official rules-engine runs (Eligibility domain, Decision 15).
 
-- **State and lifecycle** — tracking a determination's progress over time, opening and resolving blocking factors as verifications and data-exchange results arrive, and managing the eligibility object's lifecycle. That's an orchestration concern, most naturally an extension of the existing state machine DSL ([Behavioral Contract DSL](behavioral-contract-dsl.md)), not this one.
-- **Blocking-factor composition from non-engine sources** — many things that prevent a complete determination (a pending referral, an outstanding document, a program-capacity waitlist) never touch the rules engine at all. Composing the full picture from engine output plus these other sources is an orchestration responsibility.
-- **Event-driven re-evaluation** — deciding *when* to re-invoke the engine as new information arrives is a stateful, event-driven concern living outside this DSL.
+The Eligibility domain has also already made this DSL's Decision 5 for its own scope, independently: [Decision 11](../domains/eligibility.md#decision-11-eligibility-rules-engine-scope) states that program eligibility rules are adapter-layer — the blueprint contracts the data model, API surface, and events, not the rules content — for the same reason this DSL reaches the same conclusion (states already run Cúram, Pega, Drools, Corticon; a contracted rules interface would constrain adapter choice without adding value). The [eligibility adapter](../domains/eligibility.md) (`eligibility-adapter-openapi.yaml`) is the already-defined integration point: this DSL's engine is a candidate implementation behind that existing contract, not a new integration surface.
 
-The rules engine is invoked repeatedly, in different modes, by whatever owns that stateful orchestration. See [Invocation modes](#invocation-modes) for the shapes those calls take.
+What genuinely isn't covered yet by the Eligibility domain as designed: live, client-side partial/progressive evaluation during active data entry (as opposed to caseworker-triggered evaluate calls), and pre-application pre-screening. Those are this DSL's actual incremental contribution — see [Invocation modes](#invocation-modes) for how they relate to what already exists.
 
 ## Contract structure
 
@@ -63,16 +61,18 @@ Completeness propagates automatically: a derived fact is only "known" if every f
 
 The rules engine is called in at least six distinct modes, each with a different call contract. The DSL and engine need to support all of them; which mode applies on a given call is an orchestration decision, out of scope here (see [Scope](#scope-the-rules-engine-not-the-whole-eligibility-domain)).
 
-| Mode | What it needs from the engine |
-|---|---|
-| **Formal determination** | Full evaluation; every applicable fact resolved or explicitly marked unknown; the authoritative result |
-| **Partial / progressive determination** | Evaluate against whatever facts are currently known; unknown facts are expected output, not an error |
-| **What-if projection** | Evaluate against hypothetical inputs, including hypothetical values for facts that are actually still unknown; result is marked as projected, not authoritative |
-| **Pre-screening** | Evaluate against minimal input; heavy reliance on completeness tracking to identify what more would be needed for a real determination; result carries no legal weight |
-| **QC re-determination** | Evaluate against an immutable historical fact snapshot, using the exact rule-set version in effect on the original determination date — not the current rule set. A discrepancy between this replay and the original outcome is a payment error. This is the same re-derive-and-diff mechanism as any error-rate detection process: run the current (or a pinned historical) fact dictionary against verified facts, and treat any delta from what was actually issued as the finding. |
-| **Constrained at-submission evaluation** | Evaluate against submitted-but-unverified facts, treating them as known rather than pending, and suppressing unknown-fact output entirely — used for time-critical flags (e.g., expedited processing screens) that must be set before verification begins |
+| Mode | What it needs from the engine | Existing counterpart |
+|---|---|---|
+| **Formal determination** | Full evaluation; every applicable fact resolved or explicitly marked unknown; the authoritative result | Official evaluate runs (Eligibility domain, Decision 15) |
+| **Partial / progressive determination** | Evaluate against whatever facts are currently known; unknown facts are expected output, not an error | Not yet covered — the Eligibility domain's trial runs are caseworker-triggered, not live during active data entry; this is this DSL's actual new contribution |
+| **What-if projection** | Evaluate against hypothetical inputs, including hypothetical values for facts that are actually still unknown; result is marked as projected, not authoritative | Trial evaluate runs (Eligibility domain, Decision 15) — same shape, projected outcomes without updating Decision status |
+| **Pre-screening** | Evaluate against minimal input; heavy reliance on completeness tracking to identify what more would be needed for a real determination; result carries no legal weight | Not yet covered — pre-application, before an Application/Determination record exists at all; this DSL's other new contribution |
+| **QC re-determination** | Evaluate against an immutable historical fact snapshot, using the exact rule-set version in effect on the original determination date — not the current rule set. A discrepancy between this replay and the original outcome is a payment error. This is the same re-derive-and-diff mechanism as any error-rate detection process: run the current (or a pinned historical) fact dictionary against verified facts, and treat any delta from what was actually issued as the finding. | Not designed in the Eligibility domain as it stands |
+| **Constrained at-submission evaluation** | Evaluate against submitted-but-unverified facts, treating them as known rather than pending, and suppressing unknown-fact output entirely — used for time-critical flags (e.g., expedited processing screens) that must be set before verification begins | Already real and already specified: expedited SNAP screening and Medicaid ex parte evaluation (Eligibility domain, "What happens during eligibility determination" steps 1–2) match this description closely — submitted data only, no blocking factors for missing verification |
 
-The last two rows are why the completeness model needs to be a genuine per-fact tri-state rather than a single global "is this determination complete" flag: QC re-determination needs rule-set versioning at the fact-dictionary level, and constrained at-submission evaluation needs the caller to be able to say "treat unknowns as known for this call" without changing the underlying rule definitions.
+The last two rows in the table above (QC re-determination, constrained at-submission) are why the completeness model needs to be a genuine per-fact tri-state rather than a single global "is this determination complete" flag: QC re-determination needs rule-set versioning at the fact-dictionary level, and constrained at-submission evaluation needs the caller to be able to say "treat unknowns as known for this call" without changing the underlying rule definitions.
+
+Two of the six modes (formal determination, constrained at-submission) and a close match on a third (what-if ≈ trial runs) already have real, specified counterparts in the Eligibility domain — this DSL isn't inventing all six from nothing. The genuinely new modes are partial/progressive determination during live data entry and pre-screening before an application exists.
 
 ## Expression layer
 
@@ -165,16 +165,19 @@ facts:
 **Background:** Fact Graph's own XML DSL expresses computation as a nested operator tree (`<Add><Dependency path="..."/></Add>`). The blueprint already picked CEL as its sole expression language for guards, SLA conditions, and metric filters (`behavioral-contract-dsl.md`, Decision 1), specifically to avoid the verbosity of a nested tree syntax (that decision rejected JSON Logic for exactly this reason).
 
 **Considerations:**
-- A second expression syntax in the blueprint would recreate the exact problem Decision 1 in the behavioral contract DSL was written to prevent — parallel constructs for the same concept.
-- CEL already handles arithmetic, comparisons, and list operations cleanly (`totalWages + interestIncome`), with no loss of expressiveness for the arithmetic/comparison operations a Derived fact needs.
+- Flat, infix expression text is more readable than a nested operator tree for the same logic — compare `totalWages + interestIncome > 50000` to the equivalent tree of tagged nodes (`<GreaterThan><Add>...</Add><Int>50000</Int></GreaterThan>`). This is the same reason virtually every general-purpose programming language uses infix arithmetic syntax rather than requiring hand-authored parse trees — it's an independent readability argument, not specific to what this blueprint already does elsewhere, and it holds regardless of who's authoring the expression.
+- A nested tree structure also produces a much larger diff footprint for a structural logic change (adding a term to a sum, or changing what depends on what means adding/removing whole nested blocks, not editing one line) — a real cost for change review in a system where rule changes need to be auditable.
+- Separately, this also avoids introducing a second expression syntax alongside CEL's existing use for guards, SLA conditions, and metric filters (`behavioral-contract-dsl.md`, Decision 1) — but that's a supporting consistency benefit, not the primary reason.
 - The structural parts of Fact Graph's model worth keeping (facts, dependencies, completeness, collections) are independent of what expression syntax computes a value — adopting the structure doesn't require adopting the syntax.
 - CEL's native type system doesn't cover everything Fact Graph's own type system does (most notably currency precision) — see [Decision 4](#decision-4-currency-precision-in-cel-expressions) for how that gap is closed without abandoning CEL.
 
-**Options:**
-- **(A)** Bespoke operator tree (Fact Graph's own XML shape, translated to JSON) — matches the reference implementation directly, but reintroduces the verbosity problem CEL was chosen to avoid
-- **(B) ✓** CEL expression string per Derived fact — one expression language blueprint-wide
+**Known gap:** whether CEL is genuinely approachable for non-engineer rule authors (as opposed to just "less bad than a nested tree") isn't established here. The existing `behavioral-contract-dsl.md` Decision 1 asserts policy staff write CEL condition strings via overlay, but that claim isn't backed by usability research in this document or, as far as this design knows, anywhere else — it may be an inherited assumption rather than a tested one. The most directly comparable prior art for genuinely non-technical rule authoring (Oracle Policy Automation's natural-language if/then statements in Word/Excel) is a much bigger step toward non-engineer accessibility than CEL's C-like syntax is. This decision doesn't depend on CEL being non-engineer-friendly — the readability and diff-footprint reasoning above holds either way — but it shouldn't be overstated as a benefit this design has evidence for.
 
-**Decision:** CEL (B). The structural contribution worth taking from Fact Graph is the fact/dependency/completeness model, not its expression syntax.
+**Options:**
+- **(A)** Bespoke operator tree (Fact Graph's own XML shape, translated to JSON) — trivially safe to generate/validate programmatically since it's already structured data rather than text requiring a parser, but meaningfully more verbose and harder to review for the reasons above
+- **(B) ✓** CEL expression string per Derived fact — more readable, smaller diffs for structural changes, and incidentally keeps one expression language blueprint-wide
+
+**Decision:** CEL (B), for readability and diff footprint — reasoning that holds regardless of who's authoring the expression, not contingent on an unverified claim about non-engineer accessibility. The structural contribution worth taking from Fact Graph is the fact/dependency/completeness model, not its expression syntax.
 
 ---
 
@@ -207,6 +210,7 @@ facts:
 
 **Considerations:**
 - The state machine DSL already establishes this precedent explicitly: *"States implement the defined behavior in their vendor system of choice... the DSL is the specification, not the runtime. The mock server provides a reference implementation for development and testing."*
+- The Eligibility domain has independently reached the identical conclusion for this exact concern: [Decision 11](../domains/eligibility.md#decision-11-eligibility-rules-engine-scope) states "program eligibility rules are adapter-layer; the blueprint defines data model, API, and events, not eligibility criteria," for the same underlying reason (states already run Cúram, Pega, Drools, Corticon; a contracted rules interface would constrain adapter choice). This isn't a novel argument being made for the first time here — it's the second domain to land on the same answer independently, and the eligibility adapter contract (`eligibility-adapter-openapi.yaml`) is the concrete precedent for what that boundary looks like in practice.
 - Mandating a specific engine as a baseline blueprint requirement would be an extensibility trade-off inconsistent with the rest of the blueprint's philosophy (contracts are a customizable starting point, not a fixed prescription).
 - For forward-chaining engines specifically, the translation layer between a domain's data model and the engine's input/output format carries real, ongoing cost — compensating for missing-input surfacing the engine doesn't provide natively requires explicit rules, an adapter-level manifest, or both, and that logic must stay in sync with the actual rules as they evolve. A native backward-chaining engine with built-in completeness (this DSL's model) reduces that burden but doesn't eliminate the need for *some* translation between the domain's facts and the engine's fact dictionary.
 
@@ -319,13 +323,16 @@ The blueprint does not mandate an evaluation engine (Decision 5). States/adopter
 Once this design doc is out of draft, the anticipated implementation sequence is:
 
 1. Finalize this architecture doc (deepen vendor research further if needed, resolve any open design questions from #386).
-2. Design the domain orchestrator concern (blocking-factor lifecycle, state machine, event-driven re-evaluation, invocation-mode routing) as its own follow-on design — likely an extension of the existing state machine DSL rather than this one.
-3. Write the JSON Schema for the decision-rules artifact (`packages/contracts/schemas/decision-rules-schema.yaml`), including the custom CEL currency-arithmetic functions/types from Decision 4.
-4. One-time bootstrap validation: mine `IRS-Public/fact-graph`'s per-operator test specs and its `exampleAgiFacts.xml`/`ExampleAgiSpec.scala` example for input/expected-output cases, build a narrow JSON-to-their-XML transpiler, and run both engines against the same case matrix (including partial-input cases) as a correctness check before trusting the new engine's mechanics — with extra coverage on collection/wildcard path resolution. Drop the Scala oracle once parity is confirmed. **Note: this transpiler is scoped only to the operators exercised by mined test cases and is not the same tool as item 5 below — it's throwaway, not an authoring aid.**
-5. Consider a general-purpose, bidirectional XML ↔ JSON converter as a separate, ongoing tool (not the throwaway one in item 4) — this would let someone already fluent in Fact Graph's XML fact-dictionary syntax author or read rules in a familiar format without learning our JSON DSL from scratch. Unlike the bootstrap transpiler, this needs to cover the full syntax surface anyone might reasonably author with, handle edge cases gracefully, and give useful error messages, since real people would depend on it rather than an internal test harness alone. Whether this is worth building — and whether it should be bidirectional or one-directional — is an open question, not yet decided; it's a convenience/onboarding tool, not a structural requirement of the DSL itself.
-6. Build the TypeScript reference engine (dependency evaluator, completeness propagation, CEL integration including the currency extensions, collections).
-7. Wire the reference engine into the mock server as the decision-rules artifact's reference implementation.
-8. Author the first real domain decision rules against the finished engine, with no further Fact Graph dependency.
+2. Write the JSON Schema for the decision-rules artifact (`packages/contracts/schemas/decision-rules-schema.yaml`), including the custom CEL currency-arithmetic functions/types from Decision 4.
+3. One-time bootstrap validation: mine `IRS-Public/fact-graph`'s per-operator test specs and its `exampleAgiFacts.xml`/`ExampleAgiSpec.scala` example for input/expected-output cases, build a narrow JSON-to-their-XML transpiler, and run both engines against the same case matrix (including partial-input cases) as a correctness check before trusting the new engine's mechanics — with extra coverage on collection/wildcard path resolution. Drop the Scala oracle once parity is confirmed. **Note: this transpiler is scoped only to the operators exercised by mined test cases and is not the same tool as item 4 below — it's throwaway, not an authoring aid.**
+4. Consider a general-purpose, bidirectional XML ↔ JSON converter as a separate, ongoing tool (not the throwaway one in item 3) — this would let someone already fluent in Fact Graph's XML fact-dictionary syntax author or read rules in a familiar format without learning our JSON DSL from scratch. Unlike the bootstrap transpiler, this needs to cover the full syntax surface anyone might reasonably author with, handle edge cases gracefully, and give useful error messages, since real people would depend on it rather than an internal test harness alone. Whether this is worth building — and whether it should be bidirectional or one-directional — is an open question, not yet decided; it's a convenience/onboarding tool, not a structural requirement of the DSL itself.
+5. Build the TypeScript reference engine (dependency evaluator, completeness propagation, CEL integration including the currency extensions, collections).
+6. Wire the reference engine into the mock server as the decision-rules artifact's reference implementation.
+7. Author the first real domain decision rules against the finished engine, with no further Fact Graph dependency.
+
+**Open question, not yet decided:** how do we notice if `IRS-Public/fact-graph` fixes something (e.g., a bug in collection/wildcard path resolution) after our own bootstrap validation (item 3) is done and the Scala oracle is dropped? Once we stop running their engine, we lose the natural signal that would otherwise surface a mismatch. Options worth evaluating: their repo's commit Atom feed, a scheduled check against their latest commit SHA (possibly scoped to just the `compnodes`/`types` directories to cut noise), or a GitHub Actions workflow that opens a tracking issue when their `main` moves. Not resolved here — needs a decision before or shortly after item 3.
+
+**Independent of the sequence above:** the stateful orchestration this DSL depends on isn't a from-scratch design — it substantially already exists as the [Eligibility domain](../domains/eligibility.md) (`Determination`/`Decision` entities, `eligibility-state-machine.yaml`, the `eligibility-adapter-openapi.yaml` adapter contract). The real follow-on work is *extending* that existing domain to support the two genuinely new invocation modes (live partial/progressive evaluation, pre-screening) — not designing an orchestrator that doesn't exist yet. Nothing in steps 1–7 depends on that extension being done first, since this DSL's schema and engine are self-contained; it can be scheduled independently, not as a blocking prerequisite.
 
 This list is a placeholder for continuity across sessions — the actual phase breakdown should be produced by `/plan` once the design is finalized, not treated as authoritative from here.
 
@@ -334,6 +341,8 @@ This list is a placeholder for continuity across sessions — the actual phase b
 - [IRS Direct File Fact Graph](https://github.com/IRS-Public/fact-graph)
 - [Fact Graph 3.1 ADR](https://github.com/IRS-Public/fact-graph/blob/main/docs/fact-graph-3.1-adr.md)
 - [Behavioral Contract DSL](behavioral-contract-dsl.md)
+- [Eligibility Domain](../domains/eligibility.md) — existing Determination/Decision state, adapter contract, and rules-engine-scope precedent (Decision 11)
+- [Adapter Pattern](adapters.md)
 - [Google CEL specification](https://github.com/google/cel-spec)
 - [OMG DMN](https://www.omg.org/spec/DMN/)
 - [Oracle Intelligent Advisor: Determinations Engine and the inference cycle](https://docs.oracle.com/html/E79061_01/Content/Introducing%20Oracle%20Policy%20Modeling/Deter_Engine_and_infer_cycle.htm)
