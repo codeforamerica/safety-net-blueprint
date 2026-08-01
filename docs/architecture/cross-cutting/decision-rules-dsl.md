@@ -1,14 +1,24 @@
 # Decision Rules DSL
 
-> **Draft status:** this document captures the design rationale agreed during initial design discussion for issue #386. Vendor research (JSM, ServiceNow, IBM Cúram, Salesforce Government Cloud) is still a first pass and should be deepened before this is treated as final. Decisions are marked as agreed but should be revisited if research surfaces a conflict.
+> **Draft status:** this document reflects a substantial research pass (five initial vendor comparisons plus follow-up research on Oracle Intelligent Advisor and Open Policy Agent) but has not yet been reviewed end-to-end. Treat it as a strong working draft, not a final record — some phrasing and decision boundaries may still shift on review.
 
-This document is the architecture reference for the decision rules DSL — the JSON-based language used to define derived eligibility and benefit calculations that must remain computable from partial data. It is a sibling to [Behavioral Contract DSL](behavioral-contract-dsl.md), not an extension of it: the two share the CEL expression layer but have no other structural overlap. Standards evaluated: OMG DMN. Vendor systems compared: JSM, ServiceNow, IBM Cúram, Salesforce Government Cloud. Prior art evaluated: IRS Direct File's open-source Fact Graph engine (`github.com/IRS-Public/fact-graph`, CC0/public domain).
+This document is the architecture reference for the decision rules DSL — the JSON-based language used to define derived eligibility and benefit calculations that must remain computable from partial data. It is a sibling to [Behavioral Contract DSL](behavioral-contract-dsl.md), not an extension of it: the two share the CEL expression layer but have no other structural overlap. Standards evaluated: OMG DMN. Vendor and prior-art systems compared: JSM, ServiceNow, IBM Cúram, Salesforce Government Cloud, Progress Corticon, Oracle Intelligent Advisor (formerly Oracle Policy Automation), Open Policy Agent (Rego), and IRS Direct File's open-source Fact Graph engine (`github.com/IRS-Public/fact-graph`, CC0/public domain).
 
 ## Overview
 
 The decision rules DSL defines named, derived values — eligibility determinations, benefit amounts, and other calculated facts — as a dependency graph rather than a one-shot procedural calculation. Its defining property is that a value can be asked for before all of its inputs are known, and the answer reflects that partial state (a real value, a placeholder, or "not yet determinable") rather than failing or requiring the caller to first check completeness by hand. This matters specifically for eligibility screening during intake, where a household's likely eligibility is useful information well before the application is complete.
 
 It is additive to the OpenAPI specs and the behavioral contract DSL in the same way the state machine DSL is: it does not replace field definitions or lifecycle states, it defines derived values computed from them.
+
+## Scope: the rules engine, not the whole eligibility domain
+
+This DSL covers one component of a larger picture: **the rules engine** — a stateless computation that, given a set of known and unknown facts, returns outcomes and identifies what's still needed. It does not cover:
+
+- **State and lifecycle** — tracking a determination's progress over time, opening and resolving blocking factors as verifications and data-exchange results arrive, and managing the eligibility object's lifecycle. That's an orchestration concern, most naturally an extension of the existing state machine DSL ([Behavioral Contract DSL](behavioral-contract-dsl.md)), not this one.
+- **Blocking-factor composition from non-engine sources** — many things that prevent a complete determination (a pending referral, an outstanding document, a program-capacity waitlist) never touch the rules engine at all. Composing the full picture from engine output plus these other sources is an orchestration responsibility.
+- **Event-driven re-evaluation** — deciding *when* to re-invoke the engine as new information arrives is a stateful, event-driven concern living outside this DSL.
+
+The rules engine is invoked repeatedly, in different modes, by whatever owns that stateful orchestration. See [Invocation modes](#invocation-modes) for the shapes those calls take.
 
 ## Contract structure
 
@@ -47,6 +57,21 @@ Every fact resolves to one of three states, not two:
 
 Completeness propagates automatically: a derived fact is only "known" if every fact it depends on is known. This is the property a decision-table engine (evaluated once, against a complete record) cannot express, and it's the reason this DSL exists as a separate artifact type rather than an extension of the existing behavioral contract DSL's condition model. See [Decision 1](#decision-1-dependency-graph-model-for-partial-evaluation).
 
+## Invocation modes
+
+The rules engine is called in at least six distinct modes, each with a different call contract. The DSL and engine need to support all of them; which mode applies on a given call is an orchestration decision, out of scope here (see [Scope](#scope-the-rules-engine-not-the-whole-eligibility-domain)).
+
+| Mode | What it needs from the engine |
+|---|---|
+| **Formal determination** | Full evaluation; every applicable fact resolved or explicitly marked unknown; the authoritative result |
+| **Partial / progressive determination** | Evaluate against whatever facts are currently known; unknown facts are expected output, not an error |
+| **What-if projection** | Evaluate against hypothetical inputs, including hypothetical values for facts that are actually still unknown; result is marked as projected, not authoritative |
+| **Pre-screening** | Evaluate against minimal input; heavy reliance on completeness tracking to identify what more would be needed for a real determination; result carries no legal weight |
+| **QC re-determination** | Evaluate against an immutable historical fact snapshot, using the exact rule-set version in effect on the original determination date — not the current rule set. A discrepancy between this replay and the original outcome is a payment error. This is the same re-derive-and-diff mechanism as any error-rate detection process: run the current (or a pinned historical) fact dictionary against verified facts, and treat any delta from what was actually issued as the finding. |
+| **Constrained at-submission evaluation** | Evaluate against submitted-but-unverified facts, treating them as known rather than pending, and suppressing unknown-fact output entirely — used for time-critical flags (e.g., expedited processing screens) that must be set before verification begins |
+
+The last two rows are why the completeness model needs to be a genuine per-fact tri-state rather than a single global "is this determination complete" flag: QC re-determination needs rule-set versioning at the fact-dictionary level, and constrained at-submission evaluation needs the caller to be able to say "treat unknowns as known for this call" without changing the underlying rule definitions.
+
 ## Expression layer
 
 Every Derived fact's computation is a single CEL expression string — the same expression language already used for guards, SLA conditions, and metric filters (`behavioral-contract-dsl.md`, Decision 1). See [Decision 2](#decision-2-cel-as-the-derivation-expression-language).
@@ -65,34 +90,43 @@ facts:
 
 | # | Decision | Summary |
 |---|---|---|
-| 1 | [Dependency graph model for partial evaluation](#decision-1-dependency-graph-model-for-partial-evaluation) | A Fact Graph-inspired dependency graph with three-valued completeness, not a decision-table model, because eligibility screening needs answers from partial data. |
+| 1 | [Dependency graph model for partial evaluation](#decision-1-dependency-graph-model-for-partial-evaluation) | A Fact Graph-inspired dependency graph with three-valued completeness, not a decision-table or forward-chaining model, because eligibility screening needs answers from partial data — and existing open-source backward-chaining engines don't fit this problem's shape either. |
 | 2 | [CEL as the derivation expression language](#decision-2-cel-as-the-derivation-expression-language) | Every Derived fact's body is a CEL expression, not a bespoke operator tree — keeps one expression language across the whole blueprint. |
 | 3 | [Engine boundary: specification vs. runtime](#decision-3-engine-boundary-specification-vs-runtime) | The blueprint owns the DSL schema and a mock-server reference implementation; the production evaluation engine is not a blueprint contract artifact. |
 | 4 | [Implementation language for the reference engine](#decision-4-implementation-language-for-the-reference-engine) | TypeScript, for zero-cross-compilation parity between server and browser execution. |
 | 5 | [Client-side vs. server-side execution model](#decision-5-client-side-vs-server-side-execution-model) | Client-side evaluation is advisory only; the server re-runs the same fact dictionary as the authoritative determination. |
+| 6 | [Single engine vs. coexisting with an existing engine](#decision-6-single-engine-vs-coexisting-with-an-existing-engine) | The blueprint doesn't require replacing a state's existing rules engine wholesale — running the new engine for partial/what-if/pre-screening modes alongside an existing forward-chaining engine for formal determinations is a legitimate adoption path. |
 
 ---
 
 ### Decision 1: Dependency graph model for partial evaluation
 
-**Status:** Decided: B *(pending deeper vendor research)*
+**Status:** Decided: B *(pending deeper review — see draft status note at top of document)*
 
 **What's being decided:** How eligibility/benefit determination logic should be modeled, given the requirement that a household's eligibility be computable from partial intake data, not only from a complete record.
 
-**Background:** The common commercial pattern for eligibility/decision logic is a decision table (rows of conditions, columns of rules, evaluated as a batch against a complete record) — this is the model behind most rules-engine products in this space, and it has no native way to represent "the record isn't fully known yet, tell me what you can." IRS Direct File's Fact Graph engine takes a different approach: a dependency graph of named facts with explicit three-valued completeness (known/unknown/placeholder) that propagates through derived values.
+**Background:** Rule engines split into three architectural families, not two:
+
+- **Forward-chaining** (Drools, IBM ODM/ILOG, FICO Blaze Advisor, IBM Cúram's CER): rules fire when conditions match. A missing input either fails to fire a rule or hits an explicitly-coded fallback — the engine has no inherent notion of what it was looking for.
+- **DMN-based** (Camunda, Kogito, IBM ODM in DMN mode): technically forward-chaining, but DMN decision tables declare input columns as part of the model schema, so a well-designed model can introspect what inputs are needed and surface missing ones — without fully solving completeness propagation through derived/dependent values.
+- **Backward-chaining / goal-directed** (Oracle Intelligent Advisor, Open Policy Agent, IRS Fact Graph, SWI-Prolog): work in reverse from a goal, enumerating exactly which facts are needed to reach it.
 
 **Considerations:**
-- Decision-table engines are the dominant commercial pattern and are what most case-management vendor ecosystems integrate with, but none of the major platforms compared here (JSM, ServiceNow, IBM Cúram, Salesforce Government Cloud) natively model partial-input completeness as a first-class concept — this is a genuine gap across the industry pattern, not just a gap in one product.
-- OMG's DMN standard, the closest thing to a cross-vendor standard for decision tables, has the same limitation: a decision table assumes its inputs are present.
-- A dependency-graph model with propagated completeness is a heavier structural commitment than a decision table, but it's the only one of the two that can answer "what's the applicant's likely eligibility so far" mid-interview.
+- Of the vendors researched, JSM, ServiceNow, and Salesforce Government Cloud all use null-check-style condition/decision-table logic with no first-class "pending" or "placeholder" value — missing data is either a fallback branch or a value the rule author must explicitly check for. None has a native eligibility/benefits-determination product with genuine partial-evaluation support.
+- **IBM Cúram** is the closest domain analog and the one real counter-example among the forward-chaining products: its Evidence model supports "provisional determinations" (IBM's own documentation: "any result presented is provisional, dependent upon the client providing supporting documentation") plus e-verification and an evidence-completeness "concerns" list. Critically, this capability lives in the *orchestration/evidence layer wrapping CER*, not in the rules engine itself — CER is still a forward-chaining engine with no native completeness propagation through derived calculations. This is a legitimate, decades-proven alternative architecture: keep a simpler engine, put completeness-tracking in the surrounding system. See [Decision 6](#decision-6-single-engine-vs-coexisting-with-an-existing-engine) for why this doesn't have to be an either/or choice for adopters.
+- **Progress Corticon** (decision tables / Rulesheets, single-pass dependency-ordered execution) explicitly recommends the opposite pattern in its own documentation: validation Rulesheets that terminate execution if data is incomplete, rather than attempting a provisional result. It also is not open source.
+- **Oracle Intelligent Advisor** (formerly Oracle Policy Automation) is genuine backward-chaining — confirmed via its own documentation: a two-phase cycle that traces the dependency tree backward from a goal attribute to find what's unknown, then forward once facts resolve, with an API that returns "what information is needed to determine the value (if unknown)." This is real, production-proven prior art for exactly the mechanism this DSL wants. It is commercial/proprietary, ruling it out directly, but it validates that the underlying approach works at scale.
+- **Open Policy Agent (OPA/Rego)** is a genuine, mature, open-source, backward-chaining engine with an explicit unknown-inputs model — the closest open-source match on architecture. It doesn't fit this problem well regardless: it's built for boolean authorization/policy decisions, not typed numeric calculations with dollar amounts and dependency chains over collections, and it returns residual rule expressions (an abstract syntax tree) rather than caseworker-facing blocking-factor descriptions — which reintroduces the same translation-layer cost that using a backward-chaining engine was supposed to avoid.
+- **IRS Fact Graph** is open source (CC0), purpose-built for exactly this shape of problem (typed derived facts, dependency graph, three-state completeness), and reduces the translation-layer burden other engines carry because rules are authored once and consumed directly by both JVM and JavaScript runtimes with no separate translation step.
 
 **Options:**
-- **(A)** Decision-table model (DMN-aligned, matches dominant vendor pattern) — simpler, familiar, but cannot represent partial input
-- **(B) ✓** Dependency-graph model with three-valued completeness (Fact Graph-inspired) — supports partial evaluation, but a genuinely different paradigm from every vendor compared here
+- **(A)** Forward-chaining engine + orchestration-layer completeness tracking (Cúram's proven pattern) — decades of production use in benefits eligibility, but completeness logic lives outside the engine and must be independently maintained in the orchestrator (explicit rules, an adapter manifest, or both — see Decision 3's discussion of translation-layer cost)
+- **(B) ✓** Dependency-graph engine with native three-valued completeness (Fact Graph-inspired) — completeness is a property of the engine itself, not bolted on; no open-source product already does this for typed calculation (as opposed to authorization) use cases
+- **(C)** Adopt an existing backward-chaining engine directly — Oracle Intelligent Advisor is commercial (ruled out), OPA/Rego is open source but a capability and output-shape mismatch (authorization-boolean vs. typed calculation; AST output requires the same translation layer we're trying to avoid)
 
-**Decision:** Dependency graph (B). This is the one requirement decision tables cannot satisfy regardless of vendor, so the industry-pattern-matching principle doesn't have a real alternative to point to here — this is a deliberate departure from the dominant pattern, made explicitly rather than silently, because partial-result support is the actual point of this work.
+**Decision:** Dependency graph, native completeness (B). Not because no other product has ever solved partial evaluation — Cúram and Oracle Intelligent Advisor both prove the underlying need is real and solvable — but because among the options that fit this DSL's actual requirements (open source, typed calculation rather than boolean authorization, completeness as an engine property rather than an externally-maintained concern), none of the existing products are a fit. This is a deliberate, evaluated departure from the dominant commercial pattern (forward-chaining/decision-table), not an uninformed one.
 
-**Customization:** A state that wants a decision-table authoring experience over this same fact model (e.g., a table that compiles down to per-output-attribute Derived facts) is a legitimate overlay/tooling layer on top of the dependency graph — not precluded by this decision, just not the baseline authoring format.
+**Customization:** A state with an existing forward-chaining engine already embedded in their case management platform is not required to replace it — see [Decision 6](#decision-6-single-engine-vs-coexisting-with-an-existing-engine).
 
 ---
 
@@ -126,6 +160,7 @@ facts:
 **Considerations:**
 - The state machine DSL already establishes this precedent explicitly: *"States implement the defined behavior in their vendor system of choice... the DSL is the specification, not the runtime. The mock server provides a reference implementation for development and testing."*
 - Mandating a specific engine as a baseline blueprint requirement would be an extensibility trade-off inconsistent with the rest of the blueprint's philosophy (contracts are a customizable starting point, not a fixed prescription).
+- For forward-chaining engines specifically, the translation layer between a domain's data model and the engine's input/output format carries real, ongoing cost — compensating for missing-input surfacing the engine doesn't provide natively requires explicit rules, an adapter-level manifest, or both, and that logic must stay in sync with the actual rules as they evolve. A native backward-chaining engine with built-in completeness (this DSL's model) reduces that burden but doesn't eliminate the need for *some* translation between the domain's facts and the engine's fact dictionary.
 
 **Options:**
 - **(A)** Blueprint ships and mandates a specific production engine
@@ -133,7 +168,7 @@ facts:
 
 **Decision:** Specification only (B), consistent with the existing state machine DSL precedent.
 
-**Customization:** States/adopters may implement the decision-rules DSL with any engine that honors the schema and completeness semantics — this is the intended extensibility point, not a gap.
+**Customization:** States/adopters may implement the decision-rules DSL with any engine that honors the schema and completeness semantics — this is the intended extensibility point, not a gap. See also [Decision 6](#decision-6-single-engine-vs-coexisting-with-an-existing-engine) for running this alongside an existing engine rather than replacing it.
 
 ---
 
@@ -160,17 +195,38 @@ facts:
 
 **Status:** Decided: B
 
-**What's being decided:** How client-side (live, partial) evaluation and server-side (authoritative) evaluation of the same fact dictionary relate to each other.
+**What's being decided:** How client-side (live, partial) evaluation and server-side (authoritative) evaluation of the same fact dictionary relate to each other, given the six invocation modes in [Invocation modes](#invocation-modes).
 
 **Considerations:**
-- A live partial-eligibility estimate during intake is valuable applicant-facing UX (the same value Fact Graph provides Direct File's live refund estimate), but a client-side result must never be treated as the actual determination — a client can be tampered with (browser devtools), and the server-visible, verified data is what regulatory determinations must be based on.
-- Because the same fact dictionary and engine run in both places, the two results should agree when inputs agree — but only if the client and server are evaluating against the same version of the rules. A policy change between when an applicant starts an application and when they submit it could otherwise cause silent drift.
+- A live partial-eligibility estimate during intake is valuable applicant-facing UX (the same value Fact Graph provides Direct File's live refund estimate) — this corresponds to the partial/progressive and pre-screening invocation modes, and is a reasonable candidate for client-side execution.
+- Formal determination, QC re-determination, and constrained at-submission evaluation carry real regulatory and legal weight and must never be client-side-authoritative — a client can be tampered with (browser devtools), and the server-visible, verified data is what regulatory determinations must be based on.
+- Because the same fact dictionary and engine run in both places, client and server results should agree when inputs agree — but only if both are evaluating against the same version of the rules. A policy change between when an applicant starts an application and when they submit it could otherwise cause silent drift. This is the same versioning requirement QC re-determination has (pinning to the rule-set version in effect at determination time) — one mechanism should serve both needs.
 
 **Options:**
 - **(A)** Treat client-side result as authoritative if the server doesn't re-derive it
-- **(B) ✓** Client-side evaluation is advisory-only; the server always re-runs the same fact dictionary against the fully-submitted/verified facts as the authoritative determination; the resolved fact dictionary is versioned and the server validates the version the client evaluated against at submission time
+- **(B) ✓** Client-side evaluation is advisory-only, restricted to partial/progressive and pre-screening modes; the server always re-runs the same fact dictionary against the fully-submitted/verified facts as the authoritative determination for formal, QC, and constrained at-submission modes; the resolved fact dictionary is versioned and the server validates the version the client evaluated against at submission time
 
 **Decision:** Advisory client, authoritative server (B). This must be stated as an explicit rule for any implementation of this DSL, not left as an implicit assumption, given the regulatory stakes of an eligibility determination.
+
+---
+
+### Decision 6: Single engine vs. coexisting with an existing engine
+
+**Status:** Decided: B
+
+**What's being decided:** Whether adopting this DSL requires a state to replace their existing rules engine entirely, or whether it can run alongside one.
+
+**Background:** Many states already have a forward-chaining engine embedded in their case management platform (Cúram's CER, or similar). Requiring wholesale replacement to get partial/progressive-evaluation support would be a significant, possibly unjustified, migration cost.
+
+**Considerations:**
+- A workload-based split is a reasonable adoption path: backward-chaining (this DSL's engine) for pre-screening, what-if projections, and partial/progressive determination during intake or caseworker review; the existing forward-chaining engine stays for official determinations, batch redetermination, and ongoing renewal/lifecycle processing, where forward-chaining's efficient incremental-fact-update model and mature case-lifecycle tooling are genuine strengths.
+- Running two engines has real risks: keeping rule content in sync between them (e.g., annual FPL threshold updates must land in both), and resolving which engine's result is authoritative if they ever disagree at a fair hearing. Any adopter choosing this path needs an explicit answer to both before going live.
+
+**Options:**
+- **(A)** Require full replacement of any existing rules engine to adopt this DSL
+- **(B) ✓** Allow coexistence — this DSL's engine handles the invocation modes it's suited for (partial/progressive, what-if, pre-screening); an existing engine can continue handling formal/official determinations, with an explicit adopter-level answer for rule-sync and disagreement-authority questions
+
+**Decision:** Allow coexistence (B), consistent with the blueprint's extensibility principle — mandating full replacement would impose migration cost this design doesn't need to require.
 
 ---
 
@@ -180,13 +236,14 @@ facts:
 
 | Element | Reason | Decision |
 |---|---|---|
-| Three-valued completeness propagation | The one capability decision-table engines can't provide; removing it collapses this DSL back into a decision table with extra ceremony | [Decision 1](#decision-1-dependency-graph-model-for-partial-evaluation) |
+| Three-valued completeness propagation | The one capability decision-table and forward-chaining engines can't provide without an external orchestration layer; removing it collapses this DSL back into a decision table with extra ceremony | [Decision 1](#decision-1-dependency-graph-model-for-partial-evaluation) |
 | CEL as the sole derivation expression language | Keeps one expression language across the whole blueprint contract surface | [Decision 2](#decision-2-cel-as-the-derivation-expression-language) |
 | Client-side-advisory / server-side-authoritative rule | Prevents a tampered or stale client result from being treated as a real eligibility determination | [Decision 5](#decision-5-client-side-vs-server-side-execution-model) |
+| Rule-set versioning at the fact-dictionary level | Required for both QC re-determination replay and client/server consistency — the same mechanism serves both | [Decision 5](#decision-5-client-side-vs-server-side-execution-model) |
 
 ### Engine choice
 
-The blueprint does not mandate an evaluation engine (Decision 3). States/adopters may implement the DSL's completeness and dependency semantics with any engine of their choosing, including a decision-table-style authoring layer on top of the same fact model (see Decision 1's customization note).
+The blueprint does not mandate an evaluation engine (Decision 3). States/adopters may implement the DSL's completeness and dependency semantics with any engine of their choosing, including running it alongside an existing forward-chaining engine rather than replacing it (Decision 6).
 
 ## Out of scope
 
@@ -195,25 +252,28 @@ The blueprint does not mandate an evaluation engine (Decision 3). States/adopter
 | The JSON Schema file itself | Scoped to the implementation issue via `/plan`, not this design |
 | Reference engine code | Scoped to the implementation issue |
 | Any specific adopter's migration from an existing rules engine | Adoption-specific, not baseline blueprint architecture |
+| Blocking-factor lifecycle, determination state machine, event-driven re-evaluation | Domain orchestration concerns, not this DSL — see [Scope](#scope-the-rules-engine-not-the-whole-eligibility-domain); likely an extension of the existing state machine DSL, not yet designed |
 
 ## Capability coverage
 
 | Capability | Industry standard | Blueprint status |
 |---|---|---|
-| Decision-table / rulesheet authoring | Dominant commercial pattern across JSM, ServiceNow, IBM Cúram, Salesforce Government Cloud integrations | **Not in scope** — baseline authoring model is a dependency graph, not a decision table; see Decision 1 |
-| Partial/incomplete-input evaluation | Not natively supported by any of the four vendors compared | **Planned** — the core capability this DSL exists to provide; see #386 |
+| Decision-table / rulesheet authoring | Dominant commercial pattern across JSM, ServiceNow, Salesforce Government Cloud, and Progress Corticon | **Not in scope** — baseline authoring model is a dependency graph, not a decision table; see Decision 1 |
+| Partial/incomplete-input evaluation as an engine property | Not native to any decision-table/forward-chaining product researched; IBM Cúram achieves a similar outcome via an orchestration layer over a forward-chaining engine, not the engine itself; Oracle Intelligent Advisor achieves it natively but is commercial | **Planned** — the core capability this DSL exists to provide, achieved as a native engine property rather than bolted on; see #386 |
 | Vendor-neutral rules specification format | Vendors generally couple rule authoring to their own engine | **Planned** — this DSL is JSON/CEL-based and engine-agnostic; see Decision 3 |
+| Coexistence with an existing case-management-embedded rules engine | Common in practice (e.g., ACA-era MAGI/non-MAGI engine splits) | **Planned** — explicit adoption path, not required to replace an existing engine; see Decision 6 |
 
 ## Next steps (informal — not a substitute for `/plan`)
 
 Once this design doc is out of draft, the anticipated implementation sequence is:
 
-1. Finalize this architecture doc (deepen vendor research, resolve any open design questions from #386).
-2. Write the JSON Schema for the decision-rules artifact (`packages/contracts/schemas/decision-rules-schema.yaml`).
-3. One-time bootstrap validation: mine `IRS-Public/fact-graph`'s per-operator test specs and its `exampleAgiFacts.xml`/`ExampleAgiSpec.scala` example for input/expected-output cases, build a narrow JSON-to-their-XML transpiler, and run both engines against the same case matrix (including partial-input cases) as a correctness check before trusting the new engine's mechanics — with extra coverage on collection/wildcard path resolution. Drop the Scala oracle once parity is confirmed.
-4. Build the TypeScript reference engine (dependency evaluator, completeness propagation, CEL integration, collections).
-5. Wire the reference engine into the mock server as the decision-rules artifact's reference implementation.
-6. Author the first real domain decision rules against the finished engine, with no further Fact Graph dependency.
+1. Finalize this architecture doc (deepen vendor research further if needed, resolve any open design questions from #386).
+2. Design the domain orchestrator concern (blocking-factor lifecycle, state machine, event-driven re-evaluation, invocation-mode routing) as its own follow-on design — likely an extension of the existing state machine DSL rather than this one.
+3. Write the JSON Schema for the decision-rules artifact (`packages/contracts/schemas/decision-rules-schema.yaml`).
+4. One-time bootstrap validation: mine `IRS-Public/fact-graph`'s per-operator test specs and its `exampleAgiFacts.xml`/`ExampleAgiSpec.scala` example for input/expected-output cases, build a narrow JSON-to-their-XML transpiler, and run both engines against the same case matrix (including partial-input cases) as a correctness check before trusting the new engine's mechanics — with extra coverage on collection/wildcard path resolution. Drop the Scala oracle once parity is confirmed.
+5. Build the TypeScript reference engine (dependency evaluator, completeness propagation, CEL integration, collections).
+6. Wire the reference engine into the mock server as the decision-rules artifact's reference implementation.
+7. Author the first real domain decision rules against the finished engine, with no further Fact Graph dependency.
 
 This list is a placeholder for continuity across sessions — the actual phase breakdown should be produced by `/plan` once the design is finalized, not treated as authoritative from here.
 
@@ -224,3 +284,5 @@ This list is a placeholder for continuity across sessions — the actual phase b
 - [Behavioral Contract DSL](behavioral-contract-dsl.md)
 - [Google CEL specification](https://github.com/google/cel-spec)
 - [OMG DMN](https://www.omg.org/spec/DMN/)
+- [Oracle Intelligent Advisor: Determinations Engine and the inference cycle](https://docs.oracle.com/html/E79061_01/Content/Introducing%20Oracle%20Policy%20Modeling/Deter_Engine_and_infer_cycle.htm)
+- [Open Policy Agent](https://www.openpolicyagent.org/)
