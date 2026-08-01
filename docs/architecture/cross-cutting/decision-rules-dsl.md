@@ -204,6 +204,19 @@ The blueprint does not mandate an evaluation engine (Decision 3). States/adopter
 | Partial/incomplete-input evaluation | Not natively supported by any of the four vendors compared | **Planned** — the core capability this DSL exists to provide; see #386 |
 | Vendor-neutral rules specification format | Vendors generally couple rule authoring to their own engine | **Planned** — this DSL is JSON/CEL-based and engine-agnostic; see Decision 3 |
 
+## Next steps (informal — not a substitute for `/plan`)
+
+Once this design doc is out of draft, the anticipated implementation sequence is:
+
+1. Finalize this architecture doc (deepen vendor research, resolve any open design questions from #386).
+2. Write the JSON Schema for the decision-rules artifact (`packages/contracts/schemas/decision-rules-schema.yaml`).
+3. One-time bootstrap validation: mine `IRS-Public/fact-graph`'s per-operator test specs and its `exampleAgiFacts.xml`/`ExampleAgiSpec.scala` example for input/expected-output cases, build a narrow JSON-to-their-XML transpiler, and run both engines against the same case matrix (including partial-input cases) as a correctness check before trusting the new engine's mechanics — with extra coverage on collection/wildcard path resolution. Drop the Scala oracle once parity is confirmed.
+4. Build the TypeScript reference engine (dependency evaluator, completeness propagation, CEL integration, collections).
+5. Wire the reference engine into the mock server as the decision-rules artifact's reference implementation.
+6. Author the first real domain decision rules against the finished engine, with no further Fact Graph dependency.
+
+This list is a placeholder for continuity across sessions — the actual phase breakdown should be produced by `/plan` once the design is finalized, not treated as authoritative from here.
+
 ## References
 
 - [IRS Direct File Fact Graph](https://github.com/IRS-Public/fact-graph)
