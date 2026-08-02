@@ -33,13 +33,27 @@ test('extracts the real null-check-masking pattern from Mortgage Regular_NoData.
   assert.equal(rule.actions[0].expressionType, 'ASSIGNMENT');
 });
 
-test('extracts the real filter pattern from Mortgage Select_Credit.ers', () => {
+test('extracts a rule condition that reads the filtered liability collection from Mortgage Select_Credit.ers', () => {
   const { rules } = parseRulesheet('fixtures/mortgage/Select_Credit.ers');
   const conditionTexts = rules.flatMap((r) => r.conditions.map((c) => c.text));
   assert.ok(
     conditionTexts.some((t) => t?.includes('liability->size')),
     'expected a condition referencing the filtered liability collection'
   );
+});
+
+test('extracts the real filter definitions themselves from Mortgage Select_Credit.ers', () => {
+  const { filters } = parseRulesheet('fixtures/mortgage/Select_Credit.ers');
+  assert.equal(filters.length, 2, 'confirmed two real filters: accountType and lastActivityDate');
+  assert.equal(filters[0].text, "liability.accountType = 'CreditLine'");
+  assert.equal(filters[1].text, 'liability.lastActivityDate > today.addYears ( -2 )');
+  // The Studio-only "full" vs "limiting" distinction genuinely isn't visible in this
+  // static structure -- only the filter expression itself is. See Decision 9.
+});
+
+test('a rulesheet with no filters returns an empty filters array, not undefined', () => {
+  const { filters } = parseRulesheet('fixtures/mortgage/Regular_NoData.ers');
+  assert.deepEqual(filters, []);
 });
 
 test('MAGI Eligibility Groups decision table has the expected real scale', () => {

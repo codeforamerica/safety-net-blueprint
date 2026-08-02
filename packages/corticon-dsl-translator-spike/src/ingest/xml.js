@@ -10,6 +10,7 @@ const ALWAYS_ARRAY = new Set([
   'customDataTypeList',
   'conditionItemList',
   'actionItemList',
+  'filterItemList',
   'conditionValueSetCellList',
   'actionValueSetCellList',
   'ruleStatementItemList',

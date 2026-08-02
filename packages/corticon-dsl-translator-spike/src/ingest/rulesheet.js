@@ -10,7 +10,26 @@ function extractCell(cell) {
   };
 }
 
-/** Parse a Corticon Rulesheet (.ers) file into { rules, vocabulary }. */
+/**
+ * Extract this rulesheet's real filters (confirmed real in Mortgage's
+ * Select_Credit.ers: `liability.accountType = 'CreditLine'`, filtering a
+ * collection before rules evaluate it). Filters live under
+ * `rulesheetViewList.filterSection.filterItemList`, not under `ruleset` like
+ * conditions/actions -- Corticon's Studio-only "full" vs "limiting" distinction
+ * (see decision-rules-dsl.md Decision 9) isn't visible in this static structure;
+ * only the filter expression itself is.
+ */
+function extractFilters(rulesheetViewList) {
+  return asArray(rulesheetViewList?.filterSection?.filterItemList)
+    .map((item) => {
+      const cell = item?.expressionCell;
+      if (!cell?.parserOutput) return null;
+      return { expression: cell['@_external'], ...extractExpression(cell.parserOutput) };
+    })
+    .filter(Boolean);
+}
+
+/** Parse a Corticon Rulesheet (.ers) file into { rules, filters, vocabulary }. */
 export function parseRulesheet(filePath) {
   const doc = parseCorticonXml(filePath);
   const root = doc['com.corticon.rulesemf.assetmodel:RulesheetAsset'];
@@ -28,5 +47,6 @@ export function parseRulesheet(filePath) {
   return {
     vocabulary: ruleset?.['@_vocabulary'],
     rules,
+    filters: extractFilters(root?.rulesheetViewList),
   };
 }

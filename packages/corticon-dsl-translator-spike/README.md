@@ -31,7 +31,7 @@ Real Corticon project files, vendored locally so this spike doesn't depend on li
 
 ### What ingestion actually produces, and where it goes
 
-`loadProject(projectDir)` (`src/ingest/project.js`) recursively discovers every `.ecore`/`.ers`/`.erf`/`.ert` file under a given directory — any real Corticon project, not just the fixtures above — and returns a single in-memory model: `{ projectDir, vocabularies, rulesheets, ruleflows, ruletests }`, each a `Map` keyed by relative file path.
+`loadProject(projectDir)` (`src/ingest/project.js`) recursively discovers every `.ecore`/`.ers`/`.erf`/`.ert` file under a given directory — any real Corticon project, not just the fixtures above — and returns a single in-memory model: `{ projectDir, vocabularies, rulesheets, ruleflows, ruletests }`, each a `Map` keyed by relative file path. Each rulesheet also includes `filters` — real filter definitions confirmed in `Select_Credit.ers` (e.g. `liability.accountType = 'CreditLine'`), extracted the same way as conditions/actions. This was a real gap in the initial Phase 1 build (not checked against every pattern in #388's table at the time), added afterward once caught.
 
 `src/ingest-project.js` ingests a project directory using that function and prints a summary to stdout; adding `--out <file>` additionally writes the full model as JSON into `generated/` (gitignored) if you want to look at it. Later phases will call `loadProject()` directly and consume the model in-process — this script's file output is for debugging convenience, not a required hand-off between phases.
 
