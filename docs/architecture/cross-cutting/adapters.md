@@ -93,6 +93,8 @@ Two rules keep the contract honest across backends of varying capability:
 
 This is the same "adapter is a black box" principle already established above, extended to the case where different black boxes behind the same contract vary not just in *how* they answer, but in *what* they're honestly able to answer at all.
 
+**Known gap — still needs a decision, not yet confirmed:** which form the capability declaration in rule 2 actually takes. Self-declaration (the adapter exposes its own capabilities, e.g. via a manifest or capabilities response) and static per-deployment configuration (the calling domain's own config records what its configured adapter supports) have different failure modes — self-declaration can drift from reality if an adapter's capabilities change without the declaration being updated; static config requires someone to remember to update it whenever the adapter itself changes. Not resolved here.
+
 ## Contract artifacts
 
 | Artifact | File |
