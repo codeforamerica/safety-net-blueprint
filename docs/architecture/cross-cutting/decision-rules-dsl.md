@@ -242,12 +242,13 @@ facts:
 - Fact Graph itself needed Scala.js specifically to get browser execution alongside its JVM implementation — a real cross-compilation cost.
 - TypeScript/JavaScript runs natively in both Node and the browser with no cross-compilation step at all — the same artifact, not a compile-twice setup.
 - Rust compiled to WASM was considered: stronger type/ownership guarantees and better raw performance than TS, but at this workload's scale (a single household's fact graph — tens to low-hundreds of nodes, not bulk data), the performance advantage doesn't materially matter, while the cost (a second toolchain and language the team doesn't otherwise maintain) is real.
+- **CEL evaluation library:** the mock server's existing `packages/mock-server/src/cel-evaluator.js` is a regex-based shim that translates a handful of CEL-like patterns into JavaScript and executes them via `new Function()` — adequate for its actual purpose (simple state-machine guard conditions) but not a real CEL implementation: no real type system, no three-valued null-propagation semantics, no principled way to register the custom Dollar/date/sorting functions Decision 4 requires. Confirmed two real, maintained CEL implementations exist for JS/TS with custom-function registration support: `@marcbachmann/cel-js` (zero-dependency, stable, actively maintained) and `@bufbuild/cel` (backed by Buf, but explicitly beta status). The reference engine should use a real library rather than extending the mock server's shim or hand-rolling another one — reusing the shim would mean inheriting its gaps, and Decision 4's whole extensibility mechanism depends on genuine custom-type/function registration.
 
 **Options:**
 - **(A)** Rust → WASM — stronger typing/performance, but a second toolchain/language with no workload-scale benefit here
 - **(B) ✓** TypeScript — zero cross-compilation cost for server/browser parity, matches the workload's actual scale requirements
 
-**Decision:** TypeScript (B), specifically because the deciding constraint (browser + server parity) is best satisfied by a language that needs no compilation step to reach the browser at all.
+**Decision:** TypeScript (B), specifically because the deciding constraint (browser + server parity) is best satisfied by a language that needs no compilation step to reach the browser at all. CEL evaluation should use `@marcbachmann/cel-js` — stable and actively maintained, versus `@bufbuild/cel`'s current beta status — not the mock server's guard-condition shim.
 
 ---
 
