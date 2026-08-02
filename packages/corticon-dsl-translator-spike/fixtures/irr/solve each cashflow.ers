@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<com.corticon.rulesemf.assetmodel:RulesheetAsset xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:com.corticon.rulesemf.asg="http:///com/corticon/rulesemf/asg.ecore" xmlns:com.corticon.rulesemf.assetmodel="http:///com/corticon/rulesemf/assetmodel.ecore" xmlns:com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable="http:///com/corticon/rulesemf/viewrulemodel/rulesheet/decisiontable.ecore" majorVersionNumber="7" buildNumber="8020" updateStamp="_kS_pULWIEe6jjLPqgvsdaw" externalChecksum="2722078124:507989954:2304733958" studioType="Java">
+  <languageCode>en_US</languageCode>
+  <ruleset vocabularyUpdateStamp="_fMkKsLV3Ee6jjLPqgvsdaw" vocabulary="vocab.ecore#/">
+    <rule>
+      <action/>
+      <action>
+        <opaqueExpression expression="flows.portion = (flows.amount/ ((1+Investment.irr)**flows.installment))">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="flows.portion = ( flows.amount / ( ( 1 + Investment.irr ) ** flows.installment ) )" datatype="Decimal" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
+            <modifiedTermList>
+              <terms text="portion" datatype="Decimal" termtype="ATTRIBUTE" fulltext="flows.portion">
+                <parentTerm text="flows" datatype="Cashflow" termtype="ENTITY" fulltext="flows" variable="#//@ruleset/@logicalVariables.0/@extension.0">
+                  <parentTerm text="Investment" datatype="Investment" termtype="ENTITY" fulltext="Investment" variable="#//@ruleset/@logicalVariables.0"/>
+                </parentTerm>
+              </terms>
+            </modifiedTermList>
+            <referencedTermList>
+              <terms text="irr" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Investment.irr">
+                <parentTerm text="Investment" datatype="Investment" termtype="ENTITY" fulltext="Investment" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+              <terms text="flows" datatype="Cashflow" termtype="ENTITY" fulltext="flows" variable="#//@ruleset/@logicalVariables.0/@extension.0">
+                <parentTerm text="Investment" datatype="Investment" termtype="ENTITY" fulltext="Investment" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+              <terms text="amount" datatype="Decimal" termtype="ATTRIBUTE" fulltext="flows.amount">
+                <parentTerm text="flows" datatype="Cashflow" termtype="ENTITY" fulltext="flows" variable="#//@ruleset/@logicalVariables.0/@extension.0">
+                  <parentTerm text="Investment" datatype="Investment" termtype="ENTITY" fulltext="Investment" variable="#//@ruleset/@logicalVariables.0"/>
+                </parentTerm>
+              </terms>
+              <terms text="installment" datatype="Integer" termtype="ATTRIBUTE" fulltext="flows.installment">
+                <parentTerm text="flows" datatype="Cashflow" termtype="ENTITY" fulltext="flows" variable="#//@ruleset/@logicalVariables.0/@extension.0">
+                  <parentTerm text="Investment" datatype="Investment" termtype="ENTITY" fulltext="Investment" variable="#//@ruleset/@logicalVariables.0"/>
+                </parentTerm>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </action>
+    </rule>
+    <rule>
+      <action/>
+      <action/>
+    </rule>
+    <rule>
+      <action/>
+      <action/>
+    </rule>
+    <logicalVariable entity="vocab.ecore#//Investment">
+      <extension explicit="true" association="true" entity="vocab.ecore#//Cashflow" traversedAssocRole="vocab.ecore#//Investment/cashflow">
+        <alias value="flows"/>
+        <referencedAttributes attribute="vocab.ecore#//Cashflow/amount"/>
+        <referencedAttributes attribute="vocab.ecore#//Cashflow/installment"/>
+        <referencedAttributes attribute="vocab.ecore#//Cashflow/portion"/>
+      </extension>
+      <referencedAttributes attribute="vocab.ecore#//Investment/npv"/>
+      <referencedAttributes attribute="vocab.ecore#//Investment/irr"/>
+      <referencedAttributes attribute="vocab.ecore#//Investment/principal"/>
+    </logicalVariable>
+  </ruleset>
+  <rulesheetViewList xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:DecisionTable" advanced="true" sashWeightAdvancedView="19" sashWeightScope="58" sashWeightConditionsActions="37" sashWeightConditionsIf="16">
+    <actionSection rowCount="51" columnWidthFactor="0.5">
+      <actionItemList>
+        <valueSetCell valueSet=""/>
+        <expressionCell/>
+      </actionItemList>
+      <actionItemList rowHeight="140">
+        <valueSetCell/>
+        <expressionCell external="flows.portion">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="flows.portion" datatype="Decimal" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <referencedTermList>
+              <terms text="portion" datatype="Decimal" termtype="ATTRIBUTE" fulltext="flows.portion">
+                <parentTerm text="flows" datatype="Cashflow" termtype="ENTITY" fulltext="flows" variable="#//@ruleset/@logicalVariables.0/@extension.0">
+                  <parentTerm text="Investment" datatype="Investment" termtype="ENTITY" fulltext="Investment" variable="#//@ruleset/@logicalVariables.0"/>
+                </parentTerm>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </expressionCell>
+      </actionItemList>
+    </actionSection>
+    <scopeSection>
+      <rootNode>
+        <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeEntity" expanded="true" logicalVariable="#//@ruleset/@logicalVariables.0">
+          <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeAttribute" referencedAttribute="#//@ruleset/@logicalVariables.0/@referencedAttributes.0"/>
+          <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeAttribute" referencedAttribute="#//@ruleset/@logicalVariables.0/@referencedAttributes.1"/>
+          <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeAssociation" expanded="true" logicalVariable="#//@ruleset/@logicalVariables.0/@extension.0">
+            <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeAttribute" referencedAttribute="#//@ruleset/@logicalVariables.0/@extension.0/@referencedAttributes.0"/>
+            <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeAttribute" referencedAttribute="#//@ruleset/@logicalVariables.0/@extension.0/@referencedAttributes.1"/>
+            <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeAttribute" referencedAttribute="#//@ruleset/@logicalVariables.0/@extension.0/@referencedAttributes.2"/>
+          </children>
+          <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeAttribute" referencedAttribute="#//@ruleset/@logicalVariables.0/@referencedAttributes.2"/>
+        </children>
+      </rootNode>
+    </scopeSection>
+    <filterSection rowCount="50"/>
+    <ruleStatementSection rowCount="50" columnWidthReference="50" columnWidthPostSeverity="75" columnWidthAlias="100" columnWidthID="50" columnWidthText="600" columnWidthRuleName="100" columnWidthRuleLink="100" columnWidthSourceName="100" columnWidthSourceLink="100" columnWidthCategory="100" columnWidthComments="400"/>
+    <conditionSection rowCount="49" columnWidthFactor="0.5"/>
+    <ruleSection columnCount="19">
+      <ruleColumnList ruleId="0" columnWidth="348" pRule="#//@ruleset/@rules.0">
+        <actionValueSetCellList/>
+        <actionValueSetCellList valueSet="(flows.amount/ ((1+Investment.irr)**flows.installment))">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="flows.portion = ( flows.amount / ( ( 1 + Investment.irr ) ** flows.installment ) )" datatype="Decimal" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
+            <modifiedTermList>
+              <terms text="portion" datatype="Decimal" termtype="ATTRIBUTE" fulltext="flows.portion">
+                <parentTerm text="flows" datatype="Cashflow" termtype="ENTITY" fulltext="flows">
+                  <parentTerm text="Investment" datatype="Investment" termtype="ENTITY" fulltext="Investment"/>
+                </parentTerm>
+              </terms>
+            </modifiedTermList>
+            <referencedTermList>
+              <terms text="irr" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Investment.irr">
+                <parentTerm text="Investment" datatype="Investment" termtype="ENTITY" fulltext="Investment"/>
+              </terms>
+              <terms text="flows" datatype="Cashflow" termtype="ENTITY" fulltext="flows">
+                <parentTerm text="Investment" datatype="Investment" termtype="ENTITY" fulltext="Investment"/>
+              </terms>
+              <terms text="amount" datatype="Decimal" termtype="ATTRIBUTE" fulltext="flows.amount">
+                <parentTerm text="flows" datatype="Cashflow" termtype="ENTITY" fulltext="flows">
+                  <parentTerm text="Investment" datatype="Investment" termtype="ENTITY" fulltext="Investment"/>
+                </parentTerm>
+              </terms>
+              <terms text="installment" datatype="Integer" termtype="ATTRIBUTE" fulltext="flows.installment">
+                <parentTerm text="flows" datatype="Cashflow" termtype="ENTITY" fulltext="flows">
+                  <parentTerm text="Investment" datatype="Investment" termtype="ENTITY" fulltext="Investment"/>
+                </parentTerm>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </actionValueSetCellList>
+      </ruleColumnList>
+      <ruleColumnList ruleId="1" columnWidth="100" pRule="#//@ruleset/@rules.1">
+        <actionValueSetCellList/>
+        <actionValueSetCellList/>
+      </ruleColumnList>
+      <ruleColumnList ruleId="2" columnWidth="100" pRule="#//@ruleset/@rules.2">
+        <actionValueSetCellList/>
+        <actionValueSetCellList/>
+      </ruleColumnList>
+    </ruleSection>
+  </rulesheetViewList>
+</com.corticon.rulesemf.assetmodel:RulesheetAsset>
