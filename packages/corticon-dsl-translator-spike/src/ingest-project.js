@@ -1,23 +1,11 @@
 #!/usr/bin/env node
 import { writeFileSync } from 'node:fs';
 import { loadProject } from './ingest/project.js';
+import { toJson, parseCliArgs } from './cli-utils.js';
 
 function printUsage() {
   console.error('Usage: node src/ingest-project.js <corticon-project-dir> [--out <file.json>]');
   console.error('Example: node src/ingest-project.js fixtures/dc-medicaid-chip --out generated/dc-medicaid-chip.json');
-}
-
-function parseArgs(argv) {
-  const args = argv.slice(2);
-  if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
-    return null;
-  }
-  const outIndex = args.indexOf('--out');
-  const hasOut = outIndex >= 0;
-  const outFile = hasOut ? args[outIndex + 1] : undefined;
-  const excluded = hasOut ? new Set([outIndex, outIndex + 1]) : new Set();
-  const projectDir = args.filter((_, i) => !excluded.has(i))[0];
-  return { projectDir, outFile };
 }
 
 function summarize(project) {
@@ -41,20 +29,13 @@ function summarize(project) {
   };
 }
 
-function toJson(map) {
-  if (map instanceof Map) return Object.fromEntries([...map].map(([k, v]) => [k, toJson(v)]));
-  if (Array.isArray(map)) return map.map(toJson);
-  if (map && typeof map === 'object') return Object.fromEntries(Object.entries(map).map(([k, v]) => [k, toJson(v)]));
-  return map;
-}
-
-const args = parseArgs(process.argv);
+const args = parseCliArgs(process.argv);
 if (!args) {
   printUsage();
-  process.exit(args === null ? 0 : 1);
+  process.exit(0);
 }
 
-const project = loadProject(args.projectDir);
+const project = loadProject(args.positional);
 const summary = summarize(project);
 
 if (args.outFile) {
