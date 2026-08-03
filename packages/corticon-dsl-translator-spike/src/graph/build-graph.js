@@ -1,10 +1,5 @@
 import { canonicalAttributePath, touchesEntityCreation } from './attribute-path.js';
-
-/** Accept either a Map or a plain object (the JSON-deserialized shape produced by `ingest-project.js --out`) uniformly. */
-function entriesOf(mapOrObject) {
-  if (!mapOrObject) return [];
-  return mapOrObject instanceof Map ? [...mapOrObject.entries()] : Object.entries(mapOrObject);
-}
+import { entriesOf } from '../map-utils.js';
 
 function attributePathsIn(terms) {
   return (terms ?? []).map(canonicalAttributePath).filter(Boolean);
