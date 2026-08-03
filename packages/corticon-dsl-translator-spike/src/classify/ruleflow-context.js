@@ -49,7 +49,16 @@ function allInvokesTargets(node) {
  * `iterative="true"` node and/or a `BranchContainer`'s branches -- the signal Phase 3
  * classification needs to disambiguate a raw structural self-loop (see build-graph.js's
  * findCycles comment) into a genuine cycle, an ordinary decision-table row, or
- * null-check masking.
+ * null-check masking. Also resolves each rulesheet's real ruleflow invocation order
+ * (`firstInvocationOrder` on perRulesheet) -- confirmed real and documented by
+ * Progress: "If a connector is drawn from Rulesheet sample1.ers to sample2.ers, then
+ * when a deployed Ruleflow is invoked, it will execute the rules in sample1.ers
+ * first, followed by the rules in sample2.ers" (Corticon Ruleflow window docs). This
+ * is what build-facts.js's cross-rulesheet-assembly compiler needs to chain multiple
+ * rulesheets writing the same Fact in their REAL execution order (a later-invoked
+ * rulesheet's write overwrites an earlier one's), rather than an arbitrary order --
+ * see that file's own comment for the real bug fixed by resolving this properly
+ * instead of guessing.
  *
  * Also flags two cases that fell out of building this traversal, neither confirmed in
  * any real fixture (defensive additions, not observed real patterns -- see issue #388's
@@ -58,7 +67,10 @@ function allInvokesTargets(node) {
  * context ("multiInvoked") -- particularly when those contexts disagree on
  * iterative/branched status. Per that same section, disagreeing contexts are combined
  * with OR (favor flagging a possible genuine cycle over missing one), not tracked
- * per-invocation-site.
+ * per-invocation-site. The same "combine, don't pick one" treatment applies to
+ * `firstInvocationOrder`: the EARLIEST sequence number a rulesheet is ever reached at
+ * is used, so a rulesheet invoked from multiple places gets one stable, deterministic
+ * position rather than depending on traversal happenstance.
  */
 export function resolveRuleflowContext(project) {
   const ruleflowKeys = keysOf(project.ruleflows);
@@ -78,13 +90,20 @@ export function resolveRuleflowContext(project) {
   }
   const roots = ruleflowKeys.filter((key) => !invokedRuleflows.has(key));
 
-  // rulesheet file -> array of { iterative, branched } contexts it was reached through.
+  // rulesheet file -> array of { iterative, branched, order } contexts it was reached
+  // through. `order` is a global sequence number, incremented once per Ruleflow node
+  // visited (across every nested Ruleflow the walk descends into, not reset per
+  // Ruleflow) -- since each Ruleflow's own `nodes` array is already sorted by its
+  // real `order` attribute (see ingest/ruleflow.js), walking it in array order and
+  // stamping a monotonically increasing counter reproduces real execution order for
+  // both a single flat Ruleflow and nested Ruleflow invocations.
   const contextsByRulesheet = new Map();
   function recordContext(rulesheetFile, context) {
     if (!contextsByRulesheet.has(rulesheetFile)) contextsByRulesheet.set(rulesheetFile, []);
     contextsByRulesheet.get(rulesheetFile).push(context);
   }
 
+  let sequenceCounter = 0;
   const visitedRuleflows = new Set(); // guards against ruleflow invocation cycles
   function walk(ruleflowKey, context) {
     if (visitedRuleflows.has(ruleflowKey + '|' + context.iterative + '|' + context.branched)) return;
@@ -93,16 +112,18 @@ export function resolveRuleflowContext(project) {
     const ruleflow = ruleflowsByKey.get(ruleflowKey);
     if (!ruleflow) return;
     for (const node of ruleflow.nodes ?? []) {
+      sequenceCounter++;
+      const order = sequenceCounter;
       const nodeIterative = context.iterative || node.iterative === true;
       if (node.kind === 'ActivityNode') {
         const resolved = resolveInvokes(node.invokes, ruleflowKey, ruleflowKeys, rulesheetKeys);
-        if (resolved.kind === 'rulesheet') recordContext(resolved.file, { iterative: nodeIterative, branched: context.branched });
+        if (resolved.kind === 'rulesheet') recordContext(resolved.file, { iterative: nodeIterative, branched: context.branched, order });
         else if (resolved.kind === 'ruleflow') walk(resolved.file, { iterative: nodeIterative, branched: context.branched });
       } else {
         for (const branch of node.branches ?? []) {
           for (const target of branch.targets ?? []) {
             const resolved = resolveInvokes(target.invokes, ruleflowKey, ruleflowKeys, rulesheetKeys);
-            if (resolved.kind === 'rulesheet') recordContext(resolved.file, { iterative: nodeIterative, branched: true });
+            if (resolved.kind === 'rulesheet') recordContext(resolved.file, { iterative: nodeIterative, branched: true, order });
             else if (resolved.kind === 'ruleflow') walk(resolved.file, { iterative: nodeIterative, branched: true });
           }
         }
@@ -118,7 +139,11 @@ export function resolveRuleflowContext(project) {
     const contexts = contextsByRulesheet.get(rulesheetFile) ?? [];
     const iterative = contexts.some((c) => c.iterative);
     const branched = contexts.some((c) => c.branched);
-    perRulesheet.set(rulesheetFile, { iterative, branched, invocationCount: contexts.length });
+    // Earliest (lowest) sequence number this rulesheet is ever reached at -- see this
+    // function's own doc comment for why "earliest across every invocation site,"
+    // not e.g. "the site from the first root walked," is the right combination rule.
+    const firstInvocationOrder = contexts.length ? Math.min(...contexts.map((c) => c.order)) : undefined;
+    perRulesheet.set(rulesheetFile, { iterative, branched, invocationCount: contexts.length, firstInvocationOrder });
 
     const distinctShapes = new Set(contexts.map((c) => `${c.iterative}|${c.branched}`));
     if (distinctShapes.size > 1) {

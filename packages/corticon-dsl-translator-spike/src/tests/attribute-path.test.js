@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseRulesheet } from '../ingest/rulesheet.js';
+import { parseRulesheet } from '../corticon/rulesheet.js';
 import { touchesEntityCreation } from '../graph/attribute-path.js';
 
 test('flags the real Household.newUnique[...] entity-creation action (bare ENTITY in modifiedTerms + a NEW term)', () => {

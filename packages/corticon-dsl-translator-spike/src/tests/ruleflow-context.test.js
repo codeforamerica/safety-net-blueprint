@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadProject } from '../ingest/project.js';
+import { loadProject } from '../corticon/project.js';
 import { resolveRuleflowContext } from '../classify/ruleflow-context.js';
 
 test('IRR: rulesheets inside the iterative loop are marked iterative, the setup step is not', () => {
@@ -38,16 +38,16 @@ test('all-patterns: a rulesheet reached through both an iterative node and a Bra
   assert.deepEqual(ctx.roots, ['top-level-flow.erf']);
   // ProgramAEligibility/BEligibility.ers sit inside program-eligibility-loop.erf's
   // BranchContainer, itself invoked from an iterative ActivityNode -- both signals apply.
-  assert.deepEqual(ctx.perRulesheet.get('ProgramAEligibility.ers'), { iterative: true, branched: true, invocationCount: 1 });
-  assert.deepEqual(ctx.perRulesheet.get('ProgramBEligibility.ers'), { iterative: true, branched: true, invocationCount: 1 });
+  assert.deepEqual(ctx.perRulesheet.get('ProgramAEligibility.ers'), { iterative: true, branched: true, invocationCount: 1, firstInvocationOrder: 12 });
+  assert.deepEqual(ctx.perRulesheet.get('ProgramBEligibility.ers'), { iterative: true, branched: true, invocationCount: 1, firstInvocationOrder: 12 });
   // AdjustBenefit.ers sits inside benefit-loop.erf, invoked from an iterative
   // ActivityNode but never from a BranchContainer.
-  assert.deepEqual(ctx.perRulesheet.get('AdjustBenefit.ers'), { iterative: true, branched: false, invocationCount: 1 });
+  assert.deepEqual(ctx.perRulesheet.get('AdjustBenefit.ers'), { iterative: true, branched: false, invocationCount: 1, firstInvocationOrder: 15 });
   // DisabilityBranchA/B.ers sit inside a non-iterative BranchContainer.
-  assert.deepEqual(ctx.perRulesheet.get('DisabilityBranchA.ers'), { iterative: false, branched: true, invocationCount: 1 });
-  assert.deepEqual(ctx.perRulesheet.get('DisabilityBranchB.ers'), { iterative: false, branched: true, invocationCount: 1 });
+  assert.deepEqual(ctx.perRulesheet.get('DisabilityBranchA.ers'), { iterative: false, branched: true, invocationCount: 1, firstInvocationOrder: 10 });
+  assert.deepEqual(ctx.perRulesheet.get('DisabilityBranchB.ers'), { iterative: false, branched: true, invocationCount: 1, firstInvocationOrder: 10 });
   // CreateHouseholds.ers is a plain sequential step -- neither flag applies.
-  assert.deepEqual(ctx.perRulesheet.get('CreateHouseholds.ers'), { iterative: false, branched: false, invocationCount: 1 });
+  assert.deepEqual(ctx.perRulesheet.get('CreateHouseholds.ers'), { iterative: false, branched: false, invocationCount: 1, firstInvocationOrder: 1 });
   assert.deepEqual(ctx.unreachable, []);
   assert.deepEqual(ctx.multiInvoked, []);
 });
@@ -75,5 +75,7 @@ test('flags a rulesheet invoked from two disagreeing contexts -- not observed in
   assert.equal(ctx.multiInvoked[0].rulesheet, 'Shared.ers');
   assert.equal(ctx.multiInvoked[0].contexts.length, 2);
   // Combined via OR for classification purposes, per the documented tradeoff.
-  assert.deepEqual(ctx.perRulesheet.get('Shared.ers'), { iterative: true, branched: false, invocationCount: 2 });
+  // firstInvocationOrder: 1 -- the EARLIEST of the two invocation sites (the plain
+  // one, visited first), per this function's own "combine, don't pick one" rule.
+  assert.deepEqual(ctx.perRulesheet.get('Shared.ers'), { iterative: true, branched: false, invocationCount: 2, firstInvocationOrder: 1 });
 });

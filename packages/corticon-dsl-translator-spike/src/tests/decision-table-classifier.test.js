@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadProject } from '../ingest/project.js';
+import { loadProject } from '../corticon/project.js';
 import { buildDependencyGraph } from '../graph/build-graph.js';
 import { classifyDecisionTableCombinatorics } from '../classify/decision-table-classifier.js';
 
@@ -14,7 +14,7 @@ test('classifies Mortgage\'s real Select_Credit.ers 3-row decision table converg
   const results = classifyDecisionTableCombinatorics(graph).filter((r) => r.rulesheet === 'Select_Credit.ers');
   assert.equal(results.length, 1);
   assert.equal(results[0].path, 'LoanApplication.creditReqtMet');
-  assert.deepEqual(results[0].ruleIndices, [0, 1, 2]);
+  assert.deepEqual(results[0].ruleIndices, [1, 2, 3], 'shifted by 1 vs. Corticon\'s own rule count: index 0 is the reserved blank/template row, now kept rather than filtered');
 });
 
 test('a path written by only one rule in its rulesheet is not flagged', () => {

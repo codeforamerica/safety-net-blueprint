@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseRuleflow } from '../ingest/ruleflow.js';
+import { parseRuleflow } from '../corticon/ruleflow.js';
 
 test('confirms the real iterative="true" shape from the IRR fixture', () => {
   const { nodes } = parseRuleflow('fixtures/irr/top level flow.erf');

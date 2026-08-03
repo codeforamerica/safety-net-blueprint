@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadProject } from '../ingest/project.js';
+import { loadProject } from '../corticon/project.js';
 import { classifyEntityCreation } from '../classify/entity-creation-classifier.js';
 
 test('classifies DC Medicaid\'s real Household.newUnique[...] as kind "new"', () => {

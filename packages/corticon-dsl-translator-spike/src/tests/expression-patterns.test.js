@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseRulesheet } from '../ingest/rulesheet.js';
-import { loadProject } from '../ingest/project.js';
+import { parseRulesheet } from '../corticon/rulesheet.js';
+import { loadProject } from '../corticon/project.js';
 import {
   isDateArithmetic,
   isCurrencyRounding,
@@ -12,7 +12,11 @@ import {
 } from '../classify/expression-patterns.js';
 
 function allTerms(rule) {
-  return [...rule.conditions, ...rule.actions].flatMap((cell) => cell.referencedTerms ?? []);
+  return [...rule.conditions, ...rule.actions].filter(Boolean).flatMap((cell) => cell.referencedTerms ?? []);
+}
+
+function allActions(rulesheet) {
+  return rulesheet.rules.flatMap((rule) => rule.actions.filter(Boolean));
 }
 
 test('detects real date arithmetic in DC Medicaid\'s Person.dob.yearsBetween(today)', () => {
@@ -36,7 +40,7 @@ test('a plain attribute read is never mistaken for date arithmetic', () => {
 
 test('detects currency rounding via the raw expression text fallback -- DC Medicaid\'s real .round(2) on a compound expression has no term at all', () => {
   const r = parseRulesheet('fixtures/dc-medicaid-chip/Medicaid Applicant/Set FPL from Household Size.ers');
-  const roundingAction = r.rules[0].actions.find((a) => a.text?.includes('ActualPercentFPL'));
+  const roundingAction = allActions(r).find((a) => a.text?.includes('ActualPercentFPL'));
   assert.ok(roundingAction, 'expected to find the real ActualPercentFPL rounding action');
   assert.equal(allTerms({ conditions: [], actions: [roundingAction] }).some(isCurrencyRounding), false, 'no term represents the round() call on a compound expression');
   assert.equal(actionUsesCurrencyRounding(roundingAction), true, 'the text fallback still catches it');
@@ -44,7 +48,7 @@ test('detects currency rounding via the raw expression text fallback -- DC Medic
 
 test('detects currency rounding via a real METHOD term -- this fixture\'s round(2) on a bare attribute', () => {
   const r = parseRulesheet('fixtures/all-patterns/ComputeIncome.ers');
-  const roundingAction = r.rules[0].actions.find((a) => a.text?.includes('incomeRounded'));
+  const roundingAction = allActions(r).find((a) => a.text?.includes('incomeRounded'));
   assert.ok(allTerms({ conditions: [], actions: [roundingAction] }).some(isCurrencyRounding));
   assert.equal(actionUsesCurrencyRounding(roundingAction), true);
 });

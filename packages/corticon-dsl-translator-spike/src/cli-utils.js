@@ -10,8 +10,13 @@ export function toJson(value) {
 }
 
 /**
- * Parse `<positional> [--out <file>]` style CLI args, shared across this spike's
- * phase scripts so each one doesn't reimplement the same `--out`/`--help` handling.
+ * Parse `<positional> [--out <file>] [--engine <name>]` style CLI args, shared across
+ * this spike's phase scripts so each one doesn't reimplement the same
+ * `--out`/`--engine`/`--help` handling. `--engine` is only meaningful to
+ * ingest-project.js today (it's the one script that reads a raw source-engine
+ * project directory) -- everything downstream operates on the already-ingested,
+ * engine-agnostic project model, not a source engine's native files, so it has no
+ * engine to select between.
  */
 export function parseCliArgs(argv) {
   const args = argv.slice(2);
@@ -21,7 +26,13 @@ export function parseCliArgs(argv) {
   const outIndex = args.indexOf('--out');
   const hasOut = outIndex >= 0;
   const outFile = hasOut ? args[outIndex + 1] : undefined;
-  const excluded = hasOut ? new Set([outIndex, outIndex + 1]) : new Set();
+  const engineIndex = args.indexOf('--engine');
+  const hasEngine = engineIndex >= 0;
+  const engine = hasEngine ? args[engineIndex + 1] : undefined;
+  const excluded = new Set([
+    ...(hasOut ? [outIndex, outIndex + 1] : []),
+    ...(hasEngine ? [engineIndex, engineIndex + 1] : []),
+  ]);
   const positional = args.filter((_, i) => !excluded.has(i))[0];
-  return { positional, outFile };
+  return { positional, outFile, engine };
 }

@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { writeFileSync } from 'node:fs';
-import { loadProject } from './ingest/project.js';
 import { toJson, parseCliArgs } from './cli-utils.js';
+import { ENGINES, DEFAULT_ENGINE, resolveEngine } from './engines.js';
 
 function printUsage() {
-  console.error('Usage: node src/ingest-project.js <corticon-project-dir> [--out <file.json>]');
+  console.error('Usage: node src/ingest-project.js <project-dir> [--engine <name>] [--out <file.json>]');
+  console.error(`  --engine defaults to "${DEFAULT_ENGINE}". Known engines: ${Object.keys(ENGINES).join(', ')}`);
   console.error('Example: node src/ingest-project.js fixtures/dc-medicaid-chip --out generated/dc-medicaid-chip.json');
 }
 
@@ -35,6 +36,13 @@ if (!args) {
   process.exit(0);
 }
 
+let loadProject;
+try {
+  ({ loadProject } = await resolveEngine(args.engine ?? DEFAULT_ENGINE));
+} catch (err) {
+  console.error(err.message);
+  process.exit(1);
+}
 const project = loadProject(args.positional);
 const summary = summarize(project);
 

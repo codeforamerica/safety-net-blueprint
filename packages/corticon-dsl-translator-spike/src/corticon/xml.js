@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { XMLParser } from 'fast-xml-parser';
 
 // Tags that repeat unconditionally, wherever they appear (confirmed by dumping
-// real jPaths from the fixtures — see the ingest/*.test.js suites).
+// real jPaths from the fixtures — see the corticon/*.test.js suites).
 const ALWAYS_ARRAY = new Set([
   'eClassifiers',
   'eStructuralFeatures',

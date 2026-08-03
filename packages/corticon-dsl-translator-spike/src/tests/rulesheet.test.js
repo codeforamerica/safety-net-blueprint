@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { parseRulesheet } from '../ingest/rulesheet.js';
+import { parseRulesheet, isBlankTemplateRule } from '../corticon/rulesheet.js';
 
 function findFiles(dir, extension) {
   const results = [];
@@ -24,18 +24,21 @@ test('parses every real .ers fixture without error', () => {
 
 test('extracts the real null-check-masking pattern from Mortgage Regular_NoData.ers', () => {
   const { rules } = parseRulesheet('fixtures/mortgage/Regular_NoData.ers');
-  assert.equal(rules.length, 4, 'one rule per late-payment-window attribute');
+  assert.equal(rules.length, 5, 'Corticon Studio\'s own reserved blank/template row (index 0) plus one rule per late-payment-window attribute');
+  assert.ok(isBlankTemplateRule(rules[0]), 'rule index 0 is the reserved blank row, confirmed real, not a real rule');
 
-  const rule = rules[0];
-  assert.equal(rule.conditions.length, 1);
+  const rule = rules[1];
+  assert.equal(rule.conditions.length, 4, 'one real condition plus 3 blank columns this rule doesn\'t use, kept as null to preserve column position');
   assert.equal(rule.conditions[0].text, 'loanapp.late30DaysSum = null');
+  assert.deepEqual(rule.conditions.slice(1), [null, null, null]);
   assert.equal(rule.actions[0].text, 'loanapp.late30DaysSum = 0');
   assert.equal(rule.actions[0].expressionType, 'ASSIGNMENT');
+  assert.equal(rule.comment.text, 'If number of times late 30 days was not set due to a lack of data, set it to 0', 'real human-authored ruleStatement documentation, confirmed real and explicitly linked via documentingRuleStatements');
 });
 
 test('extracts a rule condition that reads the filtered liability collection from Mortgage Select_Credit.ers', () => {
   const { rules } = parseRulesheet('fixtures/mortgage/Select_Credit.ers');
-  const conditionTexts = rules.flatMap((r) => r.conditions.map((c) => c.text));
+  const conditionTexts = rules.flatMap((r) => r.conditions.filter(Boolean).map((c) => c.text));
   assert.ok(
     conditionTexts.some((t) => t?.includes('liability->size')),
     'expected a condition referencing the filtered liability collection'
@@ -58,12 +61,28 @@ test('a rulesheet with no filters returns an empty filters array, not undefined'
 
 test('MAGI Eligibility Groups decision table has the expected real scale', () => {
   const { rules } = parseRulesheet('fixtures/dc-medicaid-chip/Medicaid Applicant/MAGI Eligibility Groups.ers');
-  assert.equal(rules.length, 17, 'confirmed real rule-row count from manual inspection');
+  assert.equal(rules.length, 18, 'confirmed real rule-row count from manual inspection: 17 real rows plus Corticon Studio\'s own reserved blank/template row (index 0), now kept rather than filtered');
 });
 
-test('a bare placeholder <rule/> with no conditions or actions is filtered out', () => {
+test('a bare placeholder <rule/> with no conditions or actions is kept, not filtered, but identifiable via isBlankTemplateRule', () => {
   const { rules } = parseRulesheet('fixtures/dc-medicaid-chip/Medicaid Applicant/MAGI Eligibility Groups.ers');
-  for (const rule of rules) {
-    assert.ok(rule.conditions.length > 0 || rule.actions.length > 0, 'every retained rule has real content');
+  assert.ok(isBlankTemplateRule(rules[0]), 'rule index 0 is the reserved blank row, confirmed real, not a real rule');
+  for (const rule of rules.slice(1)) {
+    assert.ok(!isBlankTemplateRule(rule), 'every other retained rule has real content');
   }
+});
+
+test('a rule with a real ruleStatement documentation comment resolves it via documentingRuleStatements, confirmed real for exactly one of the 18 rules', () => {
+  const { rules } = parseRulesheet('fixtures/dc-medicaid-chip/Medicaid Applicant/MAGI Eligibility Groups.ers');
+  const commented = rules.filter((r) => r.comment);
+  assert.equal(commented.length, 1, 'confirmed real: sparse, not every rule has one');
+  assert.equal(commented[0].comment.text, 'Aged blind disabled');
+  assert.equal(commented[0].comment.severity, 'Info');
+});
+
+test('column definitions are captured faithfully from the decision-table grid view, without claiming a per-rule correspondence', () => {
+  const { actionColumns, conditionColumns } = parseRulesheet('fixtures/dc-medicaid-chip/Medicaid Applicant/MAGI Eligibility Groups.ers');
+  assert.equal(actionColumns.length, 7, 'confirmed real column-definition count, independent of any single rule\'s own action count');
+  assert.equal(conditionColumns.length, 22);
+  assert.ok(actionColumns.some((c) => c.naturalLanguageText?.includes('Contigent upon household income')), 'real human-authored column description');
 });

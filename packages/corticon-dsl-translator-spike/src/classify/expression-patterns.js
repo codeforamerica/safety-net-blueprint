@@ -90,7 +90,7 @@ export function classifyExpressionPatterns(project) {
   const result = [];
   for (const [rulesheetFile, rulesheet] of entriesOf(project.rulesheets)) {
     rulesheet.rules.forEach((rule, ruleIndex) => {
-      for (const cell of [...rule.conditions, ...rule.actions]) {
+      for (const cell of [...rule.conditions, ...rule.actions].filter(Boolean)) {
         if ((cell.referencedTerms ?? []).some(isDateArithmetic)) {
           result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'date-arithmetic', expression: cell.text });
         }

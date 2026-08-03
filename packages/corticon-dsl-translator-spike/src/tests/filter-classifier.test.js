@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadProject } from '../ingest/project.js';
+import { loadProject } from '../corticon/project.js';
 import { classifyFilters } from '../classify/filter-classifier.js';
 
 test('classifies Mortgage\'s real Select_Credit.ers filters, resolving the canonical path each one reads', () => {

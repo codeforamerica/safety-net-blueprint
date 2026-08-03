@@ -1,20 +1,23 @@
-# Why build a new DSL instead of adopting Fact Graph?
+# Why a custom dependency-graph engine
 
-This is a fair question given how much the decision-rules DSL (see
-[`FORWARD-VS-REVERSE-CHAINING.md`](./FORWARD-VS-REVERSE-CHAINING.md)) resembles
-[IRS Direct File's open-source Fact Graph engine](https://github.com/IRS-Public/fact-graph)
-(`github.com/IRS-Public/fact-graph`, CC0/public domain). This doc summarizes the actual decision
-record — see `decision-rules-dsl.md` (Decisions 1 and 2, on the `design/decision-rules-dsl`
-branch, design issue #386) for the full reasoning, considerations, and alternatives considered.
+The decision-rules DSL (see [`FORWARD-VS-REVERSE-CHAINING.md`](./FORWARD-VS-REVERSE-CHAINING.md))
+owes a real, direct debt to [IRS Direct File's open-source Fact Graph
+engine](https://github.com/IRS-Public/fact-graph) (`github.com/IRS-Public/fact-graph`, CC0/public
+domain) — Fact Graph is the reason this design didn't have to invent its structural model from
+scratch, and is worth taking seriously as a candidate to adopt directly, not just borrow ideas
+from. This doc summarizes why the actual decision was to build a new engine on Fact Graph's
+proven ideas rather than adopt its runtime — see `decision-rules-dsl.md` (Decisions 1 and 2, on
+the `design/decision-rules-dsl` branch, design issue #386) for the full reasoning, considerations,
+and alternatives weighed.
 
-## What's borrowed from Fact Graph
+## What this design owes to Fact Graph
 
 The *idea*, not the artifact: a dependency graph of typed facts with three-valued completeness
 (known / unknown / placeholder) tracked natively by the engine itself, not bolted on. Fact Graph
 is the only comparable open-source engine purpose-built for exactly this shape of problem, and
 using its structural model as a starting point avoids reinventing something it already got right.
 
-## Why not just run Fact Graph itself?
+## Why not adopt Fact Graph's runtime directly?
 
 - Fact Graph's biggest practical asset — years of production hardening against real tax-law edge
   cases — is domain-specific to tax preparation and doesn't transfer to safety-net eligibility
@@ -38,11 +41,12 @@ around genuinely tricky mechanics — collection/wildcard path resolution, for i
 bug fix in Fact Graph's own codebase as recently as March 2026, which is real evidence this is a
 hard area to get right even for the team that built it.
 
-The mitigation is a bootstrap validation, not a permanent runtime dependency: mining Fact Graph's
-own per-operator test specs (real Scala test files with known-correct input/expected-output pairs)
-and re-asserting the same values against the new engine, without ever needing to run Fact Graph's
-actual Scala runtime. Once that parity is confirmed, there's no *ongoing* dependency — rule
-authoring happens against the new engine, not against Fact Graph's runtime.
+The mitigation is a bootstrap validation, not a permanent runtime dependency: mining *every one* of
+Fact Graph's own per-operator test specs (real Scala test files with known-correct
+input/expected-output pairs) — not a representative sample — and re-asserting the same values
+against the new engine, without ever needing to run Fact Graph's actual Scala runtime. Once that
+full reproduction passes, there's no *ongoing* dependency — rule authoring happens against the new
+engine, not against Fact Graph's runtime.
 
 "Not an ongoing dependency" doesn't have to mean "check once and never again," though. Since we
 never run Fact Graph itself, there's no automatic way of learning when its team fixes a bug —
@@ -60,6 +64,13 @@ Fact Graph's release notes/changelog for corrections worth investigating, given 
 low-traffic open-source project — cheap, but relies on someone remembering to look; (3) treat it
 as a non-issue and accept the drift risk, on the reasoning that Fact Graph's tax-specific hardening
 was never fully applicable to this domain anyway (per the reasoning above).
+
+## Risks and mitigations, at a glance
+
+| Risk | Mitigation |
+|---|---|
+| Losing Fact Graph's own hardening on tricky mechanics (e.g. its own collection/wildcard path-resolution bug fix, March 2026) | **Bootstrap validation:** reproduce *every one* of Fact Graph's own per-operator test specs against the new engine — not a sample — once, before rule authoring begins |
+| Ongoing risk 1 creates: that reproduction is a snapshot at one point in time, not a standing guarantee — Fact Graph's own logic can still improve or get fixed afterward with nothing prompting a recheck | Periodic re-validation against Fact Graph's *current* test specs, watching its changelog, or accepting the drift risk — an open decision, not yet settled (see the known-gap note on Decision 2) |
 
 ## Where this spike fits in
 

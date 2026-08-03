@@ -1,5 +1,6 @@
 import { canonicalAttributePath, touchesEntityCreation } from './attribute-path.js';
 import { entriesOf } from '../map-utils.js';
+import { isBlankTemplateRule } from '../corticon/rulesheet.js';
 
 function attributePathsIn(terms) {
   return (terms ?? []).map(canonicalAttributePath).filter(Boolean);
@@ -22,12 +23,19 @@ export function buildDependencyGraph(project) {
 
   for (const [rulesheetFile, rulesheet] of entriesOf(project.rulesheets)) {
     rulesheet.rules.forEach((rule, ruleIndex) => {
+      // Corticon Studio's own reserved blank/template row (see rulesheet.js's own
+      // comment) -- always rule index 0 in every real fixture checked, kept in the
+      // model now for faithfulness but genuinely has no logic to contribute an edge.
+      if (isBlankTemplateRule(rule)) return;
+
       // Shared across every action in the rule -- all of them only run if the
       // rule's conditions are met, so each one's write genuinely does depend on
-      // whatever the conditions read.
-      const conditionReads = rule.conditions.flatMap((c) => attributePathsIn(c.referencedTerms));
+      // whatever the conditions read. Individual columns can still be null even on
+      // a real (non-blank-template) rule -- that column just doesn't apply to this
+      // particular row -- so those are filtered here, not upstream in ingestion.
+      const conditionReads = rule.conditions.filter(Boolean).flatMap((c) => attributePathsIn(c.referencedTerms));
 
-      for (const action of rule.actions) {
+      for (const action of rule.actions.filter(Boolean)) {
         const isEntityCreation = touchesEntityCreation(action.modifiedTerms, action.referencedTerms);
         const writePaths = attributePathsIn(action.modifiedTerms);
         // Scoped to THIS action alone, not pooled across every action in the rule --

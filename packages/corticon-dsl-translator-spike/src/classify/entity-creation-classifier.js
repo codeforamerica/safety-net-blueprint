@@ -37,7 +37,7 @@ export function classifyEntityCreation(project) {
   const result = [];
   for (const [rulesheetFile, rulesheet] of entriesOf(project.rulesheets)) {
     rulesheet.rules.forEach((rule, ruleIndex) => {
-      for (const action of rule.actions) {
+      for (const action of rule.actions.filter(Boolean)) {
         const creation = entityCreationKind(action.modifiedTerms, action.referencedTerms);
         if (creation) result.push({ rulesheet: rulesheetFile, ruleIndex, ...creation });
       }

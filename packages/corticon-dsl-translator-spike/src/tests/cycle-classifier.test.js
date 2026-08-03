@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadProject } from '../ingest/project.js';
+import { loadProject } from '../corticon/project.js';
 import { buildDependencyGraph } from '../graph/build-graph.js';
 import { resolveRuleflowContext } from '../classify/ruleflow-context.js';
 import { classifySelfLoops, classifyMultiHopCycles } from '../classify/cycle-classifier.js';

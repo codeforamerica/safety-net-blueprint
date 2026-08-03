@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { sep } from 'node:path';
-import { loadProject } from '../ingest/project.js';
+import { loadProject } from '../corticon/project.js';
 
 test('loads a whole real project directory by recursively discovering files by extension', () => {
   const project = loadProject('fixtures/dc-medicaid-chip');

@@ -2,7 +2,9 @@
 
 A state that's spent years encoding eligibility rules in a forward-chaining engine like Corticon doesn't have a good way to move to something better. Rewrite everything by hand in a new system, and you're migrating blind — there's no way to know the rewritten rules actually behave like the ones they replaced until something breaks in production. That risk alone is often enough to keep a state stuck on an aging system indefinitely.
 
-This spike proves there's a third option: **translate** a real ruleset instead of rewriting it, and **verify** the translation against the original system's own captured behavior — so a migration is provably correct, not just hoped to be.
+This spike proves there's a third option: **translate** a real ruleset instead of rewriting it, and **verify** the translation by replaying the original system's own captured input/output traces through the translated rules and diffing the results against what the original system actually produced — so a migration is provably correct on real historical cases, not just hoped to be.
+
+That same trace-and-diff approach can carry a state all the way through cutover, not just through this spike: generating synthetic partial-input cases to exercise the completeness model a forward-chaining engine's own traces can't produce, and running both engines side by side on live traffic before ever retiring the original, extend the same verification to full production confidence.
 
 Feasibility spike for issue [#388](https://github.com/codeforamerica/safety-net-blueprint/issues/388), de-risking Decisions 9 and 10 of [`decision-rules-dsl.md`](../../docs/architecture/cross-cutting/decision-rules-dsl.md) (design issue [#386](https://github.com/codeforamerica/safety-net-blueprint/issues/386)).
 
@@ -11,9 +13,9 @@ Feasibility spike for issue [#388](https://github.com/codeforamerica/safety-net-
 - [`FORWARD-VS-REVERSE-CHAINING.md`](./FORWARD-VS-REVERSE-CHAINING.md) — Corticon and the decision-rules DSL are two fundamentally different styles of rules engine; why translating between them is hard, not a syntax swap.
 - [`TRANSLATION-PATTERNS.md`](./TRANSLATION-PATTERNS.md) — the specific real patterns this translator has to recognize (a genuine loop vs. an ordinary decision-table row vs. a null-check standing in for missing data) rather than translate literally.
 - [`CORTICON-GLOSSARY.md`](./CORTICON-GLOSSARY.md) / [`DEPENDENCY-GRAPH-GLOSSARY.md`](./DEPENDENCY-GRAPH-GLOSSARY.md) — vocabulary for each side of the translation, for readers unfamiliar with either.
-- [`WHY-NOT-FACT-GRAPH.md`](./WHY-NOT-FACT-GRAPH.md) — why the decision-rules DSL is a new engine inspired by IRS Direct File's open-source Fact Graph, not an adoption of it.
+- [`WHY-A-CUSTOM-DEPENDENCY-GRAPH-ENGINE.md`](./WHY-A-CUSTOM-DEPENDENCY-GRAPH-ENGINE.md) — why the decision-rules DSL is a new engine inspired by IRS Direct File's open-source Fact Graph, not an adoption of it.
 
-Not production code — see the Non-goals section of #388. That said, the ingestion layer (`src/ingest/`) specifically is written to be reusable beyond this spike, not disposable: Decision 9 already frames a real Corticon→DSL translator as a documented adoption path a state migration would eventually need, and parsing Corticon's real file formats is the first thing that translator would have to do. It takes a project directory as a command-line argument rather than hardcoding paths to the fixtures above, so it works against any real Corticon project, not just this spike's examples. What's spike-scoped is *breadth* of coverage (only the constructs our fixtures actually contain), not the parsing approach itself.
+Not production code — see the Non-goals section of #388. That said, the ingestion, dependency-graph, and classification layers (`src/corticon/`, `src/graph/`, `src/classify/`) are specifically written to be reusable beyond this spike, not disposable: Decision 9 already frames a real Corticon→DSL translator as a documented adoption path a state migration would eventually need, and parsing Corticon's real file formats is the first thing that translator would have to do. `src/ingest-project.js` takes a project directory as a command-line argument rather than hardcoding paths to the fixtures above, so it works against any real Corticon project, not just this spike's examples. What's spike-scoped is *breadth* of coverage (only the constructs our fixtures actually contain), not the parsing approach itself.
 
 ## Fixtures
 
@@ -26,6 +28,7 @@ Real Corticon project files, vendored locally so this spike doesn't depend on li
 | `fixtures/mortgage/` | `github.com/corticon/corticon-classic-samples`, "Mortgage" | Reference — null-check masking (`Regular_NoData.ers`), filters (`Select_Credit.ers`) |
 | `fixtures/servicecallout/` | `github.com/corticon/corticon.js-samples`, `ServiceCallOut/RESTCall` | Reference — real `connectorList` service call-out shape |
 | `fixtures/branch-reconstruction/` | Original, hand-authored (see its own README) | Reference — real confirmed `BranchContainer` schema, reconstructed rather than vendored since the only real examples found have no license |
+| `fixtures/all-patterns/` | Original, hand-authored | Deliberate stress test for Phase 3 classification — every real pattern from the table above, coexisting in one project, to prove the classifier *distinguishes* them rather than just detects each in isolation. No real Corticon-computed output exists for it (nobody has run it through Corticon) — structural/classification evidence only, not golden-master |
 
 ## Layout
 
