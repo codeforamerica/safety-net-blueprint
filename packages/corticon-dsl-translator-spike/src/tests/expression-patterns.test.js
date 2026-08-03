@@ -1,7 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseRulesheet } from '../ingest/rulesheet.js';
-import { isDateArithmetic, isCurrencyRounding, actionUsesCurrencyRounding, isSortingOperation, usesSortingOperation } from '../classify/expression-patterns.js';
+import { loadProject } from '../ingest/project.js';
+import {
+  isDateArithmetic,
+  isCurrencyRounding,
+  actionUsesCurrencyRounding,
+  isSortingOperation,
+  usesSortingOperation,
+  classifyExpressionPatterns,
+} from '../classify/expression-patterns.js';
 
 function allTerms(rule) {
   return [...rule.conditions, ...rule.actions].flatMap((cell) => cell.referencedTerms ?? []);
@@ -61,4 +69,21 @@ test('detects real sorting/ranking via the raw expression text fallback -- IRR\'
   const r = parseRulesheet('fixtures/irr/initial values.ers');
   assert.equal(r.filters.flatMap((f) => f.referencedTerms ?? []).some(isSortingOperation), false, 'no term represents the real sortedBy call in this filter');
   assert.ok(r.filters.some(usesSortingOperation), 'the text fallback still catches it');
+});
+
+test('classifyExpressionPatterns finds all three kinds across a whole real project, including the raw-text-fallback cases', () => {
+  const project = loadProject('fixtures/dc-medicaid-chip');
+  const results = classifyExpressionPatterns(project);
+  const byKind = (kind) => results.filter((r) => r.kind === kind);
+  assert.ok(byKind('date-arithmetic').some((r) => r.rulesheet.includes('Create Household')));
+  assert.ok(byKind('currency-rounding').some((r) => r.rulesheet.includes('Set FPL from Household Size')), 'must catch the compound-expression .round(2) via the text fallback, not just a term match');
+  assert.ok(byKind('sorting').some((r) => r.rulesheet.includes('Parse Cohorts')));
+});
+
+test('classifyExpressionPatterns surfaces IRR\'s real filter-level sorting via the text fallback, with no ruleIndex since it\'s not tied to a rule', () => {
+  const project = loadProject('fixtures/irr');
+  const results = classifyExpressionPatterns(project).filter((r) => r.rulesheet === 'initial values.ers');
+  assert.equal(results.length, 1);
+  assert.equal(results[0].kind, 'sorting');
+  assert.equal(results[0].ruleIndex, null);
 });

@@ -4,6 +4,8 @@
  * parsed term (from a condition/action's referencedTerms or modifiedTerms).
  */
 
+import { entriesOf } from '../map-utils.js';
+
 /**
  * True if this term is date/calendar arithmetic -- confirmed real: DC Medicaid's
  * `Person.dob.yearsBetween(today)` (Create Household for Unique
@@ -74,4 +76,37 @@ export function isSortingOperation(term) {
 export function usesSortingOperation(cell) {
   if ((cell?.referencedTerms ?? []).some(isSortingOperation)) return true;
   return /sortedBy\s*\(/.test(cell?.text ?? cell?.expression ?? '');
+}
+
+/**
+ * Scans every rule's conditions/actions, plus every rulesheet's own filters, across a
+ * whole project and surfaces each real date-arithmetic, currency-rounding, or
+ * sorting/ranking match found -- the project-wide entry point classify-project.js
+ * uses, built on the same per-term/per-cell detectors above (including their raw-text
+ * fallbacks, so a project-level scan doesn't lose the compound-expression/filter-level
+ * cases those fallbacks exist for).
+ */
+export function classifyExpressionPatterns(project) {
+  const result = [];
+  for (const [rulesheetFile, rulesheet] of entriesOf(project.rulesheets)) {
+    rulesheet.rules.forEach((rule, ruleIndex) => {
+      for (const cell of [...rule.conditions, ...rule.actions]) {
+        if ((cell.referencedTerms ?? []).some(isDateArithmetic)) {
+          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'date-arithmetic', expression: cell.text });
+        }
+        if (actionUsesCurrencyRounding(cell)) {
+          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'currency-rounding', expression: cell.text });
+        }
+        if (usesSortingOperation(cell)) {
+          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'sorting', expression: cell.text });
+        }
+      }
+    });
+    for (const filter of rulesheet.filters ?? []) {
+      if (usesSortingOperation(filter)) {
+        result.push({ rulesheet: rulesheetFile, ruleIndex: null, kind: 'sorting', expression: filter.expression });
+      }
+    }
+  }
+  return result;
 }

@@ -28,7 +28,7 @@ export function buildDependencyGraph(project) {
       const conditionReads = rule.conditions.flatMap((c) => attributePathsIn(c.referencedTerms));
 
       for (const action of rule.actions) {
-        const isEntityCreation = touchesEntityCreation(action.modifiedTerms) || touchesEntityCreation(action.referencedTerms);
+        const isEntityCreation = touchesEntityCreation(action.modifiedTerms, action.referencedTerms);
         const writePaths = attributePathsIn(action.modifiedTerms);
         // Scoped to THIS action alone, not pooled across every action in the rule --
         // confirmed real in DC Medicaid's Calculate_premium.ers: one action computes
@@ -70,7 +70,7 @@ export function buildDependencyGraph(project) {
 /** Attribute paths written by more than one distinct rulesheet -- the cross-rulesheet Fact assembly pattern (e.g. Person.MedicaidEligible in Parse Cohorts.ers + Flatten.ers). */
 export function findCrossRulesheetAssembly(graph) {
   const result = [];
-  for (const [path, writers] of graph.writes) {
+  for (const [path, writers] of entriesOf(graph.writes)) {
     const distinctRulesheets = new Set(writers.map((w) => w.rulesheet));
     if (distinctRulesheets.size > 1) {
       result.push({ path, rulesheets: [...distinctRulesheets] });

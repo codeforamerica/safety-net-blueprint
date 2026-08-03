@@ -71,6 +71,14 @@ test('finds a genuine null-check-masking self-loop in Mortgage, structurally ide
   }
 });
 
+test('flags the real Household.PrimaryInsuredId write as entity-creation-tainted, but not Person.age in the same rulesheet', () => {
+  const graph = buildDependencyGraph(loadProject('fixtures/dc-medicaid-chip'));
+  const householdWriters = graph.writes.get('Household.PrimaryInsuredId') ?? [];
+  assert.ok(householdWriters.some((w) => w.isEntityCreation), 'Household.PrimaryInsuredId is set inside the real Household.newUnique[...] action');
+  const ageWriters = graph.writes.get('Person.age') ?? [];
+  assert.ok(ageWriters.length > 0 && ageWriters.every((w) => !w.isEntityCreation), 'Person.age is an ordinary date-arithmetic assignment, not entity creation');
+});
+
 test('a self-referencing assignment produces a self-loop edge, not a skipped/degenerate one', () => {
   const graph = buildDependencyGraph(loadProject('fixtures/irr'));
   const selfLoopEdges = graph.edges.filter((e) => e.from === e.to);

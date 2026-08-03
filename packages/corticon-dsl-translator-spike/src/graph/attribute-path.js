@@ -39,7 +39,26 @@ export function canonicalAttributePath(term) {
   return `${entityType}.${current.text}`;
 }
 
-/** True if a modifiedTermList/referencedTermList contains a bare ENTITY-type term -- the confirmed real shape of an entity-creation action (`.new`), distinct from a plain attribute assignment. */
-export function touchesEntityCreation(terms) {
-  return (terms ?? []).some((t) => t.termtype === 'ENTITY' || t.termtype === 'NEW');
+/**
+ * True if an action modifies or constructs an entity/association itself, not a plain
+ * scalar attribute of one. Two confirmed real shapes, both in DC Medicaid/CHIP's
+ * `Create Household for Unique PrimaryInsuredId.ers` / `Group Members into
+ * Households.ers`: (1) `Household.newUnique[...]` puts a bare top-level ENTITY term
+ * ("Household") in modifiedTermList, alongside a NEW-type term ("Household.new") in
+ * referencedTermList; (2) `members.add(...)`-style association mutation puts a bare
+ * top-level ENTITY term ("members") in modifiedTermList with no NEW term at all --
+ * so NEW alone isn't a sufficient signal.
+ *
+ * Checking referencedTermList for a bare ENTITY term (as an earlier version of this
+ * function did) is NOT a valid signal on its own: confirmed real ordinary attribute
+ * assignments -- `Person.age = Person.dob.yearsBetween(today)` and
+ * `Household.HouseholdSize = members->size`, neither an entity-creation action --
+ * both carry a bare top-level ENTITY term in referencedTermList too, just naming the
+ * entity the read is scoped to. Only a bare ENTITY term in modifiedTermList itself
+ * (the entity/association actually being written), or a NEW term anywhere, counts.
+ */
+export function touchesEntityCreation(modifiedTerms, referencedTerms) {
+  const entityItselfModified = (modifiedTerms ?? []).some((t) => t.termtype === 'ENTITY');
+  const newConstruction = [...(modifiedTerms ?? []), ...(referencedTerms ?? [])].some((t) => t.termtype === 'NEW');
+  return entityItselfModified || newConstruction;
 }

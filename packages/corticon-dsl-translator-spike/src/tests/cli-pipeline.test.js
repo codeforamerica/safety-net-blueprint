@@ -22,11 +22,12 @@ const FIXTURES = [
 ];
 
 for (const fixtureDir of FIXTURES) {
-  test(`pipeline: ingest-project.js -> graph-project.js runs end-to-end for ${fixtureDir}`, () => {
+  test(`pipeline: ingest-project.js -> graph-project.js -> classify-project.js runs end-to-end for ${fixtureDir}`, () => {
     const scratch = mkdtempSync(join(tmpdir(), 'corticon-pipeline-'));
     try {
       const projectJsonPath = join(scratch, 'project.json');
       const graphJsonPath = join(scratch, 'project.graph.json');
+      const classifiedJsonPath = join(scratch, 'project.classified.json');
 
       execFileSync('node', ['src/ingest-project.js', fixtureDir, '--out', projectJsonPath], { encoding: 'utf-8' });
       const project = JSON.parse(readFileSync(projectJsonPath, 'utf-8'));
@@ -41,6 +42,12 @@ for (const fixtureDir of FIXTURES) {
       assert.ok(combined.graph, 'graph-project.js --out should include the derived graph');
       assert.ok(Array.isArray(combined.graph.edges), 'graph.edges should be an array');
       assert.ok(combined.graph.nodes && typeof combined.graph.nodes === 'object', 'graph.nodes should be present');
+
+      execFileSync('node', ['src/classify-project.js', graphJsonPath, '--out', classifiedJsonPath], { encoding: 'utf-8' });
+      const classification = JSON.parse(readFileSync(classifiedJsonPath, 'utf-8'));
+      for (const key of ['selfLoops', 'multiHopCycles', 'crossRulesheetAssembly', 'decisionTableCombinatorics', 'entityCreation', 'serviceCallouts', 'filters', 'expressionPatterns']) {
+        assert.ok(Array.isArray(classification[key]), `classify-project.js --out should include an array for ${key}`);
+      }
     } finally {
       rmSync(scratch, { recursive: true, force: true });
     }
