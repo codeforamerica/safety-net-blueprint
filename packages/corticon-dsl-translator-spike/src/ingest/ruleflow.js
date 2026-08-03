@@ -1,10 +1,17 @@
 import { parseCorticonXml, asArray } from './xml.js';
 import { extractExpression } from './expression.js';
 
+// A single <branches> block can chain more than one <nextStep> -- confirmed real
+// in InsuranceRating.erf (5 chained nodes under one branch) and in this spike's
+// own all-patterns fixture (DisabilityBranchA -> DisabilityBranchB). Each nextStep
+// is captured individually, in document order, as `targets` -- a single-`target`
+// field would silently drop every step after the first.
 function extractBranch(branch) {
   return {
-    target: branch?.nextStep?.['@_name'],
-    invokes: branch?.nextStep?.['@_invokes'],
+    targets: asArray(branch?.nextStep).map((step) => ({
+      name: step?.['@_name'],
+      invokes: step?.['@_invokes'],
+    })),
     label: branch?.label?.['@_expression'],
   };
 }

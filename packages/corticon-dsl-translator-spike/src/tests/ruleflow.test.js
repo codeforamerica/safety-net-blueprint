@@ -31,8 +31,26 @@ test('extracts a BranchContainer condition and both branches from the original r
   assert.equal(branch.condition.text, 'Employee.hasCertification');
   assert.equal(branch.branches.length, 2);
   assert.deepEqual(
-    branch.branches.map((b) => b.target),
-    ['CertifiedTrack', 'TraineeTrack']
+    branch.branches.map((b) => b.targets.map((t) => t.name)),
+    [['CertifiedTrack'], ['TraineeTrack']]
+  );
+});
+
+test('captures every chained nextStep in a single branch, not just the first', () => {
+  // Confirmed real in InsuranceRating.erf (5 chained nodes in one branch) and
+  // reconstructed in this spike's own all-patterns fixture: a <branches> block
+  // can hold more than one <nextStep>, and all of them must survive parsing.
+  const { nodes } = parseRuleflow('fixtures/all-patterns/top-level-flow.erf');
+  const disabilityBranch = nodes.find((n) => n.name === 'DisabilityBranch');
+  assert.equal(disabilityBranch.kind, 'BranchContainer');
+  assert.equal(disabilityBranch.branches.length, 1, 'one true-case branch, no false branch');
+  assert.deepEqual(
+    disabilityBranch.branches[0].targets.map((t) => t.name),
+    ['DisabilityBranchA', 'DisabilityBranchB']
+  );
+  assert.deepEqual(
+    disabilityBranch.branches[0].targets.map((t) => t.invokes),
+    ['DisabilityBranchA.ers#//@ruleset', 'DisabilityBranchB.ers#//@ruleset']
   );
 });
 

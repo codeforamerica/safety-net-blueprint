@@ -30,6 +30,7 @@ const ALWAYS_ARRAY_BY_PATH = new Set([
   'rule.condition',
   'rule.action',
   'flowControlList.branches',
+  'branches.nextStep',
   'referencedTermList.terms',
   'modifiedTermList.terms',
   'testsheet.output',

@@ -32,8 +32,14 @@ const graph = buildDependencyGraph(project);
 const summary = summarize(graph);
 
 if (args.outFile) {
-  writeFileSync(args.outFile, JSON.stringify(toJson(graph), null, 2));
-  console.log(`Wrote full dependency graph to ${args.outFile}`);
+  // Carries the full Phase 1 project through alongside the derived graph, not just
+  // the graph alone -- Phase 3 classification needs the original rule/ruleflow
+  // detail (condition text, iterative flags, BranchContainer/connectorList shape)
+  // that the graph itself doesn't retain, and each phase's script takes only the
+  // *previous* phase's output as its input, so this file has to be a superset
+  // rather than Phase 3 reaching back to Phase 1's output directly.
+  writeFileSync(args.outFile, JSON.stringify({ project: toJson(project), graph: toJson(graph) }, null, 2));
+  console.log(`Wrote project + full dependency graph to ${args.outFile}`);
   console.log(JSON.stringify(summary, null, 2));
 } else {
   console.log(JSON.stringify(summary, null, 2));
