@@ -6,6 +6,7 @@ import { XMLParser } from 'fast-xml-parser';
 const ALWAYS_ARRAY = new Set([
   'eClassifiers',
   'eStructuralFeatures',
+  'eLiterals',
   'enumerationElements',
   'customDataTypeList',
   'conditionItemList',

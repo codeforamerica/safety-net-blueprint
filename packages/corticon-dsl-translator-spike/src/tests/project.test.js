@@ -20,6 +20,13 @@ test('does not hardcode any fixture-specific path -- works against any project d
   assert.equal(mortgageProject.rulesheets.size, 2);
 });
 
+test('loads the all-patterns fixture: a hand-authored project combining every classification pattern', () => {
+  const project = loadProject('fixtures/all-patterns');
+  assert.equal(project.vocabularies.size, 1);
+  assert.equal(project.rulesheets.size, 15);
+  assert.equal(project.ruleflows.size, 3, 'top-level-flow.erf, benefit-loop.erf, program-eligibility-loop.erf');
+});
+
 test('confirms both.ert is an empty, never-run testsheet, distinct from the real per-rulesheet Test.ert files', () => {
   const project = loadProject('fixtures/dc-medicaid-chip');
   const both = project.ruletests.get('both.ert');

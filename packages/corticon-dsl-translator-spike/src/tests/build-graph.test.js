@@ -10,6 +10,7 @@ test('builds every real fixture without error', () => {
     'fixtures/mortgage',
     'fixtures/servicecallout',
     'fixtures/branch-reconstruction',
+    'fixtures/all-patterns',
   ]) {
     assert.doesNotThrow(() => buildDependencyGraph(loadProject(dir)), `should build a graph for ${dir}`);
   }

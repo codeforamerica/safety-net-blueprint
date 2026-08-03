@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<com.corticon.rulesemf.assetmodel:RuleflowAsset xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:com.corticon.rulesemf.asg="http:///com/corticon/rulesemf/asg.ecore" xmlns:com.corticon.rulesemf.assetmodel="http:///com/corticon/rulesemf/assetmodel.ecore" xmlns:com.corticon.rulesemf.canonicalrulemodel.ruleflow="http:///com/corticon/rulesemf/canonicalrulemodel/ruleflow.ecore" xmlns:com.corticon.rulesemf.viewrulemodel.ruleflow.flowdiagram="http:///com/corticon/rulesemf/viewrulemodel/ruleflow/flowdiagram.ecore" majorVersionNumber="2" buildNumber="8020" updateStamp="_ap0000000000000037" externalChecksum="0:0:0" studioType="Javascript" rulesheetAssets="ProgramAEligibility.ers#/ ProgramBEligibility.ers#/">
+  <ruleflow majorVersion="1" vocabularyUpdateStamp="_ap0000000000000000" vocabulary="vocab.ecore#/">
+    <flowControlList xsi:type="com.corticon.rulesemf.canonicalrulemodel.ruleflow:BranchContainer" name="ProgramEligibilityBranch" order="1" ruleActivityUpdateStamp="_ap0000000000000038" invokes="#//@ruleflow/@flowControlList.0">
+      <condition expression="Applicant.programTrack">
+        <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Applicant.programTrack" datatype="String" expressiontype="EXPRESSION" enumeration="true" cellValue="false">
+          <referencedTermList>
+            <terms text="programTrack" datatype="String" termtype="ATTRIBUTE" fulltext="Applicant.programTrack">
+              <parentTerm text="Applicant" datatype="Applicant" termtype="ENTITY" fulltext="Applicant"/>
+            </terms>
+          </referencedTermList>
+        </parserOutput>
+      </condition>
+      <branches>
+        <nextStep xsi:type="com.corticon.rulesemf.canonicalrulemodel.ruleflow:ActivityNode" name="ProgramAEligibility" order="2" ruleActivityUpdateStamp="_ap0000000000000039" invokes="ProgramAEligibility.ers#//@ruleset"/>
+        <label expression="programTrack#trackA"/>
+        <label expression="programTrack#trackAPriority"/>
+        <viewExpressions lhs="Applicant.programTrack" rhs="programTrack#trackAPriority"/>
+      </branches>
+      <branches>
+        <nextStep xsi:type="com.corticon.rulesemf.canonicalrulemodel.ruleflow:ActivityNode" name="ProgramBEligibility" order="3" ruleActivityUpdateStamp="_ap0000000000000040" invokes="ProgramBEligibility.ers#//@ruleset"/>
+        <label expression="programTrack#trackB"/>
+        <viewExpressions lhs="Applicant.programTrack" rhs="programTrack#trackB"/>
+      </branches>
+    </flowControlList>
+  </ruleflow>
+  <ruleflowViewList xsi:type="com.corticon.rulesemf.viewrulemodel.ruleflow.flowdiagram:FlowDiagram">
+    <flowShapeList xsi:type="com.corticon.rulesemf.viewrulemodel.ruleflow.flowdiagram:BranchContainerShape" x="100" y="30" width="235" height="140" activityNode="#//@ruleflow/@flowControlList.0" valid="true" branchContainer="#//@ruleflow/@flowControlList.0">
+      <flowShapeList xsi:type="com.corticon.rulesemf.viewrulemodel.ruleflow.flowdiagram:ActivityShape" x="25" y="6" width="181" height="50" activityNode="#//@ruleflow/@flowControlList.0/@branches.0/@nextStep.0"/>
+      <flowShapeList xsi:type="com.corticon.rulesemf.viewrulemodel.ruleflow.flowdiagram:ActivityShape" x="25" y="70" width="181" height="50" activityNode="#//@ruleflow/@flowControlList.0/@branches.1/@nextStep.0"/>
+      <branchEdgeList targetShape="#//@ruleflowViewList.0/@flowShapeList.0/@flowShapeList.0" branch="#//@ruleflow/@flowControlList.0/@branches.0"/>
+      <branchEdgeList targetShape="#//@ruleflowViewList.0/@flowShapeList.0/@flowShapeList.1" branch="#//@ruleflow/@flowControlList.0/@branches.1"/>
+    </flowShapeList>
+  </ruleflowViewList>
+</com.corticon.rulesemf.assetmodel:RuleflowAsset>

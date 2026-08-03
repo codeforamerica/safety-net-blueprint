@@ -34,3 +34,20 @@ test('resolves a collection association distinctly from a scalar association', (
   const person = entities.get('Person');
   assert.equal(person.attributes.get('household').isCollection, false, 'Person.household is scalar');
 });
+
+test('resolves a custom type declared in a different vocabulary file', () => {
+  const { entities } = parseVocabulary('fixtures/cross-file-vocab/main.ecore');
+  const ticket = entities.get('Ticket');
+  assert.deepEqual(ticket.attributes.get('priority').type, { kind: 'customType', name: 'priorityLevel' });
+});
+
+test('falls back to a plain reference when the cross-file target does not exist on disk', () => {
+  // Confirmed real in DC Medicaid's own `Household.state`, which references a sample
+  // project ("NY State Assistance") that was never vendored alongside this fixture.
+  const { entities } = parseVocabulary(DC_MEDICAID_VOCAB);
+  const household = entities.get('Household');
+  // Still resolves correctly here, but only because this same file also happens to
+  // independently declare its own `state_name` custom type (see vocabulary.js's
+  // resolveEType comment) -- not because the cross-file reference was followed.
+  assert.deepEqual(household.attributes.get('state').type, { kind: 'customType', name: 'state_name' });
+});
