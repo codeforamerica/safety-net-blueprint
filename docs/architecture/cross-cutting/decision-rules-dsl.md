@@ -160,6 +160,8 @@ facts:
 
 **Decision:** Build new (B). What's being adopted from Fact Graph is the *idea* — a dependency graph of typed facts with native completeness tracking — not the artifact. Everything Fact Graph would bring along with itself (a foreign toolchain, an acknowledged-leaky API, an XML authoring format inconsistent with the rest of this blueprint, an architecture that assumes it's the only engine) is friction without a matching benefit once the domain isn't tax.
 
+**Known gap:** The bootstrap validation against Fact Graph's test specs happens once, before rule authoring begins — there's no decided mechanism for learning about a correctness fix Fact Graph's own team makes afterward (the collection/wildcard path-resolution fix cited above is exactly the kind of thing that could recur). Options if this turns out to matter: periodically re-run the same bootstrap check against Fact Graph's then-current test specs, watch its releases/changelog for corrections worth investigating, or explicitly accept the drift risk given Fact Graph's tax-specific hardening was only partially applicable here to begin with.
+
 ---
 
 ### Decision 3: CEL as the derivation expression language
