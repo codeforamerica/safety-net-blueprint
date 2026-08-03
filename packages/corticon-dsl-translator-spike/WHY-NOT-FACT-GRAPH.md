@@ -38,11 +38,28 @@ around genuinely tricky mechanics — collection/wildcard path resolution, for i
 bug fix in Fact Graph's own codebase as recently as March 2026, which is real evidence this is a
 hard area to get right even for the team that built it.
 
-The mitigation is a one-time bootstrap validation, not an ongoing dependency: mining Fact Graph's
+The mitigation is a bootstrap validation, not a permanent runtime dependency: mining Fact Graph's
 own per-operator test specs (real Scala test files with known-correct input/expected-output pairs)
 and re-asserting the same values against the new engine, without ever needing to run Fact Graph's
-actual Scala runtime. Once that parity is confirmed, the Fact Graph dependency ends — all further
-rule authoring happens against the new engine only.
+actual Scala runtime. Once that parity is confirmed, there's no *ongoing* dependency — rule
+authoring happens against the new engine, not against Fact Graph's runtime.
+
+"Not an ongoing dependency" doesn't have to mean "check once and never again," though. Since we
+never run Fact Graph itself, there's no automatic way of learning when its team fixes a bug —
+including exactly the kind of subtle mechanics bug already flagged as a real risk above (the
+collection/wildcard path-resolution fix in their own March 2026 release). Without some periodic
+check, a correctness improvement or a since-fixed bug in Fact Graph's own logic could sit there
+un-mirrored in this engine indefinitely, with nothing prompting anyone to notice.
+
+This hasn't been decided as part of the actual design record yet — worth raising rather than
+leaving implicit (see the corresponding known-gap note on Decision 2 in `decision-rules-dsl.md`).
+Possible mitigations, roughly in order of cost: (1) periodically re-run the same
+bootstrap-validation exercise against Fact Graph's *current* test specs (e.g. annually, or
+triggered by a specific need) to pull in whatever's changed since the last check; (2) simply watch
+Fact Graph's release notes/changelog for corrections worth investigating, given it's a small,
+low-traffic open-source project — cheap, but relies on someone remembering to look; (3) treat it
+as a non-issue and accept the drift risk, on the reasoning that Fact Graph's tax-specific hardening
+was never fully applicable to this domain anyway (per the reasoning above).
 
 ## Where this spike fits in
 
