@@ -3,6 +3,12 @@
 Feasibility spike for issue [#388](https://github.com/codeforamerica/safety-net-blueprint/issues/388), de-risking Decisions 9 and 10 of
 [`decision-rules-dsl.md`](../../docs/architecture/cross-cutting/decision-rules-dsl.md) (design issue [#386](https://github.com/codeforamerica/safety-net-blueprint/issues/386)).
 
+## Purpose
+
+Corticon (see [`CORTICON-GLOSSARY.md`](./CORTICON-GLOSSARY.md)) is a forward-chaining rules engine; the decision-rules DSL this spike is de-risking is a reverse-chaining, dependency-graph-based one instead (see [`DEPENDENCY-GRAPH-GLOSSARY.md`](./DEPENDENCY-GRAPH-GLOSSARY.md)). See [`FORWARD-VS-REVERSE-CHAINING.md`](./FORWARD-VS-REVERSE-CHAINING.md) for what that distinction means and why it matters here, and [`WHY-NOT-FACT-GRAPH.md`](./WHY-NOT-FACT-GRAPH.md) for why this DSL is a new engine inspired by IRS Direct File's open-source Fact Graph rather than an adoption of it.
+
+A state currently on Corticon that wants to move to this DSL needs its existing rule content actually translated, not rewritten from scratch — and translating between these two models is not a mechanical syntax swap. Most of what's tricky about it comes from real Corticon patterns that look structurally identical (e.g. a value that depends on itself) but mean entirely different things depending on context — a genuine iterative calculation, an ordinary decision-table alternative row, or a null-check standing in for a not-yet-known value. See [`TRANSLATION-PATTERNS.md`](./TRANSLATION-PATTERNS.md) for what these patterns are and why each one needs to be recognized rather than translated literally. This spike's job is to prove whether a real Corticon ruleset can actually be classified and translated correctly, using real vendored Corticon projects as evidence throughout rather than assumptions about how Corticon behaves.
+
 Not production code — see the Non-goals section of #388. That said, the ingestion layer (`src/ingest/`) specifically is written to be reusable beyond this spike, not disposable: Decision 9 already frames a real Corticon→DSL translator as a documented adoption path a state migration would eventually need, and parsing Corticon's real file formats is the first thing that translator would have to do. It takes a project directory as a command-line argument rather than hardcoding paths to the fixtures above, so it works against any real Corticon project, not just this spike's examples. What's spike-scoped is *breadth* of coverage (only the constructs our fixtures actually contain), not the parsing approach itself.
 
 ## Fixtures
