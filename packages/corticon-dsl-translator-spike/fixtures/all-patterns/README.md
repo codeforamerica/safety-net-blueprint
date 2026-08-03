@@ -24,3 +24,4 @@ entry for why this exists and why that distinction matters.
 | 11 | Currency/decimal precision | `ComputeIncome.ers` (`.round(2)`) |
 | 12 | Sorting/ranking | `ProgramRanking.ers` (`sortedBy`/`first`) |
 | 13 | Filters | `AdultCount.ers` (filtered to adult household members) |
+| 14 | Override (explicit rule-priority for genuinely overlapping decision-table rows) | `ProgramAEligibility.ers` — rule 2 (`isEligible = true`) `overrides` rule 1 (the unconditional `isProgramAEligible = false` fallback), which is itself `overriddenBy` rule 2 — same real `overrides`/`overriddenBy` attribute shape confirmed in `fixtures/irr/evaluate npv.ers` |

@@ -57,6 +57,14 @@ function refIndex(ref) {
   return match ? Number(match[1]) : undefined;
 }
 
+// `overrides`/`overriddenBy` are space-separated lists of the same EMF ref shape
+// (unlike the single-ref `documentingRuleStatements`) -- confirmed real in
+// fixtures/irr/evaluate npv.ers, e.g. overrides="#//@ruleset/@rules.1
+// #//@ruleset/@rules.2 #//@ruleset/@rules.4".
+function refIndexList(ref) {
+  return (ref ?? '').split(/\s+/).filter(Boolean).map(refIndex);
+}
+
 // Real, human-authored per-rule business documentation -- confirmed in both DC
 // Medicaid's MAGI Eligibility Groups.ers ("Aged blind disabled", one rule) and the
 // real vendored Mortgage/Regular_NoData.ers ("If number of times late 30 days was
@@ -118,10 +126,27 @@ export function parseRulesheet(filePath) {
   const ruleStatements = extractRuleStatements(ruleset);
   const rules = asArray(ruleset?.rule).map((rule) => {
     const statementIndex = refIndex(rule?.['@_documentingRuleStatements']);
+    // Corticon's real answer to "what if two decision-table rows genuinely
+    // overlap" is NOT a rulesheet-level hit-policy setting -- there isn't one.
+    // The default guarantee is Design-Time-Inferencing: Corticon Studio's own
+    // conflict checker enforces mutual exclusivity between rows at design time.
+    // When two rows really can both match, the rule author sets an explicit
+    // priority between them via Studio's own "Overrides row" UI, recorded here as
+    // a real, per-rule attribute -- confirmed in fixtures/irr/evaluate npv.ers
+    // (rules 1 and 2 are both overridden by rules 3 and 4; rules 3 and 4 in turn
+    // list EACH OTHER in both overrides and overriddenBy -- a real, if unintuitive,
+    // mutual relationship in the source XML, not a strict priority chain and not a
+    // bug in this extractor), and present-but-empty in DC Medicaid/CHIP's
+    // Citizenship requirements.ers/MAGI Eligibility Groups.ers, confirming this
+    // is a standard attribute every rule can carry, not something unique to IRR.
+    const overrides = refIndexList(rule?.['@_overrides']);
+    const overriddenBy = refIndexList(rule?.['@_overriddenBy']);
     return {
       conditions: asArray(rule?.condition).map(extractCell),
       actions: asArray(rule?.action).map(extractCell),
       comment: statementIndex !== undefined ? ruleStatements[statementIndex] : undefined,
+      overrides: overrides.length ? overrides : undefined,
+      overriddenBy: overriddenBy.length ? overriddenBy : undefined,
     };
   });
 

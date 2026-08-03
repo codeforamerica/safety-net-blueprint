@@ -3,7 +3,7 @@
   <languageCode>en_US</languageCode>
   <ruleset vocabularyUpdateStamp="_ap0000000000000000" vocabulary="vocab.ecore#/">
     <rule/>
-    <rule>
+    <rule overriddenBy="#//@ruleset/@rules.2">
       <action>
         <opaqueExpression expression="Applicant.isProgramAEligible = false">
           <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Applicant.isProgramAEligible = false" datatype="Boolean" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
@@ -19,7 +19,7 @@
         </opaqueExpression>
       </action>
     </rule>
-    <rule>
+    <rule overrides="#//@ruleset/@rules.1">
       <condition>
         <opaqueExpression expression="Applicant.isEligible = true">
           <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Applicant.isEligible = true" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">

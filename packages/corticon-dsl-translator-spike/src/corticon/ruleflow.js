@@ -6,13 +6,25 @@ import { extractExpression } from './expression.js';
 // own all-patterns fixture (DisabilityBranchA -> DisabilityBranchB). Each nextStep
 // is captured individually, in document order, as `targets` -- a single-`target`
 // field would silently drop every step after the first.
+//
+// A single <branches> block can ALSO carry more than one sibling <label> element --
+// confirmed real in this fixture's own program-eligibility-loop.erf: a branch on the
+// enum `Applicant.programTrack` matches EITHER "trackA" OR "trackAPriority" via two
+// separate <label> elements under the same <branches>, not one. An earlier version
+// of this function read only `branch?.label?.['@_expression']`, which works when
+// there's exactly one <label> but silently returns undefined when there are several
+// (fast-xml-parser gives an array in that case, and `array['@_expression']` isn't a
+// thing) -- both real labels were lost, and a downstream renderer's own `?? '(default)'`
+// fallback then displayed a fabricated "(default)" that has nothing to do with any
+// real Corticon default-branch concept. `labels` is now always a real array (length 1
+// for the common single-label case, e.g. DisabilityBranch's "true").
 function extractBranch(branch) {
   return {
     targets: asArray(branch?.nextStep).map((step) => ({
       name: step?.['@_name'],
       invokes: step?.['@_invokes'],
     })),
-    label: branch?.label?.['@_expression'],
+    labels: asArray(branch?.label).map((l) => l?.['@_expression']).filter(Boolean),
   };
 }
 

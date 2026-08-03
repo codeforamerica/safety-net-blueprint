@@ -80,6 +80,25 @@ test('a rule with a real ruleStatement documentation comment resolves it via doc
   assert.equal(commented[0].comment.severity, 'Info');
 });
 
+test('extracts real overrides/overriddenBy rule priority from IRR evaluate npv.ers', () => {
+  const { rules } = parseRulesheet('fixtures/irr/evaluate npv.ers');
+  assert.deepEqual(rules[1].overriddenBy, [3, 4], 'rule 1 is overridden by both rule 3 and rule 4');
+  assert.equal(rules[1].overrides, undefined, 'rule 1 does not override anything itself');
+  assert.deepEqual(rules[2].overriddenBy, [3, 4]);
+  assert.deepEqual(rules[3].overrides, [1, 2, 4]);
+  assert.deepEqual(rules[3].overriddenBy, [4]);
+  assert.deepEqual(rules[4].overrides, [1, 2, 3]);
+  assert.deepEqual(rules[4].overriddenBy, [3], 'rules 3 and 4 mutually list each other -- a real, if unintuitive, relationship in the source XML, not a bug in this extractor');
+});
+
+test('a rule with no override relationship leaves overrides/overriddenBy undefined, not empty arrays', () => {
+  const { rules } = parseRulesheet('fixtures/dc-medicaid-chip/Medicaid Applicant/MAGI Eligibility Groups.ers');
+  for (const rule of rules) {
+    assert.equal(rule.overrides, undefined);
+    assert.equal(rule.overriddenBy, undefined);
+  }
+});
+
 test('column definitions are captured faithfully from the decision-table grid view, without claiming a per-rule correspondence', () => {
   const { actionColumns, conditionColumns } = parseRulesheet('fixtures/dc-medicaid-chip/Medicaid Applicant/MAGI Eligibility Groups.ers');
   assert.equal(actionColumns.length, 7, 'confirmed real column-definition count, independent of any single rule\'s own action count');

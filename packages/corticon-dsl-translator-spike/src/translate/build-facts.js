@@ -30,6 +30,60 @@ function enumerateVocabularyAttributes(project) {
   return paths;
 }
 
+// Real, confirmed bug, not a modeling gap to merely document: a rulesheet-local
+// alias can differ from its entity's own canonical name (confirmed real:
+// AdultCount.ers's own filter defines "adult" as a filtered-collection alias for
+// Applicant -- `parentTerm text="adult" datatype="Applicant"` in the real term
+// tree). `canonicalAttributePath` already resolves this correctly for graph
+// edges (using `datatype`, not the alias `text`) -- but `parseExpression`/`toCel`
+// operate on the raw CONDITION/ACTION TEXT STRING, which has no access to
+// datatype at all, so a compiled Fact's CEL body would reference the raw alias
+// ("adult.age") while every OTHER Fact for that same real entity is keyed by its
+// canonical name ("applicant.age") -- two different Fact paths for the same real
+// attribute, a genuinely broken cross-reference in the generated CEL. Fixed by
+// building an alias -> canonical-entity-name map from the SAME cell's own
+// referencedTerms/modifiedTerms (which already carry the real datatype per
+// occurrence) and rewriting the parsed AST's identifiers through it before
+// generating CEL -- not a raw text substitution, which would risk mangling a
+// string literal that happens to contain the same word.
+function buildAliasMap(cell) {
+  const map = new Map();
+  function walkChain(term) {
+    let current = term;
+    while (current) {
+      if (current.termtype === 'ENTITY' && current.text && current.datatype) map.set(current.text, current.datatype);
+      current = current.parent;
+    }
+  }
+  for (const term of [...(cell?.referencedTerms ?? []), ...(cell?.modifiedTerms ?? [])]) walkChain(term);
+  return map;
+}
+
+// Walks any AST node shape generically (Identifier/Member/Call/BinaryOp/etc.)
+// rather than special-casing each one -- rewriting only Identifier.name through
+// the alias map, leaving every other node (including Literal string VALUES)
+// untouched, which is exactly the precision a raw-text substitution couldn't
+// guarantee.
+function resolveAliases(node, aliasMap) {
+  if (!node || typeof node !== 'object') return node;
+  if (node.type === 'Identifier') {
+    const canonical = aliasMap.get(node.name);
+    return canonical ? { ...node, name: canonical } : node;
+  }
+  const resolved = { ...node };
+  for (const key of Object.keys(node)) {
+    const value = node[key];
+    if (Array.isArray(value)) resolved[key] = value.map((v) => resolveAliases(v, aliasMap));
+    else if (value && typeof value === 'object') resolved[key] = resolveAliases(value, aliasMap);
+  }
+  return resolved;
+}
+
+/** Parses one cell's own text and resolves its identifiers to canonical entity names via that SAME cell's own term tree -- see buildAliasMap/resolveAliases above for the real bug this fixes. */
+function parseAndCanonicalize(cell, parseExpression) {
+  return resolveAliases(parseExpression(cell.text), buildAliasMap(cell));
+}
+
 function findActionForPath(rule, path) {
   // A self-closing <action/> column (that action doesn't apply to this rule row)
   // is now kept as `null`, not dropped, to preserve column position -- see
@@ -50,8 +104,20 @@ function findActionForPath(rule, path) {
 // true`) when it's actually gated by the filter. Multiple filters on one rulesheet
 // are AND-ed together, matching Select_Credit.ers's real two-filter case (both
 // narrowing the same `liability` collection).
+// Every individual condition/filter is wrapped in parens before being AND-ed with
+// the next one -- confirmed real, not a cosmetic-only concern: DC Medicaid's own
+// MAGI Eligibility Groups.ers has a real rule with condition text
+// "Person.age = 19 or Person.age = 20" AND-ed against a second, separate condition
+// ("Person.HouseholdActualPercentFPL < 216"). An earlier version of this file
+// joined each condition's own CEL with a bare " && ", producing
+// "age == 19 || age == 20 && fpl < 216" -- which CEL parses as
+// "age == 19 || (age == 20 && fpl < 216)" (&& binds tighter than ||), not the
+// "(age == 19 || age == 20) && fpl < 216" Corticon's own AND-across-columns
+// semantics actually require. Wrapping each condition/filter in its own parens
+// before joining makes the compiled guard correct regardless of what operator is
+// at that condition's own top level.
 function compileFilterGuard(rulesheet, parseExpression) {
-  const filterCels = (rulesheet.filters ?? []).map((f) => toCel(parseExpression(f.text)));
+  const filterCels = (rulesheet.filters ?? []).map((f) => `(${toCel(parseAndCanonicalize(f, parseExpression))})`);
   return filterCels.length ? filterCels.join(' && ') : null;
 }
 
@@ -59,14 +125,14 @@ function compileGuard(rule, filterGuard, parseExpression) {
   // A self-closing <condition/> column (blank for this rule row) is now kept as
   // `null`, not dropped, to preserve column position -- see rulesheet.js's own
   // comment. Filtered out here, not upstream.
-  const conditionCels = rule.conditions.filter(Boolean).map((c) => toCel(parseExpression(c.text)));
+  const conditionCels = rule.conditions.filter(Boolean).map((c) => `(${toCel(parseAndCanonicalize(c, parseExpression))})`);
   const guards = filterGuard ? [filterGuard, ...conditionCels] : conditionCels;
   return guards.length ? guards.join(' && ') : null;
 }
 
 /** Parses and translates one action exactly once, returning both its target Fact path (if it's an assignment) and its CEL value. */
 function compileAction(action, parseExpression) {
-  const ast = parseExpression(action.text);
+  const ast = parseAndCanonicalize(action, parseExpression);
   return toCelStatement(ast, { isAssignment: action.expressionType === 'ASSIGNMENT' });
 }
 
@@ -76,17 +142,36 @@ function compileActionCel(action, parseExpression) {
 
 /**
  * Chains an ordered list of { guard, value } entries into one first-match-wins CEL
- * ternary expression: `guard1 ? value1 : guard2 ? value2 : ... : fallback`.
- * `guard === null` means unconditional -- ends the chain right there (everything
- * after it is unreachable and dropped, since Corticon's own decision tables put an
- * unconditional/default row last). If the chain ends without an unconditional entry,
- * `fallback` is used as the final else -- defaults to a PROPOSED `unresolved()` CEL
- * sentinel standing in for a real semantic gap this DSL's completeness model doesn't
- * have an established answer for: what a Derived fact evaluates to when no row's
- * guard matches, given the DSL has no "leave it as whatever it was before"
- * mutate-in-place fallback the way Corticon's own engine does. Not settled fact,
- * feeding back into the same open design space decision-rules-dsl.md's Decision 4
- * already established for other real gaps found during this spike.
+ * ternary expression: `guard1 ? value1 : guard2 ? value2 : ... : fallback`. An
+ * unconditional entry (guard === null) is treated as the chain's OWN
+ * fallback/default -- REGARDLESS of where it appears in `entries` -- not
+ * "whichever one the backward iteration happens to reach first", which is what an
+ * earlier version of this function did.
+ *
+ * That earlier version was a real, confirmed, SILENT wrong compilation, not a
+ * hypothetical edge case: this fixture's own ProgramAEligibility.ers has an
+ * unconditional row FIRST (Rule 0: sets isProgramAEligible = false) and a
+ * conditioned row SECOND (Rule 1: isEligible = true -> isProgramAEligible = true).
+ * The old code iterated backward from the last entry, built a real ternary for
+ * Rule 1's condition, then hit Rule 0 (guard === null) and OVERWROTE the whole
+ * expression with a bare "false" -- silently discarding Rule 1's logic entirely.
+ * The compiled Fact was just `"false"`, with no reference to isEligible anywhere,
+ * and nothing in the output said so.
+ *
+ * More than one unconditional entry for the same path is a genuine conflict --
+ * Corticon's own design-time "Predicate Logic Matrix" should never allow two rows
+ * to both be unconditional in the same decision table -- thrown rather than
+ * silently picking one, since which one Corticon itself would use isn't knowable
+ * from this data.
+ *
+ * If the chain has no unconditional entry at all, `fallback` is used as the final
+ * else -- defaults to a PROPOSED `unresolved()` CEL sentinel standing in for a real
+ * semantic gap this DSL's completeness model doesn't have an established answer
+ * for: what a Derived fact evaluates to when no row's guard matches, given the DSL
+ * has no "leave it as whatever it was before" mutate-in-place fallback the way
+ * Corticon's own engine does. Not settled fact, feeding back into the same open
+ * design space decision-rules-dsl.md's Decision 4 already established for other
+ * real gaps found during this spike.
  *
  * Accepting an explicit `fallback` (rather than always hardcoding `unresolved()`) is
  * what lets compileAcrossRulesheets below correctly thread a LOWER-priority
@@ -94,19 +179,24 @@ function compileActionCel(action, parseExpression) {
  * silently discarding it the moment the higher-priority rulesheet has no matching row
  * -- see that function's own comment for the real bug this fixes.
  */
-function chainEntries(entries, fallback = 'unresolved()') {
-  let expr = fallback;
-  let hasFallback = false;
-  for (let i = entries.length - 1; i >= 0; i--) {
-    const { guard, value } = entries[i];
-    if (guard === null) {
-      expr = value;
-      hasFallback = true;
-    } else {
-      expr = `${guard} ? ${value} : ${expr}`;
-    }
+export function chainEntries(entries, fallback = 'unresolved()') {
+  const unconditional = entries.filter(({ guard }) => guard === null);
+  if (unconditional.length > 1) {
+    throw new Error(`${unconditional.length} unconditional entries found for the same path -- Corticon's own design-time conflict checker should never allow more than one unconditional row in the same decision table, and which one Corticon itself would use can't be determined from this data`);
+  }
+  const hasFallback = unconditional.length === 1;
+  let expr = hasFallback ? unconditional[0].value : fallback;
+  const conditioned = entries.filter(({ guard }) => guard !== null);
+  for (let i = conditioned.length - 1; i >= 0; i--) {
+    expr = `${conditioned[i].guard} ? ${conditioned[i].value} : ${expr}`;
   }
   return { cel: expr, hasFallback };
+}
+
+/** True if this rulesheet's own entries for one path have an unconditional row that ISN'T last in document order -- confirmed real (see chainEntries' own comment): the compiled result is still correct now, but this exact shape has no confirmed golden-master trace proving Corticon's real semantics match this compiled interpretation, unlike the far more common "unconditional row last" case. Flagged for manual review rather than assumed silently equivalent. */
+function hasOutOfOrderUnconditional(entries) {
+  const unconditionalIndex = entries.findIndex(({ guard }) => guard === null);
+  return unconditionalIndex !== -1 && unconditionalIndex !== entries.length - 1;
 }
 
 /**
@@ -285,10 +375,28 @@ export function buildFacts(project, graph, classification, { parseExpression }) 
     }
 
     // Entity-creation-tainted and unreachable-rulesheet writers never become part of
-    // an ordinary Fact expression -- both already got their crosswalk entry pushed
-    // above, from classification directly; this loop only needs to exclude them.
+    // an ordinary Fact expression -- both already got their OWN crosswalk entry
+    // pushed above, from classification directly; this loop only needs to exclude
+    // them here. But that per-rule/per-rulesheet entry only says "this rule/
+    // rulesheet is entity-creation/unreachable" -- it says nothing about what
+    // happens to a PATH whose every real writer gets excluded this way. Confirmed
+    // real, not theoretical: Mortgage's own `LoanApplication.creditReqtMet` is
+    // written only by Select_Credit.ers, which is unreachable within this vendored
+    // fixture (AllPrograms.erf invokes a "Rules/Select.erf" ruleflow that was never
+    // vendored) -- so this path silently got neither a Fact NOR a path-specific
+    // explanation, just a bare `continue`, unlike the genuine-cycle/unclassified-
+    // cycle cases just above which each report their own path-level entry before
+    // skipping.
     const ordinaryWriters = writers.filter((writer) => !entityCreationRuleKeys.has(`${writer.rulesheet}#${writer.ruleIndex}`) && !unreachableRulesheets.has(writer.rulesheet));
-    if (ordinaryWriters.length === 0) continue;
+    if (ordinaryWriters.length === 0) {
+      const excludedRulesheets = [...new Set(writers.map((w) => w.rulesheet))];
+      crosswalk.push({
+        path,
+        kind: 'no-ordinary-writer',
+        note: `Every real writer of this path (${excludedRulesheets.join(', ')}) was excluded as entity-creation and/or an unreachable rulesheet -- no Fact could be compiled for it at all. Needs manual review.`,
+      });
+      continue;
+    }
 
     // Null-check-masking: confirmed real as always exactly one writer for the whole
     // path (see build-facts.test.js) -- maps onto a Writable fact with a Placeholder
@@ -342,7 +450,24 @@ export function buildFacts(project, graph, classification, { parseExpression }) 
           note: 'Compiled assuming Corticon\'s default UNIQUE hit policy (rows are mutually exclusive, so row order does not affect the result). Corticon\'s file format has no hit-policy attribute to check -- if this rulesheet was authored with "Rule Order" hit policy instead (multiple overlapping rows all fire), this compiled expression may be wrong. Needs manual confirmation against the original Corticon Studio project.',
         });
       }
-      entriesByRulesheet.set(rulesheetKey, compileRulesheetEntries(rulesheetKey, rulesheet, combinatoricRuleIndices ?? ruleIndices, path, parseExpression));
+      const rulesheetEntries = compileRulesheetEntries(rulesheetKey, rulesheet, combinatoricRuleIndices ?? ruleIndices, path, parseExpression);
+      if (hasOutOfOrderUnconditional(rulesheetEntries)) {
+        // Confirmed real, not hypothetical: this fixture's own ProgramAEligibility.ers
+        // has its unconditional row FIRST, not last -- see chainEntries' own comment
+        // for the real silent-wrong-compilation bug this shape used to cause. The
+        // compiled result is now correct (unconditional treated as the fallback
+        // regardless of position), but no confirmed golden-master trace proves
+        // Corticon's real semantics match this compiled interpretation for this
+        // specific out-of-order shape, unlike the far more common "unconditional row
+        // last" case -- flagged for manual review, not assumed silently equivalent.
+        crosswalk.push({
+          path,
+          rulesheet: rulesheetKey,
+          kind: 'unconditional-row-out-of-order',
+          note: 'This rulesheet\'s unconditional/default row is not last in document order. Compiled by treating it as the fallback regardless of position -- but this exact shape has no confirmed golden-master trace proving that matches Corticon\'s real semantics. Needs manual confirmation against the original Corticon Studio project.',
+        });
+      }
+      entriesByRulesheet.set(rulesheetKey, rulesheetEntries);
     }
 
     const assemblyRulesheets = assemblyRulesheetsByPath.get(path);

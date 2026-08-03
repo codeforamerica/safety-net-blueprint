@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { loadProject } from '../corticon/project.js';
 import { buildDependencyGraph } from '../graph/build-graph.js';
 import { classifyProject } from '../classify/classify-all.js';
-import { buildFacts } from '../translate/build-facts.js';
+import { buildFacts, chainEntries } from '../translate/build-facts.js';
 import { parseExpression } from '../corticon/expression-parser.js';
 
 function compile(fixtureDir) {
@@ -14,11 +14,31 @@ function compile(fixtureDir) {
 }
 
 test('Mortgage: null-check-masking compiles to a Writable Placeholder Fact, not a Derived expression, for all four real late-day-sum attributes', () => {
+  // Fact path uses the canonical entity name ("loanApplication"), not the raw
+  // rulesheet-local alias ("loanapp") the Corticon text itself uses -- confirmed
+  // necessary, not cosmetic: see buildAliasMap/resolveAliases in build-facts.js
+  // for the real cross-reference bug this fixes.
   const { facts } = compile('fixtures/mortgage');
   for (const attr of ['late30DaysSum', 'late60DaysSum', 'late90DaysSum', 'late120DaysSum']) {
-    const fact = facts.find((f) => f.path === `/loanapp/${attr}`);
-    assert.deepEqual(fact, { path: `/loanapp/${attr}`, writable: true, placeholder: '0' });
+    const fact = facts.find((f) => f.path === `/loanApplication/${attr}`);
+    assert.deepEqual(fact, { path: `/loanApplication/${attr}`, writable: true, placeholder: '0' });
   }
+});
+
+
+test('Mortgage: a path whose only real writer is an unreachable rulesheet gets no Fact, but a path-specific crosswalk entry explains why', () => {
+  // Confirmed real, not theoretical: LoanApplication.creditReqtMet is written only
+  // by Select_Credit.ers, which is unreachable within this vendored fixture
+  // (AllPrograms.erf invokes a "Rules/Select.erf" ruleflow that was never
+  // vendored). An earlier version of this file silently `continue`d here with no
+  // reporting at all when every real writer of a path got excluded -- unlike the
+  // genuine-cycle/unclassified-cycle cases in the same loop, which each report
+  // their own path-level crosswalk entry before skipping.
+  const { facts, crosswalk } = compile('fixtures/mortgage');
+  assert.equal(facts.find((f) => f.path === '/loanApplication/creditReqtMet'), undefined);
+  const entry = crosswalk.find((c) => c.path === 'LoanApplication.creditReqtMet' && c.kind === 'no-ordinary-writer');
+  assert.ok(entry, 'expected a no-ordinary-writer crosswalk entry explaining the missing Fact');
+  assert.match(entry.note, /Select_Credit\.ers/);
 });
 
 test('all-patterns: a genuine cycle is skipped entirely, flagged as a crosswalk annotation for manual redesign', () => {
@@ -33,6 +53,40 @@ test('all-patterns: entity-creation writes are excluded from Fact compilation, f
   assert.equal(facts.some((f) => f.path === '/household/primaryHouseholdKey'), false);
   const entry = crosswalk.find((c) => c.kind === 'entity-creation' && c.rulesheet === 'CreateHouseholds.ers' && c.entityType === 'Household');
   assert.ok(entry, 'expected an entity-creation crosswalk entry for CreateHouseholds.ers, reported directly from classification.entityCreation');
+});
+
+test('all-patterns: an unconditional row that is NOT last in document order still folds in every later conditioned row, not silently discarding them', () => {
+  // Real, confirmed bug found via a user question about what "Case 0 with no
+  // condition" even means: ProgramAEligibility.ers has its unconditional row
+  // FIRST (Rule 0: sets isProgramAEligible = false) and a conditioned row SECOND
+  // (Rule 1: isEligible = true -> isProgramAEligible = true). An earlier version
+  // of chainEntries iterated backward and treated whichever row it hit with
+  // guard === null as an immediate override, discarding every entry already
+  // built for later document-order rows -- the compiled Fact was a bare "false",
+  // with no reference to isEligible anywhere, and nothing said so.
+  const { facts, crosswalk } = compile('fixtures/all-patterns');
+  const fact = facts.find((f) => f.path === '/applicant/isProgramAEligible');
+  assert.equal(fact.derived, '(applicant.isEligible == true) ? true : false');
+  const entry = crosswalk.find((c) => c.kind === 'unconditional-row-out-of-order' && c.rulesheet === 'ProgramAEligibility.ers');
+  assert.ok(entry, 'expected an unconditional-row-out-of-order crosswalk entry flagging this shape for manual review');
+});
+
+test('chainEntries: an unconditional entry folds in as the fallback regardless of its position, not just when last', () => {
+  const outOfOrder = chainEntries([
+    { guard: null, value: 'false' },
+    { guard: 'a == 1', value: 'true' },
+  ]);
+  assert.equal(outOfOrder.cel, 'a == 1 ? true : false');
+  assert.equal(outOfOrder.hasFallback, true);
+});
+
+test('chainEntries: more than one unconditional entry for the same path throws rather than silently picking one', () => {
+  assert.throws(() => {
+    chainEntries([
+      { guard: null, value: 'a' },
+      { guard: null, value: 'b' },
+    ]);
+  }, /2 unconditional entries/);
 });
 
 test('all-patterns: null-check-masking (Applicant.reportedAssets) compiles to a Writable Placeholder Fact', () => {
@@ -58,7 +112,11 @@ test('all-patterns: date arithmetic, currency rounding, and the field-sum aggreg
 test('all-patterns: a rulesheet-level filter is folded into every Fact that rulesheet compiles, not just reported informationally', () => {
   const { facts, crosswalk } = compile('fixtures/all-patterns');
   // AdultCount.ers's real filter (adult.age >= 18) gates its own otherwise-unconditional row.
-  assert.equal(facts.find((f) => f.path === '/household/adultCount').derived, 'adult.age >= 18 ? size(adult) : unresolved()');
+  // Compiled CEL uses the canonical entity alias ("applicant"), not AdultCount.ers's
+  // own rulesheet-local filtered-collection alias ("adult") -- confirmed necessary:
+  // see buildAliasMap/resolveAliases in build-facts.js for the real cross-reference
+  // bug this fixes (a bare "adult.age" wouldn't match any real Fact path at all).
+  assert.equal(facts.find((f) => f.path === '/household/adultCount').derived, '(applicant.age >= 18) ? size(applicant) : unresolved()');
   const filterEntry = crosswalk.find((c) => c.kind === 'filter' && c.rulesheet === 'AdultCount.ers');
   assert.equal(filterEntry.expression, 'adult.age >= 18');
 });
@@ -68,7 +126,7 @@ test('all-patterns: decision-table combinatorics within one rulesheet compile to
   const incomeTier = facts.find((f) => f.path === '/household/incomeTier');
   assert.equal(
     incomeTier.derived,
-    "household.totalIncome < 20000 && household.adultCount >= 2 ? 'Tier1' : household.totalIncome < 20000 && household.adultCount < 2 ? 'Tier2' : household.totalIncome >= 20000 ? 'Tier3' : unresolved()"
+    "(household.totalIncome < 20000) && (household.adultCount >= 2) ? 'Tier1' : (household.totalIncome < 20000) && (household.adultCount < 2) ? 'Tier2' : (household.totalIncome >= 20000) ? 'Tier3' : unresolved()"
   );
   const hitPolicyEntry = crosswalk.find((c) => c.kind === 'hit-policy-unverified' && c.rulesheet === 'IncomeTier.ers');
   assert.deepEqual(hitPolicyEntry.ruleIndices, [1, 2, 3], 'shifted by 1 vs. Corticon\'s own rule count: index 0 is the reserved blank/template row, now kept rather than filtered');
@@ -103,10 +161,12 @@ test('DC Medicaid/CHIP: Person.MedicaidEligible assembles all three real ruleshe
   const medicaidEligible = facts.find((f) => f.path === '/person/MedicaidEligible');
   assert.ok(medicaidEligible, 'expected a compiled Person.MedicaidEligible Fact');
   // Flatten.ers is invoked last (highest priority) -- its own 2 rows appear first.
-  assert.match(medicaidEligible.derived, /^person\.outputCoverage1 == null/);
+  assert.match(medicaidEligible.derived, /^\(person\.outputCoverage1 == null\)/);
   // Parse Cohorts.ers's real filter (cohorts->notEmpty) is folded into its own
-  // otherwise-unconditional row, not silently dropped.
-  assert.match(medicaidEligible.derived, /size\(cohorts\) != 0 \? true/);
+  // otherwise-unconditional row, not silently dropped. Uses the canonical entity
+  // alias ("cohort"), not Parse Cohorts.ers's own rulesheet-local collection alias
+  // ("cohorts") -- see buildAliasMap/resolveAliases in build-facts.js.
+  assert.match(medicaidEligible.derived, /\(size\(cohort\) != 0\) \? true/);
   // Citizenship requirements.ers (invoked first, lowest priority) still appears as
   // the final fallback -- not silently discarded once a higher-priority rulesheet's
   // own chain was compiled, which was the real bug this design fixed.
@@ -124,6 +184,23 @@ test('DC Medicaid/CHIP: a rule guarded by a real range-membership condition (Per
   // parsing/codegen unit tests.
   const { crosswalk } = compile('fixtures/dc-medicaid-chip');
   assert.ok(crosswalk.some((c) => c.kind === 'entity-creation' && c.rulesheet.includes('MAGI Eligibility Groups')));
+});
+
+test('DC Medicaid/CHIP: a condition with its own internal "or" is parenthesized as one unit before being AND-ed with the next condition, not flattened into a bare && chain', () => {
+  // Real, confirmed bug found via a user question about the rendered diagram, not
+  // hypothetical: Income Requirements.ers's real Person.isCHIPEligible rule ANDs
+  // "Person.isInmate = F or Person.isInmate = null" against three other separate
+  // conditions. An earlier version of compileGuard joined each condition's own CEL
+  // with a bare " && ", producing "isInmate == false || isInmate == null &&
+  // age < 19 && ..." -- which CEL parses as "isInmate == false || (isInmate == null
+  // && age < 19 && ...)" (&& binds tighter than ||), NOT the
+  // "(isInmate == false || isInmate == null) && age < 19 && ..." Corticon's own
+  // AND-across-columns semantics actually require. Every condition (and filter) is
+  // now individually parenthesized before joining, regardless of what operator is
+  // at that condition's own top level.
+  const { facts } = compile('fixtures/dc-medicaid-chip');
+  const isChipEligible = facts.find((f) => f.path === '/person/isCHIPEligible');
+  assert.match(isChipEligible.derived, /\(person\.isInmate == false \|\| person\.isInmate == null\) && \(person\.age < 19\)/);
 });
 
 test('DC Medicaid/CHIP: the confirmed-dead Non-MAGI Eligibility Groups.ers is excluded from Fact compilation entirely and reported directly, even though it writes the same path a real reachable rulesheet does', () => {
