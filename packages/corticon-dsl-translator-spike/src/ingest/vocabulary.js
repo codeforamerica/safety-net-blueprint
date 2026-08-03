@@ -126,13 +126,24 @@ export function parseVocabulary(filePath) {
       const isAssociation = feature['@_xsi:type'] === 'ecore:EReference';
       const isCollection = feature['@_upperBound'] === '-1';
       const resolved = resolveEType(feature['@_eType'], ctx);
-      attributes.set(featureName, {
+      const attribute = {
         kind: isAssociation ? 'association' : 'attribute',
         isCollection,
         type: resolved.kind === 'reference' && customTypes.has(resolved.name)
           ? { kind: 'customType', name: resolved.name }
           : resolved,
-      });
+      };
+      // Both confirmed real only on EReference (association) features, never on
+      // plain attributes: `eOpposite="#//Entity/fieldName"` cross-links the two
+      // sides of a bidirectional association (DC Medicaid's `Household.person` <->
+      // `Person.household`); `lowerBound="1"` marks a required (non-optional)
+      // association (every Person requires exactly one Household).
+      if (isAssociation) {
+        const eOpposite = feature['@_eOpposite'];
+        if (eOpposite) attribute.opposite = eOpposite.slice(eOpposite.lastIndexOf('/') + 1);
+        attribute.isRequired = feature['@_lowerBound'] === '1';
+      }
+      attributes.set(featureName, attribute);
     }
     entities.set(entityName, { attributes });
   }

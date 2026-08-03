@@ -33,7 +33,7 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="isProgramAEligible" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBooleanObject"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="isProgramBEligible" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBooleanObject"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="bestProgram" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="household" eType="#//Household"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="household" lowerBound="1" eType="#//Household" eOpposite="#//Household/applicant"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Household">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="totalIncome" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBigDecimal"/>
@@ -43,7 +43,7 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="estimatedBenefit" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBigDecimal"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="verifiedIncome" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBigDecimal"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="primaryHouseholdKey" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="applicant" upperBound="-1" eType="#//Applicant"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="applicant" upperBound="-1" eType="#//Applicant" eOpposite="#//Applicant/household"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="candidate" upperBound="-1" eType="#//BenefitCandidate"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="program" upperBound="-1" eType="#//Program"/>
   </eClassifiers>

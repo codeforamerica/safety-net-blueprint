@@ -35,6 +35,26 @@ test('resolves a collection association distinctly from a scalar association', (
   assert.equal(person.attributes.get('household').isCollection, false, 'Person.household is scalar');
 });
 
+test('resolves a bidirectional association via eOpposite, and marks a required association distinctly from an optional one', () => {
+  const { entities } = parseVocabulary(DC_MEDICAID_VOCAB);
+  const household = entities.get('Household');
+  const person = entities.get('Person');
+  assert.equal(household.attributes.get('person').opposite, 'household');
+  assert.equal(person.attributes.get('household').opposite, 'person');
+  assert.equal(person.attributes.get('household').isRequired, true, 'lowerBound="1" -- every Person requires a Household');
+  assert.equal(household.attributes.get('person').isRequired, false, 'no lowerBound on this side -- a Household can have zero Person records');
+});
+
+test('a plain attribute (not an association) never carries opposite/isRequired, even when absent from the real file', () => {
+  const { entities } = parseVocabulary(DC_MEDICAID_VOCAB);
+  const person = entities.get('Person');
+  assert.deepEqual(person.attributes.get('wages'), {
+    kind: 'attribute',
+    isCollection: false,
+    type: { kind: 'primitive', name: 'Decimal' },
+  });
+});
+
 test('resolves a custom type declared in a different vocabulary file', () => {
   const { entities } = parseVocabulary('fixtures/cross-file-vocab/main.ecore');
   const ticket = entities.get('Ticket');

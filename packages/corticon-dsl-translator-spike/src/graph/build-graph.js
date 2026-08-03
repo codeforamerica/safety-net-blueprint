@@ -22,13 +22,21 @@ export function buildDependencyGraph(project) {
 
   for (const [rulesheetFile, rulesheet] of entriesOf(project.rulesheets)) {
     rulesheet.rules.forEach((rule, ruleIndex) => {
+      // Shared across every action in the rule -- all of them only run if the
+      // rule's conditions are met, so each one's write genuinely does depend on
+      // whatever the conditions read.
       const conditionReads = rule.conditions.flatMap((c) => attributePathsIn(c.referencedTerms));
-      const actionReads = rule.actions.flatMap((a) => attributePathsIn(a.referencedTerms));
-      const reads = new Set([...conditionReads, ...actionReads]);
 
       for (const action of rule.actions) {
         const isEntityCreation = touchesEntityCreation(action.modifiedTerms) || touchesEntityCreation(action.referencedTerms);
         const writePaths = attributePathsIn(action.modifiedTerms);
+        // Scoped to THIS action alone, not pooled across every action in the rule --
+        // confirmed real in DC Medicaid's Calculate_premium.ers: one action computes
+        // `monthly_premium`, and a *separate* action later reads it (via `.toString`)
+        // to build an unrelated message string. Pooling all actions' reads together
+        // made that read look like monthly_premium depended on itself -- a spurious
+        // self-loop with nothing to do with monthly_premium's own computation.
+        const reads = new Set([...conditionReads, ...attributePathsIn(action.referencedTerms)]);
 
         for (const writePath of writePaths) {
           nodes.add(writePath);
