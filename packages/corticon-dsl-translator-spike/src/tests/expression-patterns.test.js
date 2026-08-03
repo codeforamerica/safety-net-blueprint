@@ -1,0 +1,64 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { parseRulesheet } from '../ingest/rulesheet.js';
+import { isDateArithmetic, isCurrencyRounding, actionUsesCurrencyRounding, isSortingOperation, usesSortingOperation } from '../classify/expression-patterns.js';
+
+function allTerms(rule) {
+  return [...rule.conditions, ...rule.actions].flatMap((cell) => cell.referencedTerms ?? []);
+}
+
+test('detects real date arithmetic in DC Medicaid\'s Person.dob.yearsBetween(today)', () => {
+  const r = parseRulesheet('fixtures/dc-medicaid-chip/Medicaid Applicant/Create Household for Unique PrimaryInsuredId.ers');
+  const matches = r.rules.flatMap(allTerms).filter(isDateArithmetic);
+  assert.ok(matches.length > 0);
+  assert.ok(matches.every((t) => t.fulltext.includes('yearsBetween')));
+});
+
+test('detects real date arithmetic in this fixture\'s own AgeCalculation.ers', () => {
+  const r = parseRulesheet('fixtures/all-patterns/AgeCalculation.ers');
+  const matches = r.rules.flatMap(allTerms).filter(isDateArithmetic);
+  assert.equal(matches.length, 1);
+});
+
+test('a plain attribute read is never mistaken for date arithmetic', () => {
+  const r = parseRulesheet('fixtures/all-patterns/IncomeTier.ers');
+  const matches = r.rules.flatMap(allTerms).filter(isDateArithmetic);
+  assert.deepEqual(matches, []);
+});
+
+test('detects currency rounding via the raw expression text fallback -- DC Medicaid\'s real .round(2) on a compound expression has no term at all', () => {
+  const r = parseRulesheet('fixtures/dc-medicaid-chip/Medicaid Applicant/Set FPL from Household Size.ers');
+  const roundingAction = r.rules[0].actions.find((a) => a.text?.includes('ActualPercentFPL'));
+  assert.ok(roundingAction, 'expected to find the real ActualPercentFPL rounding action');
+  assert.equal(allTerms({ conditions: [], actions: [roundingAction] }).some(isCurrencyRounding), false, 'no term represents the round() call on a compound expression');
+  assert.equal(actionUsesCurrencyRounding(roundingAction), true, 'the text fallback still catches it');
+});
+
+test('detects currency rounding via a real METHOD term -- this fixture\'s round(2) on a bare attribute', () => {
+  const r = parseRulesheet('fixtures/all-patterns/ComputeIncome.ers');
+  const roundingAction = r.rules[0].actions.find((a) => a.text?.includes('incomeRounded'));
+  assert.ok(allTerms({ conditions: [], actions: [roundingAction] }).some(isCurrencyRounding));
+  assert.equal(actionUsesCurrencyRounding(roundingAction), true);
+});
+
+test('detects real sorting/ranking in DC Medicaid\'s Parse Cohorts.ers', () => {
+  const r = parseRulesheet('fixtures/dc-medicaid-chip/Medicaid Applicant/Parse Cohorts.ers');
+  const matches = r.rules.flatMap(allTerms).filter(isSortingOperation);
+  assert.ok(matches.length > 0);
+});
+
+test('detects real sorting/ranking in this fixture\'s own ProgramRanking.ers', () => {
+  const r = parseRulesheet('fixtures/all-patterns/ProgramRanking.ers');
+  const matches = r.rules.flatMap(allTerms).filter(isSortingOperation);
+  assert.equal(matches.length, 1);
+});
+
+test('detects real sorting/ranking via the raw expression text fallback -- IRR\'s filter-level flows->sortedBy(installment)->first has no term for it at all', () => {
+  // Confirmed real gap, the same class as actionUsesCurrencyRounding's: IRR's
+  // `initial values.ers` filter's COLLECTION term has text/fulltext reading
+  // only "flows"/"flows->asSequence->first" -- no "sortedBy" substring anywhere
+  // in the parsed term tree, unlike the action-level cases above.
+  const r = parseRulesheet('fixtures/irr/initial values.ers');
+  assert.equal(r.filters.flatMap((f) => f.referencedTerms ?? []).some(isSortingOperation), false, 'no term represents the real sortedBy call in this filter');
+  assert.ok(r.filters.some(usesSortingOperation), 'the text fallback still catches it');
+});
