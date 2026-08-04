@@ -10,13 +10,20 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { resolve, dirname, relative, isAbsolute } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { COLORS, FONT } from '../../../lib/theme.js';
 import { esc as escXml, breadcrumb } from '../../../lib/html.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function safeResolve(base, filename) {
+  const full = resolve(base, filename);
+  const rel = relative(base, full);
+  return (rel.startsWith('..') || isAbsolute(rel)) ? null : full;
+}
+
 const resolvedArg  = process.argv.find(a => a.startsWith('--resolved='));
 const contractsDir = resolvedArg
   ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length))
@@ -46,7 +53,9 @@ const CALL_CLR  = '#1F2937';
 
 const diagramConfig = new Map(); // domain → {events, procedures}
 for (const f of readdirSync(configDir).filter(f => f.endsWith('-config.yaml'))) {
-  const cfg = yaml.load(readFileSync(resolve(configDir, f), 'utf8'));
+  const fullPath = safeResolve(configDir, f);
+  if (!fullPath) continue;
+  const cfg = yaml.load(readFileSync(fullPath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA });
   if (cfg?.domain) diagramConfig.set(cfg.domain, cfg);
 }
 
@@ -66,9 +75,10 @@ function procedureLabel(domain, procId) {
 
 const SM_FILES = readdirSync(contractsDir)
   .filter(f => f.endsWith('-state-machine.yaml') && f !== 'platform-state-machine.yaml')
+  .filter(f => safeResolve(contractsDir, f) !== null)
   .sort();
-const smDatas    = SM_FILES.map(f => yaml.load(readFileSync(resolve(contractsDir, f), 'utf8')));
-const platformSM = yaml.load(readFileSync(resolve(contractsDir, 'platform-state-machine.yaml'), 'utf8'));
+const smDatas    = SM_FILES.map(f => yaml.load(readFileSync(safeResolve(contractsDir, f), 'utf8'), { schema: yaml.DEFAULT_SCHEMA }));
+const platformSM = yaml.load(readFileSync(resolve(contractsDir, 'platform-state-machine.yaml'), 'utf8'), { schema: yaml.DEFAULT_SCHEMA });
 
 // ── Build subscriber index ─────────────────────────────────────────────────
 // eventType → [{domain, object, description, steps}]
@@ -124,7 +134,8 @@ function procToSteps(proc) {
 
 const domainEntries = readdirSync(contractsDir)
   .filter(f => f.endsWith('-openapi.yaml') && !f.includes('-adapter-'))
-  .map(f => yaml.load(readFileSync(resolve(contractsDir, f), 'utf8'))?.info?.['x-domain'])
+  .filter(f => safeResolve(contractsDir, f) !== null)
+  .map(f => yaml.load(readFileSync(safeResolve(contractsDir, f), 'utf8'), { schema: yaml.DEFAULT_SCHEMA })?.info?.['x-domain'])
   .filter(Boolean)
   .map(d => ({
     id:    d.replace(/-/g, '_'),
@@ -350,7 +361,7 @@ function mergeNoteArrows(nodes) {
 
 // ── Load diagram list from index-config.yaml ───────────────────────────────
 
-const indexConfig = yaml.load(readFileSync(resolve(configDir, 'index-config.yaml'), 'utf8'));
+const indexConfig = yaml.load(readFileSync(resolve(configDir, 'index-config.yaml'), 'utf8'), { schema: yaml.DEFAULT_SCHEMA });
 const diagramDefs = indexConfig.diagrams ?? [];
 
 // ── Collect used participants ──────────────────────────────────────────────
