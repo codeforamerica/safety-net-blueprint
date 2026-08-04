@@ -500,10 +500,16 @@ describe('Zod sweep — eligibility', () => {
 describe('Zod sweep — platform', () => {
   before(async () => { await fetch(`${BASE_URL}/mock/reset`, { method: 'POST' }); });
 
-  it('listPolicies — response validates against schema', async () => {
+  it('listPolicies — response validates against schema and returns seeded policies', async () => {
     const res = await listPolicies({ client: platformClient });
     assert.equal(res.status, 200);
-    assert.ok(Array.isArray((res.data as { items: unknown[] }).items));
+    const items = (res.data as { items: { id: string }[] }).items;
+    assert.ok(Array.isArray(items));
+    assert.ok(items.length > 0, 'registry-policies should be seeded from platform-registry-policies.yaml');
+    const ids = items.map(p => p.id);
+    assert.ok(ids.includes('snap-household-composition'), 'snap-household-composition should be present');
+    assert.ok(ids.includes('snap-right-to-apply'), 'snap-right-to-apply should be present');
+    assert.ok(ids.includes('medicaid-authorized-representative'), 'medicaid-authorized-representative should be present');
   });
 });
 

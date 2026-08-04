@@ -14,6 +14,7 @@ import { discoverConfigs } from './config-loader.js';
 import { discoverCompositions } from '@codeforamerica/safety-net-blueprint-contracts/compositions';
 import { insertResource } from './database-manager.js';
 import { registerConfigManaged } from './config-registry.js';
+import { loadPolicies } from '@codeforamerica/safety-net-blueprint-contracts/policies';
 /**
  * Perform setup: load specs and seed databases
  * @param {Object} options - Setup options
@@ -125,6 +126,17 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
         console.log(`✓ Seeded ${entries.length} config-managed ${catalogKey} (${config.domain})`);
       }
     }
+  }
+
+  // Seed platform policy registry into the mock database
+  const policies = loadPolicies(specsDir);
+  const policyEntries = Object.entries(policies);
+  for (const [id, policy] of policyEntries) {
+    insertResource('registry-policies', { id, ...policy, source: 'system' });
+    registerConfigManaged('registry-policies', id);
+  }
+  if (verbose && policyEntries.length > 0) {
+    console.log(`✓ Seeded ${policyEntries.length} config-managed registry-policies (platform)`);
   }
 
   // Validate seed data against schemas

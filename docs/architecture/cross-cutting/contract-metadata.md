@@ -208,23 +208,18 @@ because the annotation leaf level uses `additionalProperties: true`.
 
 ## TypeScript client integration
 
-The contracts package generates typed static exports from annotation files as part of
-`npm run clients:generate`. These exports are available alongside the generated API types:
+Annotation files are compiled into the generated domain package at `npm run clients:generate` and
+accessible as `Annotations` on the domain namespace — no separate import required:
 
 ```typescript
-import { IntakeAnnotations } from '@codeforamerica/safety-net-blueprint-contracts';
-
 // Element annotation lookup
-const ssn = IntakeAnnotations.schema['application.members[].personalInformation.ssn'];
-// ssn.dataClassification → ['pii', 'fti']
-// ssn.policies → ['snap-ssn-disclosure']
+intake.Annotations.schema['application.members[].personalInformation.ssn']
+// → { dataClassification: ['pii', 'fti'], policies: ['snap-ssn-disclosure'] }
 ```
 
-`IntakeAnnotations` is a typed `as const` object — no runtime fetch required. Overlays are resolved
-at generation time, so a state's generated client reflects their customized annotations.
-
-`IntakeAnnotations` mirrors the annotation file structure with `schema`, `operations`, and `events`
-sub-objects.
+`Annotations` is a typed `as const` object — no runtime fetch required. Overlays are resolved at
+generation time, so a state's generated client reflects their customized annotations. `Annotations`
+mirrors the annotation file structure with `schema`, `operations`, and `events` sub-objects.
 
 For policy lookups, use the platform API (see below) rather than a baked-in static export.
 

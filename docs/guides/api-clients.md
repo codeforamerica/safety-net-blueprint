@@ -377,6 +377,36 @@ Each generated package includes state-specific schema fields defined by that sta
 
 Check your state's overlay files to see what customizations are applied. In this repo, overlays are under `packages/contracts/overlays/`. In a state repo, they live wherever the `--overlay` argument points. See [Overlay Guide](../guides/overlay-guide.md) for overlay syntax.
 
+## Annotations
+
+Domain annotations — regulatory policies, programs, and data classification — are compiled from
+`*-annotations*.yaml` files at client generation time and accessible directly on the domain namespace:
+
+```typescript
+import { intake } from './generated';
+
+// Look up which policies govern a field
+const ssn = intake.Annotations.schema['application.members[].personalInformation.ssn'];
+// ssn.policies → ['snap-ssn-requirement']
+// ssn.dataClassification → ['pii']
+
+// Find all PII fields in the intake domain
+const piiFields = Object.entries(intake.Annotations.schema)
+  .filter(([, v]) => v.dataClassification?.includes('pii'))
+  .map(([k]) => k);
+
+// Find all fields that apply to SNAP
+const snapFields = Object.entries(intake.Annotations.schema)
+  .filter(([, v]) => v.programs?.includes('snap'))
+  .map(([k]) => k);
+```
+
+`Annotations` has three sub-objects: `schema` (keyed by JSON path), `operations` (keyed by state
+machine action or operation ID), and `events` (keyed by AsyncAPI event type).
+
+Not all domains have annotations — only domains with `*-annotations*.yaml` files in the contracts
+package will have an `Annotations` export. Domains without annotations do not expose the property.
+
 ## Updating Clients
 
 When the base specs (`@codeforamerica/safety-net-blueprint-contracts`) are updated:
