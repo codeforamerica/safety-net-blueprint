@@ -29,10 +29,10 @@
     </rule>
     <rule overrides="#//@ruleset/@rules.1">
       <condition>
-        <opaqueExpression expression="Application.totalIncome &lt; 150 and ApplicationMember.reportedAssets &lt;= 100">
-          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.totalIncome &lt; 150 and ApplicationMember.reportedAssets &lt;= 100" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+        <opaqueExpression expression="Application.incomeRounded &lt; 150 and ApplicationMember.reportedAssets &lt;= 100">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.incomeRounded &lt; 150 and ApplicationMember.reportedAssets &lt;= 100" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
             <referencedTermList>
-              <terms text="totalIncome" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.totalIncome">
+              <terms text="incomeRounded" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.incomeRounded">
                 <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.1"/>
               </terms>
               <terms text="reportedAssets" datatype="Decimal" termtype="ATTRIBUTE" fulltext="ApplicationMember.reportedAssets">

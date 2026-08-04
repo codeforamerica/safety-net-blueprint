@@ -13,10 +13,10 @@
     <rule documentingRuleStatements="0"/>
     <rule>
       <condition>
-        <opaqueExpression expression="Application.totalIncome &lt; 1580">
-          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.totalIncome &lt; 1580" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+        <opaqueExpression expression="Application.incomeRounded &lt; 1580">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.incomeRounded &lt; 1580" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
             <referencedTermList>
-              <terms text="totalIncome" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.totalIncome">
+              <terms text="incomeRounded" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.incomeRounded">
                 <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
               </terms>
             </referencedTermList>
@@ -51,10 +51,10 @@
     </rule>
     <rule>
       <condition>
-        <opaqueExpression expression="Application.totalIncome &lt; 2137">
-          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.totalIncome &lt; 2137" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+        <opaqueExpression expression="Application.incomeRounded &lt; 2137">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.incomeRounded &lt; 2137" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
             <referencedTermList>
-              <terms text="totalIncome" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.totalIncome">
+              <terms text="incomeRounded" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.incomeRounded">
                 <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
               </terms>
             </referencedTermList>
@@ -89,10 +89,10 @@
     </rule>
     <rule>
       <condition>
-        <opaqueExpression expression="Application.totalIncome &lt; 2694">
-          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.totalIncome &lt; 2694" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+        <opaqueExpression expression="Application.incomeRounded &lt; 2694">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.incomeRounded &lt; 2694" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
             <referencedTermList>
-              <terms text="totalIncome" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.totalIncome">
+              <terms text="incomeRounded" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.incomeRounded">
                 <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
               </terms>
             </referencedTermList>
@@ -127,10 +127,10 @@
     </rule>
     <rule>
       <condition>
-        <opaqueExpression expression="Application.totalIncome &gt;= 1580">
-          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.totalIncome &gt;= 1580" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+        <opaqueExpression expression="Application.incomeRounded &gt;= 1580">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.incomeRounded &gt;= 1580" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
             <referencedTermList>
-              <terms text="totalIncome" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.totalIncome">
+              <terms text="incomeRounded" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.incomeRounded">
                 <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
               </terms>
             </referencedTermList>
@@ -192,10 +192,10 @@
     <conditionSection rowCount="50" columnWidthFactor="0.5">
       <conditionItemList>
         <valueSetCell/>
-        <expressionCell external="Application.totalIncome">
-          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.totalIncome" datatype="Decimal" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+        <expressionCell external="Application.incomeRounded">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.incomeRounded" datatype="Decimal" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
             <referencedTermList>
-              <terms text="totalIncome" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.totalIncome">
+              <terms text="incomeRounded" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.incomeRounded">
                 <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
               </terms>
             </referencedTermList>
@@ -219,9 +219,9 @@
       <ruleColumnList ruleId="0" pRule="#//@ruleset/@rules.0"/>
       <ruleColumnList ruleId="1" pRule="#//@ruleset/@rules.1">
         <conditionValueSetCellList valueSet="&lt; 1580">
-          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.totalIncome &lt; 1580" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.incomeRounded &lt; 1580" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
             <referencedTermList>
-              <terms text="totalIncome" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.totalIncome">
+              <terms text="incomeRounded" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.incomeRounded">
                 <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application"/>
               </terms>
             </referencedTermList>
@@ -251,9 +251,9 @@
       </ruleColumnList>
       <ruleColumnList ruleId="2" pRule="#//@ruleset/@rules.2">
         <conditionValueSetCellList valueSet="&lt; 2137">
-          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.totalIncome &lt; 2137" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.incomeRounded &lt; 2137" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
             <referencedTermList>
-              <terms text="totalIncome" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.totalIncome">
+              <terms text="incomeRounded" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.incomeRounded">
                 <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application"/>
               </terms>
             </referencedTermList>
@@ -283,9 +283,9 @@
       </ruleColumnList>
       <ruleColumnList ruleId="3" pRule="#//@ruleset/@rules.3">
         <conditionValueSetCellList valueSet="&lt; 2694">
-          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.totalIncome &lt; 2694" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.incomeRounded &lt; 2694" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
             <referencedTermList>
-              <terms text="totalIncome" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.totalIncome">
+              <terms text="incomeRounded" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.incomeRounded">
                 <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application"/>
               </terms>
             </referencedTermList>
@@ -315,9 +315,9 @@
       </ruleColumnList>
       <ruleColumnList ruleId="4" pRule="#//@ruleset/@rules.4">
         <conditionValueSetCellList valueSet="&gt;= 1580">
-          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.totalIncome &gt;= 1580" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.incomeRounded &gt;= 1580" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
             <referencedTermList>
-              <terms text="totalIncome" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.totalIncome">
+              <terms text="incomeRounded" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.incomeRounded">
                 <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application"/>
               </terms>
             </referencedTermList>

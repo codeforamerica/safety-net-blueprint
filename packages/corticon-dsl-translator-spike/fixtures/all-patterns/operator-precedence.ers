@@ -13,15 +13,15 @@
     <rule documentingRuleStatements="0"/>
     <rule>
       <action>
-        <opaqueExpression expression="Application.netMonthlyIncome = Application.totalIncome - Application.totalIncome * 0.2">
-          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.netMonthlyIncome = Application.totalIncome - Application.totalIncome * 0.2" datatype="Decimal" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
+        <opaqueExpression expression="Application.netMonthlyIncome = Application.incomeRounded - Application.incomeRounded * 0.2">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.netMonthlyIncome = Application.incomeRounded - Application.incomeRounded * 0.2" datatype="Decimal" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
             <modifiedTermList>
               <terms text="netMonthlyIncome" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.netMonthlyIncome">
                 <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
               </terms>
             </modifiedTermList>
             <referencedTermList>
-              <terms text="totalIncome" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.totalIncome">
+              <terms text="incomeRounded" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.incomeRounded">
                 <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
               </terms>
             </referencedTermList>

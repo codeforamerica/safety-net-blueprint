@@ -83,6 +83,7 @@ function extractDependencies(derivedText, pathByAliasKey) {
  * around.
  */
 function computeLayers(facts, depsByPath) {
+  const derivedPaths = new Set(facts.filter((f) => f.derived !== undefined).map((f) => f.path));
   const layerByPath = new Map();
   const visiting = new Set();
   function layerOf(path) {
@@ -90,12 +91,28 @@ function computeLayers(facts, depsByPath) {
     if (visiting.has(path)) throw new Error(`Cycle detected among Facts while computing dependency-graph layers, at "${path}" -- a genuine cycle should never have become a Fact (see TRANSLATION-PATTERNS.md)`);
     visiting.add(path);
     const deps = depsByPath.get(path) ?? [];
-    const layer = deps.length ? 1 + Math.max(...deps.map(layerOf)) : 0;
+    // Layer 0 is reserved for writable inputs only. Derived facts with no
+    // dependencies (e.g. unconditional constant assignments) sit at layer 1
+    // so they're visually separated from inputs even though they have no edges.
+    const layer = deps.length ? 1 + Math.max(...deps.map(layerOf)) : (derivedPaths.has(path) ? 1 : 0);
     visiting.delete(path);
     layerByPath.set(path, layer);
     return layer;
   }
   for (const fact of facts) layerOf(fact.path);
+
+  // Push sinks (facts that nothing else depends on) to the bottom layer so
+  // outputs don't appear near the top just because they have short dependency
+  // chains. A fact is a sink if its path never appears in any other fact's
+  // dependency list.
+  const depTargets = new Set([...depsByPath.values()].flat());
+  const sinkPaths = facts.map((f) => f.path).filter((p) => !depTargets.has(p));
+  if (sinkPaths.length) {
+    const maxLayer = Math.max(...layerByPath.values());
+    const sinkLayer = maxLayer + 1;
+    for (const path of sinkPaths) layerByPath.set(path, sinkLayer);
+  }
+
   return layerByPath;
 }
 
@@ -112,6 +129,12 @@ function renderDiagram(facts) {
   const depsByPath = new Map(
     facts.map((f) => [f.path, f.derived !== undefined ? extractDependencies(f.derived, pathByAliasKey).filter((d) => d !== f.path) : []])
   );
+
+  // Drop input facts (writable, no derived expression) that nothing depends on --
+  // they're not part of any derivation chain and only clutter the diagram.
+  const depTargets = new Set([...depsByPath.values()].flat());
+  facts = facts.filter((f) => f.derived !== undefined || f.placeholder !== undefined || depTargets.has(f.path));
+
   const layerByPath = computeLayers(facts, depsByPath);
 
   const factsByLayer = new Map();
