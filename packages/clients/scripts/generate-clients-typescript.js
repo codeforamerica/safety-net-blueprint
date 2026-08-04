@@ -597,7 +597,7 @@ function collectNamedEnumDefs(specPath) {
     const filePath = resolvePath(specDir, ref);
     if (!existsSync(filePath)) continue;
     let schema;
-    try { schema = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+    try { schema = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA }); } catch { continue; }
     const fileStem = toPascal(ref.split('/').pop().replace(/\.yaml$/, ''));
     const defs = schema?.$defs ?? schema?.definitions ?? {};
     for (const [defName, def] of Object.entries(defs)) {
