@@ -47,7 +47,7 @@ export function resolveSchemaRefs(schema, { spec = null, specFilePath = null } =
         const resolvedFull = resolve(fullPath);
         const projectRoot = resolve(process.cwd());
         const refRel = relative(projectRoot, resolvedFull);
-        if (refRel.startsWith('..') || isAbsolute(refRel)) break;
+        if (refRel.startsWith('..') || isAbsolute(refRel)) return schema;
         try {
           const externalDoc = yaml.load(readFileSync(resolvedFull, 'utf8'), { schema: yaml.DEFAULT_SCHEMA });
           let resolved = externalDoc;

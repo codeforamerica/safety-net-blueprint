@@ -8,7 +8,7 @@
  */
 
 import { writeFileSync, mkdirSync } from 'fs';
-import { resolve } from 'path';
+import { resolve, relative, isAbsolute } from 'path';
 import { FONT } from '../../../lib/theme.js';
 
 // Set by renderSequenceDiagrams() before any helper function is called.
@@ -731,7 +731,9 @@ export function renderSequenceDiagrams(pkgConfig, outDir) {
   for (const flow of (config.flows || [])) {
     const html = renderFlowPage(flow);
     const filename = `flow_${flow.domain}_${flow.id}.html`;
-    writeFileSync(resolve(outDir, filename), html, 'utf8');
+    const outPath = resolve(outDir, filename);
+    if (relative(outDir, outPath).startsWith('..') || isAbsolute(relative(outDir, outPath))) continue;
+    writeFileSync(outPath, html, 'utf8');
     console.log(`Written: ${filename}`);
   }
 }
