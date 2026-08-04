@@ -396,7 +396,7 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
       if (resolved.kind === 'rulesheet') {
         const rulesheet = project.rulesheets.get(resolved.file);
         const rsPatterns = rulesheetPatterns?.get(resolved.file);
-        const sublabel = rsPatterns?.length ? rsPatterns.join(', ') : null;
+        const sublabel = rsPatterns?.length ? `[${rsPatterns.join(', ')}]` : null;
         const label = `${node.iterative ? `${node.name} [LOOP]` : node.name} (${resolved.file})`;
         const lines = rulesheetDetailLines(rulesheet, resolved.file, rulePatterns, rulesheetPatterns);
         const w = boxWidthFor(label, sublabel, lines);
@@ -487,7 +487,7 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
           if (resolved.kind !== 'rulesheet') continue;
           const rulesheet = project.rulesheets.get(resolved.file);
           const rsPatterns = rulesheetPatterns?.get(resolved.file);
-          const sublabel = rsPatterns?.length ? rsPatterns.join(', ') : null;
+          const sublabel = rsPatterns?.length ? `[${rsPatterns.join(', ')}]` : null;
           const lines = rulesheetDetailLines(rulesheet, resolved.file, rulePatterns, rulesheetPatterns);
           const targetLabel = `${target.name} (${resolved.file})`;
           const w = boxWidthFor(targetLabel, sublabel, lines);
@@ -593,7 +593,7 @@ function renderDiagram(project, context, rulesheetPatterns, rulePatterns) {
     let uy = y + 20;
     for (const key of context.unreachable) {
       const rsPatterns = rulesheetPatterns?.get(key);
-      const sublabel = rsPatterns?.length ? rsPatterns.join(', ') : null;
+      const sublabel = rsPatterns?.length ? `[${rsPatterns.join(', ')}]` : null;
       const lines = rulesheetDetailLines(project.rulesheets.get(key), key, rulePatterns, rulesheetPatterns);
       const w = boxWidthFor(`${key} — dead content`, sublabel, lines);
       const { svg: s, height } = box(PAD, uy, w, `${key} — dead content`, sublabel, lines, COLOR.unreachable, true);
