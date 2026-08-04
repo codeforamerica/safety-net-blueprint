@@ -42,10 +42,7 @@ A rulesheet is a **decision table** — think of a spreadsheet where each row is
 columns are split into conditions (checks) and actions (what to set).
 
 - **Rule** — one row of the table: a set of conditions, and the actions to run if they're all
-  true. **The first rule in every rulesheet is always a blank "documenting" placeholder** — a
-  template row that Corticon Studio inserts automatically and never removes. It holds no conditions
-  or actions; real rules start at index 1. Code that iterates over rules must skip this row
-  explicitly (see `isBlankTemplateRule` in `rulesheet.js`).
+  true.
 - **Override** — an explicit priority relationship between two rules in the same rulesheet. When
   the overriding rule's condition is met, its action takes effect and the overridden rule's action
   is suppressed, even if the overridden rule's condition would also be true. Corticon's default
