@@ -23,8 +23,8 @@ test('does not hardcode any fixture-specific path -- works against any project d
 test('loads the all-patterns fixture: a hand-authored project combining every classification pattern', () => {
   const project = loadProject('fixtures/all-patterns');
   assert.equal(project.vocabularies.size, 1);
-  assert.equal(project.rulesheets.size, 15);
-  assert.equal(project.ruleflows.size, 3, 'top-level-flow.erf, benefit-loop.erf, program-eligibility-loop.erf');
+  assert.equal(project.rulesheets.size, 21);
+  assert.equal(project.ruleflows.size, 5, 'top-level-flow.erf, conditional-branching.erf, enum-branch.erf, iterative-loop.erf, service-callout.erf');
 });
 
 test('confirms both.ert is an empty, never-run testsheet, distinct from the real per-rulesheet Test.ert files', () => {

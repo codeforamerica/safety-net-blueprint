@@ -1,6 +1,10 @@
 import { canonicalAttributePath } from '../graph/attribute-path.js';
-import { findCycles } from '../graph/build-graph.js';
+import { isBlankTemplateRule } from '../corticon/rulesheet.js';
 import { entriesOf } from '../map-utils.js';
+
+function attributePathsIn(terms) {
+  return (terms ?? []).map(canonicalAttributePath).filter(Boolean);
+}
 
 // Corticon's decision-table model represents each condition as a separate column
 // (a distinct simple check), never a compound boolean expression in one cell --
@@ -28,79 +32,136 @@ function isNullCheckOn(path, condition) {
 // "written by >1 rulesheet" was used to short-circuit this classifier. Assembly
 // stays a wholly separate, independently-reported finding; this function only
 // ever answers the self-loop's own three-way ambiguity.
-function classifySelfLoop(path, rule, edge, ruleflowContext) {
+function classifySelfLoop(path, rule, rulesheetFile, ruleflowContext) {
   // Priority 1: null-check masking -- the specific rule causing this self-loop
   // explicitly checks the same attribute against a literal null.
   if ((rule?.conditions ?? []).some((c) => isNullCheckOn(path, c))) return 'null-check-masking';
   // Priority 2: genuine cycle -- the rulesheet is ever reached via an
   // `iterative="true"` node (see ruleflow-context.js).
-  if (ruleflowContext.perRulesheet.get(edge.rulesheet)?.iterative) return 'genuine-cycle';
+  if (ruleflowContext.perRulesheet.get(rulesheetFile)?.iterative) return 'genuine-cycle';
   // Priority 3: none of the above -- an ordinary decision-table alternative row
   // (confirmed real: DC Medicaid's Flatten.ers `.contains('ineligible')` check).
   return 'decision-table-alternative-row';
 }
 
 /**
- * Classifies every structural self-loop in the dependency graph (edges where
- * `from === to`) into one of three categories -- see `classifySelfLoop()` for the
- * real evidence behind each one. This is the disambiguation `findCycles()`'s own
- * comment in build-graph.js defers to Phase 3: a raw self-loop alone can't tell
- * a genuine cycle apart from an ordinary decision-table row or null-check
- * masking; this function is what actually tells them apart, using the rule's
- * own condition text plus the containing Ruleflow node's `iterative` flag (via
- * ruleflow-context.js). Cross-rulesheet Fact assembly is a separate, independent
- * finding (see findCrossRulesheetAssembly) -- not merged into this classification.
+ * Classifies every structural self-loop in the project (rules where a condition
+ * references the same attribute an action writes) into one of three categories --
+ * see `classifySelfLoop()` for the real evidence behind each one. Detected directly
+ * from the project's own rule conditions and actions, without a pre-built dependency
+ * graph -- a self-loop exists when a rule's action writes attribute X and the same
+ * rule's conditions (or that specific action's own reads) reference attribute X.
  */
-export function classifySelfLoops(project, graph, ruleflowContext) {
-  const rulesheetsByKey = new Map(entriesOf(project.rulesheets));
+export function classifySelfLoops(project, ruleflowContext) {
+  const result = [];
 
-  return graph.edges
-    .filter((edge) => edge.from === edge.to)
-    .map((edge) => {
-      const path = edge.from;
-      const rule = rulesheetsByKey.get(edge.rulesheet)?.rules?.[edge.ruleIndex];
-      return {
-        path,
-        rulesheet: edge.rulesheet,
-        ruleIndex: edge.ruleIndex,
-        classification: classifySelfLoop(path, rule, edge, ruleflowContext),
-      };
+  for (const [rulesheetFile, rulesheet] of entriesOf(project.rulesheets)) {
+    rulesheet.rules.forEach((rule, ruleIndex) => {
+      if (isBlankTemplateRule(rule)) return;
+
+      // Condition reads are shared across every action in the rule -- all actions
+      // only run if the rule's conditions are met, same scoping logic as
+      // buildDependencyGraph's own conditionReads.
+      const conditionReads = new Set(
+        rule.conditions.filter(Boolean).flatMap((c) => attributePathsIn(c.referencedTerms)),
+      );
+
+      for (const action of rule.actions.filter(Boolean)) {
+        const writePaths = attributePathsIn(action.modifiedTerms);
+        // Action-scoped reads: condition reads plus this specific action's own
+        // referenced terms -- same per-action scoping confirmed real in DC Medicaid's
+        // Calculate_premium.ers (see buildDependencyGraph's own comment).
+        const reads = new Set([...conditionReads, ...attributePathsIn(action.referencedTerms)]);
+
+        for (const writePath of writePaths) {
+          if (reads.has(writePath)) {
+            result.push({
+              path: writePath,
+              rulesheet: rulesheetFile,
+              ruleIndex,
+              classification: classifySelfLoop(writePath, rule, rulesheetFile, ruleflowContext),
+            });
+          }
+        }
+      }
     });
-}
-
-// The specific edges that make up one hop-to-hop step of a multi-node cycle path
-// (e.g. for [A, B, C, A]: the A->B, B->C, and C->A edges) -- there can be more
-// than one real edge per hop (different rules independently producing the same
-// dependency), so this collects all of them, not just the first found.
-function edgesForCycle(cyclePath, graph) {
-  const edges = [];
-  for (let i = 0; i < cyclePath.length - 1; i++) {
-    const from = cyclePath[i];
-    const to = cyclePath[i + 1];
-    edges.push(...graph.edges.filter((e) => e.from === from && e.to === to));
   }
-  return edges;
+
+  return result;
 }
 
 /**
  * Classifies every multi-node cycle (length > 2 -- i.e. not a direct self-loop,
- * which classifySelfLoops already handles) found by findCycles(). Unlike a direct
- * self-loop, the null-check-masking and decision-table-alternative-row patterns
- * don't apply here -- both are about one rule's own self-consistency check
- * against a single attribute, not a chain spanning multiple attributes and
- * rulesheets. Confirmed real: IRR's `Investment.npv -> Investment.irr ->
- * Cashflow.portion -> Investment.npv` chain, spanning `evaluate npv.ers` and
- * `solve each cashflow.ers`, both reached from the same iterative loop -- so the
- * only classification this function currently makes is "genuine cycle" (any
- * edge in the chain comes from a rulesheet ever reached iteratively) or
- * "unclassified" (no confirmed real example of a non-iterative multi-node cycle
- * exists yet, so this is flagged for manual review rather than guessed at).
+ * which classifySelfLoops already handles) found by building a dependency adjacency
+ * directly from the project's own rules. Unlike a direct self-loop, the
+ * null-check-masking and decision-table-alternative-row patterns don't apply here --
+ * both are about one rule's own self-consistency check against a single attribute,
+ * not a chain spanning multiple attributes and rulesheets. Confirmed real:
+ * IRR's `Investment.npv -> Investment.irr -> Cashflow.portion -> Investment.npv`
+ * chain, spanning `evaluate npv.ers` and `solve each cashflow.ers`, both reached
+ * from the same iterative loop.
  */
-export function classifyMultiHopCycles(graph, ruleflowContext) {
-  const multiHopCycles = findCycles(graph).filter((cycle) => cycle.length > 2);
+export function classifyMultiHopCycles(project, ruleflowContext) {
+  // Build adjacency and edge list directly from project rules -- same logic as
+  // buildDependencyGraph but kept internal to classification so the classifier
+  // doesn't depend on a pre-built graph artifact.
+  const adjacency = new Map();
+  const nodes = new Set();
+  const allEdges = [];
+
+  for (const [rulesheetFile, rulesheet] of entriesOf(project.rulesheets)) {
+    rulesheet.rules.forEach((rule, ruleIndex) => {
+      if (isBlankTemplateRule(rule)) return;
+      const conditionReads = rule.conditions.filter(Boolean).flatMap((c) => attributePathsIn(c.referencedTerms));
+      for (const action of rule.actions.filter(Boolean)) {
+        const writePaths = attributePathsIn(action.modifiedTerms);
+        const reads = [...conditionReads, ...attributePathsIn(action.referencedTerms)];
+        for (const writePath of writePaths) {
+          nodes.add(writePath);
+          for (const readPath of reads) {
+            nodes.add(readPath);
+            if (!adjacency.has(readPath)) adjacency.set(readPath, new Set());
+            adjacency.get(readPath).add(writePath);
+            allEdges.push({ from: readPath, to: writePath, rulesheet: rulesheetFile, ruleIndex });
+          }
+        }
+      }
+    });
+  }
+
+  // DFS cycle detection -- same algorithm as findCycles in build-graph.js.
+  const cycles = [];
+  const visiting = new Set();
+  const visited = new Set();
+
+  function visit(node, path) {
+    if (visiting.has(node)) {
+      const cycleStart = path.indexOf(node);
+      cycles.push(path.slice(cycleStart).concat(node));
+      return;
+    }
+    if (visited.has(node)) return;
+    visiting.add(node);
+    for (const next of adjacency.get(node) ?? []) {
+      visit(next, [...path, node]);
+    }
+    visiting.delete(node);
+    visited.add(node);
+  }
+
+  for (const node of nodes) {
+    if (!visited.has(node)) visit(node, []);
+  }
+
+  const multiHopCycles = cycles.filter((cycle) => cycle.length > 2);
 
   return multiHopCycles.map((cyclePath) => {
-    const edges = edgesForCycle(cyclePath, graph);
+    const edges = [];
+    for (let i = 0; i < cyclePath.length - 1; i++) {
+      const from = cyclePath[i];
+      const to = cyclePath[i + 1];
+      edges.push(...allEdges.filter((e) => e.from === from && e.to === to));
+    }
     const isIterative = edges.some((e) => ruleflowContext.perRulesheet.get(e.rulesheet)?.iterative);
     return {
       path: cyclePath.slice(0, -1),

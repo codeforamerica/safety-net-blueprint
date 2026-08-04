@@ -415,7 +415,12 @@ export function buildFacts(project, graph, classification, { parseExpression }) 
       if (!action) throw new Error(`No action in ${maskingWriter.rulesheet}'s rule ${maskingWriter.ruleIndex} actually writes "${path}" -- graph/classification and the real rule data have gone out of sync`);
       const { targetPath, cel } = compileAction(action, parseExpression);
       facts.push({ path: targetPath, writable: true, placeholder: cel });
+      // Attribute-level entry: consumed by fact compilation and by any tool that
+      // looks up facts by corticonPath.
       crosswalk.push({ corticonPath: path, factPath: targetPath, kind: 'ordinary-writable-placeholder', note: 'Null-check masking -- maps onto a Writable fact with a Placeholder default, not a Derived expression.' });
+      // Rule-level entry: allows the crosswalk visualizer to find this pattern by
+      // rulesheet+ruleIndex without re-deriving the classification from written paths.
+      crosswalk.push({ rulesheet: maskingWriter.rulesheet, ruleIndex: maskingWriter.ruleIndex, corticonPath: path, factPath: targetPath, kind: 'null-default', note: 'Null-check masking -- Corticon defaults null to a placeholder value. The dependency graph has no equivalent; it expects the caller to supply the value with the default already applied.' });
       continue;
     }
 

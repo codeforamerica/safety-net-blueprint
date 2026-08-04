@@ -11,9 +11,9 @@ test('classifies the real service call-out in corticon.js-samples\' ServiceCallO
   assert.deepEqual(results[0].connector, { className: 'FetchServiceCallout.js', serviceName: 'fetchURL' });
 });
 
-test('classifies this fixture\'s own VerifyIncome call-out in top-level-flow.erf, alongside its other ordinary rulesheet-invoking nodes', () => {
+test('classifies this fixture\'s own VerifyIncome call-out in service-callout.erf', () => {
   const project = loadProject('fixtures/all-patterns');
-  const results = classifyServiceCallouts(project).filter((r) => r.ruleflow === 'top-level-flow.erf');
+  const results = classifyServiceCallouts(project).filter((r) => r.ruleflow === 'service-callout.erf');
   assert.equal(results.length, 1);
   assert.equal(results[0].node, 'VerifyIncome');
   assert.deepEqual(results[0].connector, { className: 'VerifyIncomeServiceCallout.js', serviceName: 'verifyIncome' });

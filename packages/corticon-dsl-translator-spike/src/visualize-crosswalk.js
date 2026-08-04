@@ -1,293 +1,323 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync } from 'node:fs';
 import { parseCliArgs } from './cli-utils.js';
+import { isBlankTemplateRule } from './corticon/rulesheet.js';
+import { resolveRuleflowContext } from './classify/ruleflow-context.js';
+import { entriesOf, keysOf } from './map-utils.js';
+
+function normalizeProject(raw) {
+  const project = raw.project ?? raw;
+  return { ...project, rulesheets: new Map(entriesOf(project.rulesheets)), ruleflows: new Map(entriesOf(project.ruleflows)) };
+}
 
 function printUsage() {
-  console.error('Usage: node src/visualize-crosswalk.js <classified.json> <crosswalk.json> [--out <file.html>]');
-  console.error('Example: node src/visualize-crosswalk.js generated/all-patterns-classified.json generated/all-patterns-translated.crosswalk.json --out generated/all-patterns-crosswalk.html');
+  console.error('Usage: node src/visualize-crosswalk.js <classified.json> <crosswalk.json> [--translated <translated.json>] [--out <file.html>]');
 }
 
-// Status priority: higher = worse
-const STATUS_RANK = { clean: 0, special: 1, warning: 2, blocked: 3, excluded: 4 };
-
-const KIND_META = {
-  'ordinary-derived':              { status: 'clean',    label: 'derived',            color: '#166534', bg: '#dcfce7' },
-  'ordinary-writable-input':       { status: 'clean',    label: 'input',              color: '#1e3a5f', bg: '#dbeafe' },
-  'ordinary-writable-placeholder': { status: 'clean',    label: 'placeholder',        color: '#1e3a5f', bg: '#dbeafe' },
-  'expression-pattern':            { status: 'special',  label: 'custom function',    color: '#5b21b6', bg: '#ede9fe' },
-  'filter':                        { status: 'special',  label: 'filter',             color: '#5b21b6', bg: '#ede9fe' },
-  'service-callout':               { status: 'special',  label: 'service callout',    color: '#92400e', bg: '#fef3c7' },
-  'entity-creation':               { status: 'special',  label: 'entity creation',    color: '#374151', bg: '#f3f4f6' },
-  'hit-policy-unverified':         { status: 'warning',  label: 'hit policy?',        color: '#92400e', bg: '#fef9c3' },
-  'no-fallback-row':               { status: 'warning',  label: 'no fallback',        color: '#92400e', bg: '#fef9c3' },
-  'assembly-rulesheet-mismatch':   { status: 'warning',  label: 'assembly mismatch',  color: '#92400e', bg: '#fef9c3' },
-  'unconditional-row-out-of-order':{ status: 'warning',  label: 'row order',          color: '#92400e', bg: '#fef9c3' },
-  'genuine-cycle':                 { status: 'blocked',  label: 'cycle — manual',     color: '#991b1b', bg: '#fee2e2' },
-  'no-ordinary-writer':            { status: 'blocked',  label: 'no writer',          color: '#991b1b', bg: '#fee2e2' },
-  'unreachable-rulesheet':         { status: 'excluded', label: 'unreachable',        color: '#6b7280', bg: '#f3f4f6' },
-};
-
-function worstStatus(kinds) {
-  return kinds.reduce((worst, k) => {
-    const rank = STATUS_RANK[KIND_META[k]?.status ?? 'clean'] ?? 0;
-    return rank > STATUS_RANK[worst] ? (KIND_META[k]?.status ?? 'clean') : worst;
-  }, 'clean');
-}
-
-const SECTION_COLORS = {
-  clean:    { border: '#16a34a', bg: '#f0fdf4', text: '#14532d' },
-  special:  { border: '#7c3aed', bg: '#faf5ff', text: '#4c1d95' },
-  warning:  { border: '#d97706', bg: '#fffbeb', text: '#78350f' },
-  blocked:  { border: '#dc2626', bg: '#fef2f2', text: '#7f1d1d' },
-  excluded: { border: '#9ca3af', bg: '#f9fafb', text: '#374151' },
-};
-
-function badge(kind) {
-  const meta = KIND_META[kind] ?? { label: kind, color: '#374151', bg: '#f3f4f6' };
-  return `<span style="display:inline-block;padding:1px 7px;border-radius:9999px;font-size:11px;font-weight:600;background:${meta.bg};color:${meta.color};white-space:nowrap">${meta.label}</span>`;
-}
-
-function escapeHtml(str) {
+function esc(str) {
   return (str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function truncate(str, max = 120) {
-  if (!str || str.length <= max) return str ?? '';
-  return str.slice(0, max) + '…';
+// ── Mapping type metadata ─────────────────────────────────────────────────
+
+const TYPE_META = {
+  '1:1':              { label: '1 : 1',                       color: '#166534', bg: '#dcfce7' },
+  'caller-provides':  { label: 'caller provides',             color: '#0369a1', bg: '#e0f2fe' },
+  'expression':       { label: 'custom function required',    color: '#5b21b6', bg: '#ede9fe' },
+  'needs-review':     { label: 'needs review',                color: '#92400e', bg: '#fef9c3' },
+  'blocked':          { label: 'blocked',                     color: '#991b1b', bg: '#fee2e2' },
+  'special':          { label: 'orchestration (not a fact)',  color: '#374151', bg: '#f3f4f6' },
+  'excluded':         { label: 'unreachable in flow',         color: '#6b7280', bg: '#f3f4f6' },
+  'gap':              { label: 'no mapping',                  color: '#6b7280', bg: '#fafafa' },
+};
+
+function badge(type) {
+  const m = TYPE_META[type] ?? TYPE_META['gap'];
+  return `<span style="display:inline-block;padding:1px 8px;border-radius:9999px;font-size:11px;font-weight:600;background:${m.bg};color:${m.color};white-space:nowrap">${m.label}</span>`;
 }
 
-// Expand top-level-flow nodes: ActivityNodes that invoke sub-ruleflows are
-// replaced with their child nodes grouped under the parent name.
-function buildFlowSections(project, unreachableRulesheets) {
-  const ruleflowEntries = Object.entries(project.ruleflows);
-  const topLevel = ruleflowEntries.find(([f]) => f.includes('top-level-flow'));
-  if (!topLevel) return [];
+function hl(code) {
+  // Minimal syntax highlight for CEL/Corticon expressions
+  if (!code || code === '—') return `<span style="color:#d1d5db">—</span>`;
+  return `<code style="font-size:11px;color:#374151;white-space:pre-wrap;word-break:break-all">${esc(code)}</code>`;
+}
 
-  const ruleflowByFile = Object.fromEntries(ruleflowEntries);
-  const sections = [];
+// ── Build rule rows from rulesheet data ───────────────────────────────────
 
-  for (const node of topLevel[1].nodes) {
-    const invokes = node.invokes ?? '';
-    const filePart = invokes.split('#')[0];
+function buildRuleRows(rsName, rsData, crosswalk, writes, factsByPath, nodeName = null) {
+  const rows = [];
+  const rules = rsData.rules ?? [];
+  let ruleNum = 0; // 0-based counter for non-empty rules, matching the rules diagram
 
-    if (filePart.endsWith('.ers')) {
-      sections.push({ flowNode: node.name, rulesheets: [filePart], kind: node.kind });
-    } else if (filePart.endsWith('.erf')) {
-      const subRf = ruleflowByFile[filePart];
-      if (subRf) {
-        const subSheets = subRf.nodes
-          .map((n) => n.invokes?.split('#')[0])
-          .filter((f) => f?.endsWith('.ers'));
-        sections.push({ flowNode: node.name, rulesheets: subSheets, kind: 'sub-ruleflow', subFlow: filePart });
-      } else {
-        // Service callout or unresolved sub-ruleflow
-        sections.push({ flowNode: node.name, rulesheets: [], kind: 'service-callout', subFlow: filePart });
-      }
+  for (let idx = 0; idx < rules.length; idx++) {
+    const rule = rules[idx];
+    const conditions = (rule.conditions ?? []).filter(Boolean).map(c => c.text).filter(Boolean);
+    const actions    = (rule.actions    ?? []).filter(Boolean).map(a => a.text).filter(Boolean);
+    const comment    = rule.comment?.text ?? null;
+
+    // Skip pure header rows (no conditions, no actions)
+    if (!conditions.length && !actions.length) continue;
+
+    const ruleId = `${rsName.replace(/\.ers$/, '')}.Rule.${ruleNum}`;
+    ruleNum++;
+
+    // Find what attribute(s) this rule writes via the writes index
+    const writtenPaths = Object.entries(writes)
+      .filter(([, writers]) => writers.some(w => w.rulesheet === rsName && w.ruleIndex === idx))
+      .map(([path]) => path);
+
+    // Find crosswalk entries for this rulesheet+index
+    const cwEntries = crosswalk.filter(e =>
+      e.rulesheet === rsName && (e.ruleIndex === idx || e.ruleIndices?.includes(idx))
+    );
+
+    // Determine fact path(s) by looking up each written corticonPath in the full crosswalk
+    const factPaths = writtenPaths
+      .map(cp => crosswalk.find(e => e.corticonPath === cp)?.factPath)
+      .filter(Boolean);
+    const uniqueFactPaths = [...new Set(factPaths)];
+
+    const compiledExprs = uniqueFactPaths
+      .map(fp => factsByPath[fp])
+      .filter(Boolean)
+      .map(f => f.derived ?? f.value ?? null)
+      .filter(Boolean);
+
+    // Determine mapping type
+    let type = 'gap';
+    const kinds = cwEntries.map(e => e.kind);
+    // Also look up the attribute-level crosswalk kind for each written path
+    // (e.g. ordinary-writable-placeholder has no rulesheet/ruleIndex, only corticonPath)
+    const writtenKinds = writtenPaths
+      .map(cp => crosswalk.find(e => e.corticonPath === cp && !e.rulesheet)?.kind)
+      .filter(Boolean);
+    if (rsData.unreachable) {
+      type = 'excluded';
+    } else if (kinds.includes('genuine-cycle') || kinds.includes('no-ordinary-writer')) {
+      type = 'blocked';
+    } else if (kinds.some(k => ['hit-policy-unverified', 'no-fallback-row', 'assembly-rulesheet-mismatch', 'unconditional-row-out-of-order'].includes(k))) {
+      type = 'needs-review';
+    } else if (kinds.includes('expression-pattern')) {
+      type = 'expression';
+    } else if (kinds.includes('service-callout') || kinds.includes('filter')) {
+      type = 'special';
+    } else if (kinds.includes('entity-creation') || writtenKinds.includes('ordinary-writable-placeholder') || writtenKinds.includes('ordinary-writable-input')) {
+      // Null-default rules: Corticon sets a default when the value is null.
+      // The dependency graph has no equivalent — it assumes the caller supplies the value with defaults already applied.
+      type = 'caller-provides';
+    } else if (uniqueFactPaths.length > 0) {
+      type = '1:1';
     }
+
+    const notes = cwEntries.map(e => e.note).filter(Boolean);
+
+    rows.push({ ruleId, nodeName, conditions, actions, comment, factPaths: uniqueFactPaths, compiledExprs, type, notes });
+
   }
 
-  // Unreachable rulesheets at the end
-  if (unreachableRulesheets?.length) {
-    sections.push({ flowNode: null, rulesheets: unreachableRulesheets, kind: 'unreachable' });
-  }
-
-  return sections;
+  return rows;
 }
 
-// For each corticon path, collect all crosswalk entries that mention it.
-// Returns Map<corticonPath, entry[]>
-function indexCrosswalkByPath(crosswalk) {
-  const byPath = new Map();
-  function add(path, entry) {
-    if (!byPath.has(path)) byPath.set(path, []);
-    byPath.get(path).push(entry);
+// ── HTML rendering ────────────────────────────────────────────────────────
+
+function renderRow(row) {
+  const rowBg = row.type === 'blocked'      ? '#fff5f5'
+              : row.type === 'needs-review'  ? '#fffdf0'
+              : row.type === 'excluded'      ? '#fafafa'
+              : '';
+
+  // Corticon side: IF [conditions] THEN [actions]; [actions]
+  const condPart = row.conditions.length ? `IF ${row.conditions.join('; ')}` : null;
+  const actPart  = row.actions.length    ? `THEN ${row.actions.join('; ')}` : null;
+  const ifThenText = [condPart, actPart].filter(Boolean).join(' ');
+  const commentHtml = row.comment
+    ? `<div style="font-size:10px;color:#9ca3af;margin-top:3px">${esc(row.comment)}</div>`
+    : '';
+  const corticonCell = `<code style="font-size:11px;color:#374151;white-space:pre-wrap;word-break:break-all">${esc(ifThenText)}</code>` + commentHtml;
+
+  // Dependency graph side: path(s) + compiled expression(s), or explanatory text for caller-provides
+  let graphCell;
+  if (row.type === 'caller-provides') {
+    graphCell = `<span style="font-size:11px;color:#0369a1;font-style:italic">Graph assumes value is provided by caller (entity pre-assembled or input with default already applied).</span>`;
+  } else if (row.type === 'special') {
+    graphCell = `<span style="font-size:11px;color:#6b7280;font-style:italic">Orchestration step — not represented as a graph fact.</span>`;
+  } else if (row.factPaths.length) {
+    graphCell = row.factPaths.map((fp, i) => {
+        const expr = row.compiledExprs[i] ?? null;
+        return `<div style="margin-bottom:${i < row.factPaths.length - 1 ? '6px' : '0'}">` +
+          `<div style="font-family:monospace;font-size:11px;color:#374151">${esc(fp)}</div>` +
+          (expr ? `<div style="font-size:10px;color:#6b7280;margin-top:2px">${esc(expr)}</div>` : '') +
+          `</div>`;
+      }).join('');
+  } else {
+    graphCell = `<span style="color:#d1d5db">—</span>`;
   }
-  for (const entry of crosswalk) {
-    const path = entry.corticonPath ?? entry.path;
-    if (path) add(path, entry);
-  }
-  return byPath;
-}
 
-// Rulesheet-level entries (not tied to a specific path)
-function getRulesheetLevelEntries(crosswalk, rulesheet) {
-  return crosswalk.filter(
-    (e) => e.rulesheet === rulesheet && !e.corticonPath && !e.path
-  );
-}
-
-function renderPathRow(corticonPath, pathAnnotations, writes) {
-  const entries = pathAnnotations.get(corticonPath) ?? [];
-  const kinds = entries.map((e) => e.kind);
-  const status = worstStatus(kinds);
-
-  // The primary mapping entry
-  const mappingEntry = entries.find((e) => e.corticonPath && e.factPath);
-  const factPath = mappingEntry?.factPath ?? '—';
-
-  // Warning/error entries (not the mapping entry itself)
-  const issues = entries.filter((e) => !e.factPath || e.kind !== 'ordinary-derived' && e.kind !== 'ordinary-writable-input' && e.kind !== 'ordinary-writable-placeholder');
-
-  // All unique kinds for badge display
-  const badgeKinds = [...new Set(kinds.filter((k) => k !== 'ordinary-derived' || !mappingEntry?.factPath))];
-  // Always show the mapping kind
-  if (mappingEntry) badgeKinds.unshift(mappingEntry.kind);
-  const uniqueBadgeKinds = [...new Set(badgeKinds)];
-
-  const noteTexts = issues.map((e) => e.note).filter(Boolean);
-  const noteHtml = noteTexts.length
-    ? `<span title="${escapeHtml(noteTexts.join(' | '))}" style="cursor:help;color:#6b7280;font-size:11px">${escapeHtml(truncate(noteTexts[0]))}</span>`
+  const noteCell = row.notes.length
+    ? row.notes.map(n => `<div style="font-size:11px;color:#6b7280;white-space:normal;line-height:1.5">${esc(n)}</div>`).join('')
     : '';
 
-  const rowBg = status === 'blocked' ? '#fff5f5' : status === 'warning' ? '#fffdf0' : '';
+  const ruleLabel = row.nodeName
+    ? `<div style="font-weight:700;font-size:12px;color:#111827;margin-bottom:2px">${esc(row.nodeName)}</div>` +
+      `<div style="font-family:monospace;font-size:11px;color:#9ca3af">${esc(row.ruleId)}</div>`
+    : `<div style="font-family:monospace;font-size:11px;color:#9ca3af">${esc(row.ruleId)}</div>`;
 
-  return `<tr style="background:${rowBg}">
-    <td style="padding:6px 10px;font-family:monospace;font-size:12px;color:#374151;white-space:nowrap">${escapeHtml(corticonPath)}</td>
-    <td style="padding:6px 10px;font-family:monospace;font-size:12px;color:#6b7280;white-space:nowrap">${factPath !== '—' ? `<a href="#" style="color:#2563eb;text-decoration:none">${escapeHtml(factPath)}</a>` : '<span style="color:#d1d5db">—</span>'}</td>
-    <td style="padding:6px 10px;white-space:nowrap">${uniqueBadgeKinds.map(badge).join(' ')}</td>
-    <td style="padding:6px 10px;font-size:12px;color:#6b7280">${noteHtml}</td>
+  return `<tr style="background:${rowBg}" data-type="${row.type}">
+    <td style="padding:7px 12px;white-space:nowrap;vertical-align:top">${ruleLabel}</td>
+    <td style="padding:7px 12px;vertical-align:top">${corticonCell}</td>
+    <td style="padding:7px 12px;vertical-align:top">${graphCell}</td>
+    <td style="padding:7px 12px;white-space:nowrap;vertical-align:top">${badge(row.type)}</td>
+    <td style="padding:7px 12px;vertical-align:top">${noteCell}</td>
   </tr>`;
 }
 
-function renderSection(section, crosswalk, writes, pathAnnotations) {
-  const rows = [];
-  const allKinds = [];
+function renderRulesheetGroup(rsName, rows) {
+  return rows.map(renderRow).join('\n');
+}
 
-  for (const rulesheet of section.rulesheets) {
-    // Rulesheet-level entries (entity-creation, filter, expression-pattern, unreachable)
-    const sheetEntries = getRulesheetLevelEntries(crosswalk, rulesheet);
-    for (const e of sheetEntries) allKinds.push(e.kind);
+// ── Summary bar ───────────────────────────────────────────────────────────
 
-    // Paths written by this rulesheet
-    const writtenPaths = Object.entries(writes)
-      .filter(([, writers]) => writers.some((w) => w.rulesheet === rulesheet))
-      .map(([path]) => path);
+function summaryBar(allRows) {
+  const counts = {};
+  for (const r of allRows) counts[r.type] = (counts[r.type] ?? 0) + 1;
+  return Object.entries(TYPE_META)
+    .filter(([k]) => counts[k])
+    .map(([k, m]) =>
+      `<button data-filter="${k}" onclick="toggleFilter('${k}')" style="padding:8px 16px;border-radius:6px;background:${m.bg};color:${m.color};font-weight:700;font-size:13px;border:2px solid ${m.color};cursor:pointer;opacity:1;transition:opacity .15s" title="Click to hide/show these rows">${counts[k]} ${m.label}</button>`
+    ).join('');
+}
 
-    for (const path of writtenPaths) {
-      const entries = pathAnnotations.get(path) ?? [];
-      entries.forEach((e) => allKinds.push(e.kind));
-      rows.push(renderPathRow(path, pathAnnotations, writes));
-    }
+// ── Main render ───────────────────────────────────────────────────────────
 
-    // Sheet-level badges (no path row)
-    if (sheetEntries.length && writtenPaths.length === 0) {
-      for (const e of sheetEntries) {
-        const noteHtml = e.note
-          ? `<span title="${escapeHtml(e.note)}" style="cursor:help;color:#6b7280;font-size:11px">${escapeHtml(truncate(e.note))}</span>`
-          : '';
-        rows.push(`<tr>
-          <td style="padding:6px 10px;font-size:12px;color:#9ca3af;font-style:italic" colspan="2">${escapeHtml(e.entityType ?? e.rulesheet ?? '')}</td>
-          <td style="padding:6px 10px">${badge(e.kind)}</td>
-          <td style="padding:6px 10px;font-size:12px">${noteHtml}</td>
-        </tr>`);
+function render(classifiedPath, crosswalkPath, translatedPath) {
+  const { project, graph, classification } = JSON.parse(readFileSync(classifiedPath, 'utf8'));
+  const { crosswalk } = JSON.parse(readFileSync(crosswalkPath, 'utf8'));
+  const translated = translatedPath ? JSON.parse(readFileSync(translatedPath, 'utf8')) : null;
+
+  const writes = graph.writes;
+
+  // Index compiled facts by path for quick lookup
+  const factsByPath = {};
+  for (const f of (translated?.facts ?? [])) {
+    if (f.path) factsByPath[f.path] = f;
+  }
+
+  // Get rulesheet execution order from the top-level ruleflow
+  const ruleflowEntries = Object.entries(project.ruleflows ?? {});
+  const topLevel = ruleflowEntries.find(([f]) => f.includes('top-level-flow'));
+  const unreachable = new Set(classification?.ruleflowContext?.unreachableRulesheets ?? []);
+
+  // Build ordered list of rulesheets from flow, then append any not in flow
+  const orderedSheets = [];
+  if (topLevel) {
+    const ruleflowByFile = Object.fromEntries(ruleflowEntries);
+    for (const node of topLevel[1].nodes ?? []) {
+      const filePart = (node.invokes ?? '').split('#')[0];
+      if (filePart.endsWith('.ers')) orderedSheets.push(filePart);
+      else if (filePart.endsWith('.erf')) {
+        const sub = ruleflowByFile[filePart];
+        for (const n of sub?.nodes ?? []) {
+          const f = (n.invokes ?? '').split('#')[0];
+          if (f.endsWith('.ers')) orderedSheets.push(f);
+        }
       }
     }
   }
-
-  // Handle service callout sections (no rulesheets)
-  if (section.kind === 'service-callout') {
-    const scEntry = crosswalk.find((e) => e.kind === 'service-callout');
-    allKinds.push('service-callout');
-    const note = scEntry?.note ?? '';
-    rows.push(`<tr>
-      <td style="padding:6px 10px;font-size:12px;color:#9ca3af;font-style:italic">${escapeHtml(scEntry?.connector?.serviceName ?? section.subFlow ?? '')}</td>
-      <td style="padding:6px 10px;color:#d1d5db;font-size:12px">—</td>
-      <td style="padding:6px 10px">${badge('service-callout')}</td>
-      <td style="padding:6px 10px;font-size:12px;color:#6b7280"><span title="${escapeHtml(note)}" style="cursor:help">${escapeHtml(truncate(note))}</span></td>
-    </tr>`);
+  // Append any sheets not reachable from the flow
+  for (const name of Object.keys(project.rulesheets ?? {})) {
+    if (!orderedSheets.includes(name)) orderedSheets.push(name);
   }
 
-  const status = section.kind === 'unreachable' ? 'excluded' : worstStatus(allKinds);
-  const col = SECTION_COLORS[status] ?? SECTION_COLORS.clean;
-  const headerLabel = section.flowNode
-    ? `${section.flowNode}${section.subFlow ? ` <span style="font-weight:400;opacity:.7">via ${section.subFlow}</span>` : ''}`
-    : 'Unreachable';
-  const rulesheetLabel = section.rulesheets.join(', ') || section.subFlow || '';
+  // Build a map from rulesheet filename → ruleflow node name
+  const sheetToNodeName = {};
+  for (const [, rf] of ruleflowEntries) {
+    for (const node of rf.nodes ?? []) {
+      const invokes = (node.invokes ?? '').split('#')[0];
+      if (invokes.endsWith('.ers')) sheetToNodeName[invokes] = node.name;
+    }
+  }
 
-  return `
-  <tr>
-    <td colspan="4" style="padding:10px 12px;background:${col.bg};border-left:4px solid ${col.border};border-top:8px solid #f9fafb">
-      <span style="font-weight:700;font-size:13px;color:${col.text}">${headerLabel}</span>
-      ${rulesheetLabel ? `<span style="margin-left:10px;font-size:11px;font-family:monospace;color:#9ca3af">${escapeHtml(rulesheetLabel)}</span>` : ''}
-    </td>
-  </tr>
-  ${rows.join('\n')}`;
-}
+  // Build all rows grouped by rulesheet
+  const allRows = [];
+  const groups = orderedSheets.map(rsName => {
+    const rsData = (project.rulesheets ?? {})[rsName];
+    if (!rsData) return null;
+    if (unreachable.has(rsName)) rsData.unreachable = true;
+    const nodeName = sheetToNodeName[rsName] ?? null;
+    const rows = buildRuleRows(rsName, rsData, crosswalk, writes, factsByPath, nodeName);
+    allRows.push(...rows);
+    return { rsName, rows };
+  }).filter(Boolean);
 
-function render(classifiedPath, crosswalkPath) {
-  const classifiedData = JSON.parse(readFileSync(classifiedPath, 'utf8'));
-  const crosswalkData = JSON.parse(readFileSync(crosswalkPath, 'utf8'));
-
-  const { project, graph, classification } = classifiedData;
-  const crosswalk = crosswalkData.crosswalk;
-  const writes = graph.writes;
-
-  const pathAnnotations = indexCrosswalkByPath(crosswalk);
-  const sections = buildFlowSections(project, classification.ruleflowContext?.unreachableRulesheets);
-
-  // Summary counts
-  const allKinds = crosswalk.map((e) => e.kind);
-  const clean = allKinds.filter((k) => ['ordinary-derived', 'ordinary-writable-input', 'ordinary-writable-placeholder'].includes(k)).length;
-  const warnings = allKinds.filter((k) => KIND_META[k]?.status === 'warning').length;
-  const blocked = allKinds.filter((k) => KIND_META[k]?.status === 'blocked').length;
-  const special = allKinds.filter((k) => KIND_META[k]?.status === 'special').length;
-  const excluded = allKinds.filter((k) => KIND_META[k]?.status === 'excluded').length;
-
-  const summaryHtml = `
-  <div style="display:flex;gap:16px;padding:16px 0;flex-wrap:wrap">
-    <div style="padding:10px 18px;border-radius:8px;background:#dcfce7;color:#166534;font-weight:700">${clean} clean</div>
-    <div style="padding:10px 18px;border-radius:8px;background:#fef9c3;color:#92400e;font-weight:700">${warnings} needs review</div>
-    <div style="padding:10px 18px;border-radius:8px;background:#fee2e2;color:#991b1b;font-weight:700">${blocked} blocked</div>
-    <div style="padding:10px 18px;border-radius:8px;background:#ede9fe;color:#5b21b6;font-weight:700">${special} special</div>
-    <div style="padding:10px 18px;border-radius:8px;background:#f3f4f6;color:#6b7280;font-weight:700">${excluded} excluded</div>
-  </div>`;
-
-  const tableHtml = `
-  <table style="width:100%;border-collapse:collapse;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-    <thead>
-      <tr style="background:#f3f4f6;text-align:left">
-        <th style="padding:8px 10px;font-size:12px;color:#6b7280;font-weight:600;width:25%">Corticon attribute</th>
-        <th style="padding:8px 10px;font-size:12px;color:#6b7280;font-weight:600;width:22%">Fact path</th>
-        <th style="padding:8px 10px;font-size:12px;color:#6b7280;font-weight:600;width:20%">Status</th>
-        <th style="padding:8px 10px;font-size:12px;color:#6b7280;font-weight:600">Notes</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${sections.map((s) => renderSection(s, crosswalk, writes, pathAnnotations)).join('\n')}
-    </tbody>
-  </table>`;
+  const tableBody = groups.map(g => renderRulesheetGroup(g.rsName, g.rows)).join('\n');
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Corticon → Fact Crosswalk</title>
+<title>Corticon → Dependency Graph Crosswalk</title>
 <style>
-  body { margin: 0; padding: 24px; background: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-  h1 { font-size: 20px; font-weight: 700; color: #111827; margin: 0 0 4px; }
-  p.sub { font-size: 13px; color: #6b7280; margin: 0 0 16px; }
-  table tr:hover td { background: #f0f9ff !important; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 32px; }
+  h1 { font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+  p.sub { font-size: 13px; color: #6b7280; margin-bottom: 20px; }
+  .summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+  table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  thead th { padding: 8px 12px; font-size: 11px; font-weight: 600; color: #6b7280; background: #f3f4f6; text-align: left; text-transform: uppercase; letter-spacing: 0.05em; }
+  tbody tr:hover td { background: #f0f9ff !important; }
+  tbody tr td { border-bottom: 1px solid #f3f4f6; }
+  tbody tr[data-type].hidden { display: none; }
+  button[data-filter].off { opacity: 0.35; text-decoration: line-through; }
 </style>
+<script>
+  const hidden = new Set();
+  function toggleFilter(type) {
+    const btn = document.querySelector('[data-filter="' + type + '"]');
+    if (hidden.has(type)) {
+      hidden.delete(type);
+      btn.classList.remove('off');
+      document.querySelectorAll('tr[data-type="' + type + '"]').forEach(r => r.classList.remove('hidden'));
+    } else {
+      hidden.add(type);
+      btn.classList.add('off');
+      document.querySelectorAll('tr[data-type="' + type + '"]').forEach(r => r.classList.add('hidden'));
+    }
+  }
+</script>
 </head>
 <body>
-<h1>Corticon → Fact Crosswalk</h1>
-<p class="sub">Mapping from Corticon rulesheets (in flow order) to compiled Fact paths, with translation status per field.</p>
-${summaryHtml}
-${tableHtml}
+<h1>Corticon &rarr; Dependency Graph Crosswalk</h1>
+<p class="sub">One row per rule (in flow order), showing the Corticon action and the compiled dependency graph expression.</p>
+<div class="summary">${summaryBar(allRows)}</div>
+<table>
+  <thead>
+    <tr>
+      <th style="width:16%">Rule</th>
+      <th style="width:26%">Corticon logic</th>
+      <th style="width:26%">Dependency graph</th>
+      <th style="width:12%">Mapping</th>
+      <th style="width:20%">Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${tableBody}
+  </tbody>
+</table>
 </body>
 </html>`;
 }
 
 const args = parseCliArgs(process.argv);
-if (!args || args.positional?.split?.(' ')?.length < 1) {
-  printUsage();
-  process.exit(0);
-}
-
-const [classifiedPath, crosswalkPath] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const positional = process.argv.slice(2).filter(a => !a.startsWith('--'));
+const [classifiedPath, crosswalkPath] = positional;
 if (!classifiedPath || !crosswalkPath) { printUsage(); process.exit(1); }
 
+// Optional translated.json for compiled expressions
+const translatedArg = process.argv.find(a => a.startsWith('--translated='));
+const translatedPath = translatedArg
+  ? translatedArg.slice('--translated='.length)
+  : positional[2] ?? null;
+
 const outFile = args.outFile ?? 'generated/crosswalk.html';
-const html = render(classifiedPath, crosswalkPath);
-writeFileSync(outFile, html);
+writeFileSync(outFile, render(classifiedPath, crosswalkPath, translatedPath));
 console.log(`Wrote crosswalk to ${outFile}`);

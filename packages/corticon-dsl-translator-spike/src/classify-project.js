@@ -4,10 +4,10 @@ import { classifyProject } from './classify/classify-all.js';
 import { toJson, parseCliArgs } from './cli-utils.js';
 
 function printUsage() {
-  console.error('Usage: node src/classify-project.js <project.graph.json> [--out <file.json>]');
-  console.error('  <project.graph.json> is the output of: node src/graph-project.js <project.json> --out <project.graph.json>');
-  console.error('Example: node src/graph-project.js generated/dc-medicaid-chip.json --out generated/dc-medicaid-chip.graph.json');
-  console.error('         node src/classify-project.js generated/dc-medicaid-chip.graph.json --out generated/dc-medicaid-chip.classified.json');
+  console.error('Usage: node src/classify-project.js <project.json> [--out <file.json>]');
+  console.error('  <project.json> is the output of: node src/ingest-project.js <dir> --out <project.json>');
+  console.error('Example: node src/ingest-project.js fixtures/dc-medicaid-chip --out generated/dc-medicaid-chip.json');
+  console.error('         node src/classify-project.js generated/dc-medicaid-chip.json --out generated/dc-medicaid-chip.classified.json');
 }
 
 function summarize(classification) {
@@ -22,16 +22,15 @@ if (!args) {
   process.exit(0);
 }
 
-const { project, graph } = JSON.parse(readFileSync(args.positional, 'utf-8'));
-const classification = classifyProject(project, graph);
+const project = JSON.parse(readFileSync(args.positional, 'utf-8'));
+const classification = classifyProject(project);
 
 if (args.outFile) {
-  // Carries project + graph through alongside the classification, not just the
-  // classification alone -- same reasoning as graph-project.js's own --out: Phase 4
-  // translation needs the original rule/condition/action text to actually parse and
-  // compile expressions, which the classification findings alone don't retain, and
-  // each phase's script takes only the *previous* phase's output as input.
-  writeFileSync(args.outFile, JSON.stringify({ project: toJson(project), graph: toJson(graph), classification: toJson(classification) }, null, 2));
-  console.log(`Wrote project + graph + classification to ${args.outFile}`);
+  // Carries project through alongside the classification -- Phase 4 translation needs
+  // the original rule/condition/action text to actually parse and compile expressions,
+  // which the classification findings alone don't retain, and each phase's script
+  // takes only the *previous* phase's output as input.
+  writeFileSync(args.outFile, JSON.stringify({ project: toJson(project), classification: toJson(classification) }, null, 2));
+  console.log(`Wrote project + classification to ${args.outFile}`);
 }
 console.log(JSON.stringify(summarize(classification), null, 2));

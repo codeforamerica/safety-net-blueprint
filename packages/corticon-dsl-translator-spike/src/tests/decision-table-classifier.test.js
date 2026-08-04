@@ -1,8 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadProject } from '../corticon/project.js';
-import { buildDependencyGraph } from '../graph/build-graph.js';
 import { classifyDecisionTableCombinatorics } from '../classify/decision-table-classifier.js';
+
+function makeTerm(entity, attr) {
+  return { termtype: 'ATTRIBUTE', text: attr, parent: { datatype: entity } };
+}
 
 test('classifies Mortgage\'s real Select_Credit.ers 3-row decision table converging on one write', () => {
   // Confirmed real: 3 rules (>= 3 liabilities AND a high-credit one; >= 3 liabilities
@@ -10,25 +13,37 @@ test('classifies Mortgage\'s real Select_Credit.ers 3-row decision table converg
   // writing loanapp.creditReqtMet -- no rule reads a path it also writes, so this is
   // not a self-loop, just ordinary decision-table combinatorics.
   const project = loadProject('fixtures/mortgage');
-  const graph = buildDependencyGraph(project);
-  const results = classifyDecisionTableCombinatorics(graph).filter((r) => r.rulesheet === 'Select_Credit.ers');
+  const results = classifyDecisionTableCombinatorics(project).filter((r) => r.rulesheet === 'Select_Credit.ers');
   assert.equal(results.length, 1);
   assert.equal(results[0].path, 'LoanApplication.creditReqtMet');
   assert.deepEqual(results[0].ruleIndices, [1, 2, 3], 'shifted by 1 vs. Corticon\'s own rule count: index 0 is the reserved blank/template row, now kept rather than filtered');
 });
 
 test('a path written by only one rule in its rulesheet is not flagged', () => {
-  const graph = {
-    writes: new Map([['Foo.bar', [{ rulesheet: 'one.ers', ruleIndex: 0, isEntityCreation: false }]]]),
+  const project = {
+    rulesheets: {
+      'one.ers': {
+        rules: [
+          { conditions: [], actions: [{ modifiedTerms: [makeTerm('Foo', 'bar')], referencedTerms: [] }] },
+        ],
+      },
+    },
   };
-  assert.deepEqual(classifyDecisionTableCombinatorics(graph), []);
+  assert.deepEqual(classifyDecisionTableCombinatorics(project), []);
 });
 
-test('works against the JSON-reconstituted (plain-object) shape produced by graph-project.js --out, not just a live Map', () => {
-  const graph = {
-    writes: { 'Foo.bar': [{ rulesheet: 'one.ers', ruleIndex: 0 }, { rulesheet: 'one.ers', ruleIndex: 1 }] },
+test('two rules in the same rulesheet writing the same path are flagged', () => {
+  const project = {
+    rulesheets: {
+      'one.ers': {
+        rules: [
+          { conditions: [], actions: [{ modifiedTerms: [makeTerm('Foo', 'bar')], referencedTerms: [] }] },
+          { conditions: [], actions: [{ modifiedTerms: [makeTerm('Foo', 'bar')], referencedTerms: [] }] },
+        ],
+      },
+    },
   };
-  const results = classifyDecisionTableCombinatorics(graph);
+  const results = classifyDecisionTableCombinatorics(project);
   assert.equal(results.length, 1);
   assert.deepEqual(results[0].ruleIndices, [0, 1]);
 });

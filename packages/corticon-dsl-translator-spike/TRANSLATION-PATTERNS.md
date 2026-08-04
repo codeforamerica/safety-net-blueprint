@@ -4,25 +4,17 @@ This spike's actual job (issue [#388](https://github.com/codeforamerica/safety-n
 
 This isn't a fixed, closed catalog written once before implementation started. New real patterns kept surfacing purely from the process of building the translator — operator precedence, decision-table hit-policy semantics, sequence-indexing base, cross-rulesheet invocation order — none of which were anticipated before implementation forced the question. Identifying new translation patterns as real data is encountered is an ongoing goal of this spike in its own right, not just a byproduct of it.
 
+**The machine-readable catalog** — pattern names, translation approach, external dependencies, and status — lives in [`translation-patterns.yaml`](./translation-patterns.yaml). This document provides the evidence and reasoning behind each entry in that file.
+
 ---
 
-## Tested
+## Translates directly
 
-### Proven
-
-Confirmed by a real, executed golden-master trace (`Test.ert` input/output), or by Corticon's own documentation stating the behavior unambiguously.
-
-**`iterative-convergence`** — A ruleflow step marked `iterative` re-runs its rulesheet repeatedly until no fact changes in a pass. The loop terminates at fixpoint, not after a fixed count. This is the one pattern the target DSL cannot express as a single backward derivation — it requires an explicit iteration construct. An `iterative` flag on a step whose rulesheet doesn't actually change any fact is equivalent to a non-iterative step (it converges in one pass), but the ruleflow XML still marks it `iterative`. Confirmed by IRR's real captured trace.
-
-**`entity-creation`** — A rulesheet creates new entity instances with `.newUnique[...]` or `.new`, and associates them to existing entities via collection-append (`members += Person`). Confirmed by DC Medicaid/CHIP's real `Household.newUnique[...]` and `members += Person` actions.
-
-**`service-callout`** — A ruleflow connector node calls external JavaScript with read/write access to the entire fact pool. There is no declared input/output mapping — the connector is fully opaque to static analysis. This translator treats every service call-out as an opaque orchestration boundary rather than guessing at fact dependencies, because the binding between the connector and specific facts exists only inside the connector's own external JS class, not in the ruleflow XML. Confirmed shape from `corticon.js-samples/ServiceCallOut`; access semantics confirmed by Progress's own ["Introduction: Service Call-out (Corticon.js v2.0)"](https://www.progress.com/blogs/introduction-service-call-out-corticon.js-v2.0) documentation.
-
-**`decision-table`** — A rulesheet with multiple rows produces different outputs depending on condition combinations. Corticon's default hit policy is UNIQUE: rows are required to be mutually exclusive, enforced by Corticon Studio's own conflict checker at design time. Row order is therefore safe to compile arbitrarily in the default case. When two rows genuinely can both match, the rule author sets explicit priority via `overrides`/`overriddenBy` attributes — see `explicit-override` below. Condition columns are AND-ed across columns, but each individual column's own text must be parenthesized before joining, because a single column can contain an internal `or` (e.g. `Person.isInmate = F or Person.isInmate = null`) that would bind incorrectly against a bare `&&`. Confirmed by DC Medicaid/CHIP's `MAGI Eligibility Groups.ers` (17 real rows) and `Income Requirements.ers` (the AND-parenthesization issue found as a real bug).
+**`decision-table`** — Corticon's default hit policy is UNIQUE: rows are required to be mutually exclusive, enforced by Corticon Studio's own conflict checker at design time. Row order is therefore safe to compile arbitrarily in the default case. When two rows genuinely can both match, the rule author sets explicit priority via `overrides`/`overriddenBy` attributes — see `explicit-override`. Condition columns are AND-ed across columns, but each individual column's own text must be parenthesized before joining, because a single column can contain an internal `or` (e.g. `Person.isInmate = F or Person.isInmate = null`) that would bind incorrectly against a bare `&&`. Confirmed by DC Medicaid/CHIP's `MAGI Eligibility Groups.ers` (17 real rows) and `Income Requirements.ers` (the AND-parenthesization issue found as a real bug).
 
 **`explicit-override`** — When two rows in a rulesheet genuinely can both match, the author sets explicit priority via `overrides`/`overriddenBy` EMF ref-list attributes. Corticon has no DMN-style rulesheet-level hit-policy setting; override is the only conflict-resolution mechanism. The common pattern is an unconditional fallback row (always fires) paired with a conditional row that overrides it when its condition holds — equivalent to an if/else. Confirmed in `fixtures/irr/evaluate npv.ers` and DC Medicaid/CHIP's `Citizenship requirements.ers`.
 
-**`fact-assembly`** — Multiple rulesheets each write part of the same fact under different conditions. The translator must merge their logic into a single expression rather than treating each rulesheet in isolation, which would produce conflicting or incomplete facts. Resolution order follows ruleflow node position, not discovery order. Confirmed by DC Medicaid/CHIP's `Parse Cohorts.ers` + `Flatten.ers` jointly determining `Person.MedicaidEligible`; resolution-order rule confirmed by Progress's own documentation.
+**`fact-assembly`** — Multiple rulesheets each write part of the same fact under different conditions. Resolution order follows ruleflow node position, not discovery order. Confirmed by DC Medicaid/CHIP's `Parse Cohorts.ers` + `Flatten.ers` jointly determining `Person.MedicaidEligible`; resolution-order rule confirmed by Progress's own documentation.
 
 **`conditional-branching`** — A `BranchContainer` node routes execution to one or more target rulesheets based on a condition, then rejoins the main flow. Only the matching branch's targets execute; when no branch matches, execution skips all targets and continues from the convergence point. Targets within a single branch can chain sequentially. Confirmed shape from third-party Corticon projects (`HOUDAAHMAD` insurance-rating).
 
@@ -30,41 +22,55 @@ Confirmed by a real, executed golden-master trace (`Test.ert` input/output), or 
 
 **`null-default`** — A rule checks whether a value is null and assigns a placeholder if so. Structurally this reads and writes the same field, producing a self-loop in the dependency graph, but semantically it is a default fill-in — the target DSL has a native Placeholder construct for this rather than translating it as a real cycle. Confirmed by `Mortgage/Regular_NoData.ers` real captured trace.
 
-**`date-arithmetic`** — Corticon has real date operators: `yearsBetween`, `addYears`, and counterparts for months/days. Confirmed by DC Medicaid/CHIP's own `Person.dob.yearsBetween(today)`.
+**`unreachable-rulesheet`** — A rulesheet never invoked by any ruleflow contributes nothing to the output, but its writes must be explicitly excluded from fact compilation — not just flagged as unreachable. An unreachable rulesheet can write the same field as a live one, and silently including it in fact compilation produces a real wrong answer. Confirmed by DC Medicaid/CHIP's `Non-MAGI Eligibility Groups.ers`, which writes `Person.outputCoverage1` — the same path written by the live `Flatten.ers`.
 
-**`decimal-rounding`** — The `.round(n)` operator rounds a decimal to `n` places. Confirmed by DC Medicaid/CHIP's own `.round(2)` usage.
+**`operator-precedence`** — Corticon's precedence order is: unary (`-`, `not`) > multiplicative (`*`, `/`, `**`) > additive (`+`, `-`) > relational > logical (`and`, `or`), left-associative. `**` (exponentiation) is the same tier as `*`/`/`, not higher as in most general-purpose languages. `<>` is Corticon's not-equal operator. Confirmed by Progress's own "Operator precedence and order of evaluation" documentation.
 
-**`sort-ranking`** — `->sortedBy` sorts a collection ascending; `->sortedByDesc` sorts descending. Confirmed by Progress's own documentation. The 1-based indexing of `->at(n)` is evidence-based — see below.
-
-**`collection-filter`** — A rulesheet's filter gates every rule in that scope, not just rules that directly reference the filtered term. Confirmed by DC Medicaid/CHIP's `Parse Cohorts.ers`, which has a real filter (`cohorts->notEmpty`) and a rule (`Person.MedicaidEligible = T`) that doesn't reference `cohorts` at all but is still gated by it. The full-vs-limiting cascade behavior is unresolved — requires live execution to verify and is explicitly flagged as a gap in issue #388.
+**`logical-keywords`** — `and`, `or`, and `not` are real Corticon keywords. Confirmed by Progress's own "Operator precedence and order of evaluation" documentation. All three appear in synthetic fixture `logical-operators.ers`.
 
 **`range-membership`** — `X in (lower..upper]` with independently optional brackets; an omitted bracket means inclusive. Confirmed by DC Medicaid/CHIP's own `Person.age in ( 18 .. 26 )`, `Person.HouseholdActualPercentFPL in ( 220 .. 250 ]`, and `Person.age in 21 .. 64`.
 
-**`unreachable-rulesheet`** — A rulesheet never invoked by any ruleflow contributes nothing to the output, but its writes must be explicitly excluded from fact compilation — not just flagged as unreachable. An unreachable rulesheet can write the same field as a live one, and silently including it in fact compilation produces a real wrong answer. Confirmed by DC Medicaid/CHIP's `Non-MAGI Eligibility Groups.ers`, which writes `Person.outputCoverage1` — the same path written by the live `Flatten.ers`.
+---
 
-**`operator-precedence`** — Corticon's precedence order is: unary (`-`, `not`) > multiplicative (`*`, `/`, `**`) > additive (`+`, `-`) > relational > logical (`and`, `or`), left-associative. `**` (exponentiation) is the same tier as `*`/`/`, not higher as in most general-purpose languages. `<>` is Corticon's not-equal operator. `and`/`or`/`not` are real Corticon keywords. Confirmed by Progress's own "Operator precedence and order of evaluation" documentation.
+## Requires caller contract
 
-**`logical-keywords`** — `and`, `or`, and `not` are real Corticon keywords. Confirmed by Progress's own "Operator precedence and order of evaluation" documentation. All three appear in synthetic fixture `logical-operators.ers`, which exercises `and` (both conditions true), `or` (either condition true), and `not` (boolean negation) against `Applicant.isEligible` and `Applicant.hasDisability`.
+**`entity-creation`** — A rulesheet creates new entity instances with `.newUnique[...]` or `.new`, and associates them to existing entities via collection-append (`members += Person`). The graph receives fully-formed entities as inputs; entity assembly is a caller responsibility. Which entities and fields are required is derivable from the Corticon actions on the specific rule. Confirmed by DC Medicaid/CHIP's real `Household.newUnique[...]` and `members += Person` actions.
 
-**`type-conversion`** — `.toString()` converts a non-string value to its string representation; the same method family (`.toDecimal`, `.toDate`, `.toTime`, `.toInteger`) applies per data type. Confirmed by DC Medicaid/CHIP's real use of `.toString()` in computed string assembly, with a captured `.ert` trace. Exercised in synthetic fixture `type-conversion.ers`, which builds `Applicant.summaryText` from `Applicant.fullName + ' age ' + Applicant.age.toString()`. Broader operators (`.toDecimal`, `.toDate`) are documented by Progress but have no fixture yet.
+**`iterative-convergence`** — A ruleflow step marked `iterative` re-runs its rulesheet repeatedly until no fact changes in a pass. The loop terminates at fixpoint, not after a fixed count. The caller runs the iteration externally and passes the converged value as a graph input. An `iterative` flag on a step whose rulesheet doesn't actually change any fact is equivalent to a non-iterative step (it converges in one pass), but the ruleflow XML still marks it `iterative`. Confirmed by IRR's real captured trace.
+
+**`service-callout`** — A ruleflow connector node calls external JavaScript with read/write access to the entire fact pool. There is no declared input/output mapping — the connector is fully opaque to static analysis. The service result is injected as a graph input by the caller. Which values the service provides is not resolvable from the ruleflow XML — only from the connector's own external JS class. Confirmed shape from `corticon.js-samples/ServiceCallOut`; access semantics confirmed by Progress's own ["Introduction: Service Call-out (Corticon.js v2.0)"](https://www.progress.com/blogs/introduction-service-call-out-corticon.js-v2.0) documentation.
 
 ---
 
-### Evidence-based
+## Requires DSL function
 
-Seen in real Corticon examples with no counter-evidence, but not independently proven by an executed golden-master trace.
+**`date-arithmetic`** — Corticon has real date operators: `yearsBetween`, `addYears`, and counterparts for months/days. Which function is needed is derivable from the Corticon action on the specific rule. Confirmed by DC Medicaid/CHIP's own `Person.dob.yearsBetween(today)`.
 
-**`sort-ranking-index`** — `->at(n)` index access into a sorted collection is 1-based, not 0-based. Found in two independent real Corticon projects (`corticon-classic-samples` "Ranking and Ordering", `Seth-Meldon/criticality` "Health Risk") with no counter-example, but no populated captured trace was located across two search passes.
+**`decimal-rounding`** — The `.round(n)` operator rounds a decimal to `n` places. Confirmed by DC Medicaid/CHIP's own `.round(2)` usage.
+
+**`sort-ranking`** — `->sortedBy` sorts a collection ascending; `->sortedByDesc` sorts descending. Confirmed by Progress's own documentation.
+
+**`type-conversion`** — `.toString()` converts a non-string value to its string representation; the same method family (`.toDecimal`, `.toDate`, `.toTime`, `.toInteger`) applies per data type. `.toString()` confirmed by DC Medicaid/CHIP's real use with a captured `.ert` trace. Broader operators are documented by Progress but have no fixture yet.
 
 ---
 
-## Untested
+## Partially translated
 
-Documented as real Corticon constructs — confirmed to exist in Progress's own documentation or known real projects — but not yet exercised in any fixture in this spike. No CEL mapping has been confirmed for any of these.
+**`collection-filter`** — A rulesheet's filter gates every rule in that scope. The filter condition is folded into every Fact this rulesheet compiles as a guard. Confirmed by DC Medicaid/CHIP's `Parse Cohorts.ers`, which has a real filter (`cohorts->notEmpty`) and a rule (`Person.MedicaidEligible = T`) that doesn't reference `cohorts` at all but is still gated by it. Open question: the full-vs-limiting cascade behavior (does an empty-after-filter collection exclude the whole parent entity, not just this alias?) is not resolvable from static file inspection.
 
-**`universal-quantifier`** — `->forAll(predicate)` returns true only if every element of a collection satisfies the predicate, the counterpart to the already-confirmed `->exists(...)`. Documented at [docs.progress.com's "For all" page](https://docs.progress.com/bundle/corticon-js-rule-language/page/For-all.html). CEL's native `.all(x, predicate)` macro is the likely mapping but is unconfirmed against a real example.
+---
 
-**`double-quoted-strings`** — Whether Corticon accepts double-quoted string literals alongside single-quoted is unresolved — no real example or documentation found confirming or ruling it out. The tokenizer accepts them defensively.
+## Unverified
+
+**`sort-ranking-index`** — `->at(n)` index access into a sorted collection is 1-based, not 0-based. Found in two independent real Corticon projects (`corticon-classic-samples` "Ranking and Ordering", `Seth-Meldon/criticality` "Health Risk") with no counter-example, but no populated captured trace was located.
+
+**`universal-quantifier`** — `->forAll(predicate)` returns true only if every element of a collection satisfies the predicate. Documented at [docs.progress.com's "For all" page](https://docs.progress.com/bundle/corticon-js-rule-language/page/For-all.html). CEL's native `.all(x, predicate)` macro is the likely mapping but is unconfirmed.
+
+---
+
+## Unknown
+
+**`double-quoted-strings`** — Whether Corticon accepts double-quoted string literals alongside single-quoted is unresolved — no real example or documentation found confirming or ruling it out.
 
 ---
 
@@ -76,23 +82,19 @@ Naive dependency-graph translation gets the wrong answer when the same graph sha
 
 A dependency-graph self-loop (a value that depends on itself) is structurally identical no matter why it exists — but the same raw shape shows up for three completely different real reasons:
 
-1. **Iterative convergence** — a real "keep adjusting until it converges" calculation. This is the one case the target DSL genuinely cannot express as a single backward derivation.
+1. **Iterative convergence** — a real "keep adjusting until it converges" calculation. The caller runs this externally.
 2. **Decision-table alternative row** — a rule table has multiple mutually-exclusive rows, and one row's condition happens to check the same field another row sets. Nothing is repeated; the graph edge is an artifact of representation.
-3. **Null default** — a rule checks "is this still unknown?" and assigns a placeholder. Structurally reads and writes the same field, but the target DSL has a native Placeholder construct for this.
+3. **Null default** — a rule checks "is this still unknown?" and assigns a placeholder. The target DSL has a native Placeholder construct for this.
 
 Telling these apart requires the specific rule's condition text (does it check for null?) and whether it is ever reached from inside an `iterative` ruleflow step — which requires resolving invocation context first.
 
 ### Fact assembly
 
-A single value can be decided by several separate rulesheets, each contributing part of the answer under different conditions. The target DSL has no equivalent: a Derived fact has exactly one expression. Translating each rulesheet in isolation produces conflicting or incomplete facts. The combined logic must be recognized and merged into a single correct expression. This is independent of the self-loop question: a value can be assembled across multiple rulesheets and have no self-loop, or have a self-loop with nothing to do with assembly.
+A single value can be decided by several separate rulesheets, each contributing part of the answer under different conditions. The target DSL has no equivalent: a Derived fact has exactly one expression. Translating each rulesheet in isolation produces conflicting or incomplete facts. The combined logic must be recognized and merged into a single correct expression.
 
 ### Invocation context
 
-Whether a rulesheet is "inside a loop" or "inside a branch" depends entirely on how the ruleflow invokes it — nothing in the rulesheet file itself says so. Working this out requires walking the full ruleflow graph, including nested ruleflows, from each entry point, to determine for every rulesheet: is it ever reached inside an `iterative` step? Inside a `BranchContainer`? This resolved context is what makes the self-loop disambiguation possible at all.
-
-### Classification
-
-For every dependency the graph finds, the translator determines what kind of thing it actually is (a sequential pipeline step, a genuine cycle, an assembled fact, a null default, entity creation, a service call-out, etc.) before deciding how to translate it — rather than naively mapping the literal graph shape and getting the wrong answer for the cases above. See issue #388's classification pattern table for the full list, each backed by a real confirmed example from a vendored Corticon project.
+Whether a rulesheet is "inside a loop" or "inside a branch" depends entirely on how the ruleflow invokes it — nothing in the rulesheet file itself says so. Working this out requires walking the full ruleflow graph, including nested ruleflows, from each entry point.
 
 ---
 
@@ -112,12 +114,12 @@ What's still deliberately excluded, confirmed as presentation/plumbing rather th
 
 **Rulesheet-scope vocabulary declarations** (`<referencedAttributes attribute="..."/>`). Corticon Studio's column-picker bookkeeping — redundant with `vocab.ecore`'s own attribute definitions and with each actually-used term's own `datatype`.
 
-**Pure XMI/EMF asset metadata** (`buildNumber`, `updateStamp`, `externalChecksum`, `studioType`, namespace URIs). Asset versioning and structural type-tagging, not rule content. `xsi:type` values are consumed to decide how to parse a node (e.g. distinguishing `BranchContainer` from `ActivityNode`), just not re-emitted verbatim.
+**Pure XMI/EMF asset metadata** (`buildNumber`, `updateStamp`, `externalChecksum`, `studioType`, namespace URIs). Asset versioning and structural type-tagging, not rule content.
 
-Column-level metadata (`rulesheetViewList`'s `actionItemList`/`conditionItemList`, including real human-authored `naturalLanguageText` descriptions) is the one exception captured without a fully understood use yet — see `rulesheet.js`'s own comment on `extractColumnDefinitions` and issue #388's Phase 5 plan. That's a deliberate "capture faithfully now, decide how to use later" call, not an oversight.
+Column-level metadata (`rulesheetViewList`'s `actionItemList`/`conditionItemList`, including real human-authored `naturalLanguageText` descriptions) is the one exception captured without a fully understood use yet — see `rulesheet.js`'s own comment on `extractColumnDefinitions` and issue #388's Phase 5 plan.
 
 ### Fail loudly, not silently
 
-**Silent mistranslation risk.** A mechanical translator can produce plausible-looking but wrong CEL for a construct it doesn't actually understand. Every translation stage (the Corticon expression-text parser and the AST-to-CEL generator) is scoped to only the constructs confirmed real across this spike's fixtures, and throws a specific, actionable error on anything outside that set rather than guessing. An unsupported construct becomes a visible failure to investigate, not a silent wrong answer to trust.
+**Silent mistranslation risk.** A mechanical translator can produce plausible-looking but wrong CEL for a construct it doesn't actually understand. Every translation stage is scoped to only the constructs confirmed real across this spike's fixtures, and throws a specific, actionable error on anything outside that set rather than guessing.
 
-**Silent content-drop risk.** A hand-written extractor can silently drop real source content simply because nobody anticipated needing it. To catch this: diff every leaf value recursively collected from the raw parsed source against every leaf value in the transformed output. Values present in the source but absent from the output are candidate real gaps — grep the raw source for each one to confirm whether it's genuinely lost or the same information survives under a different field name. This is how the reserved blank/template row and per-rule `ruleStatement` documentation were found, and how the rest of what's excluded was confirmed safe to drop rather than assumed.
+**Silent content-drop risk.** A hand-written extractor can silently drop real source content simply because nobody anticipated needing it. To catch this: diff every leaf value recursively collected from the raw parsed source against every leaf value in the transformed output. This is how the reserved blank/template row and per-rule `ruleStatement` documentation were found.

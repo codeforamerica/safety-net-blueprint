@@ -26,14 +26,14 @@ test('detects real date arithmetic in DC Medicaid\'s Person.dob.yearsBetween(tod
   assert.ok(matches.every((t) => t.fulltext.includes('yearsBetween')));
 });
 
-test('detects real date arithmetic in this fixture\'s own AgeCalculation.ers', () => {
-  const r = parseRulesheet('fixtures/all-patterns/AgeCalculation.ers');
+test('detects real date arithmetic in this fixture\'s own date-arithmetic.ers', () => {
+  const r = parseRulesheet('fixtures/all-patterns/date-arithmetic.ers');
   const matches = r.rules.flatMap(allTerms).filter(isDateArithmetic);
   assert.equal(matches.length, 1);
 });
 
 test('a plain attribute read is never mistaken for date arithmetic', () => {
-  const r = parseRulesheet('fixtures/all-patterns/IncomeTier.ers');
+  const r = parseRulesheet('fixtures/all-patterns/decision-table.ers');
   const matches = r.rules.flatMap(allTerms).filter(isDateArithmetic);
   assert.deepEqual(matches, []);
 });
@@ -47,7 +47,7 @@ test('detects currency rounding via the raw expression text fallback -- DC Medic
 });
 
 test('detects currency rounding via a real METHOD term -- this fixture\'s round(2) on a bare attribute', () => {
-  const r = parseRulesheet('fixtures/all-patterns/ComputeIncome.ers');
+  const r = parseRulesheet('fixtures/all-patterns/decimal-rounding.ers');
   const roundingAction = allActions(r).find((a) => a.text?.includes('incomeRounded'));
   assert.ok(allTerms({ conditions: [], actions: [roundingAction] }).some(isCurrencyRounding));
   assert.equal(actionUsesCurrencyRounding(roundingAction), true);
@@ -59,8 +59,8 @@ test('detects real sorting/ranking in DC Medicaid\'s Parse Cohorts.ers', () => {
   assert.ok(matches.length > 0);
 });
 
-test('detects real sorting/ranking in this fixture\'s own ProgramRanking.ers', () => {
-  const r = parseRulesheet('fixtures/all-patterns/ProgramRanking.ers');
+test('detects real sorting/ranking in this fixture\'s own sort-ranking.ers', () => {
+  const r = parseRulesheet('fixtures/all-patterns/sort-ranking.ers');
   const matches = r.rules.flatMap(allTerms).filter(isSortingOperation);
   assert.equal(matches.length, 1);
 });

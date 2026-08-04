@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync } from 'node:fs';
+import { buildDependencyGraph } from './graph/build-graph.js';
 import { buildFacts } from './translate/build-facts.js';
 import { ENGINES, DEFAULT_ENGINE, resolveEngine } from './engines.js';
 import { toJson, parseCliArgs } from './cli-utils.js';
 
 function printUsage() {
   console.error('Usage: node src/translate-project.js <project.classified.json> [--engine <name>] [--out <file.json>]');
-  console.error('  <project.classified.json> is the output of: node src/classify-project.js <project.graph.json> --out <project.classified.json>');
+  console.error('  <project.classified.json> is the output of: node src/classify-project.js <project.json> --out <project.classified.json>');
   console.error(`  --engine defaults to "${DEFAULT_ENGINE}". Known engines: ${Object.keys(ENGINES).join(', ')}`);
   console.error('  --out writes two files: <file>.json (the Fact declarations) and <file>.crosswalk.json (the Vocabulary<->Fact mapping)');
-  console.error('Example: node src/classify-project.js generated/dc-medicaid-chip.graph.json --out generated/dc-medicaid-chip.classified.json');
+  console.error('Example: node src/classify-project.js generated/dc-medicaid-chip.json --out generated/dc-medicaid-chip.classified.json');
   console.error('         node src/translate-project.js generated/dc-medicaid-chip.classified.json --out generated/dc-medicaid-chip.translated.json');
 }
 
@@ -46,7 +47,8 @@ try {
   process.exit(1);
 }
 
-const { project, graph, classification } = JSON.parse(readFileSync(args.positional, 'utf-8'));
+const { project, classification } = JSON.parse(readFileSync(args.positional, 'utf-8'));
+const graph = buildDependencyGraph(project);
 const translation = buildFacts(project, graph, classification, { parseExpression });
 const summary = summarize(translation);
 

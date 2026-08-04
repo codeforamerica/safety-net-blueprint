@@ -1,0 +1,183 @@
+# Translation patterns
+#
+# Each pattern describes how a Corticon construct maps to the dependency graph DSL.
+# Patterns are identified by the classifier and tagged onto rules, rulesheets, and
+# ruleflow nodes. A rule/rulesheet/node may carry more than one pattern; when multiple
+# apply, the least permissive status wins.
+#
+# Fields:
+#   approach  - how this construct maps to the dependency graph
+#   requires  - external dependency needed for translation:
+#                 caller-contract  the specific fields/entities must be supplied by the
+#                                  caller before invoking the graph (instance-specific)
+#                 dsl-function     a specific function must exist in the DSL
+#                                  (which function is derivable from the Corticon logic)
+#   status    - confirmed   proven against a real executed trace or authoritative docs
+#               unverified  approach identified but not yet tested
+#               unknown     no approach identified yet
+
+# ── Translates directly ───────────────────────────────────────────────────────
+
+decision-table:
+  approach: >
+    Each row compiled to a branch of a conditional expression (if/else chain).
+    Corticon's default UNIQUE hit policy means rows are mutually exclusive, so
+    order does not affect the result.
+  requires: ~
+  status: confirmed
+
+explicit-override:
+  approach: >
+    Priority expressed via conditional ordering in the compiled expression —
+    the overriding row's condition is placed earlier in the if/else chain.
+  requires: ~
+  status: confirmed
+
+fact-assembly:
+  approach: >
+    Multiple rulesheets each contributing part of the same fact are merged into
+    a single conditional expression, chained in real ruleflow invocation order.
+  requires: ~
+  status: confirmed
+
+conditional-branching:
+  approach: >
+    Branch condition becomes a guard on the facts compiled within that branch.
+    When no branch matches, execution skips all targets — modeled as the guard
+    being false and the fact remaining unset.
+  requires: ~
+  status: confirmed
+
+enum-switch-branching:
+  approach: >
+    Enum identity test becomes a guard, same shape as conditional-branching.
+    Each enum value maps to a separate branch in the compiled expression.
+  requires: ~
+  status: confirmed
+
+null-default:
+  approach: >
+    Writable fact with a Placeholder default. The DSL's native Placeholder
+    construct handles the "use this value if the input is missing" case directly,
+    without needing to express the null-check logic explicitly.
+  requires: ~
+  status: confirmed
+
+unreachable-rulesheet:
+  approach: >
+    Excluded from compilation entirely. Writes from unreachable rulesheets are
+    not included in any fact expression.
+  requires: ~
+  status: confirmed
+
+operator-precedence:
+  approach: >
+    Corticon precedence rules applied during CEL compilation via explicit
+    parenthesization — no ambiguity left to the target language's own rules.
+  requires: ~
+  status: confirmed
+
+logical-keywords:
+  approach: >
+    Corticon and/or/not keywords mapped to CEL &&, ||, ! operators.
+  requires: ~
+  status: confirmed
+
+range-membership:
+  approach: >
+    Corticon range syntax (X in (lower..upper]) compiled to CEL comparison
+    operators (>= / <= / > / <) with bracket direction determining inclusivity.
+  requires: ~
+  status: confirmed
+
+# ── Requires caller contract ──────────────────────────────────────────────────
+
+entity-creation:
+  approach: >
+    Caller pre-assembles entity instances and their associations before invoking
+    the graph. The graph receives fully-formed entities as inputs and does not
+    create them. Which entities and fields are required is derivable from the
+    Corticon actions on this rule.
+  requires: caller-contract
+  status: confirmed
+
+iterative-convergence:
+  approach: >
+    Caller runs the iterative calculation externally until convergence, then
+    passes the final value as a graph input. The graph treats the converged
+    value as an ordinary input fact, not something it derives internally.
+  requires: caller-contract
+  status: unverified
+
+service-callout:
+  approach: >
+    The service call is handled outside the graph. Its output is injected as a
+    graph input by the caller. The graph treats it as an ordinary input fact.
+    Which values the service provides is opaque to static analysis — derivable
+    only from the connector's external implementation.
+  requires: caller-contract
+  status: unverified
+
+# ── Requires DSL function ─────────────────────────────────────────────────────
+
+date-arithmetic:
+  approach: >
+    Corticon date operators (yearsBetween, addYears, monthsBetween, etc.) mapped
+    to equivalent CEL functions. Which function is needed is derivable from the
+    Corticon action on this rule.
+  requires: dsl-function
+  status: unverified
+
+decimal-rounding:
+  approach: >
+    Corticon .round(n) mapped to an equivalent CEL rounding function.
+  requires: dsl-function
+  status: unverified
+
+sort-ranking:
+  approach: >
+    Corticon ->sortedBy / ->sortedByDesc mapped to CEL collection sort expressions.
+  requires: dsl-function
+  status: unverified
+
+type-conversion:
+  approach: >
+    Corticon type conversion methods (.toString(), .toDecimal(), .toDate(), etc.)
+    mapped to CEL equivalents. .toString() is confirmed; others are identified
+    but not yet tested against a real fixture.
+  requires: dsl-function
+  status: unverified
+
+# ── Partially translated ──────────────────────────────────────────────────────
+
+collection-filter:
+  approach: >
+    Filter condition folded into the guards of all facts compiled within the
+    filtered scope. The basic case is confirmed. The full-vs-limiting cascade
+    behavior (does an empty-after-filter collection exclude the whole parent
+    entity?) is not resolvable from static file inspection and is an open
+    question.
+  requires: ~
+  status: unverified
+
+# ── Unverified ────────────────────────────────────────────────────────────────
+
+sort-ranking-index:
+  approach: >
+    Corticon ->at(n) is 1-based; mapped to 0-based array access with a -1
+    offset adjustment in the compiler.
+  requires: ~
+  status: unverified
+
+universal-quantifier:
+  approach: >
+    Corticon ->forAll(predicate) mapped to CEL .all(x, predicate) macro.
+  requires: ~
+  status: unverified
+
+# ── Unknown ───────────────────────────────────────────────────────────────────
+
+double-quoted-strings:
+  approach: ~
+  requires: ~
+  status: unknown

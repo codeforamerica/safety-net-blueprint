@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { join } from 'node:path';
 import { loadProject } from '../corticon/project.js';
 import { resolveRuleflowContext } from '../classify/ruleflow-context.js';
 
@@ -16,8 +17,8 @@ test('IRR: rulesheets inside the iterative loop are marked iterative, the setup 
 test('DC Medicaid/CHIP: resolves real cross-directory invokes references (both.erf -> subdirectory ruleflows)', () => {
   const ctx = resolveRuleflowContext(loadProject('fixtures/dc-medicaid-chip'));
   assert.deepEqual(ctx.roots, ['both.erf']);
-  assert.equal(ctx.perRulesheet.get('Medicaid Applicant\\Citizenship requirements.ers').invocationCount, 1);
-  assert.equal(ctx.perRulesheet.get('CHIP rules\\Calculate_premium.ers').invocationCount, 1);
+  assert.equal(ctx.perRulesheet.get(join('Medicaid Applicant', 'Citizenship requirements.ers')).invocationCount, 1);
+  assert.equal(ctx.perRulesheet.get(join('CHIP rules', 'Calculate_premium.ers')).invocationCount, 1);
   assert.ok(
     [...ctx.perRulesheet.values()].every((v) => v.iterative === false && v.branched === false),
     'confirms the real cascade uses plain sequencing, matching the domain-likelihood finding in Decision 9'
@@ -30,25 +31,21 @@ test('DC Medicaid/CHIP: confirms a real unreachable rulesheet -- Non-MAGI Eligib
   // upgrades "unreachable rulesheet" from a defensive-only check to a real, observed
   // pattern (see issue #388).
   const ctx = resolveRuleflowContext(loadProject('fixtures/dc-medicaid-chip'));
-  assert.deepEqual(ctx.unreachable, ['Medicaid Applicant\\Non-MAGI Eligibility Groups.ers']);
+  assert.deepEqual(ctx.unreachable, [join('Medicaid Applicant', 'Non-MAGI Eligibility Groups.ers')]);
 });
 
-test('all-patterns: a rulesheet reached through both an iterative node and a BranchContainer carries both flags', () => {
+test('all-patterns: ruleflow context correctly assigns iterative, branched, and unreachable flags', () => {
   const ctx = resolveRuleflowContext(loadProject('fixtures/all-patterns'));
   assert.deepEqual(ctx.roots, ['top-level-flow.erf']);
-  // ProgramAEligibility/BEligibility.ers sit inside program-eligibility-loop.erf's
-  // BranchContainer, itself invoked from an iterative ActivityNode -- both signals apply.
-  assert.deepEqual(ctx.perRulesheet.get('ProgramAEligibility.ers'), { iterative: true, branched: true, invocationCount: 1, firstInvocationOrder: 12 });
-  assert.deepEqual(ctx.perRulesheet.get('ProgramBEligibility.ers'), { iterative: true, branched: true, invocationCount: 1, firstInvocationOrder: 12 });
-  // AdjustBenefit.ers sits inside benefit-loop.erf, invoked from an iterative
-  // ActivityNode but never from a BranchContainer.
-  assert.deepEqual(ctx.perRulesheet.get('AdjustBenefit.ers'), { iterative: true, branched: false, invocationCount: 1, firstInvocationOrder: 15 });
-  // DisabilityBranchA/B.ers sit inside a non-iterative BranchContainer.
-  assert.deepEqual(ctx.perRulesheet.get('DisabilityBranchA.ers'), { iterative: false, branched: true, invocationCount: 1, firstInvocationOrder: 10 });
-  assert.deepEqual(ctx.perRulesheet.get('DisabilityBranchB.ers'), { iterative: false, branched: true, invocationCount: 1, firstInvocationOrder: 10 });
-  // CreateHouseholds.ers is a plain sequential step -- neither flag applies.
-  assert.deepEqual(ctx.perRulesheet.get('CreateHouseholds.ers'), { iterative: false, branched: false, invocationCount: 1, firstInvocationOrder: 1 });
-  assert.deepEqual(ctx.unreachable, []);
+  // iterative-body.ers is inside an iterative loop -- not branched.
+  assert.deepEqual(ctx.perRulesheet.get('iterative-body.ers'), { iterative: true, branched: false, invocationCount: 1, firstInvocationOrder: 22 });
+  // conditional-branch-a/b.ers are inside a BranchContainer -- not iterative.
+  assert.deepEqual(ctx.perRulesheet.get('conditional-branch-a.ers'), { iterative: false, branched: true, invocationCount: 1, firstInvocationOrder: 14 });
+  assert.deepEqual(ctx.perRulesheet.get('conditional-branch-b.ers'), { iterative: false, branched: true, invocationCount: 1, firstInvocationOrder: 14 });
+  // entity-creation.ers is a plain sequential step -- neither flag applies.
+  assert.deepEqual(ctx.perRulesheet.get('entity-creation.ers'), { iterative: false, branched: false, invocationCount: 1, firstInvocationOrder: 1 });
+  // unreachable-rulesheet.ers is never invoked by any ruleflow.
+  assert.deepEqual(ctx.unreachable, ['unreachable-rulesheet.ers']);
   assert.deepEqual(ctx.multiInvoked, []);
 });
 

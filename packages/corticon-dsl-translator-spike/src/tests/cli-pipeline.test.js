@@ -11,6 +11,10 @@ import { join } from 'node:path';
  * underlying functions directly. This is what actually proves each script's own
  * argument parsing, file I/O, and output shape work, not just the library code
  * underneath it.
+ *
+ * Full pipeline: ingest-project.js -> classify-project.js -> translate-project.js.
+ * graph-project.js is exercised in the same test as an optional diagnostic step
+ * (it no longer feeds classify, but its output shape is still verified).
  */
 const FIXTURES = [
   'fixtures/dc-medicaid-chip',
@@ -37,6 +41,8 @@ for (const fixtureDir of FIXTURES) {
       assert.ok(project.ruleflows, 'ingest-project.js --out should write a project with ruleflows');
       assert.ok(project.vocabularies, 'ingest-project.js --out should write a project with vocabularies');
 
+      // graph-project.js is an optional diagnostic step -- no longer feeds classify,
+      // but its output shape is still verified here.
       execFileSync('node', ['src/graph-project.js', projectJsonPath, '--out', graphJsonPath], { encoding: 'utf-8' });
       const combined = JSON.parse(readFileSync(graphJsonPath, 'utf-8'));
       assert.ok(combined.project, 'graph-project.js --out should carry the original project through, not just the graph');
@@ -45,11 +51,11 @@ for (const fixtureDir of FIXTURES) {
       assert.ok(Array.isArray(combined.graph.edges), 'graph.edges should be an array');
       assert.ok(combined.graph.nodes && typeof combined.graph.nodes === 'object', 'graph.nodes should be present');
 
-      execFileSync('node', ['src/classify-project.js', graphJsonPath, '--out', classifiedJsonPath], { encoding: 'utf-8' });
+      // classify-project.js takes project.json directly (not graph.json).
+      execFileSync('node', ['src/classify-project.js', projectJsonPath, '--out', classifiedJsonPath], { encoding: 'utf-8' });
       const classified = JSON.parse(readFileSync(classifiedJsonPath, 'utf-8'));
       assert.ok(classified.project, 'classify-project.js --out should carry the original project through, not just the classification');
       assert.deepEqual(classified.project.rulesheets, project.rulesheets, 'the carried-through project should match Phase 1\'s own output exactly');
-      assert.ok(classified.graph, 'classify-project.js --out should carry the graph through too');
       assert.ok(classified.classification, 'classify-project.js --out should include the classification');
       for (const key of ['selfLoops', 'multiHopCycles', 'crossRulesheetAssembly', 'decisionTableCombinatorics', 'entityCreation', 'serviceCallouts', 'filters', 'expressionPatterns']) {
         assert.ok(Array.isArray(classified.classification[key]), `classify-project.js --out should include an array for classification.${key}`);
