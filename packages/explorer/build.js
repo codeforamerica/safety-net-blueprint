@@ -3,131 +3,138 @@
  * build.js
  *
  * Consolidated explorer build. Resolves config + contracts annotations once
- * and passes the enriched config to all sub-tools that depend on it. Shares a
- * single Puppeteer browser across all PNG exports.
+ * and passes the enriched config to all sub-tools that depend on it.
+ *
+ * If packages/resolved is missing or empty, the resolve step runs automatically.
  *
  * Usage:
  *   node build.js                              # build everything
  *   node build.js --only=context-map
- *   node build.js --only=service-blueprints
- *   node build.js --only=data-explorer
+ *   node build.js --only=data-dictionaries
  *   node build.js --only=state-machine-docs
- *   node build.js --only=adoption-model
+ *   node build.js --only=event-catalog
+ *   node build.js --only=api-reference
+ *   node build.js --only=client-reference
+ *   node build.js --only=sequence-diagrams
+ *
+ * State customization (overlay-aware build):
+ *   node build.js --resolved=/path/to/state/resolved
+ *                 --clients=/path/to/state/clients
+ *
+ *   --resolved  Path to a directory of resolved OpenAPI + state machine files
+ *               (output of the contracts resolve pipeline with state overlays applied).
+ *               Defaults to packages/resolved. When provided, auto-resolve is skipped.
+ *   --clients   Path to the root clients directory containing generated/ and utility/
+ *               subdirectories. Defaults to packages/clients.
  */
 
-import { readFileSync, readdirSync } from 'fs';
+import { readFileSync, readdirSync, rmSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
 import yaml from 'js-yaml';
 import { resolveConfig } from './src/resolve-config.js';
 import { scanGaps } from './src/scan-gaps.js';
-import { renderContextMap } from './context-map/src/render.js';
-import { renderBlueprint } from './service-blueprints/src/generate-blueprint.js';
+import { renderContextMap } from './diagrams/context-map/src/render.js';
+import { resolvedDir } from './lib/paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const node = process.execPath;
 
-const args    = process.argv.slice(2);
-const onlyArg = args.find(a => a.startsWith('--only='));
-const only    = onlyArg ? onlyArg.slice('--only='.length) : null;
+const args        = process.argv.slice(2);
+const onlyArg     = args.find(a => a.startsWith('--only='));
+const only        = onlyArg ? onlyArg.slice('--only='.length) : null;
+const resolvedArg = args.find(a => a.startsWith('--resolved='));
+const clientsArg  = args.find(a => a.startsWith('--clients='));
+
+// ── Self-heal: resolve contracts if packages/resolved is missing or empty ─────
+
+if (!resolvedArg && (!existsSync(resolvedDir) || readdirSync(resolvedDir).length === 0)) {
+  console.log('packages/resolved is missing — running resolve step first...');
+  const resolveScript = resolve(__dirname, '../../packages/contracts/scripts/resolve.js');
+  execFileSync(node, [resolveScript], { stdio: 'inherit' });
+}
+
+// Args forwarded to all subprocesses that respect them.
+const fwdResolved = resolvedArg ? [resolvedArg] : [];
+const fwdClients  = clientsArg  ? [clientsArg]  : [];
 
 const doBuild = tool => !only || only === tool;
 
-const buildContextMap   = doBuild('context-map');
-const buildServiceBP    = doBuild('service-blueprints');
-const buildAdoptionModel = doBuild('adoption-model');
+const buildContextMap  = doBuild('context-map');
+const buildSeqDiagrams = doBuild('sequence-diagrams');
 
 // ── Resolve config once — shared by tools that depend on config.yaml ──────────
 
 let enrichedConfig;
-if (buildContextMap || buildServiceBP) {
-  enrichedConfig = resolveConfig();
-}
-
-// ── Launch Puppeteer browser once — shared across all PNG exports ─────────────
-
-let browser = null;
-if (!process.env.CI && (buildContextMap || buildServiceBP || buildAdoptionModel)) {
-  try {
-    const puppeteer = (await import('puppeteer')).default;
-    browser = await puppeteer.launch({ headless: 'new' });
-  } catch {
-    console.warn('puppeteer not installed — skipping PNG exports. Run: npm install puppeteer');
-  }
+if (buildContextMap) {
+  enrichedConfig = resolveConfig(resolvedDir);
 }
 
 // ── Context map ───────────────────────────────────────────────────────────────
 
 if (buildContextMap) {
   const mapConfig = yaml.load(
-    readFileSync(resolve(__dirname, 'context-map', 'config', 'config.yaml'), 'utf8')
+    readFileSync(resolve(__dirname, 'diagrams', 'context-map', 'config', 'config.yaml'), 'utf8')
   );
-  const distDir = resolve(__dirname, 'context-map', 'dist');
-  const outDir  = resolve(__dirname, 'context-map', 'output');
+  const distDir = resolve(__dirname, 'diagrams', 'context-map', 'dist');
+  const outDir  = resolve(__dirname, 'diagrams', 'context-map');
 
   renderContextMap(enrichedConfig, mapConfig, distDir);
-  execFileSync(node, [resolve(__dirname, 'context-map', 'src', 'build-html.js'), distDir, outDir], { stdio: 'inherit' });
+  execFileSync(node, [resolve(__dirname, 'diagrams', 'context-map', 'src', 'build-html.js'), distDir, outDir], { stdio: 'inherit' });
   scanGaps(enrichedConfig);
-
-  if (browser) {
-    const { exportContextMapPngs } = await import('./context-map/src/export-png.js');
-    await exportContextMapPngs(browser, outDir, distDir);
-  }
 }
 
-// ── Service blueprints ────────────────────────────────────────────────────────
+// ── Sequence diagrams ─────────────────────────────────────────────────────────
 
-if (buildServiceBP) {
-  const annotationsPath = resolve(__dirname, 'service-blueprints', 'config', 'intake-annotations.yaml');
-  const outDir = resolve(__dirname, 'service-blueprints', 'output');
-
-  const blueprintHtmlPath = renderBlueprint(enrichedConfig, annotationsPath, outDir);
-
-  if (browser) {
-    const { htmlToPng } = await import('./src/html-to-png.js');
-    const { renderCardsHtml } = await import('./service-blueprints/src/render-cards-html.js');
-
-    await htmlToPng(browser, blueprintHtmlPath, blueprintHtmlPath.replace('.html', '.png'));
-
-    const cardsHtmlPath = renderCardsHtml('intake');
-    await htmlToPng(browser, cardsHtmlPath, cardsHtmlPath.replace('.html', '.png'));
-  }
+if (buildSeqDiagrams) {
+  const seqSrcDir = resolve(__dirname, 'diagrams', 'sequence-diagrams', 'src');
+  const seqOutDir = resolve(__dirname, 'diagrams', 'sequence-diagrams');
+  execFileSync(node, [resolve(seqSrcDir, 'render-action-flow.js'), seqOutDir, ...fwdResolved], { stdio: 'inherit' });
+  execFileSync(node, [resolve(seqSrcDir, 'build-phases-html.js'), null, seqOutDir, ...fwdResolved], { stdio: 'inherit' });
 }
 
 // ── Data explorer (reads contracts directly — subprocess) ─────────────────────
 
-if (doBuild('data-explorer')) {
-  const contractsDir = resolve(__dirname, '..', 'contracts');
-  const domains = readdirSync(contractsDir)
+if (doBuild('data-dictionaries')) {
+  // Clean stale field inventories before regenerating — build.js reads these,
+  // so they must be cleaned before the generator runs, not inside build.js itself.
+  const ddDir = resolve(__dirname, 'tools', 'data-dictionaries');
+  readdirSync(ddDir)
+    .filter(f => f.endsWith('-field-inventory.yaml'))
+    .forEach(f => rmSync(resolve(ddDir, f)));
+
+  const domains = readdirSync(resolvedDir)
     .filter(f => f.endsWith('-openapi.yaml'))
     .map(f => f.replace('-openapi.yaml', ''));
-  const generateDataModel = resolve(__dirname, 'data-explorer', 'generate-field-inventory.mjs');
+  const generateDataModel = resolve(__dirname, 'tools', 'data-dictionaries', 'generate-field-inventory.mjs');
   for (const domain of domains) {
     try {
-      execFileSync(node, [generateDataModel, `--domain=${domain}`], { stdio: 'inherit' });
+      execFileSync(node, [generateDataModel, `--domain=${domain}`, `--spec=${resolvedDir}`], { stdio: 'inherit' });
     } catch {
       // Domain doesn't have the right structure for data model generation — skip
     }
   }
-  execFileSync(node, [resolve(__dirname, 'data-explorer', 'build.js')], { stdio: 'inherit' });
+  execFileSync(node, [resolve(__dirname, 'tools', 'data-dictionaries', 'build.js'), ...fwdResolved], { stdio: 'inherit' });
 }
 
 // ── State machine docs (reads contracts directly — subprocess) ────────────────
 
 if (doBuild('state-machine-docs')) {
-  execFileSync(node, [resolve(__dirname, 'state-machine-docs', 'build.js')], { stdio: 'inherit' });
+  execFileSync(node, [resolve(__dirname, 'tools', 'state-machine-docs', 'build.js'), ...fwdResolved], { stdio: 'inherit' });
 }
 
-// ── Adoption model PNG export ─────────────────────────────────────────────────
-
-if (buildAdoptionModel && browser) {
-  const { exportAdoptionModelPngs } = await import('./adoption-model/src/export-png.js');
-  await exportAdoptionModelPngs(browser);
+if (doBuild('event-catalog')) {
+  execFileSync(node, [resolve(__dirname, 'tools', 'event-catalog', 'build.js'), ...fwdResolved], { stdio: 'inherit' });
 }
 
-// ── Cleanup ───────────────────────────────────────────────────────────────────
-
-if (browser) {
-  await browser.close();
+if (doBuild('api-reference')) {
+  execFileSync(node, [resolve(__dirname, 'tools', 'api-reference', 'build.js'), ...fwdResolved], { stdio: 'inherit' });
 }
+
+if (doBuild('client-reference')) {
+  execFileSync(node, [resolve(__dirname, 'tools', 'client-reference', 'build.js'), ...fwdResolved, ...fwdClients], { stdio: 'inherit' });
+}
+
+// Hub is always rebuilt last so it can scan all tool output directories
+execFileSync(node, [resolve(__dirname, 'build-hub.js')], { stdio: 'inherit' });

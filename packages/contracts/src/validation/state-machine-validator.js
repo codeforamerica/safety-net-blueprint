@@ -9,7 +9,7 @@
  */
 
 import { readFileSync, readdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, resolve, relative, isAbsolute } from 'path';
 import yaml from 'js-yaml';
 
 export const VALID_ACTOR_ROLES = new Set(['applicant', 'case_worker', 'supervisor', 'system']);
@@ -44,8 +44,12 @@ export function resolveSchemaRefs(schema, { spec = null, specFilePath = null } =
       if (specFilePath) {
         const [filePart, jsonPointer] = schema.$ref.split('#');
         const fullPath = join(dirname(specFilePath), filePart);
+        const resolvedFull = resolve(fullPath);
+        const projectRoot = resolve(process.cwd());
+        const refRel = relative(projectRoot, resolvedFull);
+        if (refRel.startsWith('..') || isAbsolute(refRel)) return schema;
         try {
-          const externalDoc = yaml.load(readFileSync(fullPath, 'utf8'));
+          const externalDoc = yaml.load(readFileSync(resolvedFull, 'utf8'), { schema: yaml.DEFAULT_SCHEMA });
           let resolved = externalDoc;
           if (jsonPointer) {
             const parts = jsonPointer.slice(1).split('/');
@@ -176,7 +180,7 @@ export function buildSchemaIndex(specsDir) {
     if (!file.endsWith('-openapi.yaml')) continue;
     const filePath = join(specsDir, file);
     let spec;
-    try { spec = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+    try { spec = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA }); } catch { continue; }
 
     for (const [name, rawSchema] of Object.entries(spec?.components?.schemas || {})) {
       if (!index.has(name)) {
@@ -203,7 +207,7 @@ export function buildEndpointIndex(specsDir) {
   for (const file of files) {
     if (!file.endsWith('-openapi.yaml')) continue;
     let spec;
-    try { spec = yaml.load(readFileSync(join(specsDir, file), 'utf8')); } catch { continue; }
+    try { spec = yaml.load(readFileSync(join(specsDir, file), 'utf8'), { schema: yaml.DEFAULT_SCHEMA }); } catch { continue; }
 
     const domain = spec?.info?.['x-domain'];
     if (!domain || !spec.paths) continue;
@@ -314,7 +318,7 @@ export function loadExtendsDoc(filePath, extendsPath) {
   try {
     const dir = dirname(filePath);
     const extPath = join(dir, extendsPath.replace(/^\.\//, ''));
-    return yaml.load(readFileSync(extPath, 'utf8'));
+    return yaml.load(readFileSync(extPath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA });
   } catch {
     return null;
   }

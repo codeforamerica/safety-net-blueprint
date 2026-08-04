@@ -298,7 +298,7 @@ function collectNullableFieldNames(specDir) {
     if (typeof file !== 'string') continue;
     if (!file.endsWith('.yaml') && !file.endsWith('.yml')) continue;
     try {
-      const content = yaml.load(readFileSync(join(specDir, file), 'utf8'));
+      const content = yaml.load(readFileSync(join(specDir, file), 'utf8'), { schema: yaml.DEFAULT_SCHEMA });
       walkForNullable(content, result);
     } catch {
       // Skip unreadable or non-YAML files silently
@@ -556,7 +556,7 @@ function validateDiscriminatorLiterals(bundledSpec, zodGenPath) {
   const mappingKeys = collectDiscriminatorMappingKeys(bundledSpec);
   if (mappingKeys.size === 0) return;
 
-  const zodGen = readFileSync(zodGenPath, 'utf8');
+  const zodGen = readFileSync(resolvePath(zodGenPath), 'utf8');
   const missing = [];
   for (const key of mappingKeys) {
     // hey-api may emit z.literal('key') or z.enum(['key']); check for the quoted value
@@ -579,7 +579,7 @@ function validateDiscriminatorLiterals(bundledSpec, zodGenPath) {
  */
 function collectNamedEnumDefs(specPath) {
   const specDir = dirname(specPath);
-  const rawSpec = readFileSync(specPath, 'utf8');
+  const rawSpec = readFileSync(resolvePath(specPath), 'utf8');
 
   // Find all external file refs: ./path/to/file.yaml (before any # anchor)
   const externalRefs = new Set();
@@ -597,7 +597,7 @@ function collectNamedEnumDefs(specPath) {
     const filePath = resolvePath(specDir, ref);
     if (!existsSync(filePath)) continue;
     let schema;
-    try { schema = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+    try { schema = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA }); } catch { continue; }
     const fileStem = toPascal(ref.split('/').pop().replace(/\.yaml$/, ''));
     const defs = schema?.$defs ?? schema?.definitions ?? {};
     for (const [defName, def] of Object.entries(defs)) {
@@ -623,7 +623,7 @@ function collectNamedEnumDefs(specPath) {
  */
 function patchDomainBarrelForNamedEnums(domainIndexPath, namedEnums) {
   const constNames = namedEnums.map(e => e.name).join(', ');
-  const existing = readFileSync(domainIndexPath, 'utf8');
+  const existing = readFileSync(resolvePath(domainIndexPath), 'utf8');
   writeFileSync(domainIndexPath, existing.trimEnd() + `\nexport { ${constNames} } from './types.gen';\n`);
 }
 
@@ -642,7 +642,7 @@ function patchTypesGenForNamedEnums(typesGenPath, namedEnums) {
     const entries = values.map(v => `  ${toConstKey(v)}: '${v}'`).join(',\n');
     return `export const ${name} = {\n${entries},\n} as const;\nexport type ${name} = (typeof ${name})[keyof typeof ${name}];`;
   });
-  const existing = readFileSync(typesGenPath, 'utf8');
+  const existing = readFileSync(resolvePath(typesGenPath), 'utf8');
   writeFileSync(typesGenPath, existing.trimEnd() + '\n\n' + blocks.join('\n\n') + '\n');
 }
 

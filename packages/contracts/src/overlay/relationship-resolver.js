@@ -1216,6 +1216,7 @@ function resolveExampleRelationships(examplesData, expandRenames, examplesIndex,
 }
 
 export {
+  resolveExternalDefRef,
   discoverRelationships,
   buildSchemaIndex,
   deriveLinkName,

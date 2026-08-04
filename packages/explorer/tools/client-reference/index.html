@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Safety Net Blueprint — Client Reference</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; font-size: 14px; line-height: 1.6; }
+    a { color: #5650BE; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12px; background: #F7EDE8; padding: 1px 5px; border-radius: 3px; border: 1px solid #E9CCBE; color: #2a2a2a; }
+    table { border-collapse: collapse; width: 100%; }
+    th { background: #F7EDE8; color: #1a1a1a; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 8px 12px; text-align: left; border-bottom: 2px solid #E9CCBE; }
+    td { padding: 10px 12px; border-bottom: 1px solid #E9CCBE; vertical-align: top; font-size: 13px; word-break: break-word; overflow-wrap: anywhere; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #F7EDE8; }
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    
+  </style>
+</head>
+<body>
+  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Client Reference</a></div>
+  
+  <div style="max-width:800px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
+    <h1 style="font-size:1.5rem;font-weight:800;color:#2B1A78;margin-bottom:0.375rem;">Client Reference</h1>
+    <p style="color:#666;margin-bottom:2rem;font-size:13px;">Generated TypeScript SDK clients — one per domain, generated from resolved OpenAPI specs.</p>
+    <div style="background:white;border:1px solid #E9CCBE;border-radius:8px;overflow:hidden;">
+    <a href="case-management.html" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem;padding:0.875rem 1rem;border-bottom:1px solid #E9CCBE;text-decoration:none;color:inherit;" onmouseover="this.style.background='#F7EDE8'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#2B1A78;margin-bottom:2px;">Case Management</div>
+        <code style="font-size:11px;color:#888;background:none;">packages/clients/generated/case-management</code>
+      </div>
+      <div style="font-size:11px;color:#aaa;white-space:nowrap;">5 methods · 7 types</div>
+    </a>
+    <a href="client-management.html" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem;padding:0.875rem 1rem;border-bottom:1px solid #E9CCBE;text-decoration:none;color:inherit;" onmouseover="this.style.background='#F7EDE8'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#2B1A78;margin-bottom:2px;">Client Management</div>
+        <code style="font-size:11px;color:#888;background:none;">packages/clients/generated/client-management</code>
+      </div>
+      <div style="font-size:11px;color:#aaa;white-space:nowrap;">5 methods · 2 types</div>
+    </a>
+    <a href="communication.html" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem;padding:0.875rem 1rem;border-bottom:1px solid #E9CCBE;text-decoration:none;color:inherit;" onmouseover="this.style.background='#F7EDE8'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#2B1A78;margin-bottom:2px;">Communication</div>
+        <code style="font-size:11px;color:#888;background:none;">packages/clients/generated/communication</code>
+      </div>
+      <div style="font-size:11px;color:#aaa;white-space:nowrap;">0 methods · 0 types</div>
+    </a>
+    <a href="data-exchange-adapter.html" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem;padding:0.875rem 1rem;border-bottom:1px solid #E9CCBE;text-decoration:none;color:inherit;" onmouseover="this.style.background='#F7EDE8'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#2B1A78;margin-bottom:2px;">Data Exchange Adapter</div>
+        <code style="font-size:11px;color:#888;background:none;">packages/clients/generated/data-exchange-adapter</code>
+      </div>
+      <div style="font-size:11px;color:#aaa;white-space:nowrap;">0 methods · 0 types</div>
+    </a>
+    <a href="data-exchange.html" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem;padding:0.875rem 1rem;border-bottom:1px solid #E9CCBE;text-decoration:none;color:inherit;" onmouseover="this.style.background='#F7EDE8'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#2B1A78;margin-bottom:2px;">Data Exchange</div>
+        <code style="font-size:11px;color:#888;background:none;">packages/clients/generated/data-exchange</code>
+      </div>
+      <div style="font-size:11px;color:#aaa;white-space:nowrap;">7 methods · 6 types</div>
+    </a>
+    <a href="document-management.html" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem;padding:0.875rem 1rem;border-bottom:1px solid #E9CCBE;text-decoration:none;color:inherit;" onmouseover="this.style.background='#F7EDE8'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#2B1A78;margin-bottom:2px;">Document Management</div>
+        <code style="font-size:11px;color:#888;background:none;">packages/clients/generated/document-management</code>
+      </div>
+      <div style="font-size:11px;color:#aaa;white-space:nowrap;">16 methods · 12 types</div>
+    </a>
+    <a href="eligibility-adapter.html" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem;padding:0.875rem 1rem;border-bottom:1px solid #E9CCBE;text-decoration:none;color:inherit;" onmouseover="this.style.background='#F7EDE8'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#2B1A78;margin-bottom:2px;">Eligibility Adapter</div>
+        <code style="font-size:11px;color:#888;background:none;">packages/clients/generated/eligibility-adapter</code>
+      </div>
+      <div style="font-size:11px;color:#aaa;white-space:nowrap;">3 methods · 11 types</div>
+    </a>
+    <a href="eligibility.html" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem;padding:0.875rem 1rem;border-bottom:1px solid #E9CCBE;text-decoration:none;color:inherit;" onmouseover="this.style.background='#F7EDE8'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#2B1A78;margin-bottom:2px;">Eligibility</div>
+        <code style="font-size:11px;color:#888;background:none;">packages/clients/generated/eligibility</code>
+      </div>
+      <div style="font-size:11px;color:#aaa;white-space:nowrap;">10 methods · 12 types</div>
+    </a>
+    <a href="intake.html" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem;padding:0.875rem 1rem;border-bottom:1px solid #E9CCBE;text-decoration:none;color:inherit;" onmouseover="this.style.background='#F7EDE8'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#2B1A78;margin-bottom:2px;">Intake</div>
+        <code style="font-size:11px;color:#888;background:none;">packages/clients/generated/intake</code>
+      </div>
+      <div style="font-size:11px;color:#aaa;white-space:nowrap;">129 methods · 126 types</div>
+    </a>
+    <a href="platform.html" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem;padding:0.875rem 1rem;border-bottom:1px solid #E9CCBE;text-decoration:none;color:inherit;" onmouseover="this.style.background='#F7EDE8'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#2B1A78;margin-bottom:2px;">Platform</div>
+        <code style="font-size:11px;color:#888;background:none;">packages/clients/generated/platform</code>
+      </div>
+      <div style="font-size:11px;color:#aaa;white-space:nowrap;">7 methods · 8 types</div>
+    </a>
+    <a href="scheduling.html" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem;padding:0.875rem 1rem;border-bottom:1px solid #E9CCBE;text-decoration:none;color:inherit;" onmouseover="this.style.background='#F7EDE8'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#2B1A78;margin-bottom:2px;">Scheduling</div>
+        <code style="font-size:11px;color:#888;background:none;">packages/clients/generated/scheduling</code>
+      </div>
+      <div style="font-size:11px;color:#aaa;white-space:nowrap;">5 methods · 6 types</div>
+    </a>
+    <a href="users.html" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem;padding:0.875rem 1rem;border-bottom:1px solid #E9CCBE;text-decoration:none;color:inherit;" onmouseover="this.style.background='#F7EDE8'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#2B1A78;margin-bottom:2px;">Identity Access</div>
+        <code style="font-size:11px;color:#888;background:none;">packages/clients/generated/users</code>
+      </div>
+      <div style="font-size:11px;color:#aaa;white-space:nowrap;">7 methods · 9 types</div>
+    </a>
+    <a href="workflow.html" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem;padding:0.875rem 1rem;border-bottom:1px solid #E9CCBE;text-decoration:none;color:inherit;" onmouseover="this.style.background='#F7EDE8'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#2B1A78;margin-bottom:2px;">Workflow</div>
+        <code style="font-size:11px;color:#888;background:none;">packages/clients/generated/workflow</code>
+      </div>
+      <div style="font-size:11px;color:#aaa;white-space:nowrap;">30 methods · 30 types</div>
+    </a></div>
+    
+    <a href="search-helpers.html" style="display:flex;align-items:center;justify-content:space-between;padding:0.875rem 1rem;background:white;border:1px solid #E9CCBE;border-radius:8px;text-decoration:none;color:inherit;margin-top:1rem;" onmouseover="this.style.background='#F7EDE8'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#2B1A78;margin-bottom:2px;">Search Helpers</div>
+        <code style="font-size:11px;color:#888;background:none;">packages/clients/utility/search-helpers.ts</code>
+      </div>
+    </a>
+  </div>
+  <script>
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    
+  </script>
+</body>
+</html>

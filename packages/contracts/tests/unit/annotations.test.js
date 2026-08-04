@@ -59,6 +59,29 @@ test('loadAnnotations', async (t) => {
     }
   });
 
+  await t.test('deep-merges same field path across files — does not overwrite', () => {
+    // Regression: Object.assign overwrote entire entries; spread merge combines per-key fields.
+    // A structured file (programs, policies) and a docs file (reason, modeling) for the same
+    // field path should both survive in the merged result.
+    const dir = createTmpDir();
+    try {
+      writeFileSync(join(dir, 'intake-annotations.yaml'), yaml.dump({
+        schema: { 'application.programs': { programs: ['snap'], policies: ['snap-cat'] } },
+      }));
+      writeFileSync(join(dir, 'intake-annotations-docs.yaml'), yaml.dump({
+        schema: { 'application.programs': { reason: 'Determines eligibility', modeling: 'Array of program codes' } },
+      }));
+      const result = loadAnnotations('intake', dir);
+      const entry = result.schema['application.programs'];
+      assert.deepStrictEqual(entry.programs, ['snap'], 'programs from first file should survive');
+      assert.deepStrictEqual(entry.policies, ['snap-cat'], 'policies from first file should survive');
+      assert.strictEqual(entry.reason, 'Determines eligibility', 'reason from second file should survive');
+      assert.strictEqual(entry.modeling, 'Array of program codes', 'modeling from second file should survive');
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
   await t.test('loads real intake annotations from contracts', () => {
     const result = loadAnnotations('intake');
     assert.ok(Object.keys(result.schema).length > 0, 'schema should have entries');

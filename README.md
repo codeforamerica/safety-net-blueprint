@@ -6,7 +6,7 @@ A systems integration blueprint for safety net benefits programs. Contract artif
 
 > **Frontend harness packages** (form engine, safety harness, harness designer) live in a separate repository: [codeforamerica/safety-net-harness](https://github.com/codeforamerica/safety-net-harness).
 
-**New here?** Start with the [Adoption Model](https://codeforamerica.github.io/safety-net-blueprint/packages/explorer/adoption-model/output/adoption-model.html) for a non-technical overview, the [Context Map](https://codeforamerica.github.io/safety-net-blueprint/packages/explorer/context-map/output/context-map.html) for a visual map of the system landscape, or the [Data Dictionary](https://codeforamerica.github.io/safety-net-blueprint/packages/explorer/data-explorer/output/data-dictionary.html) to browse the field-level data model.
+**New here?** Browse all diagrams and reference tools in the [Explorer hub](https://codeforamerica.github.io/safety-net-blueprint/packages/explorer/).
 
 ## About This Repository
 
@@ -66,6 +66,8 @@ This installs a hook that runs before every push. The hook rebuilds explorer out
 | `npm run mock:start:all` | Start mock server + Swagger UI |
 | `npm run validate` | Validate OpenAPI specs |
 | `npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>` | Resolve overlays against base specs |
+| `npm run build --workspace=packages/explorer` | Build all explorer reference tools |
+| `node packages/explorer/build.js --resolved=<dir> --clients=<dir>` | Build explorer from state-specific resolved specs |
 | `npm run api:new` | Scaffold a new API spec |
 | `npm run mock:reset` | Reset database to example data |
 | `npm test` | Run unit tests |

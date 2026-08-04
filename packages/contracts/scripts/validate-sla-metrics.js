@@ -18,7 +18,7 @@
  */
 
 import { readFileSync, readdirSync } from 'fs';
-import { resolve, join } from 'path';
+import { resolve, join, relative, isAbsolute } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import yaml from 'js-yaml';
@@ -54,9 +54,11 @@ export function buildCollectionSchemaMap(specsDir) {
 
   for (const file of files) {
     if (!file.endsWith('-openapi.yaml')) continue;
-    const specFilePath = join(specsDir, file);
+    const specFilePath = resolve(join(specsDir, file));
+    const slaRel = relative(resolve(specsDir), specFilePath);
+    if (slaRel.startsWith('..') || isAbsolute(slaRel)) continue;
     let spec;
-    try { spec = yaml.load(readFileSync(specFilePath, 'utf8')); } catch { continue; }
+    try { spec = yaml.load(readFileSync(specFilePath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA }); } catch { continue; }
     if (!spec?.paths) continue;
 
     for (const [path, pathItem] of Object.entries(spec.paths)) {
