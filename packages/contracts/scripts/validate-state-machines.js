@@ -72,7 +72,7 @@ function discoverStateMachines(specDir) {
     const rel = relative(base, target);
     if (rel.startsWith('..') || isAbsolute(rel)) continue;
     try {
-      const doc = yaml.load(readFileSync(target, 'utf8'));
+      const doc = yaml.load(readFileSync(target, 'utf8'), { schema: yaml.DEFAULT_SCHEMA });
       if (!doc || typeof doc !== 'object') continue;
       // Use $schema as the type discriminator, not the filename convention
       const schemaBasename = doc.$schema?.split('/').pop();
