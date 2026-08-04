@@ -8,13 +8,11 @@ import { parseCliArgs } from './cli-utils.js';
 import { FONT, PALETTE, box, arrow, wrapSvgAsHtml, escapeXml } from './diagram-utils.js';
 
 function printUsage() {
-  console.error('Usage: node src/visualize-rules.js <project.json> [--out <file.html>]');
-  console.error('  <project.json> is the output of ANY phase script that carries the project through --');
-  console.error('  ingest-project.js --out (the project itself), or graph-project.js/classify-project.js/');
-  console.error('  translate-project.js --out (each wraps it as { project, ... }).');
+  console.error('Usage: node src/visualize-rules.js <classified.json> [--out <file.html>]');
+  console.error('  <classified.json> is the output of classify-project.js (contains { project, classification }).');
   console.error('  --out defaults to generated/rules-diagram.html');
-  console.error('Example: node src/ingest-project.js fixtures/all-patterns --out generated/all-patterns.json');
-  console.error('         node src/visualize-rules.js generated/all-patterns.json --out generated/all-patterns-diagram.html');
+  console.error('Example: node src/classify-project.js fixtures/all-patterns --out generated/all-patterns-classified.json');
+  console.error('         node src/visualize-rules.js generated/all-patterns-classified.json --out generated/all-patterns-diagram.html');
 }
 
 /** Every rulesheet/ruleflow map used below expects Map.get() -- normalize the JSON-deserialized plain-object shape (or the still-live Map, either is possible depending which phase's --out this came from) into real Maps once, up front. */
@@ -85,6 +83,93 @@ function resolveInvokes(invokes, fromKey, ruleflowKeys, rulesheetKeys) {
 }
 
 /**
+ * Builds two lookup maps from a classification result:
+ * - rulesheetPatterns: rulesheet key -> string[] of structural patterns (shown as box sublabel)
+ * - rulePatterns: `${rulesheetKey}#${rawRuleIndex}` -> string[] of semantic patterns (shown in rule name line)
+ *
+ * Rulesheet-level patterns: collection-filter, fact-assembly, decision-table,
+ * entity-creation, iterative-convergence, unreachable-rulesheet, plus filter-level
+ * expression patterns (date-arithmetic, decimal-rounding, sort-ranking) where no
+ * specific rule index applies.
+ * Rule-level patterns: null-default, genuine-cycle, decision-table-alt-row,
+ * date-arithmetic, decimal-rounding, sort-ranking. explicit-override is detected
+ * directly from rule data in rulesheetDetailLines and always shown at rule level.
+ */
+function buildPatternMaps(classification, ruleflowContext) {
+  const rulesheetPatterns = new Map();
+  const rulePatterns = new Map();
+
+  function addRulesheet(key, pattern) {
+    if (!rulesheetPatterns.has(key)) rulesheetPatterns.set(key, []);
+    if (!rulesheetPatterns.get(key).includes(pattern)) rulesheetPatterns.get(key).push(pattern);
+  }
+
+  function addRule(rulesheetKey, rawIndex, pattern) {
+    const k = `${rulesheetKey}#${rawIndex}`;
+    if (!rulePatterns.has(k)) rulePatterns.set(k, []);
+    if (!rulePatterns.get(k).includes(pattern)) rulePatterns.get(k).push(pattern);
+  }
+
+  // collection-filter: any rulesheet that has at least one filter
+  for (const { rulesheet } of classification.filters ?? []) {
+    addRulesheet(rulesheet, 'collection-filter');
+  }
+
+  // fact-assembly: each rulesheet that writes to a path also written by another
+  for (const { rulesheets } of classification.crossRulesheetAssembly ?? []) {
+    for (const rs of rulesheets ?? []) addRulesheet(rs, 'fact-assembly');
+  }
+
+  // decision-table: rulesheet where multiple rules write the same attribute path
+  for (const { rulesheet } of classification.decisionTableCombinatorics ?? []) {
+    addRulesheet(rulesheet, 'decision-table');
+  }
+
+  // entity-creation: rulesheet that creates or adds a new entity/association
+  for (const { rulesheet } of classification.entityCreation ?? []) {
+    addRulesheet(rulesheet, 'entity-creation');
+  }
+
+  // iterative-convergence: rulesheet invoked from an iterative (loop) node
+  for (const [rsKey, ctx] of ruleflowContext.perRulesheet ?? []) {
+    if (ctx.iterative) addRulesheet(rsKey, 'iterative-convergence');
+  }
+
+  // unreachable-rulesheet: never reached from any ruleflow
+  for (const rsKey of classification.ruleflowContext?.unreachableRulesheets ?? []) {
+    addRulesheet(rsKey, 'unreachable-rulesheet');
+  }
+
+  // Self-loop rule-level patterns (keyed by rulesheet + rawRuleIndex)
+  const selfLoopKindMap = {
+    'null-check-masking': 'null-default',
+    'genuine-cycle': 'genuine-cycle',
+    'decision-table-alternative-row': 'decision-table-alt-row',
+  };
+  for (const { rulesheet, ruleIndex, classification: cls } of classification.selfLoops ?? []) {
+    addRule(rulesheet, ruleIndex, selfLoopKindMap[cls] ?? cls);
+  }
+
+  // Expression pattern rule-level patterns (date-arithmetic, decimal-rounding, sort-ranking)
+  const exprKindMap = {
+    'date-arithmetic': 'date-arithmetic',
+    'currency-rounding': 'decimal-rounding',
+    'sorting': 'sort-ranking',
+  };
+  for (const { rulesheet, ruleIndex, kind } of classification.expressionPatterns ?? []) {
+    const pattern = exprKindMap[kind] ?? kind;
+    if (ruleIndex === null) {
+      // filter-level (no specific rule): surface at rulesheet level
+      addRulesheet(rulesheet, pattern);
+    } else {
+      addRule(rulesheet, ruleIndex, pattern);
+    }
+  }
+
+  return { rulesheetPatterns, rulePatterns };
+}
+
+/**
  * One "IF <conditions>" line and one line per real action per real rule (blank
  * template row excluded) -- this is the actual rule content the diagram exists to
  * show, not just which rulesheets exist. NEVER wrapped -- see boxWidthFor, which
@@ -115,13 +200,13 @@ function describeRuleRefs(rawIndices, displayIndexByRawIndex) {
     .join(', ');
 }
 
-function rulesheetDetailLines(rulesheet) {
+function rulesheetDetailLines(rulesheet, rulesheetKey, rulePatterns, rulesheetPatterns) {
   const displayIndexByRawIndex = new Map();
   const realRules = [];
   rulesheet.rules.forEach((rule, rawIndex) => {
     if (isBlankTemplateRule(rule)) return;
     displayIndexByRawIndex.set(rawIndex, realRules.length);
-    realRules.push(rule);
+    realRules.push({ rule, rawIndex });
   });
   const lines = [];
   if (rulesheet.description) lines.push(rulesheet.description, '');
@@ -137,14 +222,29 @@ function rulesheetDetailLines(rulesheet) {
   // confusion than clarity, not less. A real Override IS shown explicitly, though
   // -- it's not implied by the rule's own condition text the way Case/Default was,
   // so leaving it out would hide a real, load-bearing priority relationship.
-  realRules.forEach((rule, i) => {
+  const rsPatternSet = new Set(rulesheetKey && rulesheetPatterns ? (rulesheetPatterns.get(rulesheetKey) ?? []) : []);
+  realRules.forEach(({ rule, rawIndex: ruleRawIndex }, i) => {
     const realConditions = rule.conditions.filter(Boolean);
     const conditions = realConditions.length > 1 ? realConditions.map((c) => `(${c.text})`).join(' AND ') : realConditions[0]?.text;
     const overrideParts = [];
     if (rule.overrides) overrideParts.push(`overrides ${describeRuleRefs(rule.overrides, displayIndexByRawIndex)}`);
     if (rule.overriddenBy) overrideParts.push(`overridden by ${describeRuleRefs(rule.overriddenBy, displayIndexByRawIndex)}`);
     const overrideSuffix = overrideParts.length ? ` [${overrideParts.join('; ')}]` : '';
-    const name = (rule.comment ? rule.comment.text : `Rule ${i}`) + overrideSuffix;
+
+    // Rule-level semantic patterns: from the classifier, plus explicit-override for
+    // any rule that carries a priority relationship (always shown even though the
+    // override refs are already in overrideSuffix -- the pattern label makes the
+    // classification explicit). Only show patterns not already visible at rulesheet
+    // level (i.e. not in the box sublabel), except explicit-override which is
+    // always rule-level.
+    const ruleLevelPatterns = rulesheetKey && rulePatterns ? [...(rulePatterns.get(`${rulesheetKey}#${ruleRawIndex}`) ?? [])] : [];
+    if ((rule.overrides?.length || rule.overriddenBy?.length) && !ruleLevelPatterns.includes('explicit-override')) {
+      ruleLevelPatterns.push('explicit-override');
+    }
+    const distinctPatterns = ruleLevelPatterns.filter((p) => p === 'explicit-override' || !rsPatternSet.has(p));
+    const patternSuffix = distinctPatterns.length ? ` [${distinctPatterns.join(', ')}]` : '';
+
+    const name = (rule.comment ? rule.comment.text : `Rule ${i}`) + overrideSuffix + patternSuffix;
     lines.push(`${name}:`);
     // "THEN" only makes sense completing an "IF" -- an unconditional rule (no real
     // conditions at all, confirmed real: CreateHouseholds.ers/InitialBenefit.ers
@@ -242,7 +342,7 @@ function layoutVocabulary(project, originX, originY) {
  * stack-and-fork layout sufficient here. A project with deeper/wider branching
  * would need a real graph-layout library, not this.
  */
-function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, originX, originY, visited) {
+function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, originX, originY, visited, rulesheetPatterns, rulePatterns) {
   const svg = [];
   let y = originY;
   let maxWidth = BOX_W;
@@ -295,11 +395,13 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
       const resolved = resolveInvokes(node.invokes, ruleflowKey, ruleflowKeys, rulesheetKeys);
       if (resolved.kind === 'rulesheet') {
         const rulesheet = project.rulesheets.get(resolved.file);
+        const rsPatterns = rulesheetPatterns?.get(resolved.file);
+        const sublabel = rsPatterns?.length ? rsPatterns.join(', ') : null;
         const label = `${node.iterative ? `${node.name} [LOOP]` : node.name} (${resolved.file})`;
-        const lines = rulesheetDetailLines(rulesheet);
-        const w = boxWidthFor(label, null, lines);
+        const lines = rulesheetDetailLines(rulesheet, resolved.file, rulePatterns, rulesheetPatterns);
+        const w = boxWidthFor(label, sublabel, lines);
         if (!entryXCaptured) { entryX = originX + w / 2; entryXCaptured = true; }
-        const { svg: s, height } = box(originX, y, w, label, null, lines, COLOR.rulesheet, false);
+        const { svg: s, height } = box(originX, y, w, label, sublabel, lines, COLOR.rulesheet, false);
         if (node.iterative) {
           svg.push(`<rect x="${originX - 10}" y="${y - 10}" width="${w + 20}" height="${height + 20}" rx="10" fill="none" stroke="${COLOR.loopBorder}" stroke-width="1.5" stroke-dasharray="6,4"/>`);
         }
@@ -318,7 +420,7 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
         // here, on top of the ordinary V_GAP already applied by whatever produced
         // this `y`, specifically for this case.
         if (node.iterative) y += 24;
-        const nested = layoutRuleflow(project, resolved.file, ruleflowKeys, rulesheetKeys, originX, y, visited);
+        const nested = layoutRuleflow(project, resolved.file, ruleflowKeys, rulesheetKeys, originX, y, visited, rulesheetPatterns, rulePatterns);
         if (!entryXCaptured) { entryX = nested.entryX; entryXCaptured = true; }
         if (node.iterative) {
           svg.push(`<rect x="${originX - 14}" y="${y - 14}" width="${nested.width + 28}" height="${nested.height + 28}" rx="12" fill="none" stroke="${COLOR.loopBorder}" stroke-width="2" stroke-dasharray="6,4"/>`);
@@ -384,11 +486,13 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
           const resolved = resolveInvokes(target.invokes, ruleflowKey, ruleflowKeys, rulesheetKeys);
           if (resolved.kind !== 'rulesheet') continue;
           const rulesheet = project.rulesheets.get(resolved.file);
-          const lines = rulesheetDetailLines(rulesheet);
+          const rsPatterns = rulesheetPatterns?.get(resolved.file);
+          const sublabel = rsPatterns?.length ? rsPatterns.join(', ') : null;
+          const lines = rulesheetDetailLines(rulesheet, resolved.file, rulePatterns, rulesheetPatterns);
           const targetLabel = `${target.name} (${resolved.file})`;
-          const w = boxWidthFor(targetLabel, null, lines);
+          const w = boxWidthFor(targetLabel, sublabel, lines);
           branchColW = Math.max(branchColW, w);
-          const { svg: ts, height: th } = box(branchX, by, w, targetLabel, null, lines, COLOR.rulesheet, false);
+          const { svg: ts, height: th } = box(branchX, by, w, targetLabel, sublabel, lines, COLOR.rulesheet, false);
           if (branchPrevExit) svg.push(arrow(branchPrevExit.x, branchPrevExit.y, branchX + w / 2, by));
           svg.push(ts);
           branchPrevExit = { x: branchX + w / 2, y: by + th };
@@ -461,7 +565,7 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
   };
 }
 
-function renderDiagram(project, context) {
+function renderDiagram(project, context, rulesheetPatterns, rulePatterns) {
   const ruleflowKeys = [...project.ruleflows.keys()];
   const rulesheetKeys = [...project.rulesheets.keys()];
   const visited = new Set();
@@ -478,7 +582,7 @@ function renderDiagram(project, context) {
   maxWidth = Math.max(maxWidth, vocab.width);
 
   for (const root of context.roots) {
-    const laid = layoutRuleflow(project, root, ruleflowKeys, rulesheetKeys, PAD, y, visited);
+    const laid = layoutRuleflow(project, root, ruleflowKeys, rulesheetKeys, PAD, y, visited, rulesheetPatterns, rulePatterns);
     blocks.push(laid.svg);
     y = laid.exitY + V_GAP * 2;
     maxWidth = Math.max(maxWidth, laid.width);
@@ -488,9 +592,11 @@ function renderDiagram(project, context) {
     blocks.push(`<text x="${PAD}" y="${y}" font-size="13" font-weight="700" fill="#374151" font-family="${FONT}">Unreachable (never invoked):</text>`);
     let uy = y + 20;
     for (const key of context.unreachable) {
-      const lines = rulesheetDetailLines(project.rulesheets.get(key));
-      const w = boxWidthFor(`${key} — dead content`, null, lines);
-      const { svg: s, height } = box(PAD, uy, w, `${key} — dead content`, null, lines, COLOR.unreachable, true);
+      const rsPatterns = rulesheetPatterns?.get(key);
+      const sublabel = rsPatterns?.length ? rsPatterns.join(', ') : null;
+      const lines = rulesheetDetailLines(project.rulesheets.get(key), key, rulePatterns, rulesheetPatterns);
+      const w = boxWidthFor(`${key} — dead content`, sublabel, lines);
+      const { svg: s, height } = box(PAD, uy, w, `${key} — dead content`, sublabel, lines, COLOR.unreachable, true);
       blocks.push(s);
       maxWidth = Math.max(maxWidth, PAD + w);
       uy += height + 16;
@@ -510,9 +616,12 @@ if (!args) {
   process.exit(0);
 }
 
-const project = normalizeProject(JSON.parse(readFileSync(args.positional, 'utf-8')));
+const raw = JSON.parse(readFileSync(args.positional, 'utf-8'));
+const project = normalizeProject(raw);
+const classification = raw.classification ?? {};
 const context = resolveRuleflowContext(project);
-const html = renderDiagram(project, context);
+const { rulesheetPatterns, rulePatterns } = buildPatternMaps(classification, context);
+const html = renderDiagram(project, context, rulesheetPatterns, rulePatterns);
 const outFile = args.outFile ?? 'generated/rules-diagram.html';
 writeFileSync(outFile, html);
 console.log(`Wrote diagram to ${outFile}`);
