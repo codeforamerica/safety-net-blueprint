@@ -42,7 +42,17 @@ A rulesheet is a **decision table** — think of a spreadsheet where each row is
 columns are split into conditions (checks) and actions (what to set).
 
 - **Rule** — one row of the table: a set of conditions, and the actions to run if they're all
-  true.
+  true. **The first rule in every rulesheet is always a blank "documenting" placeholder** — a
+  template row that Corticon Studio inserts automatically and never removes. It holds no conditions
+  or actions; real rules start at index 1. Code that iterates over rules must skip this row
+  explicitly (see `isBlankTemplateRule` in `rulesheet.js`).
+- **Override** — an explicit priority relationship between two rules in the same rulesheet. When
+  the overriding rule's condition is met, its action takes effect and the overridden rule's action
+  is suppressed, even if the overridden rule's condition would also be true. Corticon's default
+  guarantee (Design-Time Inferencing, DTI) is that rules in the same rulesheet are mutually
+  exclusive — if two rules can both fire on the same data, Corticon flags it as a conflict at
+  authoring time. An Override is how a rule author intentionally resolves that conflict with a
+  declared priority instead.
 - **Condition** — a check, like `Household.totalIncome < 20000`.
 - **Action** — something the rule sets, like `Applicant.isEligible = true`.
 - **`parserOutput`** — Corticon's own already-parsed expression tree for a condition or action,
@@ -79,8 +89,16 @@ conditions.
 - **`iterative`** — a plain yes/no flag on a step, meaning "keep re-running this until nothing
   changes anymore." This is how Corticon expresses a loop — there's no separate "loop" node type,
   just this flag on an ordinary step.
-- **`connectorList`** — a call out to an external system (a database lookup, a web service, etc.)
-  in the middle of rule evaluation, instead of just computing from data already on hand.
+- **Service Call-Out / `connectorList`** — a call out to an external system (a database lookup, a
+  web service, etc.) in the middle of rule evaluation. In Corticon Studio this is called a "Service
+  Call-Out." In the `.erf` file it appears as a `connectorList` entry on the ruleflow, with two
+  fields: `className` (the JavaScript file that implements the call, e.g.
+  `FetchServiceCallout.js`) and `serviceName` (the method to invoke on that class, e.g.
+  `fetchURL`). An `ActivityNode` that performs a service call-out references the connector by
+  index (`invokes="#//@ruleflow/@connectorList.0"`) rather than by a rulesheet filename. The
+  service runs mid-evaluation and its outputs are merged back into the working data before any
+  subsequent rules run — from the rules' perspective, the service result looks like any other
+  input Fact.
 
 ## Ruletest (`.ert`)
 
