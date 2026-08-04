@@ -156,6 +156,10 @@ function buildPatternMaps(classification, ruleflowContext) {
     'date-arithmetic': 'date-arithmetic',
     'currency-rounding': 'decimal-rounding',
     'sorting': 'sort-ranking',
+    'operator-precedence': 'operator-precedence',
+    'logical-keywords': 'logical-keywords',
+    'range-membership': 'range-membership',
+    'type-conversion': 'type-conversion',
   };
   for (const { rulesheet, ruleIndex, kind } of classification.expressionPatterns ?? []) {
     const pattern = exprKindMap[kind] ?? kind;

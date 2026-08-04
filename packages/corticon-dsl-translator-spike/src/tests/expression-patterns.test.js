@@ -8,6 +8,10 @@ import {
   actionUsesCurrencyRounding,
   isSortingOperation,
   usesSortingOperation,
+  cellUsesCompoundArithmetic,
+  cellUsesLogicalKeywords,
+  cellUsesRangeMembership,
+  cellUsesTypeConversion,
   classifyExpressionPatterns,
 } from '../classify/expression-patterns.js';
 
@@ -90,4 +94,54 @@ test('classifyExpressionPatterns surfaces IRR\'s real filter-level sorting via t
   assert.equal(results.length, 1);
   assert.equal(results[0].kind, 'sorting');
   assert.equal(results[0].ruleIndex, null);
+});
+
+test('detects compound arithmetic in this fixture\'s own operator-precedence.ers', () => {
+  const r = parseRulesheet('fixtures/all-patterns/operator-precedence.ers');
+  const allCells = r.rules.flatMap((rule) => [...rule.conditions, ...rule.actions].filter(Boolean));
+  assert.ok(allCells.some(cellUsesCompoundArithmetic));
+});
+
+test('a plain string concatenation with only + operators is not mistaken for compound arithmetic', () => {
+  const r = parseRulesheet('fixtures/all-patterns/type-conversion.ers');
+  const allCells = r.rules.flatMap((rule) => [...rule.conditions, ...rule.actions].filter(Boolean));
+  assert.equal(allCells.some(cellUsesCompoundArithmetic), false, '+ without * or / is not mixed-precedence arithmetic');
+});
+
+test('detects logical keywords (and/or/not) in this fixture\'s own logical-operators.ers', () => {
+  const r = parseRulesheet('fixtures/all-patterns/logical-operators.ers');
+  const allCells = r.rules.flatMap((rule) => [...rule.conditions, ...rule.actions].filter(Boolean));
+  const matches = allCells.filter(cellUsesLogicalKeywords);
+  assert.ok(matches.length > 0);
+  assert.ok(matches.some((c) => /\band\b/.test(c.text)));
+  assert.ok(matches.some((c) => /\bnot\b/.test(c.text)));
+});
+
+test('a plain comparison condition is never mistaken for a logical keyword', () => {
+  const r = parseRulesheet('fixtures/all-patterns/decision-table.ers');
+  const allCells = r.rules.flatMap((rule) => [...rule.conditions, ...rule.actions].filter(Boolean));
+  assert.equal(allCells.some(cellUsesLogicalKeywords), false);
+});
+
+test('detects range-membership syntax in this fixture\'s own range-membership.ers', () => {
+  const r = parseRulesheet('fixtures/all-patterns/range-membership.ers');
+  const allCells = r.rules.flatMap((rule) => [...rule.conditions, ...rule.actions].filter(Boolean));
+  const matches = allCells.filter(cellUsesRangeMembership);
+  assert.equal(matches.length, 3, 'one range condition per real rule: [0..17], [18..64], [65..150)');
+});
+
+test('detects type conversion (.toString()) in this fixture\'s own type-conversion.ers', () => {
+  const r = parseRulesheet('fixtures/all-patterns/type-conversion.ers');
+  const allCells = r.rules.flatMap((rule) => [...rule.conditions, ...rule.actions].filter(Boolean));
+  assert.ok(allCells.some(cellUsesTypeConversion));
+});
+
+test('classifyExpressionPatterns finds all four new kinds in the all-patterns fixture', () => {
+  const project = loadProject('fixtures/all-patterns');
+  const results = classifyExpressionPatterns(project);
+  const byKind = (kind) => results.filter((r) => r.kind === kind);
+  assert.ok(byKind('operator-precedence').some((r) => r.rulesheet === 'operator-precedence.ers'));
+  assert.ok(byKind('logical-keywords').some((r) => r.rulesheet === 'logical-operators.ers'));
+  assert.ok(byKind('range-membership').some((r) => r.rulesheet === 'range-membership.ers'));
+  assert.ok(byKind('type-conversion').some((r) => r.rulesheet === 'type-conversion.ers'));
 });

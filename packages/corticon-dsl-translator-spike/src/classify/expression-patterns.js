@@ -79,12 +79,57 @@ export function usesSortingOperation(cell) {
 }
 
 /**
+ * True if this cell uses compound arithmetic where operator precedence matters --
+ * confirmed real: this fixture's own operator-precedence.ers uses
+ * `incomeRounded - incomeRounded * 0.2`, where * binds before -.
+ * Detected via mixed additive (+/-) and multiplicative (*,/) binary operators in
+ * the raw expression text; space on both sides distinguishes binary from unary,
+ * and avoids matching the -> collection-navigation operator.
+ */
+export function cellUsesCompoundArithmetic(cell) {
+  const text = cell?.text ?? cell?.expression ?? '';
+  return /\s[-+]\s/.test(text) && /\s[*\/]\s/.test(text);
+}
+
+/**
+ * True if this cell uses Corticon logical keywords (and/or/not) -- confirmed real:
+ * this fixture's own logical-operators.ers uses `and`, `or`, and `not` as compound
+ * condition connectives. Whole-word boundaries prevent false-positives on attribute
+ * names that happen to contain these substrings (e.g. "standard", "annotation").
+ */
+export function cellUsesLogicalKeywords(cell) {
+  return /\b(and|or|not)\b/.test(cell?.text ?? cell?.expression ?? '');
+}
+
+/**
+ * True if this cell uses Corticon range-membership syntax (X in [lo..hi]) --
+ * confirmed real: this fixture's own range-membership.ers uses `age in [0..17]`,
+ * `age in [18..64]`, and `age in [65..150)`. Detected via the `in` keyword
+ * followed by a bracket and the `..` range separator.
+ */
+export function cellUsesRangeMembership(cell) {
+  const text = cell?.text ?? cell?.expression ?? '';
+  return /\bin\s*[\[(]/.test(text) && /\.\./.test(text);
+}
+
+/**
+ * True if this cell uses a Corticon type-conversion method (.toString(),
+ * .toDecimal(), .toDate(), etc.) -- confirmed real: this fixture's own
+ * type-conversion.ers uses `age.toString()` in an action. Detected via the raw
+ * expression text since Corticon does not emit a METHOD term for the conversion
+ * call -- the parsed term tree only shows the attribute being converted, not the
+ * method applied to it.
+ */
+export function cellUsesTypeConversion(cell) {
+  return /\.(toString|toDecimal|toDate|toInteger|toBoolean|toNumber)\s*\(/i.test(cell?.text ?? cell?.expression ?? '');
+}
+
+/**
  * Scans every rule's conditions/actions, plus every rulesheet's own filters, across a
- * whole project and surfaces each real date-arithmetic, currency-rounding, or
- * sorting/ranking match found -- the project-wide entry point classify-project.js
- * uses, built on the same per-term/per-cell detectors above (including their raw-text
- * fallbacks, so a project-level scan doesn't lose the compound-expression/filter-level
- * cases those fallbacks exist for).
+ * whole project and surfaces each expression-level pattern match found -- the
+ * project-wide entry point classify-project.js uses, built on the same per-term/per-cell
+ * detectors above (including their raw-text fallbacks, so a project-level scan doesn't
+ * lose the compound-expression/filter-level cases those fallbacks exist for).
  */
 export function classifyExpressionPatterns(project) {
   const result = [];
@@ -99,6 +144,18 @@ export function classifyExpressionPatterns(project) {
         }
         if (usesSortingOperation(cell)) {
           result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'sorting', expression: cell.text });
+        }
+        if (cellUsesCompoundArithmetic(cell)) {
+          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'operator-precedence', expression: cell.text });
+        }
+        if (cellUsesLogicalKeywords(cell)) {
+          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'logical-keywords', expression: cell.text });
+        }
+        if (cellUsesRangeMembership(cell)) {
+          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'range-membership', expression: cell.text });
+        }
+        if (cellUsesTypeConversion(cell)) {
+          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'type-conversion', expression: cell.text });
         }
       }
     });
