@@ -17,6 +17,7 @@ export const PALETTE = {
   teal: { fill: '#E2F9F6', stroke: '#00AD93' },
   purple: { fill: '#E6EBF9', stroke: '#5650BE' },
   navy: { fill: 'rgba(43,26,120,0.08)', stroke: '#2B1A78' },
+  amber: { fill: '#FFF8E1', stroke: '#E65100' },
   tan: { fill: '#F3F3F3', stroke: '#E9CCBE' },
   flag: '#AF121D',
 };

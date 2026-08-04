@@ -53,8 +53,13 @@ export function isBlankTemplateRule(rule) {
 // confirmed real, and the only form seen: `documentingRuleStatements`,
 // `ruleModelElements`, etc. all use it.
 function refIndex(ref) {
-  const match = /\.(\d+)$/.exec(ref ?? '');
-  return match ? Number(match[1]) : undefined;
+  if (ref == null) return undefined;
+  // documentingRuleStatements is a plain integer ("0"), while overrides/overriddenBy
+  // are EMF ref paths ("#//@ruleset/@rules.1") -- handle both forms.
+  const emfMatch = /\.(\d+)$/.exec(ref);
+  if (emfMatch) return Number(emfMatch[1]);
+  const plainMatch = /^\d+$/.exec(ref.trim());
+  return plainMatch ? Number(ref.trim()) : undefined;
 }
 
 // `overrides`/`overriddenBy` are space-separated lists of the same EMF ref shape
@@ -150,11 +155,21 @@ export function parseRulesheet(filePath) {
     };
   });
 
+  // Sheet-level description: if the blank template rule (rules.0) carries a
+  // documentingRuleStatements link, treat that statement as the rulesheet description.
+  // Linking to rules.0 is the real Corticon convention -- the same per-rule link
+  // used in vendored fixtures (Regular_NoData.ers), just targeting the template
+  // row which is never displayed, so the description appears at sheet level only.
+  const templateRule = asArray(ruleset?.rule)[0];
+  const templateStatementIndex = refIndex(templateRule?.['@_documentingRuleStatements']);
+  const description = templateStatementIndex !== undefined ? ruleStatements[templateStatementIndex]?.text : undefined;
+
   return {
     vocabulary: ruleset?.['@_vocabulary'],
     rules,
     filters: extractFilters(root?.rulesheetViewList),
     actionColumns: extractColumnDefinitions(root?.rulesheetViewList?.actionSection?.actionItemList),
     conditionColumns: extractColumnDefinitions(root?.rulesheetViewList?.conditionSection?.conditionItemList),
+    description,
   };
 }

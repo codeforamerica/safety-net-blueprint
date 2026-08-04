@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<com.corticon.rulesemf.assetmodel:RulesheetAsset xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:com.corticon.rulesemf.asg="http:///com/corticon/rulesemf/asg.ecore" xmlns:com.corticon.rulesemf.assetmodel="http:///com/corticon/rulesemf/assetmodel.ecore" majorVersionNumber="2" buildNumber="8020" updateStamp="_ap0000000000000011" externalChecksum="0:0:0" studioType="Javascript">
+  <languageCode>en_US</languageCode>
+  <ruleset vocabularyUpdateStamp="_ap0000000000000000" vocabulary="vocab.ecore#/">
+    <ruleStatement post="Info" ruleModelElements="#//@ruleset/@rules.0">
+      <text expression="Defaults expedited SNAP to false; overrides to true when income is under $150 and assets are $100 or less">
+        <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Defaults expedited SNAP to false; overrides to true when income is under $150 and assets are $100 or less" expressiontype="BRSTATEMENT">
+          <referencedTermList/>
+        </parserOutput>
+      </text>
+    </ruleStatement>
+
+    <rule documentingRuleStatements="0"/>
+    <rule overriddenBy="#//@ruleset/@rules.2">
+      <action>
+        <opaqueExpression expression="ApplicationMember.isExpeditedSnap = false">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="ApplicationMember.isExpeditedSnap = false" datatype="Boolean" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
+            <modifiedTermList>
+              <terms text="isExpeditedSnap" datatype="Boolean" termtype="ATTRIBUTE" fulltext="ApplicationMember.isExpeditedSnap">
+                <parentTerm text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </modifiedTermList>
+            <referencedTermList>
+              <terms text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </action>
+    </rule>
+    <rule overrides="#//@ruleset/@rules.1">
+      <condition>
+        <opaqueExpression expression="Application.totalIncome &lt; 150 and ApplicationMember.reportedAssets &lt;= 100">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.totalIncome &lt; 150 and ApplicationMember.reportedAssets &lt;= 100" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <referencedTermList>
+              <terms text="totalIncome" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.totalIncome">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.1"/>
+              </terms>
+              <terms text="reportedAssets" datatype="Decimal" termtype="ATTRIBUTE" fulltext="ApplicationMember.reportedAssets">
+                <parentTerm text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </condition>
+      <action>
+        <opaqueExpression expression="ApplicationMember.isExpeditedSnap = true">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="ApplicationMember.isExpeditedSnap = true" datatype="Boolean" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
+            <modifiedTermList>
+              <terms text="isExpeditedSnap" datatype="Boolean" termtype="ATTRIBUTE" fulltext="ApplicationMember.isExpeditedSnap">
+                <parentTerm text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </modifiedTermList>
+            <referencedTermList>
+              <terms text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </action>
+    </rule>
+    <logicalVariable explicit="true" entity="vocab.ecore#//ApplicationMember">
+      <alias value="ApplicationMember"/>
+    </logicalVariable>
+    <logicalVariable entity="vocab.ecore#//Application">
+      <alias value="Application"/>
+    </logicalVariable>
+  </ruleset>
+  <rulesheetViewList xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:DecisionTable">
+    <actionSection rowCount="50" columnWidthFactor="0.5"/>
+    <scopeSection>
+      <rootNode>
+        <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeEntity" logicalVariable="#//@ruleset/@logicalVariables.0"/>
+        <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeEntity" logicalVariable="#//@ruleset/@logicalVariables.1"/>
+      </rootNode>
+    </scopeSection>
+    <filterSection rowCount="50"/>
+    <ruleStatementSection rowCount="50"/>
+    <conditionSection rowCount="50" columnWidthFactor="0.5"/>
+    <ruleSection columnCount="20">
+      <ruleColumnList ruleId="0" pRule="#//@ruleset/@rules.0"/>
+      <ruleColumnList ruleId="1" pRule="#//@ruleset/@rules.1"/>
+      <ruleColumnList ruleId="2" pRule="#//@ruleset/@rules.2"/>
+    </ruleSection>
+  </rulesheetViewList>
+</com.corticon.rulesemf.assetmodel:RulesheetAsset>

@@ -33,7 +33,7 @@ function normalizeProject(raw) {
 const COLOR = {
   rulesheet: PALETTE.teal,
   branch: PALETTE.purple,
-  serviceCallout: PALETTE.navy,
+  serviceCallout: PALETTE.amber,
   unreachable: PALETTE.tan,
   loopBorder: PALETTE.flag,
   // No PALETTE color left unused by the rule-flow boxes above -- a plain
@@ -68,7 +68,10 @@ function toPosix(p) {
 
 function resolveInvokes(invokes, fromKey, ruleflowKeys, rulesheetKeys) {
   if (!invokes) return { kind: 'unknown', file: null };
-  if (invokes.startsWith('#//@ruleflow/@connectorList')) return { kind: 'connector', file: null };
+  if (invokes.startsWith('#//@ruleflow/@connectorList')) {
+    const match = invokes.match(/@connectorList\.(\d+)/);
+    return { kind: 'connector', file: null, connectorIndex: match ? Number(match[1]) : 0 };
+  }
   const hashIndex = invokes.indexOf('#//@');
   const rawPath = hashIndex >= 0 ? invokes.slice(0, hashIndex) : invokes;
   const decodedPath = decodeURIComponent(rawPath);
@@ -121,6 +124,7 @@ function rulesheetDetailLines(rulesheet) {
     realRules.push(rule);
   });
   const lines = [];
+  if (rulesheet.description) lines.push(rulesheet.description, '');
   // Multiple rules in one rulesheet are NOT sequential if/elseif -- Corticon's
   // decision-table model treats them as independent alternative rows, and its
   // default guarantee (Design-Time-Inferencing) requires them to be mutually
@@ -171,12 +175,23 @@ function rulesheetDetailLines(rulesheet) {
  * fallback that turned out to be masking a real extraction failure: a fallback for
  * data that should always be resolvable hides the bug instead of surfacing it.
  */
-function entityAttributeLines(entity) {
+function entityAttributeLines(entity, customTypes) {
   const lines = [];
   for (const [attrName, attr] of entriesOf(entity.attributes)) {
     if (!attr.type?.name) throw new Error(`Vocabulary attribute "${attrName}" has no resolved type name -- real vocabulary.js data should always have one; a silent "?" placeholder here would hide a real extraction gap`);
     const collectionMark = attr.isCollection ? ' []' : '';
-    lines.push(attr.kind === 'association' ? `${attrName} -> ${attr.type.name}${collectionMark}` : `${attrName}: ${attr.type.name}${collectionMark}`);
+    if (attr.kind === 'association') {
+      lines.push(`${attrName} -> ${attr.type.name}${collectionMark}`);
+    } else if (attr.type.kind === 'customType' && customTypes) {
+      const ct = customTypes.get(attr.type.name);
+      if (ct?.isEnum && ct.values?.length) {
+        lines.push(`${attrName}: ${ct.values.join(' | ')}${collectionMark}`);
+      } else {
+        lines.push(`${attrName}: ${attr.type.name}${collectionMark}`);
+      }
+    } else {
+      lines.push(`${attrName}: ${attr.type.name}${collectionMark}`);
+    }
   }
   return lines.length ? lines : ['(no attributes)'];
 }
@@ -199,7 +214,8 @@ function layoutVocabulary(project, originX, originY) {
         rowHeight = 0;
         colCount = 0;
       }
-      const lines = entityAttributeLines(entity);
+      const customTypesMap = new Map(entriesOf(vocab.customTypes));
+      const lines = entityAttributeLines(entity, customTypesMap);
       const w = boxWidthFor(entityName, null, lines);
       const { svg: s, height } = box(x, y, w, entityName, null, lines, COLOR.vocabulary, false);
       svg.push(s);
@@ -232,6 +248,19 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
   let maxWidth = BOX_W;
   const flow = project.ruleflows.get(ruleflowKey);
   let prevExit = null;
+
+  // Draws a connecting arrow from `from` to (toX, toY). When the previous exit
+  // was the "otherwise, skip" bypass path (from.dashed === true), the connecting
+  // segment is also dashed -- so the entire bypass route (horizontal right, down,
+  // horizontal left, then this final segment to the next node) reads as one
+  // continuous dashed path with a single arrowhead at the destination, rather
+  // than a dashed route that abruptly ends in mid-air followed by a separate
+  // solid arrow to the actual box.
+  function connect(from, toX, toY) {
+    if (!from) return null;
+    if (from.dashed) return `<line x1="${from.x}" y1="${from.y}" x2="${toX}" y2="${toY}" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrow)"/>`;
+    return arrow(from.x, from.y, toX, toY);
+  }
 
   if (visited.has(ruleflowKey)) {
     const { svg: s, height } = box(originX, y, BOX_W, `(${ruleflowKey}, shown above)`, null, [], COLOR.unreachable, true);
@@ -266,16 +295,16 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
       const resolved = resolveInvokes(node.invokes, ruleflowKey, ruleflowKeys, rulesheetKeys);
       if (resolved.kind === 'rulesheet') {
         const rulesheet = project.rulesheets.get(resolved.file);
-        const label = node.iterative ? `${node.name} [LOOP]` : node.name;
+        const label = `${node.iterative ? `${node.name} [LOOP]` : node.name} (${resolved.file})`;
         const lines = rulesheetDetailLines(rulesheet);
-        const w = boxWidthFor(label, resolved.file, lines);
+        const w = boxWidthFor(label, null, lines);
         if (!entryXCaptured) { entryX = originX + w / 2; entryXCaptured = true; }
-        const { svg: s, height } = box(originX, y, w, label, resolved.file, lines, COLOR.rulesheet, false);
+        const { svg: s, height } = box(originX, y, w, label, null, lines, COLOR.rulesheet, false);
         if (node.iterative) {
           svg.push(`<rect x="${originX - 10}" y="${y - 10}" width="${w + 20}" height="${height + 20}" rx="10" fill="none" stroke="${COLOR.loopBorder}" stroke-width="1.5" stroke-dasharray="6,4"/>`);
         }
         svg.push(s);
-        if (prevExit) svg.push(arrow(prevExit.x, prevExit.y, originX + w / 2, y));
+        if (prevExit) svg.push(connect(prevExit, originX + w / 2, y));
         prevExit = { x: originX + w / 2, y: y + height };
         maxWidth = Math.max(maxWidth, originX + w - originX);
         y += height + V_GAP;
@@ -296,16 +325,20 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
           svg.push(`<text x="${originX - 14}" y="${y - 20}" font-size="11" font-weight="700" fill="${COLOR.loopBorder}" font-family="${FONT}">ITERATIVE LOOP: ${escapeXml(node.name)}</text>`);
         }
         svg.push(nested.svg);
-        if (prevExit) svg.push(arrow(prevExit.x, prevExit.y, nested.entryX, nested.entryY));
+        if (prevExit) svg.push(connect(prevExit, nested.entryX, nested.entryY));
         maxWidth = Math.max(maxWidth, nested.width);
         prevExit = { x: nested.exitX, y: nested.exitY };
         y = nested.exitY + V_GAP;
       } else if (resolved.kind === 'connector') {
-        const w = boxWidthFor(node.name, null, ['SERVICE CALL-OUT']);
+        const connectorList = [...entriesOf(flow.connectors).map(([, c]) => c)];
+        const connector = connectorList[resolved.connectorIndex];
+        const connectorLabel = `${node.name} (${ruleflowKey})`;
+        const calloutLines = connector?.className ? [`SERVICE CALL-OUT: ${connector.className}`] : ['SERVICE CALL-OUT'];
+        const w = boxWidthFor(connectorLabel, null, calloutLines);
         if (!entryXCaptured) { entryX = originX + w / 2; entryXCaptured = true; }
-        const { svg: s, height } = box(originX, y, w, node.name, null, ['SERVICE CALL-OUT'], COLOR.serviceCallout, false);
+        const { svg: s, height } = box(originX, y, w, connectorLabel, null, calloutLines, COLOR.serviceCallout, false);
         svg.push(s);
-        if (prevExit) svg.push(arrow(prevExit.x, prevExit.y, originX + w / 2, y));
+        if (prevExit) svg.push(connect(prevExit, originX + w / 2, y));
         prevExit = { x: originX + w / 2, y: y + height };
         y += height + V_GAP;
       }
@@ -317,22 +350,27 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
       // Throws rather than silently showing "?" if a real BranchContainer's own
       // condition text is missing -- same reasoning as entityAttributeLines above.
       if (!node.condition?.text) throw new Error(`BranchContainer "${node.name}" has no resolved condition text -- real ruleflow.js data should always have one for a real BranchContainer; a silent "?" placeholder here would hide a real extraction gap`);
-      const branchLines = [`IF ${node.condition.text}`];
-      const branchW = boxWidthFor(node.name, null, branchLines);
+      const branchLines = [node.condition.isEnum ? `SWITCH ${node.condition.text}` : `IF ${node.condition.text}`];
+      const branchTitle = `${node.name} (${ruleflowKey})`;
+      const branchW = boxWidthFor(branchTitle, null, branchLines);
       if (!entryXCaptured) { entryX = originX + branchW / 2; entryXCaptured = true; }
-      const { svg: s, height: branchHeight } = box(originX, y, branchW, node.name, null, branchLines, COLOR.branch, false);
+      const { svg: s, height: branchHeight } = box(originX, y, branchW, branchTitle, null, branchLines, COLOR.branch, false);
       svg.push(s);
-      if (prevExit) svg.push(arrow(prevExit.x, prevExit.y, originX + branchW / 2, y));
+      if (prevExit) svg.push(connect(prevExit, originX + branchW / 2, y));
       const branchTop = y + branchHeight + V_GAP;
       let branchX = originX;
       let tallestBranch = 0;
       let rightExtent = originX + branchW;
+      const branchExits = [];
       for (const branch of node.branches ?? []) {
         let by = branchTop;
-        // The branch condition is already shown in the purple box's own "IF ..."
-        // text right above -- labeling the arrow into it too was redundant, not
-        // clarifying.
-        svg.push(arrow(originX + branchW / 2, y + branchHeight, branchX + branchW / 2, branchTop));
+        // Label each branch arrow with the enum/value(s) it matches -- strip the
+        // type-name prefix (e.g. "programTrack#trackA" -> "trackA") so only the
+        // meaningful value is shown. For non-enum branches (e.g. "true"/"false"),
+        // the label is used as-is.
+        const rawLabels = (branch.labels ?? []).map((l) => (l.includes('#') ? l.slice(l.lastIndexOf('#') + 1) : l));
+        const branchLabel = rawLabels.length ? rawLabels.join(' | ') : null;
+        svg.push(arrow(originX + branchW / 2, y + branchHeight, branchX + branchW / 2, branchTop, branchLabel));
         // A branch's own targets can chain more than one node (confirmed real:
         // this fixture's own DisabilityBranchA -> DisabilityBranchB both run,
         // in sequence, under the SAME "true" branch -- see ruleflow.js's own
@@ -347,9 +385,10 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
           if (resolved.kind !== 'rulesheet') continue;
           const rulesheet = project.rulesheets.get(resolved.file);
           const lines = rulesheetDetailLines(rulesheet);
-          const w = boxWidthFor(target.name, resolved.file, lines);
+          const targetLabel = `${target.name} (${resolved.file})`;
+          const w = boxWidthFor(targetLabel, null, lines);
           branchColW = Math.max(branchColW, w);
-          const { svg: ts, height: th } = box(branchX, by, w, target.name, resolved.file, lines, COLOR.rulesheet, false);
+          const { svg: ts, height: th } = box(branchX, by, w, targetLabel, null, lines, COLOR.rulesheet, false);
           if (branchPrevExit) svg.push(arrow(branchPrevExit.x, branchPrevExit.y, branchX + w / 2, by));
           svg.push(ts);
           branchPrevExit = { x: branchX + w / 2, y: by + th };
@@ -357,6 +396,7 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
         }
         tallestBranch = Math.max(tallestBranch, by - branchTop);
         rightExtent = Math.max(rightExtent, branchX + branchColW);
+        if (branchPrevExit) branchExits.push(branchPrevExit);
         branchX += branchColW + H_GAP;
       }
       const convergeY = branchTop + tallestBranch - V_GAP;
@@ -381,8 +421,29 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
       const returnY = convergeY + 15;
       svg.push(`<line x1="${originX + branchW}" y1="${otherwiseY}" x2="${routeX}" y2="${otherwiseY}" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="3,3"/>`);
       svg.push(`<line x1="${routeX}" y1="${otherwiseY}" x2="${routeX}" y2="${returnY}" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="3,3"/>`);
-      svg.push(`<line x1="${routeX}" y1="${returnY}" x2="${originX + branchW / 2}" y2="${returnY}" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrow)"/>`);
-      svg.push(`<text x="${routeX + 6}" y="${(otherwiseY + returnY) / 2}" font-size="11" fill="#6b7280" font-family="${FONT}">(otherwise, skip)</text>`);
+      svg.push(`<line x1="${routeX}" y1="${returnY}" x2="${originX + branchW / 2}" y2="${returnY}" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="3,3"/>`);
+      svg.push(`<text x="${routeX + 6}" y="${(otherwiseY + returnY) / 2}" font-size="11" fill="#6b7280" font-family="${FONT}">(if no match, skip)</text>`);
+      // Draw convergence arrows: each branch column's last exit drops down to
+      // returnY, showing that matched branches execute their targets and then
+      // fall through to the same continuation point as the skip path. The
+      // center column (same X as the branch container's own center) draws a
+      // SOLID line -- that's the normal matched-branch flow, continuing
+      // straight to the next node. Off-center columns draw dashed -- they are
+      // lateral branches converging back. Drawing center-column as dashed
+      // would make it visually merge with the solid connect() arrow that
+      // follows, producing the half-dotted/half-solid artifact seen when a
+      // single branch column sits at center X.
+      const centerX = originX + branchW / 2;
+      for (const exit of branchExits) {
+        if (exit.y < returnY) {
+          const atCenter = Math.abs(exit.x - centerX) < 1;
+          if (atCenter) {
+            svg.push(`<line x1="${exit.x}" y1="${exit.y}" x2="${exit.x}" y2="${returnY}" stroke="#6b7280" stroke-width="1.5"/>`);
+          } else {
+            svg.push(`<line x1="${exit.x}" y1="${exit.y}" x2="${exit.x}" y2="${returnY}" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="3,3"/>`);
+          }
+        }
+      }
       maxWidth = Math.max(maxWidth, branchX - originX - H_GAP, routeX - originX + 120);
       prevExit = { x: originX + branchW / 2, y: returnY };
       y = returnY + V_GAP;
@@ -428,8 +489,8 @@ function renderDiagram(project, context) {
     let uy = y + 20;
     for (const key of context.unreachable) {
       const lines = rulesheetDetailLines(project.rulesheets.get(key));
-      const w = boxWidthFor(key, 'dead content -- excluded from Fact compilation', lines);
-      const { svg: s, height } = box(PAD, uy, w, key, 'dead content -- excluded from Fact compilation', lines, COLOR.unreachable, true);
+      const w = boxWidthFor(`${key} — dead content`, null, lines);
+      const { svg: s, height } = box(PAD, uy, w, `${key} — dead content`, null, lines, COLOR.unreachable, true);
       blocks.push(s);
       maxWidth = Math.max(maxWidth, PAD + w);
       uy += height + 16;

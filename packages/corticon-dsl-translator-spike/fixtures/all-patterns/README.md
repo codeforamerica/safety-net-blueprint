@@ -9,19 +9,21 @@ project, not just scattered single-pattern real fixtures.
 `Test.ert` for it. It validates classification/structure, not correctness of translated values. See issue #388's Phase 3
 entry for why this exists and why that distinction matters.
 
-| # | Pattern | Where |
+Each file is named for the pattern it exercises. Multi-file patterns share a suffix (`-a`/`-b`, `-seed`/`-body`).
+
+| # | Pattern | File(s) |
 |---|---|---|
-| 1 | Ordinary cross-rulesheet dependency | `ComputeIncome.ers` → `IncomeTier.ers` |
-| 2 | Genuine cycle | `InitialBenefit.ers` + iterative `benefit-loop.erf` (`AdjustBenefit.ers`) |
-| 3 | One-directional dependency dressed in iterative | Iterative `ActivityNode` invoking nested `program-eligibility-loop.erf` (an enum-switch `BranchContainer` on `Applicant.programTrack`) → `ProgramAEligibility.ers` → `ProgramBEligibility.ers` |
-| 4 | Entity creation/association mutation | `CreateHouseholds.ers` |
-| 5 | Service call-outs | `VerifyIncome` connectorList node in `top-level-flow.erf` |
-| 6 | Decision-table combinatorics | `IncomeTier.ers` (multiple rows/columns) |
-| 7 | Cross-rulesheet Fact assembly | `EligibilityPartA.ers` + `EligibilityPartB.ers` both write `Applicant.isEligible` |
-| 8 | Conditional branching | Non-iterative `BranchContainer` on `Applicant.hasDisability`, single branch chaining `DisabilityBranchA.ers` → `DisabilityBranchB.ers` |
-| 9 | Null-check masking | `AssetCheck.ers` (`reportedAssets = null` → `0`) |
-| 10 | Date/age arithmetic | `AgeCalculation.ers` (`dob.yearsBetween(today)`) |
-| 11 | Currency/decimal precision | `ComputeIncome.ers` (`.round(2)`) |
-| 12 | Sorting/ranking | `ProgramRanking.ers` (`sortedBy`/`first`) |
-| 13 | Filters | `AdultCount.ers` (filtered to adult household members) |
-| 14 | Override (explicit rule-priority for genuinely overlapping decision-table rows) | `ProgramAEligibility.ers` — rule 2 (`isEligible = true`) `overrides` rule 1 (the unconditional `isProgramAEligible = false` fallback), which is itself `overriddenBy` rule 2 — same real `overrides`/`overriddenBy` attribute shape confirmed in `fixtures/irr/evaluate npv.ers` |
+| 1 | Sequential pipeline | `decimal-rounding.ers` → `decision-table.ers` (relationship between the two) |
+| 2 | Iterative convergence | `iterative-seed.ers` + `iterative-body.ers` in `benefit-loop.erf` |
+| 3 | Enum-switch branching | `program-eligibility-loop.erf` — `BranchContainer` on `Applicant.programTrack` routing to `override-example.ers` or `enum-branch-target.ers` |
+| 4 | Entity creation | `entity-creation.ers` |
+| 5 | Service call-out | `VerifyIncome` connector node in `top-level-flow.erf` |
+| 6 | Decision table | `decision-table.ers` (multiple rows/columns) |
+| 7 | Fact assembly | `fact-assembly-a.ers` + `fact-assembly-b.ers` (both write `Applicant.isEligible`) |
+| 8 | Conditional branching with chained targets | `branch-chain-a.ers` + `branch-chain-b.ers` under `DisabilityBranch` in `top-level-flow.erf` |
+| 9 | Null default | `null-default.ers` (`reportedAssets = null` → `0`) |
+| 10 | Date/age arithmetic | `date-arithmetic.ers` (`dob.yearsBetween(today)`) |
+| 11 | Decimal rounding | `decimal-rounding.ers` (`.round(2)`) |
+| 12 | Sort and rank | `sort-ranking.ers` (`sortedBy`/`first`) |
+| 13 | Collection filter | `collection-filter.ers` (filtered to adult household members) |
+| 14 | Explicit override | `override-example.ers` — rule 1 (`isEligible = true`) `overrides` rule 0 (the unconditional `isProgramAEligible = false` fallback), same real `overrides`/`overriddenBy` attribute shape confirmed in `fixtures/irr/evaluate npv.ers` |

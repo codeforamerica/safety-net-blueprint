@@ -30,6 +30,7 @@ export function extractExpression(parserOutput) {
     text: parserOutput['@_text'],
     datatype: parserOutput['@_datatype'],
     expressionType: parserOutput['@_expressiontype'],
+    isEnum: parserOutput['@_enumeration'] === 'true',
     referencedTerms: asArray(parserOutput.referencedTermList?.terms).map(extractTerm),
     modifiedTerms: asArray(parserOutput.modifiedTermList?.terms).map(extractTerm),
   };

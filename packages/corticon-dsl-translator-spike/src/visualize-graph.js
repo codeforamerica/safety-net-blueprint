@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync } from 'node:fs';
-import { PALETTE, wrapText, box, arrow, wrapSvgAsHtml } from './diagram-utils.js';
+import { FONT, PALETTE, wrapText, box, arrow, wrapSvgAsHtml, escapeXml } from './diagram-utils.js';
 import { parseCliArgs } from './cli-utils.js';
 
 function printUsage() {
