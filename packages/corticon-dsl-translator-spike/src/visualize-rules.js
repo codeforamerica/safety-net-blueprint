@@ -231,25 +231,32 @@ function rulesheetDetailLines(rulesheet, rulesheetKey, rulePatterns, rulesheetPa
   realRules.forEach(({ rule, rawIndex: ruleRawIndex }, i) => {
     const realConditions = rule.conditions.filter(Boolean);
     const conditions = realConditions.length > 1 ? realConditions.map((c) => `(${c.text})`).join(' AND ') : realConditions[0]?.text;
-    const overrideParts = [];
-    if (rule.overrides) overrideParts.push(`overrides ${describeRuleRefs(rule.overrides, displayIndexByRawIndex)}`);
-    if (rule.overriddenBy) overrideParts.push(`overridden by ${describeRuleRefs(rule.overriddenBy, displayIndexByRawIndex)}`);
-    const overrideSuffix = overrideParts.length ? ` [${overrideParts.join('; ')}]` : '';
+
+    // Build the explicit-override pattern label, embedding the priority refs directly
+    // into it (e.g. explicit-override(overrides Rule 1)) so the classification and
+    // its detail read as one entry rather than two separate bracketed items.
+    let explicitOverrideLabel = null;
+    if (rule.overrides?.length || rule.overriddenBy?.length) {
+      const parts = [];
+      if (rule.overrides) parts.push(`overrides ${describeRuleRefs(rule.overrides, displayIndexByRawIndex)}`);
+      if (rule.overriddenBy) parts.push(`overridden by ${describeRuleRefs(rule.overriddenBy, displayIndexByRawIndex)}`);
+      explicitOverrideLabel = `explicit-override(${parts.join('; ')})`;
+    }
 
     // Rule-level semantic patterns: from the classifier, plus explicit-override for
-    // any rule that carries a priority relationship (always shown even though the
-    // override refs are already in overrideSuffix -- the pattern label makes the
-    // classification explicit). Only show patterns not already visible at rulesheet
-    // level (i.e. not in the box sublabel), except explicit-override which is
-    // always rule-level.
+    // any rule that carries a priority relationship. Only show patterns not already
+    // visible at rulesheet level (i.e. not in the box sublabel), except
+    // explicit-override which is always rule-level.
     const ruleLevelPatterns = rulesheetKey && rulePatterns ? [...(rulePatterns.get(`${rulesheetKey}#${ruleRawIndex}`) ?? [])] : [];
-    if ((rule.overrides?.length || rule.overriddenBy?.length) && !ruleLevelPatterns.includes('explicit-override')) {
+    if (explicitOverrideLabel && !ruleLevelPatterns.includes('explicit-override')) {
       ruleLevelPatterns.push('explicit-override');
     }
-    const distinctPatterns = ruleLevelPatterns.filter((p) => p === 'explicit-override' || !rsPatternSet.has(p));
+    const distinctPatterns = ruleLevelPatterns
+      .filter((p) => p === 'explicit-override' || !rsPatternSet.has(p))
+      .map((p) => (p === 'explicit-override' && explicitOverrideLabel ? explicitOverrideLabel : p));
     const patternSuffix = distinctPatterns.length ? ` [${distinctPatterns.join(', ')}]` : '';
 
-    const name = (rule.comment ? rule.comment.text : `Rule ${i}`) + overrideSuffix + patternSuffix;
+    const name = (rule.comment ? rule.comment.text : `Rule ${i}`) + patternSuffix;
     lines.push(`${name}:`);
     // "THEN" only makes sense completing an "IF" -- an unconditional rule (no real
     // conditions at all, confirmed real: CreateHouseholds.ers/InitialBenefit.ers
@@ -441,9 +448,10 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
         const connector = connectorList[resolved.connectorIndex];
         const connectorLabel = `${node.name} (${ruleflowKey})`;
         const calloutLines = connector?.className ? [`SERVICE CALL-OUT: ${connector.className}`] : ['SERVICE CALL-OUT'];
-        const w = boxWidthFor(connectorLabel, null, calloutLines);
+        const calloutSublabel = '[service-callout]';
+        const w = boxWidthFor(connectorLabel, calloutSublabel, calloutLines);
         if (!entryXCaptured) { entryX = originX + w / 2; entryXCaptured = true; }
-        const { svg: s, height } = box(originX, y, w, connectorLabel, null, calloutLines, COLOR.serviceCallout, false);
+        const { svg: s, height } = box(originX, y, w, connectorLabel, calloutSublabel, calloutLines, COLOR.serviceCallout, false);
         svg.push(s);
         if (prevExit) svg.push(connect(prevExit, originX + w / 2, y));
         prevExit = { x: originX + w / 2, y: y + height };
@@ -457,11 +465,13 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
       // Throws rather than silently showing "?" if a real BranchContainer's own
       // condition text is missing -- same reasoning as entityAttributeLines above.
       if (!node.condition?.text) throw new Error(`BranchContainer "${node.name}" has no resolved condition text -- real ruleflow.js data should always have one for a real BranchContainer; a silent "?" placeholder here would hide a real extraction gap`);
+      const branchPattern = node.condition.isEnum ? 'enum-switch-branching' : 'conditional-branching';
+      const branchSublabel = `[${branchPattern}]`;
       const branchLines = [node.condition.isEnum ? `SWITCH ${node.condition.text}` : `IF ${node.condition.text}`];
       const branchTitle = `${node.name} (${ruleflowKey})`;
-      const branchW = boxWidthFor(branchTitle, null, branchLines);
+      const branchW = boxWidthFor(branchTitle, branchSublabel, branchLines);
       if (!entryXCaptured) { entryX = originX + branchW / 2; entryXCaptured = true; }
-      const { svg: s, height: branchHeight } = box(originX, y, branchW, branchTitle, null, branchLines, COLOR.branch, false);
+      const { svg: s, height: branchHeight } = box(originX, y, branchW, branchTitle, branchSublabel, branchLines, COLOR.branch, false);
       svg.push(s);
       if (prevExit) svg.push(connect(prevExit, originX + branchW / 2, y));
       const branchTop = y + branchHeight + V_GAP;
