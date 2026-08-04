@@ -88,12 +88,13 @@ function resolveInvokes(invokes, fromKey, ruleflowKeys, rulesheetKeys) {
  * - rulePatterns: `${rulesheetKey}#${rawRuleIndex}` -> string[] of semantic patterns (shown in rule name line)
  *
  * Rulesheet-level patterns: collection-filter, fact-assembly, decision-table,
- * entity-creation, iterative-convergence, unreachable-rulesheet, plus filter-level
- * expression patterns (date-arithmetic, decimal-rounding, sort-ranking) where no
- * specific rule index applies.
- * Rule-level patterns: null-default, genuine-cycle, decision-table-alt-row,
- * date-arithmetic, decimal-rounding, sort-ranking. explicit-override is detected
- * directly from rule data in rulesheetDetailLines and always shown at rule level.
+ * iterative-convergence, unreachable-rulesheet, plus filter-level expression
+ * patterns (date-arithmetic, decimal-rounding, sort-ranking) where no specific
+ * rule index applies.
+ * Rule-level patterns: entity-creation, null-default, genuine-cycle,
+ * decision-table-alt-row, date-arithmetic, decimal-rounding, sort-ranking.
+ * explicit-override is detected directly from rule data in rulesheetDetailLines
+ * and always shown at rule level.
  */
 function buildPatternMaps(classification, ruleflowContext) {
   const rulesheetPatterns = new Map();
@@ -125,9 +126,9 @@ function buildPatternMaps(classification, ruleflowContext) {
     addRulesheet(rulesheet, 'decision-table');
   }
 
-  // entity-creation: rulesheet that creates or adds a new entity/association
-  for (const { rulesheet } of classification.entityCreation ?? []) {
-    addRulesheet(rulesheet, 'entity-creation');
+  // entity-creation: the specific rule whose action creates or adds an entity/association
+  for (const { rulesheet, ruleIndex } of classification.entityCreation ?? []) {
+    addRule(rulesheet, ruleIndex, 'entity-creation');
   }
 
   // iterative-convergence: rulesheet invoked from an iterative (loop) node
