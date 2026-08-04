@@ -109,7 +109,7 @@ if (process.argv[1] === __filename) {
       console.error(`Annotation file not found: ${annotationPath}`);
       process.exit(1);
     }
-    const layer = yaml.load(readFileSync(annotationPath, 'utf8')) ?? {};
+    const layer = yaml.load(readFileSync(annotationPath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA }) ?? {};
     layers.push({ path: annotationPath, layer });
   }
 

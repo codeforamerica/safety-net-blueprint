@@ -45,7 +45,7 @@ export function resolveSchemaRefs(schema, { spec = null, specFilePath = null } =
         const [filePart, jsonPointer] = schema.$ref.split('#');
         const fullPath = join(dirname(specFilePath), filePart);
         try {
-          const externalDoc = yaml.load(readFileSync(fullPath, 'utf8'));
+          const externalDoc = yaml.load(readFileSync(fullPath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA });
           let resolved = externalDoc;
           if (jsonPointer) {
             const parts = jsonPointer.slice(1).split('/');
@@ -176,7 +176,7 @@ export function buildSchemaIndex(specsDir) {
     if (!file.endsWith('-openapi.yaml')) continue;
     const filePath = join(specsDir, file);
     let spec;
-    try { spec = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+    try { spec = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA }); } catch { continue; }
 
     for (const [name, rawSchema] of Object.entries(spec?.components?.schemas || {})) {
       if (!index.has(name)) {
@@ -314,7 +314,7 @@ export function loadExtendsDoc(filePath, extendsPath) {
   try {
     const dir = dirname(filePath);
     const extPath = join(dir, extendsPath.replace(/^\.\//, ''));
-    return yaml.load(readFileSync(extPath, 'utf8'));
+    return yaml.load(readFileSync(extPath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA });
   } catch {
     return null;
   }
