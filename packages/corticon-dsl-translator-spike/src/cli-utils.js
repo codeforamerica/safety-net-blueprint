@@ -29,10 +29,14 @@ export function parseCliArgs(argv) {
   const engineIndex = args.indexOf('--engine');
   const hasEngine = engineIndex >= 0;
   const engine = hasEngine ? args[engineIndex + 1] : undefined;
+  const classifiedIndex = args.indexOf('--classified');
+  const hasClassified = classifiedIndex >= 0;
+  const classified = hasClassified ? args[classifiedIndex + 1] : undefined;
   const excluded = new Set([
     ...(hasOut ? [outIndex, outIndex + 1] : []),
     ...(hasEngine ? [engineIndex, engineIndex + 1] : []),
+    ...(hasClassified ? [classifiedIndex, classifiedIndex + 1] : []),
   ]);
   const positional = args.filter((_, i) => !excluded.has(i))[0];
-  return { positional, outFile, engine };
+  return { positional, outFile, engine, classified };
 }

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync } from 'node:fs';
 import { posix as posixPath } from 'node:path';
-import { isBlankTemplateRule } from './corticon/rulesheet.js';
+import { isBlankTemplateRule, formatRuleText } from './corticon/rulesheet.js';
 import { resolveRuleflowContext } from './classify/ruleflow-context.js';
 import { entriesOf } from './map-utils.js';
 import { parseCliArgs } from './cli-utils.js';
-import { FONT, PALETTE, box, arrow, wrapSvgAsHtml, escapeXml } from './diagram-utils.js';
+import { FONT, PALETTE, box, arrow, wrapSvgAsHtml, escapeXml, layoutAttributeStrip } from './diagram-utils.js';
 
 function printUsage() {
   console.error('Usage: node src/visualize-rules.js <classified.json> [--out <file.html>]');
@@ -229,8 +229,7 @@ function rulesheetDetailLines(rulesheet, rulesheetKey, rulePatterns, rulesheetPa
   // so leaving it out would hide a real, load-bearing priority relationship.
   const rsPatternSet = new Set(rulesheetKey && rulesheetPatterns ? (rulesheetPatterns.get(rulesheetKey) ?? []) : []);
   realRules.forEach(({ rule, rawIndex: ruleRawIndex }, i) => {
-    const realConditions = rule.conditions.filter(Boolean);
-    const conditions = realConditions.length > 1 ? realConditions.map((c) => `(${c.text})`).join(' AND ') : realConditions[0]?.text;
+    const { conditionText: conditions, actionTexts } = formatRuleText(rule.conditions, rule.actions);
 
     // Build the explicit-override pattern label, embedding the priority refs directly
     // into it (e.g. explicit-override(overrides Rule 1)) so the classification and
@@ -265,8 +264,6 @@ function rulesheetDetailLines(rulesheet, rulesheetKey, rulePatterns, rulesheetPa
     // with nothing above it to complete. IF and its first action's THEN share one
     // line now that nothing wraps -- the box just grows wider instead -- with any
     // further action indented on its own line beneath, aligned under the first.
-    const realActions = rule.actions.filter(Boolean);
-    const actionTexts = realActions.length ? realActions.map((a) => a.text) : ['(no action)'];
     const firstPrefix = conditions ? `    IF ${conditions} THEN ` : '        ';
     lines.push(`${firstPrefix}${actionTexts[0]}`);
     const indent = ' '.repeat(firstPrefix.length);
@@ -276,72 +273,6 @@ function rulesheetDetailLines(rulesheet, rulesheetKey, rulePatterns, rulesheetPa
   });
   if (!lines.length) lines.push('(no real rules)');
   return lines;
-}
-
-/**
- * One "name: Type" (or "name -> Entity []" for an association) line per attribute --
- * the .ecore Vocabulary that every rulesheet's terms are ultimately typed against,
- * previously entirely absent from this diagram (confirmed real gap: "what about the
- * vocabulary in .ecore?"). Throws if a real attribute's own type name is missing --
- * a silent "?" placeholder here would be the same class of bug as the branch-label
- * fallback that turned out to be masking a real extraction failure: a fallback for
- * data that should always be resolvable hides the bug instead of surfacing it.
- */
-function entityAttributeLines(entity, customTypes) {
-  const lines = [];
-  for (const [attrName, attr] of entriesOf(entity.attributes)) {
-    if (!attr.type?.name) throw new Error(`Vocabulary attribute "${attrName}" has no resolved type name -- real vocabulary.js data should always have one; a silent "?" placeholder here would hide a real extraction gap`);
-    const collectionMark = attr.isCollection ? ' []' : '';
-    if (attr.kind === 'association') {
-      lines.push(`${attrName} -> ${attr.type.name}${collectionMark}`);
-    } else if (attr.type.kind === 'customType' && customTypes) {
-      const ct = customTypes.get(attr.type.name);
-      if (ct?.isEnum && ct.values?.length) {
-        lines.push(`${attrName}: ${ct.values.join(' | ')}${collectionMark}`);
-      } else {
-        lines.push(`${attrName}: ${attr.type.name}${collectionMark}`);
-      }
-    } else {
-      lines.push(`${attrName}: ${attr.type.name}${collectionMark}`);
-    }
-  }
-  return lines.length ? lines : ['(no attributes)'];
-}
-
-/** Lays out every entity from every real Vocabulary file as its own box, wrapped into rows once a row holds 4 -- a flat list, not a real entity-relationship diagram with association lines drawn between boxes (no fixture yet has enough entities for that to matter more than this simpler layout). */
-function layoutVocabulary(project, originX, originY) {
-  const svg = [];
-  let x = originX;
-  let y = originY;
-  let rowHeight = 0;
-  let colCount = 0;
-  let maxWidth = originX;
-  for (const [vocabFile, vocab] of entriesOf(project.vocabularies)) {
-    svg.push(`<text x="${originX}" y="${y}" font-size="13" font-weight="700" fill="#374151" font-family="${FONT}">Vocabulary: ${escapeXml(vocabFile)}</text>`);
-    y += 26;
-    for (const [entityName, entity] of entriesOf(vocab.entities)) {
-      if (colCount === 4) {
-        x = originX;
-        y += rowHeight + V_GAP;
-        rowHeight = 0;
-        colCount = 0;
-      }
-      const customTypesMap = new Map(entriesOf(vocab.customTypes));
-      const lines = entityAttributeLines(entity, customTypesMap);
-      const w = boxWidthFor(entityName, null, lines);
-      const { svg: s, height } = box(x, y, w, entityName, null, lines, COLOR.vocabulary, false);
-      svg.push(s);
-      rowHeight = Math.max(rowHeight, height);
-      maxWidth = Math.max(maxWidth, x + w);
-      x += w + H_GAP;
-      colCount++;
-    }
-    y += rowHeight + V_GAP;
-    x = originX;
-    rowHeight = 0;
-    colCount = 0;
-  }
-  return { svg: svg.join('\n'), width: maxWidth - originX, exitY: y };
 }
 
 /**
@@ -580,7 +511,7 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
   };
 }
 
-function renderDiagram(project, context, rulesheetPatterns, rulePatterns) {
+function renderDiagram(project, classification, context, rulesheetPatterns, rulePatterns) {
   const ruleflowKeys = [...project.ruleflows.keys()];
   const rulesheetKeys = [...project.rulesheets.keys()];
   const visited = new Set();
@@ -588,13 +519,13 @@ function renderDiagram(project, context, rulesheetPatterns, rulePatterns) {
   let y = PAD;
   let maxWidth = 0;
 
-  // The Vocabulary (.ecore) comes first -- every rulesheet's own terms are typed
-  // against it, so it's the foundation the rest of the diagram builds on, not an
-  // afterthought.
-  const vocab = layoutVocabulary(project, PAD, y);
-  blocks.push(vocab.svg);
-  y = vocab.exitY + V_GAP;
-  maxWidth = Math.max(maxWidth, vocab.width);
+  const { reads, writes } = classification.attributeUsage ?? {};
+
+  // Top strip: every attribute read anywhere in the rules (inputs and intermediates)
+  const inputsStrip = layoutAttributeStrip(reads, 'Inputs — attributes read anywhere in these rules:', PAD, y);
+  blocks.push(inputsStrip.svg);
+  y = inputsStrip.exitY + V_GAP * 2;
+  maxWidth = Math.max(maxWidth, inputsStrip.width);
 
   for (const root of context.roots) {
     const laid = layoutRuleflow(project, root, ruleflowKeys, rulesheetKeys, PAD, y, visited, rulesheetPatterns, rulePatterns);
@@ -616,8 +547,14 @@ function renderDiagram(project, context, rulesheetPatterns, rulePatterns) {
       maxWidth = Math.max(maxWidth, PAD + w);
       uy += height + 16;
     }
-    y = uy;
+    y = uy + V_GAP;
   }
+
+  // Bottom strip: every attribute written anywhere in the rules (outputs and intermediates)
+  const outputsStrip = layoutAttributeStrip(writes, 'Outputs — attributes written anywhere in these rules:', PAD, y);
+  blocks.push(outputsStrip.svg);
+  y = outputsStrip.exitY + V_GAP;
+  maxWidth = Math.max(maxWidth, outputsStrip.width);
 
   const width = maxWidth + PAD * 2;
   const height = y + PAD;
@@ -636,7 +573,7 @@ const project = normalizeProject(raw);
 const classification = raw.classification ?? {};
 const context = resolveRuleflowContext(project);
 const { rulesheetPatterns, rulePatterns } = buildPatternMaps(classification, context);
-const html = renderDiagram(project, context, rulesheetPatterns, rulePatterns);
+const html = renderDiagram(project, classification, context, rulesheetPatterns, rulePatterns);
 const outFile = args.outFile ?? 'generated/rules-diagram.html';
 writeFileSync(outFile, html);
 console.log(`Wrote diagram to ${outFile}`);

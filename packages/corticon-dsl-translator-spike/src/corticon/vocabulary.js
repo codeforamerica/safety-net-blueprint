@@ -126,12 +126,14 @@ export function parseVocabulary(filePath) {
       const isAssociation = feature['@_xsi:type'] === 'ecore:EReference';
       const isCollection = feature['@_upperBound'] === '-1';
       const resolved = resolveEType(feature['@_eType'], ctx);
+      const isTransient = asArray(feature.mode).some((m) => m?.['@_value'] === 'ExtendedTransient');
       const attribute = {
         kind: isAssociation ? 'association' : 'attribute',
         isCollection,
         type: resolved.kind === 'reference' && customTypes.has(resolved.name)
           ? { kind: 'customType', name: resolved.name }
           : resolved,
+        ...(isTransient ? { isTransient: true } : {}),
       };
       // Both confirmed real only on EReference (association) features, never on
       // plain attributes: `eOpposite="#//Entity/fieldName"` cross-links the two

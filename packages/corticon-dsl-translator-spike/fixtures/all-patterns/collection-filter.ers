@@ -42,7 +42,7 @@
     </filter>
     <logicalVariable explicit="true" entity="vocab.ecore#//Application" filters="#//@ruleset/@filters.0">
       <alias value="Application"/>
-      <extension explicit="true" association="true" entity="vocab.ecore#//ApplicationMember" traversedAssocRole="vocab.ecore#//Application/applicant" filters="#//@ruleset/@filters.0">
+      <extension explicit="true" association="true" entity="vocab.ecore#//ApplicationMember" traversedAssocRole="vocab.ecore#//Application/members" filters="#//@ruleset/@filters.0">
         <alias value="adult"/>
       </extension>
     </logicalVariable>

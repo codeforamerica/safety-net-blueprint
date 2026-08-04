@@ -34,7 +34,7 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="isExpeditedSnap" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBooleanObject"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="meetsAllCriteria" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBooleanObject"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="summaryText" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="household" lowerBound="1" eType="#//Application" eOpposite="#//Application/applicant"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="household" lowerBound="1" eType="#//Application" eOpposite="#//Application/members"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Application">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="totalIncome" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBigDecimal"/>
@@ -45,7 +45,7 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="netMonthlyIncome" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBigDecimal"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="verifiedIncome" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBigDecimal"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="primaryApplicationKey" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="applicant" upperBound="-1" eType="#//ApplicationMember" eOpposite="#//ApplicationMember/household"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="members" upperBound="-1" eType="#//ApplicationMember" eOpposite="#//ApplicationMember/household"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="candidate" upperBound="-1" eType="#//BenefitOption"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="program" upperBound="-1" eType="#//Program"/>
   </eClassifiers>

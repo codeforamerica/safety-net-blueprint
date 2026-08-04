@@ -39,6 +39,26 @@ function extractFilters(rulesheetViewList) {
 }
 
 /**
+ * Formats a rule's conditions and actions as a plain-text IF/THEN string.
+ * Multiple conditions are joined with AND (each parenthesized). When there are
+ * no conditions the actions are returned without a leading "THEN". Shared by
+ * visualize-rules.js (SVG box text) and visualize-crosswalk.js (HTML cell) so
+ * both show the same logical representation.
+ *
+ * Returns { conditionText, actionTexts } so callers can lay them out differently
+ * (multi-line with indentation vs. flat single string, etc.).
+ */
+export function formatRuleText(conditions, actions) {
+  const realConditions = (conditions ?? []).filter(Boolean);
+  const conditionText = realConditions.length > 1
+    ? realConditions.map((c) => `(${c.text})`).join(' AND ')
+    : realConditions[0]?.text ?? null;
+  const realActions = (actions ?? []).filter(Boolean);
+  const actionTexts = realActions.length ? realActions.map((a) => a.text) : ['(no action)'];
+  return { conditionText, actionTexts };
+}
+
+/**
  * True if every condition and action in this rule is null -- Corticon Studio's own
  * reserved blank/template row (confirmed real, always rule index 0, in both the
  * real vendored Mortgage/Select_Credit.ers and DC Medicaid's own MAGI Eligibility

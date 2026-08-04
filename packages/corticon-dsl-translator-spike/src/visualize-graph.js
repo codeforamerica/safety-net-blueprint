@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync } from 'node:fs';
-import { FONT, PALETTE, wrapText, box, arrow, wrapSvgAsHtml, escapeXml } from './diagram-utils.js';
+import { FONT, PALETTE, wrapText, box, arrow, wrapSvgAsHtml, escapeXml, layoutAttributeStrip } from './diagram-utils.js';
 import { parseCliArgs } from './cli-utils.js';
 
 function printUsage() {
@@ -124,16 +124,19 @@ function factBodyLines(fact) {
   return lines;
 }
 
-function renderDiagram(facts) {
+function renderDiagram(facts, attributeUsage) {
   const pathByAliasKey = new Map(facts.map((f) => [aliasKeyFor(f.path), f.path]));
   const depsByPath = new Map(
     facts.map((f) => [f.path, f.derived !== undefined ? extractDependencies(f.derived, pathByAliasKey).filter((d) => d !== f.path) : []])
   );
 
-  // Drop input facts (writable, no derived expression) that nothing depends on --
-  // they're not part of any derivation chain and only clutter the diagram.
   const depTargets = new Set([...depsByPath.values()].flat());
-  facts = facts.filter((f) => f.derived !== undefined || f.placeholder !== undefined || depTargets.has(f.path));
+
+  // Writable facts (pure inputs, no derived expression) are shown as a reference
+  // strip at the top rather than graph nodes -- avoids a thicket of edges from
+  // every input box down to every derived fact that reads it.
+  const writableFacts = facts.filter((f) => f.derived === undefined && f.placeholder === undefined);
+  facts = facts.filter((f) => f.derived !== undefined || f.placeholder !== undefined);
 
   const layerByPath = computeLayers(facts, depsByPath);
 
@@ -143,7 +146,7 @@ function renderDiagram(facts) {
     if (!factsByLayer.has(layer)) factsByLayer.set(layer, []);
     factsByLayer.get(layer).push(fact);
   }
-  const maxLayer = Math.max(...factsByLayer.keys());
+  const layers = factsByLayer.size ? Math.max(...factsByLayer.keys()) : -1;
 
   const centerXByPath = new Map();
   const topYByPath = new Map();
@@ -151,7 +154,28 @@ function renderDiagram(facts) {
   const blocks = [];
   let y = PAD;
   let maxWidth = 0;
-  for (let layer = 0; layer <= maxLayer; layer++) {
+
+  // Inputs strip: writable facts listed as paths, grouped into columns
+  if (writableFacts.length) {
+    const LINE_H = 15;
+    const COL_W = 380;
+    const COLS = Math.min(3, writableFacts.length);
+    const colSize = Math.ceil(writableFacts.length / COLS);
+    const sorted = [...writableFacts].sort((a, b) => a.path.localeCompare(b.path));
+    blocks.push(`<text x="${PAD}" y="${y}" font-size="13" font-weight="700" fill="#374151" font-family="${FONT}">Inputs — writable facts (supplied from outside the derivation graph):</text>`);
+    y += 18;
+    sorted.forEach((fact, i) => {
+      const col = Math.floor(i / colSize);
+      const row = i % colSize;
+      const x = PAD + col * COL_W;
+      const fy = y + row * LINE_H;
+      blocks.push(`<text x="${x}" y="${fy}" font-size="10.5" fill="#1f2937" font-family="${FONT}">${escapeXml(fact.path)}${fact.placeholder !== undefined ? ` (default: ${fact.placeholder})` : ''}</text>`);
+    });
+    y += colSize * LINE_H + 20;
+    maxWidth = Math.max(maxWidth, PAD + COLS * COL_W);
+  }
+
+  for (let layer = 0; layer <= layers; layer++) {
     const layerFacts = (factsByLayer.get(layer) ?? []).sort((a, b) => a.path.localeCompare(b.path));
     let x = PAD;
     let rowHeight = 0;
@@ -171,10 +195,22 @@ function renderDiagram(facts) {
     // real box height -- not this layer's) down into it.
     for (const fact of layerFacts) {
       for (const dep of depsByPath.get(fact.path) ?? []) {
-        blocks.push(arrow(centerXByPath.get(dep), bottomYByPath.get(dep), centerXByPath.get(fact.path), y));
+        if (centerXByPath.has(dep)) {
+          blocks.push(arrow(centerXByPath.get(dep), bottomYByPath.get(dep), centerXByPath.get(fact.path), y));
+        }
       }
     }
     y += rowHeight + LAYER_V_GAP;
+  }
+
+  // Outputs strip at bottom
+  const outputsStrip = attributeUsage?.writes
+    ? layoutAttributeStrip(attributeUsage.writes, 'Outputs — attributes written anywhere in these rules:', PAD, y)
+    : null;
+  if (outputsStrip?.svg) {
+    blocks.push(outputsStrip.svg);
+    y = outputsStrip.exitY + PAD;
+    maxWidth = Math.max(maxWidth, outputsStrip.width);
   }
 
   const width = maxWidth + PAD;
@@ -189,7 +225,11 @@ if (!args) {
 }
 
 const { facts } = JSON.parse(readFileSync(args.positional, 'utf-8'));
-const html = renderDiagram(facts);
+const classifiedPath = args.classified;
+const attributeUsage = classifiedPath
+  ? JSON.parse(readFileSync(classifiedPath, 'utf-8')).classification?.attributeUsage
+  : null;
+const html = renderDiagram(facts, attributeUsage);
 const outFile = args.outFile ?? 'generated/fact-graph.html';
 writeFileSync(outFile, html);
 console.log(`Wrote Fact dependency graph to ${outFile}`);

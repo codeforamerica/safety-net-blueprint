@@ -108,6 +108,59 @@ export function arrow(x1, y1, x2, y2, label) {
   return parts.join('\n');
 }
 
+/**
+ * Renders a flat text list of attribute paths in field-inventory format
+ * (e.g. "ApplicationMember.dob: Date"), grouped by vocabulary file and arranged
+ * in up to 3 columns. Used for the inputs strip (top) and outputs strip (bottom)
+ * of the rules and graph diagrams. No connecting edges -- reference panels only.
+ *
+ * attrMap: object or Map mapping "Entity.attribute" -> { entity, attribute, datatype, vocabFile }
+ */
+export function layoutAttributeStrip(attrMap, stripLabel, originX, originY) {
+  const entries = attrMap instanceof Map ? [...attrMap.values()] : Object.values(attrMap);
+  if (!entries.length) return { svg: '', width: 0, exitY: originY };
+
+  // Group by vocabFile, sort within each group
+  const byVocab = new Map();
+  for (const { entity, attribute, datatype, vocabFile } of entries) {
+    const key = vocabFile ?? '(unknown)';
+    if (!byVocab.has(key)) byVocab.set(key, []);
+    byVocab.get(key).push(`${entity}.${attribute}: ${datatype ?? '?'}`);
+  }
+  for (const lines of byVocab.values()) lines.sort();
+
+  // Flatten with "Vocabulary: <file>" header before each group
+  const lines = [];
+  for (const [vocabFile, attrLines] of byVocab) {
+    lines.push({ text: `Vocabulary: ${vocabFile}`, isHeader: true });
+    for (const entry of attrLines) lines.push({ text: entry, isHeader: false });
+  }
+
+  const dataLines = lines.filter(l => !l.isHeader).length;
+  const COLS = Math.min(3, dataLines);
+  const colSize = Math.ceil(lines.length / COLS);
+  const LINE_H = 15;
+  const COL_W = 380;
+  const startY = originY + 22;
+
+  const svg = [];
+  svg.push(`<text x="${originX}" y="${originY}" font-size="13" font-weight="700" fill="#374151" font-family="${FONT}">${escapeXml(stripLabel)}</text>`);
+
+  lines.forEach((line, i) => {
+    const col = Math.floor(i / colSize);
+    const row = i % colSize;
+    const x = originX + col * COL_W;
+    const y = startY + row * LINE_H;
+    if (line.isHeader) {
+      svg.push(`<text x="${x}" y="${y}" font-size="10.5" font-weight="700" fill="#6b7280" font-family="${FONT}">${escapeXml(line.text)}</text>`);
+    } else {
+      svg.push(`<text x="${x}" y="${y}" font-size="10.5" fill="#1f2937" font-family="${MONOSPACE}">${escapeXml(line.text)}</text>`);
+    }
+  });
+
+  return { svg: svg.join('\n'), width: COLS * COL_W, exitY: startY + colSize * LINE_H };
+}
+
 /** Wraps rendered SVG body content into a complete, standalone HTML document. */
 export function wrapSvgAsHtml(title, width, height, bodySvg) {
   return `<!DOCTYPE html>

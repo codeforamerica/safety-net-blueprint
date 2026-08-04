@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync } from 'node:fs';
 import { parseCliArgs } from './cli-utils.js';
-import { isBlankTemplateRule } from './corticon/rulesheet.js';
+import { isBlankTemplateRule, formatRuleText } from './corticon/rulesheet.js';
 import { resolveRuleflowContext } from './classify/ruleflow-context.js';
 import { entriesOf, keysOf } from './map-utils.js';
 
@@ -21,14 +21,16 @@ function esc(str) {
 // ── Mapping type metadata ─────────────────────────────────────────────────
 
 const TYPE_META = {
-  '1:1':              { label: '1 : 1',                       color: '#166534', bg: '#dcfce7' },
-  'caller-provides':  { label: 'caller provides',             color: '#0369a1', bg: '#e0f2fe' },
-  'expression':       { label: 'custom function required',    color: '#5b21b6', bg: '#ede9fe' },
-  'needs-review':     { label: 'needs review',                color: '#92400e', bg: '#fef9c3' },
-  'blocked':          { label: 'blocked',                     color: '#991b1b', bg: '#fee2e2' },
-  'special':          { label: 'orchestration (not a fact)',  color: '#374151', bg: '#f3f4f6' },
-  'excluded':         { label: 'unreachable in flow',         color: '#6b7280', bg: '#f3f4f6' },
-  'gap':              { label: 'no mapping',                  color: '#6b7280', bg: '#fafafa' },
+  '1:1':                            { label: '1 : 1',                       color: '#166534', bg: '#dcfce7' },
+  'caller-provides':                { label: 'caller provided',             color: '#0369a1', bg: '#e0f2fe' },
+  'expression':                     { label: 'custom function required',    color: '#5b21b6', bg: '#ede9fe' },
+  'no-fallback-row':                { label: 'no fallback row',             color: '#92400e', bg: '#fef9c3' },
+  'assembly-rulesheet-mismatch':    { label: 'assembly mismatch',           color: '#92400e', bg: '#fef9c3' },
+  'unconditional-row-out-of-order': { label: 'row order ambiguous',         color: '#92400e', bg: '#fef9c3' },
+  'blocked':                        { label: 'blocked',                     color: '#991b1b', bg: '#fee2e2' },
+  'special':                        { label: 'orchestration (not a fact)',  color: '#374151', bg: '#f3f4f6' },
+  'excluded':                       { label: 'unreachable in flow',         color: '#6b7280', bg: '#f3f4f6' },
+  'gap':                            { label: 'no mapping',                  color: '#6b7280', bg: '#fafafa' },
 };
 
 function badge(type) {
@@ -44,32 +46,30 @@ function hl(code) {
 
 // ── Build rule rows from rulesheet data ───────────────────────────────────
 
-function buildRuleRows(rsName, rsData, crosswalk, writes, factsByPath, nodeName = null) {
+function buildRuleRows(rsName, rsData, crosswalk, factsByPath, nodeName = null) {
   const rows = [];
   const rules = rsData.rules ?? [];
   let ruleNum = 0; // 0-based counter for non-empty rules, matching the rules diagram
 
   for (let idx = 0; idx < rules.length; idx++) {
     const rule = rules[idx];
-    const conditions = (rule.conditions ?? []).filter(Boolean).map(c => c.text).filter(Boolean);
-    const actions    = (rule.actions    ?? []).filter(Boolean).map(a => a.text).filter(Boolean);
+    const { conditionText, actionTexts } = formatRuleText(rule.conditions, rule.actions);
     const comment    = rule.comment?.text ?? null;
 
     // Skip pure header rows (no conditions, no actions)
-    if (!conditions.length && !actions.length) continue;
+    if (!conditionText && !actionTexts.length) continue;
 
     const ruleId = `${rsName.replace(/\.ers$/, '')}.Rule.${ruleNum}`;
     ruleNum++;
-
-    // Find what attribute(s) this rule writes via the writes index
-    const writtenPaths = Object.entries(writes)
-      .filter(([, writers]) => writers.some(w => w.rulesheet === rsName && w.ruleIndex === idx))
-      .map(([path]) => path);
 
     // Find crosswalk entries for this rulesheet+index
     const cwEntries = crosswalk.filter(e =>
       e.rulesheet === rsName && (e.ruleIndex === idx || e.ruleIndices?.includes(idx))
     );
+
+    // Find what attribute(s) this rule writes -- corticonPath is already on the
+    // crosswalk entries for this rulesheet+index, no separate writes index needed.
+    const writtenPaths = cwEntries.map(e => e.corticonPath).filter(Boolean);
 
     // Determine fact path(s) by looking up each written corticonPath in the full crosswalk
     const factPaths = writtenPaths
@@ -95,8 +95,8 @@ function buildRuleRows(rsName, rsData, crosswalk, writes, factsByPath, nodeName 
       type = 'excluded';
     } else if (kinds.includes('genuine-cycle') || kinds.includes('no-ordinary-writer')) {
       type = 'blocked';
-    } else if (kinds.some(k => ['hit-policy-unverified', 'no-fallback-row', 'assembly-rulesheet-mismatch', 'unconditional-row-out-of-order'].includes(k))) {
-      type = 'needs-review';
+    } else if (kinds.some(k => ['no-fallback-row', 'assembly-rulesheet-mismatch', 'unconditional-row-out-of-order'].includes(k))) {
+      type = kinds.find(k => ['no-fallback-row', 'assembly-rulesheet-mismatch', 'unconditional-row-out-of-order'].includes(k));
     } else if (kinds.includes('expression-pattern')) {
       type = 'expression';
     } else if (kinds.includes('service-callout') || kinds.includes('filter')) {
@@ -110,8 +110,9 @@ function buildRuleRows(rsName, rsData, crosswalk, writes, factsByPath, nodeName 
     }
 
     const notes = cwEntries.map(e => e.note).filter(Boolean);
+    const entityType = cwEntries.find(e => e.kind === 'entity-creation')?.entityType ?? null;
 
-    rows.push({ ruleId, nodeName, conditions, actions, comment, factPaths: uniqueFactPaths, compiledExprs, type, notes });
+    rows.push({ ruleId, nodeName, conditionText, actionTexts, comment, factPaths: uniqueFactPaths, compiledExprs, type, entityType, notes });
 
   }
 
@@ -121,14 +122,15 @@ function buildRuleRows(rsName, rsData, crosswalk, writes, factsByPath, nodeName 
 // ── HTML rendering ────────────────────────────────────────────────────────
 
 function renderRow(row) {
-  const rowBg = row.type === 'blocked'      ? '#fff5f5'
-              : row.type === 'needs-review'  ? '#fffdf0'
-              : row.type === 'excluded'      ? '#fafafa'
+  const reviewTypes = new Set(['no-fallback-row', 'assembly-rulesheet-mismatch', 'unconditional-row-out-of-order']);
+  const rowBg = row.type === 'blocked'        ? '#fff5f5'
+              : reviewTypes.has(row.type)     ? '#fffdf0'
+              : row.type === 'excluded'        ? '#fafafa'
               : '';
 
-  // Corticon side: IF [conditions] THEN [actions]; [actions]
-  const condPart = row.conditions.length ? `IF ${row.conditions.join('; ')}` : null;
-  const actPart  = row.actions.length    ? `THEN ${row.actions.join('; ')}` : null;
+  // Corticon side: "IF ... THEN ..." when conditions present; actions only otherwise.
+  const condPart = row.conditionText ? `IF ${row.conditionText}` : null;
+  const actPart  = row.actionTexts.length ? (row.conditionText ? `THEN ${row.actionTexts.join('; ')}` : row.actionTexts.join('; ')) : null;
   const ifThenText = [condPart, actPart].filter(Boolean).join(' ');
   const commentHtml = row.comment
     ? `<div style="font-size:10px;color:#9ca3af;margin-top:3px">${esc(row.comment)}</div>`
@@ -138,7 +140,15 @@ function renderRow(row) {
   // Dependency graph side: path(s) + compiled expression(s), or explanatory text for caller-provides
   let graphCell;
   if (row.type === 'caller-provides') {
-    graphCell = `<span style="font-size:11px;color:#0369a1;font-style:italic">Graph assumes value is provided by caller (entity pre-assembled or input with default already applied).</span>`;
+    if (row.entityType) {
+      graphCell = `<span style="font-size:11px;color:#0369a1;font-family:monospace">List(${esc(row.entityType)})</span><span style="font-size:11px;color:#6b7280"> — caller pre-assembles instances</span>`;
+    } else if (row.factPaths.length) {
+      graphCell = row.factPaths.map(fp =>
+        `<div style="font-family:monospace;font-size:11px;color:#374151">${esc(fp)}</div>`
+      ).join('');
+    } else {
+      graphCell = `<span style="color:#d1d5db">—</span>`;
+    }
   } else if (row.type === 'special') {
     graphCell = `<span style="font-size:11px;color:#6b7280;font-style:italic">Orchestration step — not represented as a graph fact.</span>`;
   } else if (row.factPaths.length) {
@@ -190,11 +200,9 @@ function summaryBar(allRows) {
 // ── Main render ───────────────────────────────────────────────────────────
 
 function render(classifiedPath, crosswalkPath, translatedPath) {
-  const { project, graph, classification } = JSON.parse(readFileSync(classifiedPath, 'utf8'));
+  const { project, classification } = JSON.parse(readFileSync(classifiedPath, 'utf8'));
   const { crosswalk } = JSON.parse(readFileSync(crosswalkPath, 'utf8'));
   const translated = translatedPath ? JSON.parse(readFileSync(translatedPath, 'utf8')) : null;
-
-  const writes = graph.writes;
 
   // Index compiled facts by path for quick lookup
   const factsByPath = {};
@@ -244,7 +252,7 @@ function render(classifiedPath, crosswalkPath, translatedPath) {
     if (!rsData) return null;
     if (unreachable.has(rsName)) rsData.unreachable = true;
     const nodeName = sheetToNodeName[rsName] ?? null;
-    const rows = buildRuleRows(rsName, rsData, crosswalk, writes, factsByPath, nodeName);
+    const rows = buildRuleRows(rsName, rsData, crosswalk, factsByPath, nodeName);
     allRows.push(...rows);
     return { rsName, rows };
   }).filter(Boolean);

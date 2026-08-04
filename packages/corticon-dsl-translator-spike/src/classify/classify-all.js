@@ -8,6 +8,7 @@ import { classifyServiceCallouts } from './service-callout-classifier.js';
 import { classifyDecisionTableCombinatorics } from './decision-table-classifier.js';
 import { classifyFilters } from './filter-classifier.js';
 import { classifyExpressionPatterns } from './expression-patterns.js';
+import { classifyAttributeUsage } from './attribute-usage-classifier.js';
 
 function attributePathsIn(terms) {
   return (terms ?? []).map(canonicalAttributePath).filter(Boolean);
@@ -64,5 +65,6 @@ export function classifyProject(project) {
     serviceCallouts: classifyServiceCallouts(project),
     filters: classifyFilters(project),
     expressionPatterns: classifyExpressionPatterns(project),
+    attributeUsage: classifyAttributeUsage(project),
   };
 }

@@ -14,6 +14,9 @@
 #                                  (which function is derivable from the Corticon logic)
 #   status    - confirmed   proven against a real executed trace or authoritative docs
 #               unverified  approach identified but not yet tested
+#               ambiguous   approach identified but has a known semantic gap that
+#                           cannot be resolved from static file inspection alone;
+#                           flagged in the crosswalk for manual confirmation
 #               unknown     no approach identified yet
 
 # ── Translates directly ───────────────────────────────────────────────────────
@@ -174,6 +177,38 @@ universal-quantifier:
     Corticon ->forAll(predicate) mapped to CEL .all(x, predicate) macro.
   requires: ~
   status: unverified
+
+# ── Ambiguous (flagged in crosswalk for manual confirmation) ──────────────────
+
+no-fallback-row:
+  approach: >
+    Corticon leaves the attribute unchanged when no row matches. The compiled
+    expression cannot reproduce that — it uses an unresolved() sentinel for the
+    no-match case instead. Behaviors diverge when inputs fall outside every
+    covered condition. Requires manual confirmation that the no-match case cannot
+    actually occur at runtime for the given inputs, or that a fallback row should
+    be added.
+  requires: ~
+  status: ambiguous
+
+unconditional-row-out-of-order:
+  approach: >
+    Compiled by treating the unconditional row as the fallback regardless of its
+    position in the rulesheet. Corticon's exact behavior when an unconditional
+    row is not last is not determinable from static file inspection — it may fire
+    in row order or act as a true catch-all. Requires manual confirmation against
+    the original Corticon Studio project.
+  requires: ~
+  status: ambiguous
+
+assembly-rulesheet-mismatch:
+  approach: >
+    Fewer rulesheets contributed to the fact than static analysis detected —
+    some writers were excluded as unreachable or entity-creation-tainted after
+    classification. Compiled from the remaining eligible writers only. Requires
+    confirmation that the excluded writers were genuinely non-contributing.
+  requires: ~
+  status: ambiguous
 
 # ── Unknown ───────────────────────────────────────────────────────────────────
 
