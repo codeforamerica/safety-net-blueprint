@@ -163,7 +163,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     }
   }
 
-  return { apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, summary };
+  return { apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, policies, summary };
 }
 
 /**

@@ -114,6 +114,7 @@ async function startMockServer(specDirs = null, seedDir = null) {
     let allMetrics = [];
     let allConfigs = [];
     let allCompositions = [];
+    let allPolicies = {};
     for (const specsDir of specDirs) {
       const result = await performSetup({ specsDir, seedDir, verbose: true });
       apiSpecs = apiSpecs.concat(result.apiSpecs);
@@ -122,6 +123,7 @@ async function startMockServer(specDirs = null, seedDir = null) {
       allMetrics = allMetrics.concat(result.metrics);
       allConfigs = allConfigs.concat(result.configs || []);
       allCompositions = allCompositions.concat(result.compositions || []);
+      Object.assign(allPolicies, result.policies || {});
     }
 
 
@@ -236,6 +238,10 @@ async function startMockServer(specDirs = null, seedDir = null) {
             registerConfigManaged(catalogKey, data.id);
           }
         }
+      }
+      for (const [id, policy] of Object.entries(allPolicies)) {
+        insertResource('registry-policies', { id, ...policy, source: 'system' });
+        registerConfigManaged('registry-policies', id);
       }
       res.status(204).end();
     });
