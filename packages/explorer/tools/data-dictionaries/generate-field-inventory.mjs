@@ -24,7 +24,7 @@ import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, existsSync
 import { tmpdir } from 'os';
 import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
-import { dirname, join, resolve, basename, sep } from 'path';
+import { dirname, join, resolve, relative, isAbsolute, basename, sep } from 'path';
 import yaml from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 
@@ -148,10 +148,12 @@ function resolveOverlayPaths() {
 
   if (stat.isFile()) return [overlayPath];
 
+  const base = resolve(overlayPath);
   return readdirSync(overlayPath)
     .filter(f => f.endsWith('.yaml') || f.endsWith('.yml'))
     .sort()
-    .map(f => join(overlayPath, f));
+    .map(f => resolve(join(overlayPath, f)))
+    .filter(f => { const rel = relative(base, f); return !rel.startsWith('..') && !isAbsolute(rel); });
 }
 
 /**
@@ -471,7 +473,7 @@ async function processSpec(specPath, overlayPaths, outputPath) {
       const tempOverlayDir = join(tempDir, 'overlay');
       mkdirSync(tempOverlayDir, { recursive: true });
       for (const op of overlayPaths) {
-        const raw = yaml.load(readFileSync(op, 'utf8'), { schema: yaml.CORE_SCHEMA });
+        const raw = yaml.load(readFileSync(op, 'utf8'), { schema: yaml.DEFAULT_SCHEMA });
         const stripped = stripRelationshipStyles(raw);
         writeFileSync(join(tempOverlayDir, basename(op)), yaml.dump(stripped, { schema: yaml.CORE_SCHEMA, lineWidth: -1 }), 'utf8');
       }

@@ -9,7 +9,7 @@
  */
 
 import { readFileSync, readdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, resolve, relative, isAbsolute } from 'path';
 import yaml from 'js-yaml';
 
 export const VALID_ACTOR_ROLES = new Set(['applicant', 'case_worker', 'supervisor', 'system']);
@@ -44,8 +44,12 @@ export function resolveSchemaRefs(schema, { spec = null, specFilePath = null } =
       if (specFilePath) {
         const [filePart, jsonPointer] = schema.$ref.split('#');
         const fullPath = join(dirname(specFilePath), filePart);
+        const resolvedFull = resolve(fullPath);
+        const projectRoot = resolve(process.cwd());
+        const refRel = relative(projectRoot, resolvedFull);
+        if (refRel.startsWith('..') || isAbsolute(refRel)) break;
         try {
-          const externalDoc = yaml.load(readFileSync(fullPath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA });
+          const externalDoc = yaml.load(readFileSync(resolvedFull, 'utf8'), { schema: yaml.DEFAULT_SCHEMA });
           let resolved = externalDoc;
           if (jsonPointer) {
             const parts = jsonPointer.slice(1).split('/');
@@ -203,7 +207,7 @@ export function buildEndpointIndex(specsDir) {
   for (const file of files) {
     if (!file.endsWith('-openapi.yaml')) continue;
     let spec;
-    try { spec = yaml.load(readFileSync(join(specsDir, file), 'utf8')); } catch { continue; }
+    try { spec = yaml.load(readFileSync(join(specsDir, file), 'utf8'), { schema: yaml.DEFAULT_SCHEMA }); } catch { continue; }
 
     const domain = spec?.info?.['x-domain'];
     if (!domain || !spec.paths) continue;

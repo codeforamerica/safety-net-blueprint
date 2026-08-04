@@ -15,7 +15,7 @@
  */
 
 import { readFileSync, readdirSync } from 'fs';
-import { resolve, join } from 'path';
+import { resolve, join, relative, isAbsolute } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import yaml from 'js-yaml';
@@ -73,9 +73,11 @@ export function buildResourceSchemaMap(specsDir) {
 
   for (const file of files) {
     if (!file.endsWith('-openapi.yaml')) continue;
-    const specFilePath = join(specsDir, file);
+    const specFilePath = resolve(join(specsDir, file));
+    const specRel = relative(resolve(specsDir), specFilePath);
+    if (specRel.startsWith('..') || isAbsolute(specRel)) continue;
     let spec;
-    try { spec = yaml.load(readFileSync(specFilePath, 'utf8')); } catch { continue; }
+    try { spec = yaml.load(readFileSync(specFilePath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA }); } catch { continue; }
 
     if (!spec?.components?.schemas) continue;
     const components = spec.components.schemas;
