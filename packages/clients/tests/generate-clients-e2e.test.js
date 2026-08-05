@@ -314,4 +314,58 @@ components:
       rmSync(workDir, { recursive: true, force: true });
     }
   });
+
+  it('patchTypesGenForNamedEnums: skips enums already declared by hey-api — no duplicate export const', () => {
+    // Regression: patchTypesGenForNamedEnums was appending enums that hey-api had
+    // already emitted, producing TS2451 duplicate block-scoped variable errors.
+    const workDir = mkdtempSync(join(tmpdir(), 'snb-e2e-'));
+    try {
+      const typesGenPath = join(workDir, 'types.gen.ts');
+      // Simulate types.gen.ts where hey-api already emitted DecisionStatus
+      writeFileSync(typesGenPath,
+        '// auto-generated\n\n' +
+        "export const DecisionStatus = {\n  PENDING: 'pending',\n  APPROVED: 'approved',\n} as const;\n" +
+        "export type DecisionStatus = typeof DecisionStatus[keyof typeof DecisionStatus];\n"
+      );
+
+      const namedEnums = [
+        { name: 'DecisionStatus', values: ['pending', 'approved'] }, // already present
+        { name: 'DecisionPath', values: ['standard', 'expedited'] },  // new
+      ];
+
+      patchTypesGenForNamedEnums(typesGenPath, namedEnums);
+
+      const result = readFileSync(typesGenPath, 'utf8');
+      const matches = [...result.matchAll(/^export const DecisionStatus =/gm)];
+      assert.equal(matches.length, 1, `DecisionStatus should appear exactly once, found ${matches.length}`);
+      assert.ok(result.includes("export const DecisionPath ="), 'new enum DecisionPath should be appended');
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
+  it('patchDomainBarrelForNamedEnums: skips enums already exported in barrel — no duplicate export', () => {
+    const workDir = mkdtempSync(join(tmpdir(), 'snb-e2e-'));
+    try {
+      const indexPath = join(workDir, 'index.ts');
+      // Simulate barrel where hey-api already exported RoleType
+      writeFileSync(indexPath,
+        "export type { RoleType } from './types.gen';\n"
+      );
+
+      const namedEnums = [
+        { name: 'RoleType', values: ['admin', 'worker'] },   // already present
+        { name: 'StatusType', values: ['active', 'inactive'] }, // new
+      ];
+
+      patchDomainBarrelForNamedEnums(indexPath, namedEnums);
+
+      const result = readFileSync(indexPath, 'utf8');
+      const roleTypeCount = [...result.matchAll(/RoleType/g)].length;
+      assert.equal(roleTypeCount, 1, `RoleType should appear exactly once in barrel, found ${roleTypeCount}`);
+      assert.ok(result.includes('StatusType'), 'new enum StatusType should be added to barrel');
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
 });

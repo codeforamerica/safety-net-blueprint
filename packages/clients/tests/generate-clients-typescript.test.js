@@ -1,9 +1,14 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { mkdtempSync, writeFileSync, mkdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdtempSync, writeFileSync, mkdirSync, readFileSync, readdirSync, existsSync } from 'node:fs';
+import { join, resolve as resolvePath } from 'node:path';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 import { parseArgs, createOpenApiTsConfig, domainToAnnotationExportName, generateAnnotationsAndPolicies, collectNullableFieldNames, patchZodGenForNullable } from '../scripts/generate-clients-typescript.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe('Client Generation', () => {
   describe('parseArgs', () => {
@@ -530,6 +535,37 @@ events: {}
       const path = writeTmp(original);
       patchZodGenForNullable(path, new Set(['channel']));
       assert.strictEqual(readFileSync(path, 'utf8'), original);
+    });
+  });
+
+  describe('generated client output', () => {
+    it('no types.gen.ts has duplicate export const declarations', () => {
+      // Regression: patchTypesGenForNamedEnums was appending enums that hey-api
+      // already emitted, producing TS2451 duplicate block-scoped variable errors.
+      // This test scans every generated types.gen.ts to catch any domain where
+      // two code paths emit the same enum, regardless of which path causes it.
+      const generatedDir = resolvePath(__dirname, '../generated');
+      if (!existsSync(generatedDir)) return; // skip if clients haven't been generated yet
+
+      const domains = readdirSync(generatedDir, { withFileTypes: true })
+        .filter(e => e.isDirectory())
+        .map(e => e.name);
+
+      const duplicates = [];
+      for (const domain of domains) {
+        const typesGenPath = join(generatedDir, domain, 'types.gen.ts');
+        if (!existsSync(typesGenPath)) continue;
+        const content = readFileSync(typesGenPath, 'utf8');
+        const seen = new Map();
+        for (const match of content.matchAll(/^export const (\w+) =/gm)) {
+          const name = match[1];
+          seen.set(name, (seen.get(name) ?? 0) + 1);
+        }
+        for (const [name, count] of seen) {
+          if (count > 1) duplicates.push(`${domain}/types.gen.ts: ${name} declared ${count} times`);
+        }
+      }
+      assert.deepEqual(duplicates, [], `Duplicate enum declarations found:\n${duplicates.join('\n')}`);
     });
   });
 });
