@@ -57,7 +57,7 @@ for (const fixtureDir of FIXTURES) {
       assert.ok(classified.project, 'classify-project.js --out should carry the original project through, not just the classification');
       assert.deepEqual(classified.project.rulesheets, project.rulesheets, 'the carried-through project should match Phase 1\'s own output exactly');
       assert.ok(classified.classification, 'classify-project.js --out should include the classification');
-      for (const key of ['selfLoops', 'multiHopCycles', 'crossRulesheetAssembly', 'decisionTableCombinatorics', 'entityCreation', 'serviceCallouts', 'filters', 'expressionPatterns']) {
+      for (const key of ['selfLoops', 'multiHopCycles', 'crossRulesheetAssembly', 'decisionTableCombinatorics', 'entityCreation', 'serviceCallouts', 'filters', 'expressionPatterns', 'noOps']) {
         assert.ok(Array.isArray(classified.classification[key]), `classify-project.js --out should include an array for classification.${key}`);
       }
 

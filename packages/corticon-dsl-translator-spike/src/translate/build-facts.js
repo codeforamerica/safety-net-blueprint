@@ -289,6 +289,7 @@ export function buildFacts(project, graph, classification, { parseExpression }) 
   const ruleflowContext = resolveRuleflowContext(project);
 
   const entityCreationRuleKeys = new Set(classification.entityCreation.map((e) => `${e.rulesheet}#${e.ruleIndex}`));
+  const noOpRuleKeys = new Set((classification.noOps ?? []).map((e) => `${e.rulesheet}#${e.ruleIndex}`));
   const unreachableRulesheets = new Set(classification.ruleflowContext.unreachableRulesheets);
   const selfLoopClassificationByKey = new Map(classification.selfLoops.map((s) => [`${s.path}|${s.rulesheet}#${s.ruleIndex}`, s.classification]));
   const genuineCyclePaths = new Set([
@@ -317,6 +318,10 @@ export function buildFacts(project, graph, classification, { parseExpression }) 
   // graph.writes happens to enumerate a matching path.
   for (const entry of classification.entityCreation) {
     crosswalk.push({ rulesheet: entry.rulesheet, ruleIndex: entry.ruleIndex, kind: 'entity-creation', entityType: entry.entityType, note: 'Orchestration-layer concern (data assembly) -- not a Fact derivation.' });
+  }
+
+  for (const entry of (classification.noOps ?? [])) {
+    crosswalk.push({ rulesheet: entry.rulesheet, ruleIndex: entry.ruleIndex, kind: 'no-op', note: 'No actions -- produces no writes and no Fact derivations. Often used as a label/documentation column in Corticon Studio.' });
   }
 
   // Same "report directly from classification, don't rely on graph.writes
@@ -387,7 +392,7 @@ export function buildFacts(project, graph, classification, { parseExpression }) 
     // explanation, just a bare `continue`, unlike the genuine-cycle/unclassified-
     // cycle cases just above which each report their own path-level entry before
     // skipping.
-    const ordinaryWriters = writers.filter((writer) => !entityCreationRuleKeys.has(`${writer.rulesheet}#${writer.ruleIndex}`) && !unreachableRulesheets.has(writer.rulesheet));
+    const ordinaryWriters = writers.filter((writer) => !entityCreationRuleKeys.has(`${writer.rulesheet}#${writer.ruleIndex}`) && !noOpRuleKeys.has(`${writer.rulesheet}#${writer.ruleIndex}`) && !unreachableRulesheets.has(writer.rulesheet));
     if (ordinaryWriters.length === 0) {
       const excludedRulesheets = [...new Set(writers.map((w) => w.rulesheet))];
       crosswalk.push({

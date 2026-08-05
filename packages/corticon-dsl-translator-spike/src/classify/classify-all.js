@@ -9,6 +9,7 @@ import { classifyDecisionTableCombinatorics } from './decision-table-classifier.
 import { classifyFilters } from './filter-classifier.js';
 import { classifyExpressionPatterns } from './expression-patterns.js';
 import { classifyAttributeUsage } from './attribute-usage-classifier.js';
+import { classifyNoOps } from './no-op-classifier.js';
 
 function attributePathsIn(terms) {
   return (terms ?? []).map(canonicalAttributePath).filter(Boolean);
@@ -66,5 +67,6 @@ export function classifyProject(project) {
     filters: classifyFilters(project),
     expressionPatterns: classifyExpressionPatterns(project),
     attributeUsage: classifyAttributeUsage(project),
+    noOps: classifyNoOps(project),
   };
 }

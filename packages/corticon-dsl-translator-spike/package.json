@@ -5,7 +5,8 @@
   "description": "Feasibility spike (issue #388): translating a real Corticon ruleset into the decision-rules DSL's dependency-graph structure",
   "type": "module",
   "scripts": {
-    "test": "node --test src/tests/"
+    "test": "node --test src/tests/",
+    "build": "node src/build.js fixtures/all-patterns"
   },
   "dependencies": {
     "@marcbachmann/cel-js": "^7.6.1",

@@ -66,6 +66,14 @@ null-default:
   requires: ~
   status: confirmed
 
+no-op:
+  approach: >
+    Excluded from compilation entirely. A rule with conditions but no actions
+    produces no writes and no Fact derivations. Often used as a label/documentation
+    column in Corticon Studio's decision table grid.
+  requires: ~
+  status: confirmed
+
 unreachable-rulesheet:
   approach: >
     Excluded from compilation entirely. Writes from unreachable rulesheets are

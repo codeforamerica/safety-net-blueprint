@@ -30,6 +30,7 @@ const TYPE_META = {
   'blocked':                        { label: 'blocked',                     color: '#991b1b', bg: '#fee2e2' },
   'special':                        { label: 'orchestration (not a fact)',  color: '#374151', bg: '#f3f4f6' },
   'excluded':                       { label: 'unreachable in flow',         color: '#6b7280', bg: '#f3f4f6' },
+  'no-op':                          { label: 'no-op (no actions)',          color: '#6b7280', bg: '#f3f4f6' },
   'gap':                            { label: 'no mapping',                  color: '#6b7280', bg: '#fafafa' },
 };
 
@@ -99,6 +100,8 @@ function buildRuleRows(rsName, rsData, crosswalk, factsByPath, nodeName = null) 
       type = kinds.find(k => ['no-fallback-row', 'assembly-rulesheet-mismatch', 'unconditional-row-out-of-order'].includes(k));
     } else if (kinds.includes('expression-pattern')) {
       type = 'expression';
+    } else if (kinds.includes('no-op')) {
+      type = 'no-op';
     } else if (kinds.includes('service-callout') || kinds.includes('filter')) {
       type = 'special';
     } else if (kinds.includes('entity-creation') || writtenKinds.includes('ordinary-writable-placeholder') || writtenKinds.includes('ordinary-writable-input')) {

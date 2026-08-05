@@ -49,9 +49,13 @@ test('all-patterns: a genuine cycle is skipped entirely, flagged as a crosswalk 
 });
 
 test('all-patterns: entity-creation writes are excluded from Fact compilation, flagged as an orchestration-layer crosswalk annotation reported directly from classification (not derived from graph.writes)', () => {
+  // entity-creation.ers writes Application.members (an association/collection, not a scalar attribute).
+  // Associations are not scalar writes so they never appear in graph.writes or as Facts.
+  // The real test is that the entity-creation crosswalk entry is reported from classification.entityCreation
+  // directly -- not derived from graph.writes enumeration, which would silently miss it.
   const { facts, crosswalk } = compile('fixtures/all-patterns');
-  assert.equal(facts.some((f) => f.path === '/application/primaryApplicationKey'), false);
-  const entry = crosswalk.find((c) => c.kind === 'entity-creation' && c.rulesheet === 'entity-creation.ers' && c.entityType === 'Application');
+  assert.equal(facts.some((f) => f.path === '/application/members'), false, 'association writes should never produce a Fact path');
+  const entry = crosswalk.find((c) => c.kind === 'entity-creation' && c.rulesheet === 'entity-creation.ers' && c.entityType === 'ApplicationMember');
   assert.ok(entry, 'expected an entity-creation crosswalk entry for entity-creation.ers, reported directly from classification.entityCreation');
 });
 
