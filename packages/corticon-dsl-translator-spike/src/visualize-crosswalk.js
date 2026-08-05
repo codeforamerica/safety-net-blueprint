@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync } from 'node:fs';
 import { parseCliArgs } from './cli-utils.js';
-import { isBlankTemplateRule, formatRuleText } from './corticon/rulesheet.js';
+import { formatRuleText } from './corticon/rulesheet.js';
 import { resolveRuleflowContext } from './classify/ruleflow-context.js';
 import { entriesOf, keysOf } from './map-utils.js';
 
@@ -57,16 +57,17 @@ function buildRuleRows(rsName, rsData, crosswalk, factsByPath, nodeName = null) 
     const { conditionText, actionTexts } = formatRuleText(rule.conditions, rule.actions);
     const comment    = rule.comment?.text ?? null;
 
-    // Skip pure header rows (no conditions, no actions)
-    if (!conditionText && !actionTexts.length) continue;
-
-    const ruleId = `${rsName.replace(/\.ers$/, '')}.Rule.${ruleNum}`;
-    ruleNum++;
-
     // Find crosswalk entries for this rulesheet+index
     const cwEntries = crosswalk.filter(e =>
       e.rulesheet === rsName && (e.ruleIndex === idx || e.ruleIndices?.includes(idx))
     );
+
+    // Skip no-ops (blank template rows, label columns, rules with no actions) --
+    // determined by classify, not by structural inspection here.
+    if (cwEntries.some(e => e.kind === 'no-op')) continue;
+
+    const ruleId = `${rsName.replace(/\.ers$/, '')}.Rule.${ruleNum}`;
+    ruleNum++;
 
     // Find what attribute(s) this rule writes -- corticonPath is already on the
     // crosswalk entries for this rulesheet+index, no separate writes index needed.
