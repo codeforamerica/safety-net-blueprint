@@ -507,9 +507,9 @@ describe('Zod sweep — platform', () => {
     assert.ok(Array.isArray(items));
     assert.ok(items.length > 0, 'registry-policies should be seeded from platform-registry-policies.yaml');
     const ids = items.map(p => p.id);
-    assert.ok(ids.includes('snap-household-composition'), 'snap-household-composition should be present');
-    assert.ok(ids.includes('snap-right-to-apply'), 'snap-right-to-apply should be present');
-    assert.ok(ids.includes('medicaid-authorized-representative'), 'medicaid-authorized-representative should be present');
+    assert.ok(ids.includes('aca-employer-coverage-affordability'), 'aca-employer-coverage-affordability should be present');
+    assert.ok(ids.includes('aca-minimum-essential-coverage'), 'aca-minimum-essential-coverage should be present');
+    assert.ok(ids.includes('aca-premium-tax-credit'), 'aca-premium-tax-credit should be present');
   });
 });
 

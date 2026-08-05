@@ -1480,4 +1480,115 @@ test('x-enum-source injection', async (t) => {
     assert.ok('intake.application.submitted' in spec.channels);
   });
 
+  // ===========================================================================
+  // Policy file overlay support
+  // ===========================================================================
+
+  await t.test('applyOverlayWithTargets - overlay can update an existing platform policy', () => {
+    const dir = createTmpDir();
+    try {
+      writeYaml(dir, 'platform-registry-policies.yaml', {
+        version: '1.0',
+        policies: {
+          'snap-household-composition': {
+            citation: '7 CFR § 273.1',
+            description: 'All persons living together and purchasing food together.',
+            programs: ['snap']
+          },
+          'snap-right-to-apply': {
+            citation: '7 CFR § 273.2(a)',
+            description: 'Any household may apply for SNAP benefits.',
+            programs: ['snap']
+          }
+        }
+      });
+
+      const yamlFiles = [
+        {
+          relativePath: 'platform-registry-policies.yaml',
+          sourcePath: join(dir, 'platform-registry-policies.yaml'),
+          spec: yaml.load(readFileSync(join(dir, 'platform-registry-policies.yaml'), 'utf8'))
+        }
+      ];
+
+      const overlay = {
+        overlay: '1.0.0',
+        info: { title: 'State policy overlay', version: '1.0.0' },
+        actions: [
+          {
+            target: '$.policies.snap-household-composition.description',
+            update: 'All persons living and purchasing food together — state-specific definition.'
+          }
+        ]
+      };
+
+      const actionFileMap = analyzeTargetLocations(overlay, yamlFiles);
+      const { actionTargets } = resolveActionTargets(actionFileMap);
+      const { results } = applyOverlayWithTargets(yamlFiles, overlay, actionTargets, dir);
+
+      const resolved = results.get('platform-registry-policies.yaml');
+      assert.strictEqual(
+        resolved.policies['snap-household-composition'].description,
+        'All persons living and purchasing food together — state-specific definition.'
+      );
+      // Unchanged policy should be unaffected
+      assert.strictEqual(resolved.policies['snap-right-to-apply'].citation, '7 CFR § 273.2(a)');
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
+  await t.test('applyOverlayWithTargets - overlay can add a state-specific policy to the registry', () => {
+    const dir = createTmpDir();
+    try {
+      writeYaml(dir, 'platform-registry-policies.yaml', {
+        version: '1.0',
+        policies: {
+          'snap-household-composition': {
+            citation: '7 CFR § 273.1',
+            description: 'All persons living together and purchasing food together.',
+            programs: ['snap']
+          }
+        }
+      });
+
+      const yamlFiles = [
+        {
+          relativePath: 'platform-registry-policies.yaml',
+          sourcePath: join(dir, 'platform-registry-policies.yaml'),
+          spec: yaml.load(readFileSync(join(dir, 'platform-registry-policies.yaml'), 'utf8'))
+        }
+      ];
+
+      const overlay = {
+        overlay: '1.0.0',
+        info: { title: 'State policy overlay', version: '1.0.0' },
+        actions: [
+          {
+            target: '$.policies',
+            update: {
+              'state-specific-income-disregard': {
+                citation: 'State Admin Code § 400.1',
+                description: 'State-specific earned income disregard for working households.',
+                programs: ['snap']
+              }
+            }
+          }
+        ]
+      };
+
+      const actionFileMap = analyzeTargetLocations(overlay, yamlFiles);
+      const { actionTargets } = resolveActionTargets(actionFileMap);
+      const { results } = applyOverlayWithTargets(yamlFiles, overlay, actionTargets, dir);
+
+      const resolved = results.get('platform-registry-policies.yaml');
+      assert.ok(resolved.policies['state-specific-income-disregard'], 'State-specific policy should be present');
+      assert.strictEqual(resolved.policies['state-specific-income-disregard'].citation, 'State Admin Code § 400.1');
+      // Platform policy should be unaffected
+      assert.strictEqual(resolved.policies['snap-household-composition'].citation, '7 CFR § 273.1');
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
 });
