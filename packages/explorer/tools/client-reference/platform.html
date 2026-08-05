@@ -99,6 +99,10 @@
       <a href="#group-events" class="nav-link">Events <span class="nav-count">4</span></a><a href="#group-registry" class="nav-link">Registry <span class="nav-count">1</span></a><a href="#group-policies" class="nav-link">Policies <span class="nav-count">1</span></a><a href="#group-search" class="nav-link">Search <span class="nav-count">1</span></a>
     </div>
     <div class="nav-section">
+        <div class="nav-section-label">Constants</div>
+        <a href="#const-SearchResultType" class="nav-link">SearchResultType</a>
+      </div>
+    <div class="nav-section">
         <div class="nav-section-label">Types</div>
         <a href="#type-Event" class="nav-link">Event</a><a href="#type-Policy" class="nav-link">Policy</a><a href="#type-SearchResult" class="nav-link">SearchResult</a><a href="#type-EventList" class="nav-link">EventList</a><a href="#type-PolicyList" class="nav-link">PolicyList</a><a href="#type-SearchFacet" class="nav-link">SearchFacet</a><a href="#type-SearchResultAttribute" class="nav-link">SearchResultAttribute</a><a href="#type-SearchResultList" class="nav-link">SearchResultList</a>
       </div>
@@ -106,7 +110,7 @@
     </nav>
     <main id="content">
       <section id="group-events" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Events (4)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Events (4)</h2>
         <div id="ep-listEvents" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -117,7 +121,7 @@
       <a href="#ep-listEvents" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">listEvents({
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">platform.listEvents({
   query: { q?: string, sort?: string, type?: string, source?: string, subject?: string, traceid?: string, start?: string, end?: string, limit?: number, offset?: number },
 })</pre>
       
@@ -187,7 +191,7 @@
       <a href="#ep-publishEvent" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">publishEvent({ body: { ... } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">platform.publishEvent({ body: { ... } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -210,7 +214,7 @@
       <a href="#ep-streamEvents" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:0;">streamEvents()</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:0;">platform.streamEvents()</pre>
       
     </div>
   </details>
@@ -224,7 +228,7 @@
       <a href="#ep-getEvent" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getEvent({ path: { eventId: string } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">platform.getEvent({ path: { eventId: string } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -239,7 +243,7 @@
   </details>
 </div>
       </section><section id="group-registry" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Registry (1)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Registry (1)</h2>
         <div id="ep-listPolicies" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -250,7 +254,7 @@
       <a href="#ep-listPolicies" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">listPolicies({
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">platform.listPolicies({
   query: { q?: string, limit?: number, offset?: number, sort?: string },
 })</pre>
       
@@ -282,7 +286,7 @@
   </details>
 </div>
       </section><section id="group-policies" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Policies (1)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Policies (1)</h2>
         <div id="ep-getPolicy" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -293,7 +297,7 @@
       <a href="#ep-getPolicy" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getPolicy({ path: { policyId: string } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">platform.getPolicy({ path: { policyId: string } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -308,7 +312,7 @@
   </details>
 </div>
       </section><section id="group-search" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Search (1)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Search (1)</h2>
         <div id="ep-search" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -319,7 +323,7 @@
       <a href="#ep-search" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">search({
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">platform.search({
   query: { q?: string, limit?: number, offset?: number, types?: array[enum: },
 })</pre>
       
@@ -348,6 +352,19 @@
     </tr></tbody></table>
     </div>
     </div>
+  </details>
+</div>
+      </section><section id="section-constants" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Constants (1)</h2>
+        <div id="const-SearchResultType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">SearchResultType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (5 values)</span>
+      <a href="#const-SearchResultType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'person'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'case'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'application'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'task'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'appointment'</span></div></div></div>
   </details>
 </div>
       </section><section id="section-types" style="margin-bottom:2.5rem;">

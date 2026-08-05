@@ -99,6 +99,10 @@
       <a href="#group-documents" class="nav-link">Documents <span class="nav-count">4</span></a><a href="#group-metadata" class="nav-link">Metadata <span class="nav-count">2</span></a><a href="#group-document-versions" class="nav-link">Document Versions <span class="nav-count">2</span></a><a href="#group-content" class="nav-link">Content <span class="nav-count">1</span></a><a href="#group-document-types" class="nav-link">Document Types <span class="nav-count">4</span></a><a href="#group-document-links" class="nav-link">Document Links <span class="nav-count">3</span></a>
     </div>
     <div class="nav-section">
+        <div class="nav-section-label">Constants</div>
+        <a href="#const-DocumentLifecycleState" class="nav-link">DocumentLifecycleState</a><a href="#const-RetentionTrigger" class="nav-link">RetentionTrigger</a>
+      </div>
+    <div class="nav-section">
         <div class="nav-section-label">Types</div>
         <a href="#type-Document" class="nav-link">Document</a><a href="#type-DocumentUpdate" class="nav-link">DocumentUpdate</a><a href="#type-DocumentList" class="nav-link">DocumentList</a><a href="#type-DocumentVersion" class="nav-link">DocumentVersion</a><a href="#type-DocumentType" class="nav-link">DocumentType</a><a href="#type-DocumentTypeCreate" class="nav-link">DocumentTypeCreate</a><a href="#type-DocumentTypeList" class="nav-link">DocumentTypeList</a><a href="#type-DocumentLink" class="nav-link">DocumentLink</a><a href="#type-DocumentLinkCreate" class="nav-link">DocumentLinkCreate</a><a href="#type-DocumentLinkList" class="nav-link">DocumentLinkList</a><a href="#type-DocumentTypeWritable" class="nav-link">DocumentTypeWritable</a><a href="#type-DocumentTypeListWritable" class="nav-link">DocumentTypeListWritable</a>
       </div>
@@ -106,7 +110,7 @@
     </nav>
     <main id="content">
       <section id="group-documents" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Documents (4)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Documents (4)</h2>
         <div id="ep-listDocuments" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -117,7 +121,7 @@
       <a href="#ep-listDocuments" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">listDocuments({
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.listDocuments({
   query: { q?: string, limit?: number, offset?: number, sort?: string, documentTypeId?: string, lifecycleState?: enum: },
 })</pre>
       
@@ -167,7 +171,7 @@
       <a href="#ep-uploadDocument" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">uploadDocument({ body: { ... } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.uploadDocument({ body: { ... } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -190,7 +194,7 @@
       <a href="#ep-getDocument" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getDocument({ path: { documentId: string } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.getDocument({ path: { documentId: string } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -213,7 +217,10 @@
       <a href="#ep-updateDocument" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">updateDocument({ path: { documentId: string }, body: { ... } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.updateDocument({
+  path: { documentId: string },
+  body: { ... },
+})</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -233,7 +240,7 @@
   </details>
 </div>
       </section><section id="group-metadata" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Metadata (2)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Metadata (2)</h2>
         <div id="ep-deleteDocumentMetadata" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -244,7 +251,7 @@
       <a href="#ep-deleteDocumentMetadata" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">deleteDocumentMetadata({
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.deleteDocumentMetadata({
   path: { documentId: string, domain: enum (6 values) },
 })</pre>
       
@@ -274,7 +281,7 @@
       <a href="#ep-setDocumentMetadata" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">setDocumentMetadata({
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.setDocumentMetadata({
   path: { documentId: string, domain: enum (6 values) },
   body: { ... },
 })</pre>
@@ -302,7 +309,7 @@
   </details>
 </div>
       </section><section id="group-document-versions" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Document Versions (2)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Document Versions (2)</h2>
         <div id="ep-uploadDocumentVersion" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -313,7 +320,10 @@
       <a href="#ep-uploadDocumentVersion" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">uploadDocumentVersion({ path: { documentId: string }, body: { ... } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.uploadDocumentVersion({
+  path: { documentId: string },
+  body: { ... },
+})</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -341,7 +351,9 @@
       <a href="#ep-getDocumentVersion" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getDocumentVersion({ path: { documentVersionId: string } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.getDocumentVersion({
+  path: { documentVersionId: string },
+})</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -356,7 +368,7 @@
   </details>
 </div>
       </section><section id="group-content" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Content (1)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Content (1)</h2>
         <div id="ep-getDocumentVersionContent" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -367,7 +379,9 @@
       <a href="#ep-getDocumentVersionContent" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getDocumentVersionContent({ path: { documentVersionId: string } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.getDocumentVersionContent({
+  path: { documentVersionId: string },
+})</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -382,7 +396,7 @@
   </details>
 </div>
       </section><section id="group-document-types" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Document Types (4)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Document Types (4)</h2>
         <div id="ep-listDocumentTypes" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -393,7 +407,7 @@
       <a href="#ep-listDocumentTypes" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">listDocumentTypes({
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.listDocumentTypes({
   query: { q?: string, limit?: number, offset?: number, sort?: string },
 })</pre>
       
@@ -433,7 +447,7 @@
       <a href="#ep-createDocumentType" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">createDocumentType({ body: { ... } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.createDocumentType({ body: { ... } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -456,7 +470,9 @@
       <a href="#ep-deleteDocumentType" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">deleteDocumentType({ path: { documentTypeId: string } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.deleteDocumentType({
+  path: { documentTypeId: string },
+})</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -479,7 +495,9 @@
       <a href="#ep-getDocumentType" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getDocumentType({ path: { documentTypeId: string } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.getDocumentType({
+  path: { documentTypeId: string },
+})</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -494,7 +512,7 @@
   </details>
 </div>
       </section><section id="group-document-links" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Document Links (3)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Document Links (3)</h2>
         <div id="ep-listDocumentLinks" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -505,7 +523,7 @@
       <a href="#ep-listDocumentLinks" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">listDocumentLinks({
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.listDocumentLinks({
   query: { q?: string, limit?: number, offset?: number, sort?: string, documentId?: string, subjectId?: string, subjectType?: string },
 })</pre>
       
@@ -560,7 +578,7 @@
       <a href="#ep-createDocumentLink" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">createDocumentLink({ body: { ... } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.createDocumentLink({ body: { ... } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -583,7 +601,9 @@
       <a href="#ep-getDocumentLink" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getDocumentLink({ path: { documentLinkId: string } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">document-management.getDocumentLink({
+  path: { documentLinkId: string },
+})</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -595,6 +615,29 @@
     </tr></tbody></table>
     </div>
     </div>
+  </details>
+</div>
+      </section><section id="section-constants" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Constants (2)</h2>
+        <div id="const-DocumentLifecycleState" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DocumentLifecycleState</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (4 values)</span>
+      <a href="#const-DocumentLifecycleState" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'active'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'retained'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'pending_disposition'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'destroyed'</span></div></div></div>
+  </details>
+</div><div id="const-RetentionTrigger" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">RetentionTrigger</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (4 values)</span>
+      <a href="#const-RetentionTrigger" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'case_closure'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'application_denial'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'document_date'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'submission_date'</span></div></div></div>
   </details>
 </div>
       </section><section id="section-types" style="margin-bottom:2.5rem;">

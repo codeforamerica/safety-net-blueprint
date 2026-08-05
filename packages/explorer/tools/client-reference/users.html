@@ -99,6 +99,10 @@
       <a href="#group-users" class="nav-link">Users <span class="nav-count">6</span></a><a href="#group-claims" class="nav-link">Claims <span class="nav-count">1</span></a>
     </div>
     <div class="nav-section">
+        <div class="nav-section-label">Constants</div>
+        <a href="#const-Domain" class="nav-link">Domain</a><a href="#const-Frequency" class="nav-link">Frequency</a><a href="#const-Program" class="nav-link">Program</a><a href="#const-RoleType" class="nav-link">RoleType</a><a href="#const-RoleType" class="nav-link">RoleType</a>
+      </div>
+    <div class="nav-section">
         <div class="nav-section-label">Types</div>
         <a href="#type-User" class="nav-link">User</a><a href="#type-FrontendAuthContext" class="nav-link">FrontendAuthContext</a><a href="#type-TokenClaims" class="nav-link">TokenClaims</a><a href="#type-UserCreate" class="nav-link">UserCreate</a><a href="#type-UserList" class="nav-link">UserList</a><a href="#type-UserUpdate" class="nav-link">UserUpdate</a><a href="#type-UserWritable" class="nav-link">UserWritable</a><a href="#type-FrontendAuthContextWritable" class="nav-link">FrontendAuthContextWritable</a><a href="#type-UserListWritable" class="nav-link">UserListWritable</a>
       </div>
@@ -106,7 +110,7 @@
     </nav>
     <main id="content">
       <section id="group-users" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Users (6)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Users (6)</h2>
         <div id="ep-listUsers" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -117,7 +121,7 @@
       <a href="#ep-listUsers" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">listUsers({
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">users.listUsers({
   query: { q?: string, limit?: number, offset?: number, sort?: string },
 })</pre>
       
@@ -157,7 +161,7 @@
       <a href="#ep-createUser" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">createUser({ body: { ... } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">users.createUser({ body: { ... } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -180,7 +184,7 @@
       <a href="#ep-getCurrentUser" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:0;">getCurrentUser()</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:0;">users.getCurrentUser()</pre>
       
     </div>
   </details>
@@ -194,7 +198,7 @@
       <a href="#ep-deactivateUser" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">deactivateUser({ path: { userId: string } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">users.deactivateUser({ path: { userId: string } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -217,7 +221,7 @@
       <a href="#ep-getUser" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getUser({ path: { userId: string } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">users.getUser({ path: { userId: string } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -240,7 +244,7 @@
       <a href="#ep-updateUser" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">updateUser({ path: { userId: string }, body: { ... } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">users.updateUser({ path: { userId: string }, body: { ... } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -260,7 +264,7 @@
   </details>
 </div>
       </section><section id="group-claims" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Claims (1)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Claims (1)</h2>
         <div id="ep-getTokenClaims" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -271,7 +275,7 @@
       <a href="#ep-getTokenClaims" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getTokenClaims({ path: { sub: string } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">users.getTokenClaims({ path: { sub: string } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -283,6 +287,59 @@
     </tr></tbody></table>
     </div>
     </div>
+  </details>
+</div>
+      </section><section id="section-constants" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Constants (5)</h2>
+        <div id="const-Domain" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">Domain</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (6 values)</span>
+      <a href="#const-Domain" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'client-management'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'data-exchange'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'document-management'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'eligibility'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'intake'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'workflow'</span></div></div></div>
+  </details>
+</div><div id="const-Frequency" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">Frequency</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (7 values)</span>
+      <a href="#const-Frequency" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'daily'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'weekly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'every_two_weeks'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'twice_monthly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'monthly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'yearly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'variable'</span></div></div></div>
+  </details>
+</div><div id="const-Program" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">Program</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (5 values)</span>
+      <a href="#const-Program" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'snap'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'medicaid'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'chip'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'tanf'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'aca'</span></div></div></div>
+  </details>
+</div><div id="const-RoleType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">RoleType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (7 values)</span>
+      <a href="#const-RoleType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'applicant'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'case_worker'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'supervisor'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'county_admin'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'state_admin'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'partner_readonly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'system'</span></div></div></div>
+  </details>
+</div><div id="const-RoleType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">RoleType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (7 values)</span>
+      <a href="#const-RoleType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'applicant'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'case_worker'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'supervisor'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'county_admin'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'state_admin'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'partner_readonly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'system'</span></div></div></div>
   </details>
 </div>
       </section><section id="section-types" style="margin-bottom:2.5rem;">

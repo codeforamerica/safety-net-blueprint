@@ -275,11 +275,11 @@ properties:
       return { specsDir, outputDir };
     }
 
-    function readAnnotations(outputDir) {
-      return readFileSync(join(outputDir, 'annotations.ts'), 'utf8');
+    function readAnnotations(outputDir, domain) {
+      return readFileSync(join(outputDir, domain, 'annotations.ts'), 'utf8');
     }
 
-    it('uses domain property from file as export name', async () => {
+    it('uses domain property from file as domain name', async () => {
       const { specsDir, outputDir } = makeDir({
         'intake-annotations.yaml': `
 domain: intake
@@ -290,10 +290,10 @@ operations: {}
 events: {}
 `,
       });
-      const exportNames = [];
-      await generateAnnotationsAndPolicies(specsDir, outputDir, exportNames);
-      assert.ok(exportNames.includes('IntakeAnnotations'));
-      assert.ok(readAnnotations(outputDir).includes('export const IntakeAnnotations'));
+      const domains = [];
+      await generateAnnotationsAndPolicies(specsDir, outputDir, domains);
+      assert.ok(domains.includes('intake'));
+      assert.ok(readAnnotations(outputDir, 'intake').includes('export const Annotations'));
     });
 
     it('uses domain property over filename when they differ', async () => {
@@ -307,10 +307,10 @@ operations: {}
 events: {}
 `,
       });
-      const exportNames = [];
-      await generateAnnotationsAndPolicies(specsDir, outputDir, exportNames);
-      assert.ok(exportNames.includes('IntakeAnnotations'), 'should use domain from file, not filename');
-      assert.ok(!exportNames.includes('FooAnnotations'), 'should not use filename-derived name');
+      const domains = [];
+      await generateAnnotationsAndPolicies(specsDir, outputDir, domains);
+      assert.ok(domains.includes('intake'), 'should use domain from file, not filename');
+      assert.ok(!domains.includes('foo'), 'should not use filename-derived name');
     });
 
     it('falls back to filename when domain property is absent', async () => {
@@ -323,9 +323,9 @@ operations: {}
 events: {}
 `,
       });
-      const exportNames = [];
-      await generateAnnotationsAndPolicies(specsDir, outputDir, exportNames);
-      assert.ok(exportNames.includes('WorkflowAnnotations'));
+      const domains = [];
+      await generateAnnotationsAndPolicies(specsDir, outputDir, domains);
+      assert.ok(domains.includes('workflow'));
     });
 
     it('generates exports for multiple domains', async () => {
@@ -347,13 +347,12 @@ operations:
 events: {}
 `,
       });
-      const exportNames = [];
-      await generateAnnotationsAndPolicies(specsDir, outputDir, exportNames);
-      assert.ok(exportNames.includes('IntakeAnnotations'));
-      assert.ok(exportNames.includes('WorkflowAnnotations'));
-      const content = readAnnotations(outputDir);
-      assert.ok(content.includes('export const IntakeAnnotations'));
-      assert.ok(content.includes('export const WorkflowAnnotations'));
+      const domains = [];
+      await generateAnnotationsAndPolicies(specsDir, outputDir, domains);
+      assert.ok(domains.includes('intake'));
+      assert.ok(domains.includes('workflow'));
+      assert.ok(readAnnotations(outputDir, 'intake').includes('export const Annotations'));
+      assert.ok(readAnnotations(outputDir, 'workflow').includes('export const Annotations'));
     });
 
     it('merges multiple files with the same domain', async () => {
@@ -375,22 +374,64 @@ operations: {}
 events: {}
 `,
       });
-      const exportNames = [];
-      await generateAnnotationsAndPolicies(specsDir, outputDir, exportNames);
-      assert.deepStrictEqual(exportNames, ['IntakeAnnotations']);
-      const content = readAnnotations(outputDir);
+      const domains = [];
+      await generateAnnotationsAndPolicies(specsDir, outputDir, domains);
+      assert.deepStrictEqual(domains, ['intake']);
+      const content = readAnnotations(outputDir, 'intake');
       assert.ok(content.includes('application.submittedAt'));
       assert.ok(content.includes('application.members.ssn'));
     });
 
-    it('generates no file when no annotation files are present', async () => {
+    it('generates no annotation files when no annotation files are present', async () => {
       const { specsDir, outputDir } = makeDir({
         'intake-openapi.yaml': 'openapi: 3.1.0\ninfo:\n  title: Test\n  version: 1.0.0\n',
       });
-      const exportNames = [];
-      await generateAnnotationsAndPolicies(specsDir, outputDir, exportNames);
-      assert.deepStrictEqual(exportNames, []);
-      assert.throws(() => readAnnotations(outputDir), 'annotations.ts should not be written');
+      const domains = [];
+      await generateAnnotationsAndPolicies(specsDir, outputDir, domains);
+      assert.deepStrictEqual(domains, []);
+      assert.throws(() => readAnnotations(outputDir, 'intake'), 'annotations.ts should not be written');
+    });
+
+    it('patches domain index.ts with Annotations re-export when index exists', async () => {
+      const { specsDir, outputDir } = makeDir({
+        'intake-annotations.yaml': `
+domain: intake
+schema:
+  application.submittedAt:
+    policies: [snap-processing-clock]
+operations: {}
+events: {}
+`,
+      });
+      // Pre-create the domain index.ts as hey-api would
+      const domainDir = join(outputDir, 'intake');
+      mkdirSync(domainDir, { recursive: true });
+      writeFileSync(join(domainDir, 'index.ts'), `export { listApplications } from './sdk.gen';\n`);
+
+      const domains = [];
+      await generateAnnotationsAndPolicies(specsDir, outputDir, domains);
+
+      const index = readFileSync(join(domainDir, 'index.ts'), 'utf8');
+      assert.ok(index.includes(`export { Annotations } from './annotations.js'`),
+        'index.ts should re-export Annotations');
+      assert.ok(index.includes('listApplications'), 'original exports should be preserved');
+    });
+
+    it('does not patch index.ts when it does not exist', async () => {
+      const { specsDir, outputDir } = makeDir({
+        'intake-annotations.yaml': `
+domain: intake
+schema: {}
+operations: {}
+events: {}
+`,
+      });
+      // No index.ts created — just the annotations file should be written
+      const domains = [];
+      await generateAnnotationsAndPolicies(specsDir, outputDir, domains);
+      assert.ok(domains.includes('intake'));
+      // annotations.ts written, no error thrown
+      assert.ok(readAnnotations(outputDir, 'intake').includes('export const Annotations'));
     });
   });
 
