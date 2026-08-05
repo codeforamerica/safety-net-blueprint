@@ -8,7 +8,7 @@ import { extractExpandFields, applyExpand, getItemSchema } from './handlers/expa
 import { createGetHandler } from './handlers/get-handler.js';
 import { createCurrentUserHandler } from './handlers/current-user-handler.js';
 import { createCreateHandler } from './handlers/create-handler.js';
-import { createUpdateHandler } from './handlers/update-handler.js';
+import { createUpdateHandler, buildChanges } from './handlers/update-handler.js';
 import { createDeleteHandler } from './handlers/delete-handler.js';
 import { createTransitionHandler } from './handlers/transition-handler.js';
 import { createSearchHandler } from './handlers/search-handler.js';
@@ -23,6 +23,7 @@ import { emitEvent } from './emit-event.js';
 import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
 import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX } from './search-engine.js';
 import { randomUUID } from 'node:crypto';
+import { extractCallerRoles } from './auth-context.js';
 
 /**
  * Determine if a path is a flat collection endpoint (no path parameters).
@@ -124,6 +125,7 @@ function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parent
       const { items } = findAll(endpoint.collectionName, { [parentField]: parentId }, { limit: 1 });
       let result;
       let action;
+      let eventData;
 
       if (items.length === 0) {
         // No record yet — create one (upsert)
@@ -131,9 +133,12 @@ function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parent
         insertResource(endpoint.collectionName, newRecord);
         result = findAll(endpoint.collectionName, { id: newRecord.id }, { limit: 1 }).items[0];
         action = 'created';
+        eventData = { ...result };
       } else {
+        const before = { ...items[0] };
         result = update(endpoint.collectionName, items[0].id, req.body);
         action = 'updated';
+        eventData = { changes: buildChanges(before, result) };
       }
 
       try {
@@ -144,8 +149,9 @@ function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parent
           action,
           resourceId: result.id,
           source: apiMetadata.serverBasePath,
-          data: { changes: [] },
+          data: eventData,
           callerId: req.headers['x-caller-id'] || null,
+          callerRoles: extractCallerRoles(req),
           traceparent: req.headers['traceparent'] || null,
           now: result.updatedAt,
         });
