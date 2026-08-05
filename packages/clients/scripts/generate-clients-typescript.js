@@ -634,7 +634,7 @@ function collectNamedEnumDefs(specPath) {
  */
 function patchDomainBarrelForNamedEnums(domainIndexPath, namedEnums) {
   const existing = readFileSync(resolvePath(domainIndexPath), 'utf8');
-  const newNames = namedEnums.map(e => e.name).filter(name => !existing.includes(`${name}`));
+  const newNames = namedEnums.map(e => e.name).filter(name => !new RegExp(`\\b${name}\\b`).test(existing));
   if (newNames.length === 0) return;
   writeFileSync(domainIndexPath, existing.trimEnd() + `\nexport { ${newNames.join(', ')} } from './types.gen';\n`);
 }

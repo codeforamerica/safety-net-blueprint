@@ -538,34 +538,4 @@ events: {}
     });
   });
 
-  describe('generated client output', () => {
-    it('no types.gen.ts has duplicate export const declarations', () => {
-      // Regression: patchTypesGenForNamedEnums was appending enums that hey-api
-      // already emitted, producing TS2451 duplicate block-scoped variable errors.
-      // This test scans every generated types.gen.ts to catch any domain where
-      // two code paths emit the same enum, regardless of which path causes it.
-      const generatedDir = resolvePath(__dirname, '../generated');
-      if (!existsSync(generatedDir)) return; // skip if clients haven't been generated yet
-
-      const domains = readdirSync(generatedDir, { withFileTypes: true })
-        .filter(e => e.isDirectory())
-        .map(e => e.name);
-
-      const duplicates = [];
-      for (const domain of domains) {
-        const typesGenPath = join(generatedDir, domain, 'types.gen.ts');
-        if (!existsSync(typesGenPath)) continue;
-        const content = readFileSync(typesGenPath, 'utf8');
-        const seen = new Map();
-        for (const match of content.matchAll(/^export const (\w+) =/gm)) {
-          const name = match[1];
-          seen.set(name, (seen.get(name) ?? 0) + 1);
-        }
-        for (const [name, count] of seen) {
-          if (count > 1) duplicates.push(`${domain}/types.gen.ts: ${name} declared ${count} times`);
-        }
-      }
-      assert.deepEqual(duplicates, [], `Duplicate enum declarations found:\n${duplicates.join('\n')}`);
-    });
-  });
 });
