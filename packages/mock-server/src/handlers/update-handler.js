@@ -31,16 +31,26 @@ export function deepEqual(a, b) {
 
 export function buildChanges(before, after) {
   const excluded = new Set(['id', 'createdAt', 'updatedAt']);
-  const allFields = new Set([...Object.keys(before), ...Object.keys(after)]);
   const changes = [];
-  for (const field of allFields) {
-    if (excluded.has(field)) continue;
-    const beforeVal = before[field] ?? null;
-    const afterVal = after[field] ?? null;
-    if (!deepEqual(beforeVal, afterVal)) {
-      changes.push({ field, before: beforeVal, after: afterVal });
+
+  function diffPaths(b, a, prefix) {
+    const allKeys = new Set([...Object.keys(b ?? {}), ...Object.keys(a ?? {})]);
+    for (const key of allKeys) {
+      if (!prefix && excluded.has(key)) continue;
+      const path = prefix ? `${prefix}.${key}` : key;
+      const beforeVal = b?.[key] ?? null;
+      const afterVal = a?.[key] ?? null;
+      if (deepEqual(beforeVal, afterVal)) continue;
+      if (beforeVal && afterVal && typeof beforeVal === 'object' && !Array.isArray(beforeVal)
+          && typeof afterVal === 'object' && !Array.isArray(afterVal)) {
+        diffPaths(beforeVal, afterVal, path);
+      } else {
+        changes.push({ field: path, before: beforeVal, after: afterVal });
+      }
     }
   }
+
+  diffPaths(before, after, '');
   return changes;
 }
 

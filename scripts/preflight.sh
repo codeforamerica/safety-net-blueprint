@@ -43,6 +43,11 @@ bail_if_failed() {
   fi
 }
 
+step "Stopping any running mock server for a clean-slate run"
+lsof -ti :1080 | xargs kill -9 2>/dev/null || true
+pass "Mock server stopped (or was not running)"
+
+
 step "Clearing generated artifacts for a clean-slate run"
 rm -rf packages/resolved
 rm -rf packages/mock-server/tests/integration/generated
@@ -121,9 +126,6 @@ else
 fi
 
 step "Running functional tests"
-# Kill any orphaned mock server from a previous run
-lsof -ti :1080 | xargs kill -9 2>/dev/null || true
-
 if node packages/mock-server/tests/run-all-tests.js --functional 2>&1; then
   pass "Functional tests passed"
 else
@@ -131,9 +133,6 @@ else
 fi
 
 step "Running integration tests"
-# Kill any orphaned mock server from a previous run
-lsof -ti :1080 | xargs kill -9 2>/dev/null || true
-
 if npm run test:integration 2>&1; then
   pass "Integration tests passed"
 else

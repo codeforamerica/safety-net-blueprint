@@ -218,6 +218,23 @@ function parseDomainTypes(typesContent) {
   return results;
 }
 
+/**
+ * Parse named `as const` enum objects from types.gen.ts.
+ * Returns [{ name, values }] where values are the string literal values.
+ */
+function parseDomainConsts(typesContent) {
+  const results = [];
+  const re = /^export const ([A-Z][A-Za-z0-9]+) = \{([\s\S]*?)\} as const;/gm;
+  let m;
+  while ((m = re.exec(typesContent)) !== null) {
+    const name = m[1];
+    const body = m[2];
+    const values = [...body.matchAll(/:\s*'([^']+)'/g)].map(v => v[1]);
+    if (values.length > 0) results.push({ name, values });
+  }
+  return results.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 // ── Type cross-linking ─────────────────────────────────────────────────────────
 
 const PRIMITIVES = new Set(['string', 'number', 'integer', 'boolean', 'null', 'void', 'undefined', 'any', 'unknown', 'object', 'array', 'record', 'union', 'never']);
@@ -278,26 +295,28 @@ function groupFromUrl(url) {
 
 // ── HTML renderers ─────────────────────────────────────────────────────────────
 
-function buildCallSignature(ep) {
+function buildCallSignature(ep, domain) {
   const pathParams  = ep.parameters.filter(p => p.kind === 'Path');
   const queryParams = ep.parameters.filter(p => p.kind === 'Query');
   const hasBody     = ep.parameters.some(p => p.kind === 'Body');
-  if (!pathParams.length && !queryParams.length && !hasBody) return `${ep.name}()`;
+  const qualifiedName = domain ? `${domain}.${ep.name}` : ep.name;
+  if (!pathParams.length && !queryParams.length && !hasBody) return `${qualifiedName}()`;
   const opts = [];
   if (pathParams.length)  opts.push(`path: { ${pathParams.map(p => `${p.name}: ${p.typeLabel}`).join(', ')} }`);
   if (queryParams.length) opts.push(`query: { ${queryParams.map(p => `${p.name}${p.optional ? '?' : ''}: ${p.typeLabel.split(' ')[0]}`).join(', ')} }`);
   if (hasBody)            opts.push(`body: { ... }`);
-  const oneLine = `${ep.name}({ ${opts.join(', ')} })`;
-  return oneLine.length <= 72 ? oneLine : `${ep.name}({\n  ${opts.join(',\n  ')},\n})`;
+  const oneLine = `${qualifiedName}({ ${opts.join(', ')} })`;
+  return oneLine.length <= 72 ? oneLine : `${qualifiedName}({\n  ${opts.join(',\n  ')},\n})`;
 }
 
-function renderEndpointBlock(ep, apiSlug, knownTypes, id = '') {
+function renderEndpointBlock(ep, apiSlug, knownTypes, id = '', domain = '') {
   const pathParams = ep.parameters.filter(p => p.kind === 'Path');
   const argSummary = pathParams.map(p => esc(p.name)).join(', ');
   const apiRefLink = apiSlug
     ? `<a href="../api-reference/${apiSlug}.html#${endpointId(ep.url, ep.method.toLowerCase())}" style="font-size:10px;background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:3px;padding:1px 6px;color:${COLORS.midBlue};text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>`
     : '';
-  const sig = buildCallSignature(ep);
+  const sig = buildCallSignature(ep, domain);
+  const displayName = domain ? `${domain}.${ep.name}` : ep.name;
   const td = `padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;`;
   const paramRows = ep.parameters.map(p => {
     const nameCell = (p.name === 'q' && p.kind === 'Query')
@@ -351,6 +370,48 @@ function renderTypeBlock(schema, knownTypes, id = '') {
 </div>`;
 }
 
+function renderConstantBlock(c, domainDir) {
+  const id = `const-${c.name}`;
+  let subtitle, bodyHtml;
+
+  if (c.kind === 'annotations') {
+    subtitle = `map — annotations compiled from <code>${esc(domainDir)}-annotations*.yaml</code> at generation time`;
+    const usageLine = [
+      `${domainDir}.Annotations.schema['field/path']      // field annotations`,
+      `${domainDir}.Annotations.operations['action-id']   // operation annotations`,
+      `${domainDir}.Annotations.events['event.type']      // event annotations`,
+    ].join('\n');
+    bodyHtml = `
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">${esc(usageLine)}</pre>
+      <div style="border:1px solid #eee;border-radius:4px;overflow:hidden;">
+        <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Sub-maps</div>
+        <table style="width:100%;border-collapse:collapse;"><tbody>
+          <tr><td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;font-weight:600;">schema</td><td style="padding:4px 10px;font-size:11px;color:#555;border-bottom:1px solid #f2f2f2;">Field-level annotations keyed by JSON path</td></tr>
+          <tr><td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;font-weight:600;">operations</td><td style="padding:4px 10px;font-size:11px;color:#555;border-bottom:1px solid #f2f2f2;">State machine action and OpenAPI operation annotations</td></tr>
+          <tr><td style="padding:4px 10px;font-size:11.5px;font-family:monospace;font-weight:600;">events</td><td style="padding:4px 10px;font-size:11px;color:#555;">AsyncAPI event channel annotations</td></tr>
+        </tbody></table>
+      </div>`;
+  } else {
+    subtitle = `enum (${c.values.length} value${c.values.length !== 1 ? 's' : ''})`;
+    const rows = c.values.map(v =>
+      `<div style="line-height:1.8;"><span style="color:#b5490a;">'${esc(v)}'</span></div>`
+    ).join('');
+    bodyHtml = `<div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">${rows}</div>`;
+  }
+
+  return `<div id="${esc(id)}" class="content-item" style="border:1px solid ${COLORS.sandDark};border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:${COLORS.darkBlue};">${esc(c.name)}</code>
+      <span style="font-size:11px;color:#888;flex:1;">${subtitle}</span>
+      <a href="#${esc(id)}" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;">${bodyHtml}</div>
+  </details>
+</div>`;
+}
+
 // ── Load and process each domain ──────────────────────────────────────────────
 
 const indexContent = readFileSync(join(generatedClientsDir, 'index.ts'), 'utf8');
@@ -367,6 +428,12 @@ const domains = domainDirs.map(dir => {
   const types         = parseDomainTypes(typesContent);
   const knownTypes    = new Set(types.map(t => t.name));
   const apiSlug       = existsSync(join(resolvedDir, `${slug}-openapi.yaml`)) ? slug : null;
+  const hasAnnotations = existsSync(join(domainDir, 'annotations.ts'));
+  const enumConsts    = parseDomainConsts(typesContent).map(c => ({ ...c, kind: 'enum' }));
+  const allConsts     = [
+    ...enumConsts,
+    ...(hasAnnotations ? [{ name: 'Annotations', kind: 'annotations' }] : []),
+  ].sort((a, b) => a.name.localeCompare(b.name));
 
   const endpoints = endpointsList.map(ep => {
     const data = dataTypeMap.get(ep.name) ?? { path: [], query: [], hasBody: false };
@@ -380,7 +447,7 @@ const domains = domainDirs.map(dir => {
     };
   });
 
-  return { dir, slug, label: titleCase(slug), endpoints, types, knownTypes, apiSlug };
+  return { dir, slug, label: titleCase(slug), endpoints, types, knownTypes, apiSlug, allConsts };
 });
 
 // ── Per-domain page ────────────────────────────────────────────────────────────
@@ -409,10 +476,24 @@ function buildDomainPage(d) {
       </section>`
     : '';
 
+  const constantsSectionHtml = d.allConsts.length
+    ? `<section id="section-constants" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Constants (${d.allConsts.length})</h2>
+        ${d.allConsts.map(c => renderConstantBlock(c, d.dir)).join('')}
+      </section>`
+    : '';
+
   const typesNavSection = d.types.length
     ? `<div class="nav-section">
         <div class="nav-section-label">Types</div>
         ${d.types.map(t => `<a href="#type-${esc(t.name)}" class="nav-link">${esc(t.name)}</a>`).join('')}
+      </div>`
+    : '';
+
+  const constantsNavSection = d.allConsts.length
+    ? `<div class="nav-section">
+        <div class="nav-section-label">Constants</div>
+        ${d.allConsts.map(c => `<a href="#const-${esc(c.name)}" class="nav-link">${esc(c.name)}</a>`).join('')}
       </div>`
     : '';
 
@@ -423,15 +504,15 @@ function buildDomainPage(d) {
     ).join('');
     methodsMainHtml = [...groups.entries()].map(([key, g]) =>
       `<section id="group-${slugify(key)}" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">${esc(g.label)} (${g.endpoints.length})</h2>
-        ${g.endpoints.map(ep => renderEndpointBlock(ep, d.apiSlug, d.knownTypes, `ep-${ep.name}`)).join('')}
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">${esc(g.label)} (${g.endpoints.length})</h2>
+        ${g.endpoints.map(ep => renderEndpointBlock(ep, d.apiSlug, d.knownTypes, `ep-${ep.name}`, d.dir)).join('')}
       </section>`
     ).join('');
   } else {
     methodsNavItems = `<a href="#section-methods" class="nav-link">All methods <span class="nav-count">${d.endpoints.length}</span></a>`;
     methodsMainHtml = `<section id="section-methods" style="margin-bottom:2.5rem;">
       <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Methods (${d.endpoints.length})</h2>
-      ${d.endpoints.map(ep => renderEndpointBlock(ep, d.apiSlug, d.knownTypes, `ep-${ep.name}`)).join('')}
+      ${d.endpoints.map(ep => renderEndpointBlock(ep, d.apiSlug, d.knownTypes, `ep-${ep.name}`, d.dir)).join('')}
     </section>`;
   }
 
@@ -439,8 +520,9 @@ function buildDomainPage(d) {
       <div class="nav-section-label">Methods</div>
       ${methodsNavItems}
     </div>
+    ${constantsNavSection}
     ${typesNavSection}`;
-  const mainHtml = methodsMainHtml + typesSectionHtml;
+  const mainHtml = methodsMainHtml + constantsSectionHtml + typesSectionHtml;
 
   const html = twoColumnPage({
     title: `Safety Net Blueprint \u2014 Client Reference: ${esc(d.label)}`,
@@ -613,7 +695,7 @@ function buildIndexPage() {
         <div style="font-size:14px;font-weight:700;color:${COLORS.darkBlue};margin-bottom:2px;">${esc(d.label)}</div>
         <code style="font-size:11px;color:#888;background:none;">packages/clients/generated/${esc(d.dir)}</code>
       </div>
-      <div style="font-size:11px;color:#aaa;white-space:nowrap;">${d.endpoints.length} method${d.endpoints.length !== 1 ? 's' : ''} · ${d.types.length} type${d.types.length !== 1 ? 's' : ''}</div>
+      <div style="font-size:11px;color:#aaa;white-space:nowrap;">${d.endpoints.length} method${d.endpoints.length !== 1 ? 's' : ''} · ${d.allConsts.length} constant${d.allConsts.length !== 1 ? 's' : ''} · ${d.types.length} type${d.types.length !== 1 ? 's' : ''}</div>
     </a>`).join('');
 
   const helperRows = helperFiles.map(h => `

@@ -16,14 +16,14 @@
  *
  * Output structure:
  *   {out}/
- *     index.ts                  # Re-exports all domains and annotations
+ *     index.ts                  # Re-exports all domains and search helpers
  *     search-helpers.ts         # Query string builder utilities
- *     annotations.ts            # Typed annotation exports (if annotation files found)
  *     persons/
- *       index.ts                # SDK functions + types
+ *       index.ts                # SDK functions + types + Annotations re-export (if annotation files found)
  *       sdk.gen.ts              # getPerson, createPerson, etc.
  *       types.gen.ts            # TypeScript interfaces
  *       zod.gen.ts              # Zod schemas for validation
+ *       annotations.ts          # Domain annotations as Annotations const (if annotation files found)
  *       client/                 # HTTP client utilities
  *     applications/
  *     households/
@@ -86,14 +86,14 @@ Example:
 
 Output structure:
   {out}/
-    index.ts                  # Re-exports all domains and annotations
+    index.ts                  # Re-exports all domains and search helpers
     search-helpers.ts         # Query string builder utilities
-    annotations.ts            # Typed annotation exports (when annotation files are present)
     persons/
-      index.ts                # SDK functions + types
+      index.ts                # SDK functions + types + Annotations re-export (if annotation files found)
       sdk.gen.ts              # getPerson, createPerson, etc.
       types.gen.ts            # TypeScript interfaces
       zod.gen.ts              # Zod schemas for validation
+      annotations.ts          # Domain annotations as Annotations const (if annotation files found)
       client/                 # HTTP client utilities
     applications/
     households/
@@ -199,6 +199,8 @@ export default {
 /**
  * Convert a kebab-case domain name to a PascalCase export name.
  * e.g. 'intake' → 'IntakeAnnotations', 'case-management' → 'CaseManagementAnnotations'
+ * Kept for external callers; not used internally (annotations are now exported as `Annotations`
+ * inside each domain package, accessible as `intake.Annotations`).
  * @param {string} domain
  */
 function domainToAnnotationExportName(domain) {
@@ -209,52 +211,65 @@ function domainToAnnotationExportName(domain) {
 }
 
 /**
- * Look for annotation YAML files in `specsDir` and emit `annotations.ts` with
- * one typed `as const` export per domain. Policy data is served by the platform
- * API (`GET /platform/registry/policies`) rather than baked into the client.
+ * Look for annotation YAML files in `specsDir` and write per-domain `annotations.ts` files.
+ * Each domain gets `export const Annotations = {...} as const` inside its own subdirectory,
+ * making it accessible as `intake.Annotations` in the generated client with no extra import.
+ * Policy data is served by the platform API rather than baked into the client.
  *
- * Populates `annotationExportNames` with the export names written to annotations.ts.
+ * Populates `annotationDomains` with the domain names that received annotation files.
  *
  * @param {string} specsDir
  * @param {string} outputDir
- * @param {string[]} annotationExportNames - mutated in place
+ * @param {string[]} annotationDomains - mutated in place
  * @returns {Promise<void>}
  */
-async function generateAnnotationsAndPolicies(specsDir, outputDir, annotationExportNames) {
+async function generateAnnotationsAndPolicies(specsDir, outputDir, annotationDomains) {
   const allFiles = readdirSync(specsDir);
 
   // ── Annotations ───────────────────────────────────────────────────────────
 
   const annotationFiles = allFiles.filter(f => f.includes('-annotations') && f.endsWith('.yaml')).sort();
 
-  if (annotationFiles.length > 0) {
-    // Group files by domain. Prefer the `domain:` property declared in the file;
-    // fall back to the filename prefix (everything before "-annotations") if absent.
-    const domainMap = new Map();
-    for (const f of annotationFiles) {
-      const data = yaml.load(readFileSync(join(specsDir, f), 'utf8'));
-      const domain = data.domain || f.replace(/-annotations.*\.yaml$/, '');
-      if (!domainMap.has(domain)) domainMap.set(domain, []);
-      domainMap.get(domain).push({ file: f, data });
+  if (annotationFiles.length === 0) {
+    console.log('  No annotation files found, skipping annotations');
+    return;
+  }
+
+  // Group files by domain. Prefer the `domain:` property declared in the file;
+  // fall back to the filename prefix (everything before "-annotations") if absent.
+  const domainMap = new Map();
+  for (const f of annotationFiles) {
+    const data = yaml.load(readFileSync(join(specsDir, f), 'utf8'));
+    const domain = data.domain || f.replace(/-annotations.*\.yaml$/, '');
+    if (!domainMap.has(domain)) domainMap.set(domain, []);
+    domainMap.get(domain).push({ file: f, data });
+  }
+
+  for (const [domain, entries] of domainMap) {
+    const merged = { schema: {}, operations: {}, events: {} };
+    for (const { data } of entries) {
+      Object.assign(merged.schema, data.schema || {});
+      Object.assign(merged.operations, data.operations || {});
+      Object.assign(merged.events, data.events || {});
     }
 
-    const blocks = [];
-    for (const [domain, entries] of domainMap) {
-      const merged = { schema: {}, operations: {}, events: {} };
-      for (const { data } of entries) {
-        Object.assign(merged.schema, data.schema || {});
-        Object.assign(merged.operations, data.operations || {});
-        Object.assign(merged.events, data.events || {});
-      }
-      const exportName = domainToAnnotationExportName(domain);
-      annotationExportNames.push(exportName);
-      blocks.push(`export const ${exportName} = ${JSON.stringify(merged, null, 2)} as const;`);
+    // Write per-domain annotations.ts — `Annotations` is part of the domain namespace.
+    const domainDir = join(outputDir, domain);
+    mkdirSync(domainDir, { recursive: true });
+    writeFileSync(
+      join(domainDir, 'annotations.ts'),
+      `export const Annotations = ${JSON.stringify(merged, null, 2)} as const;\n`
+    );
+
+    // Patch the domain barrel so `import { intake } from './generated'` exposes Annotations.
+    const domainIndexPath = join(domainDir, 'index.ts');
+    if (existsSync(domainIndexPath)) {
+      const existing = readFileSync(domainIndexPath, 'utf8');
+      writeFileSync(domainIndexPath, existing.trimEnd() + `\nexport { Annotations } from './annotations.js';\n`);
     }
 
-    writeFileSync(join(outputDir, 'annotations.ts'), blocks.join('\n\n') + '\n');
-    console.log(`  ✓ Generated annotations.ts (${annotationExportNames.join(', ')})`);
-  } else {
-    console.log('  No annotation files found, skipping annotations.ts');
+    annotationDomains.push(domain);
+    console.log(`  ✓ Generated ${domain}/annotations.ts`);
   }
 }
 
@@ -497,19 +512,18 @@ async function main() {
 
   // Generate annotation TypeScript files when present in the spec dir
   console.log('\nGenerating annotation exports...');
-  const annotationExports = [];
-  await generateAnnotationsAndPolicies(specsDir, outputDir, annotationExports);
+  const annotationDomains = [];
+  await generateAnnotationsAndPolicies(specsDir, outputDir, annotationDomains);
 
-  // Create index.ts that re-exports all domains and annotations
+  // Create index.ts that re-exports all domains and search helpers.
+  // Annotations are part of each domain namespace (intake.Annotations) — no root-level re-export needed.
   console.log('\nCreating index exports...');
   const domainExports = domains.map(d => `export * as ${d} from './${d}/index.js';`).join('\n');
-  const annotationIndexExports = annotationExports.map(n => `export { ${n} } from './annotations.js';`).join('\n');
-  const indexParts = [
+  const indexContent = [
     domainExports,
-    annotationIndexExports,
     `export { q, search } from './search-helpers.js';`,
-  ].filter(Boolean);
-  writeFileSync(join(outputDir, 'index.ts'), indexParts.join('\n') + '\n');
+  ].join('\n') + '\n';
+  writeFileSync(join(outputDir, 'index.ts'), indexContent);
   console.log('  ✓ Created index.ts');
 
   // Copy search helpers
@@ -587,10 +601,8 @@ function collectNamedEnumDefs(specPath) {
     externalRefs.add(match[1]);
   }
 
-  // Name enums using file stem + def name to match hey-api's hoisting convention,
-  // e.g. income.yaml + IncomeType → IncomeIncomeType. This avoids naming collisions
-  // across files and preserves compatibility with what hey-api produced before bundling.
-  const toPascal = s => s.charAt(0).toUpperCase() + s.slice(1);
+  // Use the def name directly — it already carries semantic meaning (e.g. IncomeType, JobStatus).
+  // Prefixing with the file stem produced redundant names (IncomeIncomeType, IntakeImmigrantStatus).
   const seen = new Set();
   const namedEnums = [];
   for (const ref of externalRefs) {
@@ -598,11 +610,10 @@ function collectNamedEnumDefs(specPath) {
     if (!existsSync(filePath)) continue;
     let schema;
     try { schema = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA }); } catch { continue; }
-    const fileStem = toPascal(ref.split('/').pop().replace(/\.yaml$/, ''));
     const defs = schema?.$defs ?? schema?.definitions ?? {};
     for (const [defName, def] of Object.entries(defs)) {
       if (def.type === 'string' && Array.isArray(def.enum)) {
-        const name = fileStem + defName;
+        const name = defName;
         if (!seen.has(name)) {
           seen.add(name);
           namedEnums.push({ name, values: def.enum });
@@ -646,8 +657,20 @@ function patchTypesGenForNamedEnums(typesGenPath, namedEnums) {
   writeFileSync(typesGenPath, existing.trimEnd() + '\n\n' + blocks.join('\n\n') + '\n');
 }
 
+/**
+ * Patch a domain's index.ts barrel to re-export Annotations.
+ * This is called by generateAnnotationsAndPolicies when a domain index already exists.
+ * Exported for testing.
+ *
+ * @param {string} domainIndexPath - absolute path to the domain's index.ts
+ */
+function patchDomainBarrelForAnnotations(domainIndexPath) {
+  const existing = readFileSync(resolvePath(domainIndexPath), 'utf8');
+  writeFileSync(domainIndexPath, existing.trimEnd() + `\nexport { Annotations } from './annotations.js';\n`);
+}
+
 // Export for testing
-export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, generateAnnotationsAndPolicies, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, collectNamedEnumDefs, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums };
+export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, generateAnnotationsAndPolicies, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, collectNamedEnumDefs, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums, patchDomainBarrelForAnnotations };
 
 // Run main function only if this is the entry point
 if (import.meta.url === `file://${realpathSync(process.argv[1])}`) {

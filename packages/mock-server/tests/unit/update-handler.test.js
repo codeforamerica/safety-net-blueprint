@@ -126,6 +126,54 @@ test('buildChanges — empty when nothing changed (excluding system fields)', ()
   assert.strictEqual(changes.length, 0);
 });
 
+test('buildChanges — nested scalar change emits dot-path key', () => {
+  const before = { id: '1', updatedAt: 'y', personalInformation: { dateOfBirth: '1990-01-01', firstName: 'Jane' } };
+  const after  = { id: '1', updatedAt: 'z', personalInformation: { dateOfBirth: '1991-05-15', firstName: 'Jane' } };
+  const changes = buildChanges(before, after);
+  assert.strictEqual(changes.length, 1);
+  assert.deepStrictEqual(changes[0], { field: 'personalInformation.dateOfBirth', before: '1990-01-01', after: '1991-05-15' });
+});
+
+test('buildChanges — multiple nested fields changed emit separate dot-path entries', () => {
+  const before = { id: '1', updatedAt: 'y', address: { city: 'Oakland', state: 'CA', zip: '94601' } };
+  const after  = { id: '1', updatedAt: 'z', address: { city: 'Fresno',  state: 'CA', zip: '93701' } };
+  const changes = buildChanges(before, after);
+  const fields = changes.map(c => c.field).sort();
+  assert.deepStrictEqual(fields, ['address.city', 'address.zip']);
+});
+
+test('buildChanges — deeply nested change (three levels) emits correct dot-path', () => {
+  const before = { id: '1', updatedAt: 'y', contact: { phone: { number: '555-0100', type: 'cell' } } };
+  const after  = { id: '1', updatedAt: 'z', contact: { phone: { number: '555-9999', type: 'cell' } } };
+  const changes = buildChanges(before, after);
+  assert.strictEqual(changes.length, 1);
+  assert.deepStrictEqual(changes[0], { field: 'contact.phone.number', before: '555-0100', after: '555-9999' });
+});
+
+test('buildChanges — unchanged sibling fields in nested object are not reported', () => {
+  const before = { id: '1', updatedAt: 'y', name: { firstName: 'Jane', lastName: 'Doe' } };
+  const after  = { id: '1', updatedAt: 'z', name: { firstName: 'Jane', lastName: 'Smith' } };
+  const changes = buildChanges(before, after);
+  assert.strictEqual(changes.length, 1);
+  assert.strictEqual(changes[0].field, 'name.lastName');
+});
+
+test('buildChanges — nested array treated as leaf (whole array in before/after)', () => {
+  const before = { id: '1', updatedAt: 'y', household: { members: ['Alice', 'Bob'] } };
+  const after  = { id: '1', updatedAt: 'z', household: { members: ['Alice', 'Bob', 'Carol'] } };
+  const changes = buildChanges(before, after);
+  assert.strictEqual(changes.length, 1);
+  assert.deepStrictEqual(changes[0], { field: 'household.members', before: ['Alice', 'Bob'], after: ['Alice', 'Bob', 'Carol'] });
+});
+
+test('buildChanges — nested object added whole (before null) emits top-level field as leaf', () => {
+  const before = { id: '1', updatedAt: 'y' };
+  const after  = { id: '1', updatedAt: 'z', address: { city: 'Oakland', state: 'CA' } };
+  const changes = buildChanges(before, after);
+  assert.strictEqual(changes.length, 1);
+  assert.deepStrictEqual(changes[0], { field: 'address', before: null, after: { city: 'Oakland', state: 'CA' } });
+});
+
 // =============================================================================
 // createUpdateHandler — onUpdate trigger
 // =============================================================================

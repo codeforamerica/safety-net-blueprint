@@ -99,6 +99,10 @@
       <a href="#section-methods" class="nav-link">All methods <span class="nav-count">5</span></a>
     </div>
     <div class="nav-section">
+        <div class="nav-section-label">Constants</div>
+        <a href="#const-AppointmentStatus" class="nav-link">AppointmentStatus</a>
+      </div>
+    <div class="nav-section">
         <div class="nav-section-label">Types</div>
         <a href="#type-Appointment" class="nav-link">Appointment</a><a href="#type-AppointmentCreate" class="nav-link">AppointmentCreate</a><a href="#type-AppointmentUpdate" class="nav-link">AppointmentUpdate</a><a href="#type-AppointmentList" class="nav-link">AppointmentList</a><a href="#type-AppointmentWritable" class="nav-link">AppointmentWritable</a><a href="#type-AppointmentListWritable" class="nav-link">AppointmentListWritable</a>
       </div>
@@ -117,7 +121,7 @@
       <a href="#ep-listAppointments" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">listAppointments({
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">scheduling.listAppointments({
   query: { q?: string, limit?: number, offset?: number, sort?: string },
 })</pre>
       
@@ -157,7 +161,7 @@
       <a href="#ep-createAppointment" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">createAppointment({ body: { ... } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">scheduling.createAppointment({ body: { ... } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -180,7 +184,7 @@
       <a href="#ep-deleteAppointment" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">deleteAppointment({ path: { appointmentId: string } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">scheduling.deleteAppointment({ path: { appointmentId: string } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -203,7 +207,7 @@
       <a href="#ep-getAppointment" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getAppointment({ path: { appointmentId: string } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">scheduling.getAppointment({ path: { appointmentId: string } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -226,7 +230,10 @@
       <a href="#ep-updateAppointment" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">updateAppointment({ path: { appointmentId: string }, body: { ... } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">scheduling.updateAppointment({
+  path: { appointmentId: string },
+  body: { ... },
+})</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -245,7 +252,20 @@
     </div>
   </details>
 </div>
-    </section><section id="section-types" style="margin-bottom:2.5rem;">
+    </section><section id="section-constants" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Constants (1)</h2>
+        <div id="const-AppointmentStatus" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">AppointmentStatus</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (4 values)</span>
+      <a href="#const-AppointmentStatus" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'scheduled'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'completed'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'canceled'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'no_show'</span></div></div></div>
+  </details>
+</div>
+      </section><section id="section-types" style="margin-bottom:2.5rem;">
         <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (6)</h2>
         <div id="type-Appointment" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>

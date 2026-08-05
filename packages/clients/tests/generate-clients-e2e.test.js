@@ -258,12 +258,12 @@ components:
       const namedEnums = collectNamedEnumDefs(resolvePath(specPath));
 
       // Should find the two string enum $defs, not the object $def.
-      // Names are prefixed with the file stem (Status) to match hey-api's hoisting convention.
+      // Names use the $def name directly (no file-stem prefix).
       assert.equal(namedEnums.length, 2, `Expected 2 named enums, got ${namedEnums.length}`);
       const names = namedEnums.map(e => e.name);
-      assert.ok(names.includes('StatusApplicationStatus'), 'Should include StatusApplicationStatus');
-      assert.ok(names.includes('StatusReviewOutcome'), 'Should include StatusReviewOutcome');
-      assert.ok(!names.includes('StatusReviewNotes'), 'Should not include non-enum StatusReviewNotes');
+      assert.ok(names.includes('ApplicationStatus'), 'Should include ApplicationStatus');
+      assert.ok(names.includes('ReviewOutcome'), 'Should include ReviewOutcome');
+      assert.ok(!names.includes('ReviewNotes'), 'Should not include non-enum ReviewNotes');
 
       // Generate a minimal types.gen.ts and patch it
       const typesGenPath = join(workDir, 'types.gen.ts');
@@ -271,13 +271,13 @@ components:
       patchTypesGenForNamedEnums(typesGenPath, namedEnums);
 
       const result = readFileSync(typesGenPath, 'utf8');
-      assert.ok(result.includes("export const StatusApplicationStatus = {"), 'Should export StatusApplicationStatus const');
+      assert.ok(result.includes("export const ApplicationStatus = {"), 'Should export ApplicationStatus const');
       assert.ok(result.includes("PENDING: 'pending'"), 'Should have PENDING key');
       assert.ok(result.includes("APPROVED: 'approved'"), 'Should have APPROVED key');
       assert.ok(result.includes("DENIED: 'denied'"), 'Should have DENIED key');
       assert.ok(result.includes("} as const;"), 'Should end with as const');
-      assert.ok(result.includes("export type StatusApplicationStatus ="), 'Should export StatusApplicationStatus type');
-      assert.ok(result.includes("export const StatusReviewOutcome = {"), 'Should export StatusReviewOutcome const');
+      assert.ok(result.includes("export type ApplicationStatus ="), 'Should export ApplicationStatus type');
+      assert.ok(result.includes("export const ReviewOutcome = {"), 'Should export ReviewOutcome const');
     } finally {
       rmSync(workDir, { recursive: true, force: true });
     }

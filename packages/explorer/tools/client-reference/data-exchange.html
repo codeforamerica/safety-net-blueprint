@@ -99,6 +99,10 @@
       <a href="#group-services" class="nav-link">Services <span class="nav-count">2</span></a><a href="#group-service-calls" class="nav-link">Service Calls <span class="nav-count">3</span></a><a href="#group-metadata" class="nav-link">Metadata <span class="nav-count">2</span></a>
     </div>
     <div class="nav-section">
+        <div class="nav-section-label">Constants</div>
+        <a href="#const-CallMode" class="nav-link">CallMode</a><a href="#const-ExternalServiceCallStatus" class="nav-link">ExternalServiceCallStatus</a><a href="#const-ServiceType" class="nav-link">ServiceType</a><a href="#const-ServiceType" class="nav-link">ServiceType</a>
+      </div>
+    <div class="nav-section">
         <div class="nav-section-label">Types</div>
         <a href="#type-ExternalService" class="nav-link">ExternalService</a><a href="#type-ExternalServiceList" class="nav-link">ExternalServiceList</a><a href="#type-ExternalServiceCall" class="nav-link">ExternalServiceCall</a><a href="#type-ExternalServiceCallList" class="nav-link">ExternalServiceCallList</a><a href="#type-ExternalServiceWritable" class="nav-link">ExternalServiceWritable</a><a href="#type-ExternalServiceListWritable" class="nav-link">ExternalServiceListWritable</a>
       </div>
@@ -106,7 +110,7 @@
     </nav>
     <main id="content">
       <section id="group-services" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Services (2)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Services (2)</h2>
         <div id="ep-listServices" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -117,7 +121,7 @@
       <a href="#ep-listServices" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">listServices({
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">data-exchange.listServices({
   query: { q?: string, limit?: number, offset?: number, sort?: string, serviceType?: enum },
 })</pre>
       
@@ -162,7 +166,7 @@
       <a href="#ep-getService" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getService({ path: { serviceId: string } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">data-exchange.getService({ path: { serviceId: string } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -177,7 +181,7 @@
   </details>
 </div>
       </section><section id="group-service-calls" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Service Calls (3)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Service Calls (3)</h2>
         <div id="ep-listServiceCalls" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -188,7 +192,7 @@
       <a href="#ep-listServiceCalls" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">listServiceCalls({
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">data-exchange.listServiceCalls({
   query: { q?: string, limit?: number, offset?: number, sort?: string, requestingResourceId?: string, serviceType?: enum, status?: enum: },
 })</pre>
       
@@ -243,7 +247,7 @@
       <a href="#ep-createServiceCall" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">createServiceCall({ body: { ... } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">data-exchange.createServiceCall({ body: { ... } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -266,7 +270,7 @@
       <a href="#ep-getServiceCall" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">getServiceCall({ path: { serviceCallId: string } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">data-exchange.getServiceCall({ path: { serviceCallId: string } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
@@ -281,7 +285,7 @@
   </details>
 </div>
       </section><section id="group-metadata" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Metadata (2)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Metadata (2)</h2>
         <div id="ep-deleteServiceCallMetadata" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -292,7 +296,7 @@
       <a href="#ep-deleteServiceCallMetadata" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">deleteServiceCallMetadata({
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">data-exchange.deleteServiceCallMetadata({
   path: { serviceCallId: string, domain: enum (6 values) },
 })</pre>
       
@@ -322,7 +326,7 @@
       <a href="#ep-setServiceCallMetadata" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">setServiceCallMetadata({
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">data-exchange.setServiceCallMetadata({
   path: { serviceCallId: string, domain: enum (6 values) },
   body: { ... },
 })</pre>
@@ -347,6 +351,49 @@
     </tr></tbody></table>
     </div>
     </div>
+  </details>
+</div>
+      </section><section id="section-constants" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Constants (4)</h2>
+        <div id="const-CallMode" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">CallMode</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (2 values)</span>
+      <a href="#const-CallMode" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'async'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'sync'</span></div></div></div>
+  </details>
+</div><div id="const-ExternalServiceCallStatus" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ExternalServiceCallStatus</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (4 values)</span>
+      <a href="#const-ExternalServiceCallStatus" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'pending'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'completed'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'failed'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'timed_out'</span></div></div></div>
+  </details>
+</div><div id="const-ServiceType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ServiceType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (12 values)</span>
+      <a href="#const-ServiceType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'fdsh_ssa'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'fdsh_vlp'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'fdsh_fti'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'fdsh_medicare'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'fdsh_vci'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'ssa_ievs'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'irs_ievs'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'swica'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'uib'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'save'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'enrollment_check'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'incarceration_check'</span></div></div></div>
+  </details>
+</div><div id="const-ServiceType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ServiceType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (12 values)</span>
+      <a href="#const-ServiceType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'fdsh_ssa'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'fdsh_vlp'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'fdsh_fti'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'fdsh_medicare'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'fdsh_vci'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'ssa_ievs'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'irs_ievs'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'swica'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'uib'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'save'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'enrollment_check'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'incarceration_check'</span></div></div></div>
   </details>
 </div>
       </section><section id="section-types" style="margin-bottom:2.5rem;">
