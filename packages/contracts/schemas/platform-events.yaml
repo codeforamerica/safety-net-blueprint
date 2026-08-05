@@ -177,7 +177,11 @@ FieldChange:
   properties:
     field:
       type: string
-      description: Name of the changed field.
+      description: >
+        Dot-path of the changed field. Top-level fields are a simple name (e.g. `status`);
+        nested fields use dot notation (e.g. `personalInformation.dateOfBirth`).
+        Arrays are treated as leaf values — the path identifies the array field itself,
+        not individual elements.
     before:
       description: Value of the field before the update.
     after:
