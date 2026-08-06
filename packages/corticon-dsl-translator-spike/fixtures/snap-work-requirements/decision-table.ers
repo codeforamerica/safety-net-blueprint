@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<com.corticon.rulesemf.assetmodel:RulesheetAsset xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:com.corticon.rulesemf.asg="http:///com/corticon/rulesemf/asg.ecore" xmlns:com.corticon.rulesemf.assetmodel="http:///com/corticon/rulesemf/assetmodel.ecore" majorVersionNumber="2" buildNumber="8020" updateStamp="_ap0000000000000004" externalChecksum="0:0:0" studioType="Javascript">
+  <languageCode>en_US</languageCode>
+  <ruleset vocabularyUpdateStamp="_ap0000000000000000" vocabulary="vocab.ecore#/">
+    <ruleStatement post="Info" ruleModelElements="#//@ruleset/@rules.0">
+      <text expression="Assigns exemption category based on disability, pregnancy, and dependent care status; rule 4 is a no-op documentation column">
+        <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Assigns exemption category based on disability, pregnancy, and dependent care status; rule 4 is a no-op documentation column" expressiontype="BRSTATEMENT">
+          <referencedTermList/>
+        </parserOutput>
+      </text>
+    </ruleStatement>
+
+    <rule documentingRuleStatements="0"/>
+    <rule>
+      <condition>
+        <opaqueExpression expression="ApplicationMember.hasDisability = true">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="ApplicationMember.hasDisability = true" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <referencedTermList>
+              <terms text="hasDisability" datatype="Boolean" termtype="ATTRIBUTE" fulltext="ApplicationMember.hasDisability">
+                <parentTerm text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </condition>
+      <action>
+        <opaqueExpression expression="ApplicationMember.exemptionCategory = 'disability'">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="ApplicationMember.exemptionCategory = 'disability'" datatype="String" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
+            <modifiedTermList>
+              <terms text="exemptionCategory" datatype="String" termtype="ATTRIBUTE" fulltext="ApplicationMember.exemptionCategory">
+                <parentTerm text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </modifiedTermList>
+            <referencedTermList>
+              <terms text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </action>
+    </rule>
+    <rule>
+      <condition>
+        <opaqueExpression expression="ApplicationMember.isPregnant = true">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="ApplicationMember.isPregnant = true" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <referencedTermList>
+              <terms text="isPregnant" datatype="Boolean" termtype="ATTRIBUTE" fulltext="ApplicationMember.isPregnant">
+                <parentTerm text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </condition>
+      <action>
+        <opaqueExpression expression="ApplicationMember.exemptionCategory = 'pregnancy'">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="ApplicationMember.exemptionCategory = 'pregnancy'" datatype="String" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
+            <modifiedTermList>
+              <terms text="exemptionCategory" datatype="String" termtype="ATTRIBUTE" fulltext="ApplicationMember.exemptionCategory">
+                <parentTerm text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </modifiedTermList>
+            <referencedTermList>
+              <terms text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </action>
+    </rule>
+    <rule>
+      <condition>
+        <opaqueExpression expression="ApplicationMember.hasChildUnder6 = true">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="ApplicationMember.hasChildUnder6 = true" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <referencedTermList>
+              <terms text="hasChildUnder6" datatype="Boolean" termtype="ATTRIBUTE" fulltext="ApplicationMember.hasChildUnder6">
+                <parentTerm text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </condition>
+      <action>
+        <opaqueExpression expression="ApplicationMember.exemptionCategory = 'caretaker'">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="ApplicationMember.exemptionCategory = 'caretaker'" datatype="String" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
+            <modifiedTermList>
+              <terms text="exemptionCategory" datatype="String" termtype="ATTRIBUTE" fulltext="ApplicationMember.exemptionCategory">
+                <parentTerm text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </modifiedTermList>
+            <referencedTermList>
+              <terms text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </action>
+    </rule>
+    <rule>
+      <condition>
+        <opaqueExpression expression="ApplicationMember.isInABAWDAge = false">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="ApplicationMember.isInABAWDAge = false" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <referencedTermList>
+              <terms text="isInABAWDAge" datatype="Boolean" termtype="ATTRIBUTE" fulltext="ApplicationMember.isInABAWDAge">
+                <parentTerm text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </condition>
+    </rule>
+    <logicalVariable explicit="true" entity="vocab.ecore#//ApplicationMember">
+      <alias value="ApplicationMember"/>
+    </logicalVariable>
+  </ruleset>
+  <rulesheetViewList xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:DecisionTable">
+    <actionSection rowCount="50" columnWidthFactor="0.5">
+      <actionItemList>
+        <valueSetCell/>
+        <expressionCell external="ApplicationMember.exemptionCategory"/>
+        <expressionCell external="ApplicationMember.exemptionCategory"/>
+        <expressionCell external="ApplicationMember.exemptionCategory"/>
+      </actionItemList>
+    </actionSection>
+    <scopeSection>
+      <rootNode>
+        <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeEntity" logicalVariable="#//@ruleset/@logicalVariables.0"/>
+      </rootNode>
+    </scopeSection>
+    <filterSection rowCount="50"/>
+    <ruleStatementSection rowCount="50"/>
+    <conditionSection rowCount="50" columnWidthFactor="0.5">
+      <conditionItemList>
+        <valueSetCell/>
+        <expressionCell external="ApplicationMember.hasDisability"/>
+        <expressionCell external="ApplicationMember.isPregnant"/>
+        <expressionCell external="ApplicationMember.hasChildUnder6"/>
+        <expressionCell external="ApplicationMember.isInABAWDAge"/>
+      </conditionItemList>
+    </conditionSection>
+    <ruleSection columnCount="20">
+      <ruleColumnList ruleId="0" pRule="#//@ruleset/@rules.0"/>
+      <ruleColumnList ruleId="1" pRule="#//@ruleset/@rules.1"/>
+      <ruleColumnList ruleId="2" pRule="#//@ruleset/@rules.2"/>
+      <ruleColumnList ruleId="3" pRule="#//@ruleset/@rules.3"/>
+      <ruleColumnList ruleId="4" pRule="#//@ruleset/@rules.4"/>
+    </ruleSection>
+  </rulesheetViewList>
+</com.corticon.rulesemf.assetmodel:RulesheetAsset>

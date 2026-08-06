@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { parseRuletest } from '../corticon/ruletest.js';
+import { parseRuletest } from '../sources/corticon/corticon/ruletest.js';
 
 const MEDICAID_APPLICANT_TEST = 'fixtures/dc-medicaid-chip/Medicaid Applicant/Test.ert';
 

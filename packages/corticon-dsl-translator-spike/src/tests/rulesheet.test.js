@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { parseRulesheet, isBlankTemplateRule } from '../corticon/rulesheet.js';
+import { parseRulesheet, isBlankTemplateRule } from '../sources/corticon/corticon/rulesheet.js';
 
 function findFiles(dir, extension) {
   const results = [];

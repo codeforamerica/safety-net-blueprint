@@ -1,0 +1,399 @@
+# Translation patterns — Corticon-specific
+#
+# Each entry describes how a Corticon construct maps to the dependency graph DSL.
+# Every top-level key maps exactly to a `pattern` value in the translation log.
+# Entries with a `parent` field are variants of that parent pattern.
+#
+# Universal graph-level patterns (genuine-cycle, unclassified-multi-hop-cycle,
+# ordinary-expression, ordinary-writable-input, no-ordinary-writer,
+# multi-invoked-disagreeing-context) live in src/graph/translation-patterns.yaml.
+#
+# Fields:
+#   approach  - how this construct maps to the dependency graph
+#   parent    - parent pattern this is a variant of (optional)
+#   requires  - external dependency needed for translation:
+#                 caller-contract  the specific fields/entities must be supplied by the
+#                                  caller before invoking the graph (instance-specific)
+#                 dsl-function     a specific function must exist in the DSL
+#                                  (which function is derivable from the Corticon logic)
+#   status    - confirmed   proven against a real executed trace or authoritative docs
+#               unverified  approach identified but not yet tested
+#               ambiguous   approach identified but has a known semantic gap that
+#                           cannot be resolved from static file inspection alone;
+#                           flagged in the translation log for manual confirmation
+#               unknown     no approach identified yet
+
+# ── Translates directly ───────────────────────────────────────────────────────
+
+decision-table:
+  approach: >
+    Each row compiled to a branch of a conditional expression (if/else chain).
+    Corticon's default UNIQUE hit policy means rows are mutually exclusive, so
+    order does not affect the result.
+  requires: ~
+  status: confirmed
+
+hit-policy-unverified:
+  parent: decision-table
+  approach: >
+    Compiled assuming the default UNIQUE hit policy (rows mutually exclusive,
+    order does not matter). Corticon's file format has no hit-policy attribute
+    to verify against — if this rulesheet was authored with Rule Order hit
+    policy instead (multiple overlapping rows all fire in sequence), the
+    compiled expression may be wrong. Flagged in the translation log for manual
+    confirmation against the original Corticon Studio project.
+  requires: ~
+  status: ambiguous
+
+explicit-override:
+  approach: >
+    Priority expressed via conditional ordering in the compiled expression —
+    the overriding row's condition is placed earlier in the if/else chain.
+  requires: ~
+  status: confirmed
+
+fact-assembly:
+  approach: >
+    Multiple rulesheets each contributing part of the same fact are merged into
+    a single conditional expression, chained in real ruleflow invocation order.
+  requires: ~
+  status: confirmed
+
+conditional-branching:
+  approach: >
+    Branch condition becomes a guard on the facts compiled within that branch.
+    When no branch matches, execution skips all targets — modeled as the guard
+    being false and the fact remaining unset.
+  requires: ~
+  status: confirmed
+
+enum-switch-branching:
+  approach: >
+    Enum identity test becomes a guard, same shape as conditional-branching.
+    Each enum value maps to a separate branch in the compiled expression.
+  requires: ~
+  status: confirmed
+
+null-default:
+  approach: >
+    A null-check masking rule ("if field = null, set field = X") is the sole
+    writer of this path. Compiled as a Writable fact with a Placeholder default.
+    The caller supplies the real value; the placeholder is used only when the
+    caller omits it. The null-check condition is a Corticon forward-chaining
+    re-fire guard, redundant in reverse-chaining.
+  requires: ~
+  status: confirmed
+
+null-default-fallback:
+  parent: null-default
+  approach: >
+    A null-check masking rule ("if field = null, set field = X") exists
+    alongside other writers for this path. The masking rule's value becomes the
+    final else branch of the compiled conditional expression rather than a
+    standalone Placeholder. The null-check condition is a Corticon forward-
+    chaining re-fire guard, redundant in reverse-chaining.
+  requires: ~
+  status: confirmed
+
+no-op:
+  approach: >
+    Excluded from compilation entirely. A rule with conditions but no actions
+    produces no writes and no Fact derivations. Often used as a label/documentation
+    column in Corticon Studio's decision table grid.
+  requires: ~
+  status: confirmed
+
+unreachable-rulesheet:
+  approach: >
+    Excluded from compilation entirely. Writes from unreachable rulesheets are
+    not included in any fact expression.
+  requires: ~
+  status: confirmed
+
+operator-precedence:
+  approach: >
+    Corticon precedence rules applied during CEL compilation via explicit
+    parenthesization — no ambiguity left to the target language's own rules.
+  requires: ~
+  status: confirmed
+
+logical-keywords:
+  approach: >
+    Corticon and/or/not keywords mapped to CEL &&, ||, ! operators.
+  requires: ~
+  status: confirmed
+
+decision-table-alternative-row:
+  approach: >
+    A decision-table row whose condition reads the same attribute another row
+    sets. Corticon's UNIQUE hit policy guarantees the rows are mutually
+    exclusive, so this is not a real cycle — the dependency-graph self-loop
+    is an artifact of representation. Compiles as ordinary if/else rows with
+    no special handling. Confirmed real in DC Medicaid's Flatten.ers
+    (Person.outputCoverage1.contains('ineligible') check alongside the row
+    that sets Person.outputCoverage1).
+  requires: ~
+  status: confirmed
+
+membership-test:
+  approach: >
+    Test whether a value belongs to a set. How the set is expressed determines
+    the translation; see range and string-list variants.
+  requires: ~
+  status: confirmed
+
+range:
+  parent: membership-test
+  approach: >
+    Corticon range syntax (X in (lower..upper]) compiled to CEL comparison
+    operators (>= / <= / > / <) with bracket direction determining inclusivity.
+  requires: ~
+  status: confirmed
+
+string-list:
+  parent: membership-test
+  approach: >
+    A String attribute holds a delimited list of tokens; the Corticon
+    .contains() string operator tests whether a given value appears in that
+    list. Exact match semantics (substring vs. delimiter-separated token)
+    are not determinable from static file inspection and must be confirmed
+    against the original Corticon project before translating. In CBMS:
+    cntyCdList.contains(homeCntyCd), zipList.contains(homeZip),
+    actvIndvList.contains(clientID.toInteger.toString).
+  requires: ~
+  status: ambiguous
+
+# ── Requires caller contract ──────────────────────────────────────────────────
+
+entity-creation:
+  approach: >
+    A rule creates new entity instances. Two variants based on whether the
+    created entity/association is subsequently read by other rules; see
+    entity-creation-input and entity-creation-output. The `kind` sub-field
+    (new vs newUnique) describes Corticon deduplication semantics and applies
+    independently of variant.
+  requires: ~
+  status: confirmed
+
+entity-creation-input:
+  parent: entity-creation
+  approach: >
+    The association is both written and subsequently read by other rules in
+    the project. The graph receives it as a caller-supplied input: the caller
+    pre-assembles the entity instances before invoking the graph. Which
+    entities and fields are required is derivable from the Corticon actions
+    on this rule. Caller-contract distinction: newUnique creates only if no
+    matching entity exists (create-or-skip); new always creates a fresh
+    instance — shifts what the caller must guarantee about idempotency.
+  requires: caller-contract
+  status: confirmed
+
+entity-creation-output:
+  parent: entity-creation
+  approach: >
+    The association is only written, never read downstream. The collection
+    should appear in the response body: the DSL derives what it contains
+    from the creation logic — the conditions that gate entity creation
+    become the expression guard, and the assigned fields on the new entity
+    become the output shape. Confirmed real in SNAP work requirements'
+    ApplicationMember.exemptions (WorkExemption.exemptionType assigned,
+    never read by any downstream rule). Scalar attribute paths on the
+    created entity reference the collection fact via a `ref` field in the
+    translation log rather than carrying their own separate pattern entry.
+  requires: ~
+  status: unverified
+
+iterative-convergence:
+  approach: >
+    Caller runs the iterative calculation externally until convergence, then
+    passes the final value as a graph input. The graph treats the converged
+    value as an ordinary input fact, not something it derives internally.
+  requires: caller-contract
+  status: unverified
+
+service-callout:
+  approach: >
+    The service call is handled outside the graph. Its output is injected as a
+    graph input by the caller. The graph treats it as an ordinary input fact.
+    Which values the service provides is opaque to static analysis — derivable
+    only from the connector's external implementation.
+  requires: caller-contract
+  status: unverified
+
+deterministic-extension:
+  parent: service-callout
+  approach: >
+    A Java extension method that is a pure function — no I/O, no external
+    state, deterministic output given the same inputs. Translates to a DSL
+    function rather than a caller-contract injection. The distinction from
+    the parent pattern is determinable from the Java source: if the class
+    does not call ReferenceTableFieldFinder or any external resource, it is
+    a deterministic extension. In CBMS: EligUtility.getLastMonth(yyyymm),
+    getNextMonth(yyyymm), getBusinessDays(date, n), calcPOIDate(...).
+  requires: dsl-function
+  status: unverified
+
+# ── Requires DSL function ─────────────────────────────────────────────────────
+
+date-arithmetic:
+  approach: >
+    Corticon date operators (yearsBetween, addYears, monthsBetween, etc.) mapped
+    to equivalent CEL functions. Which function is needed is derivable from the
+    Corticon action on this rule. Confirmed by CBMS Disaster FS:
+    participatingProgramIndvEligRslt.prmAidCdBgnDt.monthsBetween(program.runDate).
+  requires: dsl-function
+  status: confirmed
+
+decimal-rounding:
+  approach: >
+    Corticon .round(n) mapped to an equivalent CEL rounding function.
+  requires: dsl-function
+  status: unverified
+
+sort-ranking:
+  approach: >
+    Corticon ->sortedBy / ->sortedByDesc mapped to CEL collection sort expressions.
+  requires: dsl-function
+  status: unverified
+
+type-conversion:
+  approach: >
+    Corticon type conversion methods (.toString(), .toDecimal(), .toDate(), etc.)
+    mapped to CEL equivalents. .toString() is confirmed; others are identified
+    but not yet tested against a real fixture.
+  requires: dsl-function
+  status: unverified
+
+collection-accumulation:
+  approach: >
+    Corticon iterative accumulation (total = total + item.field across multiple
+    entity-scoped firings) translated to sum(collection, 'field'). The sum()
+    function is a proposed DSL function not yet settled in the spec.
+  requires: dsl-function
+  status: unverified
+
+# ── Partially translated ──────────────────────────────────────────────────────
+
+collection-filter:
+  approach: >
+    Filter condition folded into the guards of all facts compiled within the
+    filtered scope. The basic case is confirmed. The full-vs-limiting cascade
+    behavior (does an empty-after-filter collection exclude the whole parent
+    entity?) is not resolvable from static file inspection and is an open
+    question.
+  requires: ~
+  status: unverified
+
+# ── Unverified ────────────────────────────────────────────────────────────────
+
+sort-ranking-index:
+  approach: >
+    Corticon ->at(n) is 1-based; mapped to 0-based array access with a -1
+    offset adjustment in the compiler.
+  requires: ~
+  status: unverified
+
+universal-quantifier:
+  approach: >
+    Corticon ->forAll(predicate) mapped to CEL .all(x, predicate) macro.
+  requires: ~
+  status: unverified
+
+expression-pattern:
+  approach: >
+    A translation log wrapper entry indicating that the associated rule uses one
+    or more expression-level patterns (date-arithmetic, decimal-rounding,
+    sort-ranking, operator-precedence, logical-keywords, membership-test/range,
+    type-conversion). The specific pattern is in the patternKind field; the
+    expression text is in the expression field. Translation requires a proposed
+    custom CEL function not yet settled in the DSL spec.
+  requires: dsl-function
+  status: unverified
+
+# ── Ambiguous (flagged in translation log for manual confirmation) ─────────────
+
+no-fallback-row:
+  approach: >
+    Corticon leaves the attribute unchanged when no row matches. The compiled
+    expression cannot reproduce that — it uses an unresolved() sentinel for the
+    no-match case instead. Behaviors diverge when inputs fall outside every
+    covered condition. Requires manual confirmation that the no-match case cannot
+    actually occur at runtime for the given inputs, or that a fallback row should
+    be added.
+  requires: ~
+  status: ambiguous
+
+unconditional-row-out-of-order:
+  approach: >
+    Compiled by treating the unconditional row as the fallback regardless of its
+    position in the rulesheet. Corticon's exact behavior when an unconditional
+    row is not last is not determinable from static file inspection — it may fire
+    in row order or act as a true catch-all. Requires manual confirmation against
+    the original Corticon Studio project.
+  requires: ~
+  status: ambiguous
+
+assembly-rulesheet-mismatch:
+  approach: >
+    Fewer rulesheets contributed to the fact than static analysis detected —
+    some writers were excluded as unreachable or entity-creation-tainted after
+    classification. Compiled from the remaining eligible writers only. Requires
+    confirmation that the excluded writers were genuinely non-contributing.
+  requires: ~
+  status: ambiguous
+
+scalar-accumulator:
+  approach: >
+    A rule uses += on a scalar attribute (e.g. program.t_totalNoOfClients += 1)
+    to accumulate a count across multiple entity-scoped firings. In Corticon's
+    forward-chaining model this fires once per matching entity instance and
+    increments the counter. The dependency graph has no equivalent of
+    multi-firing accumulation. The correct translation is almost always a
+    collection aggregate (->size or a filtered count) on the implied entity
+    collection, but which collection and which filter cannot be determined from
+    static analysis of the rulesheet alone — it requires tracing all rules that
+    participate in populating that collection. Requires manual confirmation of
+    what is being counted before translating.
+  requires: ~
+  status: ambiguous
+
+extension-call:
+  approach: >
+    A Java extension method call detected in the rule expression
+    (e.g. EligUtility.getLastMonth(yyyymm), ReferenceTableData.getDecimalValue(...)).
+    The translator emits a __ext_ClassName_method(args) placeholder rather than
+    crashing so the pipeline can complete and the translation log can flag the
+    call. Whether the extension is a deterministic pure function (maps to
+    deterministic-extension, requires a DSL function) or an external-state lookup
+    (maps to service-callout, requires caller-contract) cannot be determined from
+    the rulesheet alone — it requires examining the Java source to see whether the
+    class calls ReferenceTableFieldFinder or any external resource. Requires manual
+    review before translating.
+  requires: ~
+  status: ambiguous
+
+# ── Unknown ───────────────────────────────────────────────────────────────────
+
+double-quoted-strings:
+  approach: ~
+  requires: ~
+  status: unknown
+
+# ── Translation outcomes (not Corticon patterns) ──────────────────────────────
+#
+# These identify what a compiled Fact IS rather than what Corticon construct
+# produced it. They appear as pattern values in the translation log and are
+# consumed by the visualizer to determine display type.
+
+null-guard-decision-table:
+  approach: >
+    A decision table where every row guards on `field = null` before writing it.
+    In Corticon's forward-chaining engine this prevents a row from re-firing once
+    another row has already set the value. In reverse-chaining the null-guard is
+    redundant — compiled as a regular decision table with the null-guard condition
+    retained in each branch's CEL (semantically correct: each branch fires only
+    when no prior branch matched, which is what the null-guard achieves in
+    forward-chaining). Confirmed real in CBMS Disaster FS's
+    COM_POSTPGM_IntakeXYZindicator.ers (12 rows, all guarding on xyzPrdActnInd = null).
+  requires: ~
+  status: confirmed

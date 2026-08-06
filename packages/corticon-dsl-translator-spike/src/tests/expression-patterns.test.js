@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseRulesheet } from '../corticon/rulesheet.js';
-import { loadProject } from '../corticon/project.js';
+import { parseRulesheet } from '../sources/corticon/corticon/rulesheet.js';
+import { loadProject } from '../sources/corticon/corticon/project.js';
 import {
   isDateArithmetic,
   isCurrencyRounding,
@@ -13,7 +13,7 @@ import {
   cellUsesRangeMembership,
   cellUsesTypeConversion,
   classifyExpressionPatterns,
-} from '../classify/expression-patterns.js';
+} from '../sources/corticon/classify/expression-patterns.js';
 
 function allTerms(rule) {
   return [...rule.conditions, ...rule.actions].filter(Boolean).flatMap((cell) => cell.referencedTerms ?? []);
@@ -123,7 +123,7 @@ test('a plain comparison condition is never mistaken for a logical keyword', () 
   assert.equal(allCells.some(cellUsesLogicalKeywords), false);
 });
 
-test('detects range-membership syntax in this fixture\'s own range-membership.ers', () => {
+test('detects membership-test/range syntax in this fixture\'s own range-membership.ers', () => {
   const r = parseRulesheet('fixtures/all-patterns/range-membership.ers');
   const allCells = r.rules.flatMap((rule) => [...rule.conditions, ...rule.actions].filter(Boolean));
   const matches = allCells.filter(cellUsesRangeMembership);
@@ -142,6 +142,6 @@ test('classifyExpressionPatterns finds all four new kinds in the all-patterns fi
   const byKind = (kind) => results.filter((r) => r.kind === kind);
   assert.ok(byKind('operator-precedence').some((r) => r.rulesheet === 'operator-precedence.ers'));
   assert.ok(byKind('logical-keywords').some((r) => r.rulesheet === 'logical-operators.ers'));
-  assert.ok(byKind('range-membership').some((r) => r.rulesheet === 'range-membership.ers'));
+  assert.ok(byKind('membership-test/range').some((r) => r.rulesheet === 'range-membership.ers'));
   assert.ok(byKind('type-conversion').some((r) => r.rulesheet === 'type-conversion.ers'));
 });

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseVocabulary } from '../corticon/vocabulary.js';
+import { parseVocabulary } from '../sources/corticon/corticon/vocabulary.js';
 
 const DC_MEDICAID_VOCAB = 'fixtures/dc-medicaid-chip/Vocabulary/Rule Vocabulary.ecore';
 

@@ -1,6 +1,7 @@
 import { canonicalAttributePath, touchesEntityCreation } from './attribute-path.js';
 import { entriesOf } from '../map-utils.js';
-import { isBlankTemplateRule } from '../corticon/rulesheet.js';
+// TODO: isBlankTemplateRule is Corticon-specific — should be filtered upstream before reaching the graph builder
+import { isBlankTemplateRule } from '../sources/corticon/corticon/rulesheet.js';
 
 function attributePathsIn(terms) {
   return (terms ?? []).map(canonicalAttributePath).filter(Boolean);
@@ -68,12 +69,118 @@ export function buildDependencyGraph(project) {
           if (!writes.has(writePath)) writes.set(writePath, []);
           writes.get(writePath).push({ rulesheet: rulesheetFile, ruleIndex, isEntityCreation });
         }
+
+        // For entity-creation actions, also add the association path (e.g.
+        // ApplicationMember.exemptions) as a written node. canonicalAttributePath
+        // only resolves scalar ATTRIBUTE terms -- the ENTITY term for the association
+        // itself returns null there, so it never enters writePaths above and would
+        // be invisible to the sink-candidate and translation layers entirely.
+        // Recording it here lets the translation layer generate a collection output
+        // fact for it (variant: 'output') rather than having no panel at all.
+        // Only qualified paths (containing '.') are included -- bare association
+        // names like 'members' (DC Medicaid's Person.members += ...) lack a stable
+        // parent-entity context and can't reliably be represented as a canonical path.
+        if (isEntityCreation) {
+          for (const term of (action.modifiedTerms ?? [])) {
+            if (term.termtype !== 'ENTITY' || !term.fulltext?.includes('.')) continue;
+            const assocPath = term.fulltext;
+            nodes.add(assocPath);
+            for (const readPath of reads) {
+              nodes.add(readPath);
+              edges.push({ from: readPath, to: assocPath, rulesheet: rulesheetFile, ruleIndex });
+            }
+            if (!writes.has(assocPath)) writes.set(assocPath, []);
+            writes.get(assocPath).push({ rulesheet: rulesheetFile, ruleIndex, isEntityCreation: true });
+          }
+        }
       }
     });
   }
 
   return { nodes, edges, writes };
 }
+
+/**
+ * Traces backward from a sink candidate through the dependency graph to build
+ * its subgraph. Returns { nodes, edges, nodeCount, depth, orderedLayers } where:
+ * - depth is the longest path from any source node to the candidate
+ * - orderedLayers is an array of node arrays grouped by BFS depth (layer 0 =
+ *   sink, layer 1 = direct predecessors, etc.), each layer's nodes ordered
+ *   left-to-right using barycenter heuristic to minimize edge crossings —
+ *   the same ordering used to lay out the diagram, stored here so the
+ *   visualizer reads it rather than recomputing it.
+ */
+export function buildCandidateSubgraph(candidatePath, graph) {
+  // Build adjacency in reverse (to -> from) for backward traversal.
+  const reverseAdj = new Map();
+  // Forward adjacency needed for barycenter ordering within each layer.
+  const fwdAdj = new Map();
+  for (const edge of graph.edges) {
+    if (edge.from === edge.to) continue; // skip self-loops — corrupt layer assignment without adding structural info
+    if (!reverseAdj.has(edge.to)) reverseAdj.set(edge.to, []);
+    if (!reverseAdj.get(edge.to).includes(edge.from)) reverseAdj.get(edge.to).push(edge.from);
+    if (!fwdAdj.has(edge.from)) fwdAdj.set(edge.from, []);
+    if (!fwdAdj.get(edge.from).includes(edge.to)) fwdAdj.get(edge.from).push(edge.to);
+  }
+
+  const visitedNodes = new Set();
+  const visitedEdges = [];
+  const depthByNode = new Map();
+  const visiting = new Set();
+
+  function visit(path, depth) {
+    if (visiting.has(path)) return; // cycle — don't follow
+    if (depthByNode.has(path) && depth <= depthByNode.get(path)) return;
+    depthByNode.set(path, depth);
+    visitedNodes.add(path);
+    visiting.add(path);
+    for (const pred of reverseAdj.get(path) ?? []) {
+      // Collect the original edge objects (with rulesheet/ruleIndex) for consumers.
+      const edgesForPair = graph.edges.filter((e) => e.from === pred && e.to === path);
+      for (const e of edgesForPair) visitedEdges.push(e);
+      visit(pred, depth + 1);
+    }
+    visiting.delete(path);
+  }
+
+  visit(candidatePath, 0);
+
+  // Group nodes by layer depth.
+  const byLayer = new Map();
+  for (const [node, depth] of depthByNode) {
+    if (!byLayer.has(depth)) byLayer.set(depth, []);
+    byLayer.get(depth).push(node);
+  }
+  const maxDepth = visitedNodes.size ? Math.max(...depthByNode.values()) : 0;
+
+  // Barycenter ordering: for each layer (deepest first), sort by avg position
+  // of the nodes it connects to in the layer below — reduces edge crossings.
+  // This is the canonical left-to-right ordering for the diagram and nav.
+  const orderedLayers = [];
+  for (let l = maxDepth; l >= 0; l--) {
+    const lNodes = [...(byLayer.get(l) ?? [])];
+    const below = orderedLayers[maxDepth - l - 1] ?? []; // already-ordered layer l+1 (one closer to sink)
+    const posOf = (n) => { const i = below.indexOf(n); return i < 0 ? below.length / 2 : i; };
+    lNodes.sort((a, b) => {
+      const avg = (targets) => targets.length ? targets.reduce((s, t) => s + posOf(t), 0) / targets.length : below.length / 2;
+      const aTgts = (fwdAdj.get(a) ?? []).filter((t) => depthByNode.get(t) === l - 1);
+      const bTgts = (fwdAdj.get(b) ?? []).filter((t) => depthByNode.get(t) === l - 1);
+      return avg(aTgts) - avg(bTgts);
+    });
+    orderedLayers.push(lNodes);
+  }
+  // orderedLayers is built deepest-first; reverse so index 0 = sink layer.
+  orderedLayers.reverse();
+
+  return {
+    nodes: [...visitedNodes],
+    edges: visitedEdges,
+    nodeCount: visitedNodes.size,
+    depth: maxDepth,
+    orderedLayers,
+  };
+}
+
 
 /** Attribute paths written by more than one distinct rulesheet -- the cross-rulesheet Fact assembly pattern (e.g. Person.MedicaidEligible in Parse Cohorts.ers + Flatten.ers). */
 export function findCrossRulesheetAssembly(graph) {

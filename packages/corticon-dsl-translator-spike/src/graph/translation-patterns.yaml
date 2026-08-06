@@ -1,0 +1,91 @@
+# Translation patterns — universal graph-level
+#
+# These patterns apply to any rules source, not just Corticon. They describe
+# classifier findings and translation outcomes that are properties of the
+# dependency graph itself, independent of what produced the graph.
+# Every top-level key maps exactly to a `pattern` value in the translation log.
+#
+# Fields:
+#   approach  - how this construct maps to the dependency graph
+#   parent    - parent pattern this is a variant of (optional)
+#   requires  - external dependency needed for translation:
+#                 caller-contract  the specific fields/entities must be supplied by the
+#                                  caller before invoking the graph (instance-specific)
+#                 dsl-function     a specific function must exist in the DSL
+#                                  (which function is derivable from the Corticon logic)
+#   status    - confirmed   proven against a real executed trace or authoritative docs
+#               unverified  approach identified but not yet tested
+#               ambiguous   approach identified but has a known semantic gap that
+#                           cannot be resolved from static file inspection alone;
+#                           flagged in the translation log for manual confirmation
+#               unknown     no approach identified yet
+
+# ── Diagnostic / Cannot translate automatically ───────────────────────────────
+#
+# These are not source-specific constructs with translation approaches — they are
+# classifier findings that prevent automatic translation and must be resolved
+# manually. They appear as pattern values in the translation log.
+
+genuine-cycle:
+  approach: >
+    A confirmed dependency cycle: a path whose value depends on itself through
+    an iterative ruleflow step. Cannot be translated as a single reverse-
+    chaining Derived expression. Flagged in the translation log for manual
+    redesign. The containing rulesheet is classified as iterative-convergence
+    (caller runs the loop externally), but the cyclic path itself has no
+    automatic translation — the caller must express the convergence logic
+    explicitly.
+  requires: ~
+  status: confirmed
+
+unclassified-multi-hop-cycle:
+  approach: >
+    A multi-node dependency cycle (A -> B -> ... -> A, length > 1) that is
+    not confirmed to be inside an iterative ruleflow step. Cannot be translated
+    without manual investigation into whether the cycle is intentional and how
+    the caller should resolve it. Not observed in any real fixture; flagged
+    defensively by the classifier.
+  requires: ~
+  status: unknown
+
+multi-invoked-disagreeing-context:
+  approach: >
+    A rulesheet is reached from more than one place in the ruleflow with
+    conflicting invocation context (one path reaches it iteratively, another
+    does not). Self-loop and cycle classification was resolved conservatively
+    (treating it as iterative to avoid missing a genuine cycle). Needs manual
+    review before translating any paths this rulesheet writes. Not observed in
+    any real fixture.
+  requires: ~
+  status: unknown
+
+no-ordinary-writer:
+  approach: >
+    Every rulesheet that writes this path was excluded from Fact compilation
+    (entity-creation-tainted, unreachable rulesheet, or no-op). No Fact could
+    be compiled for this path at all. Needs manual review — the path may be an
+    entity-creation output, may never be produced by the ruleflow, or may
+    indicate a fixture/ruleflow wiring error.
+  requires: ~
+  status: unknown
+
+# ── Translation outcomes (not source-specific patterns) ───────────────────────
+#
+# These identify what a compiled Fact IS rather than what source construct
+# produced it. They appear as pattern values in the translation log and are
+# consumed by the visualizer to determine display type.
+
+ordinary-expression:
+  approach: >
+    A path with at least one ordinary rulesheet writer that compiled cleanly to
+    a Derived fact expression. No special handling required.
+  requires: ~
+  status: confirmed
+
+ordinary-writable-input:
+  approach: >
+    A path that no rule in this project writes — it is a pure input to the
+    graph, supplied by the caller before invocation. Compiled as a Writable
+    fact with no derived expression.
+  requires: ~
+  status: confirmed

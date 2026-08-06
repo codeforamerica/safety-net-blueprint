@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadProject } from '../corticon/project.js';
-import { classifyDecisionTableCombinatorics } from '../classify/decision-table-classifier.js';
+import { loadProject } from '../sources/corticon/corticon/project.js';
+import { classifyDecisionTableCombinatorics } from '../sources/corticon/classify/decision-table-classifier.js';
 
 function makeTerm(entity, attr) {
   return { termtype: 'ATTRIBUTE', text: attr, parent: { datatype: entity } };

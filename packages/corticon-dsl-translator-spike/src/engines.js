@@ -18,8 +18,8 @@
  */
 export const ENGINES = {
   corticon: {
-    ingestModule: './corticon/project.js',
-    expressionParserModule: './corticon/expression-parser.js',
+    ingestModule: './sources/corticon/corticon/project.js',
+    expressionParserModule: './sources/corticon/corticon/expression-parser.js',
   },
 };
 

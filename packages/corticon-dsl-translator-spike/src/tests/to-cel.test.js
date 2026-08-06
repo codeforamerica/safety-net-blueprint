@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseExpression } from '../corticon/expression-parser.js';
-import { toCel, toCelStatement, factPathOf } from '../translate/to-cel.js';
+import { parseExpression } from '../sources/corticon/corticon/expression-parser.js';
+import { toCel, toCelStatement, factPathOf } from '../targets/blueprint-dsl/to-cel.js';
 
 test('translates a real collection-size comparison to CEL\'s native size() function -- Mortgage\'s "liability->size >= 3"', () => {
   assert.equal(toCel(parseExpression('liability->size >= 3')), 'size(liability) >= 3');

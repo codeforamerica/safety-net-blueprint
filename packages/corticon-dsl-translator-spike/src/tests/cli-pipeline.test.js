@@ -31,11 +31,10 @@ for (const fixtureDir of FIXTURES) {
     try {
       const projectJsonPath = join(scratch, 'project.json');
       const graphJsonPath = join(scratch, 'project.graph.json');
-      const classifiedJsonPath = join(scratch, 'project.classified.json');
+      const classifiedJsonPath = join(scratch, 'project.patterns.json');
       const translatedJsonPath = join(scratch, 'project.translated.json');
-      const crosswalkJsonPath = join(scratch, 'project.translated.crosswalk.json');
 
-      execFileSync('node', ['src/ingest-project.js', fixtureDir, '--out', projectJsonPath], { encoding: 'utf-8' });
+      execFileSync('node', ['src/sources/corticon/ingest-project.js', fixtureDir, '--out', projectJsonPath], { encoding: 'utf-8' });
       const project = JSON.parse(readFileSync(projectJsonPath, 'utf-8'));
       assert.ok(project.rulesheets, 'ingest-project.js --out should write a project with rulesheets');
       assert.ok(project.ruleflows, 'ingest-project.js --out should write a project with ruleflows');
@@ -43,7 +42,7 @@ for (const fixtureDir of FIXTURES) {
 
       // graph-project.js is an optional diagnostic step -- no longer feeds classify,
       // but its output shape is still verified here.
-      execFileSync('node', ['src/graph-project.js', projectJsonPath, '--out', graphJsonPath], { encoding: 'utf-8' });
+      execFileSync('node', ['src/graph/graph-project.js', projectJsonPath, '--out', graphJsonPath], { encoding: 'utf-8' });
       const combined = JSON.parse(readFileSync(graphJsonPath, 'utf-8'));
       assert.ok(combined.project, 'graph-project.js --out should carry the original project through, not just the graph');
       assert.deepEqual(combined.project.rulesheets, project.rulesheets, 'the carried-through project should match Phase 1\'s own output exactly');
@@ -52,23 +51,20 @@ for (const fixtureDir of FIXTURES) {
       assert.ok(combined.graph.nodes && typeof combined.graph.nodes === 'object', 'graph.nodes should be present');
 
       // classify-project.js takes project.json directly (not graph.json).
-      execFileSync('node', ['src/classify-project.js', projectJsonPath, '--out', classifiedJsonPath], { encoding: 'utf-8' });
+      execFileSync('node', ['src/sources/corticon/classify-project.js', projectJsonPath, '--out', classifiedJsonPath], { encoding: 'utf-8' });
       const classified = JSON.parse(readFileSync(classifiedJsonPath, 'utf-8'));
-      assert.ok(classified.project, 'classify-project.js --out should carry the original project through, not just the classification');
-      assert.deepEqual(classified.project.rulesheets, project.rulesheets, 'the carried-through project should match Phase 1\'s own output exactly');
+      assert.ok(classified.sourceFile, 'classify-project.js --out should reference the source file, not carry the project through');
       assert.ok(classified.classification, 'classify-project.js --out should include the classification');
       for (const key of ['selfLoops', 'multiHopCycles', 'crossRulesheetAssembly', 'decisionTableCombinatorics', 'entityCreation', 'serviceCallouts', 'filters', 'expressionPatterns', 'noOps']) {
         assert.ok(Array.isArray(classified.classification[key]), `classify-project.js --out should include an array for classification.${key}`);
       }
 
-      execFileSync('node', ['src/translate-project.js', classifiedJsonPath, '--out', translatedJsonPath], { encoding: 'utf-8' });
+      execFileSync('node', ['src/sources/corticon/translate-project.js', classifiedJsonPath, '--out', translatedJsonPath], { encoding: 'utf-8' });
       const translated = JSON.parse(readFileSync(translatedJsonPath, 'utf-8'));
-      const crosswalkDoc = JSON.parse(readFileSync(crosswalkJsonPath, 'utf-8'));
       assert.ok(Array.isArray(translated.facts), 'translate-project.js --out should write a Facts-only file');
-      assert.ok(Array.isArray(crosswalkDoc.crosswalk), 'translate-project.js --out should write a separate <file>.crosswalk.json for the Vocabulary<->Fact crosswalk');
       for (const fact of translated.facts) {
         assert.ok(fact.path?.startsWith('/'), `every compiled Fact path should be a real decision-rules DSL path, got: ${fact.path}`);
-        assert.ok(fact.derived !== undefined || fact.writable === true, `every compiled Fact should be either Derived or Writable, got: ${JSON.stringify(fact)}`);
+        assert.ok(fact.expression !== undefined || fact.writable === true || fact.entityCreationOutput === true, `every compiled Fact should be either Derived, Writable, or an entity-creation output, got: ${JSON.stringify(fact)}`);
       }
     } finally {
       rmSync(scratch, { recursive: true, force: true });

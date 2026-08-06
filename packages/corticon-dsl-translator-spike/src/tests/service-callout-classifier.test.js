@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadProject } from '../corticon/project.js';
-import { classifyServiceCallouts } from '../classify/service-callout-classifier.js';
+import { loadProject } from '../sources/corticon/corticon/project.js';
+import { classifyServiceCallouts } from '../sources/corticon/classify/service-callout-classifier.js';
 
 test('classifies the real service call-out in corticon.js-samples\' ServiceCallOut/RESTCall/Fetch.erf', () => {
   const project = loadProject('fixtures/servicecallout');

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadProject } from '../corticon/project.js';
+import { loadProject } from '../sources/corticon/corticon/project.js';
 import { buildDependencyGraph, findCrossRulesheetAssembly, findCycles } from '../graph/build-graph.js';
 
 test('builds every real fixture without error', () => {

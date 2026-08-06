@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<com.corticon.rulesemf.assetmodel:RulesheetAsset xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:com.corticon.rulesemf.asg="http:///com/corticon/rulesemf/asg.ecore" xmlns:com.corticon.rulesemf.assetmodel="http:///com/corticon/rulesemf/assetmodel.ecore" majorVersionNumber="2" buildNumber="8020" updateStamp="_ap0000000000000003" externalChecksum="0:0:0" studioType="Javascript">
+  <languageCode>en_US</languageCode>
+  <ruleset vocabularyUpdateStamp="_ap0000000000000000" vocabulary="vocab.ecore#/">
+    <ruleStatement post="Info" ruleModelElements="#//@ruleset/@rules.0">
+      <text expression="Creates a WorkExemption record for each member who has a qualifying exemption category">
+        <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Creates a WorkExemption record for each member who has a qualifying exemption category" expressiontype="BRSTATEMENT">
+          <referencedTermList/>
+        </parserOutput>
+      </text>
+    </ruleStatement>
+
+    <rule documentingRuleStatements="0"/>
+    <rule>
+      <condition>
+        <opaqueExpression expression="ApplicationMember.exemptionCategory &lt;&gt; null">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="ApplicationMember.exemptionCategory &lt;&gt; null" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <referencedTermList>
+              <terms text="exemptionCategory" datatype="String" termtype="ATTRIBUTE" fulltext="ApplicationMember.exemptionCategory">
+                <parentTerm text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </condition>
+      <action>
+        <opaqueExpression expression="ApplicationMember.exemptions.new[exemptionType=ApplicationMember.exemptionCategory]">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="ApplicationMember.exemptions.new [ WorkExemption.exemptionType = ApplicationMember.exemptionCategory ]" datatype="WorkExemption" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <modifiedTermList>
+              <terms text="exemptions" datatype="WorkExemption" termtype="ENTITY" fulltext="ApplicationMember.exemptions" variable="#//@ruleset/@logicalVariables.0/@extension.0">
+                <parentTerm text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+              <terms text="exemptionType" datatype="String" termtype="ATTRIBUTE" fulltext="WorkExemption.exemptionType">
+                <parentTerm text="WorkExemption" datatype="WorkExemption" termtype="ENTITY" fulltext="WorkExemption" variable="#//@ruleset/@logicalVariables.0/@extension.0"/>
+              </terms>
+            </modifiedTermList>
+            <referencedTermList>
+              <terms text="exemptionCategory" datatype="String" termtype="ATTRIBUTE" fulltext="ApplicationMember.exemptionCategory">
+                <parentTerm text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+              <terms text="new" datatype="WorkExemption" termtype="NEW" fulltext="ApplicationMember.exemptions.new">
+                <parentTerm text="exemptions" datatype="WorkExemption" termtype="ENTITY" fulltext="ApplicationMember.exemptions" variable="#//@ruleset/@logicalVariables.0/@extension.0"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </action>
+    </rule>
+    <logicalVariable explicit="true" entity="vocab.ecore#//ApplicationMember">
+      <alias value="ApplicationMember"/>
+      <extension explicit="true" association="true" entity="vocab.ecore#//WorkExemption" traversedAssocRole="vocab.ecore#//ApplicationMember/exemptions">
+        <alias value="WorkExemption"/>
+      </extension>
+    </logicalVariable>
+  </ruleset>
+  <rulesheetViewList xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:DecisionTable">
+    <actionSection rowCount="50" columnWidthFactor="0.5">
+      <actionItemList>
+        <valueSetCell/>
+        <expressionCell external="ApplicationMember.exemptions"/>
+      </actionItemList>
+    </actionSection>
+    <scopeSection>
+      <rootNode>
+        <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeEntity" logicalVariable="#//@ruleset/@logicalVariables.0">
+          <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeAssociation" logicalVariable="#//@ruleset/@logicalVariables.0/@extension.0"/>
+        </children>
+      </rootNode>
+    </scopeSection>
+    <filterSection rowCount="50"/>
+    <ruleStatementSection rowCount="50"/>
+    <conditionSection rowCount="50" columnWidthFactor="0.5">
+      <conditionItemList>
+        <valueSetCell/>
+        <expressionCell external="ApplicationMember.exemptionCategory"/>
+      </conditionItemList>
+    </conditionSection>
+    <ruleSection columnCount="20">
+      <ruleColumnList ruleId="0" pRule="#//@ruleset/@rules.0"/>
+      <ruleColumnList ruleId="1" pRule="#//@ruleset/@rules.1"/>
+    </ruleSection>
+  </rulesheetViewList>
+</com.corticon.rulesemf.assetmodel:RulesheetAsset>

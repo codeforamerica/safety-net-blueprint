@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadProject } from '../corticon/project.js';
-import { resolveRuleflowContext } from '../classify/ruleflow-context.js';
-import { classifySelfLoops, classifyMultiHopCycles } from '../classify/cycle-classifier.js';
+import { loadProject } from '../sources/corticon/corticon/project.js';
+import { resolveRuleflowContext } from '../sources/corticon/classify/ruleflow-context.js';
+import { classifySelfLoops, classifyMultiHopCycles } from '../sources/corticon/classify/cycle-classifier.js';
+import { classifyExpressionPatterns } from '../sources/corticon/classify/expression-patterns.js';
 
 test('classifies IRR\'s real self-loop as a genuine cycle -- inside the iterative loop', () => {
   const project = loadProject('fixtures/irr');
@@ -55,6 +56,27 @@ test('all-patterns: classifies the genuine cycle and the null-check masking self
   const byPath = Object.fromEntries(results.map((r) => [r.path, r.classification]));
   assert.equal(byPath['Application.estimatedBenefit'], 'genuine-cycle');
   assert.equal(byPath['ApplicationMember.reportedAssets'], 'null-check-masking');
+});
+
+test('snap-work-requirements: decimal-rounding self-loop (adjustedHours = adjustedHours.round(1)) is suppressed when expressionPatterns are passed -- not a decision-table-alternative-row', () => {
+  // decimal-rounding.ers writes and reads ApplicationMember.adjustedHours in the
+  // same action, producing a structural self-loop. Without expressionPatterns, the
+  // catch-all would label it decision-table-alternative-row (false positive). With
+  // expressionPatterns passed in, the decimal-rounding classification on the same
+  // rule explains the self-loop and the entry is suppressed.
+  const project = loadProject('fixtures/snap-work-requirements');
+  const ctx = resolveRuleflowContext(project);
+  const exprPatterns = classifyExpressionPatterns(project);
+  const withoutExpr = classifySelfLoops(project, ctx);
+  const withExpr = classifySelfLoops(project, ctx, exprPatterns);
+  assert.ok(
+    withoutExpr.some((r) => r.rulesheet === 'decimal-rounding.ers' && r.classification === 'decision-table-alternative-row'),
+    'without expressionPatterns, decimal-rounding.ers gets a false-positive decision-table-alternative-row entry',
+  );
+  assert.ok(
+    !withExpr.some((r) => r.rulesheet === 'decimal-rounding.ers'),
+    'with expressionPatterns, decimal-rounding.ers self-loop is suppressed',
+  );
 });
 
 test('flags a non-iterative multi-hop cycle as unclassified -- not observed in any real fixture, exercised with minimal synthetic data', () => {

@@ -1,3 +1,4 @@
 node_modules/
 generated/*
 !generated/.gitkeep
+fixtures/state-specific/

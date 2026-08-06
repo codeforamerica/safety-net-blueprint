@@ -30,23 +30,33 @@ This isn't a fixed, closed catalog written once before implementation started. N
 
 **`logical-keywords`** — `and`, `or`, and `not` are real Corticon keywords. Confirmed by Progress's own "Operator precedence and order of evaluation" documentation. All three appear in synthetic fixture `logical-operators.ers`.
 
-**`range-membership`** — `X in (lower..upper]` with independently optional brackets; an omitted bracket means inclusive. Confirmed by DC Medicaid/CHIP's own `Person.age in ( 18 .. 26 )`, `Person.HouseholdActualPercentFPL in ( 220 .. 250 ]`, and `Person.age in 21 .. 64`.
+**`decision-table-alternative-row`** — A decision-table row whose condition reads the same attribute another row in the same rulesheet writes. Corticon's UNIQUE hit policy guarantees the rows are mutually exclusive — only one fires per fact pass — so this is not a real cycle. The dependency-graph self-loop it creates is an artifact of representing multiple mutually-exclusive rows as a single graph node; the rows compile as an ordinary if/else chain with no special handling. Confirmed real in DC Medicaid's `Flatten.ers`, which checks `Person.outputCoverage1.contains('ineligible')` in one row while a separate row sets `Person.outputCoverage1`.
+
+**`membership-test`** — Test whether a value belongs to a set. How the set is expressed determines the translation approach; two confirmed variants:
+
+- **`range`** — `X in (lower..upper]` with independently optional brackets; an omitted bracket means inclusive. Confirmed by DC Medicaid/CHIP's own `Person.age in ( 18 .. 26 )`, `Person.HouseholdActualPercentFPL in ( 220 .. 250 ]`, and `Person.age in 21 .. 64`.
+- **`string-list`** — A `String` attribute holds a delimited list of tokens; the Corticon `.contains()` string operator tests whether a given value appears in that list. The semantics (substring match vs. delimiter-separated token match) are not determinable from static file inspection — see `ambiguous` section below. Confirmed shape from CBMS Disaster FS: `snapDisaster.cntyCdList.contains(snapHhDstrDetails.homeCntyCd)`, `snapDisaster.zipList.contains(snapHhDstrDetails.homeZip)`, `snapHhDstrDetails.actvIndvList.contains(client.clientID.toInteger.toString)`.
 
 ---
 
 ## Requires caller contract
 
-**`entity-creation`** — A rulesheet creates new entity instances with `.newUnique[...]` or `.new`, and associates them to existing entities via collection-append (`members += Person`). The graph receives fully-formed entities as inputs; entity assembly is a caller responsibility. Which entities and fields are required is derivable from the Corticon actions on the specific rule. Confirmed by DC Medicaid/CHIP's real `Household.newUnique[...]` and `members += Person` actions.
+**`entity-creation`** — A rulesheet creates new entity instances or mutates associations. Two variants based on whether the created association is subsequently read by other rules:
+
+- **`entity-creation/input`** — The association is written AND subsequently read downstream. The graph receives it as a caller-supplied input: the caller pre-assembles entity instances before invoking the graph. The `.newUnique[key-fields]` / `.new[...]` distinction shifts idempotency responsibility — newUnique means the caller can safely call twice; new means a fresh instance every time. Association mutation (`members += Person`) without a NEW term is also caller-contract. Confirmed by DC Medicaid/CHIP's real `Household.newUnique[...]`, `Cohort.new[...]`, and `members += Person` actions.
+- **`entity-creation/output`** — The association is only written, never read by any downstream rule. The collection should appear in the response body; the DSL derives its contents from the creation logic — the conditions that gate entity creation become the expression guard, and the assigned fields on the new entity become the output shape. Confirmed real in SNAP work requirements' `ApplicationMember.exemptions` (`WorkExemption.exemptionType` is assigned based on `exemptionCategory`, never referenced elsewhere). The DSL expression approach for collection outputs is not yet settled.
 
 **`iterative-convergence`** — A ruleflow step marked `iterative` re-runs its rulesheet repeatedly until no fact changes in a pass. The loop terminates at fixpoint, not after a fixed count. The caller runs the iteration externally and passes the converged value as a graph input. An `iterative` flag on a step whose rulesheet doesn't actually change any fact is equivalent to a non-iterative step (it converges in one pass), but the ruleflow XML still marks it `iterative`. Confirmed by IRR's real captured trace.
 
 **`service-callout`** — A ruleflow connector node calls external JavaScript with read/write access to the entire fact pool. There is no declared input/output mapping — the connector is fully opaque to static analysis. The service result is injected as a graph input by the caller. Which values the service provides is not resolvable from the ruleflow XML — only from the connector's own external JS class. Confirmed shape from `corticon.js-samples/ServiceCallOut`; access semantics confirmed by Progress's own ["Introduction: Service Call-out (Corticon.js v2.0)"](https://www.progress.com/blogs/introduction-service-call-out-corticon.js-v2.0) documentation.
 
+- **`deterministic-extension`** — A Java extension method called from within a rule expression (e.g. `Allotment.getMaximumAllotmentAmount(...)`) that is a pure function — no I/O, no external state, deterministic output for the same inputs. Translates to a DSL function rather than a caller-contract injection. Distinguishable from the opaque variant by examining the Java source: if the class does not call `ReferenceTableFieldFinder` or any external resource, it is a deterministic extension. In CBMS Disaster FS: `EligUtility.getLastMonth(yyyymm)`, `getNextMonth(yyyymm)`, `getBusinessDays(date, n)`, `calcPOIDate(...)`. Not confirmed against an executed trace yet.
+
 ---
 
 ## Requires DSL function
 
-**`date-arithmetic`** — Corticon has real date operators: `yearsBetween`, `addYears`, and counterparts for months/days. Which function is needed is derivable from the Corticon action on the specific rule. Confirmed by DC Medicaid/CHIP's own `Person.dob.yearsBetween(today)`.
+**`date-arithmetic`** — Corticon has real date operators: `yearsBetween`, `addYears`, and counterparts for months/days. Which function is needed is derivable from the Corticon action on the specific rule. Confirmed by DC Medicaid/CHIP's own `Person.dob.yearsBetween(today)` and CBMS Disaster FS's own `participatingProgramIndvEligRslt.prmAidCdBgnDt.monthsBetween(program.runDate)`.
 
 **`decimal-rounding`** — The `.round(n)` operator rounds a decimal to `n` places. Confirmed by DC Medicaid/CHIP's own `.round(2)` usage.
 
@@ -67,6 +77,44 @@ This isn't a fixed, closed catalog written once before implementation started. N
 **`sort-ranking-index`** — `->at(n)` index access into a sorted collection is 1-based, not 0-based. Found in two independent real Corticon projects (`corticon-classic-samples` "Ranking and Ordering", `Seth-Meldon/criticality` "Health Risk") with no counter-example, but no populated captured trace was located.
 
 **`universal-quantifier`** — `->forAll(predicate)` returns true only if every element of a collection satisfies the predicate. Documented at [docs.progress.com's "For all" page](https://docs.progress.com/bundle/corticon-js-rule-language/page/For-all.html). CEL's native `.all(x, predicate)` macro is the likely mapping but is unconfirmed.
+
+**`scalar-accumulator`** — A rule uses `+=` on a scalar attribute (e.g. `program.t_totalNoOfClients += 1`) to accumulate a count across multiple entity-scoped firings. In Corticon's forward-chaining model this fires once per matching entity instance and increments the counter each time. The dependency graph has no equivalent of multi-firing accumulation: the correct translation is almost always a collection aggregate (`->size` or a filtered count) on the implied entity collection, but which collection and which filter is not determinable from static analysis of the rulesheet alone — it requires tracing all rules that participate in populating that collection. Confirmed by CBMS Disaster FS's `program.t_totalNoOfClients += 1`. Requires manual confirmation of what is being counted before translating.
+
+**`extension-call`** — A Java extension method call detected in the rule expression (e.g. `EligUtility.getLastMonth(yyyymm)`, `ReferenceTableData.getDecimalValue(...)`). The translator emits a `__ext_ClassName_method(args)` placeholder rather than crashing so the pipeline can complete and the crosswalk can flag the call. Whether the extension is a deterministic pure function (maps to `service-callout/deterministic-extension`, requires a DSL function) or an external-state lookup (maps to `service-callout`, requires caller-contract) cannot be determined from the rulesheet alone — it requires examining the Java source to see whether the class calls `ReferenceTableFieldFinder` or any external resource. Confirmed shape from CBMS Disaster FS. Requires manual review before translating.
+
+---
+
+## Diagnostic / Cannot translate automatically
+
+These are not Corticon constructs with translation approaches — they are classifier findings that block automatic translation. They appear as crosswalk kinds and/or visualizer tags in the output and must be resolved manually.
+
+**`genuine-cycle`** — A confirmed dependency cycle: a path whose value depends on itself through an iterative ruleflow step. The containing rulesheets are classified as `iterative-convergence` (caller runs the loop externally), but the cyclic path itself has no automatic translation — the caller must express the convergence logic explicitly.
+
+**`unclassified-multi-hop-cycle`** — A multi-node dependency cycle (A → B → … → A) not confirmed to be inside an iterative ruleflow step. Cannot be translated without manual investigation. Not observed in any real fixture; flagged defensively.
+
+**`multi-invoked-disagreeing-context`** — A rulesheet reached from more than one place in the ruleflow with conflicting invocation context (iterative via one path, non-iterative via another). Classification was resolved conservatively (treating it as iterative); needs manual review before translating any paths it writes. Not observed in any real fixture.
+
+**`no-ordinary-writer`** — Every rulesheet that writes this path was excluded from Fact compilation (entity-creation-tainted, unreachable, or no-op). No Fact could be compiled for the path at all. Needs manual review.
+
+**`hit-policy-unverified`** — A variant of `decision-table`. Compiled assuming Corticon's default UNIQUE hit policy (rows mutually exclusive, order does not matter), but the file format has no hit-policy field to verify this against. If the rulesheet was authored with Rule Order hit policy, the compiled expression may be wrong. Flagged in the crosswalk for manual confirmation.
+
+---
+
+## Translation outcomes
+
+These identify what a compiled Fact *is* rather than what Corticon construct produced it. They appear as crosswalk kinds in the JSON output and are consumed by the crosswalk visualizer to determine display type. They are not Corticon patterns.
+
+**`ordinary-derived`** — A path with at least one ordinary rulesheet writer that compiled cleanly to a Derived fact expression.
+
+**`ordinary-writable-input`** — A path no rule in this project writes. A pure input to the graph, compiled as a Writable fact with no derived expression.
+
+**`null-guard-decision-table`** — A decision table where every row guards on `field = null` before writing it. In Corticon's forward-chaining engine this prevents a row from re-firing once another row has already set the value. In reverse-chaining the null-guard is redundant — compiled as a regular decision table with the null-guard condition retained in each branch's CEL (semantically correct: each branch fires only when no prior branch matched, which is what the null-guard achieves in forward-chaining). Confirmed real in CBMS Disaster FS's `COM_POSTPGM_IntakeXYZindicator.ers` (12 rows all guarding on `xyzPrdActnInd = null`).
+
+**`ordinary-writable-placeholder`** — A path classified as null-check-masking (`null-default` pattern). Compiled as a Writable fact with a Placeholder default rather than a Derived expression.
+
+**`collection-filter`** *(crosswalk kind)* — A rulesheet-level filter entry in the crosswalk, distinct from the rule-level `collection-filter` pattern tag. The filter condition is folded into every Fact that rulesheet compiles.
+
+**`expression-pattern`** — A crosswalk wrapper entry indicating a rule uses one or more expression-level patterns. The specific pattern is in `patternKind`; the expression text is in `expression`. Translation requires a proposed custom CEL function not yet settled in the DSL spec.
 
 ---
 

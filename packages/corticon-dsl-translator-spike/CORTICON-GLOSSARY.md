@@ -12,7 +12,7 @@ one-to-one to a concept below.
 | Extension | Called | What it holds |
 |---|---|---|
 | `.ecore` | **Vocabulary** | The data model: what business objects exist (e.g. `Household`, `Applicant`), what fields they have, and how they relate to each other. |
-| `.ers` | **Rulesheet** | One decision table: a set of conditions and the actions to take when they're met. |
+| `.ers` | **Rulesheet** | A set of rules, each with optional conditions and one or more actions. |
 | `.erf` | **Ruleflow** | The orchestration script: what order rulesheets run in, and any branching/looping logic. |
 | `.ert` | **Ruletest** | A captured test case: sample input data, run through the rules, with Corticon's own recorded output. |
 
@@ -38,11 +38,14 @@ one-to-one to a concept below.
 
 ## Rulesheet (`.ers`)
 
-A rulesheet is a **decision table** — think of a spreadsheet where each row is one rule, and
-columns are split into conditions (checks) and actions (what to set).
+A rulesheet is a set of rules. Each rule has zero or more conditions and one or more actions.
 
-- **Rule** — one row of the table: a set of conditions, and the actions to run if they're all
-  true.
+- **Rule** — one or more conditions and one or more actions. All conditions must be true for the
+  rule to fire. A rule with no conditions always fires.
+- **Rule execution order** — all rules in a rulesheet are processed left to right. A rule fires
+  if all its conditions are true, or if it has no conditions. Rules whose conditions are false are
+  skipped. When a rule fires, all of its actions execute — nothing inside a rule fires
+  independently of the rest.
 - **Override** — an explicit priority relationship between two rules in the same rulesheet. When
   the overriding rule's condition is met, its action takes effect and the overridden rule's action
   is suppressed, even if the overridden rule's condition would also be true. Corticon's default

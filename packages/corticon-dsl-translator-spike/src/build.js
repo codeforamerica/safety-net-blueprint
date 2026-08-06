@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Full pipeline: ingest → graph → classify → translate → visualize (rules, graph, crosswalk).
+ * Full pipeline: ingest → classify → translate → visualize.
  * Usage: node src/build.js <fixtureDir> [--out-dir <dir>]
  * Example: node src/build.js fixtures/all-patterns
  *          node src/build.js fixtures/dc-medicaid-chip --out-dir generated
@@ -28,10 +28,15 @@ function run(...nodeArgs) {
   execFileSync('node', nodeArgs, { stdio: 'inherit' });
 }
 
-run('src/ingest-project.js',    fixtureDir,              '--out', out('project.json'));
-run('src/graph-project.js',     out('project.json'),     '--out', out('graph.json'));
-run('src/classify-project.js',  out('project.json'),     '--out', out('classified.json'));
-run('src/translate-project.js', out('classified.json'),  '--out', out('translated.json'));
-run('src/visualize-rules.js',   out('classified.json'),  '--out', out('diagram.html'));
-run('src/visualize-graph.js',   out('translated.json'),  '--classified', out('classified.json'), '--out', out('graph.html'));
-run('src/visualize-crosswalk.js', out('classified.json'), out('translated.crosswalk.json'), `--translated=${out('translated.json')}`, '--out', out('crosswalk.html'));
+run('src/sources/corticon/ingest-project.js',    fixtureDir,                    '--out', out('corticon.json'));
+run('src/sources/corticon/classify-project.js',  out('corticon.json'),           '--out', out('patterns.json'));
+run('src/sources/corticon/translate-project.js', out('patterns.json'),  '--out', out('blueprint-dsl.json'));
+run('src/sources/corticon/visualize-rules-html.js', slug,
+  '--classified', out('patterns.json'),
+  '--project',    out('corticon.json'),
+  '--out',        join(outDir, `${slug}-rules.html`));
+run('src/targets/blueprint-dsl/visualize-graph-html.js', slug,
+  '--classified',  out('patterns.json'),
+  '--translated',  out('blueprint-dsl.json'),
+  '--graph',       out('graph.json'),
+  '--out',         join(outDir, `${slug}-graph.html`));

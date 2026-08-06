@@ -7,6 +7,8 @@
  * ever folded into packages/explorer alongside context-map/state-machine-docs.
  */
 
+import { basename } from 'node:path';
+
 export const FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 export const MONOSPACE = 'ui-monospace,SFMono-Regular,Menlo,monospace';
 
@@ -123,7 +125,7 @@ export function layoutAttributeStrip(attrMap, stripLabel, originX, originY) {
   // Group by vocabFile, sort within each group
   const byVocab = new Map();
   for (const { entity, attribute, datatype, vocabFile } of entries) {
-    const key = vocabFile ?? '(unknown)';
+    const key = vocabFile ?? null;
     if (!byVocab.has(key)) byVocab.set(key, []);
     byVocab.get(key).push(`${entity}.${attribute}: ${datatype ?? '?'}`);
   }
@@ -132,7 +134,8 @@ export function layoutAttributeStrip(attrMap, stripLabel, originX, originY) {
   // Flatten with "Vocabulary: <file>" header before each group
   const lines = [];
   for (const [vocabFile, attrLines] of byVocab) {
-    lines.push({ text: `Vocabulary: ${vocabFile}`, isHeader: true });
+    const label = vocabFile ? `Vocabulary: ${basename(vocabFile)}` : 'Vocabulary: (not in vocabulary file)';
+    lines.push({ text: label, isHeader: true });
     for (const entry of attrLines) lines.push({ text: entry, isHeader: false });
   }
 
@@ -159,6 +162,26 @@ export function layoutAttributeStrip(attrMap, stripLabel, originX, originY) {
   });
 
   return { svg: svg.join('\n'), width: COLS * COL_W, exitY: startY + colSize * LINE_H };
+}
+
+/**
+ * Returns just the bare `<svg>` element with the shared arrowhead defs. Used by
+ * visualize-combined.js to embed SVGs inline -- the arrow marker id must be
+ * unique per SVG (passed as markerId) to avoid id collisions across two diagrams
+ * in the same HTML document.
+ */
+export function rawSvgElement(markerId, width, height, bodySvg) {
+  const markerRef = markerId ?? 'arrow';
+  // Replace url(#arrow) with url(#<markerId>) so references stay local
+  const body = markerRef === 'arrow' ? bodySvg : bodySvg.replaceAll('url(#arrow)', `url(#${markerRef})`);
+  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="${markerRef}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#6b7280"/>
+    </marker>
+  </defs>
+  ${body}
+</svg>`;
 }
 
 /** Wraps rendered SVG body content into a complete, standalone HTML document. */
