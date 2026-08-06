@@ -1,9 +1,14 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { mkdtempSync, writeFileSync, mkdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdtempSync, writeFileSync, mkdirSync, readFileSync, readdirSync, existsSync } from 'node:fs';
+import { join, resolve as resolvePath } from 'node:path';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 import { parseArgs, createOpenApiTsConfig, domainToAnnotationExportName, generateAnnotationsAndPolicies, collectNullableFieldNames, patchZodGenForNullable } from '../scripts/generate-clients-typescript.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe('Client Generation', () => {
   describe('parseArgs', () => {
@@ -532,4 +537,5 @@ events: {}
       assert.strictEqual(readFileSync(path, 'utf8'), original);
     });
   });
+
 });

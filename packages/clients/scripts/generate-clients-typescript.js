@@ -633,9 +633,10 @@ function collectNamedEnumDefs(specPath) {
  * @param {{ name: string }[]} namedEnums
  */
 function patchDomainBarrelForNamedEnums(domainIndexPath, namedEnums) {
-  const constNames = namedEnums.map(e => e.name).join(', ');
   const existing = readFileSync(resolvePath(domainIndexPath), 'utf8');
-  writeFileSync(domainIndexPath, existing.trimEnd() + `\nexport { ${constNames} } from './types.gen';\n`);
+  const newNames = namedEnums.map(e => e.name).filter(name => !new RegExp(`\\b${name}\\b`).test(existing));
+  if (newNames.length === 0) return;
+  writeFileSync(domainIndexPath, existing.trimEnd() + `\nexport { ${newNames.join(', ')} } from './types.gen';\n`);
 }
 
 /**
@@ -649,11 +650,13 @@ function patchDomainBarrelForNamedEnums(domainIndexPath, namedEnums) {
  */
 function patchTypesGenForNamedEnums(typesGenPath, namedEnums) {
   const toConstKey = v => String(v).toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-  const blocks = namedEnums.map(({ name, values }) => {
+  const existing = readFileSync(resolvePath(typesGenPath), 'utf8');
+  const newEnums = namedEnums.filter(({ name }) => !existing.includes(`export const ${name} =`));
+  if (newEnums.length === 0) return;
+  const blocks = newEnums.map(({ name, values }) => {
     const entries = values.map(v => `  ${toConstKey(v)}: '${v}'`).join(',\n');
     return `export const ${name} = {\n${entries},\n} as const;\nexport type ${name} = (typeof ${name})[keyof typeof ${name}];`;
   });
-  const existing = readFileSync(resolvePath(typesGenPath), 'utf8');
   writeFileSync(typesGenPath, existing.trimEnd() + '\n\n' + blocks.join('\n\n') + '\n');
 }
 

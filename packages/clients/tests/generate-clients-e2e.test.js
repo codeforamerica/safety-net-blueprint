@@ -283,6 +283,69 @@ components:
     }
   });
 
+  it('no duplicate export const when enum is in both components/schemas and external $defs', async () => {
+    // Regression: when a spec declares `components/schemas/Foo: $ref: ./external.yaml#/$defs/Foo`,
+    // hey-api generates `export const Foo = ...` from the named component schema, AND
+    // collectNamedEnumDefs also finds Foo in the external file's $defs. Without the dedup
+    // guard, patchTypesGenForNamedEnums appends a second declaration, producing TS2451.
+    const workDir = mkdtempSync(join(tmpdir(), 'snb-e2e-'));
+    try {
+      mkdirSync(join(workDir, 'schemas'));
+
+      writeFileSync(join(workDir, 'schemas', 'enums.yaml'), `\
+$defs:
+  ItemStatus:
+    type: string
+    enum: [pending, active, closed]
+`);
+
+      const specPath = join(workDir, 'test-openapi.yaml');
+      writeFileSync(specPath, `\
+openapi: 3.1.0
+info:
+  title: Items API
+  version: 1.0.0
+paths:
+  /items:
+    get:
+      operationId: listItems
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    $ref: '#/components/schemas/ItemStatus'
+components:
+  schemas:
+    ItemStatus:
+      $ref: './schemas/enums.yaml#/$defs/ItemStatus'
+`);
+
+      const bundled = await bundleSpec(resolvePath(specPath));
+      const bundledPath = join(workDir, 'test-bundled.yaml');
+      writeFileSync(bundledPath, yaml.dump(bundled, { noRefs: true }));
+
+      const outPath = join(workDir, 'out');
+      const configPath = join(workDir, 'openapi-ts.config.js');
+      writeFileSync(configPath, OPENAPI_TS_CONFIG(bundledPath, outPath));
+      await exec('npx', ['@hey-api/openapi-ts', '-f', configPath], { cwd: clientsRoot });
+
+      const typesGenPath = join(outPath, 'types.gen.ts');
+      const namedEnums = collectNamedEnumDefs(resolvePath(specPath));
+      if (namedEnums.length > 0) patchTypesGenForNamedEnums(typesGenPath, namedEnums);
+
+      const content = readFileSync(typesGenPath, 'utf8');
+      const matches = [...content.matchAll(/^export const ItemStatus =/gm)];
+      assert.equal(matches.length, 1, `ItemStatus should appear exactly once, found ${matches.length}:\n${content}`);
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
   it('barrel patching: named enum consts are re-exported as values from the domain index.ts', () => {
     // Regression: hey-api generates type-only re-exports in index.ts, so enum consts
     // appended to types.gen.ts are not reachable from the package entry point.
@@ -310,6 +373,80 @@ components:
       );
       // Original type-only export should be preserved
       assert.ok(result.includes("export type { Income, IncomeCreate } from './types.gen';"), 'original type exports should be preserved');
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
+  it('patchTypesGenForNamedEnums: skips enums already declared by hey-api — no duplicate export const', () => {
+    // Regression: patchTypesGenForNamedEnums was appending enums that hey-api had
+    // already emitted, producing TS2451 duplicate block-scoped variable errors.
+    const workDir = mkdtempSync(join(tmpdir(), 'snb-e2e-'));
+    try {
+      const typesGenPath = join(workDir, 'types.gen.ts');
+      // Simulate types.gen.ts where hey-api already emitted DecisionStatus
+      writeFileSync(typesGenPath,
+        '// auto-generated\n\n' +
+        "export const DecisionStatus = {\n  PENDING: 'pending',\n  APPROVED: 'approved',\n} as const;\n" +
+        "export type DecisionStatus = typeof DecisionStatus[keyof typeof DecisionStatus];\n"
+      );
+
+      const namedEnums = [
+        { name: 'DecisionStatus', values: ['pending', 'approved'] }, // already present
+        { name: 'DecisionPath', values: ['standard', 'expedited'] },  // new
+      ];
+
+      patchTypesGenForNamedEnums(typesGenPath, namedEnums);
+
+      const result = readFileSync(typesGenPath, 'utf8');
+      const matches = [...result.matchAll(/^export const DecisionStatus =/gm)];
+      assert.equal(matches.length, 1, `DecisionStatus should appear exactly once, found ${matches.length}`);
+      assert.ok(result.includes("export const DecisionPath ="), 'new enum DecisionPath should be appended');
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
+  it('patchDomainBarrelForNamedEnums: skips enums already exported in barrel — no duplicate export', () => {
+    const workDir = mkdtempSync(join(tmpdir(), 'snb-e2e-'));
+    try {
+      const indexPath = join(workDir, 'index.ts');
+      // Simulate barrel where hey-api already exported RoleType
+      writeFileSync(indexPath,
+        "export type { RoleType } from './types.gen';\n"
+      );
+
+      const namedEnums = [
+        { name: 'RoleType', values: ['admin', 'worker'] },   // already present
+        { name: 'StatusType', values: ['active', 'inactive'] }, // new
+      ];
+
+      patchDomainBarrelForNamedEnums(indexPath, namedEnums);
+
+      const result = readFileSync(indexPath, 'utf8');
+      const roleTypeCount = [...result.matchAll(/RoleType/g)].length;
+      assert.equal(roleTypeCount, 1, `RoleType should appear exactly once in barrel, found ${roleTypeCount}`);
+      assert.ok(result.includes('StatusType'), 'new enum StatusType should be added to barrel');
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
+  it('patchDomainBarrelForNamedEnums: does not skip enum whose name is a substring of an existing export', () => {
+    // Regression: existing.includes(name) is a substring match — a barrel containing
+    // UserRoleType would falsely block RoleType from being added, silently dropping its export.
+    const workDir = mkdtempSync(join(tmpdir(), 'snb-e2e-'));
+    try {
+      const indexPath = join(workDir, 'index.ts');
+      writeFileSync(indexPath,
+        "export type { UserRoleType } from './types.gen';\n"
+      );
+
+      const namedEnums = [{ name: 'RoleType', values: ['admin', 'worker'] }];
+      patchDomainBarrelForNamedEnums(indexPath, namedEnums);
+
+      const result = readFileSync(indexPath, 'utf8');
+      assert.ok(result.includes('RoleType'), 'RoleType should be added to the barrel');
     } finally {
       rmSync(workDir, { recursive: true, force: true });
     }
