@@ -4,6 +4,7 @@ import { posix as posixPath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isBlankTemplateRule, formatRuleText } from './corticon/rulesheet.js';
 import { resolveRuleflowContext } from './classify/ruleflow-context.js';
+import { classifyAttributeUsage } from './classify/attribute-usage-classifier.js';
 import { entriesOf } from '../../map-utils.js';
 import { parseCliArgs } from '../../cli-utils.js';
 import { FONT, PALETTE, box, arrow, rawSvgElement, wrapSvgAsHtml, escapeXml, layoutAttributeStrip } from '../../diagram-utils.js';
@@ -549,7 +550,7 @@ function renderDiagram(project, classification, context, rulesheetPatterns, rule
   let y = PAD;
   let maxWidth = 0;
 
-  const { reads, writes } = classification.attributeUsage ?? {};
+  const { reads, writes } = classifyAttributeUsage(project);
 
   if (!skipStrips) {
     // Top strip: every attribute read anywhere in the rules (inputs and intermediates)

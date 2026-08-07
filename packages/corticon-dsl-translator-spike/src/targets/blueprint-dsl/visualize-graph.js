@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { FONT, PALETTE, wrapText, box, arrow, rawSvgElement, wrapSvgAsHtml, escapeXml, layoutAttributeStrip } from '../../diagram-utils.js';
+import { FONT, PALETTE, wrapText, box, arrow, rawSvgElement, wrapSvgAsHtml, escapeXml } from '../../diagram-utils.js';
 import { parseCliArgs } from '../../cli-utils.js';
 
 function printUsage() {
@@ -125,7 +125,7 @@ function factBodyLines(fact) {
   return lines;
 }
 
-function renderDiagram(facts, attributeUsage, { skipStrips = false } = {}) {
+function renderDiagram(facts, { skipStrips = false } = {}) {
   const pathByAliasKey = new Map(facts.map((f) => [aliasKeyFor(f.path), f.path]));
   const depsByPath = new Map(
     facts.map((f) => [f.path, f.derived !== undefined ? extractDependencies(f.derived, pathByAliasKey).filter((d) => d !== f.path) : []])
@@ -204,33 +204,18 @@ function renderDiagram(facts, attributeUsage, { skipStrips = false } = {}) {
     y += rowHeight + LAYER_V_GAP;
   }
 
-  if (!skipStrips) {
-    // Outputs strip at bottom
-    const outputsStrip = attributeUsage?.writes
-      ? layoutAttributeStrip(attributeUsage.writes, 'Outputs — attributes written anywhere in these rules:', PAD, y)
-      : null;
-    if (outputsStrip?.svg) {
-      blocks.push(outputsStrip.svg);
-      y = outputsStrip.exitY + PAD;
-      maxWidth = Math.max(maxWidth, outputsStrip.width);
-    }
-  }
-
   const width = maxWidth + PAD;
   const height = y;
   return { width, height, bodySvg: blocks.join('\n') };
 }
 
 /**
- * Load translated.json (and optionally patterns.json for attribute usage), run
- * the full render pipeline, and return a raw `<svg>` element string for embedding.
+ * Load translated.json, run the full render pipeline, and return a raw `<svg>`
+ * element string for embedding.
  */
-export function buildGraphContent(translatedPath, classifiedPath, markerId = 'arrow-graph', opts = {}) {
+export function buildGraphContent(translatedPath, markerId = 'arrow-graph', opts = {}) {
   const { facts } = JSON.parse(readFileSync(translatedPath, 'utf-8'));
-  const attributeUsage = classifiedPath
-    ? JSON.parse(readFileSync(classifiedPath, 'utf-8')).classification?.attributeUsage
-    : null;
-  const { width, height, bodySvg } = renderDiagram(facts, attributeUsage, opts);
+  const { width, height, bodySvg } = renderDiagram(facts, opts);
   return rawSvgElement(markerId, width, height, bodySvg);
 }
 
@@ -242,11 +227,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   }
 
   const { facts } = JSON.parse(readFileSync(args.positional, 'utf-8'));
-  const classifiedPath = args.classified;
-  const attributeUsage = classifiedPath
-    ? JSON.parse(readFileSync(classifiedPath, 'utf-8')).classification?.attributeUsage
-    : null;
-  const { width, height, bodySvg } = renderDiagram(facts, attributeUsage);
+  const { width, height, bodySvg } = renderDiagram(facts);
   const outFile = args.outFile ?? 'generated/fact-graph.html';
   writeFileSync(outFile, wrapSvgAsHtml('Decision-rules DSL Fact dependency graph', width, height, bodySvg));
   console.log(`Wrote Fact dependency graph to ${outFile}`);
