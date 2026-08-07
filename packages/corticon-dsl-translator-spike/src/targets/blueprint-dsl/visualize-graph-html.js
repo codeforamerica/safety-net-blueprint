@@ -309,7 +309,7 @@ function renderCandidatesNavAndPanels(candidates, subgraphs, corticonToFact, nod
 
     const hasSub = !!subgraphs[key];
     const graphHtml = hasSub ? subgraph.svg : '<p style="color:#9ca3af;font-size:12px">No subgraph data.</p>';
-    const dslHtml   = hasSub ? renderDslNodeList(key, subgraph.orderedNodes, corticonToFact, subgraph.edges, nodeTypes, shortenPath) : '';
+    const dslHtml   = hasSub ? renderDslNodeList(key, subgraph.orderedNodes, corticonToFact, subgraph.edges, nodeTypes) : '';
 
     panels.push(`<div id="${esc(tabId)}" class="tab-panel" style="padding:1.5rem 2rem">
         <div style="margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #e5e7eb">
