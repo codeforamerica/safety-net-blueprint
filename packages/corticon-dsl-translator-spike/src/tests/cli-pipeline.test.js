@@ -55,8 +55,9 @@ for (const fixtureDir of FIXTURES) {
       const classified = JSON.parse(readFileSync(classifiedJsonPath, 'utf-8'));
       assert.ok(classified.sourceFile, 'classify-project.js --out should reference the source file, not carry the project through');
       assert.ok(classified.classification, 'classify-project.js --out should include the classification');
+      assert.ok(classified.classification.patterns, 'classify-project.js --out should include classification.patterns');
       for (const key of ['selfLoops', 'multiHopCycles', 'crossRulesheetAssembly', 'decisionTableCombinatorics', 'entityCreation', 'serviceCallouts', 'filters', 'expressionPatterns', 'noOps']) {
-        assert.ok(Array.isArray(classified.classification[key]), `classify-project.js --out should include an array for classification.${key}`);
+        assert.ok(Array.isArray(classified.classification.patterns[key]), `classify-project.js --out should include an array for classification.patterns.${key}`);
       }
 
       execFileSync('node', ['src/sources/corticon/translate-project.js', classifiedJsonPath, '--out', translatedJsonPath], { encoding: 'utf-8' });

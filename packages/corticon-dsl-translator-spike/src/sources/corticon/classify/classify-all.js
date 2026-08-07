@@ -100,21 +100,24 @@ export function classifyProject(project) {
   const selfLoops = classifySelfLoops(project, ruleflowContext, expressionPatterns);
   const attributeUsage = classifyAttributeUsage(project);
   return withRuleIds({
+    // Structural context: what's reachable, what loops, what's dead
     ruleflowContext: {
       roots: ruleflowContext.roots,
       unreachableRulesheets: ruleflowContext.unreachable,
       multiInvokedRulesheets: ruleflowContext.multiInvoked,
     },
-    selfLoops,
-    multiHopCycles: classifyMultiHopCycles(project, ruleflowContext),
-    crossRulesheetAssembly: findCrossRulesheetAssembly(project),
-    decisionTableCombinatorics: classifyDecisionTableCombinatorics(project),
-    entityCreation: classifyEntityCreation(project),
-    serviceCallouts: classifyServiceCallouts(project),
-    filters: classifyFilters(project),
-    expressionPatterns,
-    attributeUsage,
-    noOps: classifyNoOps(project),
     sinkCandidates: classifySinkCandidates(project, ruleflowContext, attributeUsage),
+    // Pattern findings: the classified rule-level and rulesheet-level constructs
+    patterns: {
+      entityCreation: classifyEntityCreation(project),
+      selfLoops,
+      multiHopCycles: classifyMultiHopCycles(project, ruleflowContext),
+      crossRulesheetAssembly: findCrossRulesheetAssembly(project),
+      decisionTableCombinatorics: classifyDecisionTableCombinatorics(project),
+      filters: classifyFilters(project),
+      serviceCallouts: classifyServiceCallouts(project),
+      noOps: classifyNoOps(project),
+      expressionPatterns,
+    },
   });
 }

@@ -1,4 +1,3 @@
-import { canonicalAttributePath } from '../../../graph/attribute-path.js';
 import { isBlankTemplateRule } from '../corticon/rulesheet.js';
 import { entriesOf } from '../../../map-utils.js';
 
@@ -39,7 +38,6 @@ export function classifySinkCandidates(project, ruleflowContext, attributeUsage)
   const writingRulesheetsByKey = new Map();
   const writingRuleCountByKey = new Map();
   const latestPositionByKey = new Map();
-  const canonicalPathByKey = new Map();
 
   for (const [rulesheetFile, rulesheet] of entriesOf(project.rulesheets)) {
     const ctx = perRulesheet.get(rulesheetFile);
@@ -52,13 +50,7 @@ export function classifySinkCandidates(project, ruleflowContext, attributeUsage)
           const entity = term.parent?.text ?? '';
           if (!entity) continue;
           const key = `${entity}.${term.text}`;
-          if (!writes[key]) continue;
-
-          if (!canonicalPathByKey.has(key)) {
-            const canonical = canonicalAttributePath(term)
-              ?? (term.termtype === 'ENTITY' && term.fulltext?.includes('.') ? term.fulltext : null);
-            if (canonical) canonicalPathByKey.set(key, canonical);
-          }
+          if (!writes.has(key)) continue;
 
           if (!writingRulesheetsByKey.has(key)) writingRulesheetsByKey.set(key, new Set());
           writingRulesheetsByKey.get(key).add(rulesheetFile);
@@ -77,13 +69,11 @@ export function classifySinkCandidates(project, ruleflowContext, attributeUsage)
   }
 
   const candidates = {};
-  for (const [key, info] of Object.entries(writes)) {
+  for (const key of writes) {
     const rulesheetCount = writingRulesheetsByKey.get(key)?.size ?? 0;
     const ruleCount = writingRuleCountByKey.get(key) ?? 0;
     const latestPosition = latestPositionByKey.get(key) ?? null;
     candidates[key] = {
-      ...info,
-      canonicalPath: canonicalPathByKey.get(key) ?? null,
       rulesheetCount,
       totalRulesheets,
       ruleCount,

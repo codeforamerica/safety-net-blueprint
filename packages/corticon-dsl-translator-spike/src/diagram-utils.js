@@ -7,7 +7,6 @@
  * ever folded into packages/explorer alongside context-map/state-machine-docs.
  */
 
-import { basename } from 'node:path';
 
 export const FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 export const MONOSPACE = 'ui-monospace,SFMono-Regular,Menlo,monospace';
@@ -118,28 +117,14 @@ export function arrow(x1, y1, x2, y2, label) {
  *
  * attrMap: object or Map mapping "Entity.attribute" -> { entity, attribute, datatype, vocabFile }
  */
-export function layoutAttributeStrip(attrMap, stripLabel, originX, originY) {
-  const entries = attrMap instanceof Map ? [...attrMap.values()] : Object.values(attrMap);
-  if (!entries.length) return { svg: '', width: 0, exitY: originY };
+export function layoutAttributeStrip(attrPaths, stripLabel, originX, originY) {
+  const paths = (attrPaths instanceof Set || Array.isArray(attrPaths))
+    ? [...attrPaths].sort()
+    : Object.keys(attrPaths).sort();
+  if (!paths.length) return { svg: '', width: 0, exitY: originY };
 
-  // Group by vocabFile, sort within each group
-  const byVocab = new Map();
-  for (const { entity, attribute, datatype, vocabFile } of entries) {
-    const key = vocabFile ?? null;
-    if (!byVocab.has(key)) byVocab.set(key, []);
-    byVocab.get(key).push(`${entity}.${attribute}: ${datatype ?? '?'}`);
-  }
-  for (const lines of byVocab.values()) lines.sort();
-
-  // Flatten with "Vocabulary: <file>" header before each group
-  const lines = [];
-  for (const [vocabFile, attrLines] of byVocab) {
-    const label = vocabFile ? `Vocabulary: ${basename(vocabFile)}` : 'Vocabulary: (not in vocabulary file)';
-    lines.push({ text: label, isHeader: true });
-    for (const entry of attrLines) lines.push({ text: entry, isHeader: false });
-  }
-
-  const dataLines = lines.filter(l => !l.isHeader).length;
+  const lines = paths.map(p => ({ text: p, isHeader: false }));
+  const dataLines = lines.length;
   const COLS = Math.min(3, dataLines);
   const colSize = Math.ceil(lines.length / COLS);
   const LINE_H = 15;

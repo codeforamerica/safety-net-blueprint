@@ -12,7 +12,6 @@ function entityCreationKind(modifiedTerms, referencedTerms) {
   // both at once (a brand-new Cohort, added into Person.cohort) -- "new" wins since
   // it's the more specific/informative fact about what happened.
   return {
-    kind: hasNew ? 'new' : 'add',
     entityType: modifiedEntityTerm.datatype ?? modifiedEntityTerm.text,
     associationPath: modifiedEntityTerm.fulltext,
   };

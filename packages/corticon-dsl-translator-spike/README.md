@@ -53,13 +53,16 @@ Real Corticon project files, vendored locally so this spike doesn't depend on li
 - `src/sources/corticon/corticon/` — Phase 1: parses the four real Corticon file types (`.ecore`/`.ers`/`.erf`/`.ert`) into an in-memory model
 - `src/sources/corticon/ingest-project.js` — runs Phase 1 against a real Corticon project directory. Named for what it does (parallel to `graph-project.js` below, and the other phase entry points — `translate-project.js`, `classify-project.js` — rather than one growing monolithic `cli.js`), not for whether it's "the pipeline" vs. "a debug tool": there's no separate non-CLI ingestion script, this is it. Produces `{slug}-corticon.json` (includes `sourceType: "corticon"` and `ruleId` on each rule).
 - `src/graph/` — Phase 2: builds the universal attribute dependency graph from a Phase 1 project model (which attribute reads feed which attribute writes, across the whole project). Contains `build-graph.js`, `graph-project.js`, and `translation-patterns.yaml` (universal graph-level patterns).
-- `src/graph/graph-project.js` — runs Phase 2. Takes a Phase 1 JSON file as input, same chaining pattern as the phases themselves. Produces `{slug}-graph.json` (`{ nodes, edges }` where edges carry `ruleId`).
+- `src/graph/graph-project.js` — standalone debug tool for Phase 2. Takes a Phase 1 JSON file as input and prints a graph summary. `--out` writes `{slug}-graph.json` (`{ nodes, edges }` where edges carry `ruleId`). Not part of the main pipeline — `translate-project.js` produces `graph.json` as a side output instead.
 - `src/sources/corticon/classify/` — Phase 3: resolves ruleflow-invocation context (is a rulesheet ever reached from inside a loop or a branch?) and classifies cycles/self-loops and other rule-level patterns using that context
-- `src/sources/corticon/classify-project.js` — runs Phase 3. Produces `{slug}-patterns.json` (`{ project, classification }` with universal graph findings + source-detected patterns).
-- `src/sources/corticon/translate-project.js` — Phase 4: translates classified patterns to blueprint-dsl facts. Produces `{slug}-blueprint-dsl.json` (`{ facts }` with optional `meta` per fact).
+- `src/sources/corticon/classify-project.js` — runs Phase 3. Takes the Phase 1 corticon.json as input. Produces `{slug}-patterns.json` (`{ sourceFile, classification }` with universal graph findings + source-detected patterns).
+- `src/sources/corticon/translate-project.js` — Phase 4: translates classified patterns to blueprint-dsl facts. Produces `{slug}-blueprint-dsl.json` (`{ facts, translationLog }` with optional `meta` per fact) and `{slug}-graph.json` (`{ nodes, edges }` where edges carry `ruleId`) as a side output.
 - `src/sources/corticon/translation-patterns.yaml` — Corticon-specific translation patterns (how each Corticon construct maps to the DSL)
 - `src/graph/translation-patterns.yaml` — universal graph-level patterns that apply to any rules source, not just Corticon
-- `src/targets/blueprint-dsl/` — blueprint-dsl target: graph visualizer
+- `src/targets/blueprint-dsl/` — blueprint-dsl target: fact dependency graph and HTML visualizer
+  - `visualize-graph.js` — renders a fact dependency graph SVG from `{slug}-blueprint-dsl.json`
+  - `visualize-graph-html.js` — renders a full interactive HTML report (data model, sink candidates, subgraph drill-down) from `{slug}-blueprint-dsl.json` + `{slug}-patterns.json`
+- `src/sources/corticon/visualize-rules.js` — renders an HTML rules diagram from `{slug}-patterns.json`, annotating each rulesheet and rule with its classification tags (null-default, entity-creation, unreachable, etc.)
 - `src/cli-utils.js` — shared `--out`/`--help` arg parsing and Map/Set-to-JSON conversion, used by every `*-project.js` script so each doesn't reimplement the same thing
 - `src/map-utils.js` — shared Map-or-plain-object helpers, used by both the graph and classification layers since either one may run against a freshly-loaded project or a JSON file read back in from a prior phase
 - `src/tests/` — real, automated tests (`node --test`) asserting against the real fixtures above — the fixtures are test *input*, not the tests themselves. Includes `cli-pipeline.test.js`, which runs the actual CLI scripts as subprocesses end-to-end, not just the underlying functions.
@@ -75,17 +78,14 @@ Real Corticon project files, vendored locally so this spike doesn't depend on li
 
 `buildDependencyGraph(project)` (`src/graph/build-graph.js`) walks every rule in every rulesheet and records an edge from each attribute its condition/action *reads* to the attribute it *writes*, across the whole project. It returns `{ nodes, edges, writes }` — `writes` tracks every rulesheet that writes each attribute, which is what `findCrossRulesheetAssembly()` and entity-creation detection both need. `findCycles()` finds structural self-loops/cycles in the raw graph — but a raw cycle isn't automatically a genuine Decision 9 cycle needing manual redesign: confirmed real self-loops include an ordinary decision-table alternative row (DC Medicaid) and null-check masking (Mortgage) alongside IRR's genuine one, and telling them apart needs the rule's own condition plus the containing Ruleflow node's `iterative` flag (Phase 3's job — see `src/sources/corticon/classify/cycle-classifier.js`).
 
-`src/graph/graph-project.js` builds the graph from a Phase 1 JSON file and prints a summary (node/edge counts, cycle candidates, cross-rulesheet assembly); `--out <file>` writes `{slug}-graph.json` as `{ nodes, edges }` where edges carry `ruleId`. Phase 3 classification needs the original rule/ruleflow detail (condition text, `iterative` flags, `BranchContainer`/`connectorList` shape) that the graph itself doesn't retain, and each phase's script takes only the *previous* phase's output as input — so the graph output is a universal format rather than Phase 3 reaching back to Phase 1's output directly.
+`src/graph/graph-project.js` is a standalone debug tool that builds the graph from a Phase 1 JSON file and prints a summary (node/edge counts, cycle candidates, cross-rulesheet assembly); `--out <file>` writes `{slug}-graph.json` as `{ nodes, edges }` where edges carry `ruleId`. In the main pipeline, `graph.json` is produced as a side output of `translate-project.js` rather than a standalone phase: Phase 3 (`classify-project.js`) takes the Phase 1 corticon.json directly, since classification needs the original rule/ruleflow detail (condition text, `iterative` flags, `BranchContainer`/`connectorList` shape) that a pure topology graph doesn't retain.
 
 ```
 node src/sources/corticon/ingest-project.js fixtures/dc-medicaid-chip
 node src/sources/corticon/ingest-project.js fixtures/dc-medicaid-chip --out generated/dc-medicaid-chip-corticon.json
 
-node src/graph/graph-project.js generated/dc-medicaid-chip-corticon.json
-node src/graph/graph-project.js generated/dc-medicaid-chip-corticon.json --out generated/dc-medicaid-chip-graph.json
-
-node src/sources/corticon/classify-project.js generated/dc-medicaid-chip-graph.json
-node src/sources/corticon/classify-project.js generated/dc-medicaid-chip-graph.json --out generated/dc-medicaid-chip-patterns.json
+node src/sources/corticon/classify-project.js generated/dc-medicaid-chip-corticon.json
+node src/sources/corticon/classify-project.js generated/dc-medicaid-chip-corticon.json --out generated/dc-medicaid-chip-patterns.json
 
 node src/sources/corticon/translate-project.js generated/dc-medicaid-chip-patterns.json
 node src/sources/corticon/translate-project.js generated/dc-medicaid-chip-patterns.json --out generated/dc-medicaid-chip-blueprint-dsl.json

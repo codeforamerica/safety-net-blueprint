@@ -396,7 +396,7 @@ async function render(opts) {
       const project = JSON.parse(readFileSync(sourceFile, 'utf-8'));
       const graph = buildDependencyGraph(project);
       for (const [key, candidate] of Object.entries(sinkCandidates)) {
-        if (candidate.canonicalPath) rawCandidateGraphs[key] = buildCandidateSubgraph(candidate.canonicalPath, graph);
+        rawCandidateGraphs[key] = buildCandidateSubgraph(key, graph);
       }
     }
   } catch { /* ok */ }
@@ -419,9 +419,38 @@ async function render(opts) {
 
   let nodeTypes = {};
   try {
-    const { reads: attrReads = {}, writes: attrWrites = {} } = JSON.parse(readFileSync(classifiedPath, 'utf-8'))?.classification?.attributeUsage ?? {};
-    for (const [path, info] of [...Object.entries(attrReads), ...Object.entries(attrWrites)]) {
-      if (info.datatype) nodeTypes[path] = info.datatype;
+    const { sourceFile } = JSON.parse(readFileSync(classifiedPath, 'utf-8'));
+    const project = JSON.parse(readFileSync(sourceFile, 'utf-8'));
+    // Primary: vocabulary gives authoritative types (including enums) keyed by declared entity name.
+    for (const [, vocab] of Object.entries(project.vocabularies ?? {})) {
+      const customTypes = new Map(Object.entries(vocab.customTypes ?? {}));
+      for (const [entityName, entity] of Object.entries(vocab.entities ?? {})) {
+        for (const [attrName, attr] of Object.entries(entity.attributes ?? {})) {
+          let datatype;
+          if (attr.kind === 'association') {
+            datatype = attr.isCollection ? `List(${attr.type?.name ?? '?'})` : (attr.type?.name ?? '?');
+          } else if (attr.type?.kind === 'customType') {
+            const ct = customTypes.get(attr.type.name);
+            datatype = (ct?.isEnum && ct.values?.length) ? ct.values.join(' | ') : attr.type.name;
+          } else {
+            datatype = attr.type?.name ?? null;
+          }
+          if (datatype) nodeTypes[`${entityName}.${attrName}`] = datatype;
+        }
+      }
+    }
+    // Fallback: scan rule terms for alias-named entities (e.g. filter alias "activity" for WorkActivity).
+    // term.datatype carries the primitive type even when the entity name doesn't match the vocab key.
+    for (const [, rulesheet] of Object.entries(project.rulesheets ?? {})) {
+      for (const rule of rulesheet.rules ?? []) {
+        for (const cell of [...(rule.conditions ?? []), ...(rule.actions ?? [])].filter(Boolean)) {
+          for (const term of [...(cell.referencedTerms ?? []), ...(cell.modifiedTerms ?? [])]) {
+            if (term.termtype !== 'ATTRIBUTE' || !term.parent?.text || !term.datatype) continue;
+            const key = `${term.parent.text}.${term.text}`;
+            if (!nodeTypes[key]) nodeTypes[key] = term.datatype;
+          }
+        }
+      }
     }
   } catch { /* ok */ }
 

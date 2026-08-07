@@ -4,7 +4,7 @@ This spike's actual job (issue [#388](https://github.com/codeforamerica/safety-n
 
 This isn't a fixed, closed catalog written once before implementation started. New real patterns kept surfacing purely from the process of building the translator — operator precedence, decision-table hit-policy semantics, sequence-indexing base, cross-rulesheet invocation order — none of which were anticipated before implementation forced the question. Identifying new translation patterns as real data is encountered is an ongoing goal of this spike in its own right, not just a byproduct of it.
 
-**The machine-readable catalog** — pattern names, translation approach, external dependencies, and status — lives in [`translation-patterns.yaml`](./translation-patterns.yaml). This document provides the evidence and reasoning behind each entry in that file.
+**The machine-readable catalog** — pattern names, translation approach, external dependencies, and status — lives in two files: [`src/sources/corticon/translation-patterns.yaml`](./src/sources/corticon/translation-patterns.yaml) for Corticon-specific patterns, and [`src/graph/translation-patterns.yaml`](./src/graph/translation-patterns.yaml) for universal graph-level patterns that apply to any source. This document provides the evidence and reasoning behind each entry in those files.
 
 ---
 
@@ -104,7 +104,7 @@ These are not Corticon constructs with translation approaches — they are class
 
 These identify what a compiled Fact *is* rather than what Corticon construct produced it. They appear as crosswalk kinds in the JSON output and are consumed by the crosswalk visualizer to determine display type. They are not Corticon patterns.
 
-**`ordinary-derived`** — A path with at least one ordinary rulesheet writer that compiled cleanly to a Derived fact expression.
+**`ordinary-expression`** — A path with at least one ordinary rulesheet writer that compiled cleanly to a Derived fact expression.
 
 **`ordinary-writable-input`** — A path no rule in this project writes. A pure input to the graph, compiled as a Writable fact with no derived expression.
 

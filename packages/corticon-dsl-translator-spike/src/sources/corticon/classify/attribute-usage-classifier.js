@@ -4,44 +4,14 @@ import { entriesOf } from '../../../map-utils.js';
 /**
  * Scans every rule's conditions and actions and collects all ATTRIBUTE terms that
  * are read (referencedTerms of conditions and actions) or written (modifiedTerms of
- * actions). Cross-references the vocabulary for authoritative type info -- term.datatype
- * is the primitive underlying type (e.g. String) and loses custom-type/enum information,
- * so the vocabulary is the authoritative source. An attribute in both maps is an
- * intermediate: computed by one rule, consumed by another.
- *
- * Returns { reads, writes } where each is an object mapping "Entity.attribute" ->
- * { entity, attribute, datatype, vocabFile }.
+ * actions). Returns { reads, writes } where each is a Set of "Entity.attribute" strings.
+ * An attribute in both sets is an intermediate: computed by one rule, consumed by another.
  */
 export function classifyAttributeUsage(project) {
-  const reads = {};
-  const writes = {};
+  const reads = new Set();
+  const writes = new Set();
 
-  // Build a lookup from "Entity.attribute" -> { datatype, vocabFile } using the
-  // vocabulary directly so enum types show their values ("'snap' | 'tanf'") rather
-  // than just the underlying primitive type name.
-  const vocabLookup = new Map();
-  for (const [vocabFile, vocab] of entriesOf(project.vocabularies)) {
-    const customTypes = new Map(entriesOf(vocab.customTypes));
-    for (const [entityName, entity] of entriesOf(vocab.entities)) {
-      for (const [attrName, attr] of entriesOf(entity.attributes)) {
-        let datatype;
-        if (attr.kind === 'association') {
-          const typeName = attr.type?.name ?? '?';
-          datatype = attr.isCollection ? `List(${typeName})` : typeName;
-        } else if (attr.type?.kind === 'customType') {
-          const ct = customTypes.get(attr.type.name);
-          datatype = (ct?.isEnum && ct.values?.length) ? ct.values.join(' | ') : attr.type.name;
-        } else {
-          datatype = attr.type?.name ?? '?';
-        }
-        // Keyed by lowercase entity name so rule aliases (e.g. "program") match
-        // vocab entries (e.g. "Program") regardless of capitalisation.
-        vocabLookup.set(`${entityName.toLowerCase()}.${attrName}`, { datatype, vocabFile });
-      }
-    }
-  }
-
-  function add(map, term) {
+  function add(set, term) {
     // Capture both scalar ATTRIBUTE terms and named association references --
     // associations have termtype ENTITY but carry a parent (e.g. applicant on
     // Application from "applicant += ApplicationMember"), distinguishing them
@@ -51,16 +21,7 @@ export function classifyAttributeUsage(project) {
     if (!isAttribute && !isAssociation) return;
     const entity = term.parent?.text ?? '';
     if (!entity) return;
-    const key = `${entity}.${term.text}`;
-    if (!map[key]) {
-      const resolved = vocabLookup.get(`${entity.toLowerCase()}.${term.text}`);
-      map[key] = {
-        entity,
-        attribute: term.text,
-        datatype: resolved?.datatype ?? term.datatype ?? '?',
-        vocabFile: resolved?.vocabFile ?? null,
-      };
-    }
+    set.add(`${entity}.${term.text}`);
   }
 
   for (const [, rulesheet] of entriesOf(project.rulesheets)) {

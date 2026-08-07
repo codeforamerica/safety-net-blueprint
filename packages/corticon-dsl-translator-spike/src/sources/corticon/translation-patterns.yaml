@@ -169,9 +169,9 @@ entity-creation:
   approach: >
     A rule creates new entity instances. Two variants based on whether the
     created entity/association is subsequently read by other rules; see
-    entity-creation-input and entity-creation-output. The `kind` sub-field
-    (new vs newUnique) describes Corticon deduplication semantics and applies
-    independently of variant.
+    entity-creation-input and entity-creation-output. Each entry carries
+    entityType (the created entity's type) and associationPath (the path being
+    written), plus a variant field (input or output).
   requires: ~
   status: confirmed
 
@@ -182,9 +182,10 @@ entity-creation-input:
     the project. The graph receives it as a caller-supplied input: the caller
     pre-assembles the entity instances before invoking the graph. Which
     entities and fields are required is derivable from the Corticon actions
-    on this rule. Caller-contract distinction: newUnique creates only if no
-    matching entity exists (create-or-skip); new always creates a fresh
-    instance — shifts what the caller must guarantee about idempotency.
+    on this rule. Note: whether the creation uses newUnique (create-or-skip)
+    or new (always fresh) affects caller idempotency guarantees — this is
+    visible in the original Corticon action text but is not captured as a
+    separate field in the classification output.
   requires: caller-contract
   status: confirmed
 

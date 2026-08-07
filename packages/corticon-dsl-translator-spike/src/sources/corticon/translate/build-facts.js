@@ -292,13 +292,14 @@ function compileAcrossRulesheets(rulesheetKeys, entriesByRulesheet, initialFallb
  * touches the shared, engine-agnostic project model and the generic AST, never
  * Corticon's raw text syntax itself.
  */
-export function buildFacts(project, graph, classification, { parseExpression }) {
+export function buildFacts(project, graph, classificationInput, { parseExpression }) {
+  const classification = classificationInput.patterns ?? classificationInput;
   const rulesheets = new Map(entriesOf(project.rulesheets));
   const ruleflowContext = resolveRuleflowContext(project);
 
   const entityCreationRuleKeys = new Set(classification.entityCreation.map((e) => e.ruleId));
   const noOpRuleKeys = new Set((classification.noOps ?? []).map((e) => e.ruleId));
-  const unreachableRulesheets = new Set(classification.ruleflowContext.unreachableRulesheets);
+  const unreachableRulesheets = new Set(classificationInput.ruleflowContext.unreachableRulesheets);
   const selfLoopClassificationByKey = new Map(classification.selfLoops.map((s) => [`${s.path}|${s.ruleId}`, s.classification]));
   const genuineCyclePaths = new Set([
     ...classification.selfLoops.filter((s) => s.classification === 'genuine-cycle').map((s) => s.path),
@@ -456,7 +457,7 @@ export function buildFacts(project, graph, classification, { parseExpression }) 
   // Defensive, not yet confirmed real (see ruleflow-context.js's own comment) --
   // surfaced anyway per the same "don't let a real finding go unreported just
   // because it hasn't happened yet" principle as everything above.
-  for (const entry of classification.ruleflowContext.multiInvokedRulesheets) {
+  for (const entry of classificationInput.ruleflowContext.multiInvokedRulesheets) {
     translationLog.push({
       ruleId: entry.ruleId,
       pattern: 'multi-invoked-disagreeing-context',

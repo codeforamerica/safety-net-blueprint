@@ -199,7 +199,7 @@ test('snap-work-requirements: null-default.ers is NOT classified as fact-assembl
   // as fact-assembly in the visualizer.
   const project = loadProject('fixtures/snap-work-requirements');
   const classification = classifyProject(project);
-  const hoursAppliedAssembly = classification.crossRulesheetAssembly.find((a) => a.path === 'WorkActivity.hoursApplied');
+  const hoursAppliedAssembly = classification.patterns.crossRulesheetAssembly.find((a) => a.path === 'WorkActivity.hoursApplied');
   assert.equal(hoursAppliedAssembly, undefined, 'WorkActivity.hoursApplied should not appear in crossRulesheetAssembly after excluding null-default writers');
 });
 
@@ -261,14 +261,17 @@ test('a rulesheet invoked from multiple disagreeing contexts (synthetic -- not o
   const graph = { nodes: new Set(), edges: [], writes: new Map() };
   const classification = {
     ruleflowContext: { roots: ['main.erf'], unreachableRulesheets: [], multiInvokedRulesheets: [{ ruleId: 'Shared.ers', contexts: [] }] },
-    selfLoops: [],
-    multiHopCycles: [],
-    crossRulesheetAssembly: [],
-    decisionTableCombinatorics: [],
-    entityCreation: [],
-    serviceCallouts: [],
-    filters: [],
-    expressionPatterns: [],
+    patterns: {
+      selfLoops: [],
+      multiHopCycles: [],
+      crossRulesheetAssembly: [],
+      decisionTableCombinatorics: [],
+      entityCreation: [],
+      serviceCallouts: [],
+      filters: [],
+      expressionPatterns: [],
+      noOps: [],
+    },
   };
   const { translationLog: crosswalk } = buildFacts(project, graph, classification, { parseExpression });
   const entry = crosswalk.find((c) => c.pattern === 'multi-invoked-disagreeing-context');
