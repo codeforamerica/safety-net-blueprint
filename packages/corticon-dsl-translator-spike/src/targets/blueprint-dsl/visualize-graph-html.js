@@ -95,7 +95,13 @@ function buildCandidateSubgraphSvg(sinkKey, data, markerId) {
 
   const maxL = orderedLayers.length - 1;
   const CHAR_W = 7.2, H_PAD = 28, NODE_H = 44, V_GAP = 40, H_GAP = 20, MARGIN = 20;
-  const nodeW = n => Math.max(140, Math.ceil(n.length * CHAR_W) + H_PAD);
+  // Use last-two-segment label (e.g. Program.runDate) unless two nodes share the same
+  // short form, in which case fall back to the full path to avoid ambiguity.
+  const shortOf = n => n.split('.').slice(-2).join('.');
+  const shortCounts = new Map();
+  for (const n of nodes) shortCounts.set(shortOf(n), (shortCounts.get(shortOf(n)) ?? 0) + 1);
+  const label = n => shortCounts.get(shortOf(n)) === 1 ? shortOf(n) : n;
+  const nodeW = n => Math.max(140, Math.ceil(label(n).length * CHAR_W) + H_PAD);
   const layerY = l => MARGIN + (maxL - l) * (NODE_H + V_GAP);
   const layerTotalW = l => (orderedLayers[l] ?? []).reduce((s, n) => s + nodeW(n), 0)
     + Math.max(0, (orderedLayers[l] ?? []).length - 1) * H_GAP;
@@ -127,8 +133,8 @@ function buildCandidateSubgraphSvg(sinkKey, data, markerId) {
   }
   for (const n of nodes) {
     const p = pos[n]; if (!p) continue;
-    const { svg: boxSvg } = box(p.x, p.y, nodeW(n), n, null, [], n === sinkKey ? PALETTE.navy : PALETTE.teal);
-    parts.push(`<g class="sg-node" data-node="${esc(n)}" style="cursor:pointer">${boxSvg}</g>`);
+    const { svg: boxSvg } = box(p.x, p.y, nodeW(n), label(n), null, [], n === sinkKey ? PALETTE.navy : PALETTE.teal);
+    parts.push(`<g class="sg-node" data-node="${esc(n)}" title="${esc(n)}" style="cursor:pointer">${boxSvg}</g>`);
   }
 
   return rawSvgElement(markerId, svgW, svgH, parts.join('\n'));

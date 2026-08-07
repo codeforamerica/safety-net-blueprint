@@ -12,6 +12,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { buildRulesDiagramContent } from './visualize-rules.js';
 import { jsonPanel } from '../../json-panel.js';
+import { buildEntityAliasMap } from '../../graph/attribute-path.js';
 
 import { COLORS, FONT } from '../../../../explorer/lib/theme.js';
 import { esc } from '../../../../explorer/lib/html.js';
@@ -39,33 +40,42 @@ function renderVocabularyTab(projectPath) {
   try { project = JSON.parse(readFileSync(projectPath, 'utf-8')); }
   catch { return '<p style="color:#9ca3af;font-size:12px">Could not load project file.</p>'; }
 
-  const vocabEntries = Object.entries(project.vocabularies ?? {});
-  if (!vocabEntries.length) return '<p style="color:#9ca3af;font-size:12px">No vocabulary found.</p>';
+  // Build entity→attribute→type map by scanning rule terms using canonical entity types.
+  // The vocabulary object only surfaces the root entity with associations, not the scalar
+  // attributes of associated entities — rule terms are the authoritative source for those.
+  const aliasMap = buildEntityAliasMap(project);
+  const byEntity = new Map();
+  for (const rulesheet of Object.values(project.rulesheets ?? {})) {
+    for (const rule of rulesheet.rules ?? []) {
+      for (const cell of [...(rule.conditions ?? []), ...(rule.actions ?? [])].filter(Boolean)) {
+        for (const term of [...(cell.referencedTerms ?? []), ...(cell.modifiedTerms ?? [])]) {
+          if (term.termtype !== 'ATTRIBUTE' || !term.parent?.text || !term.datatype) continue;
+          const entityType = aliasMap.get(term.parent.text) ?? term.parent.text;
+          if (!byEntity.has(entityType)) byEntity.set(entityType, new Map());
+          if (!byEntity.get(entityType).has(term.text)) {
+            byEntity.get(entityType).set(term.text, term.datatype);
+          }
+        }
+      }
+    }
+  }
 
-  return vocabEntries.map(([vocabFile, vocab]) => {
-    const entities = Object.entries(vocab.entities ?? {});
-    const entityHtml = entities.map(([entityName, entity]) => {
-      const attrs = Object.entries(entity.attributes ?? {});
-      if (!attrs.length) return '';
-      const rows = attrs.map(([attrName, attr]) => {
-        const typeName = attr.type?.name ?? '?';
-        const typeHtml = `<span style="color:#6b7280;font-size:11px">${esc(typeName)}</span>`;
-        return `<tr style="border-bottom:1px solid #f3f4f6">
-          <td style="padding:4px 16px 4px 0;font-family:${MONO};font-size:11.5px;color:#1f2937;white-space:nowrap">${esc(attrName)}</td>
-          <td style="padding:4px 0">${typeHtml}</td>
-        </tr>`;
-      }).join('');
-      return `<div style="break-inside:avoid;margin-bottom:20px">
-        <div style="font-size:11px;font-weight:700;color:#111827;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e5e7eb">${esc(entityName)}</div>
-        <table style="border-collapse:collapse;width:100%"><tbody>${rows}</tbody></table>
-      </div>`;
+  if (!byEntity.size) return '<p style="color:#9ca3af;font-size:12px">No attributes found.</p>';
+
+  const entityHtml = [...byEntity.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([entityName, attrs]) => {
+    const rows = [...attrs.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([attrName, typeName]) => {
+      return `<tr style="border-bottom:1px solid #f3f4f6">
+        <td style="padding:4px 16px 4px 0;font-family:${MONO};font-size:11.5px;color:#1f2937;white-space:nowrap">${esc(attrName)}</td>
+        <td style="padding:4px 0;font-size:11px;color:#6b7280;white-space:nowrap">${esc(typeName)}</td>
+      </tr>`;
     }).join('');
-    const label = basename(vocabFile);
-    return `<div style="margin-bottom:2rem">
-      <h3 style="font-size:13px;font-weight:700;color:#111827;margin-bottom:12px;padding-bottom:5px;border-bottom:1px solid #e5e7eb">${esc(label)}</h3>
-      <div style="columns:3 280px;column-gap:32px">${entityHtml}</div>
+    return `<div style="break-inside:avoid;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;color:#111827;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e5e7eb">${esc(entityName)}</div>
+      <table style="border-collapse:collapse;width:100%"><tbody>${rows}</tbody></table>
     </div>`;
   }).join('');
+
+  return `<div style="columns:3 280px;column-gap:32px">${entityHtml}</div>`;
 }
 
 // ── Main render ─────────────────────────────────────────────────────────────
