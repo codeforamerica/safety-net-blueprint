@@ -34,8 +34,12 @@ export function canonicalAttributePath(term) {
     current = current.parent;
   }
   if (!current || current.termtype !== 'ATTRIBUTE') return undefined;
-  const entityType = current.parent?.datatype ?? current.parent?.text;
-  if (!entityType) return undefined;
+  // Corticon's datatype field can be a fully-qualified path (e.g. "DomainModel.Results.AgEligRslt")
+  // or just the class name (e.g. "LoanApplication") depending on the project. Normalize to the
+  // last segment so canonical paths are always "EntityClassName.attrName" regardless of namespace.
+  const rawType = current.parent?.datatype ?? current.parent?.text;
+  if (!rawType) return undefined;
+  const entityType = rawType.includes('.') ? rawType.split('.').pop() : rawType;
   return `${entityType}.${current.text}`;
 }
 
@@ -78,7 +82,9 @@ export function buildEntityAliasMap(project) {
             current = current.parent;
           }
           if (!current?.parent?.text || !current.parent.datatype) continue;
-          aliasMap.set(current.parent.text, current.parent.datatype);
+          const raw = current.parent.datatype;
+          const canonical = raw.includes('.') ? raw.split('.').pop() : raw;
+          aliasMap.set(current.parent.text, canonical);
         }
       }
     }

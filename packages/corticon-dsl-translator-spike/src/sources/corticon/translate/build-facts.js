@@ -59,7 +59,11 @@ function buildAliasMap(cell) {
   function walkChain(term) {
     let current = term;
     while (current) {
-      if (current.termtype === 'ENTITY' && current.text && current.datatype) map.set(current.text, current.datatype);
+      if (current.termtype === 'ENTITY' && current.text && current.datatype) {
+        const raw = current.datatype;
+        const canonical = raw.includes('.') ? raw.split('.').pop() : raw;
+        map.set(current.text, canonical);
+      }
       current = current.parent;
     }
   }
