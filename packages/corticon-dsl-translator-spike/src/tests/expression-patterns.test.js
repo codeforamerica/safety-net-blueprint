@@ -141,7 +141,7 @@ test('classifyExpressionPatterns finds all four new kinds in the all-patterns fi
   const results = classifyExpressionPatterns(project);
   const byKind = (kind) => results.filter((r) => r.kind === kind);
   assert.ok(byKind('operator-precedence').some((r) => r.rulesheet === 'operator-precedence.ers'));
-  assert.ok(byKind('logical-keywords').some((r) => r.rulesheet === 'logical-operators.ers'));
-  assert.ok(byKind('membership-test/range').some((r) => r.rulesheet === 'range-membership.ers'));
-  assert.ok(byKind('type-conversion').some((r) => r.rulesheet === 'type-conversion.ers'));
+  assert.ok(byKind('logical-operators').some((r) => r.rulesheet === 'logical-operators.ers'));
+  assert.ok(byKind('membership-test-range').some((r) => r.rulesheet === 'range-membership.ers'));
+  assert.ok(byKind('coercion').some((r) => r.rulesheet === 'type-conversion.ers'));
 });

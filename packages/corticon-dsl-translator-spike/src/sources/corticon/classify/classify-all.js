@@ -11,6 +11,7 @@ import { classifyExpressionPatterns } from './expression-patterns.js';
 import { classifyAttributeUsage } from './attribute-usage-classifier.js';
 import { classifyNoOps } from './no-op-classifier.js';
 import { classifySinkCandidates } from './sink-candidate-classifier.js';
+import { loadClassifierConfig } from './load-classifier-config.js';
 
 function attributePathsIn(terms) {
   return (terms ?? []).map(canonicalAttributePath).filter(Boolean);
@@ -94,6 +95,7 @@ function findCrossRulesheetAssembly(project) {
  */
 export function classifyProject(project) {
   const ruleflowContext = resolveRuleflowContext(project);
+  const classifierConfig = project.projectDir ? loadClassifierConfig(project.projectDir) : {};
   // expressionPatterns runs first: classifySelfLoops needs it to avoid false-positive
   // decision-table-alternative-row labels on transform-in-place rules (e.g. decimal-rounding).
   const expressionPatterns = classifyExpressionPatterns(project);
@@ -106,7 +108,7 @@ export function classifyProject(project) {
       unreachableRulesheets: ruleflowContext.unreachable,
       multiInvokedRulesheets: ruleflowContext.multiInvoked,
     },
-    sinkCandidates: classifySinkCandidates(project, ruleflowContext, attributeUsage),
+    sinkCandidates: classifySinkCandidates(project, ruleflowContext, attributeUsage, classifierConfig),
     // Pattern findings: the classified rule-level and rulesheet-level constructs
     patterns: {
       entityCreation: classifyEntityCreation(project),

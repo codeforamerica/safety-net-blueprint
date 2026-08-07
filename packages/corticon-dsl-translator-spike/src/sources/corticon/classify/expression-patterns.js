@@ -189,22 +189,22 @@ export function classifyExpressionPatterns(project) {
           result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'operator-precedence', expression: cell.text });
         }
         if (cellUsesLogicalKeywords(cell)) {
-          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'logical-keywords', expression: cell.text });
+          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'logical-operators', expression: cell.text });
         }
         if (cellUsesRangeMembership(cell)) {
-          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'membership-test/range', expression: cell.text });
+          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'membership-test-range', expression: cell.text });
         }
         if (cellUsesStringListMembership(cell)) {
-          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'membership-test/string-list', expression: cell.text });
+          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'membership-test-list', expression: cell.text });
         }
         if (cellUsesScalarAccumulator(cell)) {
           result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'scalar-accumulator', expression: cell.text });
         }
         if (cellUsesExtensionCall(cell)) {
-          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'extension-call', expression: cell.text });
+          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'call-function', expression: cell.text });
         }
         if (cellUsesTypeConversion(cell)) {
-          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'type-conversion', expression: cell.text });
+          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'coercion', expression: cell.text });
         }
       }
     });

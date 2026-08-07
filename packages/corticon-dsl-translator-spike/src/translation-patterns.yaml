@@ -307,6 +307,31 @@ scalar-accumulator:
   example: "sum(program_members, 'benefit_amount')"
   source-model: imperative
 
+expression-pattern:
+  description: >
+    A fact whose value is written by a rule expression that was extracted but
+    not classified into a more specific pattern. Translates as a derived
+    expression; no structural concern.
+  type-of: derived
+  source-model: imperative
+
+unconditional-row-out-of-order:
+  description: >
+    A rule with no conditions (unconditional action) that is not the last rule
+    in its rulesheet. In Corticon's decision-table model the unconditional row
+    is conventionally the fallback/default and should appear last; an earlier
+    position is unusual and may indicate a logic error.
+  source-model: imperative
+
+decision-table-alternative-row:
+  description: >
+    A self-referential rule (reads and writes the same attribute) that is part
+    of a decision table. The read is a guard condition selecting one branch of
+    the table, not a genuine data cycle. Translates cleanly as one branch of
+    a conditional expression.
+  type-of: decision-table
+  source-model: imperative
+
 hit-policy-unverified:
   description: >
     A decision table whose hit policy — which rows fire when multiple rows

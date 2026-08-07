@@ -105,11 +105,11 @@ function resolveInvokes(invokes, fromKey, ruleflowKeys, rulesheetKeys) {
  * - rulesheetPatterns: rulesheet key -> string[] of structural patterns (shown as box sublabel)
  * - rulePatterns: `${rulesheetKey}#${rawRuleIndex}` -> string[] of semantic patterns (shown in rule name line)
  *
- * Rulesheet-level patterns: collection-filter, fact-assembly, decision-table,
- * iterative-convergence, unreachable-rulesheet, plus filter-level expression
+ * Rulesheet-level patterns: guard, fact-assembly, decision-table,
+ * fixpoint, unreachable, plus filter-level expression
  * patterns (date-arithmetic, decimal-rounding, sort-ranking) where no specific
  * rule index applies.
- * Rule-level patterns: entity-creation, null-default, genuine-cycle,
+ * Rule-level patterns: constructor-output, null-guard-default, cycle,
  * decision-table-alt-row, date-arithmetic, decimal-rounding, sort-ranking.
  * explicit-override is detected directly from rule data in rulesheetDetailLines
  * and always shown at rule level.
@@ -117,6 +117,7 @@ function resolveInvokes(invokes, fromKey, ruleflowKeys, rulesheetKeys) {
 function buildPatternMaps(classification, ruleflowContext) {
   const rulesheetPatterns = new Map();
   const rulePatterns = new Map();
+  const patterns = classification.patterns ?? {};
 
   function addRulesheet(key, pattern) {
     if (!rulesheetPatterns.has(key)) rulesheetPatterns.set(key, []);
@@ -129,64 +130,59 @@ function buildPatternMaps(classification, ruleflowContext) {
     if (!rulePatterns.get(k).includes(pattern)) rulePatterns.get(k).push(pattern);
   }
 
-  // collection-filter: any rulesheet that has at least one filter
-  for (const { ruleId } of classification.filters ?? []) {
-    addRulesheet(ruleId, 'collection-filter');
+  // guard: any rulesheet that has at least one filter
+  for (const { ruleId } of patterns.filters ?? []) {
+    addRulesheet(ruleId, 'guard');
   }
 
-  // fact-assembly: each rulesheet that writes to a path also written by another
-  for (const { rulesheets } of classification.crossRulesheetAssembly ?? []) {
-    for (const rs of rulesheets ?? []) addRulesheet(rs, 'fact-assembly');
+  // composition: each rulesheet that writes to a path also written by another
+  for (const { rulesheets } of patterns.crossRulesheetAssembly ?? []) {
+    for (const rs of rulesheets ?? []) addRulesheet(rs, 'composition');
   }
 
   // decision-table: rulesheet where multiple rules write the same attribute path
-  for (const { ruleId } of classification.decisionTableCombinatorics ?? []) {
+  for (const { ruleId } of patterns.decisionTableCombinatorics ?? []) {
     addRulesheet(ruleId, 'decision-table');
   }
 
-  // entity-creation: tag both rulesheet (sublabel) and rule (body line) so the pattern
+  // constructor-output: tag both rulesheet (sublabel) and rule (body line) so the pattern
   // is visible at the box level even when the rule body is scrolled out of view.
-  for (const { ruleId } of classification.entityCreation ?? []) {
+  for (const { ruleId } of patterns.entityCreation ?? []) {
     const { rulesheet, ruleIndex } = parseRuleId(ruleId);
-    addRulesheet(rulesheet, 'entity-creation');
-    if (ruleIndex !== null) addRule(rulesheet, ruleIndex, 'entity-creation');
+    addRulesheet(rulesheet, 'constructor-output');
+    if (ruleIndex !== null) addRule(rulesheet, ruleIndex, 'constructor-output');
   }
 
-  // iterative-convergence: rulesheet invoked from an iterative (loop) node
+  // fixpoint: rulesheet invoked from an iterative (loop) node
   for (const [rsKey, ctx] of ruleflowContext.perRulesheet ?? []) {
-    if (ctx.iterative) addRulesheet(rsKey, 'iterative-convergence');
+    if (ctx.iterative) addRulesheet(rsKey, 'fixpoint');
   }
 
-  // unreachable-rulesheet: never reached from any ruleflow
+  // unreachable: never reached from any ruleflow
   for (const rsKey of classification.ruleflowContext?.unreachableRulesheets ?? []) {
-    addRulesheet(rsKey, 'unreachable-rulesheet');
+    addRulesheet(rsKey, 'unreachable');
   }
 
-  // Self-loop rule-level patterns (keyed by rulesheet + rawRuleIndex)
-  const selfLoopKindMap = {
-    'null-check-masking': 'null-default',
-    'genuine-cycle': 'genuine-cycle',
-    'decision-table-alternative-row': 'decision-table-alt-row',
-  };
-  for (const { ruleId, classification: cls } of classification.selfLoops ?? []) {
+  // Self-loop rule-level patterns -- classifier now outputs pattern names directly
+  for (const { ruleId, classification: cls } of patterns.selfLoops ?? []) {
     const { rulesheet, ruleIndex } = parseRuleId(ruleId);
-    if (ruleIndex !== null) addRule(rulesheet, ruleIndex, selfLoopKindMap[cls] ?? cls);
+    if (ruleIndex !== null) addRule(rulesheet, ruleIndex, cls);
   }
 
-  // Expression pattern rule-level patterns (date-arithmetic, decimal-rounding, sort-ranking)
+  // Expression pattern rule-level patterns (date-arithmetic, rounding, sort-rank, etc.)
   const exprKindMap = {
     'date-arithmetic': 'date-arithmetic',
-    'currency-rounding': 'decimal-rounding',
-    'sorting': 'sort-ranking',
+    'currency-rounding': 'rounding',
+    'sorting': 'sort-rank',
     'operator-precedence': 'operator-precedence',
-    'logical-keywords': 'logical-keywords',
-    'membership-test/range': 'membership-test/range',
-    'membership-test/string-list': 'membership-test/string-list',
+    'logical-operators': 'logical-operators',
+    'membership-test-range': 'membership-test-range',
+    'membership-test-list': 'membership-test-list',
     'scalar-accumulator': 'scalar-accumulator',
-    'extension-call': 'extension-call',
-    'type-conversion': 'type-conversion',
+    'call-function': 'call-function',
+    'coercion': 'coercion',
   };
-  for (const { ruleId, kind } of classification.expressionPatterns ?? []) {
+  for (const { ruleId, kind } of patterns.expressionPatterns ?? []) {
     const { rulesheet, ruleIndex } = parseRuleId(ruleId);
     const pattern = exprKindMap[kind] ?? kind;
     if (ruleIndex === null) {
@@ -410,7 +406,7 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
         const connector = connectorList[resolved.connectorIndex];
         const connectorLabel = `${node.name} (${ruleflowKey})`;
         const calloutLines = connector?.className ? [`SERVICE CALL-OUT: ${connector.className}`] : ['SERVICE CALL-OUT'];
-        const calloutSublabel = '[service-callout]';
+        const calloutSublabel = '[call-procedure]';
         const w = boxWidthFor(connectorLabel, calloutSublabel, calloutLines);
         if (!entryXCaptured) { entryX = originX + w / 2; entryXCaptured = true; }
         const { svg: s, height } = box(originX, y, w, connectorLabel, calloutSublabel, calloutLines, COLOR.serviceCallout, false);
@@ -427,7 +423,7 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
       // Throws rather than silently showing "?" if a real BranchContainer's own
       // condition text is missing -- same reasoning as entityAttributeLines above.
       if (!node.condition?.text) throw new Error(`BranchContainer "${node.name}" has no resolved condition text -- real ruleflow.js data should always have one for a real BranchContainer; a silent "?" placeholder here would hide a real extraction gap`);
-      const branchPattern = node.condition.isEnum ? 'enum-switch-branching' : 'conditional-branching';
+      const branchPattern = node.condition.isEnum ? 'conditional' : 'conditional';
       const branchSublabel = `[${branchPattern}]`;
       const branchLines = [node.condition.isEnum ? `SWITCH ${node.condition.text}` : `IF ${node.condition.text}`];
       const branchTitle = `${node.name} (${ruleflowKey})`;

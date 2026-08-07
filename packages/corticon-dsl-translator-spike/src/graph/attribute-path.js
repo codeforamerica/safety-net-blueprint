@@ -57,6 +57,35 @@ export function canonicalAttributePath(term) {
  * entity the read is scoped to. Only a bare ENTITY term in modifiedTermList itself
  * (the entity/association actually being written), or a NEW term anywhere, counts.
  */
+/**
+ * Scans all rule terms in a project and builds a map from every alias used in
+ * rules (term.parent.text, e.g. "ppEligRslt") to its canonical entity type
+ * (term.parent.datatype, e.g. "ParticipatingProgramEligRslt"). This is the
+ * Corticon alias concept: rulesheets declare entity aliases locally, but the
+ * datatype field always carries the real type name regardless of alias.
+ *
+ * Returns a Map<alias, canonicalType>. Entries where alias === canonicalType
+ * are included so callers can use the map unconditionally.
+ */
+export function buildEntityAliasMap(project) {
+  const aliasMap = new Map();
+  for (const rulesheet of Object.values(project.rulesheets ?? {})) {
+    for (const rule of rulesheet.rules ?? []) {
+      for (const cell of [...(rule.conditions ?? []), ...(rule.actions ?? [])].filter(Boolean)) {
+        for (const term of [...(cell.referencedTerms ?? []), ...(cell.modifiedTerms ?? [])]) {
+          let current = term;
+          while (current && (current.termtype === 'METHOD' || current.termtype === 'COLLECTION')) {
+            current = current.parent;
+          }
+          if (!current?.parent?.text || !current.parent.datatype) continue;
+          aliasMap.set(current.parent.text, current.parent.datatype);
+        }
+      }
+    }
+  }
+  return aliasMap;
+}
+
 export function touchesEntityCreation(modifiedTerms, referencedTerms) {
   const entityItselfModified = (modifiedTerms ?? []).some((t) => t.termtype === 'ENTITY');
   const newConstruction = [...(modifiedTerms ?? []), ...(referencedTerms ?? [])].some((t) => t.termtype === 'NEW');

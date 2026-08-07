@@ -57,13 +57,13 @@ function isCollectionAccumulation(path, rule) {
 function classifySelfLoop(path, rule, rulesheetFile, ruleflowContext) {
   // Priority 1: null-check masking -- the specific rule causing this self-loop
   // explicitly checks the same attribute against a literal null.
-  if ((rule?.conditions ?? []).some((c) => isNullCheckOn(path, c))) return 'null-check-masking';
+  if ((rule?.conditions ?? []).some((c) => isNullCheckOn(path, c))) return 'null-guard-default';
   // Priority 2: collection accumulation inside an iterative ruleflow -- translates
   // to sum(collection, 'field'), not a genuine cycle needing manual redesign.
-  if (ruleflowContext.perRulesheet.get(rulesheetFile)?.iterative && isCollectionAccumulation(path, rule)) return 'collection-accumulation';
+  if (ruleflowContext.perRulesheet.get(rulesheetFile)?.iterative && isCollectionAccumulation(path, rule)) return 'scalar-accumulator';
   // Priority 3: genuine cycle -- the rulesheet is ever reached via an
   // `iterative="true"` node (see ruleflow-context.js).
-  if (ruleflowContext.perRulesheet.get(rulesheetFile)?.iterative) return 'genuine-cycle';
+  if (ruleflowContext.perRulesheet.get(rulesheetFile)?.iterative) return 'cycle';
   // Priority 4: none of the above -- an ordinary decision-table alternative row
   // (confirmed real: DC Medicaid's Flatten.ers `.contains('ineligible')` check).
   return 'decision-table-alternative-row';
@@ -209,7 +209,7 @@ export function classifyMultiHopCycles(project, ruleflowContext) {
     return {
       path: cyclePath.slice(0, -1),
       rulesheets: [...new Set(edges.map((e) => e.rulesheet))],
-      classification: isIterative ? 'genuine-cycle' : 'unclassified-multi-hop-cycle',
+      classification: isIterative ? 'cycle' : 'cycle-unclassified',
     };
   });
 }

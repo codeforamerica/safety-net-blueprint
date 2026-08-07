@@ -1,5 +1,6 @@
 import { isBlankTemplateRule } from '../corticon/rulesheet.js';
 import { entriesOf } from '../../../map-utils.js';
+import { buildEntityAliasMap } from '../../../graph/attribute-path.js';
 
 /**
  * Scans every rule's conditions and actions and collects all ATTRIBUTE terms that
@@ -10,6 +11,7 @@ import { entriesOf } from '../../../map-utils.js';
 export function classifyAttributeUsage(project) {
   const reads = new Set();
   const writes = new Set();
+  const aliasMap = buildEntityAliasMap(project);
 
   function add(set, term) {
     // Capture both scalar ATTRIBUTE terms and named association references --
@@ -19,8 +21,10 @@ export function classifyAttributeUsage(project) {
     const isAttribute = term?.termtype === 'ATTRIBUTE';
     const isAssociation = term?.termtype === 'ENTITY' && !!term.parent?.text;
     if (!isAttribute && !isAssociation) return;
-    const entity = term.parent?.text ?? '';
-    if (!entity) return;
+    const alias = term.parent?.text ?? '';
+    if (!alias) return;
+    // Resolve alias to canonical entity type so keys match the dependency graph.
+    const entity = aliasMap.get(alias) ?? alias;
     set.add(`${entity}.${term.text}`);
   }
 

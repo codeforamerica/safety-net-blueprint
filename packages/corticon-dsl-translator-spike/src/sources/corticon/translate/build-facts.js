@@ -302,15 +302,15 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
   const unreachableRulesheets = new Set(classificationInput.ruleflowContext.unreachableRulesheets);
   const selfLoopClassificationByKey = new Map(classification.selfLoops.map((s) => [`${s.path}|${s.ruleId}`, s.classification]));
   const genuineCyclePaths = new Set([
-    ...classification.selfLoops.filter((s) => s.classification === 'genuine-cycle').map((s) => s.path),
-    ...classification.multiHopCycles.filter((c) => c.classification !== 'unclassified-multi-hop-cycle').flatMap((c) => c.path),
+    ...classification.selfLoops.filter((s) => s.classification === 'cycle').map((s) => s.path),
+    ...classification.multiHopCycles.filter((c) => c.classification !== 'cycle-unclassified').flatMap((c) => c.path),
   ]);
 
   // Collection-accumulation: Corticon iterative pattern (total = total + item.field)
   // translates directly to sum(collection, 'field') -- not a genuine cycle.
   const collectionAccumulationByPath = new Map();
   for (const s of classification.selfLoops) {
-    if (s.classification !== 'collection-accumulation') continue;
+    if (s.classification !== 'scalar-accumulator') continue;
     const writtenEntity = s.path.split('.')[0].toLowerCase();
     const { rulesheet: rsKey, ruleIndex: rsRuleIndex } = parseRuleId(s.ruleId);
     const rs = rulesheets.get(rsKey);
@@ -327,7 +327,7 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
       break;
     }
   }
-  const unclassifiedCyclePaths = new Set(classification.multiHopCycles.filter((c) => c.classification === 'unclassified-multi-hop-cycle').flatMap((c) => c.path));
+  const unclassifiedCyclePaths = new Set(classification.multiHopCycles.filter((c) => c.classification === 'cycle-unclassified').flatMap((c) => c.path));
   const combinatoricsByPathRulesheet = new Map(classification.decisionTableCombinatorics.map((d) => {
     const ruleIndices = (d.ruleIds ?? []).map((id) => parseRuleId(id).ruleIndex);
     return [`${d.path}|${d.ruleId}`, ruleIndices];
@@ -547,7 +547,7 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
     // (semantically correct: each branch fires only when no prior branch has matched,
     // which is what the null-guard achieves in forward-chaining). Confirmed real in
     // CBMS Disaster FS's COM_POSTPGM_IntakeXYZindicator.ers.
-    const maskingWriters = ordinaryWriters.filter((w) => selfLoopClassificationByKey.get(`${path}|${w.rulesheet}:${w.ruleIndex}`) === 'null-check-masking');
+    const maskingWriters = ordinaryWriters.filter((w) => selfLoopClassificationByKey.get(`${path}|${w.rulesheet}:${w.ruleIndex}`) === 'null-guard-default');
     if (maskingWriters.length > 1) {
       translationLog.push({
         sourcePath: path,

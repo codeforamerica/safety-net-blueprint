@@ -10,7 +10,7 @@ test('classifies IRR\'s real self-loop as a genuine cycle -- inside the iterativ
   const ctx = resolveRuleflowContext(project);
   const results = classifySelfLoops(project, ctx);
   assert.ok(results.length > 0);
-  assert.ok(results.every((r) => r.path === 'Investment.irr' && r.classification === 'genuine-cycle'));
+  assert.ok(results.every((r) => r.path === 'Investment.irr' && r.classification === 'cycle'));
 });
 
 test('classifies IRR\'s real multi-hop cycle (npv -> irr -> portion -> npv) as a genuine cycle, spanning two rulesheets', () => {
@@ -24,7 +24,7 @@ test('classifies IRR\'s real multi-hop cycle (npv -> irr -> portion -> npv) as a
   assert.equal(results.length, 1);
   assert.deepEqual(results[0].path.sort(), ['Cashflow.portion', 'Investment.irr', 'Investment.npv']);
   assert.deepEqual(results[0].rulesheets.sort(), ['evaluate npv.ers', 'solve each cashflow.ers']);
-  assert.equal(results[0].classification, 'genuine-cycle');
+  assert.equal(results[0].classification, 'cycle');
 });
 
 test('classifies DC Medicaid\'s two real self-loop-causing rules on the same path distinctly', () => {
@@ -37,7 +37,7 @@ test('classifies DC Medicaid\'s two real self-loop-causing rules on the same pat
   const results = classifySelfLoops(project, ctx);
   assert.deepEqual(
     results.map((r) => r.classification).sort(),
-    ['decision-table-alternative-row', 'null-check-masking']
+    ['decision-table-alternative-row', 'null-guard-default']
   );
 });
 
@@ -46,7 +46,7 @@ test('classifies Mortgage\'s real null-check-masking self-loops correctly', () =
   const ctx = resolveRuleflowContext(project);
   const results = classifySelfLoops(project, ctx);
   assert.equal(results.length, 4);
-  assert.ok(results.every((r) => r.classification === 'null-check-masking'));
+  assert.ok(results.every((r) => r.classification === 'null-guard-default'));
 });
 
 test('all-patterns: classifies the genuine cycle and the null-check masking self-loops distinctly', () => {
@@ -54,8 +54,8 @@ test('all-patterns: classifies the genuine cycle and the null-check masking self
   const ctx = resolveRuleflowContext(project);
   const results = classifySelfLoops(project, ctx);
   const byPath = Object.fromEntries(results.map((r) => [r.path, r.classification]));
-  assert.equal(byPath['Application.estimatedBenefit'], 'genuine-cycle');
-  assert.equal(byPath['ApplicationMember.reportedAssets'], 'null-check-masking');
+  assert.equal(byPath['Application.estimatedBenefit'], 'cycle');
+  assert.equal(byPath['ApplicationMember.reportedAssets'], 'null-guard-default');
 });
 
 test('snap-work-requirements: decimal-rounding self-loop (adjustedHours = adjustedHours.round(1)) is suppressed when expressionPatterns are passed -- not a decision-table-alternative-row', () => {
@@ -115,5 +115,5 @@ test('flags a non-iterative multi-hop cycle as unclassified -- not observed in a
   const ruleflowContext = { perRulesheet: new Map([['one.ers', { iterative: false }], ['two.ers', { iterative: false }]]) };
   const results = classifyMultiHopCycles(project, ruleflowContext);
   assert.equal(results.length, 1);
-  assert.equal(results[0].classification, 'unclassified-multi-hop-cycle');
+  assert.equal(results[0].classification, 'cycle-unclassified');
 });

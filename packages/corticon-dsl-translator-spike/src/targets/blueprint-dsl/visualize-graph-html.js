@@ -22,50 +22,49 @@ const DARK_BLUE = COLORS.darkBlue;
 // Derived from translation-patterns.yaml — maps pattern → translation status.
 // 'confirmed' = clean translation; anything else surfaces in the Exceptions tab.
 const PATTERN_STATUS = {
+  // Confirmed — translate cleanly
   'decision-table':                  'confirmed',
-  'hit-policy-unverified':           'ambiguous',
-  'explicit-override':               'confirmed',
-  'fact-assembly':                   'confirmed',
-  'conditional-branching':           'confirmed',
-  'enum-switch-branching':           'confirmed',
-  'null-default':                    'confirmed',
-  'null-default-fallback':           'confirmed',
-  'no-op':                           'confirmed',
-  'unreachable-rulesheet':           'confirmed',
-  'operator-precedence':             'confirmed',
-  'logical-keywords':                'confirmed',
   'decision-table-alternative-row':  'confirmed',
+  'explicit-override':               'confirmed',
+  'composition':                     'confirmed',
+  'conditional':                     'confirmed',
+  'null-guard-default':              'confirmed',
+  'null-guard-fallback':             'confirmed',
+  'null-guard-table':                'confirmed',
+  'no-op':                           'confirmed',
+  'unreachable':                     'confirmed',
+  'operator-precedence':             'confirmed',
+  'logical-operators':               'confirmed',
   'membership-test':                 'confirmed',
-  'range':                           'confirmed',
-  'string-list':                     'ambiguous',
-  'entity-creation':                 'confirmed',
-  'entity-creation-input':           'confirmed',
-  'entity-creation-output':          'unverified',
-  'iterative-convergence':           'unverified',
-  'service-callout':                 'unverified',
-  'deterministic-extension':         'unverified',
+  'membership-test-range':           'confirmed',
+  'membership-test-list':            'confirmed',
+  'constructor-output':              'confirmed',
+  'constructor-input':               'confirmed',
   'date-arithmetic':                 'confirmed',
-  'decimal-rounding':                'unverified',
-  'sort-ranking':                    'unverified',
-  'type-conversion':                 'unverified',
-  'collection-filter':               'unverified',
-  'collection-accumulation':         'unverified',
-  'sort-ranking-index':              'unverified',
-  'universal-quantifier':            'unverified',
-  'expression-pattern':              'unverified',
-  'no-fallback-row':                 'ambiguous',
+  'cycle':                           'confirmed',
+  'derived':                         'confirmed',
+  'input':                           'confirmed',
+  'guard':                           'confirmed',
+  'expression-pattern':              'confirmed',
+  // Ambiguous — translate with assumption; flag for review
+  'hit-policy-unverified':           'ambiguous',
+  'no-default':                      'ambiguous',
   'unconditional-row-out-of-order':  'ambiguous',
-  'assembly-rulesheet-mismatch':     'ambiguous',
-  'scalar-accumulator':              'ambiguous',
-  'extension-call':                  'ambiguous',
-  'double-quoted-strings':           'unknown',
-  'genuine-cycle':                   'confirmed',
-  'unclassified-multi-hop-cycle':    'unknown',
-  'multi-invoked-disagreeing-context': 'unknown',
-  'no-ordinary-writer':              'unknown',
-  'ordinary-expression':             'confirmed',
-  'ordinary-writable-input':         'confirmed',
-  'null-guard-decision-table':       'confirmed',
+  'composition-mismatch':            'ambiguous',
+  // Unverified — translation exists but confidence is lower
+  'fixpoint':                        'unverified',
+  'call-procedure':                  'unverified',
+  'call-function':                   'unverified',
+  'rounding':                        'unverified',
+  'sort-rank':                       'unverified',
+  'sort':                            'unverified',
+  'coercion':                        'unverified',
+  'scalar-accumulator':              'unverified',
+  'quantifier':                      'unverified',
+  // Unknown — no translation strategy yet
+  'cycle-unclassified':              'unknown',
+  'context-conflict':                'unknown',
+  'no-writer':                       'unknown',
 };
 
 const STATUS_LABEL = { ambiguous: 'Ambiguous', unverified: 'Unverified', unknown: 'Unknown' };
@@ -124,12 +123,12 @@ function buildCandidateSubgraphSvg(sinkKey, data, markerId) {
     const fp = pos[e.from], tp = pos[e.to];
     const x1 = fp.x + nodeW(e.from) / 2, y1 = fp.y + NODE_H;
     const x2 = tp.x + nodeW(e.to)   / 2, y2 = tp.y;
-    parts.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#6b7280" stroke-width="1.5"/>`);
+    parts.push(`<line class="sg-edge" data-from="${esc(e.from)}" data-to="${esc(e.to)}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#6b7280" stroke-width="1.5"/>`);
   }
   for (const n of nodes) {
     const p = pos[n]; if (!p) continue;
     const { svg: boxSvg } = box(p.x, p.y, nodeW(n), n, null, [], n === sinkKey ? PALETTE.navy : PALETTE.teal);
-    parts.push(boxSvg);
+    parts.push(`<g class="sg-node" data-node="${esc(n)}" style="cursor:pointer">${boxSvg}</g>`);
   }
 
   return rawSvgElement(markerId, svgW, svgH, parts.join('\n'));
@@ -228,12 +227,13 @@ function renderDslNodeList(sinkKey, orderedNodes, corticonToFact, edges, nodeTyp
   const logic = orderedNodes.filter(n => n !== sinkKey && hasIncoming.has(n)).concat(sinkKey);
 
   const dataRows = orderedNodes.map(n => {
-    const type = nodeTypes?.[n] ?? (corticonToFact[n]?.datatype) ?? '—';
+    const shortN = n.split('.').slice(-2).join('.');
+    const type = nodeTypes?.[n] ?? nodeTypes?.[shortN] ?? (corticonToFact[n]?.datatype) ?? '—';
     const nameStyle = n === sinkKey
       ? `font-weight:700;color:#2B1A78;font-family:${MONO};font-size:11px`
       : `color:#374151;font-family:${MONO};font-size:11px`;
     return `<tr style="border-bottom:1px solid #f3f4f6">
-      <td style="padding:4px 12px 4px 0;white-space:nowrap"><span style="${nameStyle}">${n === sinkKey ? '● ' : ''}${esc(n)}</span></td>
+      <td style="padding:4px 12px 4px 0;white-space:nowrap"><span style="${nameStyle}">${n === sinkKey ? '● ' : ''}${esc(shortN)}</span></td>
       <td style="padding:4px 0;font-size:11px;color:#6b7280;white-space:nowrap">${esc(type)}</td>
     </tr>`;
   }).join('');
@@ -266,20 +266,29 @@ function renderCandidatesNavAndPanels(candidates, subgraphs, corticonToFact, nod
   const panels = [];
   let firstTabId = null;
 
-  for (const [rootKey] of topLevel) {
-    const subgraph = subgraphs[rootKey];
-    const layers = subgraph?.orderedLayers ?? [[rootKey]];
-    for (let depth = 0; depth < layers.length; depth++) {
-      for (const key of layers[depth]) {
-        if (!candidateKeySet.has(key)) continue;
-        const tabId = `cg-${encodeKey(key)}`;
-        if (!firstTabId) firstTabId = tabId;
-        const indent = depth * 14;
-        navItems.push(`<a class="nav-link cg-nav-item" data-tab="${esc(tabId)}" title="${esc(key)}"
-            style="padding-left:${8 + indent}px">
-            <span style="font-family:${MONO};font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block">${depth > 0 ? '↳ ' : ''}${esc(key)}</span>
-          </a>`);
-      }
+  // Group by subgraph depth, order groups depth desc, items within each group by flow position desc
+  const byDepth = new Map();
+  for (const [key, info] of entries) {
+    const depth = subgraphs[key]?.depth ?? 0;
+    if (!byDepth.has(depth)) byDepth.set(depth, []);
+    byDepth.get(depth).push([key, info]);
+  }
+  const depthGroups = [...byDepth.keys()].sort((a, b) => b - a);
+  for (const depth of depthGroups) {
+    const group = byDepth.get(depth).sort((a, b) => {
+      const posA = a[1].latestPosition ?? -1;
+      const posB = b[1].latestPosition ?? -1;
+      return posB - posA;
+    });
+    const label = depth === 0 ? 'No graph' : depth === 1 ? 'Depth 1' : `Depth ${depth}`;
+    navItems.push(`<div class="nav-section-label" style="margin-top:0.5rem">${esc(label)}</div>`);
+    for (const [key] of group) {
+      const tabId = `cg-${encodeKey(key)}`;
+      if (!firstTabId) firstTabId = tabId;
+      const shortKey = key.split('.').slice(-2).join('.');
+      navItems.push(`<a class="nav-link cg-nav-item" data-tab="${esc(tabId)}" title="${esc(key)}">
+          <span style="font-family:${MONO};font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block">${esc(shortKey)}</span>
+        </a>`);
     }
   }
 
@@ -395,7 +404,7 @@ async function render(opts) {
       const { buildCandidateSubgraph, buildDependencyGraph } = await import('../../graph/build-graph.js');
       const project = JSON.parse(readFileSync(sourceFile, 'utf-8'));
       const graph = buildDependencyGraph(project);
-      for (const [key, candidate] of Object.entries(sinkCandidates)) {
+      for (const [key] of Object.entries(sinkCandidates)) {
         rawCandidateGraphs[key] = buildCandidateSubgraph(key, graph);
       }
     }
@@ -439,14 +448,14 @@ async function render(opts) {
         }
       }
     }
-    // Fallback: scan rule terms for alias-named entities (e.g. filter alias "activity" for WorkActivity).
-    // term.datatype carries the primitive type even when the entity name doesn't match the vocab key.
+    // Scan rule terms: use the canonical entity type (term.parent.datatype) as the key,
+    // matching what canonicalAttributePath and the graph use, so lookups by graph node key work.
     for (const [, rulesheet] of Object.entries(project.rulesheets ?? {})) {
       for (const rule of rulesheet.rules ?? []) {
         for (const cell of [...(rule.conditions ?? []), ...(rule.actions ?? [])].filter(Boolean)) {
           for (const term of [...(cell.referencedTerms ?? []), ...(cell.modifiedTerms ?? [])]) {
-            if (term.termtype !== 'ATTRIBUTE' || !term.parent?.text || !term.datatype) continue;
-            const key = `${term.parent.text}.${term.text}`;
+            if (term.termtype !== 'ATTRIBUTE' || !term.parent?.datatype || !term.datatype) continue;
+            const key = `${term.parent.datatype}.${term.text}`;
             if (!nodeTypes[key]) nodeTypes[key] = term.datatype;
           }
         }
@@ -573,6 +582,45 @@ async function render(opts) {
       const first = firstCandidate ?? document.querySelector('#sidebar .nav-link[data-tab]');
       if (first) activate(first.dataset.tab, first, false);
     })();
+
+    // Click-to-highlight: clicking a node dims all edges and highlights only those
+    // connected to it. Clicking the same node or the SVG background resets.
+    document.addEventListener('click', function (e) {
+      const nodeEl = e.target.closest('.sg-node');
+      const svg = e.target.closest('svg');
+      if (!svg) return;
+      const allNodes = svg.querySelectorAll('.sg-node');
+      const allEdges = svg.querySelectorAll('.sg-edge');
+      if (!nodeEl || !svg.contains(nodeEl)) {
+        // Click on background — reset
+        allNodes.forEach(n => n.style.opacity = '');
+        allEdges.forEach(l => { l.style.opacity = ''; l.setAttribute('stroke', '#6b7280'); l.setAttribute('stroke-width', '1.5'); });
+        svg._activeNode = null;
+        return;
+      }
+      const node = nodeEl.dataset.node;
+      if (svg._activeNode === node) {
+        // Click same node again — reset
+        allNodes.forEach(n => n.style.opacity = '');
+        allEdges.forEach(l => { l.style.opacity = ''; l.setAttribute('stroke', '#6b7280'); l.setAttribute('stroke-width', '1.5'); });
+        svg._activeNode = null;
+        return;
+      }
+      svg._activeNode = node;
+      // Collect all nodes directly connected to the clicked node via any edge.
+      const connected = new Set([node]);
+      allEdges.forEach(l => {
+        if (l.dataset.from === node) connected.add(l.dataset.to);
+        if (l.dataset.to === node) connected.add(l.dataset.from);
+      });
+      allNodes.forEach(n => n.style.opacity = connected.has(n.dataset.node) ? '1' : '0.15');
+      allEdges.forEach(l => {
+        const isConnected = l.dataset.from === node || l.dataset.to === node;
+        l.style.opacity = isConnected ? '1' : '0.1';
+        l.setAttribute('stroke', isConnected ? '#2B1A78' : '#6b7280');
+        l.setAttribute('stroke-width', isConnected ? '2.5' : '1.5');
+      });
+    });
   </script>
 </body>
 </html>`;
