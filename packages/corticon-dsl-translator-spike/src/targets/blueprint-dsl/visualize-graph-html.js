@@ -196,8 +196,10 @@ function renderDataModelTab(translatedPath) {
 
 function encodeKey(key) { return key.replace(/[^a-zA-Z0-9-]/g, '_'); }
 
-function renderDslNodeRow(node, isSink, fact) {
-  const expr = fact?.expression ?? fact?.value ?? null;
+function renderDslNodeRow(node, isSink, fact, shortenPath = s => s) {
+  const shortNode = node.split('.').slice(-2).join('.');
+  const rawExpr = fact?.expression ?? fact?.value ?? null;
+  const expr = rawExpr ? shortenPath(rawExpr) : null;
   const nameStyle = isSink
     ? `font-weight:700;color:#2B1A78;font-family:${MONO};font-size:11.5px`
     : `color:#374151;font-family:${MONO};font-size:11.5px`;
@@ -218,7 +220,7 @@ function renderDslNodeRow(node, isSink, fact) {
     exprHtml = `<span style="color:#9ca3af;font-size:11px;font-style:italic">—</span>`;
   }
   return `<tr style="border-bottom:1px solid #f3f4f6">
-    <td style="padding:5px 16px 5px 0;white-space:nowrap;vertical-align:top;width:40%"><span style="${nameStyle}">${isSink ? '● ' : ''}${esc(node)}</span></td>
+    <td style="padding:5px 16px 5px 0;white-space:nowrap;vertical-align:top;width:40%"><span style="${nameStyle}">${isSink ? '● ' : ''}${esc(shortNode)}</span></td>
     <td style="padding:5px 0;vertical-align:top">${exprHtml}</td>
   </tr>`;
 }
@@ -227,7 +229,7 @@ function colHeader(label) {
   return `<tr><th style="padding:6px 16px 4px 0;font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;text-align:left">${esc(label)}</th><th></th></tr>`;
 }
 
-function renderDslNodeList(sinkKey, orderedNodes, corticonToFact, edges, nodeTypes) {
+function renderDslNodeList(sinkKey, orderedNodes, corticonToFact, edges, nodeTypes, shortenPath = s => s) {
   if (!orderedNodes?.length) return '<p style="color:#9ca3af;font-size:11px;padding:8px 0">No nodes found.</p>';
   const hasIncoming = new Set((edges ?? []).filter(e => e.from !== e.to).map(e => e.to));
   const logic = orderedNodes.filter(n => n !== sinkKey && hasIncoming.has(n)).concat(sinkKey);
@@ -246,7 +248,7 @@ function renderDslNodeList(sinkKey, orderedNodes, corticonToFact, edges, nodeTyp
   const dataTable = `<table style="width:100%;border-collapse:collapse">${colHeader('Data')}${dataRows}</table>`;
 
   function logicTable(nodes) {
-    const rows = [colHeader('Logic'), ...nodes.map(n => renderDslNodeRow(n, n === sinkKey, corticonToFact[n]))];
+    const rows = [colHeader('Logic'), ...nodes.map(n => renderDslNodeRow(n, n === sinkKey, corticonToFact[n], shortenPath))];
     return `<table style="width:100%;border-collapse:collapse">${rows.join('')}</table>`;
   }
 
@@ -256,7 +258,7 @@ function renderDslNodeList(sinkKey, orderedNodes, corticonToFact, edges, nodeTyp
   </div>`;
 }
 
-function renderCandidatesNavAndPanels(candidates, subgraphs, corticonToFact, nodeTypes) {
+function renderCandidatesNavAndPanels(candidates, subgraphs, corticonToFact, nodeTypes, shortenPath = s => s) {
   const entries = Object.entries(candidates);
   if (!entries.length) return { navHtml: '', panelsHtml: '', count: 0, firstTabId: null };
 
@@ -308,7 +310,7 @@ function renderCandidatesNavAndPanels(candidates, subgraphs, corticonToFact, nod
 
     const hasSub = !!subgraphs[key];
     const graphHtml = hasSub ? subgraph.svg : '<p style="color:#9ca3af;font-size:12px">No subgraph data.</p>';
-    const dslHtml   = hasSub ? renderDslNodeList(key, subgraph.orderedNodes, corticonToFact, subgraph.edges, nodeTypes) : '';
+    const dslHtml   = hasSub ? renderDslNodeList(key, subgraph.orderedNodes, corticonToFact, subgraph.edges, nodeTypes, shortenPath) : '';
 
     panels.push(`<div id="${esc(tabId)}" class="tab-panel" style="padding:1.5rem 2rem">
         <div style="margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #e5e7eb">
@@ -469,9 +471,30 @@ async function render(opts) {
     }
   } catch { /* ok */ }
 
+  // Build a path shortener from graph node keys: collect all namespace prefixes
+  // (everything before the last two segments) and strip them from display strings.
+  let shortenPath = s => s;
+  try {
+    const { sourceFile } = JSON.parse(readFileSync(classifiedPath, 'utf-8'));
+    const proj = JSON.parse(readFileSync(sourceFile, 'utf-8'));
+    const { buildDependencyGraph: _bdg } = await import('../../graph/build-graph.js');
+    const g = _bdg(proj);
+    const prefixes = new Set();
+    for (const node of g.nodes ?? []) {
+      const parts = node.split('.');
+      if (parts.length > 2) prefixes.add(parts.slice(0, -2).join('.'));
+    }
+    if (prefixes.size) {
+      // Sort longest first so more-specific prefixes are stripped before shorter ones.
+      const sorted = [...prefixes].sort((a, b) => b.length - a.length);
+      const pattern = new RegExp(`\\b(${sorted.map(p => p.replace(/\./g, '\\.')).join('|')})\\.(\\w+\\.\\w+)\\b`, 'g');
+      shortenPath = s => (s ?? '').replace(pattern, '$2');
+    }
+  } catch { /* leave as identity */ }
+
   let candidatesNavHtml = '', candidatesPanelsHtml = '', candidateCount = 0, firstCandidateTabId = null;
   try {
-    const result = renderCandidatesNavAndPanels(sinkCandidates, subgraphs, corticonToFact, nodeTypes);
+    const result = renderCandidatesNavAndPanels(sinkCandidates, subgraphs, corticonToFact, nodeTypes, shortenPath);
     candidatesNavHtml = result.navHtml;
     candidatesPanelsHtml = result.panelsHtml;
     candidateCount = result.count;

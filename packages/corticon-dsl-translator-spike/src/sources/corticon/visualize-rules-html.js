@@ -65,13 +65,13 @@ function renderVocabularyTab(projectPath) {
   const entityHtml = [...byEntity.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([entityName, attrs]) => {
     const rows = [...attrs.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([attrName, typeName]) => {
       return `<tr style="border-bottom:1px solid #f3f4f6">
-        <td style="padding:4px 16px 4px 0;font-family:${MONO};font-size:11.5px;color:#1f2937;white-space:nowrap">${esc(attrName)}</td>
-        <td style="padding:4px 0;font-size:11px;color:#6b7280;white-space:nowrap">${esc(typeName)}</td>
+        <td style="padding:4px 8px 4px 0;font-family:${MONO};font-size:11.5px;color:#1f2937;width:65%;overflow:hidden;text-overflow:ellipsis">${esc(attrName)}</td>
+        <td style="padding:4px 0;font-size:11px;color:#6b7280;width:35%;white-space:nowrap">${esc(typeName)}</td>
       </tr>`;
     }).join('');
     return `<div style="break-inside:avoid;margin-bottom:20px">
       <div style="font-size:11px;font-weight:700;color:#111827;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e5e7eb">${esc(entityName)}</div>
-      <table style="border-collapse:collapse;width:100%"><tbody>${rows}</tbody></table>
+      <table style="border-collapse:collapse;width:100%;table-layout:fixed"><tbody>${rows}</tbody></table>
     </div>`;
   }).join('');
 
