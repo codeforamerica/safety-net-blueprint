@@ -220,6 +220,13 @@ function translateMember(node) {
   }
   const conversionTranslator = DOT_MEMBER_TRANSLATORS[node.property];
   if (conversionTranslator) return conversionTranslator(node.object);
+  // Expressions are instance-scoped: strip entity-class identifiers (PascalCase)
+  // from the access chain. `Person.age` → `age`; `Household.applicant.income` →
+  // `applicant.income`. Lowercase-first identifiers (collection aliases, attribute
+  // names) are left as-is -- they're already instance-level references.
+  if (node.object.type === 'Identifier' && /^[A-Z]/.test(node.object.name)) {
+    return node.property;
+  }
   return `${toCel(node.object)}.${node.property}`;
 }
 

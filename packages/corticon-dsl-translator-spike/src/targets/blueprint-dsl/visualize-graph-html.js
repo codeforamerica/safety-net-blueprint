@@ -462,7 +462,9 @@ async function render(opts) {
         for (const cell of [...(rule.conditions ?? []), ...(rule.actions ?? [])].filter(Boolean)) {
           for (const term of [...(cell.referencedTerms ?? []), ...(cell.modifiedTerms ?? [])]) {
             if (term.termtype !== 'ATTRIBUTE' || !term.parent?.datatype || !term.datatype) continue;
-            const key = `${term.parent.datatype}.${term.text}`;
+            const rawType = term.parent.datatype;
+            const entityType = rawType.includes('.') ? rawType.split('.').pop() : rawType;
+            const key = `${entityType}.${term.text}`;
             if (!nodeTypes[key]) nodeTypes[key] = term.datatype;
           }
         }
