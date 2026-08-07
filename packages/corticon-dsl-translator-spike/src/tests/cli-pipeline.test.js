@@ -17,12 +17,12 @@ import { join } from 'node:path';
  * (it no longer feeds classify, but its output shape is still verified).
  */
 const FIXTURES = [
-  'fixtures/dc-medicaid-chip',
-  'fixtures/irr',
-  'fixtures/mortgage',
-  'fixtures/servicecallout',
-  'fixtures/branch-reconstruction',
-  'fixtures/all-patterns',
+  'fixtures/corticon/government/dc-medicaid-chip',
+  'fixtures/corticon/vendor-samples/irr',
+  'fixtures/corticon/vendor-samples/mortgage',
+  'fixtures/corticon/vendor-samples/servicecallout',
+  'fixtures/corticon/synthetic/branch-reconstruction',
+  'fixtures/corticon/synthetic/all-patterns',
 ];
 
 for (const fixtureDir of FIXTURES) {

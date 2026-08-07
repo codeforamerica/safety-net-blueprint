@@ -6,7 +6,7 @@ import { ENGINES, DEFAULT_ENGINE, resolveEngine } from '../../engines.js';
 function printUsage() {
   console.error('Usage: node src/ingest-project.js <project-dir> [--engine <name>] [--out <file.json>]');
   console.error(`  --engine defaults to "${DEFAULT_ENGINE}". Known engines: ${Object.keys(ENGINES).join(', ')}`);
-  console.error('Example: node src/ingest-project.js fixtures/dc-medicaid-chip --out generated/dc-medicaid-chip.json');
+  console.error('Example: node src/ingest-project.js fixtures/corticon/government/dc-medicaid-chip --out generated/dc-medicaid-chip.json');
 }
 
 function summarize(project) {

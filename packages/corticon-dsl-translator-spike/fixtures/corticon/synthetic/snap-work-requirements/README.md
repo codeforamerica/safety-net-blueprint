@@ -1,6 +1,6 @@
 # snap-work-requirements fixture
 
-Hand-authored (not vendored from any real Corticon project). A single coherent scenario — **SNAP ABAWD (Able-Bodied Adults Without Dependents) work requirement determination** — that exercises all 20 Corticon translation patterns from TRANSLATION-PATTERNS.md in one realistic project. Designed so Phase 3's classifier can be stress-tested against coexisting patterns, not just scattered single-pattern fixtures.
+Hand-authored (not vendored from any real Corticon project). A single coherent scenario — **SNAP ABAWD (Able-Bodied Adults Without Dependents) work requirement determination** — that exercises all 20 Corticon translation patterns from [docs/TRANSLATION-PATTERNS.md](../../docs/TRANSLATION-PATTERNS.md) in one realistic project. Designed so Phase 3's classifier can be stress-tested against coexisting patterns, not just scattered single-pattern fixtures.
 
 **This fixture has no real Corticon-computed output** — nobody has run it through Corticon, so there is no golden-master `.ert` for it. It validates classification/structure, not correctness of translated values.
 

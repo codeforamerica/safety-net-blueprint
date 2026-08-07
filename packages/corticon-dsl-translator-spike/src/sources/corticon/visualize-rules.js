@@ -13,7 +13,7 @@ function printUsage() {
   console.error('Usage: node src/visualize-rules.js <patterns.json> [--out <file.html>]');
   console.error('  <patterns.json> is the output of classify-project.js (contains { project, classification }).');
   console.error('  --out defaults to generated/rules-diagram.html');
-  console.error('Example: node src/classify-project.js fixtures/all-patterns --out generated/all-patterns-patterns.json');
+  console.error('Example: node src/classify-project.js fixtures/corticon/synthetic/all-patterns --out generated/all-patterns-patterns.json');
   console.error('         node src/visualize-rules.js generated/all-patterns-patterns.json --out generated/all-patterns-diagram.html');
 }
 

@@ -2,8 +2,8 @@
 /**
  * Full pipeline: ingest → classify → translate → visualize.
  * Usage: node src/build.js <fixtureDir> [--out-dir <dir>]
- * Example: node src/build.js fixtures/all-patterns
- *          node src/build.js fixtures/dc-medicaid-chip --out-dir generated
+ * Example: node src/build.js fixtures/corticon/synthetic/all-patterns
+ *          node src/build.js fixtures/corticon/government/dc-medicaid-chip --out-dir generated
  */
 import { execFileSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { parseRuleflow } from '../sources/corticon/corticon/ruleflow.js';
 
 test('confirms the real iterative="true" shape from the IRR fixture', () => {
-  const { nodes } = parseRuleflow('fixtures/irr/top level flow.erf');
+  const { nodes } = parseRuleflow('fixtures/corticon/vendor-samples/irr/top level flow.erf');
   const loopNode = nodes.find((n) => n.name === 'loop');
   assert.ok(loopNode, 'expected a node named "loop"');
   assert.equal(loopNode.kind, 'ActivityNode', 'iterative is a plain attribute, not a distinct node type');
@@ -15,7 +15,7 @@ test('confirms the real iterative="true" shape from the IRR fixture', () => {
 });
 
 test('extracts the confirmed real connectorList shape from the ServiceCallOut fixture', () => {
-  const { nodes, connectors } = parseRuleflow('fixtures/servicecallout/Fetch.erf');
+  const { nodes, connectors } = parseRuleflow('fixtures/corticon/vendor-samples/servicecallout/Fetch.erf');
   assert.equal(nodes[0].invokes, '#//@ruleflow/@connectorList.0');
   assert.deepEqual(connectors.get('fetchURL'), {
     className: 'FetchServiceCallout.js',
@@ -24,7 +24,7 @@ test('extracts the confirmed real connectorList shape from the ServiceCallOut fi
 });
 
 test('extracts a BranchContainer condition and both branches from the original reconstruction', () => {
-  const { nodes } = parseRuleflow('fixtures/branch-reconstruction/branch-example.erf');
+  const { nodes } = parseRuleflow('fixtures/corticon/synthetic/branch-reconstruction/branch-example.erf');
   assert.equal(nodes.length, 1);
   const branch = nodes[0];
   assert.equal(branch.kind, 'BranchContainer');
@@ -40,7 +40,7 @@ test('captures every chained nextStep in a single branch, not just the first', (
   // Confirmed real in InsuranceRating.erf (5 chained nodes in one branch) and
   // reconstructed in this spike's own all-patterns fixture: a <branches> block
   // can hold more than one <nextStep>, and all of them must survive parsing.
-  const { nodes } = parseRuleflow('fixtures/all-patterns/conditional-branching.erf');
+  const { nodes } = parseRuleflow('fixtures/corticon/synthetic/all-patterns/conditional-branching.erf');
   const disabilityBranch = nodes.find((n) => n.name === 'DisabilityAccommodation');
   assert.equal(disabilityBranch.kind, 'BranchContainer');
   assert.equal(disabilityBranch.branches.length, 1, 'one true-case branch, no false branch');
@@ -55,7 +55,7 @@ test('captures every chained nextStep in a single branch, not just the first', (
 });
 
 test('DC Medicaid/CHIP is a plain sequential cascade -- no Branch, no Iterative', () => {
-  const { nodes } = parseRuleflow('fixtures/dc-medicaid-chip/both.erf');
+  const { nodes } = parseRuleflow('fixtures/corticon/government/dc-medicaid-chip/both.erf');
   assert.equal(nodes.length, 2);
   assert.ok(
     nodes.every((n) => n.kind === 'ActivityNode' && n.iterative === false),

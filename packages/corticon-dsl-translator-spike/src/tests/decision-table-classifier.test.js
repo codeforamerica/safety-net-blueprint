@@ -12,7 +12,7 @@ test('classifies Mortgage\'s real Select_Credit.ers 3-row decision table converg
   // AND none high-credit; < 3 liabilities), each an independent alternative, all
   // writing loanapp.creditReqtMet -- no rule reads a path it also writes, so this is
   // not a self-loop, just ordinary decision-table combinatorics.
-  const project = loadProject('fixtures/mortgage');
+  const project = loadProject('fixtures/corticon/vendor-samples/mortgage');
   const results = classifyDecisionTableCombinatorics(project).filter((r) => r.rulesheet === 'Select_Credit.ers');
   assert.equal(results.length, 1);
   assert.equal(results[0].path, 'LoanApplication.creditReqtMet');

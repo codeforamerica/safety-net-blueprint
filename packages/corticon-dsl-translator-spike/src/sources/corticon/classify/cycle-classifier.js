@@ -81,7 +81,7 @@ function classifySelfLoop(path, rule, rulesheetFile, ruleflowContext) {
  * expression-level pattern (e.g. decimal-rounding's `adjustedHours = adjustedHours.round(1)`)
  * are not also classified as decision-table-alternative-row. The expression pattern
  * is the accurate classification for those rules; emitting a self-loop entry on top
- * of it produces a false-positive in the visualizer and crosswalk.
+ * of it produces a false-positive in the visualizer and translation log.
  */
 export function classifySelfLoops(project, ruleflowContext, expressionPatterns = []) {
   const expressionPatternRuleKeys = new Set(expressionPatterns.map((p) => `${p.rulesheet}#${p.ruleIndex}`));

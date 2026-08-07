@@ -26,4 +26,4 @@ Each file is named for the pattern it exercises. Multi-file patterns share a suf
 | 11 | Decimal rounding | `decimal-rounding.ers` (`.round(2)`) |
 | 12 | Sort and rank | `sort-ranking.ers` (`sortedBy`/`first`) |
 | 13 | Collection filter | `collection-filter.ers` (filtered to adult household members) |
-| 14 | Explicit override | `override-example.ers` — rule 1 (`isEligible = true`) `overrides` rule 0 (the unconditional `isProgramAEligible = false` fallback), same real `overrides`/`overriddenBy` attribute shape confirmed in `fixtures/irr/evaluate npv.ers` |
+| 14 | Explicit override | `override-example.ers` — rule 1 (`isEligible = true`) `overrides` rule 0 (the unconditional `isProgramAEligible = false` fallback), same real `overrides`/`overriddenBy` attribute shape confirmed in `fixtures/corticon/vendor-samples/irr/evaluate npv.ers` |

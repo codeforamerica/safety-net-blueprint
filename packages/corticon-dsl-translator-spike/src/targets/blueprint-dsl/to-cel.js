@@ -230,7 +230,7 @@ function translateCall(node) {
     // Java extension calls: `ClassName.methodName(...)` where the object is a bare
     // uppercase Identifier (e.g. EligUtility.getLastMonth, Allotment.getMaximumAllotmentAmount).
     // These are caller-contract or DSL-function concerns, not translatable to native CEL.
-    // Emit a clearly-labeled placeholder so the pipeline can complete and the crosswalk
+    // Emit a clearly-labeled placeholder so the pipeline can complete and the translation log
     // can flag them, rather than hard-crashing the whole translate stage.
     if (node.navigation === 'dot' && node.object?.type === 'Identifier' && /^[A-Z]/.test(node.object.name)) {
       const argsCel = (node.args ?? []).map(toCel).join(', ');

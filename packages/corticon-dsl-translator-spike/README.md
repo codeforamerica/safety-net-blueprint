@@ -27,10 +27,10 @@ This probably belongs in `docs/architecture/` eventually, but capturing it here 
 
 ## Background reading
 
-- [`FORWARD-VS-REVERSE-CHAINING.md`](./FORWARD-VS-REVERSE-CHAINING.md) — Corticon and the decision-rules DSL are two fundamentally different styles of rules engine; why translating between them is hard, not a syntax swap.
-- [`TRANSLATION-PATTERNS.md`](./TRANSLATION-PATTERNS.md) — the specific real patterns this translator has to recognize (a genuine loop vs. an ordinary decision-table row vs. a null-check standing in for missing data) rather than translate literally.
-- [`CORTICON-GLOSSARY.md`](./CORTICON-GLOSSARY.md) / [`DEPENDENCY-GRAPH-GLOSSARY.md`](./DEPENDENCY-GRAPH-GLOSSARY.md) — vocabulary for each side of the translation, for readers unfamiliar with either.
-- [`WHY-A-CUSTOM-DEPENDENCY-GRAPH-ENGINE.md`](./WHY-A-CUSTOM-DEPENDENCY-GRAPH-ENGINE.md) — why the decision-rules DSL is a new engine inspired by IRS Direct File's open-source Fact Graph, not an adoption of it.
+- [`docs/FORWARD-VS-REVERSE-CHAINING.md`](./docs/FORWARD-VS-REVERSE-CHAINING.md) — Corticon and the decision-rules DSL are two fundamentally different styles of rules engine; why translating between them is hard, not a syntax swap.
+- [`docs/TRANSLATION-PATTERNS.md`](./docs/TRANSLATION-PATTERNS.md) — the specific real patterns this translator has to recognize (a genuine loop vs. an ordinary decision-table row vs. a null-check standing in for missing data) rather than translate literally.
+- [`docs/CORTICON-GLOSSARY.md`](./docs/CORTICON-GLOSSARY.md) / [`docs/DEPENDENCY-GRAPH-GLOSSARY.md`](./docs/DEPENDENCY-GRAPH-GLOSSARY.md) — vocabulary for each side of the translation, for readers unfamiliar with either.
+- [`docs/WHY-A-CUSTOM-DEPENDENCY-GRAPH-ENGINE.md`](./docs/WHY-A-CUSTOM-DEPENDENCY-GRAPH-ENGINE.md) — why the decision-rules DSL is a new engine inspired by IRS Direct File's open-source Fact Graph, not an adoption of it.
 
 Not production code — see the Non-goals section of #388. That said, the ingestion, dependency-graph, and classification layers (`src/sources/corticon/`, `src/graph/`, `src/sources/corticon/classify/`) are specifically written to be reusable beyond this spike, not disposable: Decision 9 already frames a real Corticon→DSL translator as a documented adoption path a state migration would eventually need, and parsing Corticon's real file formats is the first thing that translator would have to do. `src/sources/corticon/ingest-project.js` takes a project directory as a command-line argument rather than hardcoding paths to the fixtures above, so it works against any real Corticon project, not just this spike's examples. What's spike-scoped is *breadth* of coverage (only the constructs our fixtures actually contain), not the parsing approach itself.
 
@@ -40,25 +40,25 @@ Real Corticon project files, vendored locally so this spike doesn't depend on li
 
 | Directory | Source | Role |
 |---|---|---|
-| `fixtures/dc-medicaid-chip/` | `github.com/corticon/corticon.js-samples`, "Washington D.C. Medicaid and CHIP Eligibility Determination" | Primary example — drives the actual translator/crosswalk build-and-validate work |
-| `fixtures/irr/` | `github.com/corticon/corticon-classic-samples`, "Internal Rate of Return" | Reference — genuine cycle, real `iterative="true"` shape |
-| `fixtures/mortgage/` | `github.com/corticon/corticon-classic-samples`, "Mortgage" | Reference — null-check masking (`Regular_NoData.ers`), filters (`Select_Credit.ers`) |
-| `fixtures/servicecallout/` | `github.com/corticon/corticon.js-samples`, `ServiceCallOut/RESTCall` | Reference — real `connectorList` service call-out shape |
-| `fixtures/branch-reconstruction/` | Original, hand-authored (see its own README) | Reference — real confirmed `BranchContainer` schema, reconstructed rather than vendored since the only real examples found have no license |
-| `fixtures/all-patterns/` | Original, hand-authored | Deliberate stress test for Phase 3 classification — every real pattern from the table above, coexisting in one project, to prove the classifier *distinguishes* them rather than just detects each in isolation. No real Corticon-computed output exists for it (nobody has run it through Corticon) — structural/classification evidence only, not golden-master |
+| `fixtures/corticon/government/dc-medicaid-chip/` | `github.com/corticon/corticon.js-samples`, "Washington D.C. Medicaid and CHIP Eligibility Determination" | Primary example — drives the actual translator/translation build-and-validate work |
+| `fixtures/corticon/vendor-samples/irr/` | `github.com/corticon/corticon-classic-samples`, "Internal Rate of Return" | Reference — genuine cycle, real `iterative="true"` shape |
+| `fixtures/corticon/vendor-samples/mortgage/` | `github.com/corticon/corticon-classic-samples`, "Mortgage" | Reference — null-check masking (`Regular_NoData.ers`), filters (`Select_Credit.ers`) |
+| `fixtures/corticon/vendor-samples/servicecallout/` | `github.com/corticon/corticon.js-samples`, `ServiceCallOut/RESTCall` | Reference — real `connectorList` service call-out shape |
+| `fixtures/corticon/synthetic/branch-reconstruction/` | Original, hand-authored (see its own README) | Reference — real confirmed `BranchContainer` schema, reconstructed rather than vendored since the only real examples found have no license |
+| `fixtures/corticon/synthetic/all-patterns/` | Original, hand-authored | Deliberate stress test for Phase 3 classification — every real pattern from the table above, coexisting in one project, to prove the classifier *distinguishes* them rather than just detects each in isolation. No real Corticon-computed output exists for it (nobody has run it through Corticon) — structural/classification evidence only, not golden-master |
 
 ## Layout
 
 - `fixtures/` — real (and one original-reconstruction) Corticon project files, per above
 - `src/sources/corticon/corticon/` — Phase 1: parses the four real Corticon file types (`.ecore`/`.ers`/`.erf`/`.ert`) into an in-memory model
 - `src/sources/corticon/ingest-project.js` — runs Phase 1 against a real Corticon project directory. Named for what it does (parallel to `graph-project.js` below, and the other phase entry points — `translate-project.js`, `classify-project.js` — rather than one growing monolithic `cli.js`), not for whether it's "the pipeline" vs. "a debug tool": there's no separate non-CLI ingestion script, this is it. Produces `{slug}-corticon.json` (includes `sourceType: "corticon"` and `ruleId` on each rule).
-- `src/graph/` — Phase 2: builds the universal attribute dependency graph from a Phase 1 project model (which attribute reads feed which attribute writes, across the whole project). Contains `build-graph.js`, `graph-project.js`, and `translation-patterns.yaml` (universal graph-level patterns).
+- `src/graph/` — Phase 2: builds the universal attribute dependency graph from a Phase 1 project model (which attribute reads feed which attribute writes, across the whole project). Contains `build-graph.js` and `graph-project.js`.
 - `src/graph/graph-project.js` — standalone debug tool for Phase 2. Takes a Phase 1 JSON file as input and prints a graph summary. `--out` writes `{slug}-graph.json` (`{ nodes, edges }` where edges carry `ruleId`). Not part of the main pipeline — `translate-project.js` produces `graph.json` as a side output instead.
 - `src/sources/corticon/classify/` — Phase 3: resolves ruleflow-invocation context (is a rulesheet ever reached from inside a loop or a branch?) and classifies cycles/self-loops and other rule-level patterns using that context
 - `src/sources/corticon/classify-project.js` — runs Phase 3. Takes the Phase 1 corticon.json as input. Produces `{slug}-patterns.json` (`{ sourceFile, classification }` with universal graph findings + source-detected patterns).
 - `src/sources/corticon/translate-project.js` — Phase 4: translates classified patterns to blueprint-dsl facts. Produces `{slug}-blueprint-dsl.json` (`{ facts, translationLog }` with optional `meta` per fact) and `{slug}-graph.json` (`{ nodes, edges }` where edges carry `ruleId`) as a side output.
-- `src/sources/corticon/translation-patterns.yaml` — Corticon-specific translation patterns (how each Corticon construct maps to the DSL)
-- `src/graph/translation-patterns.yaml` — universal graph-level patterns that apply to any rules source, not just Corticon
+- `src/translation-patterns.yaml` — universal translation pattern catalog; applies to any rule source
+- `src/translation-patterns.yaml` — universal translation pattern catalog; applies to any rule source
 - `src/targets/blueprint-dsl/` — blueprint-dsl target: fact dependency graph and HTML visualizer
   - `visualize-graph.js` — renders a fact dependency graph SVG from `{slug}-blueprint-dsl.json`
   - `visualize-graph-html.js` — renders a full interactive HTML report (data model, sink candidates, subgraph drill-down) from `{slug}-blueprint-dsl.json` + `{slug}-patterns.json`
@@ -81,8 +81,8 @@ Real Corticon project files, vendored locally so this spike doesn't depend on li
 `src/graph/graph-project.js` is a standalone debug tool that builds the graph from a Phase 1 JSON file and prints a summary (node/edge counts, cycle candidates, cross-rulesheet assembly); `--out <file>` writes `{slug}-graph.json` as `{ nodes, edges }` where edges carry `ruleId`. In the main pipeline, `graph.json` is produced as a side output of `translate-project.js` rather than a standalone phase: Phase 3 (`classify-project.js`) takes the Phase 1 corticon.json directly, since classification needs the original rule/ruleflow detail (condition text, `iterative` flags, `BranchContainer`/`connectorList` shape) that a pure topology graph doesn't retain.
 
 ```
-node src/sources/corticon/ingest-project.js fixtures/dc-medicaid-chip
-node src/sources/corticon/ingest-project.js fixtures/dc-medicaid-chip --out generated/dc-medicaid-chip-corticon.json
+node src/sources/corticon/ingest-project.js fixtures/corticon/government/dc-medicaid-chip
+node src/sources/corticon/ingest-project.js fixtures/corticon/government/dc-medicaid-chip --out generated/dc-medicaid-chip-corticon.json
 
 node src/sources/corticon/classify-project.js generated/dc-medicaid-chip-corticon.json
 node src/sources/corticon/classify-project.js generated/dc-medicaid-chip-corticon.json --out generated/dc-medicaid-chip-patterns.json

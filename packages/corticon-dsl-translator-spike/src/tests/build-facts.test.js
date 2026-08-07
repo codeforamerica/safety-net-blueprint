@@ -11,7 +11,7 @@ function compile(fixtureDir) {
   const graph = buildDependencyGraph(project);
   const classification = classifyProject(project);
   const { facts, translationLog } = buildFacts(project, graph, classification, { parseExpression });
-  return { facts, crosswalk: translationLog };
+  return { facts, translationLog };
 }
 
 test('Mortgage: null-check-masking compiles to an expression fact for all four real late-day-sum attributes', () => {
@@ -19,7 +19,7 @@ test('Mortgage: null-check-masking compiles to an expression fact for all four r
   // rulesheet-local alias ("loanapp") the Corticon text itself uses -- confirmed
   // necessary, not cosmetic: see buildAliasMap/resolveAliases in build-facts.js
   // for the real cross-reference bug this fixes.
-  const { facts } = compile('fixtures/mortgage');
+  const { facts } = compile('fixtures/corticon/vendor-samples/mortgage');
   for (const attr of ['late30DaysSum', 'late60DaysSum', 'late90DaysSum', 'late120DaysSum']) {
     const fact = facts.find((f) => f.path === `/loanApplication/${attr}`);
     assert.deepEqual(fact, { path: `/loanApplication/${attr}`, expression: '0' });
@@ -27,39 +27,39 @@ test('Mortgage: null-check-masking compiles to an expression fact for all four r
 });
 
 
-test('Mortgage: a path whose only real writer is an unreachable rulesheet gets no Fact, but a path-specific crosswalk entry explains why', () => {
+test('Mortgage: a path whose only real writer is an unreachable rulesheet gets no Fact, but a path-specific translationLog entry explains why', () => {
   // Confirmed real, not theoretical: LoanApplication.creditReqtMet is written only
   // by Select_Credit.ers, which is unreachable within this vendored fixture
   // (AllPrograms.erf invokes a "Rules/Select.erf" ruleflow that was never
   // vendored). An earlier version of this file silently `continue`d here with no
   // reporting at all when every real writer of a path got excluded -- unlike the
   // genuine-cycle/unclassified-cycle cases in the same loop, which each report
-  // their own path-level crosswalk entry before skipping.
-  const { facts, crosswalk } = compile('fixtures/mortgage');
+  // their own path-level translationLog entry before skipping.
+  const { facts, translationLog } = compile('fixtures/corticon/vendor-samples/mortgage');
   assert.equal(facts.find((f) => f.path === '/loanApplication/creditReqtMet'), undefined);
-  const entry = crosswalk.find((c) => c.path === 'LoanApplication.creditReqtMet' && c.pattern === 'no-ordinary-writer');
-  assert.ok(entry, 'expected a no-ordinary-writer crosswalk entry explaining the missing Fact');
-  assert.match(entry.note, /Select_Credit\.ers/);
+  const entry = translationLog.find((c) => c.sourcePath === 'LoanApplication.creditReqtMet' && c.pattern === 'no-writer');
+  assert.ok(entry, 'expected a no-writer translation log entry explaining the missing Fact');
+  assert.ok(entry.excludedRuleIds.some((id) => /Select_Credit\.ers/.test(id)));
 });
 
-test('all-patterns: a genuine cycle is skipped entirely, flagged as a crosswalk annotation for manual redesign', () => {
-  const { facts, crosswalk } = compile('fixtures/all-patterns');
+test('all-patterns: a genuine cycle is skipped entirely, flagged as a translationLog annotation for manual redesign', () => {
+  const { facts, translationLog } = compile('fixtures/corticon/synthetic/all-patterns');
   assert.equal(facts.some((f) => f.path === '/application/estimatedBenefit'), false);
-  const entry = crosswalk.find((c) => c.path === 'Application.estimatedBenefit');
-  assert.equal(entry.pattern, 'genuine-cycle');
+  const entry = translationLog.find((c) => c.sourcePath === 'Application.estimatedBenefit');
+  assert.equal(entry.pattern, 'cycle');
 });
 
-test('all-patterns: entity-creation writes are flagged in the crosswalk reported directly from classification (not derived from graph.writes)', () => {
+test('all-patterns: entity-creation writes are flagged in the translationLog reported directly from classification (not derived from graph.writes)', () => {
   // entity-creation.ers writes Application.members (an association/collection).
   // ApplicationMember entities are read downstream in all-patterns (input variant), so
   // this is a caller-contract entry, not a collection output -- no fact is generated for
   // the association path.
-  // The real test is that the crosswalk entry is reported from classification.entityCreation
+  // The real test is that the translationLog entry is reported from classification.entityCreation
   // directly -- not derived from graph.writes enumeration, which would silently miss it.
-  const { facts, crosswalk } = compile('fixtures/all-patterns');
+  const { facts, translationLog } = compile('fixtures/corticon/synthetic/all-patterns');
   assert.equal(facts.some((f) => f.path === '/application/members'), false, 'input-variant entity-creation should not produce a Fact for the association path');
-  const entry = crosswalk.find((c) => c.pattern === 'entity-creation-input' && c.ruleId?.includes('entity-creation.ers') && c.entityType === 'ApplicationMember');
-  assert.ok(entry, 'expected an entity-creation crosswalk entry for entity-creation.ers, reported directly from classification.entityCreation');
+  const entry = translationLog.find((c) => c.pattern === 'constructor-input' && c.ruleId?.includes('entity-creation.ers') && c.entityType === 'ApplicationMember');
+  assert.ok(entry, 'expected a constructor-input translation log entry for entity-creation.ers, reported directly from classification.entityCreation');
 });
 
 test('all-patterns: an unconditional row that is NOT last in document order still folds in every later conditioned row, not silently discarding them', () => {
@@ -70,11 +70,11 @@ test('all-patterns: an unconditional row that is NOT last in document order stil
   // an immediate override, discarding every entry already built for later
   // document-order rows -- the compiled Fact was a bare "false", with no
   // reference to the condition anywhere, and nothing said so.
-  const { facts, crosswalk } = compile('fixtures/all-patterns');
+  const { facts, translationLog } = compile('fixtures/corticon/synthetic/all-patterns');
   const fact = facts.find((f) => f.path === '/applicationMember/isExpeditedSnap');
   assert.equal(fact.expression, '(application.incomeRounded < 150 && applicationMember.reportedAssets <= 100) ? true : false');
-  const entry = crosswalk.find((c) => c.pattern === 'unconditional-row-out-of-order' && c.rulesheet === 'override-example.ers');
-  assert.ok(entry, 'expected an unconditional-row-out-of-order crosswalk entry flagging this shape for manual review');
+  const entry = translationLog.find((c) => c.pattern === 'unconditional-row-out-of-order' && c.ruleId === 'override-example.ers');
+  assert.ok(entry, 'expected an unconditional-row-out-of-order translationLog entry flagging this shape for manual review');
 });
 
 test('chainEntries: an unconditional entry folds in as the fallback regardless of its position, not just when last', () => {
@@ -96,55 +96,55 @@ test('chainEntries: more than one unconditional entry for the same path throws r
 });
 
 test('all-patterns: null-check-masking (ApplicationMember.reportedAssets) compiles to an expression fact', () => {
-  const { facts } = compile('fixtures/all-patterns');
+  const { facts } = compile('fixtures/corticon/synthetic/all-patterns');
   const fact = facts.find((f) => f.path === '/applicationMember/reportedAssets');
   assert.deepEqual(fact, { path: '/applicationMember/reportedAssets', expression: '0' });
 });
 
 test('all-patterns: an ordinary unconditional single-rule Fact compiles to a bare value, no ternary', () => {
-  const { facts } = compile('fixtures/all-patterns');
+  const { facts } = compile('fixtures/corticon/synthetic/all-patterns');
   assert.equal(facts.find((f) => f.path === '/applicationMember/reviewTrack').expression, "'Expedited'");
   assert.equal(facts.find((f) => f.path === '/applicationMember/needsAccommodationReview').expression, 'true');
 });
 
 test('all-patterns: date arithmetic, currency rounding, and the field-sum aggregate all compile against real proposed custom CEL functions', () => {
-  const { facts } = compile('fixtures/all-patterns');
+  const { facts } = compile('fixtures/corticon/synthetic/all-patterns');
   assert.equal(facts.find((f) => f.path === '/applicationMember/age').expression, 'yearsBetween(applicationMember.dob, today)');
   assert.equal(facts.find((f) => f.path === '/application/totalIncome').expression, "sum(applicationMember, 'income')");
   assert.equal(facts.find((f) => f.path === '/application/incomeRounded').expression, 'round(application.totalIncome, 2)');
 });
 
 test('all-patterns: a rulesheet-level filter is folded into every Fact that rulesheet compiles, not just reported informationally', () => {
-  const { facts, crosswalk } = compile('fixtures/all-patterns');
+  const { facts, translationLog } = compile('fixtures/corticon/synthetic/all-patterns');
   // collection-filter.ers's real filter (adult.age >= 18) gates its own otherwise-unconditional row.
   // Compiled CEL uses the canonical entity alias ("applicationMember"), not the rulesheet-local
   // filtered-collection alias ("adult") -- confirmed necessary: see buildAliasMap/resolveAliases
   // in build-facts.js for the real cross-reference bug this fixes.
   assert.equal(facts.find((f) => f.path === '/application/adultCount').expression, '(applicationMember.age >= 18) ? size(applicationMember) : unresolved()');
-  const filterEntry = crosswalk.find((c) => c.pattern === 'collection-filter' && c.ruleId === 'collection-filter.ers');
+  const filterEntry = translationLog.find((c) => c.pattern === 'guard' && c.ruleId === 'collection-filter.ers');
   assert.equal(filterEntry.expression, 'adult.age >= 18');
 });
 
 test('all-patterns: decision-table combinatorics within one rulesheet compile to a first-match-wins chain, flagged with the real hit-policy caveat', () => {
-  const { facts, crosswalk } = compile('fixtures/all-patterns');
+  const { facts, translationLog } = compile('fixtures/corticon/synthetic/all-patterns');
   const incomeTier = facts.find((f) => f.path === '/application/incomeTier');
   assert.equal(
     incomeTier.expression,
     "(application.incomeRounded < 1580) && (application.adultCount == 1) ? 'Tier1' : (application.incomeRounded < 2137) && (application.adultCount == 2) ? 'Tier1' : (application.incomeRounded < 2694) && (application.adultCount >= 3) ? 'Tier1' : (application.incomeRounded >= 1580) && (application.adultCount == 1) ? 'Tier2' : unresolved()"
   );
-  const hitPolicyEntry = crosswalk.find((c) => c.pattern === 'hit-policy-unverified' && c.rulesheet === 'decision-table.ers');
+  const hitPolicyEntry = translationLog.find((c) => c.pattern === 'hit-policy-unverified' && c.ruleId === 'decision-table.ers');
   assert.deepEqual(hitPolicyEntry.ruleIndices, [1, 2, 3, 4], 'shifted by 1 vs. Corticon\'s own rule count: index 0 is the reserved blank/template row, now kept rather than filtered');
 });
 
-test('all-patterns: no unconditional row anywhere in the chain surfaces a no-fallback-row crosswalk entry and calls the proposed unresolved() sentinel', () => {
-  const { crosswalk } = compile('fixtures/all-patterns');
+test('all-patterns: no unconditional row anywhere in the chain surfaces a no-fallback-row translationLog entry and calls the proposed unresolved() sentinel', () => {
+  const { translationLog } = compile('fixtures/corticon/synthetic/all-patterns');
   for (const path of ['Application.incomeTier', 'ApplicationMember.isEligible', 'ApplicationMember.meetsAllCriteria', 'Application.adultCount']) {
-    assert.ok(crosswalk.some((c) => c.path === path && c.pattern === 'no-fallback-row'), `expected a no-fallback-row entry for ${path}`);
+    assert.ok(translationLog.some((c) => c.sourcePath === path && c.pattern === 'no-default'), `expected a no-default entry for ${path}`);
   }
 });
 
 test('all-patterns: cross-rulesheet assembly (ApplicationMember.isEligible, across fact-assembly-a.ers and fact-assembly-b.ers) compiles as one chained expression', () => {
-  const { facts } = compile('fixtures/all-patterns');
+  const { facts } = compile('fixtures/corticon/synthetic/all-patterns');
   const isEligible = facts.find((f) => f.path === '/applicationMember/isEligible');
   // Both rulesheets' rows are present in the compiled chain -- not just one of them.
   assert.match(isEligible.expression, /incomeTier == 'Tier1'/);
@@ -153,15 +153,15 @@ test('all-patterns: cross-rulesheet assembly (ApplicationMember.isEligible, acro
   assert.match(isEligible.expression, /unresolved\(\)$/);
 });
 
-test('all-patterns: a real service call-out is flagged as an orchestration-layer crosswalk annotation, not a Fact', () => {
-  const { crosswalk } = compile('fixtures/all-patterns');
-  const entry = crosswalk.find((c) => c.pattern === 'service-callout');
+test('all-patterns: a real service call-out is flagged as an orchestration-layer translationLog annotation, not a Fact', () => {
+  const { translationLog } = compile('fixtures/corticon/synthetic/all-patterns');
+  const entry = translationLog.find((c) => c.pattern === 'call-procedure');
   assert.equal(entry.node, 'VerifyIncome');
   assert.deepEqual(entry.connector, { className: 'VerifyIncomeServiceCallout.js', serviceName: 'verifyIncome' });
 });
 
 test('DC Medicaid/CHIP: Person.MedicaidEligible assembles all three real rulesheets (Flatten, Parse Cohorts, Citizenship requirements) in real ruleflow invocation order, with Parse Cohorts\' real filter folded in', () => {
-  const { facts } = compile('fixtures/dc-medicaid-chip');
+  const { facts } = compile('fixtures/corticon/government/dc-medicaid-chip');
   const medicaidEligible = facts.find((f) => f.path === '/person/MedicaidEligible');
   assert.ok(medicaidEligible, 'expected a compiled Person.MedicaidEligible Fact');
   // Flatten.ers is invoked last (highest priority) -- its own 2 rows appear first.
@@ -186,8 +186,8 @@ test('DC Medicaid/CHIP: a rule guarded by a real range-membership condition (Per
   // membership) this translator only added support for recently -- see
   // corticon-expression-parser.test.js/to-cel.test.js for the actual range-membership
   // parsing/codegen unit tests.
-  const { crosswalk } = compile('fixtures/dc-medicaid-chip');
-  assert.ok(crosswalk.some((c) => c.pattern === 'entity-creation-input' && c.ruleId?.includes('MAGI Eligibility Groups')));
+  const { translationLog } = compile('fixtures/corticon/government/dc-medicaid-chip');
+  assert.ok(translationLog.some((c) => c.pattern === 'constructor-input' && c.ruleId?.includes('MAGI Eligibility Groups')));
 });
 
 test('snap-work-requirements: null-default.ers is NOT classified as fact-assembly for WorkActivity.hoursApplied -- only enum-branch-b.ers is the real writer', () => {
@@ -197,7 +197,7 @@ test('snap-work-requirements: null-default.ers is NOT classified as fact-assembl
   // the null-default writer must be excluded from the assembly count so the path
   // does not appear as cross-rulesheet assembly and null-default.ers is not tagged
   // as fact-assembly in the visualizer.
-  const project = loadProject('fixtures/snap-work-requirements');
+  const project = loadProject('fixtures/corticon/synthetic/snap-work-requirements');
   const classification = classifyProject(project);
   const hoursAppliedAssembly = classification.patterns.crossRulesheetAssembly.find((a) => a.path === 'WorkActivity.hoursApplied');
   assert.equal(hoursAppliedAssembly, undefined, 'WorkActivity.hoursApplied should not appear in crossRulesheetAssembly after excluding null-default writers');
@@ -215,33 +215,33 @@ test('DC Medicaid/CHIP: a condition with its own internal "or" is parenthesized 
   // AND-across-columns semantics actually require. Every condition (and filter) is
   // now individually parenthesized before joining, regardless of what operator is
   // at that condition's own top level.
-  const { facts } = compile('fixtures/dc-medicaid-chip');
+  const { facts } = compile('fixtures/corticon/government/dc-medicaid-chip');
   const isChipEligible = facts.find((f) => f.path === '/person/isCHIPEligible');
   assert.match(isChipEligible.expression, /\(person\.isInmate == false \|\| person\.isInmate == null\) && \(person\.age < 19\)/);
 });
 
 test('DC Medicaid/CHIP: the confirmed-dead Non-MAGI Eligibility Groups.ers is excluded from Fact compilation entirely and reported directly, even though it writes the same path a real reachable rulesheet does', () => {
-  const { crosswalk } = compile('fixtures/dc-medicaid-chip');
+  const { translationLog } = compile('fixtures/corticon/government/dc-medicaid-chip');
   // Confirmed real: Non-MAGI Eligibility Groups.ers (never invoked by any real
   // Ruleflow) also writes Person.outputCoverage1, the same path Flatten.ers (real,
   // reachable) writes -- an earlier version of this file didn't exclude unreachable
   // rulesheets from cross-rulesheet assembly/decision-table compilation at all, so
   // this dead rulesheet's logic was silently eligible to be compiled in as if live.
-  const entry = crosswalk.find((c) => c.pattern === 'unreachable-rulesheet');
-  assert.ok(entry, 'expected a direct unreachable-rulesheet crosswalk entry');
-  assert.match(entry.rulesheet, /Non-MAGI Eligibility Groups\.ers$/);
+  const entry = translationLog.find((c) => c.pattern === 'unreachable');
+  assert.ok(entry, 'expected a direct unreachable translation log entry');
+  assert.match(entry.ruleId, /Non-MAGI Eligibility Groups\.ers$/);
 });
 
-test('DC Medicaid/CHIP: every real expression pattern found in Phase 3 classification is reported in the crosswalk, not just implicit in the compiled CEL', () => {
-  const { crosswalk } = compile('fixtures/dc-medicaid-chip');
-  const entries = crosswalk.filter((c) => c.pattern === 'expression-pattern');
-  assert.ok(entries.length > 0, 'expected at least one expression-pattern crosswalk entry');
+test('DC Medicaid/CHIP: every real expression pattern found in Phase 3 classification is reported in the translationLog, not just implicit in the compiled CEL', () => {
+  const { translationLog } = compile('fixtures/corticon/government/dc-medicaid-chip');
+  const entries = translationLog.filter((c) => c.pattern === 'expression-pattern');
+  assert.ok(entries.length > 0, 'expected at least one expression-pattern translationLog entry');
   assert.ok(entries.some((e) => e.patternKind === 'date-arithmetic'));
   assert.ok(entries.some((e) => e.patternKind === 'currency-rounding'));
   assert.ok(entries.some((e) => e.patternKind === 'sorting'));
 });
 
-test('a rulesheet invoked from multiple disagreeing contexts (synthetic -- not observed in any real fixture) is reported directly as a crosswalk entry, not silently resolved', () => {
+test('a rulesheet invoked from multiple disagreeing contexts (synthetic -- not observed in any real fixture) is reported directly as a translationLog entry, not silently resolved', () => {
   // Mirrors the synthetic project in ruleflow-context.test.js's own "disagreeing
   // contexts" test -- exercising this defensive path since no real project does.
   const project = {
@@ -273,7 +273,7 @@ test('a rulesheet invoked from multiple disagreeing contexts (synthetic -- not o
       noOps: [],
     },
   };
-  const { translationLog: crosswalk } = buildFacts(project, graph, classification, { parseExpression });
-  const entry = crosswalk.find((c) => c.pattern === 'multi-invoked-disagreeing-context');
+  const { translationLog } = buildFacts(project, graph, classification, { parseExpression });
+  const entry = translationLog.find((c) => c.pattern === 'context-conflict');
   assert.equal(entry.ruleId, 'Shared.ers');
 });

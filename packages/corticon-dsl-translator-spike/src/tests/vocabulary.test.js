@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseVocabulary } from '../sources/corticon/corticon/vocabulary.js';
 
-const DC_MEDICAID_VOCAB = 'fixtures/dc-medicaid-chip/Vocabulary/Rule Vocabulary.ecore';
+const DC_MEDICAID_VOCAB = 'fixtures/corticon/government/dc-medicaid-chip/Vocabulary/Rule Vocabulary.ecore';
 
 test('parses all real entities from the DC Medicaid/CHIP vocabulary', () => {
   const { entities } = parseVocabulary(DC_MEDICAID_VOCAB);
@@ -56,7 +56,7 @@ test('a plain attribute (not an association) never carries opposite/isRequired, 
 });
 
 test('resolves a custom type declared in a different vocabulary file', () => {
-  const { entities } = parseVocabulary('fixtures/cross-file-vocab/main.ecore');
+  const { entities } = parseVocabulary('fixtures/corticon/synthetic/cross-file-vocab/main.ecore');
   const ticket = entities.get('Ticket');
   assert.deepEqual(ticket.attributes.get('priority').type, { kind: 'customType', name: 'priorityLevel' });
 });

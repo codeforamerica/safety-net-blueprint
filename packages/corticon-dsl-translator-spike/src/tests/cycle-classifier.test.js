@@ -6,7 +6,7 @@ import { classifySelfLoops, classifyMultiHopCycles } from '../sources/corticon/c
 import { classifyExpressionPatterns } from '../sources/corticon/classify/expression-patterns.js';
 
 test('classifies IRR\'s real self-loop as a genuine cycle -- inside the iterative loop', () => {
-  const project = loadProject('fixtures/irr');
+  const project = loadProject('fixtures/corticon/vendor-samples/irr');
   const ctx = resolveRuleflowContext(project);
   const results = classifySelfLoops(project, ctx);
   assert.ok(results.length > 0);
@@ -18,7 +18,7 @@ test('classifies IRR\'s real multi-hop cycle (npv -> irr -> portion -> npv) as a
   // and updates Investment.irr from Investment.npv; `solve each cashflow.ers`
   // discounts each Cashflow.portion by the current Investment.irr guess. Both
   // rulesheets are reached from the same iterative loop.
-  const project = loadProject('fixtures/irr');
+  const project = loadProject('fixtures/corticon/vendor-samples/irr');
   const ctx = resolveRuleflowContext(project);
   const results = classifyMultiHopCycles(project, ctx);
   assert.equal(results.length, 1);
@@ -32,7 +32,7 @@ test('classifies DC Medicaid\'s two real self-loop-causing rules on the same pat
   // Flatten.ers: one an explicit null-check (masking), one a content-check
   // (an ordinary decision-table alternative row) -- confirmed real, and only
   // fully visible once the method-term/action-scoping graph bugs were fixed.
-  const project = loadProject('fixtures/dc-medicaid-chip');
+  const project = loadProject('fixtures/corticon/government/dc-medicaid-chip');
   const ctx = resolveRuleflowContext(project);
   const results = classifySelfLoops(project, ctx);
   assert.deepEqual(
@@ -42,7 +42,7 @@ test('classifies DC Medicaid\'s two real self-loop-causing rules on the same pat
 });
 
 test('classifies Mortgage\'s real null-check-masking self-loops correctly', () => {
-  const project = loadProject('fixtures/mortgage');
+  const project = loadProject('fixtures/corticon/vendor-samples/mortgage');
   const ctx = resolveRuleflowContext(project);
   const results = classifySelfLoops(project, ctx);
   assert.equal(results.length, 4);
@@ -50,7 +50,7 @@ test('classifies Mortgage\'s real null-check-masking self-loops correctly', () =
 });
 
 test('all-patterns: classifies the genuine cycle and the null-check masking self-loops distinctly', () => {
-  const project = loadProject('fixtures/all-patterns');
+  const project = loadProject('fixtures/corticon/synthetic/all-patterns');
   const ctx = resolveRuleflowContext(project);
   const results = classifySelfLoops(project, ctx);
   const byPath = Object.fromEntries(results.map((r) => [r.path, r.classification]));
@@ -64,7 +64,7 @@ test('snap-work-requirements: decimal-rounding self-loop (adjustedHours = adjust
   // catch-all would label it decision-table-alternative-row (false positive). With
   // expressionPatterns passed in, the decimal-rounding classification on the same
   // rule explains the self-loop and the entry is suppressed.
-  const project = loadProject('fixtures/snap-work-requirements');
+  const project = loadProject('fixtures/corticon/synthetic/snap-work-requirements');
   const ctx = resolveRuleflowContext(project);
   const exprPatterns = classifyExpressionPatterns(project);
   const withoutExpr = classifySelfLoops(project, ctx);

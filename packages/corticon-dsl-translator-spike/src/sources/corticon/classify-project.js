@@ -6,7 +6,7 @@ import { toJson, parseCliArgs } from '../../cli-utils.js';
 function printUsage() {
   console.error('Usage: node src/classify-project.js <project.json> [--out <file.json>]');
   console.error('  <project.json> is the output of: node src/ingest-project.js <dir> --out <project.json>');
-  console.error('Example: node src/ingest-project.js fixtures/dc-medicaid-chip --out generated/dc-medicaid-chip.json');
+  console.error('Example: node src/ingest-project.js fixtures/corticon/government/dc-medicaid-chip --out generated/dc-medicaid-chip.json');
   console.error('         node src/classify-project.js generated/dc-medicaid-chip.json --out generated/dc-medicaid-chip-patterns.json');
 }
 

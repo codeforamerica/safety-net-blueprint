@@ -8,22 +8,23 @@ import { esc, nextEid, expandHidden, expandChip } from '../../../../explorer/lib
 const MONO = 'ui-monospace,SFMono-Regular,Menlo,monospace';
 
 function printUsage() {
-  console.error('Usage: node src/visualize-crosswalk.js <patterns.json> <crosswalk.json> [--translated <translated.json>] [--out <file.html>]');
+  console.error('Usage: node src/visualize-translation-log.js <patterns.json> <blueprint-dsl.json> [--graph <graph.json>] [--out <file.html>]');
 }
 
-// ── Mapping type metadata ─────────────────────────────────────────────────
+// ── Badge metadata ────────────────────────────────────────────────────────
 
 const TYPE_META = {
-  '1:1':                            { label: '1 : 1',                       color: '#166534', bg: '#dcfce7' },
-  'caller-provides':                { label: 'caller provided',             color: '#0369a1', bg: '#e0f2fe' },
-  'expression':                     { label: 'custom function required',    color: '#5b21b6', bg: '#ede9fe' },
-  'no-fallback-row':                { label: 'no fallback row',             color: '#92400e', bg: '#fef9c3' },
-  'assembly-rulesheet-mismatch':    { label: 'assembly mismatch',           color: '#92400e', bg: '#fef9c3' },
-  'unconditional-row-out-of-order': { label: 'row order ambiguous',         color: '#92400e', bg: '#fef9c3' },
-  'blocked':                        { label: 'blocked',                     color: '#991b1b', bg: '#fee2e2' },
-  'special':                        { label: 'orchestration (not a fact)',  color: '#374151', bg: '#f3f4f6' },
-  'excluded':                       { label: 'unreachable in flow',         color: '#6b7280', bg: '#f3f4f6' },
-  'gap':                            { label: 'no mapping',                  color: '#6b7280', bg: '#fafafa' },
+  'translated':                     { label: 'translated',                color: '#166534', bg: '#dcfce7' },
+  'input':                          { label: 'input',                     color: '#0369a1', bg: '#e0f2fe' },
+  'output':                         { label: 'output',                    color: '#0369a1', bg: '#e0f2fe' },
+  'modifier':                       { label: 'modifier',                  color: '#5b21b6', bg: '#ede9fe' },
+  'no-default':                     { label: 'no default row',            color: '#92400e', bg: '#fef9c3' },
+  'composition-mismatch':           { label: 'composition mismatch',      color: '#92400e', bg: '#fef9c3' },
+  'unconditional-row-out-of-order': { label: 'row order ambiguous',       color: '#92400e', bg: '#fef9c3' },
+  'needs-redesign':                 { label: 'needs redesign',            color: '#991b1b', bg: '#fee2e2' },
+  'no-writer':                      { label: 'no writer',                 color: '#991b1b', bg: '#fee2e2' },
+  'excluded':                       { label: 'excluded',                  color: '#6b7280', bg: '#f3f4f6' },
+  'gap':                            { label: 'no mapping',                color: '#6b7280', bg: '#fafafa' },
 };
 
 function badge(type) {
@@ -31,17 +32,31 @@ function badge(type) {
   return `<span style="display:inline-block;padding:1px 8px;border-radius:9999px;font-size:11px;font-weight:600;background:${m.bg};color:${m.color};white-space:nowrap">${m.label}</span>`;
 }
 
-// ── Type resolution ───────────────────────────────────────────────────────
+// ── Rulesheet/ruleIndex extraction from ruleId ────────────────────────────
 
-function resolveType(isUnreachable, kinds, attrLevelKind, factPath) {
-  if (isUnreachable) return 'excluded';
-  if (kinds.includes('genuine-cycle') || kinds.includes('no-ordinary-writer')) return 'blocked';
-  const reviewKind = kinds.find(k => ['no-fallback-row', 'assembly-rulesheet-mismatch', 'unconditional-row-out-of-order'].includes(k));
-  if (reviewKind) return reviewKind;
-  if (kinds.includes('expression-pattern')) return 'expression';
-  if (kinds.includes('service-callout') || kinds.includes('collection-filter')) return 'special';
-  if (kinds.includes('entity-creation') || attrLevelKind === 'ordinary-writable-placeholder' || attrLevelKind === 'ordinary-writable-input') return 'caller-provides';
-  if (factPath) return '1:1';
+function ruleIdParts(ruleId) {
+  if (!ruleId) return { rulesheet: null, ruleIndex: null };
+  const colonIdx = ruleId.lastIndexOf(':');
+  if (colonIdx < 0) return { rulesheet: ruleId, ruleIndex: null };
+  const idx = parseInt(ruleId.slice(colonIdx + 1), 10);
+  return { rulesheet: ruleId.slice(0, colonIdx), ruleIndex: isNaN(idx) ? null : idx };
+}
+
+// ── Display type resolution ───────────────────────────────────────────────
+
+function resolveDisplayType(patterns, role, translated) {
+  if (!translated) {
+    if (role === 'excluded') return 'excluded';
+    if (patterns.includes('cycle') || patterns.includes('no-writer')) return 'needs-redesign';
+    if (role === 'input') return 'input';
+    if (role === 'output') return 'output';
+  }
+  if (role === 'modifier') return 'modifier';
+  if (role === 'input') return 'input';
+  if (role === 'output') return 'output';
+  const warningPattern = patterns.find(p => ['no-default', 'composition-mismatch', 'unconditional-row-out-of-order'].includes(p));
+  if (warningPattern) return warningPattern;
+  if (translated) return 'translated';
   return 'gap';
 }
 
@@ -49,31 +64,33 @@ function resolveType(isUnreachable, kinds, attrLevelKind, factPath) {
 
 /**
  * Builds one record per written attribute using the graph's `writes` map as
- * the primary index — it authoritatively lists every (rulesheet, ruleIndex)
- * pair that writes each attribute, without needing corticonPath on every
- * crosswalk entry.
+ * the primary index, cross-referencing translation log entries by ruleId.
  */
-function buildAttributeIndex(graphWrites, orderedSheets, project, crosswalk, factsByPath, unreachable, sheetToNodeName) {
+function buildAttributeIndex(graphWrites, orderedSheets, project, translationLog, factsByPath, unreachable, sheetToNodeName) {
   // Pre-compute sequential rule numbers within each rulesheet (matching the
-  // Rules diagram numbering) so ruleId labels are consistent.
+  // rules diagram numbering) so ruleId labels are consistent.
   const ruleNumMap = new Map();
   for (const rsName of orderedSheets) {
     const rsData = (project.rulesheets ?? {})[rsName];
     if (!rsData) continue;
     let ruleNum = 0;
     for (let idx = 0; idx < (rsData.rules ?? []).length; idx++) {
-      const cwE = crosswalk.filter(e => e.rulesheet === rsName && (e.ruleIndex === idx || e.ruleIndices?.includes(idx)));
-      if (!cwE.some(e => e.kind === 'no-op')) ruleNumMap.set(`${rsName}:${idx}`, ruleNum++);
+      const isNoOp = translationLog.some(e => {
+        const p = ruleIdParts(e.ruleId);
+        return p.rulesheet === rsName && p.ruleIndex === idx && e.pattern === 'no-op';
+      });
+      if (!isNoOp) ruleNumMap.set(`${rsName}:${idx}`, ruleNum++);
     }
   }
 
   const attributes = [];
 
-  for (const [corticonPath, writers] of Object.entries(graphWrites)) {
+  for (const [sourcePath, writers] of Object.entries(graphWrites)) {
     const rules = [];
-    const allKinds = [];
-    const allNotes = [];
+    const allPatterns = [];
     let hasReachableWriter = false;
+    let role = null;
+    let translated = false;
 
     for (const { rulesheet, ruleIndex } of (writers ?? [])) {
       const rsData = (project.rulesheets ?? {})[rulesheet];
@@ -83,45 +100,49 @@ function buildAttributeIndex(graphWrites, orderedSheets, project, crosswalk, fac
       const rule = rsData.rules?.[ruleIndex];
       if (!rule) continue;
 
-      const cwEntries = crosswalk.filter(e =>
-        e.rulesheet === rulesheet && (e.ruleIndex === ruleIndex || e.ruleIndices?.includes(ruleIndex))
-      );
-      if (cwEntries.some(e => e.kind === 'no-op')) continue;
+      const logEntries = translationLog.filter(e => {
+        const p = ruleIdParts(e.ruleId);
+        return p.rulesheet === rulesheet &&
+          (p.ruleIndex === ruleIndex || (e.ruleIndices?.includes(ruleIndex)));
+      });
+      if (logEntries.some(e => e.pattern === 'no-op')) continue;
 
-      const ruleNum = ruleNumMap.get(`${rulesheet}:${ruleIndex}`) ?? ruleIndex;
-      const ruleId = `${rulesheet.replace(/\.ers$/, '')}.Rule.${ruleNum}`;
+      const ruleFullId = `${rulesheet}:${ruleIndex}`;
+      const ruleNum = ruleNumMap.get(ruleFullId) ?? ruleIndex;
+      const ruleLabel = `${rulesheet.replace(/\.ers$/, '')}.Rule.${ruleNum}`;
       const nodeName = sheetToNodeName[rulesheet] ?? null;
       const { conditionText, actionTexts } = formatRuleText(rule.conditions, rule.actions);
       const comment = rule.comment?.text ?? null;
-      const kinds = cwEntries.map(e => e.kind);
-      const notes = cwEntries.map(e => e.note).filter(Boolean);
+      const patterns = logEntries.map(e => e.pattern);
 
-      rules.push({ ruleId, nodeName, conditionText, actionTexts, comment, kinds, notes });
-      allKinds.push(...kinds);
-      allNotes.push(...notes);
+      rules.push({ ruleId: ruleLabel, nodeName, conditionText, actionTexts, comment, patterns });
+      allPatterns.push(...patterns);
     }
 
-    // Attribute-level crosswalk entry (no rulesheet) carries factPath and kind
-    // for writable/placeholder attributes.
-    const attrEntry = crosswalk.find(e => e.corticonPath === corticonPath && !e.rulesheet);
-    const attrLevelKind = attrEntry?.kind ?? null;
-    const factPath = crosswalk.find(e => e.corticonPath === corticonPath && e.factPath)?.factPath ?? null;
-    const fact = factPath ? factsByPath[factPath] : null;
-    const dslExpression = fact?.derived ?? fact?.value ?? null;
-    const datatype = fact?.datatype ?? null;
-    const entityType = crosswalk.find(e => e.corticonPath === corticonPath && e.kind === 'entity-creation')?.entityType ?? null;
+    // Find the attribute-level translation log entry for this sourcePath.
+    const attrEntry = translationLog.find(e => e.sourcePath === sourcePath);
+    if (attrEntry) {
+      role = attrEntry.role;
+      translated = attrEntry.translated ?? false;
+    }
 
-    const type = resolveType(!hasReachableWriter, allKinds, attrLevelKind, factPath);
-    const notes = [...new Set(allNotes)];
-    const [entity, attribute] = corticonPath.split('.');
+    const factPath = translationLog.find(e => e.sourcePath === sourcePath && e.factPath)?.factPath ?? null;
+    const fact = factPath ? factsByPath[factPath] : null;
+    const dslExpression = fact?.expression ?? null;
+    const datatype = fact?.datatype ?? null;
+    const suggestedName = translationLog.find(e => e.sourcePath === sourcePath && e.suggestedName)?.suggestedName ?? null;
+    const entityType = translationLog.find(e => e.sourcePath === sourcePath && e.entityType)?.entityType ?? null;
+
+    const displayType = resolveDisplayType(allPatterns, role ?? (hasReachableWriter ? 'derived' : 'excluded'), translated);
+    const [entity, attribute] = sourcePath.split('.');
 
     attributes.push({
-      corticonPath, entity: entity ?? corticonPath, attribute: attribute ?? '',
-      datatype, factPath, dslExpression, type, rules, notes, entityType,
+      sourcePath, entity: entity ?? sourcePath, attribute: attribute ?? '',
+      datatype, factPath, dslExpression, displayType, rules, entityType, suggestedName,
     });
   }
 
-  return attributes.sort((a, b) => a.corticonPath.localeCompare(b.corticonPath));
+  return attributes.sort((a, b) => a.sourcePath.localeCompare(b.sourcePath));
 }
 
 // ── HTML rendering ────────────────────────────────────────────────────────
@@ -144,7 +165,6 @@ function renderCorticonSide(rules) {
     if (rules.length === 1) {
       return `<div style="font-size:10px;color:#9ca3af;margin-bottom:4px">${esc(metaLabel)}</div>${exprHtml}`;
     }
-    // Multiple rules: each collapsed behind an expandChip — same pattern as Graph tab
     const eid = nextEid();
     return expandChip(esc(metaLabel), eid,
       'display:block;margin-bottom:4px;padding:3px 8px;border-radius:4px;background:#f3f4f6;font-size:10px;color:#374151;') +
@@ -153,17 +173,16 @@ function renderCorticonSide(rules) {
 }
 
 function renderDslSide(attr) {
-  const { type, factPath, dslExpression, corticonPath, entityType } = attr;
-  if (type === 'caller-provides') {
-    if (entityType) return `<code style="font-family:${MONO};font-size:11px;color:#0369a1">List(${esc(entityType)})</code><div style="font-size:11px;color:#6b7280;margin-top:4px">caller pre-assembles instances</div>`;
-    if (factPath) return `<code style="font-family:${MONO};font-size:11px;color:#374151">${esc(factPath)}</code><div style="font-size:11px;color:#6b7280;margin-top:4px">caller-supplied input</div>`;
+  const { displayType, factPath, dslExpression, sourcePath, entityType, suggestedName } = attr;
+  if (displayType === 'input' && !factPath) {
+    if (entityType) return `<code style="font-family:${MONO};font-size:11px;color:#0369a1">List(${esc(entityType)})</code><div style="font-size:11px;color:#6b7280;margin-top:4px">caller pre-assembles instances${suggestedName ? ` — suggested name: ${esc(suggestedName)}` : ''}</div>`;
     return `<span style="color:#d1d5db">—</span>`;
   }
-  if (type === 'special')   return `<span style="font-size:11px;color:#6b7280;font-style:italic">Orchestration step — not a graph fact.</span>`;
-  if (type === 'excluded')  return `<span style="font-size:11px;color:#9ca3af;font-style:italic">Unreachable in flow.</span>`;
-  if (type === 'blocked')   return `<span style="font-size:11px;color:#991b1b;font-style:italic">Blocked — see notes.</span>`;
+  if (displayType === 'modifier')      return `<span style="font-size:11px;color:#6b7280;font-style:italic">Filter folded into compiled guards — not a standalone fact.</span>`;
+  if (displayType === 'excluded')      return `<span style="font-size:11px;color:#9ca3af;font-style:italic">Unreachable in flow.</span>`;
+  if (displayType === 'needs-redesign') return `<span style="font-size:11px;color:#991b1b;font-style:italic">Cannot translate automatically — see translation log.</span>`;
   if (dslExpression) {
-    const pathLabel = factPath && factPath !== corticonPath
+    const pathLabel = factPath && factPath !== sourcePath
       ? `<div style="font-size:10px;color:#9ca3af;margin-bottom:2px">${esc(factPath)}</div>`
       : '';
     return pathLabel + `<code style="font-size:11px;color:#374151;white-space:pre-wrap;word-break:break-all;font-family:${MONO}">${esc(dslExpression)}</code>`;
@@ -172,17 +191,10 @@ function renderDslSide(attr) {
   return `<span style="color:#d1d5db">—</span>`;
 }
 
-/**
- * Each attribute section starts collapsed — click the header to expand,
- * same pattern as the Graph tab's inline subgraph rows.
- */
 function renderAttributeSection(attr) {
-  const { attribute, corticonPath, datatype, type, notes } = attr;
+  const { attribute, sourcePath, datatype, displayType } = attr;
   const eid = nextEid();
   const datatypeHtml = datatype ? ` <span style="font-size:10px;color:#9ca3af;font-family:${MONO}">${esc(datatype)}</span>` : '';
-  const notesHtml = notes.length
-    ? `<div style="padding:8px 12px;border-top:1px solid #f3f4f6;font-size:11px;color:#6b7280">${notes.map(n => esc(n)).join('<br>')}</div>`
-    : '';
 
   const body = `<div style="display:grid;grid-template-columns:1fr 1fr">
     <div style="padding:10px 12px;border-right:1px solid #f3f4f6">
@@ -193,14 +205,13 @@ function renderAttributeSection(attr) {
       <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9ca3af;margin-bottom:6px">DSL</div>
       ${renderDslSide(attr)}
     </div>
-  </div>
-  ${notesHtml}`;
+  </div>`;
 
   return `<div class="content-item" style="margin-bottom:8px;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;background:white">
   <div data-expand-id="${esc(eid)}" style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:#f8fafc;border-bottom:1px solid #e5e7eb;cursor:pointer">
     <span class="chip-arrow" style="font-size:9px;color:#9ca3af">&#9654;</span>
-    <code style="font-size:12px;font-weight:600;color:#111827;font-family:${MONO}">${esc(attribute || corticonPath)}</code>${datatypeHtml}
-    <span style="margin-left:auto">${badge(type)}</span>
+    <code style="font-size:12px;font-weight:600;color:#111827;font-family:${MONO}">${esc(attribute || sourcePath)}</code>${datatypeHtml}
+    <span style="margin-left:auto">${badge(displayType)}</span>
   </div>
   ${expandHidden(eid, body, 'border:none;border-radius:0;')}
 </div>`;
@@ -225,7 +236,7 @@ function renderAttributeGroups(attributes) {
 
 function summaryBar(attributes) {
   const counts = {};
-  for (const a of attributes) counts[a.type] = (counts[a.type] ?? 0) + 1;
+  for (const a of attributes) counts[a.displayType] = (counts[a.displayType] ?? 0) + 1;
   return Object.entries(TYPE_META)
     .filter(([k]) => counts[k])
     .map(([k, m]) =>
@@ -236,19 +247,18 @@ function summaryBar(attributes) {
 // ── Exportable content builder ────────────────────────────────────────────
 
 /**
- * Builds the crosswalk content grouped by attribute (one section per written
+ * Builds the translation log view grouped by attribute (one section per written
  * attribute, showing Corticon logic and DSL translation side by side).
  * Requires graphPath to use the graph's `writes` map as the attribute index.
  */
-export function buildCrosswalkContent(classifiedPath, crosswalkPath, translatedPath, graphPath) {
+export function buildTranslationLogContent(classifiedPath, blueprintDslPath, graphPath) {
   const { sourceFile, classification } = JSON.parse(readFileSync(classifiedPath, 'utf8'));
   const project = JSON.parse(readFileSync(sourceFile, 'utf8'));
-  const { crosswalk } = JSON.parse(readFileSync(crosswalkPath, 'utf8'));
-  const translated = translatedPath ? JSON.parse(readFileSync(translatedPath, 'utf8')) : null;
+  const { facts, translationLog } = JSON.parse(readFileSync(blueprintDslPath, 'utf8'));
   const graph = graphPath ? JSON.parse(readFileSync(graphPath, 'utf8')) : null;
 
   const factsByPath = {};
-  for (const f of (translated?.facts ?? [])) {
+  for (const f of (facts ?? [])) {
     if (f.path) factsByPath[f.path] = f;
   }
 
@@ -283,7 +293,7 @@ export function buildCrosswalkContent(classifiedPath, crosswalkPath, translatedP
   }
 
   const graphWrites = graph?.writes ?? {};
-  const allAttributes = buildAttributeIndex(graphWrites, orderedSheets, project, crosswalk, factsByPath, unreachable, sheetToNodeName);
+  const allAttributes = buildAttributeIndex(graphWrites, orderedSheets, project, translationLog, factsByPath, unreachable, sheetToNodeName);
   const contentHtml = renderAttributeGroups(allAttributes);
   const summaryBarHtml = summaryBar(allAttributes);
 
@@ -292,13 +302,13 @@ export function buildCrosswalkContent(classifiedPath, crosswalkPath, translatedP
 
 // ── Main render (standalone HTML page) ────────────────────────────────────
 
-function render(classifiedPath, crosswalkPath, translatedPath, graphPath) {
-  const { summaryBarHtml, contentHtml } = buildCrosswalkContent(classifiedPath, crosswalkPath, translatedPath, graphPath);
+function render(classifiedPath, blueprintDslPath, graphPath) {
+  const { summaryBarHtml, contentHtml } = buildTranslationLogContent(classifiedPath, blueprintDslPath, graphPath);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Corticon → DSL translation guide</title>
+<title>Corticon → DSL translation log</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 32px; }
@@ -311,7 +321,7 @@ function render(classifiedPath, crosswalkPath, translatedPath, graphPath) {
 </style>
 </head>
 <body>
-<h1>Corticon → DSL translation guide</h1>
+<h1>Corticon → DSL translation log</h1>
 <p class="sub">One section per written attribute. Click an attribute to expand its Corticon logic and DSL translation.</p>
 <div class="summary">${summaryBarHtml}</div>
 ${contentHtml}
@@ -334,13 +344,12 @@ ${contentHtml}
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = parseCliArgs(process.argv);
   const positional = process.argv.slice(2).filter(a => !a.startsWith('--'));
-  const [classifiedPath, crosswalkPath] = positional;
-  if (!classifiedPath || !crosswalkPath) { printUsage(); process.exit(1); }
+  const [classifiedPath, blueprintDslPath] = positional;
+  if (!classifiedPath || !blueprintDslPath) { printUsage(); process.exit(1); }
 
-  const translatedPath = process.argv.find(a => a.startsWith('--translated='))?.slice('--translated='.length) ?? positional[2] ?? null;
   const graphPath = process.argv.find(a => a.startsWith('--graph='))?.slice('--graph='.length) ?? null;
 
-  const outFile = args.outFile ?? 'generated/crosswalk.html';
-  writeFileSync(outFile, render(classifiedPath, crosswalkPath, translatedPath, graphPath));
-  console.log(`Wrote crosswalk to ${outFile}`);
+  const outFile = args.outFile ?? 'generated/translation-log.html';
+  writeFileSync(outFile, render(classifiedPath, blueprintDslPath, graphPath));
+  console.log(`Wrote translation log to ${outFile}`);
 }

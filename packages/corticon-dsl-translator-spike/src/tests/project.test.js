@@ -4,7 +4,7 @@ import { sep } from 'node:path';
 import { loadProject } from '../sources/corticon/corticon/project.js';
 
 test('loads a whole real project directory by recursively discovering files by extension', () => {
-  const project = loadProject('fixtures/dc-medicaid-chip');
+  const project = loadProject('fixtures/corticon/government/dc-medicaid-chip');
   assert.equal(project.vocabularies.size, 1);
   assert.equal(project.rulesheets.size, 12);
   assert.equal(project.ruleflows.size, 3);
@@ -12,23 +12,23 @@ test('loads a whole real project directory by recursively discovering files by e
 });
 
 test('does not hardcode any fixture-specific path -- works against any project directory given as an argument', () => {
-  const irrProject = loadProject('fixtures/irr');
+  const irrProject = loadProject('fixtures/corticon/vendor-samples/irr');
   assert.equal(irrProject.rulesheets.size, 3);
   assert.equal(irrProject.ruleflows.size, 2);
 
-  const mortgageProject = loadProject('fixtures/mortgage');
+  const mortgageProject = loadProject('fixtures/corticon/vendor-samples/mortgage');
   assert.equal(mortgageProject.rulesheets.size, 2);
 });
 
 test('loads the all-patterns fixture: a hand-authored project combining every classification pattern', () => {
-  const project = loadProject('fixtures/all-patterns');
+  const project = loadProject('fixtures/corticon/synthetic/all-patterns');
   assert.equal(project.vocabularies.size, 1);
   assert.equal(project.rulesheets.size, 21);
   assert.equal(project.ruleflows.size, 5, 'top-level-flow.erf, conditional-branching.erf, enum-branch.erf, iterative-loop.erf, service-callout.erf');
 });
 
 test('confirms both.ert is an empty, never-run testsheet, distinct from the real per-rulesheet Test.ert files', () => {
-  const project = loadProject('fixtures/dc-medicaid-chip');
+  const project = loadProject('fixtures/corticon/government/dc-medicaid-chip');
   const both = project.ruletests.get('both.ert');
   assert.ok(both.every((sheet) => sheet.trace.length === 0), 'both.ert has no captured trace data');
 

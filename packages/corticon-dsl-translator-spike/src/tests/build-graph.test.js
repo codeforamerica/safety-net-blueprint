@@ -5,19 +5,19 @@ import { buildDependencyGraph, findCrossRulesheetAssembly, findCycles } from '..
 
 test('builds every real fixture without error', () => {
   for (const dir of [
-    'fixtures/dc-medicaid-chip',
-    'fixtures/irr',
-    'fixtures/mortgage',
-    'fixtures/servicecallout',
-    'fixtures/branch-reconstruction',
-    'fixtures/all-patterns',
+    'fixtures/corticon/government/dc-medicaid-chip',
+    'fixtures/corticon/vendor-samples/irr',
+    'fixtures/corticon/vendor-samples/mortgage',
+    'fixtures/corticon/vendor-samples/servicecallout',
+    'fixtures/corticon/synthetic/branch-reconstruction',
+    'fixtures/corticon/synthetic/all-patterns',
   ]) {
     assert.doesNotThrow(() => buildDependencyGraph(loadProject(dir)), `should build a graph for ${dir}`);
   }
 });
 
 test('confirms the real cross-rulesheet dependency: Set FPL from Household Size -> MAGI Eligibility Groups', () => {
-  const graph = buildDependencyGraph(loadProject('fixtures/dc-medicaid-chip'));
+  const graph = buildDependencyGraph(loadProject('fixtures/corticon/government/dc-medicaid-chip'));
   assert.ok(
     graph.edges.some((e) => e.from === 'Household.fpl' && e.to === 'Household.ActualPercentFPL'),
     'expected an edge from Household.fpl to Household.ActualPercentFPL'
@@ -25,7 +25,7 @@ test('confirms the real cross-rulesheet dependency: Set FPL from Household Size 
 });
 
 test('confirms the real cross-rulesheet Fact assembly: Person.MedicaidEligible written by Parse Cohorts.ers and Flatten.ers', () => {
-  const graph = buildDependencyGraph(loadProject('fixtures/dc-medicaid-chip'));
+  const graph = buildDependencyGraph(loadProject('fixtures/corticon/government/dc-medicaid-chip'));
   const assembly = findCrossRulesheetAssembly(graph);
   const medicaidEligible = assembly.find((a) => a.path === 'Person.MedicaidEligible');
   assert.ok(medicaidEligible, 'expected Person.MedicaidEligible to be flagged as cross-rulesheet assembly');
@@ -34,7 +34,7 @@ test('confirms the real cross-rulesheet Fact assembly: Person.MedicaidEligible w
 });
 
 test('finds a genuine cycle in IRR: Investment.irr depends on itself across passes', () => {
-  const graph = buildDependencyGraph(loadProject('fixtures/irr'));
+  const graph = buildDependencyGraph(loadProject('fixtures/corticon/vendor-samples/irr'));
   const cycles = findCycles(graph);
   assert.ok(
     cycles.some((c) => c.includes('Investment.irr')),
@@ -50,7 +50,7 @@ test('DC Medicaid/CHIP has no genuine Decision-9-style cycle, despite a structur
   // test exists to document that distinction, not to assert findCycles() returns
   // zero results -- see the comment on findCycles in build-graph.js for why a raw
   // structural cycle isn't automatically a Decision 9 cycle.
-  const graph = buildDependencyGraph(loadProject('fixtures/dc-medicaid-chip'));
+  const graph = buildDependencyGraph(loadProject('fixtures/corticon/government/dc-medicaid-chip'));
   const cycles = findCycles(graph);
   assert.deepEqual(
     cycles.map((c) => c[0]),
@@ -60,7 +60,7 @@ test('DC Medicaid/CHIP has no genuine Decision-9-style cycle, despite a structur
 });
 
 test('finds a genuine null-check-masking self-loop in Mortgage, structurally identical to a cycle but a different pattern', () => {
-  const graph = buildDependencyGraph(loadProject('fixtures/mortgage'));
+  const graph = buildDependencyGraph(loadProject('fixtures/corticon/vendor-samples/mortgage'));
   const cycles = findCycles(graph);
   const lateDaySumAttrs = ['late30DaysSum', 'late60DaysSum', 'late90DaysSum', 'late120DaysSum'];
   for (const attr of lateDaySumAttrs) {
@@ -72,7 +72,7 @@ test('finds a genuine null-check-masking self-loop in Mortgage, structurally ide
 });
 
 test('flags the real Household.PrimaryInsuredId write as entity-creation-tainted, but not Person.age in the same rulesheet', () => {
-  const graph = buildDependencyGraph(loadProject('fixtures/dc-medicaid-chip'));
+  const graph = buildDependencyGraph(loadProject('fixtures/corticon/government/dc-medicaid-chip'));
   const householdWriters = graph.writes.get('Household.PrimaryInsuredId') ?? [];
   assert.ok(householdWriters.some((w) => w.isEntityCreation), 'Household.PrimaryInsuredId is set inside the real Household.newUnique[...] action');
   const ageWriters = graph.writes.get('Person.age') ?? [];
@@ -80,7 +80,7 @@ test('flags the real Household.PrimaryInsuredId write as entity-creation-tainted
 });
 
 test('a self-referencing assignment produces a self-loop edge, not a skipped/degenerate one', () => {
-  const graph = buildDependencyGraph(loadProject('fixtures/irr'));
+  const graph = buildDependencyGraph(loadProject('fixtures/corticon/vendor-samples/irr'));
   const selfLoopEdges = graph.edges.filter((e) => e.from === e.to);
   assert.ok(selfLoopEdges.length > 0, 'self-loop edges must be recorded, not filtered out, for cycle detection to work at all');
 });

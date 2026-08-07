@@ -5,7 +5,7 @@ import { loadProject } from '../sources/corticon/corticon/project.js';
 import { resolveRuleflowContext } from '../sources/corticon/classify/ruleflow-context.js';
 
 test('IRR: rulesheets inside the iterative loop are marked iterative, the setup step is not', () => {
-  const ctx = resolveRuleflowContext(loadProject('fixtures/irr'));
+  const ctx = resolveRuleflowContext(loadProject('fixtures/corticon/vendor-samples/irr'));
   assert.deepEqual(ctx.roots, ['top level flow.erf']);
   assert.equal(ctx.perRulesheet.get('evaluate npv.ers').iterative, true);
   assert.equal(ctx.perRulesheet.get('solve each cashflow.ers').iterative, true);
@@ -15,7 +15,7 @@ test('IRR: rulesheets inside the iterative loop are marked iterative, the setup 
 });
 
 test('DC Medicaid/CHIP: resolves real cross-directory invokes references (both.erf -> subdirectory ruleflows)', () => {
-  const ctx = resolveRuleflowContext(loadProject('fixtures/dc-medicaid-chip'));
+  const ctx = resolveRuleflowContext(loadProject('fixtures/corticon/government/dc-medicaid-chip'));
   assert.deepEqual(ctx.roots, ['both.erf']);
   assert.equal(ctx.perRulesheet.get(join('Medicaid Applicant', 'Citizenship requirements.ers')).invocationCount, 1);
   assert.equal(ctx.perRulesheet.get(join('CHIP rules', 'Calculate_premium.ers')).invocationCount, 1);
@@ -30,12 +30,12 @@ test('DC Medicaid/CHIP: confirms a real unreachable rulesheet -- Non-MAGI Eligib
   // rulesheet by name at all -- not a resolution bug, genuinely dead content. This
   // upgrades "unreachable rulesheet" from a defensive-only check to a real, observed
   // pattern (see issue #388).
-  const ctx = resolveRuleflowContext(loadProject('fixtures/dc-medicaid-chip'));
+  const ctx = resolveRuleflowContext(loadProject('fixtures/corticon/government/dc-medicaid-chip'));
   assert.deepEqual(ctx.unreachable, [join('Medicaid Applicant', 'Non-MAGI Eligibility Groups.ers')]);
 });
 
 test('all-patterns: ruleflow context correctly assigns iterative, branched, and unreachable flags', () => {
-  const ctx = resolveRuleflowContext(loadProject('fixtures/all-patterns'));
+  const ctx = resolveRuleflowContext(loadProject('fixtures/corticon/synthetic/all-patterns'));
   assert.deepEqual(ctx.roots, ['top-level-flow.erf']);
   // iterative-body.ers is inside an iterative loop -- not branched.
   assert.deepEqual(ctx.perRulesheet.get('iterative-body.ers'), { iterative: true, branched: false, invocationCount: 1, firstInvocationOrder: 22 });

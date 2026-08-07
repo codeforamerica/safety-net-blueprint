@@ -4,7 +4,7 @@ import { loadProject } from '../sources/corticon/corticon/project.js';
 import { classifyFilters } from '../sources/corticon/classify/filter-classifier.js';
 
 test('classifies Mortgage\'s real Select_Credit.ers filters, resolving the canonical path each one reads', () => {
-  const project = loadProject('fixtures/mortgage');
+  const project = loadProject('fixtures/corticon/vendor-samples/mortgage');
   const results = classifyFilters(project).filter((r) => r.rulesheet === 'Select_Credit.ers');
   assert.equal(results.length, 2);
   assert.deepEqual(results[0].paths, ['CreditLiability.accountType']);
@@ -13,13 +13,13 @@ test('classifies Mortgage\'s real Select_Credit.ers filters, resolving the canon
 });
 
 test('a rulesheet with no real filters contributes nothing', () => {
-  const project = loadProject('fixtures/dc-medicaid-chip');
+  const project = loadProject('fixtures/corticon/government/dc-medicaid-chip');
   const results = classifyFilters(project).filter((r) => r.rulesheet.includes('Create Household'));
   assert.deepEqual(results, []);
 });
 
 test('surfaces IRR\'s real filter even though it resolves no attribute path -- same term-tree gap expression-patterns.test.js documents for ->sortedBy', () => {
-  const project = loadProject('fixtures/irr');
+  const project = loadProject('fixtures/corticon/vendor-samples/irr');
   const results = classifyFilters(project).filter((r) => r.rulesheet === 'initial values.ers');
   assert.equal(results.length, 1);
   assert.deepEqual(results[0].paths, []);

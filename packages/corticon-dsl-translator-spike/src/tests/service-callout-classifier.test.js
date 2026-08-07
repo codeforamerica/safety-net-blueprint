@@ -4,7 +4,7 @@ import { loadProject } from '../sources/corticon/corticon/project.js';
 import { classifyServiceCallouts } from '../sources/corticon/classify/service-callout-classifier.js';
 
 test('classifies the real service call-out in corticon.js-samples\' ServiceCallOut/RESTCall/Fetch.erf', () => {
-  const project = loadProject('fixtures/servicecallout');
+  const project = loadProject('fixtures/corticon/vendor-samples/servicecallout');
   const results = classifyServiceCallouts(project);
   assert.equal(results.length, 1);
   assert.equal(results[0].node, 'fetch');
@@ -12,7 +12,7 @@ test('classifies the real service call-out in corticon.js-samples\' ServiceCallO
 });
 
 test('classifies this fixture\'s own VerifyIncome call-out in service-callout.erf', () => {
-  const project = loadProject('fixtures/all-patterns');
+  const project = loadProject('fixtures/corticon/synthetic/all-patterns');
   const results = classifyServiceCallouts(project).filter((r) => r.ruleflow === 'service-callout.erf');
   assert.equal(results.length, 1);
   assert.equal(results[0].node, 'VerifyIncome');
@@ -20,6 +20,6 @@ test('classifies this fixture\'s own VerifyIncome call-out in service-callout.er
 });
 
 test('a project with no connectorList contributes nothing', () => {
-  const project = loadProject('fixtures/irr');
+  const project = loadProject('fixtures/corticon/vendor-samples/irr');
   assert.deepEqual(classifyServiceCallouts(project), []);
 });

@@ -42,7 +42,7 @@ function extractFilters(rulesheetViewList) {
  * Formats a rule's conditions and actions as a plain-text IF/THEN string.
  * Multiple conditions are joined with AND (each parenthesized). When there are
  * no conditions the actions are returned without a leading "THEN". Shared by
- * visualize-rules.js (SVG box text) and visualize-crosswalk.js (HTML cell) so
+ * visualize-rules.js (SVG box text) and visualize-translation-log.js (HTML cell) so
  * both show the same logical representation.
  *
  * Returns { conditionText, actionTexts } so callers can lay them out differently
@@ -87,7 +87,7 @@ function refIndex(ref) {
 
 // `overrides`/`overriddenBy` are space-separated lists of the same EMF ref shape
 // (unlike the single-ref `documentingRuleStatements`) -- confirmed real in
-// fixtures/irr/evaluate npv.ers, e.g. overrides="#//@ruleset/@rules.1
+// fixtures/corticon/vendor-samples/irr/evaluate npv.ers, e.g. overrides="#//@ruleset/@rules.1
 // #//@ruleset/@rules.2 #//@ruleset/@rules.4".
 function refIndexList(ref) {
   return (ref ?? '').split(/\s+/).filter(Boolean).map(refIndex);
@@ -160,7 +160,7 @@ export function parseRulesheet(filePath) {
     // conflict checker enforces mutual exclusivity between rows at design time.
     // When two rows really can both match, the rule author sets an explicit
     // priority between them via Studio's own "Overrides row" UI, recorded here as
-    // a real, per-rule attribute -- confirmed in fixtures/irr/evaluate npv.ers
+    // a real, per-rule attribute -- confirmed in fixtures/corticon/vendor-samples/irr/evaluate npv.ers
     // (rules 1 and 2 are both overridden by rules 3 and 4; rules 3 and 4 in turn
     // list EACH OTHER in both overrides and overriddenBy -- a real, if unintuitive,
     // mutual relationship in the source XML, not a strict priority chain and not a

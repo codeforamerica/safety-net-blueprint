@@ -107,7 +107,7 @@ function findActionForPath(rule, path) {
 // real rule (`Person.MedicaidEligible = T`) that does NOT reference `cohorts` at all
 // -- yet the filter still gates it, because both share the rulesheet's own Person
 // scope. An earlier version of this file ignored filters entirely when compiling
-// guards, surfacing them only as an informational crosswalk note -- which produced a
+// guards, surfacing them only as an informational translation log note -- which produced a
 // real, silently wrong compilation: that rule looked unconditional (`hasFallback:
 // true`) when it's actually gated by the filter. Multiple filters on one rulesheet
 // are AND-ed together, matching Select_Credit.ers's real two-filter case (both
@@ -224,7 +224,7 @@ function hasOutOfOrderUnconditional(entries) {
  * a hit-policy attribute on `<rulesheetViewList>`/`<ruleset>` and found none -- this
  * translator has no way to detect which hit policy a given rulesheet was authored
  * with, because Corticon's own file format doesn't appear to expose it. Since this
- * can't be resolved from the data, it's surfaced as an explicit crosswalk annotation
+ * can't be resolved from the data, it's surfaced as an explicit translation log annotation
  * on every multi-row Fact (see the caller in buildFacts), not left as a comment only
  * a source-reader would see.
  */
@@ -284,7 +284,7 @@ function compileAcrossRulesheets(rulesheetKeys, entriesByRulesheet, initialFallb
  * Compiles a whole classified project into two things: a COMPLETE set of decision-rules
  * DSL Fact declarations (every real Vocabulary attribute becomes either a Fact with an
  * expression:, or a plain Writable Fact for a pure input that carries no expression
- * -- see enumerateVocabularyAttributes) and a COMPLETE Vocabulary<->Fact crosswalk (one
+ * -- see enumerateVocabularyAttributes) and a COMPLETE Vocabulary<->Fact translation log (one
  * `ordinary-*` row per attribute, plus additional rows for anything flagged as an
  * orchestration-layer concern, a genuine cycle, or otherwise not translatable into a
  * Fact at all). Takes the engine's own `parseExpression` as a dependency (see
@@ -350,16 +350,16 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
   const translationLog = [];
 
   // classification.entityCreation is the complete, authoritative source for
-  // entity-creation crosswalk entries -- reported directly and unconditionally here,
+  // entity-creation translation log entries -- reported directly and unconditionally here,
   // not derived from graph.writes. An earlier version of this function only pushed
-  // an entity-creation crosswalk entry from inside the per-path loop below, keyed off
+  // an entity-creation translation log entry from inside the per-path loop below, keyed off
   // whatever graph.writes happened to enumerate -- but a real association-mutation
   // action (`Person.cohort += Cohort.newUnique[...]`, confirmed real in DC Medicaid's
   // MAGI Eligibility Groups.ers) has no resolvable scalar ATTRIBUTE term at all, so it
   // never becomes a graph.writes entry (the same real gap entity-creation-classifier.js's
   // own comment documents for why it scans rulesheets directly instead of the graph).
   // That meant this real, correctly-classified finding was silently missing from the
-  // crosswalk output entirely -- not flagged, not thrown, just absent. Fixed by making
+  // translation log output entirely -- not flagged, not thrown, just absent. Fixed by making
   // this list itself the source of truth, so completeness doesn't depend on whether
   // graph.writes happens to enumerate a matching path.
   //
@@ -402,23 +402,25 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
         sourcePath: entry.associationPath,
         factPath: assocFactPath,
         ruleId: entry.ruleId,
-        pattern: 'entity-creation-output',
+        pattern: 'constructor-output',
+        role: 'output',
+        translated: false,
         entityType: entry.entityType,
-        note: 'Collection output -- instances are constructed by this rule and should appear in the response body. DSL collection expression not yet settled; see corticonExpression for the source logic.',
       });
     } else {
       translationLog.push({
         ruleId: entry.ruleId,
-        pattern: 'entity-creation-input',
+        pattern: 'constructor-input',
+        role: 'input',
+        translated: false,
         entityType: entry.entityType,
-        variant: entry.variant ?? 'input',
-        note: 'Orchestration-layer concern (caller-contract) -- the caller pre-assembles these entity instances before invoking the graph.',
+        suggestedName: entry.entityType,
       });
     }
   }
 
   for (const entry of (classification.noOps ?? [])) {
-    translationLog.push({ ruleId: entry.ruleId, pattern: 'no-op', note: 'No actions -- produces no writes and no Fact derivations. Often used as a label/documentation column in Corticon Studio.' });
+    translationLog.push({ ruleId: entry.ruleId, pattern: 'no-op', role: 'excluded', translated: false });
   }
 
   // Same "report directly from classification, don't rely on graph.writes
@@ -432,7 +434,7 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
   // unconditionally; excluded from ordinaryWriters below the same way entity-creation
   // writers are.
   for (const rulesheetKey of unreachableRulesheets) {
-    translationLog.push({ rulesheet: rulesheetKey, ruleId: rulesheetKey, pattern: 'unreachable-rulesheet', note: 'Never invoked by any real Ruleflow node -- dead content, excluded entirely from Fact compilation.' });
+    translationLog.push({ ruleId: rulesheetKey, pattern: 'unreachable', role: 'excluded', translated: false });
   }
 
   // Same reasoning again: classification.expressionPatterns (date arithmetic,
@@ -448,9 +450,10 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
     translationLog.push({
       ruleId: p.ruleId,
       pattern: 'expression-pattern',
+      role: 'derived',
+      translated: true,
       patternKind: p.kind,
       expression: p.expression,
-      note: 'Translated via a PROPOSED custom CEL function, not yet settled in decision-rules-dsl.md\'s Decision 4 -- see to-cel.js and translation-patterns.yaml for the real evidence behind this specific mapping.',
     });
   }
 
@@ -460,8 +463,10 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
   for (const entry of classificationInput.ruleflowContext.multiInvokedRulesheets) {
     translationLog.push({
       ruleId: entry.ruleId,
-      pattern: 'multi-invoked-disagreeing-context',
-      note: 'Reached from more than one place in the project with disagreeing iterative/branched context -- not yet observed in any real fixture. Self-loop/cycle classification for this rulesheet was resolved by combining contexts with OR (favoring a possible false positive over a missed genuine cycle); worth manual review if this ever fires for real.',
+      pattern: 'context-conflict',
+      role: 'derived',
+      translated: false,
+      contexts: entry.contexts,
     });
   }
 
@@ -470,20 +475,20 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
       const { collectionEntity, collectionField } = collectionAccumulationByPath.get(path);
       const factPath = factPathFromCanonicalPath(path);
       facts.push({ path: factPath, expression: `sum(${collectionEntity}, '${collectionField}')` });
-      translationLog.push({ sourcePath: path, factPath, pattern: 'collection-accumulation', note: `Corticon iterative accumulation -- translated to sum(${collectionEntity}, '${collectionField}').` });
+      translationLog.push({ sourcePath: path, factPath, pattern: 'aggregation', role: 'derived', translated: true, collectionEntity, collectionField });
       continue;
     }
     if (genuineCyclePaths.has(path)) {
-      translationLog.push({ path, pattern: 'genuine-cycle', note: 'Flagged for manual redesign -- reverse-chaining cannot express this as a single backward derivation.' });
+      translationLog.push({ sourcePath: path, pattern: 'cycle', role: 'derived', translated: false });
       continue;
     }
     if (unclassifiedCyclePaths.has(path)) {
-      translationLog.push({ path, pattern: 'unclassified-multi-hop-cycle', note: 'A multi-node cycle not confirmed genuine or safe -- needs manual review before translating.' });
+      translationLog.push({ sourcePath: path, pattern: 'cycle-unclassified', role: 'derived', translated: false });
       continue;
     }
 
     // Entity-creation-tainted and unreachable-rulesheet writers never become part of
-    // an ordinary Fact expression -- both already got their OWN crosswalk entry
+    // an ordinary Fact expression -- both already got their OWN translation log entry
     // pushed above, from classification directly; this loop only needs to exclude
     // them here. But that per-rule/per-rulesheet entry only says "this rule/
     // rulesheet is entity-creation/unreachable" -- it says nothing about what
@@ -511,18 +516,21 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
         translationLog.push({
           sourcePath: path,
           factPath: assocFactPath,
-          pattern: 'entity-creation-output',
+          pattern: 'constructor-output',
+          role: 'output',
+          translated: false,
           ref: assocFactPath,
           entityType: ecOutputEntry.entityType,
-          note: `Attribute of ${ecOutputEntry.entityType} instances in collection output ${ecOutputEntry.associationPath} -- the full creation logic is in the collection fact.`,
         });
         continue;
       }
-      const excludedRulesheets = [...new Set(writers.map((w) => w.rulesheet))];
+      const excludedRuleIds = [...new Set(writers.map((w) => w.rulesheet))];
       translationLog.push({
-        path,
-        pattern: 'no-ordinary-writer',
-        note: `Every real writer of this path (${excludedRulesheets.join(', ')}) was excluded as entity-creation and/or an unreachable rulesheet -- no Fact could be compiled for it at all. Needs manual review.`,
+        sourcePath: path,
+        pattern: 'no-writer',
+        role: 'derived',
+        translated: false,
+        excludedRuleIds,
       });
       continue;
     }
@@ -543,8 +551,10 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
     if (maskingWriters.length > 1) {
       translationLog.push({
         sourcePath: path,
-        pattern: 'null-guard-decision-table',
-        note: `${maskingWriters.length} rows each guard on "${path} = null" to prevent re-firing in Corticon forward-chaining. Compiled as a regular decision table; null-guard condition appears in each branch's CEL.`,
+        pattern: 'null-guard-table',
+        role: 'derived',
+        translated: true,
+        rowCount: maskingWriters.length,
       });
       // Fall through: maskingWriters are already included in ordinaryWriters and will
       // be compiled by the decision-table path below. No continue.
@@ -561,8 +571,8 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
       if (!action) throw new Error(`No action in ${maskingWriter.rulesheet}'s rule ${maskingWriter.ruleIndex} actually writes "${path}" -- graph/classification and the real rule data have gone out of sync`);
       maskingFallbackCel = compileActionCel(action, parseExpression);
       const factPath = factPathFromCanonicalPath(path);
-      translationLog.push({ sourcePath: path, factPath, pattern: 'null-default-fallback', note: 'Null-check masking -- the null-check condition is a Corticon forward-chaining re-fire guard, redundant in reverse-chaining. Its value is the final fallback for this expression.' });
-      translationLog.push({ rulesheet: maskingWriter.rulesheet, ruleIndex: maskingWriter.ruleIndex, ruleId: `${maskingWriter.rulesheet}:${maskingWriter.ruleIndex}`, sourcePath: path, factPath, pattern: 'null-default', note: 'Null-check masking -- compiled as the final fallback of this expression.' });
+      translationLog.push({ sourcePath: path, factPath, pattern: 'null-guard-fallback', role: 'derived', translated: true });
+      translationLog.push({ ruleId: `${maskingWriter.rulesheet}:${maskingWriter.ruleIndex}`, sourcePath: path, factPath, pattern: 'null-guard-default', role: 'input', translated: true });
     }
 
     // Exclude the single masking writer from main compilation -- its CEL is the fallback.
@@ -598,16 +608,18 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
       const ruleIndices = compilationWriters.filter((w) => w.rulesheet === rulesheetKey).map((w) => w.ruleIndex);
       const combinatoricRuleIndices = combinatoricsByPathRulesheet.get(`${path}|${rulesheetKey}`);
       if (combinatoricRuleIndices) {
-        // Surfaced in the actual crosswalk output, not just a source comment -- see
+        // Surfaced in the actual translation log output, not just a source comment -- see
         // compileRulesheetEntries's own doc comment for the real, cited reasoning
         // (Corticon's default UNIQUE hit policy) and the real, confirmed gap (Rule
         // Order hit policy isn't detectable from the file format at all).
         translationLog.push({
-          path,
-          rulesheet: rulesheetKey,
+          sourcePath: path,
+          ruleId: rulesheetKey,
           ruleIndices: combinatoricRuleIndices,
           pattern: 'hit-policy-unverified',
-          note: 'Compiled assuming Corticon\'s default UNIQUE hit policy (rows are mutually exclusive, so row order does not affect the result). Corticon\'s file format has no hit-policy attribute to check -- if this rulesheet was authored with "Rule Order" hit policy instead (multiple overlapping rows all fire), this compiled expression may be wrong. Needs manual confirmation against the original Corticon Studio project.',
+          role: 'derived',
+          translated: true,
+          assumption: 'unique-hit-policy',
         });
       }
       const rulesheetEntries = compileRulesheetEntries(rulesheetKey, rulesheet, combinatoricRuleIndices ?? ruleIndices, path, parseExpression);
@@ -621,10 +633,11 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
         // specific out-of-order shape, unlike the far more common "unconditional row
         // last" case -- flagged for manual review, not assumed silently equivalent.
         translationLog.push({
-          path,
-          rulesheet: rulesheetKey,
+          sourcePath: path,
+          ruleId: rulesheetKey,
           pattern: 'unconditional-row-out-of-order',
-          note: 'This rulesheet\'s unconditional/default row is not last in document order. Compiled by treating it as the fallback regardless of position -- but this exact shape has no confirmed golden-master trace proving that matches Corticon\'s real semantics. Needs manual confirmation against the original Corticon Studio project.',
+          role: 'derived',
+          translated: true,
         });
       }
       entriesByRulesheet.set(rulesheetKey, rulesheetEntries);
@@ -640,9 +653,14 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
       // found. Surfaced explicitly rather than silently compiling against a shrunk
       // set without saying so.
       translationLog.push({
-        path,
-        pattern: 'assembly-rulesheet-mismatch',
-        note: `Classification found ${assemblyRulesheets.length} assembling rulesheets (${assemblyRulesheets.join(', ')}) but only ${rulesheetKeysInOrder.length} (${rulesheetKeysInOrder.join(', ')}) remain after excluding entity-creation-tainted and/or unreachable-rulesheet writers. Needs manual review.`,
+        sourcePath: path,
+        pattern: 'composition-mismatch',
+        role: 'derived',
+        translated: true,
+        expectedCount: assemblyRulesheets.length,
+        actualCount: rulesheetKeysInOrder.length,
+        expectedRuleIds: assemblyRulesheets,
+        actualRuleIds: rulesheetKeysInOrder,
       });
     }
 
@@ -654,11 +672,11 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
     // fallback provides a catch-all -- if a masking fallback exists it always covers
     // the unmatched case.
     if (!hasFallback && maskingFallbackCel === null) {
-      translationLog.push({ path, pattern: 'no-fallback-row', note: 'No unconditional row covers every case -- the compiled expression calls a proposed unresolved() sentinel where Corticon would have simply left the value unchanged. Needs manual review.' });
+      translationLog.push({ sourcePath: path, pattern: 'no-default', role: 'derived', translated: true, sentinel: 'unresolved()' });
     }
     const factPath = factPathFromCanonicalPath(path);
     facts.push({ path: factPath, expression: cel });
-    translationLog.push({ sourcePath: path, factPath, pattern: 'ordinary-expression' });
+    translationLog.push({ sourcePath: path, factPath, pattern: 'derived' });
   }
 
   // The main loop above only ever walks graph.writes -- every Vocabulary attribute
@@ -672,7 +690,7 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
     const factPath = factPathFromCanonicalPath(path);
     const datatype = vocabDatatypeByPath.get(path);
     facts.push({ path: factPath, writable: true, ...(datatype ? { datatype } : {}) });
-    translationLog.push({ sourcePath: path, factPath, pattern: 'ordinary-writable-input', note: 'Pure input -- no rule in this project ever writes it.' });
+    translationLog.push({ sourcePath: path, factPath, pattern: 'input', role: 'input', translated: true });
   }
 
   for (const filter of classification.filters) {
@@ -681,10 +699,10 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
     // full-vs-limiting cascade behavior (does an empty-after-filter collection
     // exclude the whole parent entity, not just the filtered alias?) still isn't
     // resolvable from static file inspection (issue #388's own flagged open item).
-    translationLog.push({ ruleId: filter.ruleId, pattern: 'collection-filter', expression: filter.expression, note: 'Scope/Alias/Filter -- the filter condition is folded into every Fact this rulesheet compiles, but the full-vs-limiting cascade behavior (does an empty-after-filter collection exclude the whole parent entity, not just this alias?) is not resolvable from static file inspection (issue #388).' });
+    translationLog.push({ ruleId: filter.ruleId, pattern: 'guard', role: 'modifier', translated: true, expression: filter.expression });
   }
   for (const callout of classification.serviceCallouts) {
-    translationLog.push({ ruleflow: callout.ruleflow, node: callout.node, pattern: 'service-callout', connector: callout.connector, note: 'Orchestration/adapter-layer concern -- a side-effecting external call, not a Fact derivation.' });
+    translationLog.push({ ruleId: callout.ruleflow, node: callout.node, pattern: 'call-procedure', role: 'input', translated: false, connector: callout.connector });
   }
 
   return { facts, translationLog };

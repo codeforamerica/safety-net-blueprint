@@ -4,7 +4,7 @@ import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseRuletest } from '../sources/corticon/corticon/ruletest.js';
 
-const MEDICAID_APPLICANT_TEST = 'fixtures/dc-medicaid-chip/Medicaid Applicant/Test.ert';
+const MEDICAID_APPLICANT_TEST = 'fixtures/corticon/government/dc-medicaid-chip/Medicaid Applicant/Test.ert';
 
 function findFiles(dir, extension) {
   const results = [];
@@ -17,7 +17,7 @@ function findFiles(dir, extension) {
 }
 
 test('parses every real .ert fixture without error', () => {
-  for (const dir of ['fixtures/dc-medicaid-chip', 'fixtures/irr', 'fixtures/mortgage']) {
+  for (const dir of ['fixtures/corticon/government/dc-medicaid-chip', 'fixtures/corticon/vendor-samples/irr', 'fixtures/corticon/vendor-samples/mortgage']) {
     for (const file of findFiles(dir, '.ert')) {
       assert.doesNotThrow(() => parseRuletest(file), `should parse ${file}`);
     }

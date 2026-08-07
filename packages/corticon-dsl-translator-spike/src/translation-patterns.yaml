@@ -1,0 +1,317 @@
+# Translation patterns
+#
+# A universal catalog of patterns that arise when translating from any rule
+# source language into a declarative, dependency-graph-based target language.
+# These patterns are defined in terms of compiler and logic concepts — not
+# specific to any rule engine or source format.
+#
+# Every top-level key is a pattern name that maps to a `pattern` value emitted
+# in the translation log. Source-specific classify modules detect which patterns
+# apply to each rule; the universal translate step handles them by name.
+#
+# Fields:
+#   description   - what the pattern is (language-agnostic)
+#   example       - a representative CEL snippet showing the compiled output
+#   type-of       - the parent pattern this is a specialization of (optional)
+#   source-model  - imperative, if this pattern is an artifact of forward-chaining
+#                   stateful execution and would not appear in a declarative source
+
+# ── Core fact kinds ───────────────────────────────────────────────────────────
+
+input:
+  description: >
+    A fact supplied by the caller before invocation. No rule in the source
+    derives its value — it is a pure input to the graph.
+  example: "# no compiled expression; fact is marked writable"
+
+input-default:
+  description: >
+    An input fact with a known default value. The caller may supply a value;
+    the default is used when none is provided.
+  example: "# fact is marked writable with placeholder: 80"
+  type-of: input
+
+input-discriminated:
+  description: >
+    An input fact parameterized by a discriminator key, expanding to one
+    concrete input fact per discriminator value. A single source declaration
+    becomes multiple facts in the compiled output.
+  example: "# expands to: person.hours_of_activity_work, person.hours_of_activity_education, ..."
+  type-of: input
+
+derived:
+  description: >
+    A fact whose value is computed from other facts by a rule in the source.
+    Compiled to an expression in the target language.
+  example: "person.age >= 18 && person.income > 0"
+
+# ── Computation patterns ──────────────────────────────────────────────────────
+
+decision-table:
+  description: >
+    A set of condition/action rows where each row maps a combination of input
+    conditions to output values. Compiles to a chained conditional expression
+    with one branch per row.
+  example: "income < 1000 ? 'low' : income < 5000 ? 'medium' : 'high'"
+
+conditional:
+  description: >
+    A rule whose output depends on a boolean condition. Compiles to an
+    if/then/else expression.
+  example: "enrolled_in_education ? education_hours : 0"
+
+composition:
+  description: >
+    A single fact whose value is assembled from multiple contributing rule
+    groups, each covering different conditions. The groups are merged into
+    one expression ordered by rule invocation priority.
+  example: "citizenship_check ? eligible : income_check ? eligible : false"
+
+aggregation:
+  description: >
+    A fact whose value is computed by folding over a collection — summing,
+    counting, or otherwise reducing multiple values into one.
+  example: "sum(household_members, 'income')"
+
+guard:
+  description: >
+    A predicate that scopes which entity instances subsequent rules apply to.
+    The guard condition is folded into the compiled expression of every fact
+    derived within that scope.
+  example: "size(cohorts) != 0 && person.medicaid_eligible"
+
+quantifier:
+  description: >
+    A universal (∀) or existential (∃) predicate over a collection. True when
+    all or at least one element satisfies the predicate condition.
+  example: "members.all(m, m.age >= 18)"
+
+membership-test:
+  description: >
+    A test of whether a value belongs to a set. The set may be expressed as
+    a range, a list, or an enumeration of values.
+  example: "age >= 18 && age <= 64"
+
+membership-test-range:
+  description: >
+    A membership test against a numeric range with inclusive or exclusive bounds.
+  example: "fpl >= 220.0 && fpl < 250.0"
+  type-of: membership-test
+
+membership-test-list:
+  description: >
+    A membership test against a delimited string or explicit list of values.
+  example: "county_list.contains(home_county)"
+  type-of: membership-test
+
+constructor:
+  description: >
+    A rule that creates new instances of a structured type. Two variants based
+    on whether the created instances are read by downstream rules or only
+    appear in the output.
+
+constructor-input:
+  description: >
+    A constructor whose created instances are read by downstream rules. The
+    caller pre-assembles the instances before invoking the graph.
+  example: "# no compiled expression; instances are caller-supplied input"
+  type-of: constructor
+
+constructor-output:
+  description: >
+    A constructor whose created instances are only written, never read
+    downstream. The instances appear in the response output.
+  example: "# fact compiled with guard and output shape from creation logic"
+  type-of: constructor
+
+# ── External calls ────────────────────────────────────────────────────────────
+
+call:
+  description: >
+    A call from within a rule to an external unit the translator cannot
+    inspect directly.
+
+call-function:
+  description: >
+    A call to a pure, deterministic external function — same inputs always
+    produce the same output with no side effects. Translates to a named
+    DSL function in the target language.
+  example: "yearsBetween(person.dob, today())"
+  type-of: call
+
+call-procedure:
+  description: >
+    A call to a stateful external procedure with side effects or external
+    state access. The result is injected as a graph input by the caller.
+  example: "# no compiled expression; result is caller-supplied input"
+  type-of: call
+
+call-opaque:
+  description: >
+    A call to an external unit where purity cannot be determined from the
+    source alone. Requires inspecting the external implementation to classify
+    as call-function or call-procedure.
+  example: "# emits placeholder: __ext_ClassName_method(args)"
+  type-of: call
+
+# ── Iteration ─────────────────────────────────────────────────────────────────
+
+fixpoint:
+  description: >
+    A computation that repeats until its output equals its input — convergence
+    to a fixed point. The caller runs the iteration externally and supplies
+    the converged value as a graph input.
+  example: "# no compiled expression; converged value is caller-supplied input"
+
+# ── Expression-level patterns ─────────────────────────────────────────────────
+
+operator-precedence:
+  description: >
+    The source language's operator binding order differs from the target
+    language's. Correct compilation requires explicit parenthesization to
+    preserve source semantics in the target expression.
+  example: "(a + b) * c"
+
+logical-operators:
+  description: >
+    Logical AND, OR, NOT operators in the source language mapped to their
+    equivalents in the target language, which may use different spellings
+    or symbols.
+  example: "age >= 18 && income > 0 || has_exemption"
+
+coercion:
+  description: >
+    A type conversion from one data type to another. The source and target
+    languages may express this differently.
+  example: "string(person.client_id)"
+
+date-arithmetic:
+  description: >
+    Arithmetic on date or datetime values — adding or subtracting periods,
+    computing differences between dates. Typically requires DSL functions
+    with no direct operator equivalent in the target language.
+  example: "yearsBetween(person.dob, today()) >= 18"
+
+rounding:
+  description: >
+    Rounding a numeric value to a specified number of decimal places.
+  example: "round(household.fpl, 2)"
+
+sort:
+  description: >
+    Ordering a collection by a key expression.
+  example: "nthByKey(liabilities, 'balance', 1)"
+
+sort-rank:
+  description: >
+    Selecting the nth-ranked element from an ordered collection.
+  example: "nthByKey(liabilities, 'balance', 2)"
+  type-of: sort
+
+# ── Diagnostics ───────────────────────────────────────────────────────────────
+
+cycle:
+  description: >
+    A dependency cycle: a fact whose derivation depends on itself directly
+    or through a chain of other facts. Cannot be compiled to a declarative
+    expression without manual redesign.
+
+cycle-unclassified:
+  description: >
+    A multi-hop dependency cycle (A → B → … → A) that cannot be automatically
+    classified as intentional or erroneous. Requires manual investigation
+    before translating.
+  type-of: cycle
+
+context-conflict:
+  description: >
+    A rule or rule group reachable via multiple execution paths that disagree
+    on execution context — for example, one path treats it as iterative and
+    another does not. Resolved conservatively; requires manual review.
+
+composition-mismatch:
+  description: >
+    Fewer rule sources contributed to a composed fact than static analysis
+    predicted — some were excluded during compilation. Requires manual
+    confirmation that excluded sources were genuinely non-contributing.
+  type-of: composition
+
+unreachable:
+  description: >
+    A rule or rule group that is never invoked by any execution path in the
+    source. Its output is excluded from fact compilation.
+
+no-op:
+  description: >
+    A rule with conditions but no actions. Evaluates its conditions but
+    produces no writes and therefore no fact derivations.
+
+no-writer:
+  description: >
+    A fact path that no rule in the source writes. Every potential writer was
+    excluded from compilation. Compiled as a plain input fact if no other
+    explanation applies; otherwise flagged for manual review.
+
+no-default:
+  description: >
+    A conditional expression with no unconditional catch-all branch. The
+    compiled expression is undefined when no condition matches.
+  example: "income < 1000 ? 'low' : income < 5000 ? 'medium' : unresolved()"
+
+# ── Imperative patterns ───────────────────────────────────────────────────────
+#
+# These patterns are artifacts of forward-chaining stateful execution and would
+# not appear in a purely declarative source. They arise because rules in an
+# imperative engine can fire multiple times and mutate shared state.
+
+null-guard:
+  description: >
+    A rule that checks whether a value is null before assigning it. In a
+    forward-chaining engine this prevents re-firing once a value is set.
+    Redundant in a declarative target where facts are derived, not mutated.
+  example: "x == null ? default_value : x"
+  source-model: imperative
+
+null-guard-default:
+  description: >
+    A null-guard that is the sole writer of a fact path. Produces a writable
+    fact with a default value rather than a derived expression.
+  example: "# fact is marked writable with placeholder: federal_minimum_wage"
+  type-of: null-guard
+  source-model: imperative
+
+null-guard-fallback:
+  description: >
+    A null-guard that exists alongside other writers of the same fact path.
+    Its value becomes the final fallback branch of the compiled conditional
+    expression.
+  example: "condition_a ? value_a : condition_b ? value_b : default_value"
+  type-of: null-guard
+  source-model: imperative
+
+null-guard-table:
+  description: >
+    A decision table where every row guards on the target attribute being null.
+    The null-guard condition is an imperative re-fire guard and is retained
+    in each compiled branch.
+  example: "x == null && condition_a ? value_a : x == null && condition_b ? value_b : x"
+  type-of: null-guard
+  source-model: imperative
+
+scalar-accumulator:
+  description: >
+    A rule that uses += to accumulate a running total into a scalar attribute
+    across multiple entity-scoped firings. In a forward-chaining engine this
+    fires once per matching entity instance. Translates to a collection
+    aggregation in a declarative target.
+  example: "sum(program_members, 'benefit_amount')"
+  source-model: imperative
+
+hit-policy-unverified:
+  description: >
+    A decision table whose hit policy — which rows fire when multiple rows
+    match — cannot be determined from the source alone. Compiled assuming
+    mutually exclusive rows; requires manual confirmation.
+  example: "condition_a ? value_a : condition_b ? value_b : unresolved()"
+  type-of: decision-table
+  source-model: imperative
