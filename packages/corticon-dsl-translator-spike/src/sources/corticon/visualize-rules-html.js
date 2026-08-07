@@ -62,6 +62,9 @@ function renderVocabularyTab(projectPath) {
 
   if (!byEntity.size) return '<p style="color:#9ca3af;font-size:12px">No attributes found.</p>';
 
+  const vocabLabels = Object.keys(project.vocabularies ?? {}).map(f => basename(f)).join(', ');
+  const vocabHeader = vocabLabels ? `<h3 style="font-size:13px;font-weight:700;color:#111827;margin-bottom:12px;padding-bottom:5px;border-bottom:1px solid #e5e7eb">${esc(vocabLabels)}</h3>` : '';
+
   const entityHtml = [...byEntity.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([entityName, attrs]) => {
     const rows = [...attrs.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([attrName, typeName]) => {
       return `<tr style="border-bottom:1px solid #f3f4f6">
@@ -75,7 +78,7 @@ function renderVocabularyTab(projectPath) {
     </div>`;
   }).join('');
 
-  return `<div style="columns:3 280px;column-gap:32px">${entityHtml}</div>`;
+  return `${vocabHeader}<div style="columns:3 280px;column-gap:32px">${entityHtml}</div>`;
 }
 
 // ── Main render ─────────────────────────────────────────────────────────────
