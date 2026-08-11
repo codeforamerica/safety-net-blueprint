@@ -288,15 +288,19 @@ function pathSegments(node) {
   throw new Error(`Cannot derive a Fact path from this expression shape: ${JSON.stringify(node)}`);
 }
 
-/** Renders a "EntityType.attribute" canonical attribute path string (see graph/attribute-path.js) as a decision-rules DSL Fact path, e.g. "Household.fpl110" -> "/household/fpl110". */
-export function factPathFromCanonicalPath(path) {
+/** Renders a "EntityType.attribute" canonical attribute path string (see graph/attribute-path.js) as a decision-rules DSL Fact path, e.g. "Household.fpl110" -> "household.fpl110". */
+export function factPathFromCanonicalPath(path, domain, graphName) {
   const [entity, ...rest] = path.split('.');
-  return `/${[lowerFirst(entity), ...rest].join('/')}`;
+  const localPath = [lowerFirst(entity), ...rest].join('.');
+  if (domain && graphName) return `/${domain}/${graphName}/${localPath}`;
+  return localPath;
 }
 
-/** Renders a Member/Identifier chain as a decision-rules DSL Fact path, e.g. Household.fpl110 -> "/household/fpl110". */
-export function factPathOf(node) {
-  return `/${pathSegments(node).join('/')}`;
+/** Renders a Member/Identifier chain as a decision-rules DSL Fact path, e.g. Household.fpl110 -> "household.fpl110". */
+export function factPathOf(node, domain, graphName) {
+  const localPath = pathSegments(node).join('.');
+  if (domain && graphName) return `/${domain}/${graphName}/${localPath}`;
+  return localPath;
 }
 
 /**
@@ -306,12 +310,12 @@ export function factPathOf(node) {
  * returns either `{ targetPath, cel }` for an assignment, or `{ cel }` for a bare
  * boolean/value expression with no assignment target.
  */
-export function toCelStatement(node, { isAssignment }) {
+export function toCelStatement(node, { isAssignment, domain, graphName } = {}) {
   if (node.type === 'Assignment') {
-    return { targetPath: factPathOf(node.target), cel: toCel(node.value) };
+    return { targetPath: factPathOf(node.target, domain, graphName), cel: toCel(node.value) };
   }
   if (isAssignment && node.type === 'BinaryOp' && node.operator === '=') {
-    return { targetPath: factPathOf(node.left), cel: toCel(node.right) };
+    return { targetPath: factPathOf(node.left, domain, graphName), cel: toCel(node.right) };
   }
   return { cel: toCel(node) };
 }

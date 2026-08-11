@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { posix as posixPath } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isBlankTemplateRule, formatRuleText } from './corticon/rulesheet.js';
+import { isBlankTemplateRule, formatRuleText } from './rulesheet.js';
 import { resolveRuleflowContext } from './classify/ruleflow-context.js';
 import { classifyAttributeUsage } from './classify/attribute-usage-classifier.js';
 import { entriesOf } from '../../map-utils.js';
@@ -101,96 +101,66 @@ function resolveInvokes(invokes, fromKey, ruleflowKeys, rulesheetKeys) {
 }
 
 /**
- * Builds two lookup maps from a classification result:
- * - rulesheetPatterns: rulesheet key -> string[] of structural patterns (shown as box sublabel)
- * - rulePatterns: `${rulesheetKey}#${rawRuleIndex}` -> string[] of semantic patterns (shown in rule name line)
+ * Builds two lookup maps from a patterns array (PatternFinding[]):
+ * - rulesheetPatterns: basename -> string[] of patterns (shown as box sublabel)
+ * - rulePatterns: "basename:N" -> string[] of patterns (shown in rule name line)
  *
- * Rulesheet-level patterns: guard, fact-assembly, decision-table,
- * fixpoint, unreachable, plus filter-level expression
- * patterns (date-arithmetic, decimal-rounding, sort-ranking) where no specific
- * rule index applies.
- * Rule-level patterns: constructor-output, null-guard-default, cycle,
- * decision-table-alt-row, date-arithmetic, decimal-rounding, sort-ranking.
- * explicit-override is detected directly from rule data in rulesheetDetailLines
- * and always shown at rule level.
+ * ruleId ending in :* → rulesheet-level. ruleId ending in :N → rule-level (and
+ * optionally also rulesheet-level for certain patterns). ruleIds array → each
+ * entry contributes to its rulesheet (used by composition findings).
+ * fixpoint is derived from the live ruleflowContext, not from patterns.
  */
-function buildPatternMaps(classification, ruleflowContext) {
-  const rulesheetPatterns = new Map();
-  const rulePatterns = new Map();
-  const patterns = classification.patterns ?? {};
+function buildPatternMaps(patterns, ruleflowContext) {
+  const rulesheetPatterns = new Map(); // keyed by basename
+  const rulePatterns = new Map();     // keyed by "basename:N"
 
-  function addRulesheet(key, pattern) {
-    if (!rulesheetPatterns.has(key)) rulesheetPatterns.set(key, []);
-    if (!rulesheetPatterns.get(key).includes(pattern)) rulesheetPatterns.get(key).push(pattern);
+  function addRulesheet(rsBasename, pattern) {
+    if (!rulesheetPatterns.has(rsBasename)) rulesheetPatterns.set(rsBasename, []);
+    if (!rulesheetPatterns.get(rsBasename).includes(pattern)) rulesheetPatterns.get(rsBasename).push(pattern);
   }
 
-  function addRule(rulesheetKey, rawIndex, pattern) {
-    const k = `${rulesheetKey}#${rawIndex}`;
-    if (!rulePatterns.has(k)) rulePatterns.set(k, []);
-    if (!rulePatterns.get(k).includes(pattern)) rulePatterns.get(k).push(pattern);
+  function addRule(ruleId, pattern) {
+    if (!rulePatterns.has(ruleId)) rulePatterns.set(ruleId, []);
+    if (!rulePatterns.get(ruleId).includes(pattern)) rulePatterns.get(ruleId).push(pattern);
   }
 
-  // guard: any rulesheet that has at least one filter
-  for (const { ruleId } of patterns.filters ?? []) {
-    addRulesheet(ruleId, 'guard');
+  // Patterns with variants are displayed as "pattern-variant" (e.g. null-guard-default,
+  // constructor-output, membership-test-range).
+  function displayName(finding) {
+    return finding.variant ? `${finding.pattern}-${finding.variant}` : finding.pattern;
   }
 
-  // composition: each rulesheet that writes to a path also written by another
-  for (const { rulesheets } of patterns.crossRulesheetAssembly ?? []) {
-    for (const rs of rulesheets ?? []) addRulesheet(rs, 'composition');
-  }
-
-  // decision-table: rulesheet where multiple rules write the same attribute path
-  for (const { ruleId } of patterns.decisionTableCombinatorics ?? []) {
-    addRulesheet(ruleId, 'decision-table');
-  }
-
-  // constructor-output: tag both rulesheet (sublabel) and rule (body line) so the pattern
-  // is visible at the box level even when the rule body is scrolled out of view.
-  for (const { ruleId } of patterns.entityCreation ?? []) {
-    const { rulesheet, ruleIndex } = parseRuleId(ruleId);
-    addRulesheet(rulesheet, 'constructor-output');
-    if (ruleIndex !== null) addRule(rulesheet, ruleIndex, 'constructor-output');
-  }
-
-  // fixpoint: rulesheet invoked from an iterative (loop) node
-  for (const [rsKey, ctx] of ruleflowContext.perRulesheet ?? []) {
-    if (ctx.iterative) addRulesheet(rsKey, 'fixpoint');
-  }
-
-  // unreachable: never reached from any ruleflow
-  for (const rsKey of classification.ruleflowContext?.unreachableRulesheets ?? []) {
-    addRulesheet(rsKey, 'unreachable');
-  }
-
-  // Self-loop rule-level patterns -- classifier now outputs pattern names directly
-  for (const { ruleId, classification: cls } of patterns.selfLoops ?? []) {
-    const { rulesheet, ruleIndex } = parseRuleId(ruleId);
-    if (ruleIndex !== null) addRule(rulesheet, ruleIndex, cls);
-  }
-
-  // Expression pattern rule-level patterns (date-arithmetic, rounding, sort-rank, etc.)
-  const exprKindMap = {
-    'date-arithmetic': 'date-arithmetic',
-    'currency-rounding': 'rounding',
-    'sorting': 'sort-rank',
-    'operator-precedence': 'operator-precedence',
-    'logical-operators': 'logical-operators',
-    'membership-test-range': 'membership-test-range',
-    'membership-test-list': 'membership-test-list',
-    'scalar-accumulator': 'scalar-accumulator',
-    'call-function': 'call-function',
-    'coercion': 'coercion',
-  };
-  for (const { ruleId, kind } of patterns.expressionPatterns ?? []) {
-    const { rulesheet, ruleIndex } = parseRuleId(ruleId);
-    const pattern = exprKindMap[kind] ?? kind;
-    if (ruleIndex === null) {
-      // filter-level (no specific rule): surface at rulesheet level
-      addRulesheet(rulesheet, pattern);
-    } else {
-      addRule(rulesheet, ruleIndex, pattern);
+  for (const finding of patterns ?? []) {
+    const name = displayName(finding);
+    if (finding.ruleId) {
+      const colonIdx = finding.ruleId.lastIndexOf(':');
+      const rsBasename = colonIdx >= 0 ? finding.ruleId.slice(0, colonIdx) : finding.ruleId;
+      const indexPart = colonIdx >= 0 ? finding.ruleId.slice(colonIdx + 1) : null;
+      const isWildcard = indexPart === '*' || indexPart === null;
+      if (isWildcard) {
+        addRulesheet(rsBasename, name);
+      } else {
+        addRule(finding.ruleId, name);
+        // Also tag the rulesheet for patterns that should be visible at box level
+        // even when the rule body is scrolled out of view.
+        if (['constructor', 'null-guard', 'cycle', 'scalar-accumulator'].includes(finding.pattern)) {
+          addRulesheet(rsBasename, name);
+        }
+      }
     }
+    // composition: each contributing rulesheet gets tagged
+    if (finding.ruleIds) {
+      for (const rid of finding.ruleIds) {
+        const colonIdx = rid.lastIndexOf(':');
+        const rsBasename = colonIdx >= 0 ? rid.slice(0, colonIdx) : rid;
+        addRulesheet(rsBasename, name);
+      }
+    }
+  }
+
+  // fixpoint: rulesheet invoked from an iterative (loop) node — derived from live context
+  for (const [rsKey, ctx] of ruleflowContext.perRulesheet ?? []) {
+    if (ctx.iterative) addRulesheet(posixPath.basename(rsKey), 'fixpoint');
   }
 
   return { rulesheetPatterns, rulePatterns };
@@ -268,7 +238,8 @@ function rulesheetDetailLines(rulesheet, rulesheetKey, rulePatterns, rulesheetPa
     // any rule that carries a priority relationship. Only show patterns not already
     // visible at rulesheet level (i.e. not in the box sublabel), except
     // explicit-override which is always rule-level.
-    const ruleLevelPatterns = rulesheetKey && rulePatterns ? [...(rulePatterns.get(`${rulesheetKey}#${ruleRawIndex}`) ?? [])] : [];
+    const rulePatternKey = rulesheetKey ? `${posixPath.basename(rulesheetKey)}:${ruleRawIndex}` : null;
+    const ruleLevelPatterns = rulePatternKey && rulePatterns ? [...(rulePatterns.get(rulePatternKey) ?? [])] : [];
     if (explicitOverrideLabel && !ruleLevelPatterns.includes('explicit-override')) {
       ruleLevelPatterns.push('explicit-override');
     }
@@ -365,9 +336,10 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
       const resolved = resolveInvokes(node.invokes, ruleflowKey, ruleflowKeys, rulesheetKeys);
       if (resolved.kind === 'rulesheet') {
         const rulesheet = project.rulesheets.get(resolved.file);
-        const rsPatterns = rulesheetPatterns?.get(resolved.file);
+        const rsBasename = posixPath.basename(resolved.file);
+        const rsPatterns = rulesheetPatterns?.get(rsBasename);
         const sublabel = rsPatterns?.length ? `[${rsPatterns.join(', ')}]` : null;
-        const label = `${node.iterative ? `${node.name} [LOOP]` : node.name} (${posixPath.basename(resolved.file)})`;
+        const label = `${node.iterative ? `${node.name} [LOOP]` : node.name} (${rsBasename})`;
         const lines = rulesheetDetailLines(rulesheet, resolved.file, rulePatterns, rulesheetPatterns);
         const w = boxWidthFor(label, sublabel, lines);
         if (!entryXCaptured) { entryX = originX + w / 2; entryXCaptured = true; }
@@ -459,10 +431,11 @@ function layoutRuleflow(project, ruleflowKey, ruleflowKeys, rulesheetKeys, origi
           const resolved = resolveInvokes(target.invokes, ruleflowKey, ruleflowKeys, rulesheetKeys);
           if (resolved.kind !== 'rulesheet') continue;
           const rulesheet = project.rulesheets.get(resolved.file);
-          const rsPatterns = rulesheetPatterns?.get(resolved.file);
+          const targetBasename = posixPath.basename(resolved.file);
+          const rsPatterns = rulesheetPatterns?.get(targetBasename);
           const sublabel = rsPatterns?.length ? `[${rsPatterns.join(', ')}]` : null;
           const lines = rulesheetDetailLines(rulesheet, resolved.file, rulePatterns, rulesheetPatterns);
-          const targetLabel = `${target.name} (${posixPath.basename(resolved.file)})`;
+          const targetLabel = `${target.name} (${targetBasename})`;
           const w = boxWidthFor(targetLabel, sublabel, lines);
           branchColW = Math.max(branchColW, w);
           const { svg: ts, height: th } = box(branchX, by, w, targetLabel, sublabel, lines, COLOR.rulesheet, false);
@@ -567,10 +540,11 @@ function renderDiagram(project, classification, context, rulesheetPatterns, rule
     blocks.push(`<text x="${PAD}" y="${y}" font-size="13" font-weight="700" fill="#374151" font-family="${FONT}">Unreachable (never invoked):</text>`);
     let uy = y + 20;
     for (const key of context.unreachable) {
-      const rsPatterns = rulesheetPatterns?.get(key);
+      const keyBasename = posixPath.basename(key);
+      const rsPatterns = rulesheetPatterns?.get(keyBasename);
       const sublabel = rsPatterns?.length ? `[${rsPatterns.join(', ')}]` : null;
       const lines = rulesheetDetailLines(project.rulesheets.get(key), key, rulePatterns, rulesheetPatterns);
-      const w = boxWidthFor(`${posixPath.basename(key)} — dead content`, sublabel, lines);
+      const w = boxWidthFor(`${keyBasename} — dead content`, sublabel, lines);
       const { svg: s, height } = box(PAD, uy, w, `${posixPath.basename(key)} — dead content`, sublabel, lines, COLOR.unreachable, true);
       blocks.push(s);
       maxWidth = Math.max(maxWidth, PAD + w);
@@ -602,11 +576,67 @@ function renderDiagram(project, classification, context, rulesheetPatterns, rule
 export function buildRulesDiagramContent(classifiedPath, markerId = 'arrow-rules', opts = {}) {
   const raw = JSON.parse(readFileSync(classifiedPath, 'utf-8'));
   const project = loadProjectFromClassified(raw);
-  const classification = raw.classification ?? {};
+  const patterns = raw.classification?.patterns ?? [];
   const context = resolveRuleflowContext(project);
-  const { rulesheetPatterns, rulePatterns } = buildPatternMaps(classification, context);
-  const { width, height, bodySvg } = renderDiagram(project, classification, context, rulesheetPatterns, rulePatterns, opts);
+  const { rulesheetPatterns, rulePatterns } = buildPatternMaps(patterns, context);
+  const { width, height, bodySvg } = renderDiagram(project, patterns, context, rulesheetPatterns, rulePatterns, opts);
   return rawSvgElement(markerId, width, height, bodySvg);
+}
+
+/**
+ * Returns rulesheet basenames in the order they appear top-to-bottom in the
+ * rules diagram -- i.e. navigation order through the ruleflow graph. Unreachable
+ * rulesheets are appended after reachable ones. Any rulesheet not referenced by
+ * any ruleflow is appended last.
+ */
+export function getRulesheetNavigationOrder(projectPath) {
+  const raw = JSON.parse(readFileSync(projectPath, 'utf-8'));
+  const project = loadProjectFromClassified(raw);
+  const context = resolveRuleflowContext(project);
+  const ruleflowKeys = [...project.ruleflows.keys()];
+  const rulesheetKeys = [...project.rulesheets.keys()];
+  const result = [];
+  const seen = new Set();
+  const visited = new Set();
+
+  function walkRuleflow(ruleflowKey) {
+    if (visited.has(ruleflowKey)) return;
+    visited.add(ruleflowKey);
+    const flow = project.ruleflows.get(ruleflowKey);
+    for (const node of flow?.nodes ?? []) {
+      if (node.kind === 'ActivityNode') {
+        const resolved = resolveInvokes(node.invokes, ruleflowKey, ruleflowKeys, rulesheetKeys);
+        if (resolved.kind === 'rulesheet') {
+          const name = posixPath.basename(resolved.file);
+          if (!seen.has(name)) { seen.add(name); result.push(name); }
+        } else if (resolved.kind === 'ruleflow') {
+          walkRuleflow(resolved.file);
+        }
+      } else {
+        // BranchContainer: walk each branch's targets in order
+        for (const branch of node.branches ?? []) {
+          for (const target of branch.targets ?? []) {
+            const resolved = resolveInvokes(target.invokes, ruleflowKey, ruleflowKeys, rulesheetKeys);
+            if (resolved.kind === 'rulesheet') {
+              const name = posixPath.basename(resolved.file);
+              if (!seen.has(name)) { seen.add(name); result.push(name); }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  for (const root of context.roots) walkRuleflow(root);
+  for (const key of context.unreachable ?? []) {
+    const name = posixPath.basename(key);
+    if (!seen.has(name)) { seen.add(name); result.push(name); }
+  }
+  for (const key of rulesheetKeys) {
+    const name = posixPath.basename(key);
+    if (!seen.has(name)) { seen.add(name); result.push(name); }
+  }
+  return result;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -618,10 +648,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 
   const raw = JSON.parse(readFileSync(args.positional, 'utf-8'));
   const project = loadProjectFromClassified(raw);
-  const classification = raw.classification ?? {};
+  const patterns = raw.classification?.patterns ?? [];
   const context = resolveRuleflowContext(project);
-  const { rulesheetPatterns, rulePatterns } = buildPatternMaps(classification, context);
-  const { width, height, bodySvg } = renderDiagram(project, classification, context, rulesheetPatterns, rulePatterns);
+  const { rulesheetPatterns, rulePatterns } = buildPatternMaps(patterns, context);
+  const { width, height, bodySvg } = renderDiagram(project, patterns, context, rulesheetPatterns, rulePatterns);
   const outFile = args.outFile ?? 'generated/rules-diagram.html';
   writeFileSync(outFile, wrapSvgAsHtml('Corticon rules diagram', width, height, bodySvg));
   console.log(`Wrote diagram to ${outFile}`);

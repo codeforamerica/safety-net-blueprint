@@ -4,17 +4,18 @@
  * DSL expression panels, and the patterns.json + graph.json + dsl.json
  * source files for reference.
  *
- * Usage: node src/visualize-graph-html.js <slug>
+ * Usage: node src/visualizers/visualize-graph-html.js <slug>
  *   --classified  <patterns.json>
  *   --translated  <dsl.json>
  *   --graph       <graph.json>
  *   --out         <output.html>
  */
 import { readFileSync, writeFileSync } from 'node:fs';
-import { COLORS, FONT } from '../../../../explorer/lib/theme.js';
-import { esc } from '../../../../explorer/lib/html.js';
-import { PALETTE, box, rawSvgElement } from '../../diagram-utils.js';
-import { jsonPanel } from '../../json-panel.js';
+import { validateSchema } from '../validate-schema.js';
+import { COLORS, FONT } from '../../../explorer/lib/theme.js';
+import { esc } from '../../../explorer/lib/html.js';
+import { PALETTE, box, rawSvgElement } from '../diagram-utils.js';
+import { jsonPanel } from '../json-panel.js';
 
 const MONO = 'ui-monospace,SFMono-Regular,Menlo,monospace';
 const DARK_BLUE = COLORS.darkBlue;
@@ -95,8 +96,6 @@ function buildCandidateSubgraphSvg(sinkKey, data, markerId) {
 
   const maxL = orderedLayers.length - 1;
   const CHAR_W = 7.2, H_PAD = 28, NODE_H = 44, V_GAP = 40, H_GAP = 20, MARGIN = 20;
-  // Use last-two-segment label (e.g. Program.runDate) unless two nodes share the same
-  // short form, in which case fall back to the full path to avoid ambiguity.
   const shortOf = n => n.split('.').slice(-2).join('.');
   const shortCounts = new Map();
   for (const n of nodes) shortCounts.set(shortOf(n), (shortCounts.get(shortOf(n)) ?? 0) + 1);
@@ -148,48 +147,52 @@ function orderSubgraphNodes(data) {
 
 // ── Data Model tab ───────────────────────────────────────────────────────────
 
-function renderDataModelTab(translatedPath) {
+function renderDataModelTab(translatedPath, nodeTypes = {}) {
   if (!translatedPath) return '<p style="color:#9ca3af;font-size:12px">No translated file provided.</p>';
   let facts;
   try { ({ facts } = JSON.parse(readFileSync(translatedPath, 'utf-8'))); }
   catch { return '<p style="color:#9ca3af;font-size:12px">Could not load translated file.</p>'; }
 
-  const inputs  = (facts ?? []).filter(f => f.writable);
-  const outputs = (facts ?? []).filter(f => f.expression !== undefined || f.entityCreationOutput);
-
-  function groupByEntity(factList) {
-    const byEntity = new Map();
-    for (const f of factList) {
-      const entity = f.path?.split('/').filter(Boolean)[0] ?? '(unknown)';
-      if (!byEntity.has(entity)) byEntity.set(entity, []);
-      byEntity.get(entity).push(f);
-    }
-    return byEntity;
+  // Extract the local "entity.attr" portion from a universal path like /domain/graph/entity.attr
+  function localPart(path) {
+    if (!path) return '';
+    const segs = path.split('/').filter(Boolean);
+    return segs.length >= 3 ? segs.slice(2).join('/') : segs[segs.length - 1] ?? path;
   }
 
-  function renderSection(factList, sectionTitle) {
-    if (!factList.length) return '';
-    const groupHtml = [...groupByEntity(factList).entries()].map(([entity, items]) => {
-      const rows = items.map(f => {
-        const typeHtml = f.datatype ? `<span style="color:#6b7280;font-size:11px">${esc(f.datatype)}</span>` : '';
-        const tbdHtml  = f.entityCreationOutput ? `<span style="color:#b45309;font-size:10px;font-style:italic;margin-left:4px">CEL TBD</span>` : '';
-        return `<tr style="border-bottom:1px solid #f3f4f6">
-          <td style="padding:4px 12px 4px 0;font-family:${MONO};font-size:11px;color:#374151;white-space:nowrap">${esc(f.path ?? '')}</td>
-          <td style="padding:4px 0;white-space:nowrap">${typeHtml}${tbdHtml}</td>
-        </tr>`;
-      }).join('');
-      return `<div style="break-inside:avoid;margin-bottom:20px">
-        <div style="font-size:11px;font-weight:700;color:#111827;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e5e7eb">${esc(entity)}</div>
-        <table style="border-collapse:collapse;width:100%"><tbody>${rows}</tbody></table>
-      </div>`;
+  // Group by entity using dot-format paths. Prefer meta.sourcePath for proper casing.
+  const byEntity = new Map();
+  for (const f of (facts ?? [])) {
+    const sourcePath = f.meta?.sourcePath ?? localPart(f.path);
+    const entityDisplay = sourcePath.split('.')[0] || '(unknown)';
+    if (!byEntity.has(entityDisplay)) byEntity.set(entityDisplay, []);
+    byEntity.get(entityDisplay).push(f);
+  }
+
+  const groupHtml = [...byEntity.entries()].map(([entity, items]) => {
+    items.sort((a, b) => {
+      const aName = localPart(a.path);
+      const bName = localPart(b.path);
+      return aName.localeCompare(bName);
+    });
+    const rows = items.map(f => {
+      const sourcePath = f.meta?.sourcePath ?? localPart(f.path);
+      const local = localPart(f.path);
+      const attrName = local.includes('.') ? local.split('.').slice(1).join('.') : local;
+      const datatype = nodeTypes[sourcePath] ?? f.datatype ?? '';
+      const typeHtml = datatype ? `<span style="color:#6b7280;font-size:11px">${esc(datatype)}</span>` : '';
+      return `<tr style="border-bottom:1px solid #f3f4f6">
+        <td style="padding:4px 8px 4px 0;font-family:${MONO};font-size:11px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:62%">${esc(attrName)}</td>
+        <td style="padding:4px 0;white-space:nowrap;width:38%">${typeHtml}</td>
+      </tr>`;
     }).join('');
-    return `<div style="margin-bottom:2rem">
-      <h3 style="font-size:13px;font-weight:700;color:#111827;margin-bottom:12px;padding-bottom:5px;border-bottom:1px solid #e5e7eb">${esc(sectionTitle)}</h3>
-      <div style="columns:3 280px;column-gap:32px">${groupHtml}</div>
+    return `<div style="break-inside:avoid;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;color:#111827;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e5e7eb">${esc(entity)}</div>
+      <table style="border-collapse:collapse;width:100%;table-layout:fixed"><tbody>${rows}</tbody></table>
     </div>`;
-  }
+  }).join('');
 
-  return renderSection(inputs, 'Inputs — caller-supplied') + renderSection(outputs, 'Outputs — derived by rules');
+  return `<div style="columns:3 280px;column-gap:32px">${groupHtml}</div>`;
 }
 
 // ── DSL expression list ──────────────────────────────────────────────────────
@@ -305,7 +308,7 @@ function renderCandidatesNavAndPanels(candidates, subgraphs, corticonToFact, nod
     const nodeCount = subgraph.nodeCount ?? '?';
     const depth     = subgraph.depth     ?? '?';
     const posRatio  = info.latestPosition != null ? `${info.latestPosition}/${info.totalPositions}` : '—';
-    const rsRatio   = info.rulesheetCount != null ? `${info.rulesheetCount}/${info.totalRulesheets}` : '—';
+    const defRatio  = info.definitionCount != null ? `${info.definitionCount}/${info.totalDefinitions}` : '—';
 
     const hasSub = !!subgraphs[key];
     const graphHtml = hasSub ? subgraph.svg : '<p style="color:#9ca3af;font-size:12px">No subgraph data.</p>';
@@ -317,7 +320,7 @@ function renderCandidatesNavAndPanels(candidates, subgraphs, corticonToFact, nod
           <div style="display:flex;gap:16px;font-size:11px;color:#6b7280">
             <span><b>${esc(String(nodeCount))}</b> nodes</span>
             <span><b>${esc(String(depth))}</b> depth</span>
-            <span><b>${esc(String(rsRatio))}</b> rulesheets</span>
+            <span><b>${esc(String(defRatio))}</b> definitions</span>
             <span>flow position <b>${esc(String(posRatio))}</b></span>
           </div>
         </div>
@@ -358,15 +361,24 @@ function renderExceptionsTab(translatedPath) {
       const items = byStatus[s];
       const { bg, text, border } = STATUS_STYLE[s];
       const rows = items.map(e => {
-        const path = e.corticonPath ?? e.path ?? '';
-        const loc  = `${e.rulesheet ?? ''}${e.ruleIndex != null ? ` #${e.ruleIndex}` : ''}`;
+        const sourcePath = e.sourcePath ?? e.factPath ?? e.path ?? '';
+        // Parse ruleId like "Dir/File.ers:1" → "File.ers #1"
+        const ruleId = e.ruleId ?? '';
+        const ruleIdMatch = ruleId.match(/([^/\\]+\.ers)(?::(\d+))?$/i);
+        const loc = ruleIdMatch
+          ? `${ruleIdMatch[1]}${ruleIdMatch[2] ? ` #${ruleIdMatch[2]}` : ''}`
+          : ruleId;
+        const note = e.note ?? e.patternKind ?? '';
+        const exprHtml = e.expression
+          ? `<div style="font-family:${MONO};font-size:10px;color:#6b7280;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:400px" title="${esc(e.expression)}">${esc(e.expression)}</div>`
+          : '';
         return `<tr style="border-bottom:1px solid #f3f4f6">
-          <td style="padding:5px 12px 5px 0;white-space:nowrap;font-family:${MONO};font-size:11px;color:#6b7280">${esc(loc)}</td>
-          <td style="padding:5px 12px 5px 0;white-space:nowrap">
+          <td style="padding:5px 12px 5px 0;white-space:nowrap;font-family:${MONO};font-size:11px;color:#6b7280;vertical-align:top">${esc(loc)}</td>
+          <td style="padding:5px 12px 5px 0;white-space:nowrap;vertical-align:top">
             <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;background:${bg};color:${text};border:1px solid ${border}">${esc(e.pattern)}</span>
           </td>
-          <td style="padding:5px 12px 5px 0;white-space:nowrap;font-family:${MONO};font-size:11px;color:#374151">${esc(path)}</td>
-          <td style="padding:5px 0;font-size:11px;color:#4b5563;font-style:italic">${esc(e.note ?? '')}</td>
+          <td style="padding:5px 12px 5px 0;font-family:${MONO};font-size:11px;color:#374151;vertical-align:top">${esc(sourcePath)}${exprHtml}</td>
+          <td style="padding:5px 0;font-size:11px;color:#4b5563;font-style:italic;vertical-align:top">${esc(note)}</td>
         </tr>`;
       }).join('');
       return `<div style="margin-bottom:2rem">
@@ -385,6 +397,10 @@ function renderExceptionsTab(translatedPath) {
 
 async function render(opts) {
   const { slug, classifiedPath, translatedPath, graphPath } = opts;
+
+  if (translatedPath) { const d = JSON.parse(readFileSync(translatedPath, 'utf-8')); validateSchema('blueprint-dsl', d, translatedPath); }
+  if (classifiedPath) { const d = JSON.parse(readFileSync(classifiedPath, 'utf-8')); validateSchema('patterns', d, classifiedPath); }
+  if (graphPath)      { const d = JSON.parse(readFileSync(graphPath, 'utf-8'));      validateSchema('graph', d, graphPath); }
 
   const corticonToFact = {};
   try {
@@ -405,12 +421,11 @@ async function render(opts) {
   let sinkCandidates = {};
   let rawCandidateGraphs = {};
   try {
-    const { sourceFile, classification } = JSON.parse(readFileSync(classifiedPath, 'utf-8'));
+    const { classification } = JSON.parse(readFileSync(classifiedPath, 'utf-8'));
     sinkCandidates = classification?.sinkCandidates ?? {};
     if (graphPath) {
-      const { buildCandidateSubgraph, buildDependencyGraph } = await import('../../graph/build-graph.js');
-      const project = JSON.parse(readFileSync(sourceFile, 'utf-8'));
-      const graph = buildDependencyGraph(project);
+      const { buildCandidateSubgraph } = await import('../../graph/build-graph.js');
+      const graph = JSON.parse(readFileSync(graphPath, 'utf-8'));
       for (const [key] of Object.entries(sinkCandidates)) {
         rawCandidateGraphs[key] = buildCandidateSubgraph(key, graph);
       }
@@ -442,16 +457,13 @@ async function render(opts) {
       const customTypes = new Map(Object.entries(vocab.customTypes ?? {}));
       for (const [entityName, entity] of Object.entries(vocab.entities ?? {})) {
         for (const [attrName, attr] of Object.entries(entity.attributes ?? {})) {
-          let datatype;
-          if (attr.kind === 'association') {
-            datatype = attr.isCollection ? `List(${attr.type?.name ?? '?'})` : (attr.type?.name ?? '?');
-          } else if (attr.type?.kind === 'customType') {
-            const ct = customTypes.get(attr.type.name);
-            datatype = (ct?.isEnum && ct.values?.length) ? ct.values.join(' | ') : attr.type.name;
-          } else {
-            datatype = attr.type?.name ?? null;
-          }
+          const ct = customTypes.get(attr.dataType);
+          const datatype = (ct?.isEnum && ct.values?.length) ? ct.values.join(' | ') : attr.dataType;
           if (datatype) nodeTypes[`${entityName}.${attrName}`] = datatype;
+        }
+        for (const [assocName, assoc] of Object.entries(entity.references ?? {})) {
+          const datatype = assoc.isCollection ? `List(${assoc.entityType ?? '?'})` : (assoc.entityType ?? '?');
+          if (datatype) nodeTypes[`${entityName}.${assocName}`] = datatype;
         }
       }
     }
@@ -481,7 +493,7 @@ async function render(opts) {
     firstCandidateTabId = result.firstTabId;
   } catch (e) { candidatesPanelsHtml = `<p style="color:#991b1b;padding:1rem">Error: ${esc(e.message)}</p>`; }
 
-  const dataModelHtml = renderDataModelTab(translatedPath);
+  const dataModelHtml = renderDataModelTab(translatedPath, nodeTypes);
   const exceptionsHtml = renderExceptionsTab(translatedPath);
 
   let exceptionCount = 0;

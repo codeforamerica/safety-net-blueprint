@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseCliArgs } from '../../cli-utils.js';
-import { formatRuleText } from './corticon/rulesheet.js';
+import { formatRuleText } from './rulesheet.js';
 import { esc, nextEid, expandHidden, expandChip } from '../../../../explorer/lib/html.js';
 
 const MONO = 'ui-monospace,SFMono-Regular,Menlo,monospace';
@@ -252,7 +252,7 @@ function summaryBar(attributes) {
  * Requires graphPath to use the graph's `writes` map as the attribute index.
  */
 export function buildTranslationLogContent(classifiedPath, blueprintDslPath, graphPath) {
-  const { sourceFile, classification } = JSON.parse(readFileSync(classifiedPath, 'utf8'));
+  const { sourceFile, sourceContext, classification } = JSON.parse(readFileSync(classifiedPath, 'utf8'));
   const project = JSON.parse(readFileSync(sourceFile, 'utf8'));
   const { facts, translationLog } = JSON.parse(readFileSync(blueprintDslPath, 'utf8'));
   const graph = graphPath ? JSON.parse(readFileSync(graphPath, 'utf8')) : null;
@@ -262,7 +262,7 @@ export function buildTranslationLogContent(classifiedPath, blueprintDslPath, gra
     if (f.path) factsByPath[f.path] = f;
   }
 
-  const unreachable = new Set(classification?.ruleflowContext?.unreachableRulesheets ?? []);
+  const unreachable = new Set(sourceContext?.ruleflowContext?.unreachableRulesheets ?? []);
   const ruleflowEntries = Object.entries(project.ruleflows ?? {});
   const topLevel = ruleflowEntries.find(([f]) => f.includes('top-level-flow'));
 

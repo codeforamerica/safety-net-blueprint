@@ -1,7 +1,7 @@
 import { canonicalAttributePath, touchesEntityCreation } from './attribute-path.js';
 import { entriesOf } from '../map-utils.js';
 // TODO: isBlankTemplateRule is Corticon-specific — should be filtered upstream before reaching the graph builder
-import { isBlankTemplateRule } from '../sources/corticon/corticon/rulesheet.js';
+import { isBlankTemplateRule } from '../sources/corticon/rulesheet.js';
 
 function attributePathsIn(terms) {
   return (terms ?? []).map(canonicalAttributePath).filter(Boolean);

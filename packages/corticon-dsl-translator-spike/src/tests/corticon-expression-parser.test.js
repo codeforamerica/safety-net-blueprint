@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseExpression } from '../sources/corticon/corticon/expression-parser.js';
+import { parseExpression } from '../sources/corticon/expression-parser.js';
 
 const Identifier = (name) => ({ type: 'Identifier', name });
 const Member = (object, property, navigation = 'dot') => ({ type: 'Member', object, property, navigation });

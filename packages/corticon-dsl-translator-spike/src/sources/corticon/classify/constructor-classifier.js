@@ -1,3 +1,4 @@
+import { basename } from 'node:path';
 import { entriesOf } from '../../../map-utils.js';
 
 // A bare top-level ENTITY term in modifiedTermList means the entity/association itself
@@ -61,8 +62,7 @@ function isReadAnywhere(project, associationPath, entityType) {
  * Groups.ers` (`Person.cohort += Cohort.newUnique[...]`/`Cohort.new[...]`, both kinds
  * at once).
  *
- * Each result includes a `variant` field distinguishing two cases (see
- * translation-patterns.yaml `entity-creation` variants for the full rationale):
+ * Each result is a PatternFinding with pattern "constructor" and variant:
  * - `output`: the association is only written, never read downstream — the response
  *   body should contain it, derived from the creation logic.
  * - `input`: the association is both written and read by other rules — it must be
@@ -73,7 +73,7 @@ function isReadAnywhere(project, associationPath, entityType) {
  * Group Members "add" case), so buildDependencyGraph's attribute-path write tracking
  * never records it -- this pattern would be invisible if detection only looked there.
  */
-export function classifyEntityCreation(project) {
+export function classifyConstructors(project) {
   const result = [];
   for (const [rulesheetFile, rulesheet] of entriesOf(project.rulesheets)) {
     rulesheet.rules.forEach((rule, ruleIndex) => {
@@ -83,10 +83,12 @@ export function classifyEntityCreation(project) {
       }
     });
   }
-  // Second pass: tag each entry with its variant based on whether the association
-  // path is ever read elsewhere in the project.
-  for (const entry of result) {
-    entry.variant = isReadAnywhere(project, entry.associationPath, entry.entityType) ? 'input' : 'output';
-  }
-  return result;
+  // Second pass: tag each entry with its variant and convert to PatternFinding.
+  return result.map((entry) => ({
+    pattern: 'constructor',
+    variant: isReadAnywhere(project, entry.associationPath, entry.entityType) ? 'input' : 'output',
+    node: entry.associationPath,
+    ruleId: `${basename(entry.rulesheet)}:${entry.ruleIndex}`,
+    entityType: entry.entityType,
+  }));
 }

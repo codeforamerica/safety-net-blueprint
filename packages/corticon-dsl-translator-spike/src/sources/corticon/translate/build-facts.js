@@ -1,9 +1,11 @@
 import { canonicalAttributePath } from '../../../graph/attribute-path.js';
-import { toCel, toCelStatement, factPathFromCanonicalPath } from '../../../targets/blueprint-dsl/to-cel.js';
+import { toCel, toCelStatement, factPathFromCanonicalPath } from '../../../graph/to-cel.js';
 import { resolveRuleflowContext } from '../classify/ruleflow-context.js';
 import { entriesOf } from '../../../map-utils.js';
+import { basename } from 'node:path';
 
-/** Parse a ruleId string back to { rulesheet, ruleIndex } for rule lookups. */
+/** Parse a ruleId string (basename form "file.ers:N") back to { rulesheet, ruleIndex }.
+ * rulesheet is a basename; callers must resolve it to a full path via basenameToRulesheet. */
 function parseRuleId(ruleId) {
   const colonIdx = ruleId.lastIndexOf(':');
   if (colonIdx < 0) return { rulesheet: ruleId, ruleIndex: null };
@@ -26,11 +28,7 @@ function enumerateVocabularyAttributes(project) {
   const paths = [];
   for (const [, vocab] of entriesOf(project.vocabularies)) {
     for (const [entityName, entity] of entriesOf(vocab.entities)) {
-      for (const [attrName, attr] of entriesOf(entity.attributes)) {
-        if (attr.kind !== 'attribute') continue;
-        if (attr.isCollection) {
-          throw new Error(`"${entityName}.${attrName}" is a repeating scalar attribute (isCollection) -- no confirmed real example exists in any fixture yet, and this DSL's Fact path scheme (see factPathFromCanonicalPath) has no established wildcard convention for one. Flagging rather than guessing at a path shape.`);
-        }
+      for (const [attrName] of entriesOf(entity.attributes)) {
         paths.push(`${entityName}.${attrName}`);
       }
     }
@@ -143,13 +141,13 @@ function compileGuard(rule, filterGuard, parseExpression) {
 }
 
 /** Parses and translates one action exactly once, returning both its target Fact path (if it's an assignment) and its CEL value. */
-function compileAction(action, parseExpression) {
+function compileAction(action, parseExpression, domain, graphName) {
   const ast = parseAndCanonicalize(action, parseExpression);
-  return toCelStatement(ast, { isAssignment: action.expressionType === 'ASSIGNMENT' });
+  return toCelStatement(ast, { isAssignment: action.expressionType === 'ASSIGNMENT', domain, graphName });
 }
 
-function compileActionCel(action, parseExpression) {
-  return compileAction(action, parseExpression).cel;
+function compileActionCel(action, parseExpression, domain, graphName) {
+  return compileAction(action, parseExpression, domain, graphName).cel;
 }
 
 /**
@@ -232,14 +230,14 @@ function hasOutOfOrderUnconditional(entries) {
  * on every multi-row Fact (see the caller in buildFacts), not left as a comment only
  * a source-reader would see.
  */
-function compileRulesheetEntries(rulesheetKey, rulesheet, ruleIndices, path, parseExpression) {
+function compileRulesheetEntries(rulesheetKey, rulesheet, ruleIndices, path, parseExpression, domain, graphName) {
   const filterGuard = compileFilterGuard(rulesheet, parseExpression);
   const sorted = [...ruleIndices].sort((a, b) => a - b);
   return sorted.map((ruleIndex) => {
     const rule = rulesheet.rules[ruleIndex];
     const action = findActionForPath(rule, path);
     if (!action) throw new Error(`No action in ${rulesheetKey}'s rule ${ruleIndex} actually writes "${path}" -- graph/classification and the real rule data have gone out of sync`);
-    return { guard: compileGuard(rule, filterGuard, parseExpression), value: compileActionCel(action, parseExpression) };
+    return { guard: compileGuard(rule, filterGuard, parseExpression), value: compileActionCel(action, parseExpression, domain, graphName), rawExpression: action.text ?? null };
   });
 }
 
@@ -296,28 +294,59 @@ function compileAcrossRulesheets(rulesheetKeys, entriesByRulesheet, initialFallb
  * touches the shared, engine-agnostic project model and the generic AST, never
  * Corticon's raw text syntax itself.
  */
-export function buildFacts(project, graph, classificationInput, { parseExpression }) {
-  const classification = classificationInput.patterns ?? classificationInput;
+const CONFIRMED_PATTERNS = new Set(['derived', 'input', 'null-guard-fallback', 'null-guard-default', 'null-guard-table', 'aggregation', 'no-op', 'unreachable', 'constructor-output', 'constructor-input', 'guard', 'decision-table', 'decision-table-alternative-row']);
+const INFERRED_PATTERNS  = new Set(['date-arithmetic', 'rounding', 'scalar-accumulator', 'operator-precedence', 'logical-operators', 'membership-test', 'coercion', 'call-function', 'sort', 'sort-rank', 'hit-policy-unverified', 'unconditional-row-out-of-order', 'composition-mismatch', 'no-default', 'context-conflict']);
+const UNSUPPORTED_PATTERNS = new Set(['cycle', 'cycle-unclassified', 'no-writer', 'call-opaque', 'call-procedure']);
+
+function statusFor(pattern) {
+  if (CONFIRMED_PATTERNS.has(pattern)) return 'confirmed';
+  if (INFERRED_PATTERNS.has(pattern)) return 'inferred';
+  if (UNSUPPORTED_PATTERNS.has(pattern)) return 'unsupported';
+  return 'error';
+}
+
+export function buildFacts(project, graph, patterns, { parseExpression, ruleflowContext: sourceRuleflowContext, domain, graphName } = {}) {
   const rulesheets = new Map(entriesOf(project.rulesheets));
+  // ruleIds in patterns.json are basename-only (e.g. "foo.ers:1"). Build a
+  // basename → full-path map so parseRuleId results can be resolved to rulesheets.
+  const basenameToRulesheet = new Map();
+  for (const [fullPath] of rulesheets) basenameToRulesheet.set(basename(fullPath), fullPath);
+  const resolveRulesheet = (name) => basenameToRulesheet.get(name) ?? name;
   const ruleflowContext = resolveRuleflowContext(project);
 
-  const entityCreationRuleKeys = new Set(classification.entityCreation.map((e) => e.ruleId));
-  const noOpRuleKeys = new Set((classification.noOps ?? []).map((e) => e.ruleId));
-  const unreachableRulesheets = new Set(classificationInput.ruleflowContext.unreachableRulesheets);
-  const selfLoopClassificationByKey = new Map(classification.selfLoops.map((s) => [`${s.path}|${s.ruleId}`, s.classification]));
+  // Local helper that captures domain/graphName in closure so every call site is unchanged.
+  const fpFromCanonical = (path) => factPathFromCanonicalPath(path, domain, graphName);
+
+  const effectiveRuleflowContext = sourceRuleflowContext ?? {};
+
+  // Build lookup structures from the patterns array.
+  const constructorFindings = patterns.filter((p) => p.pattern === 'constructor');
+  const entityCreationRuleKeys = new Set(constructorFindings.map((e) => e.ruleId));
+  const noOpRuleKeys = new Set(patterns.filter((p) => p.pattern === 'no-op').map((e) => e.ruleId));
+
+  // Unreachable basenames (strip ':*' suffix to get bare basename for Set membership checks).
+  const unreachableBasenames = new Set(
+    patterns.filter((p) => p.pattern === 'unreachable').map((p) => p.ruleId.slice(0, p.ruleId.lastIndexOf(':'))),
+  );
+
+  // null-guard-default: keyed by "node|basename:N" for ordinaryWriters filtering.
+  const nullGuardDefaultKeys = new Set(
+    patterns.filter((p) => p.pattern === 'null-guard' && p.variant === 'default').map((p) => `${p.node}|${p.ruleId}`),
+  );
+
+  // Genuine cycles: self-loop (has node, no nodes array) and multi-hop (has nodes, no variant).
   const genuineCyclePaths = new Set([
-    ...classification.selfLoops.filter((s) => s.classification === 'cycle').map((s) => s.path),
-    ...classification.multiHopCycles.filter((c) => c.classification !== 'cycle-unclassified').flatMap((c) => c.path),
+    ...patterns.filter((p) => p.pattern === 'cycle' && p.node && !p.nodes).map((p) => p.node),
+    ...patterns.filter((p) => p.pattern === 'cycle' && p.nodes && !p.variant).flatMap((p) => p.nodes),
   ]);
 
   // Collection-accumulation: Corticon iterative pattern (total = total + item.field)
   // translates directly to sum(collection, 'field') -- not a genuine cycle.
   const collectionAccumulationByPath = new Map();
-  for (const s of classification.selfLoops) {
-    if (s.classification !== 'scalar-accumulator') continue;
-    const writtenEntity = s.path.split('.')[0].toLowerCase();
-    const { rulesheet: rsKey, ruleIndex: rsRuleIndex } = parseRuleId(s.ruleId);
-    const rs = rulesheets.get(rsKey);
+  for (const p of patterns.filter((f) => f.pattern === 'scalar-accumulator')) {
+    const writtenEntity = p.node.split('.')[0].toLowerCase();
+    const { rulesheet: rsKey, ruleIndex: rsRuleIndex } = parseRuleId(p.ruleId);
+    const rs = rulesheets.get(resolveRulesheet(rsKey));
     const rule = rs?.rules[rsRuleIndex];
     for (const action of (rule?.actions ?? []).filter(Boolean)) {
       const actionReads = (action.referencedTerms ?? []).map((t) => canonicalAttributePath(t)).filter(Boolean);
@@ -327,28 +356,96 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
       const collTerm = action.referencedTerms?.find((t) => canonicalAttributePath(t) === collRead);
       const rawEntityName = collTerm?.parent?.datatype ?? collRead.split('.')[0];
       const collectionEntity = rawEntityName.charAt(0).toLowerCase() + rawEntityName.slice(1);
-      collectionAccumulationByPath.set(s.path, { collectionEntity, collectionField: collField });
+      collectionAccumulationByPath.set(p.node, { collectionEntity, collectionField: collField });
       break;
     }
   }
-  const unclassifiedCyclePaths = new Set(classification.multiHopCycles.filter((c) => c.classification === 'cycle-unclassified').flatMap((c) => c.path));
-  const combinatoricsByPathRulesheet = new Map(classification.decisionTableCombinatorics.map((d) => {
-    const ruleIndices = (d.ruleIds ?? []).map((id) => parseRuleId(id).ruleIndex);
-    return [`${d.path}|${d.ruleId}`, ruleIndices];
-  }));
-  const assemblyRulesheetsByPath = new Map(classification.crossRulesheetAssembly.map((a) => [a.path, a.rulesheets]));
+
+  const unclassifiedCyclePaths = new Set(
+    patterns.filter((p) => p.pattern === 'cycle' && p.variant === 'unclassified' && p.nodes).flatMap((p) => p.nodes),
+  );
+
+  // hit-policy-unverified: keyed by "node|basename" (strip ':*' from ruleId).
+  const hitPolicyUnverifiedKeys = new Set(
+    patterns.filter((p) => p.pattern === 'hit-policy-unverified').map((p) => `${p.node}|${p.ruleId.slice(0, p.ruleId.lastIndexOf(':'))}`),
+  );
+
+  // composition: keyed by node, value is the ruleIds array.
+  const assemblyRulesheetsByPath = new Map(
+    patterns.filter((p) => p.pattern === 'composition').map((a) => [a.node, a.ruleIds]),
+  );
 
   // Build path → datatype map from vocabulary for writable fact annotations.
   const vocabDatatypeByPath = new Map();
   for (const [, vocab] of entriesOf(project.vocabularies)) {
     for (const [entityName, entity] of entriesOf(vocab.entities)) {
       for (const [attrName, attr] of entriesOf(entity.attributes)) {
-        if (attr.kind !== 'attribute') continue;
-        const datatype = attr.type?.name ?? null;
-        if (datatype) vocabDatatypeByPath.set(`${entityName}.${attrName}`, datatype);
+        if (attr.dataType) vocabDatatypeByPath.set(`${entityName}.${attrName}`, attr.dataType);
       }
     }
   }
+
+  // Corticon vocabulary type → JSON Schema fragment. Inline (not imported from
+  // translate-project.js, which is a CLI script, not a library).
+  const PRIMITIVE_TYPE_MAP = {
+    Integer: 'integer',
+    Decimal: 'number', Float: 'number', Real: 'number', Double: 'number',
+    String: 'string', Text: 'string',
+    Boolean: 'boolean', boolean: 'boolean',
+  };
+  const vocabCustomTypes = new Map();
+  for (const [, vocab] of entriesOf(project.vocabularies)) {
+    for (const [typeName, typeInfo] of entriesOf(vocab.customTypes ?? {})) {
+      vocabCustomTypes.set(typeName, typeInfo);
+    }
+  }
+  function corticonTypeToJsonSchema(cortType) {
+    if (!cortType) return null;
+    if (PRIMITIVE_TYPE_MAP[cortType]) return { type: PRIMITIVE_TYPE_MAP[cortType] };
+    if (cortType === 'Date') return { type: 'string', format: 'date' };
+    if (cortType === 'DateTime') return { type: 'string', format: 'date-time' };
+    if (cortType === 'Time') return { type: 'string', format: 'time' };
+    const ct = vocabCustomTypes.get(cortType);
+    if (ct?.isEnum) {
+      const result = { type: 'string', enum: ct.values };
+      if (ct.entries?.some((e) => e.label)) result.enumDescriptions = ct.entries.map((e) => e.label ?? '');
+      return result;
+    }
+    return null;
+  }
+  // Infer enum types from EnumType#Literal syntax in opaqueExpression text.
+  // Mirrors the same logic in translate-project.js — see that file for the full comment.
+  const ENUM_LIT_RE = /\b([A-Za-z_]\w*)#[A-Za-z_]\w*/g;
+  for (const [, rulesheet] of entriesOf(project.rulesheets)) {
+    for (const rule of rulesheet.rules ?? []) {
+      for (const cell of [...(rule.conditions ?? []), ...(rule.actions ?? [])].filter(Boolean)) {
+        if (!cell.expression) continue;
+        const enumTypeNames = new Set();
+        for (const m of cell.expression.matchAll(ENUM_LIT_RE)) {
+          if (vocabCustomTypes.has(m[1])) enumTypeNames.add(m[1]);
+        }
+        if (!enumTypeNames.size) continue;
+        const [enumTypeName] = enumTypeNames;
+        for (const term of [...(cell.modifiedTerms ?? []), ...(cell.referencedTerms ?? [])]) {
+          if (term.termtype !== 'ATTRIBUTE') continue;
+          const path = canonicalAttributePath(term);
+          if (!path) continue;
+          const existing = vocabDatatypeByPath.get(path);
+          if (!existing || existing === 'String' || existing === 'Text') {
+            vocabDatatypeByPath.set(path, enumTypeName);
+          }
+        }
+      }
+    }
+  }
+
+  // Returns compiled JSON Schema properties for a path (spread onto compiled sub-object).
+  const jt = (path) => {
+    const cortType = vocabDatatypeByPath.get(path);
+    if (!cortType) return {};
+    const schema = corticonTypeToJsonSchema(cortType);
+    return schema ?? {};
+  };
 
   const facts = [];
   const translationLog = [];
@@ -376,15 +473,15 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
   const entityCreationOutputByAssocPath = new Map(); // assocPath -> entry
   const entityCreationOutputByScalarPath = new Map(); // scalar Corticon path -> entry
 
-  for (const entry of classification.entityCreation) {
-    if (entry.variant === 'output' && entry.associationPath) {
-      const assocFactPath = factPathFromCanonicalPath(entry.associationPath);
+  for (const entry of constructorFindings) {
+    if (entry.variant === 'output' && entry.node) {
+      const assocFactPath = fpFromCanonical(entry.node);
       // Find the action to capture the Corticon expression and compile the guard.
       const { rulesheet: rsKey, ruleIndex: rsRuleIndex } = parseRuleId(entry.ruleId);
-      const rulesheet = rulesheets.get(rsKey);
+      const rulesheet = rulesheets.get(resolveRulesheet(rsKey));
       const rule = rulesheet?.rules[rsRuleIndex];
       const action = rule?.actions.filter(Boolean).find((a) =>
-        (a.modifiedTerms ?? []).some((t) => t.termtype === 'ENTITY' && t.fulltext === entry.associationPath)
+        (a.modifiedTerms ?? []).some((t) => t.termtype === 'ENTITY' && t.fulltext === entry.node)
       );
       const filterGuard = action ? compileFilterGuard(rulesheet, parseExpression) : null;
       const guard = action && rule ? compileGuard(rule, filterGuard, parseExpression) : null;
@@ -392,7 +489,7 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
       for (const term of (action?.modifiedTerms ?? []).filter((t) => t.termtype === 'ATTRIBUTE')) {
         entityCreationOutputByScalarPath.set(term.fulltext, entry);
       }
-      entityCreationOutputByAssocPath.set(entry.associationPath, entry);
+      entityCreationOutputByAssocPath.set(entry.node, entry);
       facts.push({
         path: assocFactPath,
         entityCreationOutput: true,
@@ -403,28 +500,26 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
         expression: action?.expression ?? null,
       });
       translationLog.push({
-        sourcePath: entry.associationPath,
-        factPath: assocFactPath,
-        ruleId: entry.ruleId,
+        edgeId: entry.ruleId,
+        node: entry.node,
         pattern: 'constructor-output',
-        role: 'output',
+        status: statusFor('constructor-output'),
         translated: false,
-        entityType: entry.entityType,
+        raw: { type: entry.entityType, expression: action?.text ?? null },
       });
     } else {
       translationLog.push({
-        ruleId: entry.ruleId,
+        edgeId: entry.ruleId,
         pattern: 'constructor-input',
-        role: 'input',
+        status: statusFor('constructor-input'),
         translated: false,
-        entityType: entry.entityType,
-        suggestedName: entry.entityType,
+        raw: { type: entry.entityType },
       });
     }
   }
 
-  for (const entry of (classification.noOps ?? [])) {
-    translationLog.push({ ruleId: entry.ruleId, pattern: 'no-op', role: 'excluded', translated: false });
+  for (const p of patterns.filter((f) => f.pattern === 'no-op')) {
+    translationLog.push({ edgeId: p.ruleId, pattern: 'no-op', status: statusFor('no-op'), translated: false });
   }
 
   // Same "report directly from classification, don't rely on graph.writes
@@ -437,38 +532,33 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
   // excluding it and nothing reporting that it happened. Reported here directly and
   // unconditionally; excluded from ordinaryWriters below the same way entity-creation
   // writers are.
-  for (const rulesheetKey of unreachableRulesheets) {
-    translationLog.push({ ruleId: rulesheetKey, pattern: 'unreachable', role: 'excluded', translated: false });
+  for (const p of patterns.filter((f) => f.pattern === 'unreachable')) {
+    translationLog.push({ edgeId: p.ruleId, pattern: 'unreachable', status: statusFor('unreachable'), translated: false });
   }
 
-  // Same reasoning again: classification.expressionPatterns (date arithmetic,
-  // currency rounding, sorting) is computed in Phase 3 but was never reported
-  // anywhere in Phase 4 -- a reviewer had no explicit list of which real constructs
-  // depend on a PROPOSED, not-yet-settled custom CEL function (round/yearsBetween/
-  // addYears/nthByKey/sum/pow -- see to-cel.js), only whatever's implicit in the
-  // compiled CEL text itself. Reported directly here, independent of whether the
-  // pattern's own rule ends up excluded from Fact compilation for an unrelated
-  // reason (e.g. entity creation, unreachability) -- the pattern was still found and
-  // still depends on an unsettled function, which is worth knowing either way.
-  for (const p of classification.expressionPatterns) {
+  // Expression-level patterns (date arithmetic, rounding, sorting, etc.) — reported
+  // directly so a reviewer has an explicit list of which constructs depend on proposed
+  // CEL functions, independent of whether the rule ends up excluded for another reason.
+  const expressionLevelPatterns = new Set(['date-arithmetic', 'rounding', 'sort', 'sort-rank', 'operator-precedence', 'logical-operators', 'membership-test', 'call-function', 'coercion']);
+  for (const p of patterns.filter((f) => expressionLevelPatterns.has(f.pattern))) {
     translationLog.push({
-      ruleId: p.ruleId,
-      pattern: 'expression-pattern',
-      role: 'derived',
+      edgeId: p.ruleId,
+      pattern: p.pattern,
+      status: statusFor(p.pattern),
       translated: true,
-      patternKind: p.kind,
-      expression: p.expression,
+      ...(p.variant ? { variant: p.variant } : {}),
+      raw: { expression: p.expression },
     });
   }
 
   // Defensive, not yet confirmed real (see ruleflow-context.js's own comment) --
   // surfaced anyway per the same "don't let a real finding go unreported just
   // because it hasn't happened yet" principle as everything above.
-  for (const entry of classificationInput.ruleflowContext.multiInvokedRulesheets) {
+  for (const entry of effectiveRuleflowContext.multiInvokedRulesheets ?? []) {
     translationLog.push({
-      ruleId: entry.ruleId,
+      edgeId: basename(entry.rulesheet),
       pattern: 'context-conflict',
-      role: 'derived',
+      status: statusFor('context-conflict'),
       translated: false,
       contexts: entry.contexts,
     });
@@ -477,19 +567,27 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
   for (const [path, writers] of entriesOf(graph.writes)) {
     if (collectionAccumulationByPath.has(path)) {
       const { collectionEntity, collectionField } = collectionAccumulationByPath.get(path);
-      const factPath = factPathFromCanonicalPath(path);
+      const factPath = fpFromCanonical(path);
       facts.push({ path: factPath, expression: `sum(${collectionEntity}, '${collectionField}')` });
-      translationLog.push({ sourcePath: path, factPath, pattern: 'aggregation', role: 'derived', translated: true, collectionEntity, collectionField });
+      {
+        const rawType = vocabDatatypeByPath.get(path);
+        translationLog.push({
+          node: path, pattern: 'aggregation', status: statusFor('aggregation'), translated: true,
+          ...(rawType ? { raw: { type: rawType } } : {}),
+          compiled: { ...jt(path), expression: `sum(${collectionEntity}, '${collectionField}')` },
+        });
+      }
       continue;
     }
     if (genuineCyclePaths.has(path)) {
-      translationLog.push({ sourcePath: path, pattern: 'cycle', role: 'derived', translated: false });
+      translationLog.push({ node: path, pattern: 'cycle', status: statusFor('cycle'), translated: false });
       continue;
     }
     if (unclassifiedCyclePaths.has(path)) {
-      translationLog.push({ sourcePath: path, pattern: 'cycle-unclassified', role: 'derived', translated: false });
+      translationLog.push({ node: path, pattern: 'cycle-unclassified', status: statusFor('cycle-unclassified'), translated: false });
       continue;
     }
+
 
     // Entity-creation-tainted and unreachable-rulesheet writers never become part of
     // an ordinary Fact expression -- both already got their OWN translation log entry
@@ -504,7 +602,7 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
     // explanation, just a bare `continue`, unlike the genuine-cycle/unclassified-
     // cycle cases just above which each report their own path-level entry before
     // skipping.
-    const ordinaryWriters = writers.filter((writer) => !entityCreationRuleKeys.has(`${writer.rulesheet}:${writer.ruleIndex}`) && !noOpRuleKeys.has(`${writer.rulesheet}:${writer.ruleIndex}`) && !unreachableRulesheets.has(writer.rulesheet));
+    const ordinaryWriters = writers.filter((writer) => !entityCreationRuleKeys.has(`${basename(writer.rulesheet)}:${writer.ruleIndex}`) && !noOpRuleKeys.has(`${basename(writer.rulesheet)}:${writer.ruleIndex}`) && !unreachableBasenames.has(basename(writer.rulesheet)));
     if (ordinaryWriters.length === 0) {
       // If this scalar path is an attribute on an entity-creation output, cross-
       // reference it to the collection fact rather than flagging it as unresolvable.
@@ -514,28 +612,31 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
       if (entityCreationOutputByAssocPath.has(path)) continue;
       const ecOutputEntry = entityCreationOutputByScalarPath.get(path);
       if (ecOutputEntry) {
-        const assocFactPath = factPathFromCanonicalPath(ecOutputEntry.associationPath);
+        const assocFactPath = fpFromCanonical(ecOutputEntry.node);
         // Point factPath at the collection fact (not a per-field path) so the
         // visualizer's sourcePath→fact lookup finds the entity-creation output fact.
+        const rawType = vocabDatatypeByPath.get(path);
         translationLog.push({
-          sourcePath: path,
-          factPath: assocFactPath,
+          node: path,
           pattern: 'constructor-output',
-          role: 'output',
+          status: statusFor('constructor-output'),
           translated: false,
-          ref: assocFactPath,
-          entityType: ecOutputEntry.entityType,
+          raw: { type: ecOutputEntry.entityType, ...(rawType ? { sourceType: rawType } : {}) },
         });
         continue;
       }
-      const excludedRuleIds = [...new Set(writers.map((w) => w.rulesheet))];
-      translationLog.push({
-        sourcePath: path,
-        pattern: 'no-writer',
-        role: 'derived',
-        translated: false,
-        excludedRuleIds,
-      });
+      const excludedEdgeIds = [...new Set(writers.map((w) => w.rulesheet))];
+      {
+        const rawType = vocabDatatypeByPath.get(path);
+        translationLog.push({
+          node: path,
+          pattern: 'no-writer',
+          status: statusFor('no-writer'),
+          translated: false,
+          ...(rawType ? { raw: { type: rawType } } : {}),
+          excludedEdgeIds,
+        });
+      }
       continue;
     }
 
@@ -551,15 +652,18 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
     // (semantically correct: each branch fires only when no prior branch has matched,
     // which is what the null-guard achieves in forward-chaining). Confirmed real in
     // CBMS Disaster FS's COM_POSTPGM_IntakeXYZindicator.ers.
-    const maskingWriters = ordinaryWriters.filter((w) => selfLoopClassificationByKey.get(`${path}|${w.rulesheet}:${w.ruleIndex}`) === 'null-guard-default');
+    const maskingWriters = ordinaryWriters.filter((w) => nullGuardDefaultKeys.has(`${path}|${basename(w.rulesheet)}:${w.ruleIndex}`));
     if (maskingWriters.length > 1) {
-      translationLog.push({
-        sourcePath: path,
-        pattern: 'null-guard-table',
-        role: 'derived',
-        translated: true,
-        rowCount: maskingWriters.length,
-      });
+      {
+        const rawType = vocabDatatypeByPath.get(path);
+        translationLog.push({
+          node: path,
+          pattern: 'null-guard-table',
+          status: statusFor('null-guard-table'),
+          translated: true,
+          ...(rawType ? { raw: { type: rawType } } : {}),
+        });
+      }
       // Fall through: maskingWriters are already included in ordinaryWriters and will
       // be compiled by the decision-table path below. No continue.
     }
@@ -573,10 +677,20 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
       const rs = rulesheets.get(maskingWriter.rulesheet);
       const action = findActionForPath(rs.rules[maskingWriter.ruleIndex], path);
       if (!action) throw new Error(`No action in ${maskingWriter.rulesheet}'s rule ${maskingWriter.ruleIndex} actually writes "${path}" -- graph/classification and the real rule data have gone out of sync`);
-      maskingFallbackCel = compileActionCel(action, parseExpression);
-      const factPath = factPathFromCanonicalPath(path);
-      translationLog.push({ sourcePath: path, factPath, pattern: 'null-guard-fallback', role: 'derived', translated: true });
-      translationLog.push({ ruleId: `${maskingWriter.rulesheet}:${maskingWriter.ruleIndex}`, sourcePath: path, factPath, pattern: 'null-guard-default', role: 'input', translated: true });
+      maskingFallbackCel = compileActionCel(action, parseExpression, domain, graphName);
+      {
+        const rawType = vocabDatatypeByPath.get(path);
+        translationLog.push({
+          node: path, pattern: 'null-guard-fallback', status: statusFor('null-guard-fallback'), translated: true,
+          ...(rawType ? { raw: { type: rawType, expression: action?.text ?? null } } : { raw: { expression: action?.text ?? null } }),
+        });
+        translationLog.push({
+          edgeId: `${basename(maskingWriter.rulesheet)}:${maskingWriter.ruleIndex}`,
+          node: path, pattern: 'null-guard-default', status: statusFor('null-guard-default'), translated: true,
+          ...(rawType ? { raw: { type: rawType, expression: action?.text ?? null } } : {}),
+          compiled: { ...jt(path), expression: maskingFallbackCel },
+        });
+      }
     }
 
     // Exclude the single masking writer from main compilation -- its CEL is the fallback.
@@ -586,7 +700,7 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
 
     if (compilationWriters.length === 0) {
       // Pure null-default: no other writers -- the masking CEL is the sole expression.
-      const factPath = factPathFromCanonicalPath(path);
+      const factPath = fpFromCanonical(path);
       facts.push({ path: factPath, expression: maskingFallbackCel });
       continue;
     }
@@ -610,23 +724,25 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
     for (const rulesheetKey of rulesheetKeysInOrder) {
       const rulesheet = rulesheets.get(rulesheetKey);
       const ruleIndices = compilationWriters.filter((w) => w.rulesheet === rulesheetKey).map((w) => w.ruleIndex);
-      const combinatoricRuleIndices = combinatoricsByPathRulesheet.get(`${path}|${rulesheetKey}`);
-      if (combinatoricRuleIndices) {
+      const isHitPolicyUnverified = hitPolicyUnverifiedKeys.has(`${path}|${basename(rulesheetKey)}`);
+      if (isHitPolicyUnverified) {
         // Surfaced in the actual translation log output, not just a source comment -- see
         // compileRulesheetEntries's own doc comment for the real, cited reasoning
         // (Corticon's default UNIQUE hit policy) and the real, confirmed gap (Rule
         // Order hit policy isn't detectable from the file format at all).
-        translationLog.push({
-          sourcePath: path,
-          ruleId: rulesheetKey,
-          ruleIndices: combinatoricRuleIndices,
-          pattern: 'hit-policy-unverified',
-          role: 'derived',
-          translated: true,
-          assumption: 'unique-hit-policy',
-        });
+        {
+          const rawType = vocabDatatypeByPath.get(path);
+          translationLog.push({
+            edgeId: `${basename(rulesheetKey)}:*`,
+            node: path,
+            pattern: 'hit-policy-unverified',
+            status: statusFor('hit-policy-unverified'),
+            translated: true,
+            ...(rawType ? { raw: { type: rawType } } : {}),
+          });
+        }
       }
-      const rulesheetEntries = compileRulesheetEntries(rulesheetKey, rulesheet, combinatoricRuleIndices ?? ruleIndices, path, parseExpression);
+      const rulesheetEntries = compileRulesheetEntries(rulesheetKey, rulesheet, ruleIndices, path, parseExpression, domain, graphName);
       if (hasOutOfOrderUnconditional(rulesheetEntries)) {
         // Confirmed real, not hypothetical: this fixture's own ProgramAEligibility.ers
         // has its unconditional row FIRST, not last -- see chainEntries' own comment
@@ -636,19 +752,23 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
         // Corticon's real semantics match this compiled interpretation for this
         // specific out-of-order shape, unlike the far more common "unconditional row
         // last" case -- flagged for manual review, not assumed silently equivalent.
-        translationLog.push({
-          sourcePath: path,
-          ruleId: rulesheetKey,
-          pattern: 'unconditional-row-out-of-order',
-          role: 'derived',
-          translated: true,
-        });
+        {
+          const rawType = vocabDatatypeByPath.get(path);
+          translationLog.push({
+            edgeId: basename(rulesheetKey),
+            node: path,
+            pattern: 'unconditional-row-out-of-order',
+            status: statusFor('unconditional-row-out-of-order'),
+            translated: true,
+            ...(rawType ? { raw: { type: rawType } } : {}),
+          });
+        }
       }
       entriesByRulesheet.set(rulesheetKey, rulesheetEntries);
     }
 
-    const assemblyRulesheets = assemblyRulesheetsByPath.get(path);
-    if (assemblyRulesheets && assemblyRulesheets.length !== rulesheetKeysInOrder.length) {
+    const assemblyRuleIds = assemblyRulesheetsByPath.get(path);
+    if (assemblyRuleIds && assemblyRuleIds.length !== rulesheetKeysInOrder.length) {
       // Confirmed possible, and confirmed real for the unreachable-rulesheet case
       // (DC Medicaid/CHIP's dead Non-MAGI Eligibility Groups.ers is one of
       // Person.outputCoverage1's assembling rulesheets): entity-creation or
@@ -657,18 +777,15 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
       // found. Surfaced explicitly rather than silently compiling against a shrunk
       // set without saying so.
       translationLog.push({
-        sourcePath: path,
+        node: path,
         pattern: 'composition-mismatch',
-        role: 'derived',
+        status: statusFor('composition-mismatch'),
         translated: true,
-        expectedCount: assemblyRulesheets.length,
-        actualCount: rulesheetKeysInOrder.length,
-        expectedRuleIds: assemblyRulesheets,
-        actualRuleIds: rulesheetKeysInOrder,
+        note: `Expected ${assemblyRuleIds.length} rulesheets, got ${rulesheetKeysInOrder.length}`,
       });
     }
 
-    const { cel, hasFallback } = assemblyRulesheets && assemblyRulesheets.length > 1
+    const { cel, hasFallback } = assemblyRuleIds && assemblyRuleIds.length > 1
       ? compileAcrossRulesheets(rulesheetKeysInOrder, entriesByRulesheet, effectiveFallback)
       : chainEntries(entriesByRulesheet.get(rulesheetKeysInOrder[0]), effectiveFallback);
 
@@ -676,11 +793,19 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
     // fallback provides a catch-all -- if a masking fallback exists it always covers
     // the unmatched case.
     if (!hasFallback && maskingFallbackCel === null) {
-      translationLog.push({ sourcePath: path, pattern: 'no-default', role: 'derived', translated: true, sentinel: 'unresolved()' });
+      const rawType = vocabDatatypeByPath.get(path);
+      translationLog.push({ node: path, pattern: 'no-default', status: statusFor('no-default'), translated: true, ...(rawType ? { raw: { type: rawType } } : {}) });
     }
-    const factPath = factPathFromCanonicalPath(path);
-    facts.push({ path: factPath, expression: cel });
-    translationLog.push({ sourcePath: path, factPath, pattern: 'derived' });
+    facts.push({ path: fpFromCanonical(path), expression: cel });
+    {
+      const rawExpressions = [...entriesByRulesheet.values()].flat().map(e => e.rawExpression).filter(Boolean);
+      const rawType = vocabDatatypeByPath.get(path);
+      translationLog.push({
+        node: path, pattern: 'derived', status: statusFor('derived'), translated: true,
+        raw: { ...(rawType ? { type: rawType } : {}), ...(rawExpressions.length ? { expression: rawExpressions.length === 1 ? rawExpressions[0] : rawExpressions } : {}) },
+        compiled: { ...jt(path), expression: cel },
+      });
+    }
   }
 
   // The main loop above only ever walks graph.writes -- every Vocabulary attribute
@@ -691,22 +816,52 @@ export function buildFacts(project, graph, classificationInput, { parseExpressio
   const writtenPaths = new Set(entriesOf(graph.writes).map(([writtenPath]) => writtenPath));
   for (const path of enumerateVocabularyAttributes(project)) {
     if (writtenPaths.has(path)) continue;
-    const factPath = factPathFromCanonicalPath(path);
     const datatype = vocabDatatypeByPath.get(path);
-    facts.push({ path: factPath, writable: true, ...(datatype ? { datatype } : {}) });
-    translationLog.push({ sourcePath: path, factPath, pattern: 'input', role: 'input', translated: true });
+    facts.push({ path: fpFromCanonical(path), writable: true, ...(datatype ? { datatype } : {}) });
+    {
+      const rawType = vocabDatatypeByPath.get(path);
+      const compiledSchema = jt(path);
+      translationLog.push({
+        node: path, pattern: 'input', status: statusFor('input'), translated: true,
+        ...(rawType ? { raw: { type: rawType } } : {}),
+        ...(Object.keys(compiledSchema).length ? { compiled: { ...compiledSchema } } : {}),
+      });
+    }
   }
 
-  for (const filter of classification.filters) {
+  for (const p of patterns.filter((f) => f.pattern === 'guard')) {
     // The filter's own condition IS folded into every affected Fact's compiled guard
     // (see compileFilterGuard) -- this note flags the narrower remaining gap: the
     // full-vs-limiting cascade behavior (does an empty-after-filter collection
     // exclude the whole parent entity, not just the filtered alias?) still isn't
     // resolvable from static file inspection (issue #388's own flagged open item).
-    translationLog.push({ ruleId: filter.ruleId, pattern: 'guard', role: 'modifier', translated: true, expression: filter.expression });
+    translationLog.push({ edgeId: p.ruleId, pattern: 'guard', status: statusFor('guard'), translated: true, raw: { expression: p.expression } });
   }
-  for (const callout of classification.serviceCallouts) {
-    translationLog.push({ ruleId: callout.ruleflow, node: callout.node, pattern: 'call-procedure', role: 'input', translated: false, connector: callout.connector });
+  for (const p of patterns.filter((f) => f.pattern === 'call')) {
+    const pattern = `call-${p.variant ?? 'opaque'}`;
+    translationLog.push({ edgeId: p.ruleId, node: p.node, pattern, status: statusFor(pattern), translated: false, connector: p.connector });
+  }
+
+  // Post-process: fill in node + compiled on expression-level entries.
+  // These entries are pushed before the main loop so they don't have the compiled CEL yet.
+  // Build edgeId → node from graph.writes, then node → compiled from derived entries.
+  const nodeByEdgeId = new Map();
+  for (const [path, writers] of entriesOf(graph.writes)) {
+    for (const w of writers) nodeByEdgeId.set(`${basename(w.rulesheet)}:${w.ruleIndex}`, path);
+  }
+  const compiledByNode = new Map();
+  for (const entry of translationLog) {
+    if (entry.pattern === 'derived' && entry.node && entry.compiled) compiledByNode.set(entry.node, entry.compiled);
+  }
+  for (const entry of translationLog) {
+    if (expressionLevelPatterns.has(entry.pattern) && entry.edgeId && !entry.compiled) {
+      const node = nodeByEdgeId.get(entry.edgeId);
+      if (node) {
+        entry.node = node;
+        const compiled = compiledByNode.get(node);
+        if (compiled) entry.compiled = compiled;
+      }
+    }
   }
 
   return { facts, translationLog };

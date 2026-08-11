@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Rule Graph",
+  "description": "Universal intermediate representation of a compiled rule graph. Source-agnostic: produced by any rule source translator (Corticon, rulespec, etc.) and consumed by any output formatter (blueprint DSL, Fact Graph XML, FEEL/DMN, etc.).",
+  "type": "object",
+  "required": ["nodes", "edges"],
+  "additionalProperties": false,
+  "properties": {
+    "functions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Non-baseline CEL functions used in expressions (e.g. 'yearsBetween', 'round'). A translator must be able to implement or map each listed function to produce valid output for its target format.",
+      "uniqueItems": true
+    },
+    "nodes": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/Node" },
+      "description": "Map of node path → node definition. Two kinds of nodes:\n- Input nodes: path prefixed with '$.' (e.g. '$.Person.age'). These are values the caller supplies; they have no expression. Add 'type' when the source vocabulary declares a mappable primitive type.\n- Derived nodes: path with no prefix (e.g. 'Person.eligible'). These are computed from other nodes via a CEL expression. Add 'type' when the source vocabulary declares a mappable primitive type for the attribute."
+    },
+    "edges": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "$ref": "#/definitions/EdgePair" }
+      },
+      "description": "Directed data-dependency edges keyed by edgeId. Each key is a source-specific rule identifier (e.g. 'file.ers:N' for Corticon); the value is an array of {from, to} pairs established by that rule."
+    }
+  },
+  "definitions": {
+    "Node": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of what this node represents. Use plain language; cite the relevant regulation or policy when applicable."
+        },
+        "expression": {
+          "type": "string",
+          "description": "CEL expression that computes this node's value. Present on derived nodes; absent on input nodes."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["string", "number", "integer", "boolean", "object"],
+          "description": "JSON Schema type. Always include when the vocabulary declares a type that maps to JSON Schema. Corticon mapping: Integer→integer, Decimal/Float/Real/Double→number, String/Text→string, Boolean→boolean, Date/DateTime/Time→string (with format), enums→string (with enum values), entity references→object (with entityType)."
+        },
+        "format": {
+          "type": "string",
+          "description": "JSON Schema format. Used with type:string for date types: 'date' (Corticon Date), 'date-time' (Corticon DateTime), 'time' (Corticon Time)."
+        },
+        "enum": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "JSON Schema enum. Used with type:string for Corticon custom enum types. Contains the enumeration values declared in the vocabulary."
+        },
+        "enumDescriptions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Human-readable labels for each enum value, parallel to the enum array. Derived from the Corticon literal display name with the code prefix and underscores removed (e.g. 'Non recipient Fraud' for literal 'AF0018_Non_recipient_Fraud')."
+        },
+        "entityType": {
+          "type": "string",
+          "description": "Entity class name for object-typed nodes (type:object). Used for reference nodes to identify which entity class this node represents."
+        },
+        "default": {
+          "description": "Default value for input nodes (JSON Schema convention). Used for policy parameters that have a well-known value but can be overridden by states."
+        }
+      }
+    },
+    "EdgePair": {
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "Path of the node this edge depends on. Input node paths carry the '$.' prefix."
+        },
+        "to": {
+          "type": "string",
+          "description": "Path of the derived node that depends on 'from'."
+        }
+      }
+    }
+  }
+}

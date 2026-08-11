@@ -1,4 +1,4 @@
 node_modules/
 generated/*
 !generated/.gitkeep
-fixtures/corticon/state-specific/
+fixtures/state-specific/

@@ -1,125 +1,104 @@
-import { canonicalAttributePath } from '../../../graph/attribute-path.js';
-import { isBlankTemplateRule } from '../corticon/rulesheet.js';
-import { entriesOf } from '../../../map-utils.js';
 import { resolveRuleflowContext } from './ruleflow-context.js';
-import { classifySelfLoops, classifyMultiHopCycles } from './cycle-classifier.js';
-import { classifyEntityCreation } from './entity-creation-classifier.js';
-import { classifyServiceCallouts } from './service-callout-classifier.js';
-import { classifyDecisionTableCombinatorics } from './decision-table-classifier.js';
-import { classifyFilters } from './filter-classifier.js';
+import { classifyCycles, classifyMultiHopCycles } from './cycle-classifier.js';
+import { classifyConstructors } from './constructor-classifier.js';
+import { classifyCalls } from './call-classifier.js';
+import { classifyHitPolicyUnverified, classifyDecisionTableAlternativeRows } from './decision-table-classifier.js';
+import { classifyGuards } from './guard-classifier.js';
 import { classifyExpressionPatterns } from './expression-patterns.js';
+import { classifyNullGuards } from './null-guard-classifier.js';
+import { classifyScalarAccumulators } from './scalar-accumulator-classifier.js';
+import { classifyUnreachable } from './unreachable-classifier.js';
+import { classifyComposition } from './composition-classifier.js';
+import { classifyUnconditionalRows } from './unconditional-row-classifier.js';
 import { classifyAttributeUsage } from './attribute-usage-classifier.js';
 import { classifyNoOps } from './no-op-classifier.js';
 import { classifySinkCandidates } from './sink-candidate-classifier.js';
 import { loadClassifierConfig } from './load-classifier-config.js';
 
-function attributePathsIn(terms) {
-  return (terms ?? []).map(canonicalAttributePath).filter(Boolean);
-}
-
 /**
- * Recursively stamps ruleId on every object that has rulesheet/ruleIndex or
- * rulesheet/ruleIndices, then strips rulesheet/ruleIndex/ruleIndices so
- * consumers work with the universal ruleId instead of Corticon-specific fields.
- */
-function withRuleIds(value) {
-  if (Array.isArray(value)) return value.map(withRuleIds);
-  if (value && typeof value === 'object') {
-    const out = {};
-    for (const [k, v] of Object.entries(value)) {
-      if (k === 'rulesheet' || k === 'ruleIndex' || k === 'ruleIndices') continue;
-      out[k] = withRuleIds(v);
-    }
-    if ('rulesheet' in value && 'ruleIndex' in value) {
-      out.ruleId = value.ruleIndex != null ? `${value.rulesheet}:${value.ruleIndex}` : value.rulesheet;
-    } else if ('rulesheet' in value && 'ruleIndices' in value) {
-      out.ruleId = value.rulesheet;
-      out.ruleIds = value.ruleIndices.map((i) => `${value.rulesheet}:${i}`);
-    } else if ('rulesheet' in value) {
-      out.ruleId = value.rulesheet;
-    }
-    return out;
-  }
-  return value;
-}
-
-/**
- * Attribute paths written by more than one distinct rulesheet -- the cross-rulesheet
- * Fact assembly pattern (e.g. Person.MedicaidEligible in Parse Cohorts.ers + Flatten.ers).
- * Derived directly from the project's own rules without a pre-built graph.
+ * Runs every classifier against a Phase 2 project model and returns a unified
+ * classification result: sinkCandidates (keyed by attribute path) and patterns
+ * (an array of PatternFinding objects from the translation-patterns catalog).
  *
- * Null-check-masking rules (null-default pattern) are excluded from the count.
- * A null-default writer provides a placeholder fallback, not a partial fact
- * contribution -- including it falsely inflates the writer count and causes the
- * null-default rulesheet to be tagged as fact-assembly in the visualizer.
- * The null-check detection is the same heuristic cycle-classifier.js uses:
- * any condition that checks the written path against a literal null.
- */
-function findCrossRulesheetAssembly(project) {
-  const writesByPath = new Map();
-  for (const [rulesheetFile, rulesheet] of entriesOf(project.rulesheets)) {
-    rulesheet.rules.forEach((rule) => {
-      if (isBlankTemplateRule(rule)) return;
-      for (const action of rule.actions.filter(Boolean)) {
-        for (const writePath of attributePathsIn(action.modifiedTerms)) {
-          // Exclude null-check-masking writers: a rule that checks `X = null`
-          // on the same path it writes is a null-default, not a fact-assembly
-          // participant. Same heuristic as cycle-classifier.js's isNullCheckOn.
-          const isNullDefault = (rule.conditions ?? []).filter(Boolean).some((c) => {
-            const touchesPath = (c.referencedTerms ?? []).some((t) => canonicalAttributePath(t) === writePath);
-            return touchesPath && /=\s*null\s*$/.test(c.text ?? '');
-          });
-          if (isNullDefault) continue;
-          if (!writesByPath.has(writePath)) writesByPath.set(writePath, new Set());
-          writesByPath.get(writePath).add(rulesheetFile);
-        }
-      }
-    });
-  }
-  const result = [];
-  for (const [path, rulesheets] of writesByPath) {
-    if (rulesheets.size > 1) result.push({ path, rulesheets: [...rulesheets] });
-  }
-  return result;
-}
-
-/**
- * Runs every Phase 3 classifier against a Phase 2 project model, matching
- * issue #388's pattern table: ruleflow-invocation-context-dependent classifications
- * (self-loops, multi-hop cycles) alongside classifications that need the raw
- * project rules (cross-rulesheet assembly, decision-table combinatorics) or only
- * the project's rulesheets/ruleflows directly (entity creation, service call-outs,
- * filters, the remaining expression patterns). Shared by classify-project.js (the
- * CLI) and anything else that needs a real classification without going through a
- * file on disk (tests, translate-project.js's own tests) -- not duplicated between them.
+ * Classifier ordering matters for exclusion sets:
+ * 1. expressionPatterns first — cycle and decision-table classifiers need to skip
+ *    rules already explained by expression-level patterns.
+ * 2. nullGuards and scalarAccumulators — self-loop classifiers that take priority
+ *    over the generic cycle classifier.
+ * 3. cycles — only fires on iterative self-loops not already classified above.
+ * 4. decisionTableAlternativeRows — non-iterative self-loops not classified by null-guard.
+ * 5. Remaining classifiers are independent.
  */
 export function classifyProject(project) {
   const ruleflowContext = resolveRuleflowContext(project);
   const classifierConfig = project.projectDir ? loadClassifierConfig(project.projectDir) : {};
-  // expressionPatterns runs first: classifySelfLoops needs it to avoid false-positive
-  // decision-table-alternative-row labels on transform-in-place rules (e.g. decimal-rounding).
-  const expressionPatterns = classifyExpressionPatterns(project);
-  const selfLoops = classifySelfLoops(project, ruleflowContext, expressionPatterns);
   const attributeUsage = classifyAttributeUsage(project);
-  return withRuleIds({
-    // Structural context: what's reachable, what loops, what's dead
+
+  // Step 1: expression patterns — needed as exclusion input for later classifiers.
+  const expressionPatterns = classifyExpressionPatterns(project);
+
+  // Step 2: null-guard and scalar-accumulator — self-loop classifiers with priority.
+  const nullGuards = classifyNullGuards(project);
+  const scalarAccumulators = classifyScalarAccumulators(project, ruleflowContext);
+
+  // Exclusion set for the cycle classifier: only null-guard and scalar-accumulator
+  // ruleIds explain iterative self-loops. Expression-level patterns (operator-precedence,
+  // rounding, etc.) describe the expression shape but do NOT mean the self-loop isn't a
+  // genuine cycle — passing them here would suppress real cycles (confirmed: all-patterns'
+  // iterative-body.ers cycle would be masked by its operator-precedence classification).
+  const selfLoopClassifiedRuleIds = new Set([
+    ...nullGuards.map((f) => f.ruleId),
+    ...scalarAccumulators.map((f) => f.ruleId),
+  ]);
+
+  // Step 3: genuine cycles — iterative self-loops not already classified.
+  const cycles = classifyCycles(project, ruleflowContext, selfLoopClassifiedRuleIds);
+
+  // Step 4: decision-table alternative rows — non-iterative self-loops.
+  // Expression-pattern ruleIds are excluded (same "basename:N" format).
+  const expressionPatternRuleIds = new Set(expressionPatterns.map((f) => f.ruleId));
+  const decisionTableAlternativeRows = classifyDecisionTableAlternativeRows(
+    project, ruleflowContext, expressionPatternRuleIds,
+  );
+
+  // Step 5: remaining independent classifiers.
+  const hitPolicyUnverified = classifyHitPolicyUnverified(project);
+  const constructors = classifyConstructors(project);
+  const calls = classifyCalls(project);
+  const guards = classifyGuards(project);
+  const noOps = classifyNoOps(project);
+  const multiHopCycles = classifyMultiHopCycles(project, ruleflowContext);
+  const unreachable = classifyUnreachable(ruleflowContext);
+  const composition = classifyComposition(project);
+  const unconditionalRows = classifyUnconditionalRows(project);
+
+  const patterns = [
+    ...expressionPatterns,
+    ...nullGuards,
+    ...scalarAccumulators,
+    ...cycles,
+    ...multiHopCycles,
+    ...decisionTableAlternativeRows,
+    ...hitPolicyUnverified,
+    ...constructors,
+    ...calls,
+    ...guards,
+    ...noOps,
+    ...unreachable,
+    ...composition,
+    ...unconditionalRows,
+  ];
+
+  return {
     ruleflowContext: {
-      roots: ruleflowContext.roots,
-      unreachableRulesheets: ruleflowContext.unreachable,
-      multiInvokedRulesheets: ruleflowContext.multiInvoked,
+      roots: ruleflowContext.roots.map((r) => r.split('/').pop()),
+      unreachableRulesheets: ruleflowContext.unreachable.map((r) => r.split('/').pop()),
+      multiInvokedRulesheets: ruleflowContext.multiInvoked.map(({ rulesheet, contexts }) => ({
+        rulesheet: rulesheet.split('/').pop(),
+        contexts,
+      })),
     },
     sinkCandidates: classifySinkCandidates(project, ruleflowContext, attributeUsage, classifierConfig),
-    // Pattern findings: the classified rule-level and rulesheet-level constructs
-    patterns: {
-      entityCreation: classifyEntityCreation(project),
-      selfLoops,
-      multiHopCycles: classifyMultiHopCycles(project, ruleflowContext),
-      crossRulesheetAssembly: findCrossRulesheetAssembly(project),
-      decisionTableCombinatorics: classifyDecisionTableCombinatorics(project),
-      filters: classifyFilters(project),
-      serviceCallouts: classifyServiceCallouts(project),
-      noOps: classifyNoOps(project),
-      expressionPatterns,
-    },
-  });
+    patterns,
+  };
 }

@@ -1,4 +1,4 @@
-import { isBlankTemplateRule } from '../corticon/rulesheet.js';
+import { isBlankTemplateRule } from '../rulesheet.js';
 import { entriesOf } from '../../../map-utils.js';
 import { buildEntityAliasMap } from '../../../graph/attribute-path.js';
 
@@ -6,8 +6,7 @@ import { buildEntityAliasMap } from '../../../graph/attribute-path.js';
  * For each written attribute, computes signals that help identify which are
  * meaningful goal outputs (sink candidates) vs. intermediates or logging artifacts:
  *
- * - rulesheetCount / totalRulesheets: how many distinct rulesheets write to it
- * - ruleCount / totalRules: how many distinct rules (across all rulesheets) write to it
+ * - definitionCount / totalDefinitions: how many distinct rules (across all rulesheets) write to it
  * - latestPosition / totalPositions: the latest execution position of any rulesheet
  *   that writes to it, expressed as a fraction of the total ruleflow sequence length
  * - isOutput: true if declared in ruleset-config.yaml output_entities
@@ -87,14 +86,11 @@ export function classifySinkCandidates(project, ruleflowContext, attributeUsage,
     // Exclude temp attributes unless explicitly declared as an output entity
     if (!isOutput && tempPrefixes.some((prefix) => attr.startsWith(prefix))) continue;
 
-    const rulesheetCount = writingRulesheetsByKey.get(key)?.size ?? 0;
-    const ruleCount = writingRuleCountByKey.get(key) ?? 0;
+    const definitionCount = writingRuleCountByKey.get(key) ?? 0;
     const latestPosition = latestPositionByKey.get(key) ?? null;
     candidates[key] = {
-      rulesheetCount,
-      totalRulesheets,
-      ruleCount,
-      totalRules,
+      definitionCount,
+      totalDefinitions: totalRules,
       latestPosition,
       totalPositions,
       ...(isOutput ? { isOutput: true } : {}),

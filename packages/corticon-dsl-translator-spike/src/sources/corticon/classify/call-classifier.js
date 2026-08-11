@@ -1,3 +1,4 @@
+import { basename } from 'node:path';
 import { entriesOf } from '../../../map-utils.js';
 
 // A connector invocation is a plain-object `invokes` shape ("#//@ruleflow/@connectorList.0"),
@@ -20,16 +21,19 @@ function invocationTargets(node) {
 }
 
 /**
- * Finds real Corticon service call-out nodes -- a Ruleflow node invoking a
- * `connectorList` entry instead of a `.ers` ruleset (confirmed real in
- * corticon.js-samples/ServiceCallOut/RESTCall/Fetch.erf: an ActivityNode with
- * `invokes="#//@ruleflow/@connectorList.0"`, paired with
- * `<connectorList className="FetchServiceCallout.js" serviceName="fetchURL"/>` in the
- * same ruleflow). Per issue #388, this is an orchestration/adapter-layer concern to
- * flag, not a Fact derivation to translate -- a call-out is a side-effecting external
- * call, not a derivation from other known facts.
+ * Finds Corticon service call-out nodes as PatternFinding objects with pattern "call"
+ * and variant "opaque" — a Ruleflow node invoking a `connectorList` entry instead of
+ * a `.ers` ruleset (confirmed real in corticon.js-samples/ServiceCallOut/RESTCall/
+ * Fetch.erf: an ActivityNode with `invokes="#//@ruleflow/@connectorList.0"`, paired
+ * with `<connectorList className="FetchServiceCallout.js" serviceName="fetchURL"/>` in
+ * the same ruleflow). Per issue #388, this is an orchestration/adapter-layer concern
+ * to flag, not a Fact derivation to translate — a call-out is a side-effecting
+ * external call, not a derivation from other known facts.
+ *
+ * Variant is "opaque" because purity cannot be determined from the source alone;
+ * inspecting the external implementation is required to classify as function or procedure.
  */
-export function classifyServiceCallouts(project) {
+export function classifyCalls(project) {
   const result = [];
   for (const [ruleflowFile, ruleflow] of entriesOf(project.ruleflows)) {
     const connectorsInOrder = entriesOf(ruleflow.connectors).map(([, connector]) => connector);
@@ -37,7 +41,13 @@ export function classifyServiceCallouts(project) {
       for (const target of invocationTargets(node)) {
         const index = connectorIndexFromInvokes(target.invokes);
         if (index === undefined) continue;
-        result.push({ ruleflow: ruleflowFile, node: target.name, connector: connectorsInOrder[index] });
+        result.push({
+          pattern: 'call',
+          variant: 'opaque',
+          node: target.name,
+          ruleId: basename(ruleflowFile),
+          connector: connectorsInOrder[index],
+        });
       }
     }
   }

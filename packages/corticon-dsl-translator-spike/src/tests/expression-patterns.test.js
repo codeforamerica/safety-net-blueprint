@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseRulesheet } from '../sources/corticon/corticon/rulesheet.js';
-import { loadProject } from '../sources/corticon/corticon/project.js';
+import { parseRulesheet } from '../sources/corticon/rulesheet.js';
+import { loadProject } from '../sources/corticon/project.js';
 import {
   isDateArithmetic,
   isCurrencyRounding,
@@ -82,18 +82,17 @@ test('detects real sorting/ranking via the raw expression text fallback -- IRR\'
 test('classifyExpressionPatterns finds all three kinds across a whole real project, including the raw-text-fallback cases', () => {
   const project = loadProject('fixtures/corticon/government/dc-medicaid-chip');
   const results = classifyExpressionPatterns(project);
-  const byKind = (kind) => results.filter((r) => r.kind === kind);
-  assert.ok(byKind('date-arithmetic').some((r) => r.rulesheet.includes('Create Household')));
-  assert.ok(byKind('currency-rounding').some((r) => r.rulesheet.includes('Set FPL from Household Size')), 'must catch the compound-expression .round(2) via the text fallback, not just a term match');
-  assert.ok(byKind('sorting').some((r) => r.rulesheet.includes('Parse Cohorts')));
+  const byPattern = (pattern) => results.filter((r) => r.pattern === pattern);
+  assert.ok(byPattern('date-arithmetic').some((r) => r.ruleId.includes('Create Household')));
+  assert.ok(byPattern('rounding').some((r) => r.ruleId.includes('Set FPL from Household Size')), 'must catch the compound-expression .round(2) via the text fallback, not just a term match');
+  assert.ok(byPattern('sort').some((r) => r.ruleId.includes('Parse Cohorts')));
 });
 
-test('classifyExpressionPatterns surfaces IRR\'s real filter-level sorting via the text fallback, with no ruleIndex since it\'s not tied to a rule', () => {
+test('classifyExpressionPatterns surfaces IRR\'s real filter-level sorting via the text fallback, with ruleId :* since it\'s not tied to a specific rule', () => {
   const project = loadProject('fixtures/corticon/vendor-samples/irr');
-  const results = classifyExpressionPatterns(project).filter((r) => r.rulesheet === 'initial values.ers');
+  const results = classifyExpressionPatterns(project).filter((r) => r.ruleId === 'initial values.ers:*');
   assert.equal(results.length, 1);
-  assert.equal(results[0].kind, 'sorting');
-  assert.equal(results[0].ruleIndex, null);
+  assert.equal(results[0].pattern, 'sort');
 });
 
 test('detects compound arithmetic in this fixture\'s own operator-precedence.ers', () => {
@@ -139,9 +138,9 @@ test('detects type conversion (.toString()) in this fixture\'s own type-conversi
 test('classifyExpressionPatterns finds all four new kinds in the all-patterns fixture', () => {
   const project = loadProject('fixtures/corticon/synthetic/all-patterns');
   const results = classifyExpressionPatterns(project);
-  const byKind = (kind) => results.filter((r) => r.kind === kind);
-  assert.ok(byKind('operator-precedence').some((r) => r.rulesheet === 'operator-precedence.ers'));
-  assert.ok(byKind('logical-operators').some((r) => r.rulesheet === 'logical-operators.ers'));
-  assert.ok(byKind('membership-test-range').some((r) => r.rulesheet === 'range-membership.ers'));
-  assert.ok(byKind('coercion').some((r) => r.rulesheet === 'type-conversion.ers'));
+  const byPattern = (pattern, variant) => results.filter((r) => r.pattern === pattern && (!variant || r.variant === variant));
+  assert.ok(byPattern('operator-precedence').some((r) => r.ruleId.includes('operator-precedence.ers')));
+  assert.ok(byPattern('logical-operators').some((r) => r.ruleId.includes('logical-operators.ers')));
+  assert.ok(byPattern('membership-test', 'range').some((r) => r.ruleId.includes('range-membership.ers')));
+  assert.ok(byPattern('coercion').some((r) => r.ruleId.includes('type-conversion.ers')));
 });

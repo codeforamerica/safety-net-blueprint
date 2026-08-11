@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Full pipeline: ingest → classify → translate → visualize.
+ * Full pipeline: ingest → translate → visualize.
  * Usage: node src/build.js <fixtureDir> [--out-dir <dir>]
  * Example: node src/build.js fixtures/corticon/synthetic/all-patterns
  *          node src/build.js fixtures/corticon/government/dc-medicaid-chip --out-dir generated
@@ -28,15 +28,10 @@ function run(...nodeArgs) {
   execFileSync('node', nodeArgs, { stdio: 'inherit' });
 }
 
-run('src/sources/corticon/ingest-project.js',    fixtureDir,                    '--out', out('corticon.json'));
-run('src/sources/corticon/classify-project.js',  out('corticon.json'),           '--out', out('patterns.json'));
-run('src/sources/corticon/translate-project.js', out('patterns.json'),  '--out', out('blueprint-dsl.json'));
-run('src/sources/corticon/visualize-rules-html.js', slug,
-  '--classified', out('patterns.json'),
-  '--project',    out('corticon.json'),
-  '--out',        join(outDir, `${slug}-rules.html`));
-run('src/targets/blueprint-dsl/visualize-graph-html.js', slug,
-  '--classified',  out('patterns.json'),
-  '--translated',  out('blueprint-dsl.json'),
-  '--graph',       out('graph.json'),
-  '--out',         join(outDir, `${slug}-graph.html`));
+run('src/sources/corticon/ingest-project.js',    fixtureDir,            '--out', out('source.json'));
+run('src/sources/corticon/translate-project.js', out('source.json'), '--out', out('graph.json'), '--translation-log', out('translation-log.json'));
+run('src/visualizers/visualize-html.js', slug,
+  '--project',         out('source.json'),
+  '--graph',           out('graph.json'),
+  '--translation-log', out('translation-log.json'),
+  '--out',             join(outDir, `${slug}.html`));

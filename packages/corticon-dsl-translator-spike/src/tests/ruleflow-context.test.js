@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
-import { loadProject } from '../sources/corticon/corticon/project.js';
+import { loadProject } from '../sources/corticon/project.js';
 import { resolveRuleflowContext } from '../sources/corticon/classify/ruleflow-context.js';
 
 test('IRR: rulesheets inside the iterative loop are marked iterative, the setup step is not', () => {

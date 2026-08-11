@@ -1,0 +1,78 @@
+{
+  "nodes": {
+    "$.Household.size": {
+      "type": "integer",
+      "description": "Number of people in the household."
+    },
+    "$.Household.monthlyGrossIncome": {
+      "type": "number",
+      "description": "Total monthly gross income for the household before any deductions."
+    },
+    "$.Household.liquidResources": {
+      "type": "number",
+      "description": "Value of countable liquid resources (cash, checking/savings accounts, etc.)."
+    },
+    "$.Household.monthlyHousingCosts": {
+      "type": "number",
+      "description": "Total monthly housing costs including rent or mortgage plus utilities."
+    },
+    "$.Household.isDestituteMigrant": {
+      "type": "boolean",
+      "description": "True if the household includes a destitute migrant or seasonal farmworker. (7 CFR 273.2(i)(1)(ii)(C))"
+    },
+
+    "$.Expedited.resourceLimit": {
+      "default": 100,
+      "type": "number",
+      "description": "Federal liquid resource ceiling for expedited SNAP: $100. (7 CFR 273.2(i)(1)(ii)(A) and (C))"
+    },
+    "$.Expedited.grossIncomeLimit": {
+      "default": 150,
+      "type": "number",
+      "description": "Federal monthly gross income ceiling for prong 1: flat $150 regardless of household size. (7 CFR 273.2(i)(1)(ii)(A))"
+    },
+    "Expedited.passesLowIncomeTest": {
+      "expression": "monthlyGrossIncome < grossIncomeLimit && liquidResources <= resourceLimit",
+      "type": "boolean",
+      "description": "Prong 1: monthly gross income below $150 AND liquid resources at or below $100. (7 CFR 273.2(i)(1)(ii)(A))"
+    },
+    "Expedited.passesHousingCostTest": {
+      "expression": "(monthlyGrossIncome + liquidResources) < monthlyHousingCosts",
+      "type": "boolean",
+      "description": "Prong 2: combined monthly gross income and liquid resources less than monthly housing costs. (7 CFR 273.2(i)(1)(ii)(B))"
+    },
+    "Expedited.passesMigrantTest": {
+      "expression": "isDestituteMigrant && liquidResources <= resourceLimit",
+      "type": "boolean",
+      "description": "Prong 3: destitute migrant or seasonal farmworker with liquid resources at or below $100. (7 CFR 273.2(i)(1)(ii)(C))"
+    },
+    "Expedited.eligible": {
+      "expression": "passesLowIncomeTest || passesHousingCostTest || passesMigrantTest",
+      "type": "boolean",
+      "description": "Eligible for expedited SNAP (7-day processing) if any one of the three federal prongs is met. (7 CFR 273.2(i)(1)(ii))"
+    }
+  },
+  "edges": {
+    "prong-1-low-income": [
+      { "from": "$.Household.monthlyGrossIncome", "to": "Expedited.passesLowIncomeTest" },
+      { "from": "$.Household.liquidResources",    "to": "Expedited.passesLowIncomeTest" },
+      { "from": "$.Expedited.grossIncomeLimit",     "to": "Expedited.passesLowIncomeTest" },
+      { "from": "$.Expedited.resourceLimit",        "to": "Expedited.passesLowIncomeTest" }
+    ],
+    "prong-2-housing-cost": [
+      { "from": "$.Household.monthlyGrossIncome",  "to": "Expedited.passesHousingCostTest" },
+      { "from": "$.Household.liquidResources",     "to": "Expedited.passesHousingCostTest" },
+      { "from": "$.Household.monthlyHousingCosts", "to": "Expedited.passesHousingCostTest" }
+    ],
+    "prong-3-migrant": [
+      { "from": "$.Household.isDestituteMigrant", "to": "Expedited.passesMigrantTest" },
+      { "from": "$.Household.liquidResources",    "to": "Expedited.passesMigrantTest" },
+      { "from": "$.Expedited.resourceLimit",        "to": "Expedited.passesMigrantTest" }
+    ],
+    "eligibility": [
+      { "from": "Expedited.passesLowIncomeTest",   "to": "Expedited.eligible" },
+      { "from": "Expedited.passesHousingCostTest", "to": "Expedited.eligible" },
+      { "from": "Expedited.passesMigrantTest",     "to": "Expedited.eligible" }
+    ]
+  }
+}

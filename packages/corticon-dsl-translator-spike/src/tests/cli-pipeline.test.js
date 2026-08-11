@@ -12,9 +12,8 @@ import { join } from 'node:path';
  * argument parsing, file I/O, and output shape work, not just the library code
  * underneath it.
  *
- * Full pipeline: ingest-project.js -> classify-project.js -> translate-project.js.
- * graph-project.js is exercised in the same test as an optional diagnostic step
- * (it no longer feeds classify, but its output shape is still verified).
+ * Pipeline: ingest-project.js -> translate-project.js (classify is now internal).
+ * classify-project.js is also exercised as a standalone tool to verify it still works.
  */
 const FIXTURES = [
   'fixtures/corticon/government/dc-medicaid-chip',
@@ -23,16 +22,17 @@ const FIXTURES = [
   'fixtures/corticon/vendor-samples/servicecallout',
   'fixtures/corticon/synthetic/branch-reconstruction',
   'fixtures/corticon/synthetic/all-patterns',
+  'fixtures/corticon/synthetic/snap-work-requirements',
 ];
 
 for (const fixtureDir of FIXTURES) {
-  test(`pipeline: ingest-project.js -> graph-project.js -> classify-project.js -> translate-project.js runs end-to-end for ${fixtureDir}`, () => {
+  test(`pipeline: ingest-project.js -> translate-project.js runs end-to-end for ${fixtureDir}`, () => {
     const scratch = mkdtempSync(join(tmpdir(), 'corticon-pipeline-'));
     try {
-      const projectJsonPath = join(scratch, 'project.json');
-      const graphJsonPath = join(scratch, 'project.graph.json');
-      const classifiedJsonPath = join(scratch, 'project.patterns.json');
-      const translatedJsonPath = join(scratch, 'project.translated.json');
+      const projectJsonPath      = join(scratch, 'project.json');
+      const classifiedJsonPath   = join(scratch, 'project.patterns.json');
+      const graphJsonPath        = join(scratch, 'graph.json');
+      const translationLogPath   = join(scratch, 'translation-log.json');
 
       execFileSync('node', ['src/sources/corticon/ingest-project.js', fixtureDir, '--out', projectJsonPath], { encoding: 'utf-8' });
       const project = JSON.parse(readFileSync(projectJsonPath, 'utf-8'));
@@ -40,32 +40,53 @@ for (const fixtureDir of FIXTURES) {
       assert.ok(project.ruleflows, 'ingest-project.js --out should write a project with ruleflows');
       assert.ok(project.vocabularies, 'ingest-project.js --out should write a project with vocabularies');
 
-      // graph-project.js is an optional diagnostic step -- no longer feeds classify,
-      // but its output shape is still verified here.
-      execFileSync('node', ['src/graph/graph-project.js', projectJsonPath, '--out', graphJsonPath], { encoding: 'utf-8' });
-      const combined = JSON.parse(readFileSync(graphJsonPath, 'utf-8'));
-      assert.ok(combined.project, 'graph-project.js --out should carry the original project through, not just the graph');
-      assert.deepEqual(combined.project.rulesheets, project.rulesheets, 'the carried-through project should match Phase 1\'s own output exactly');
-      assert.ok(combined.graph, 'graph-project.js --out should include the derived graph');
-      assert.ok(Array.isArray(combined.graph.edges), 'graph.edges should be an array');
-      assert.ok(combined.graph.nodes && typeof combined.graph.nodes === 'object', 'graph.nodes should be present');
-
-      // classify-project.js takes project.json directly (not graph.json).
+      // classify-project.js is still usable as a standalone tool.
       execFileSync('node', ['src/sources/corticon/classify-project.js', projectJsonPath, '--out', classifiedJsonPath], { encoding: 'utf-8' });
       const classified = JSON.parse(readFileSync(classifiedJsonPath, 'utf-8'));
-      assert.ok(classified.sourceFile, 'classify-project.js --out should reference the source file, not carry the project through');
+      assert.ok(classified.sourceFile, 'classify-project.js --out should reference the source file');
       assert.ok(classified.classification, 'classify-project.js --out should include the classification');
-      assert.ok(classified.classification.patterns, 'classify-project.js --out should include classification.patterns');
-      for (const key of ['selfLoops', 'multiHopCycles', 'crossRulesheetAssembly', 'decisionTableCombinatorics', 'entityCreation', 'serviceCallouts', 'filters', 'expressionPatterns', 'noOps']) {
-        assert.ok(Array.isArray(classified.classification.patterns[key]), `classify-project.js --out should include an array for classification.patterns.${key}`);
+      assert.ok(Array.isArray(classified.classification.patterns), 'classify-project.js --out should include classification.patterns as an array');
+      assert.ok('sinkCandidates' in classified.classification, 'classify-project.js --out should include classification.sinkCandidates');
+
+      // translate-project.js now takes input.json directly; classification runs internally.
+      execFileSync('node', ['src/sources/corticon/translate-project.js', projectJsonPath, '--out', graphJsonPath, '--translation-log', translationLogPath], { encoding: 'utf-8' });
+
+      const graph = JSON.parse(readFileSync(graphJsonPath, 'utf-8'));
+      assert.ok(graph.nodes && typeof graph.nodes === 'object' && !Array.isArray(graph.nodes), 'translate-project.js --out should write a graph with nodes as a path-keyed object');
+      assert.ok(graph.edges && typeof graph.edges === 'object' && !Array.isArray(graph.edges), 'translate-project.js --out should write a graph with edges as an edgeId-keyed object');
+      for (const [path, node] of Object.entries(graph.nodes)) {
+        assert.ok(typeof path === 'string' && path.length > 0, `every graph node key should be a non-empty string, got: ${path}`);
+        const isInput = path.startsWith('$.');
+        if (isInput) {
+          assert.ok(!node.expression, `input node ${path} should not have an expression`);
+        } else {
+          assert.ok(node.expression !== undefined, `derived node ${path} should have an expression`);
+        }
+      }
+      for (const [edgeId, pairs] of Object.entries(graph.edges)) {
+        assert.ok(typeof edgeId === 'string' && edgeId.length > 0, `every edge key should be a non-empty edgeId string, got: ${edgeId}`);
+        assert.ok(Array.isArray(pairs) && pairs.length > 0, `every edge value should be a non-empty array of {from,to} pairs, got: ${JSON.stringify(pairs)}`);
+        for (const pair of pairs) {
+          assert.ok(pair.from && pair.to, `every edge pair should have from and to, got: ${JSON.stringify(pair)}`);
+        }
       }
 
-      execFileSync('node', ['src/sources/corticon/translate-project.js', classifiedJsonPath, '--out', translatedJsonPath], { encoding: 'utf-8' });
-      const translated = JSON.parse(readFileSync(translatedJsonPath, 'utf-8'));
-      assert.ok(Array.isArray(translated.facts), 'translate-project.js --out should write a Facts-only file');
-      for (const fact of translated.facts) {
-        assert.ok(fact.path?.startsWith('/'), `every compiled Fact path should be a real decision-rules DSL path, got: ${fact.path}`);
-        assert.ok(fact.expression !== undefined || fact.writable === true || fact.entityCreationOutput === true, `every compiled Fact should be either Derived, Writable, or an entity-creation output, got: ${JSON.stringify(fact)}`);
+      const translationLogRaw = JSON.parse(readFileSync(translationLogPath, 'utf-8'));
+      assert.ok(translationLogRaw && typeof translationLogRaw === 'object' && !Array.isArray(translationLogRaw), 'translation log should be an object with entries and sinkCandidates');
+      assert.ok(translationLogRaw.entries && typeof translationLogRaw.entries === 'object' && !Array.isArray(translationLogRaw.entries), 'translation log entries should be a pattern-keyed object');
+      assert.ok(translationLogRaw.sinkCandidates && typeof translationLogRaw.sinkCandidates === 'object', 'translation log should have a sinkCandidates object');
+      for (const [, sc] of Object.entries(translationLogRaw.sinkCandidates)) {
+        assert.ok(typeof sc.nodeCount === 'number', `sinkCandidate should have nodeCount, got: ${JSON.stringify(sc)}`);
+        assert.ok(typeof sc.depth === 'number', `sinkCandidate should have depth, got: ${JSON.stringify(sc)}`);
+      }
+      for (const [pattern, entries] of Object.entries(translationLogRaw.entries)) {
+        assert.ok(typeof pattern === 'string' && pattern.length > 0, `every entries key should be a pattern name, got: ${pattern}`);
+        assert.ok(Array.isArray(entries), `entries[${pattern}] should be an array, got: ${JSON.stringify(entries)}`);
+        for (const entry of entries) {
+          assert.ok(entry.pattern === pattern, `every entry under pattern key "${pattern}" should have matching pattern field, got: ${JSON.stringify(entry)}`);
+          assert.ok(['confirmed', 'inferred', 'unsupported', 'error'].includes(entry.status), `every entry should have a valid status, got: ${JSON.stringify(entry)}`);
+          assert.ok(typeof entry.translated === 'boolean', `every entry should have a boolean translated field, got: ${JSON.stringify(entry)}`);
+        }
       }
     } finally {
       rmSync(scratch, { recursive: true, force: true });

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync } from 'node:fs';
+import { basename } from 'node:path';
 import { classifyProject } from './classify/classify-all.js';
+import { buildDependencyGraph } from '../../graph/build-graph.js';
 import { toJson, parseCliArgs } from '../../cli-utils.js';
 
 function printUsage() {
@@ -10,12 +12,6 @@ function printUsage() {
   console.error('         node src/classify-project.js generated/dc-medicaid-chip.json --out generated/dc-medicaid-chip-patterns.json');
 }
 
-function summarize(classification) {
-  return Object.fromEntries(
-    Object.entries(classification).map(([key, value]) => [key, Array.isArray(value) ? value.length : value])
-  );
-}
-
 const args = parseCliArgs(process.argv);
 if (!args) {
   printUsage();
@@ -23,11 +19,27 @@ if (!args) {
 }
 
 const project = JSON.parse(readFileSync(args.positional, 'utf-8'));
-const classification = classifyProject(project);
+const result = classifyProject(project);
 
 if (args.outFile) {
-  const serialized = toJson(classification);
-  writeFileSync(args.outFile, JSON.stringify({ sourceFile: args.positional, classification: serialized }, null, 2));
+  const serialized = toJson(result);
+  const { ruleflowContext, ...classificationOnly } = serialized;
+  writeFileSync(args.outFile, JSON.stringify({
+    sourceFile: args.positional,
+    sourceType: 'corticon',
+    sourceContext: { ruleflowContext },
+    classification: classificationOnly,
+  }, null, 2));
   console.log(`Wrote classification to ${args.outFile}`);
 }
-console.log(JSON.stringify(summarize(classification), null, 2));
+
+if (args.graphFile) {
+  const graph = buildDependencyGraph(project);
+  const edges = graph.edges.map(({ from, to, rulesheet, ruleIndex }) => ({
+    from, to, ruleId: `${basename(rulesheet)}:${ruleIndex}`,
+  }));
+  writeFileSync(args.graphFile, JSON.stringify(toJson({ nodes: [...graph.nodes], edges }), null, 2));
+  console.log(`Wrote dependency graph to ${args.graphFile}`);
+}
+
+console.log(JSON.stringify({ patterns: result.patterns.length, sinkCandidates: Object.keys(result.sinkCandidates).length }, null, 2));

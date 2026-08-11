@@ -4,6 +4,7 @@
  * parsed term (from a condition/action's referencedTerms or modifiedTerms).
  */
 
+import { basename } from 'node:path';
 import { entriesOf } from '../../../map-utils.js';
 
 /**
@@ -175,42 +176,40 @@ export function classifyExpressionPatterns(project) {
   const result = [];
   for (const [rulesheetFile, rulesheet] of entriesOf(project.rulesheets)) {
     rulesheet.rules.forEach((rule, ruleIndex) => {
+      const ruleId = `${basename(rulesheetFile)}:${ruleIndex}`;
       for (const cell of [...rule.conditions, ...rule.actions].filter(Boolean)) {
         if ((cell.referencedTerms ?? []).some(isDateArithmetic)) {
-          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'date-arithmetic', expression: cell.text });
+          result.push({ pattern: 'date-arithmetic', ruleId, expression: cell.text });
         }
         if (actionUsesCurrencyRounding(cell)) {
-          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'currency-rounding', expression: cell.text });
+          result.push({ pattern: 'rounding', ruleId, expression: cell.text });
         }
         if (usesSortingOperation(cell)) {
-          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'sorting', expression: cell.text });
+          result.push({ pattern: 'sort', ruleId, expression: cell.text });
         }
         if (cellUsesCompoundArithmetic(cell)) {
-          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'operator-precedence', expression: cell.text });
+          result.push({ pattern: 'operator-precedence', ruleId, expression: cell.text });
         }
         if (cellUsesLogicalKeywords(cell)) {
-          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'logical-operators', expression: cell.text });
+          result.push({ pattern: 'logical-operators', ruleId, expression: cell.text });
         }
         if (cellUsesRangeMembership(cell)) {
-          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'membership-test-range', expression: cell.text });
+          result.push({ pattern: 'membership-test', variant: 'range', ruleId, expression: cell.text });
         }
         if (cellUsesStringListMembership(cell)) {
-          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'membership-test-list', expression: cell.text });
-        }
-        if (cellUsesScalarAccumulator(cell)) {
-          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'scalar-accumulator', expression: cell.text });
+          result.push({ pattern: 'membership-test', variant: 'list', ruleId, expression: cell.text });
         }
         if (cellUsesExtensionCall(cell)) {
-          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'call-function', expression: cell.text });
+          result.push({ pattern: 'call-function', ruleId, expression: cell.text });
         }
         if (cellUsesTypeConversion(cell)) {
-          result.push({ rulesheet: rulesheetFile, ruleIndex, kind: 'coercion', expression: cell.text });
+          result.push({ pattern: 'coercion', ruleId, expression: cell.text });
         }
       }
     });
     for (const filter of rulesheet.filters ?? []) {
       if (usesSortingOperation(filter)) {
-        result.push({ rulesheet: rulesheetFile, ruleIndex: null, kind: 'sorting', expression: filter.expression });
+        result.push({ pattern: 'sort', ruleId: `${basename(rulesheetFile)}:*`, expression: filter.expression });
       }
     }
   }

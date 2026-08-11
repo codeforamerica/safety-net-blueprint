@@ -1,4 +1,4 @@
-import { parse } from './formula-parser.js';
+import { parse } from '../formula-parser.js';
 
 /**
  * Set of entity/subject types that appear as the first signature element.
@@ -53,9 +53,12 @@ function nodePrec(node) {
  *
  * @param {string} formulaStr - Raw formula text (may be multiline; comments stripped).
  * @param {{
- *   parameterNames: Set<string>,
- *   enumValues:     Set<string>,
- *   callables:      Map<string, { sigTypes: string[] }>,
+ *   parameterNames:   Set<string>,
+ *   enumValues:       Set<string>,
+ *   callables:        Map<string, { sigTypes: string[] }>,
+ *   dataRelationNames?: Set<string>,   // names that are data_relation (writable inputs)
+ *   domain?:          string,          // universal path domain segment
+ *   graphName?:       string,          // universal path graphName segment
  * }} ctx
  * @returns {string} CEL expression
  */
@@ -74,7 +77,7 @@ function celOf(ast, ctx) {
 
     case 'Identifier': {
       const { name } = ast;
-      if (ctx.parameterNames.has(name)) return `parameter.${name}`;
+      if (ctx.parameterNames.has(name)) return ctx.localNames ? name : `$.${name}`;
       if (ctx.enumValues.has(name)) return `'${name}'`;
       // Entity/period variable (person, month, case, …) — pass through as-is.
       // These appear standalone only when used as a call argument; they should
@@ -210,9 +213,27 @@ function translateCall(ast, ctx) {
   const suffix = discValues.length > 0 ? '_' + discValues.join('_') : '';
   const factKey = `${name}${suffix}`;
 
+  // Data relations (writable inputs) → $.<entityVar>.<factKey> format
+  // Derived rules (computed facts) → /${domain}/${graphName}/<factKey> format
+  const isDataRelation = ctx.dataRelationNames?.has(name);
+
+  // localNames mode: emit only the bare factKey so expressions match the
+  // evaluator's scope (which is keyed by localName = last path segment).
+  if (ctx.localNames) return factKey;
+
+  if (isDataRelation) {
+    if (entityVar) return `$.${entityVar}.${factKey}`;
+    return `$.${factKey}`;
+  }
+
+  // Derived rule reference — universal graph path
+  if (ctx.domain && ctx.graphName) {
+    return `/${ctx.domain}/${ctx.graphName}/${factKey}`;
+  }
+
+  // Fallback (no domain/graphName provided): use entity-prefixed path
   if (entityVar) {
     return `${entityVar}.${factKey}`;
   }
-  // No entity (e.g. Eternity-period case-state predicates with no entity arg).
   return factKey;
 }

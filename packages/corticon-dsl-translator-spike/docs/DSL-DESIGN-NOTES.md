@@ -115,6 +115,60 @@ A **sink** is a fact that no other fact in the graph depends on — a root node 
 
 ---
 
+## Universal rule graph intermediate format
+
+The pipeline produces a **rule graph** as its canonical intermediate representation — the single artifact that sits between source translation (Corticon, rulespec, etc.) and output formatting (blueprint DSL, Fact Graph XML, FEEL/DMN, etc.). Any source translator produces a rule graph; any output formatter consumes one.
+
+### Design decisions
+
+**Self-describing without external refs.** The graph carries everything a formatter needs. Input node types use JSON Schema primitive type names (`"string"`, `"number"`, `"integer"`, `"boolean"`) inline — no `$ref` to an OpenAPI schema or any other external artifact. This keeps the format shareable outside the blueprint ecosystem.
+
+**No top-level identity fields.** No `domain`, `graph`, or `id` at the file level. Identity is the consumer's concern — the blueprint populates those from its own conventions, another system uses whatever makes sense to it. The graph is purely the computation.
+
+**Path conventions encode structure.** Two path prefixes distinguish node kinds:
+
+- `$.path.to.value` — an input node. The `$.` prefix signals the value comes from the caller, not from the graph itself.
+- `path.to.value` — a derived node. No prefix; the graph computes its value.
+
+Collection traversal is encoded inline with `[]`:
+
+```
+$.application.members[].income   — input: income for each member (collection)
+application.members[].isEligible — derived: eligibility for each member (collection)
+application.isEligible           — derived: scalar on the root entity
+```
+
+The `[]` notation tells the engine that `members` is a collection and evaluation applies per-item. No external schema reference is needed to understand the shape.
+
+**CEL for expressions; extensions declared explicitly.** Derived nodes carry a CEL expression string. Non-baseline functions (e.g. `yearsBetween`, `round`, `sum`) are listed in a top-level `functions` array so a formatter can check upfront whether it can handle every function the graph uses. The graph does not define function semantics — that is the translator's responsibility.
+
+**`edgeId` for source tracing.** Edges carry an optional `edgeId` — a source-specific identifier (e.g. `file.ers:N` for Corticon, a derived-rule name for rulespec) that maps the edge back to the originating rule or formula. Format is source-specific; the field is for traceability, not for evaluation.
+
+### Example
+
+```json
+{
+  "functions": ["yearsBetween", "sum"],
+  "nodes": {
+    "$.application.members[].dob":      { "type": "string" },
+    "$.application.members[].income":   { "type": "number" },
+    "application.members[].age":        { "expression": "yearsBetween(dob, today())" },
+    "application.members[].isEligible": { "expression": "age >= 18 && income < 1500" },
+    "application.totalIncome":          { "expression": "$.application.members.map(m, m.income).sum()" },
+    "application.isEligible":           { "expression": "application.members.all(m, m.isEligible)" }
+  },
+  "edges": [
+    { "from": "$.application.members[].dob",    "to": "application.members[].age",        "edgeId": "age-calc.ers:1" },
+    { "from": "$.application.members[].income", "to": "application.members[].isEligible", "edgeId": "eligibility.ers:2" },
+    { "from": "application.members[].age",      "to": "application.members[].isEligible", "edgeId": "eligibility.ers:2" },
+    { "from": "$.application.members[].income", "to": "application.totalIncome",          "edgeId": "totals.ers:1" },
+    { "from": "application.members[].isEligible", "to": "application.isEligible",         "edgeId": "eligibility.ers:3" }
+  ]
+}
+```
+
+---
+
 ## DSL file structure
 
 One file per graph. The graph name is the goal. Example:

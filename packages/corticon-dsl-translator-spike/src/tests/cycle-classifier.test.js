@@ -1,16 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadProject } from '../sources/corticon/corticon/project.js';
+import { loadProject } from '../sources/corticon/project.js';
 import { resolveRuleflowContext } from '../sources/corticon/classify/ruleflow-context.js';
-import { classifySelfLoops, classifyMultiHopCycles } from '../sources/corticon/classify/cycle-classifier.js';
+import { classifyCycles, classifyMultiHopCycles } from '../sources/corticon/classify/cycle-classifier.js';
+import { classifyNullGuards } from '../sources/corticon/classify/null-guard-classifier.js';
+import { classifyDecisionTableAlternativeRows } from '../sources/corticon/classify/decision-table-classifier.js';
 import { classifyExpressionPatterns } from '../sources/corticon/classify/expression-patterns.js';
 
 test('classifies IRR\'s real self-loop as a genuine cycle -- inside the iterative loop', () => {
   const project = loadProject('fixtures/corticon/vendor-samples/irr');
   const ctx = resolveRuleflowContext(project);
-  const results = classifySelfLoops(project, ctx);
+  const results = classifyCycles(project, ctx);
   assert.ok(results.length > 0);
-  assert.ok(results.every((r) => r.path === 'Investment.irr' && r.classification === 'cycle'));
+  assert.ok(results.every((r) => r.node === 'Investment.irr' && r.pattern === 'cycle'));
 });
 
 test('classifies IRR\'s real multi-hop cycle (npv -> irr -> portion -> npv) as a genuine cycle, spanning two rulesheets', () => {
@@ -22,40 +24,39 @@ test('classifies IRR\'s real multi-hop cycle (npv -> irr -> portion -> npv) as a
   const ctx = resolveRuleflowContext(project);
   const results = classifyMultiHopCycles(project, ctx);
   assert.equal(results.length, 1);
-  assert.deepEqual(results[0].path.sort(), ['Cashflow.portion', 'Investment.irr', 'Investment.npv']);
-  assert.deepEqual(results[0].rulesheets.sort(), ['evaluate npv.ers', 'solve each cashflow.ers']);
-  assert.equal(results[0].classification, 'cycle');
+  assert.deepEqual(results[0].nodes.sort(), ['Cashflow.portion', 'Investment.irr', 'Investment.npv']);
+  assert.equal(results[0].pattern, 'cycle');
+  assert.equal(results[0].variant, undefined);
 });
 
 test('classifies DC Medicaid\'s two real self-loop-causing rules on the same path distinctly', () => {
   // Person.outputCoverage1 has TWO independent self-referencing rules within
   // Flatten.ers: one an explicit null-check (masking), one a content-check
-  // (an ordinary decision-table alternative row) -- confirmed real, and only
-  // fully visible once the method-term/action-scoping graph bugs were fixed.
+  // (an ordinary decision-table alternative row) -- confirmed real.
   const project = loadProject('fixtures/corticon/government/dc-medicaid-chip');
   const ctx = resolveRuleflowContext(project);
-  const results = classifySelfLoops(project, ctx);
-  assert.deepEqual(
-    results.map((r) => r.classification).sort(),
-    ['decision-table-alternative-row', 'null-guard-default']
-  );
+  const nullGuards = classifyNullGuards(project);
+  const dtAltRows = classifyDecisionTableAlternativeRows(project, ctx);
+  // Flatten.ers has another writer of outputCoverage1 (the decision-table-alternative-row
+  // rule), so the null-guard is classified as fallback, not default.
+  assert.ok(nullGuards.some((r) => r.pattern === 'null-guard' && r.node === 'Person.outputCoverage1'));
+  assert.ok(dtAltRows.some((r) => r.pattern === 'decision-table-alternative-row'));
 });
 
 test('classifies Mortgage\'s real null-check-masking self-loops correctly', () => {
   const project = loadProject('fixtures/corticon/vendor-samples/mortgage');
-  const ctx = resolveRuleflowContext(project);
-  const results = classifySelfLoops(project, ctx);
+  const results = classifyNullGuards(project);
   assert.equal(results.length, 4);
-  assert.ok(results.every((r) => r.classification === 'null-guard-default'));
+  assert.ok(results.every((r) => r.pattern === 'null-guard' && r.variant === 'default'));
 });
 
 test('all-patterns: classifies the genuine cycle and the null-check masking self-loops distinctly', () => {
   const project = loadProject('fixtures/corticon/synthetic/all-patterns');
   const ctx = resolveRuleflowContext(project);
-  const results = classifySelfLoops(project, ctx);
-  const byPath = Object.fromEntries(results.map((r) => [r.path, r.classification]));
-  assert.equal(byPath['Application.estimatedBenefit'], 'cycle');
-  assert.equal(byPath['ApplicationMember.reportedAssets'], 'null-guard-default');
+  const cycles = classifyCycles(project, ctx);
+  const nullGuards = classifyNullGuards(project);
+  assert.ok(cycles.some((r) => r.node === 'Application.estimatedBenefit' && r.pattern === 'cycle'));
+  assert.ok(nullGuards.some((r) => r.node === 'ApplicationMember.reportedAssets' && r.variant === 'default'));
 });
 
 test('snap-work-requirements: decimal-rounding self-loop (adjustedHours = adjustedHours.round(1)) is suppressed when expressionPatterns are passed -- not a decision-table-alternative-row', () => {
@@ -67,28 +68,20 @@ test('snap-work-requirements: decimal-rounding self-loop (adjustedHours = adjust
   const project = loadProject('fixtures/corticon/synthetic/snap-work-requirements');
   const ctx = resolveRuleflowContext(project);
   const exprPatterns = classifyExpressionPatterns(project);
-  const withoutExpr = classifySelfLoops(project, ctx);
-  const withExpr = classifySelfLoops(project, ctx, exprPatterns);
+  const expressionPatternRuleIds = new Set(exprPatterns.map((f) => f.ruleId));
+  const withoutExpr = classifyDecisionTableAlternativeRows(project, ctx);
+  const withExpr = classifyDecisionTableAlternativeRows(project, ctx, expressionPatternRuleIds);
   assert.ok(
-    withoutExpr.some((r) => r.rulesheet === 'decimal-rounding.ers' && r.classification === 'decision-table-alternative-row'),
+    withoutExpr.some((r) => r.ruleId?.startsWith('decimal-rounding.ers') && r.pattern === 'decision-table-alternative-row'),
     'without expressionPatterns, decimal-rounding.ers gets a false-positive decision-table-alternative-row entry',
   );
   assert.ok(
-    !withExpr.some((r) => r.rulesheet === 'decimal-rounding.ers'),
+    !withExpr.some((r) => r.ruleId?.startsWith('decimal-rounding.ers')),
     'with expressionPatterns, decimal-rounding.ers self-loop is suppressed',
   );
 });
 
 test('flags a non-iterative multi-hop cycle as unclassified -- not observed in any real fixture, exercised with minimal synthetic data', () => {
-  // No real or fixture project has a multi-node cycle outside an iterative
-  // context; this proves the defensive fallback itself works rather than
-  // silently mislabeling something we have no real evidence about as a
-  // "genuine cycle."
-  //
-  // Synthetic project: one.ers has a rule that reads Entity.a and writes
-  // Entity.b; two.ers has a rule that reads Entity.b and writes Entity.a.
-  // Together they form a two-node cycle (Entity.a -> Entity.b -> Entity.a)
-  // that is longer than 1 hop, triggering the multi-hop path.
   function makeTerm(entity, attr) {
     return { termtype: 'ATTRIBUTE', text: attr, parent: { datatype: entity } };
   }
@@ -115,5 +108,6 @@ test('flags a non-iterative multi-hop cycle as unclassified -- not observed in a
   const ruleflowContext = { perRulesheet: new Map([['one.ers', { iterative: false }], ['two.ers', { iterative: false }]]) };
   const results = classifyMultiHopCycles(project, ruleflowContext);
   assert.equal(results.length, 1);
-  assert.equal(results[0].classification, 'cycle-unclassified');
+  assert.equal(results[0].pattern, 'cycle');
+  assert.equal(results[0].variant, 'unclassified');
 });

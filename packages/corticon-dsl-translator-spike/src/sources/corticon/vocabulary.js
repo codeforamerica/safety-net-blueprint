@@ -2,13 +2,24 @@ import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { parseCorticonXml, asArray } from './xml.js';
 
+// Maps EMF Ecore built-in type names to Corticon's own display names.
+// Both primitive (EInt, EBoolean) and boxed-object (EIntegerObject, EBooleanObject)
+// variants are included — confirmed real: expedited-snap uses EString while DC Medicaid
+// uses the canonicalvocabularymodel#//String form; both must resolve to 'String'.
 const ECORE_TYPE_MAP = {
-  EString: 'String',
-  ELongObject: 'Integer',
-  EIntegerObject: 'Integer',
-  EDoubleObject: 'Decimal',
+  EString:        'String',
+  EBoolean:       'Boolean',
   EBooleanObject: 'Boolean',
-  EBigDecimal: 'Decimal',
+  EInt:           'Integer',
+  EIntegerObject: 'Integer',
+  ELong:          'Integer',
+  ELongObject:    'Integer',
+  EDouble:        'Decimal',
+  EDoubleObject:  'Decimal',
+  EFloat:         'Decimal',
+  EBigDecimal:    'Decimal',
+  EBigInteger:    'Integer',
+  EByte:          'Integer',
 };
 
 // Corticon emits an enum type two ways, sometimes both at once for the same name:
@@ -20,6 +31,21 @@ const ECORE_TYPE_MAP = {
 // Crucially, every real cross-file `eType` reference found points at an EEnum
 // classifier, never a customDataTypeList entry -- so both sources must be merged
 // for cross-file resolution to ever find anything.
+// Strips the code prefix from a Corticon enum literal display name and converts
+// underscores to spaces. E.g. name="AF0018_Non_recipient_Fraud", value="'AF0018'"
+// → "Non recipient Fraud". If the name doesn't start with the code, replaces all
+// underscores directly. Returns null when no display name is available.
+function enumLabel(displayName, literalValue) {
+  if (!displayName) return null;
+  const code = literalValue ? literalValue.replace(/^'|'$/g, '') : null;
+  const withoutCode = code && displayName.startsWith(code + '_')
+    ? displayName.slice(code.length + 1)
+    : displayName;
+  const label = withoutCode.replace(/_/g, ' ');
+  // Suppress labels that are identical to the code — no useful information added.
+  return label === code ? null : label;
+}
+
 function extractCustomTypes(root) {
   const customTypes = new Map();
   for (const annotation of asArray(root?.eAnnotations)) {
@@ -27,10 +53,14 @@ function extractCustomTypes(root) {
     for (const dt of asArray(rootExtension?.customDataTypeList)) {
       const name = dt?.dataTypeName?.['@_value'];
       if (!name) continue;
+      const entries = asArray(dt?.enumerationElements)
+        .map((el) => ({ value: el?.value?.['@_value'], label: enumLabel(el?.label?.['@_value'], el?.value?.['@_value']) }))
+        .filter((e) => e.value);
       customTypes.set(name, {
         baseType: dt?.baseDataType?.['@_value'],
         isEnum: dt?.enumeration?.['@_value'] === 'true',
-        values: asArray(dt?.enumerationElements).map((el) => el?.value?.['@_value']),
+        values: entries.map((e) => e.value),
+        entries,
       });
     }
   }
@@ -38,10 +68,14 @@ function extractCustomTypes(root) {
     if (classifier?.['@_xsi:type'] !== 'ecore:EEnum') continue;
     const name = classifier['@_name'];
     if (!name || customTypes.has(name)) continue; // customDataTypeList sibling already covers it
+    const entries = asArray(classifier?.eLiterals)
+      .map((lit) => ({ value: lit?.['@_literal'], label: enumLabel(lit?.['@_name'], lit?.['@_literal']) }))
+      .filter((e) => e.value);
     customTypes.set(name, {
       baseType: 'String',
       isEnum: true,
-      values: asArray(classifier?.eLiterals).map((lit) => lit?.['@_literal']),
+      values: entries.map((e) => e.value),
+      entries,
     });
   }
   return customTypes;
@@ -108,18 +142,30 @@ function resolveEType(eType, ctx) {
   return { kind: 'reference', name: localName };
 }
 
-/** Parse a Corticon Vocabulary (.ecore) file into { entities, customTypes }. */
-export function parseVocabulary(filePath) {
-  const doc = parseCorticonXml(filePath);
-  const root = doc['ecore:EPackage'];
-  const customTypes = extractCustomTypes(root);
-  const ctx = { filePath: path.resolve(filePath), baseDir: path.dirname(filePath), cache: new Map() };
-
-  const entities = new Map();
-  for (const classifier of asArray(root?.eClassifiers)) {
+/**
+ * Parse a Corticon Vocabulary (.ecore) file into { entities, customTypes }.
+ *
+ * Each entity has separate `attributes` and `references` maps, mirroring
+ * Corticon's own distinction (ecore:EAttribute vs ecore:EReference):
+ *   attributes:   { dataType } — scalar fields; dataType is the Corticon type name
+ *                   (e.g. 'Integer', 'String', 'Boolean', 'Decimal', 'Date') or a
+ *                   custom type name (e.g. 'state_name') defined in customTypes.
+ *   references:   { entityType, isCollection, isRequired, opposite? } — relationships
+ *                   to other entities; entityType is the simple entity class name
+ *                   (e.g. 'AgEligRslt'), never the package-qualified path.
+ *
+ * Entities are collected by recursively walking eSubpackages — confirmed real:
+ * expedited-snap's CBMSVocabulary.ecore has 965 entity classes nested under
+ * DomainModel/* subpackages; only EligibilityHousehold lives at root level.
+ * Corticon rules always reference entities by their simple class name regardless
+ * of which subpackage they live in.
+ */
+function extractEntitiesFromPackage(pkg, entities, ctx, customTypes) {
+  for (const classifier of asArray(pkg?.eClassifiers)) {
     if (classifier?.['@_xsi:type'] !== 'ecore:EClass') continue;
     const entityName = classifier['@_name'];
     const attributes = new Map();
+    const references = new Map();
     for (const feature of asArray(classifier?.eStructuralFeatures)) {
       const featureName = feature?.['@_name'];
       if (!featureName) continue;
@@ -127,28 +173,54 @@ export function parseVocabulary(filePath) {
       const isCollection = feature['@_upperBound'] === '-1';
       const resolved = resolveEType(feature['@_eType'], ctx);
       const isTransient = asArray(feature.mode).some((m) => m?.['@_value'] === 'ExtendedTransient');
-      const attribute = {
-        kind: isAssociation ? 'association' : 'attribute',
-        isCollection,
-        type: resolved.kind === 'reference' && customTypes.has(resolved.name)
-          ? { kind: 'customType', name: resolved.name }
-          : resolved,
-        ...(isTransient ? { isTransient: true } : {}),
-      };
-      // Both confirmed real only on EReference (association) features, never on
-      // plain attributes: `eOpposite="#//Entity/fieldName"` cross-links the two
-      // sides of a bidirectional association (DC Medicaid's `Household.person` <->
-      // `Person.household`); `lowerBound="1"` marks a required (non-optional)
-      // association (every Person requires exactly one Household).
+
       if (isAssociation) {
+        // Both confirmed real only on EReference features, never on plain attributes:
+        // `eOpposite` cross-links bidirectional references (DC Medicaid's Household.person
+        // <-> Person.household); `lowerBound="1"` marks a required reference.
+        // resolved.name may be a package-qualified path (e.g. "DomainModel/Results/AgEligRslt")
+        // when the target entity lives in a subpackage -- take only the simple class name
+        // because that's what Corticon rules use in their term references.
+        const entityType = resolved.name.split('/').pop();
+        const ref = {
+          entityType,
+          isCollection,
+          isRequired: feature['@_lowerBound'] === '1',
+          ...(isTransient ? { isTransient: true } : {}),
+        };
         const eOpposite = feature['@_eOpposite'];
-        if (eOpposite) attribute.opposite = eOpposite.slice(eOpposite.lastIndexOf('/') + 1);
-        attribute.isRequired = feature['@_lowerBound'] === '1';
+        if (eOpposite) ref.opposite = eOpposite.slice(eOpposite.lastIndexOf('/') + 1);
+        references.set(featureName, ref);
+      } else {
+        // EAttribute: dataType is the Corticon type name. A bare reference that matches
+        // a customType entry is a custom data type (enum) -- its name IS its type name.
+        const dataType = resolved.name;
+        if (isCollection) {
+          throw new Error(`"${entityName}.${featureName}" is a repeating scalar attribute (isCollection) -- no confirmed real example exists in any fixture yet, and this DSL's Fact path scheme has no established wildcard convention for one. Flagging rather than guessing at a path shape.`);
+        }
+        attributes.set(featureName, {
+          dataType,
+          ...(isTransient ? { isTransient: true } : {}),
+        });
       }
-      attributes.set(featureName, attribute);
     }
-    entities.set(entityName, { attributes });
+    entities.set(entityName, { attributes, references });
   }
+  // Recurse into nested subpackages -- confirmed real: CBMSVocabulary.ecore nests all
+  // 964 non-root entities under DomainModel/* subpackages.
+  for (const subpkg of asArray(pkg?.eSubpackages)) {
+    extractEntitiesFromPackage(subpkg, entities, ctx, customTypes);
+  }
+}
+
+export function parseVocabulary(filePath) {
+  const doc = parseCorticonXml(filePath);
+  const root = doc['ecore:EPackage'];
+  const customTypes = extractCustomTypes(root);
+  const ctx = { filePath: path.resolve(filePath), baseDir: path.dirname(filePath), cache: new Map() };
+
+  const entities = new Map();
+  extractEntitiesFromPackage(root, entities, ctx, customTypes);
 
   return { entities, customTypes };
 }

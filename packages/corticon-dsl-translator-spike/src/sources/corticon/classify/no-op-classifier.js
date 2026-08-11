@@ -1,7 +1,8 @@
+import { basename } from 'node:path';
 import { entriesOf } from '../../../map-utils.js';
 
 /**
- * Finds rules that have no actions -- they produce no writes and therefore no
+ * Finds rules that have no actions — they produce no writes and therefore no
  * Fact derivations. Includes blank template rows (Corticon Studio's built-in
  * reserved row at index 0, all-null conditions and actions) and any rule with
  * conditions but no actions (confirmed real in DC Medicaid/CHIP's MAGI Eligibility
@@ -14,7 +15,7 @@ export function classifyNoOps(project) {
   for (const [rulesheetFile, rulesheet] of entriesOf(project.rulesheets)) {
     rulesheet.rules.forEach((rule, ruleIndex) => {
       if (!rule.actions.some(Boolean)) {
-        result.push({ rulesheet: rulesheetFile, ruleIndex });
+        result.push({ pattern: 'no-op', ruleId: `${basename(rulesheetFile)}:${ruleIndex}` });
       }
     });
   }

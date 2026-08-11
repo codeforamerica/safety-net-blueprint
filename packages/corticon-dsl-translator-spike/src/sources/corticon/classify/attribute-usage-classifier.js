@@ -1,4 +1,4 @@
-import { isBlankTemplateRule } from '../corticon/rulesheet.js';
+import { isBlankTemplateRule } from '../rulesheet.js';
 import { entriesOf } from '../../../map-utils.js';
 import { buildEntityAliasMap } from '../../../graph/attribute-path.js';
 

@@ -1,0 +1,55 @@
+name: safety-net-blueprint
+version: 1.0.0
+private: true
+description: Systems integration blueprint for safety net benefits programs
+type: module
+engines:
+  node: ">=20.19.0"
+workspaces:
+  - packages/*
+  - packages/explorer/service-blueprints/src/figma-plugin
+  - "!packages/resolved"
+scripts:
+  start: node packages/mock-server/scripts/server.js --spec=packages/contracts
+  validate: npm run --prefix packages/contracts validate
+  validate:resolved: node packages/contracts/scripts/validate-openapi.js
+    --spec=packages/resolved && node packages/contracts/scripts/validate-refs.js
+    --spec=packages/resolved && node
+    packages/contracts/scripts/validate-state-machines.js --resolved && node
+    packages/contracts/scripts/validate-annotations.js --spec=packages/resolved
+  validate:refs: node packages/contracts/scripts/validate-refs.js --spec=packages/resolved
+  validate:syntax: node packages/contracts/scripts/validate-openapi.js --spec=packages/contracts
+  validate:patterns: node packages/contracts/scripts/validate-patterns.js
+    --spec=packages/contracts
+  validate:schemas: node packages/contracts/scripts/validate-schemas.js --spec=packages/contracts
+  api:new: node packages/contracts/scripts/generate-api.js
+  api:update: node packages/contracts/scripts/update-api.js
+  resolve: node packages/contracts/scripts/resolve.js
+  clients:typescript: node packages/clients/scripts/generate-clients-typescript.js
+  clients:json-schema: node packages/clients/scripts/generate-clients-json-schema.js
+  postman:generate: node packages/contracts/scripts/resolve.js && node
+    packages/contracts/scripts/generate-postman.js --spec=packages/resolved
+  mock:start: node packages/mock-server/scripts/server.js
+  mock:stop: node packages/mock-server/scripts/server.js --stop
+  mock:start:all: node packages/mock-server/scripts/start-all.js --spec=packages/contracts
+  mock:swagger: node packages/mock-server/scripts/swagger/server.js --spec=packages/contracts
+  mock:seed: node packages/mock-server/scripts/generate-seed.js
+    --spec=packages/contracts --out=packages/mock-server/seed
+  validate:seed: node packages/mock-server/scripts/validate-seed.js
+    --spec=packages/contracts --seed=packages/mock-server/seed
+  mock:setup: node packages/mock-server/scripts/setup.js --spec=packages/contracts
+  mock:reset: node packages/mock-server/scripts/reset.js --spec=packages/contracts
+  test: npm test --workspaces --if-present
+  test:unit: node packages/mock-server/tests/run-all-tests.js --unit
+  test:integration: node packages/mock-server/tests/run-all-tests.js --integration
+  test:functional: node packages/mock-server/tests/run-all-tests.js --functional
+  test:all: node packages/mock-server/tests/run-all-tests.js --all
+  preflight: bash scripts/preflight.sh
+  setup:hooks: git config core.hooksPath scripts/hooks && echo 'Git hooks
+    installed. Pre-push hook will run preflight before every push. Use git push
+    --no-verify to skip.'
+  contract-tables:export: node packages/contracts/scripts/export-contract-tables.js
+  contract-tables:import: node packages/contracts/scripts/import-contract-tables.js
+devDependencies:
+  jszip: ^3.10.1
+  puppeteer: ^24.0.0

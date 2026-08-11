@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 /**
  * Produces a rules.html per fixture: rules diagram, vocabulary, and the
- * corticon.json + patterns.json source files for reference.
+ * input.json + patterns.json source files for reference.
  *
- * Usage: node src/visualize-rules-html.js <slug>
+ * Usage: node src/visualizers/visualize-rules-html.js <slug>
  *   --classified  <patterns.json>
- *   --project     <corticon.json>
+ *   --project     <input.json>
  *   --out         <output.html>
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
-import { buildRulesDiagramContent } from './visualize-rules.js';
-import { jsonPanel } from '../../json-panel.js';
-import { buildEntityAliasMap } from '../../graph/attribute-path.js';
+import { buildRulesDiagramContent } from '../sources/corticon/visualize-rules.js';
+import { jsonPanel } from '../json-panel.js';
+import { buildEntityAliasMap } from '../graph/attribute-path.js';
 
-import { COLORS, FONT } from '../../../../explorer/lib/theme.js';
-import { esc } from '../../../../explorer/lib/html.js';
+import { COLORS, FONT } from '../../../explorer/lib/theme.js';
+import { esc } from '../../../explorer/lib/html.js';
 
 const MONO = 'ui-monospace,SFMono-Regular,Menlo,monospace';
 const DARK_BLUE = COLORS.darkBlue;
@@ -93,7 +93,7 @@ function render(opts) {
   const vocabHtml = renderVocabularyTab(projectPath);
 
   const jsonFiles = [
-    { id: 'json-project',    label: 'corticon.json',   path: projectPath },
+    { id: 'json-project',    label: 'source.json',  path: projectPath },
     { id: 'json-classified', label: 'patterns.json', path: classifiedPath },
   ];
   const jsonNavItems   = jsonFiles.map(f => jsonPanel(f.id, f.label, f.path).navHtml).join('\n');
