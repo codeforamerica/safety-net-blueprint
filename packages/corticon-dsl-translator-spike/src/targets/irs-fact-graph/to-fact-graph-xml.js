@@ -247,7 +247,10 @@ function astToXml(ast, localToFgPath, depth) {
 
     case 'num': {
       const n = Number(ast.val);
-      return Number.isInteger(n) ? `${p}<Int>${n}</Int>` : `${p}<Dollar>${n}</Dollar>`;
+      // Use <Dollar> if the source literal has a decimal point (e.g. 1632.0 = money amount).
+      // Use <Int> only for whole-number literals without a decimal point.
+      const isDollar = !Number.isInteger(n) || ast.val.includes('.');
+      return isDollar ? `${p}<Dollar>${n}</Dollar>` : `${p}<Int>${n}</Int>`;
     }
 
     case 'id': {
