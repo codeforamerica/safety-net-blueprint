@@ -1055,6 +1055,7 @@ function renderSandboxSection(graphData) {
       fgCells.forEach(function(td) { td.style.display = ''; });
 
       // Populate each cell
+      var tableMismatches = {}; // nodePath → true if mismatch
       var rows = table.querySelectorAll('tr[data-sb-path]');
       rows.forEach(function(row) {
         var nodePath = row.dataset.sbPath;
@@ -1088,7 +1089,13 @@ function renderSandboxSection(graphData) {
         var agrees;
         if (fgResolved && ourResolved) {
           var fgVal = String(cmp.value);
-          agrees = ourText.indexOf(fgVal) >= 0 || (ourText.indexOf('true') >= 0 && fgVal === 'true') || (ourText.indexOf('false') >= 0 && fgVal === 'false');
+          // Compare numerically when both sides look like numbers (handles "2750" vs "2750.00")
+          var fgNum = parseFloat(fgVal), ourNum = parseFloat(ourText);
+          if (!isNaN(fgNum) && !isNaN(ourNum) && String(ourNum) === ourText.trim()) {
+            agrees = fgNum === ourNum;
+          } else {
+            agrees = ourText.indexOf(fgVal) >= 0 || (ourText.indexOf('true') >= 0 && fgVal === 'true') || (ourText.indexOf('false') >= 0 && fgVal === 'false');
+          }
         } else {
           agrees = !fgResolved && !ourResolved;
         }
@@ -1096,6 +1103,7 @@ function renderSandboxSection(graphData) {
         if (agrees) {
           cell.innerHTML = fgValHtml(cmp);
           row.style.background = row.dataset.sink === '1' ? '#f5f3ff' : '';
+          tableMismatches[nodePath] = false;
         } else {
           // Show both sides so the difference is visible
           var ourDisplay = ourResolved ? ourText : '—';
@@ -1104,52 +1112,32 @@ function renderSandboxSection(graphData) {
             + '<div><span style="color:#6b7280;font-size:9px">fg:&nbsp;&nbsp;&nbsp;</span>' + fgValHtml(cmp) + '</div>'
             + '</div>';
           row.style.background = '#fff1f2';
+          tableMismatches[nodePath] = true;
         }
       });
 
       // Update determination badge
-      updateFgDeterminationBadge(comparison);
+      updateFgDeterminationBadge(tableMismatches);
     }
 
-    function updateFgDeterminationBadge(comparison) {
+    function updateFgDeterminationBadge(tableMismatches) {
       var resultsEl = document.getElementById('sb-results');
       if (!resultsEl) return;
       var existing = resultsEl.querySelector('#fg-det-badge');
       if (existing) existing.remove();
 
-      var sinkSet2 = new Set(SINK_SET);
-      var mismatches = 0, unresolved = 0;
-      sinkSet2.forEach(function(sp) {
-        var cmp = comparison[sp];
-        var row = resultsEl.querySelector('tr[data-sb-path="' + sp.replace(/"/g, '&quot;') + '"]');
-        var ourEl = row ? row.querySelectorAll('td')[1] : null;
-        var ourText = ourEl ? ourEl.textContent.trim() : '';
-        var ourResolved = ourText && ourText !== '—' && ourText.indexOf('missing') < 0 && ourText.indexOf('error') < 0;
-        var fgResolved = cmp && (cmp.state === 'complete' || cmp.state === 'placeholder');
-
-        if (fgResolved && ourResolved) {
-          var fgVal = String(cmp.value);
-          var agrees = ourText.indexOf(fgVal) >= 0 || (ourText.indexOf('true') >= 0 && fgVal === 'true') || (ourText.indexOf('false') >= 0 && fgVal === 'false');
-          if (!agrees) mismatches++;
-        } else if (fgResolved !== ourResolved) {
-          // One side resolved, the other didn't
-          unresolved++;
-        }
-      });
+      // Count rows that are highlighted as mismatches in the table
+      var mismatchCount = Object.values(tableMismatches).filter(Boolean).length;
 
       var badge = document.createElement('div');
       badge.id = 'fg-det-badge';
       var text, style;
-      if (mismatches === 0 && unresolved === 0) {
+      if (mismatchCount === 0) {
         text = '&#10003; fact-graph agrees';
         style = 'background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0';
-      } else if (mismatches > 0) {
-        text = '&#9888; ' + mismatches + ' value mismatch' + (mismatches > 1 ? 'es' : '') + ' with fact-graph'
-          + (unresolved > 0 ? ', ' + unresolved + ' unresolved' : '');
-        style = 'background:#fff1f2;color:#dc2626;border:1px solid #fecaca';
       } else {
-        text = '&#9888; ' + unresolved + ' sink' + (unresolved > 1 ? 's' : '') + ' unresolved in fact-graph';
-        style = 'background:#fefce8;color:#854d0e;border:1px solid #fde047';
+        text = '&#9888; ' + mismatchCount + ' value mismatch' + (mismatchCount > 1 ? 'es' : '') + ' with fact-graph';
+        style = 'background:#fff1f2;color:#dc2626;border:1px solid #fecaca';
       }
       badge.style.cssText = 'display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;' + style;
       badge.innerHTML = text;
