@@ -799,7 +799,7 @@ function renderSandboxSection(graphData) {
             : '';
           var desc = (item.info.description || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
           html += '<div style="margin-bottom:12px">';
-          html += '<label for="' + fieldId + '" title="' + item.attr + '" style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;font-family:' + MONO + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.attr + paramBadge + '</label>';
+          html += '<label for="' + fieldId + '" data-title="' + item.attr + '" style="display:block;font-size:11px;font-weight:600;color:#374151;margin-bottom:4px;font-family:' + MONO + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + item.attr + paramBadge + '</label>';
           html += inputEl;
           if (desc) html += '<div style="font-size:10px;color:#9ca3af;margin-top:3px;line-height:1.4">' + desc + '</div>';
           html += '</div>';
@@ -1734,7 +1734,7 @@ async function render(opts) {
         <div style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden">
           <div id="graph-cand-header" style="flex-shrink:0;padding:7px 20px;border-bottom:1px solid #e5e7eb;background:#fff">
             <div style="display:flex;align-items:center;gap:8px">
-              <span id="graph-cand-name" style="font-family:${MONO};font-size:13px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span>
+              <span id="graph-cand-name" style="font-family:${MONO};font-size:13px;font-weight:700;color:#111827;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
               ${sandboxGraphData ? `<div style="display:flex;border:1px solid #e5e7eb;border-radius:5px;overflow:hidden;flex-shrink:0">
                 <button id="graph-mode-view" onclick="setGraphMode('view')" style="font-size:11px;padding:3px 12px;border:none;border-right:1px solid #e5e7eb;cursor:pointer;background:#2B1A78;color:#fff;font-weight:600">View</button>
                 <button id="graph-mode-eval" onclick="setGraphMode('evaluate')" style="font-size:11px;padding:3px 12px;border:none;cursor:pointer;background:#fff;color:#374151">Evaluate</button>
@@ -2118,7 +2118,7 @@ async function render(opts) {
     function _updateCandHeader(link) {
       var nameEl  = document.getElementById('graph-cand-name');
       var statsEl = document.getElementById('graph-cand-stats');
-      if (nameEl) nameEl.textContent = link ? (link.title || '') : '';
+      if (nameEl) nameEl.textContent = link ? (link.dataset.title || link.title || '') : '';
       if (statsEl && link) {
         var panel = document.getElementById(link.dataset.tab);
         var nc = panel ? panel.dataset.nodeCount : null;
@@ -2129,7 +2129,7 @@ async function render(opts) {
     function _setSandboxContext(link) {
       if (!link || !window.__sbSetContext) return;
       var nodeList = (link.dataset.nodes || '').split(' ').filter(Boolean);
-      window.__sbSetContext(link.title, nodeList);
+      window.__sbSetContext(link.dataset.title || link.title, nodeList);
     }
     function setGraphMode(mode) {
       _currentGraphMode = mode;
@@ -2464,13 +2464,13 @@ async function render(opts) {
       tip.style.cssText = 'position:fixed;z-index:9999;background:#1e293b;color:#f1f5f9;font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;padding:4px 8px;border-radius:4px;pointer-events:none;display:none;max-width:360px;word-break:break-all;line-height:1.4';
       document.body.appendChild(tip);
       document.addEventListener('mouseover', function(e) {
-        var el = e.target.closest('a[data-title]');
+        var el = e.target.closest('[data-title]');
         if (!el) { tip.style.display = 'none'; return; }
         tip.textContent = el.dataset.title;
         tip.style.display = 'block';
       }, true);
       document.addEventListener('mouseout', function(e) {
-        var el = e.target.closest('a[data-title]');
+        var el = e.target.closest('[data-title]');
         if (el) tip.style.display = 'none';
       }, true);
       document.addEventListener('mousemove', function(e) {

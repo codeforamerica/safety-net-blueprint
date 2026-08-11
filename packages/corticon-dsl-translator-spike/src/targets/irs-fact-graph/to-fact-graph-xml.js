@@ -366,7 +366,11 @@ export function toFactGraphXml(graph) {
     }
   }
 
-  const facts = [];
+  // Accumulate facts by fgPath to detect collisions.
+  // Derived (expression) nodes take priority over input (default) nodes since
+  // a derived rule may intentionally override a policy parameter default
+  // (e.g. a state overlay replaces a federal flat value with a computed rule).
+  const factMap = new Map(); // fgPath → { priority, descLine, inner }
   const errors = [];
 
   for (const [nodePath, nodeInfo] of Object.entries(nodes)) {
@@ -379,6 +383,7 @@ export function toFactGraphXml(graph) {
       : '';
 
     let inner;
+    let priority; // higher = preferred on collision
     if (isInput) {
       const hasDefault = nodeInfo.default !== undefined;
       if (hasDefault) {
@@ -395,8 +400,10 @@ export function toFactGraphXml(graph) {
           litXml = `        <Dollar>${escXml(String(val))}</Dollar>`;
         }
         inner = `      <Derived>\n${litXml}\n      </Derived>`;
+        priority = 1; // default constant — lowest priority
       } else {
         inner = `      <Writable>\n        ${typeDecl(type)}\n      </Writable>`;
+        priority = 2; // writable input
       }
     } else {
       const expr = nodeInfo.expression;
@@ -412,10 +419,19 @@ export function toFactGraphXml(graph) {
       }
 
       inner = `      <Derived>\n${exprXml}\n      </Derived>`;
+      priority = 3; // derived expression — highest priority
     }
 
-    facts.push(`    <Fact path="${fgPath}">${descLine}\n${inner}\n    </Fact>`);
+    const existing = factMap.get(fgPath);
+    if (!existing || priority > existing.priority) {
+      factMap.set(fgPath, { priority, descLine, inner });
+    }
   }
+
+  const facts = [...factMap.entries()].map(
+    ([fgPath, { descLine, inner }]) =>
+      `    <Fact path="${fgPath}">${descLine}\n${inner}\n    </Fact>`
+  );
 
   const xml = [
     '<FactDictionaryModule>',
