@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join, basename } from 'path';
 import yaml from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
+import pluralize from 'pluralize';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -211,20 +212,11 @@ export function extractMetadata(spec, resourceName) {
  * @param {string} collectionName - Database collection name
  * @returns {string} PascalCase schema prefix
  */
-// Words ending in 's' that are not plurals, so their trailing 's' must not be
-// stripped when singularizing the final collection segment (e.g. progress ->
-// progress, not progres).
-const NON_PLURAL_ENDINGS = new Set(['progress', 'status', 'access', 'address', 'process']);
-
 export function collectionToSchemaPrefix(collectionName) {
   const segments = collectionName.split('-');
   return segments.map((seg, i) => {
-    let s = seg;
-    if (i === segments.length - 1) {
-      if (s.endsWith('ies')) s = s.slice(0, -3) + 'y';
-      else if (s.endsWith('ses')) s = s.slice(0, -2);
-      else if (s.endsWith('s') && !NON_PLURAL_ENDINGS.has(s)) s = s.slice(0, -1);
-    }
+    // only the trailing segment is the plural noun, the earlier ones qualify it
+    const s = i === segments.length - 1 ? pluralize.singular(seg) : seg;
     return s.charAt(0).toUpperCase() + s.slice(1);
   }).join('');
 }
