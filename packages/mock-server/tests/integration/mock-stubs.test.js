@@ -248,6 +248,64 @@ async function testMatchFilter() {
 }
 
 // =============================================================================
+// causationid — stub-fired events are correlated to the triggering event
+// =============================================================================
+
+async function testStubResponseCausationid() {
+  console.log('\n--- Stub response carries causationid ---');
+  await clearStubs();
+
+  await fetch(`${BASE_URL}/mock/stubs/events`, {
+    method: 'POST',
+    body: {
+      on: 'data_exchange.service_call.created',
+      respond: { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }
+    }
+  });
+
+  const injectRes = await injectEvent('data_exchange.service_call.created', { serviceType: 'fdsh_ssa' }, 'sc-causation-1');
+  assert(injectRes.status === 201, `inject → expected 201, got ${injectRes.status}`);
+  const trigger = await injectRes.json();
+  assert(trigger.id, 'injected trigger event should have an id');
+
+  // The fired response event must reference the trigger via causationid
+  const eventsRes = await fetch(`${BASE_URL}/platform/events?type=data_exchange.call.completed`);
+  const events = await eventsRes.json();
+  const fired = events.items?.find(e => e.subject === 'sc-causation-1');
+  assert(fired, 'stub response event should have been emitted');
+  assert.strictEqual(fired.causationid, trigger.id, 'response event causationid should be the trigger event id');
+  console.log('  ✓ Stub response event has causationid = trigger event id');
+}
+
+async function testTimerStubCausationid() {
+  console.log('\n--- Timer callback carries causationid ---');
+  await clearStubs();
+
+  await fetch(`${BASE_URL}/mock/stubs/events`, {
+    method: 'POST',
+    body: { on: 'scheduling.timer.requested', match: { 'data.callback.event': 'workflow.creation_deadline' } }
+  });
+
+  const subjectId = 'task-timer-causation-1';
+  const injectRes = await injectEvent(
+    'scheduling.timer.requested',
+    { timerId: `workflow.creation_deadline.${subjectId}`, callback: { event: 'workflow.creation_deadline', data: {} } },
+    subjectId
+  );
+  assert(injectRes.status === 201, `inject → expected 201, got ${injectRes.status}`);
+  const trigger = await injectRes.json();
+
+  const eventsRes = await fetch(`${BASE_URL}/platform/events?type=workflow.creation_deadline`);
+  const events = await eventsRes.json();
+  const callbackEvent = events.items?.find(e => e.subject === subjectId);
+  assert(callbackEvent, 'workflow.creation_deadline callback event should have been emitted');
+  assert.strictEqual(callbackEvent.causationid, trigger.id, 'timer callback causationid should be the scheduling.timer.requested event id');
+  console.log('  ✓ Timer callback event has causationid = scheduling.timer.requested event id');
+
+  await clearStubs();
+}
+
+// =============================================================================
 // Test runner
 // =============================================================================
 
@@ -274,6 +332,8 @@ async function run() {
     testNoStubNoError,
     testMatchFilter,
     testTimerStub,
+    testStubResponseCausationid,
+    testTimerStubCausationid,
   ];
 
   let passed = 0;
