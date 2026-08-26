@@ -44,7 +44,7 @@ machines:
     events:
       - type: intake.application.submitted
         steps:
-          - call: {POST: eligibility/determinations, body: {applicationId: $this.subject, programs: $this.data.programs, status: in_progress}, description: Create a Determination for the submitted application}
+          - call: {POST: eligibility/determinations, body: {applicationId: $this.subject, programs: $this.data.programs, status: in_progress, expeditedFlagged: false}, description: Create a Determination for the submitted application}
       - type: intake.application.review_completed
         description: Run final eligibility determination for all remaining pending Decisions after caseworker review is complete (42 CFR § 435.912)
         context:
