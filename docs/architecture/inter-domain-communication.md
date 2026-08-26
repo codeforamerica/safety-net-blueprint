@@ -67,7 +67,7 @@ State partners may overlay the `type` prefix to match their own namespace.
 Event contracts for each domain live in two artifacts:
 
 - **OpenAPI spec** (`x-events` section) — declares each event's CloudEvents type name and payload schema reference
-- **State machine** — declares which hooks emit which events. Three hooks are available: `onCreate` (object creation), `onUpdate` (field changes outside a transition), and `transitions` (state changes and non-state-changing actor actions)
+- **State machine** — declares which events cause the machine to emit further events. Object creation, field changes, and timer callbacks all arrive as named events in the machine's `events:` subscriptions, the same as any other domain event — there are no special-cased hook types (`onCreate`/`onUpdate`/`onTimer`); see [Fully event-driven model](cross-cutting/behavioral-contract-dsl.md#decision-4-fully-event-driven-model).
 
 AsyncAPI specs are generated from these two sources. State partners do not author AsyncAPI directly — they overlay the source artifacts and regenerate.
 

@@ -39,7 +39,7 @@ Each domain has different operational and performance requirements. Caching poli
 | Metrics | Request rates, latencies, error rates | Prometheus format |
 | Structured logging | Searchable, consistent format | JSON with correlation IDs, PII masked |
 | Distributed tracing | Follow requests across APIs | OpenTelemetry |
-| Audit logs | Who did what when | Domain-specific (e.g., TaskAuditEvent) |
+| Audit logs | Who did what when | Cross-cutting audit domain, built from every domain's own immutable mutation events — see [Domain Design](domain-design.md#1-domain-organization) |
 
 **API-level SLI metrics:**
 

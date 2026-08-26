@@ -1,6 +1,6 @@
 # Design Rationale
 
-Key decisions made during design, with alternatives considered. These are **proposed decisions** - review and adjust before implementation.
+Key decisions made during design, with alternatives considered. Some entries have since been superseded as the architecture evolved — superseded entries are marked inline and kept for historical context, not current guidance.
 
 See also: [Domain Design](domain-design.md) | [API Architecture](api-architecture.md) | [Roadmap](roadmap.md)
 
