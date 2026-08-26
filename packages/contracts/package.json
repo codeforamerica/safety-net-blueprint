@@ -57,7 +57,8 @@
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
     "ajv": "^8.12.0",
     "ajv-formats": "^3.0.1",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.0",
+    "pluralize": "^8.0.0"
   },
   "engines": {
     "node": ">=20.19.0"
