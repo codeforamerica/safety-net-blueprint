@@ -677,7 +677,6 @@ export function hasJsonResponse(operation) {
 
 /**
  * Check if path is a collection endpoint (no {id} parameter, not a named singleton like /me)
->>>>>>> 308d1ea (Add /users/me and q=field:me current-user scoping)
  * @param {string} path - The endpoint path
  * @returns {boolean}
  */
