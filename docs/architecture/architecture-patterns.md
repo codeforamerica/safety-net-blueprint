@@ -1,0 +1,78 @@
+# Architecture Patterns
+
+For architects and technical leaders who want the specific, recognized software patterns behind each of this blueprint's design philosophies, with citations. See [Architecture Philosophy](architecture-philosophy.md) for the plain-language reasoning behind each one — this document doesn't repeat that reasoning, just the technical realization of it.
+
+## Why this document exists
+
+[Architecture Philosophy](architecture-philosophy.md) explains the handful of ideas driving every design decision here, and why this blueprint relies on each one. This document names the specific patterns that realize each of those ideas, so a reader can predict how an unfamiliar part of the system is likely to work before reading its specific domain doc.
+
+## Patterns by design philosophy
+
+### 1. Contract-first / spec-first design
+
+*Why this matters:* see [Architecture Philosophy §1](architecture-philosophy.md#1-contract-first--spec-first-design).
+
+**Patterns used:**
+
+- **Statecharts** (a formalized version of the "State" design pattern). An object's lifecycle is declared as a fixed set of states, transitions between them (each one only allowed to happen when a specific condition holds), and effects that run automatically on entering or leaving a state — the same thing a state-machine diagram shows. Without this, lifecycle logic ends up scattered across whatever code paths happen to check or set state, with no single place listing every valid transition — leaving whoever inherits the system to reconstruct it by tracing execution paths instead of reading a spec. *Reference:* [statecharts.dev](https://statecharts.dev/); [Gang of Four, "State"](https://en.wikipedia.org/wiki/State_pattern).
+- **Rules Engine** (declarative business rules — the same category of thing a commercial "Business Rules Management System," or BRMS, provides). Decision logic — routing, assignment, priority, eligibility rules — is expressed as structured rules an engine evaluates purely, with no side effects of its own, instead of conditional logic buried inside application code. Without this, changing a rule means a developer finds the right place in the code and releases new code to production, and reviewing the change means reading through it and inferring the effect. When the rule is data, comparing the old and new rule *is* comparing the actual decision logic — nothing to infer. *Reference:* [Fowler, "Rules Engine"](https://martinfowler.com/bliki/RulesEngine.html); [OMG DMN spec](https://www.omg.org/spec/DMN/).
+- **Orchestration.** Answers a different question from Rules Engine above: not *what* the outcome should be, but *what sequence of actions carries it out*. One domain's contract directly sequences a series of calls — including calls into other domains — to accomplish a single operation, with the calling domain in control of the order and outcome throughout, while the domain being called stays generic and needs no knowledge of who's calling or why. Declaring that sequence in the contract, not hand-coding it inside whatever adapter — the implementation that actually satisfies the contract for one specific vendor — happens to provide, keeps the actual coordination logic reviewable and state-customizable the same way any other contract is. Without this, the same coordination logic either gets duplicated across every caller that needs it, or hidden inside an adapter where nobody reading the contract can see it. *Reference:* [Fowler, "Orchestration vs. Choreography"](https://martinfowler.com/articles/microservices.html#Orchestration-vs-Choreography).
+- **API Composition.** A consumer that needs data assembled from more than one resource gets a single composed response instead of querying each one separately and combining the results itself (fields assembled one way for a caseworker dashboard, another way for a client-facing view). That composition — the shape, and which resources it draws from — is declared as part of the contract, the same way every other resource shape in this blueprint is, so whoever builds the adapter that produces it works from the same declared shape instead of inventing the composition logic itself. Without this, either the consumer ends up combining multiple calls on its own, or the composition logic gets buried inside whichever adapter happens to need it, invisible to anyone reading the contract. *Reference:* [microservices.io, "API Composition"](https://microservices.io/patterns/data/api-composition.html).
+
+### 2. Domain-Driven Design
+
+*Why this matters:* see [Architecture Philosophy §2](architecture-philosophy.md#2-domain-driven-design).
+
+**Patterns used:**
+
+- **Bounded Contexts** (see [Architecture Philosophy §2](architecture-philosophy.md#2-domain-driven-design) for the concrete `Income` example). Domain-Driven Design structures software around explicit models of the business domain, using the same vocabulary domain experts use; one of its core tools is the bounded context — a boundary within which a term has exactly one meaning, and can mean something else outside it, on purpose. Without this, one shared entity strains to mean both things at once, and a change meant for one meaning can silently break the other, so extending either domain's model means checking the other's assumptions first instead of changing it in isolation. *Reference:* [Evans, *Domain-Driven Design*](https://www.domainlanguage.com/ddd/); [Fowler, "Bounded Context"](https://martinfowler.com/bliki/BoundedContext.html).
+- **Database per Service** (domain-oriented data ownership). Nothing in the blueprint's contracts lets one domain reach another domain's storage directly — every cross-domain access is required to go through the owning domain's published interface. Whatever storage a domain's implementation actually uses is that implementation's own choice; the contract only constrains how *other* domains are allowed to reach it. Without this, a shared database becomes a hidden dependency every domain relies on, and it can never be swapped or restructured without coordinating every domain that queries it directly. *Reference:* [microservices.io, "Database per Service"](https://microservices.io/patterns/data/database-per-service.html).
+- **Data as a Product** (one of Data Mesh's principles — Data Mesh extends domain-oriented ownership to data specifically, the same idea Database per Service applies to services). Database per Service only guarantees *who* can reach a domain's data — nobody but that domain, directly. It says nothing about whether what the domain publishes through that one channel is any good: a domain can satisfy Database per Service while still exposing an interface that's genuinely painful to consume — narrow, undocumented, not built with consumers' needs in mind (Reporting, most concretely). Without this, other domains route around a bad interface instead of building against it, quietly recreating the same coupling to internal implementation details that Database per Service exists to prevent — coupling that becomes exactly as expensive to unwind the next time this domain's vendor changes. *Reference:* [Dehghani, "Data Mesh Principles"](https://martinfowler.com/articles/data-mesh-principles.html).
+
+### 3. Adapters (Ports & Adapters / Hexagonal Architecture)
+
+*Why this matters:* see [Architecture Philosophy §3](architecture-philosophy.md#3-adapters-ports--adapters--hexagonal-architecture).
+
+**Patterns used:**
+
+- **Anti-corruption layer.** Answers a different question from Ports & Adapters above: not what consumers depend on, but what shape the data crossing the boundary actually takes. Ports & Adapters only guarantees nothing outside the adapter depends on the vendor — it says nothing about whether the adapter's own output is any good, and a fully swappable adapter can still hand back a response full of the vendor's own field names and quirks. Anti-corruption layer closes that gap — the adapter must actively translate the vendor's concepts into this system's own model, not just relay them under a different name. Without it, the vendor's quirks get adopted wholesale, and everything downstream inherits them even after that vendor is gone. The same discipline runs in reverse: a domain's own internal structure must not leak into the vendor's side of the contract either — see the [Adapter Pattern](cross-cutting/adapters.md) doc for the specific rule this produces. *Reference:* [Evans, *Domain-Driven Design*](https://www.domainlanguage.com/ddd/) (the pattern's origin); [Microsoft Azure Architecture Center summary](https://learn.microsoft.com/en-us/azure/architecture/patterns/anti-corruption-layer).
+- **Facade.** A coarser-grained version of Ports & Adapters: one domain provides a single, unified interface to a whole category of external systems, and every other domain goes through it instead of integrating directly. Without this, every domain that needs the same category of external system re-implements its own credentials handling, retry logic, and call history — scattered, duplicated, and with no single portable surface a state can build an adapter against, mock, or swap out later without redoing that work everywhere it was duplicated. *Reference:* [Gang of Four, "Facade"](https://en.wikipedia.org/wiki/Facade_pattern).
+
+### 4. Event-Driven Architecture
+
+*Why this matters:* see [Architecture Philosophy §4](architecture-philosophy.md#4-event-driven-architecture).
+
+**Patterns used:**
+
+- **Choreography.** A domain notifies that its own state changed by emitting an event, with no particular consumer in mind; every other domain that cares subscribes and decides independently how to react, with no central coordinator sequencing that reaction across domains. That's what makes it possible to add an entirely new kind of consumer later — an audit trail, a new reporting need — without the producing domain ever needing to change, or even know that consumer exists. This is distinct from Orchestration (§1), which is the right choice when a domain needs a result back to continue its own operation — choreography is specifically for the opposite case, where the producer doesn't need anything back and shouldn't need to know who's listening. Without this, adding a new reaction to an existing event means modifying the producing domain's own code to explicitly call the new consumer, so its change surface grows with every consumer anyone ever adds — and a central coordinator becomes a single place that has to know about every domain's reaction, reintroducing the coupling this was meant to remove. *Reference:* [Fowler, "What do you mean by Event-Driven?"](https://martinfowler.com/articles/201701-event-driven.html); [Fowler, "Orchestration vs. Choreography"](https://martinfowler.com/articles/microservices.html#Orchestration-vs-Choreography).
+
+### 5. Overlay-based customization
+
+*Why this matters:* see [Architecture Philosophy §5](architecture-philosophy.md#5-overlay-based-customization).
+
+**Patterns used:**
+
+- **JSON Merge Patch** (a standard being borrowed, not an architecture pattern like the others here). A base configuration and a separate, targeted patch file are combined by a build step (this blueprint calls it "resolving") into the final result, so a customization layers on top of an untouched base rather than editing it directly. Without this, upgrading the base later means manually re-merging every state's edits by hand, forever, with divergence guaranteed over time. The merged (base + overlay) output is then checked with the exact same validation as the base itself, not a separate or looser pass — without that, an overlay could silently produce something structurally broken (a link pointing to something that no longer exists, or data that doesn't match its required shape) that nobody catches until the system is actually live and being used. *Reference:* [JSON Merge Patch, RFC 7396](https://www.rfc-editor.org/rfc/rfc7396); [Kubernetes Kustomize overlays](https://kubectl.docs.kubernetes.io/references/kustomize/) (same technique, different domain).
+
+### 6. Prefer open standards over bespoke formats
+
+*Why this matters:* see [Architecture Philosophy §6](architecture-philosophy.md#6-prefer-open-standards-over-bespoke-formats).
+
+**Patterns used:**
+
+- **OpenAPI.** The industry-standard specification format for describing REST APIs — endpoints, request/response shapes, validation rules — machine-readable enough to generate mock servers, client libraries, and documentation directly from it. Without this, a bespoke schema format would need its own tooling built from scratch: no existing code generators, no existing validators, no developers who already know how to read it. *Reference:* [OpenAPI Specification](https://spec.openapis.org/oas/latest.html).
+- **CloudEvents / AsyncAPI.** CloudEvents standardizes the envelope every event in this blueprint is wrapped in (type, source, time, data), so any tool built to consume CloudEvents works here without modification; AsyncAPI documents the event contracts the same way OpenAPI documents REST contracts. Without this, a custom event envelope means every consumer — internal, or a state's own tooling — has to be taught this project's specific format instead of one an event-driven system would already understand. *Reference:* [CloudEvents](https://cloudevents.io/); [AsyncAPI](https://www.asyncapi.com/).
+- **JSON Schema.** Validation rules for a resource's shape are expressed in JSON Schema, not a bespoke validation DSL, so any existing JSON Schema validator can check a request or an overlay's output without this project writing and maintaining its own. *Reference:* [JSON Schema](https://json-schema.org/).
+- **CEL (Common Expression Language).** Conditions inside decision rules, form visibility, SLA timers, and metric filters are expressed in CEL rather than a purpose-built expression language — already used by Kubernetes and other infrastructure projects, with parsers and evaluators available off the shelf. Without this, every consumer of a condition — the mock server, a production adapter, a future tool — needs its own hand-written interpreter for a format that exists nowhere else. *Reference:* [CEL (Common Expression Language)](https://cel.dev/).
+
+## Where to go deeper
+
+| Document | Covers |
+|---|---|
+| [Architecture Philosophy](architecture-philosophy.md) | The plain-language reasoning behind each design philosophy above |
+| [Contract-Driven Architecture](contract-driven-architecture.md) | Full contract artifact model, adapter pattern, standards alignment |
+| [Adapter Pattern](cross-cutting/adapters.md) | The adapter contract itself, including the metadata passthrough rule that keeps the blueprint's internal identifiers out of vendor contracts |
+| [Resolve Pipeline](resolve-pipeline.md) | The overlay mechanism in full: merge semantics, relationship resolution, environment filtering |
+| [Design Rationale](design-rationale.md) | Per-decision log with alternatives considered and "reconsider if" conditions |
+| [Domain Design](domain-design.md) | Domain boundaries, entity ownership, cross-domain rules |
+| [Inter-Domain Communication](inter-domain-communication.md) | Commands vs. domain events, CloudEvents envelope, event versioning |
