@@ -236,7 +236,14 @@ function ind(n) { return '  '.repeat(n); }
  * @param {object}  localToFgPath   - local variable name → fact-graph path
  * @param {number}  depth           - current indentation depth (for pretty-print)
  */
-function astToXml(ast, localToFgPath, depth) {
+/**
+ * @param {object} ast
+ * @param {object} localToFgPath  - local name → fg path
+ * @param {number} depth          - indentation depth
+ * @param {object} localToType    - local name → 'integer'|'number'|'boolean' (for comparison type inference)
+ * @param {string} returnType     - expected return type of this expression node ('integer'|'number'|'boolean')
+ */
+function astToXml(ast, localToFgPath, depth, localToType, returnType) {
   const p = ind(depth);
   const p1 = ind(depth + 1);
   const p2 = ind(depth + 2);
@@ -247,10 +254,12 @@ function astToXml(ast, localToFgPath, depth) {
 
     case 'num': {
       const n = Number(ast.val);
-      // Use <Dollar> if the source literal has a decimal point (e.g. 1632.0 = money amount).
-      // Use <Int> only for whole-number literals without a decimal point.
-      const isDollar = !Number.isInteger(n) || ast.val.includes('.');
-      return isDollar ? `${p}<Dollar>${n}</Dollar>` : `${p}<Int>${n}</Int>`;
+      // Use the declared return type to pick the fact-graph numeric element.
+      // 'integer' → <Int>, anything else (number/money) → <Dollar>.
+      // Fallback: if no returnType, use the decimal point as a heuristic.
+      const useInt = returnType === 'integer'
+        || (!returnType && Number.isInteger(n) && !ast.val.includes('.'));
+      return useInt ? `${p}<Int>${n}</Int>` : `${p}<Dollar>${n}</Dollar>`;
     }
 
     case 'id': {
@@ -260,39 +269,42 @@ function astToXml(ast, localToFgPath, depth) {
     }
 
     case 'unary': {
-      return `${p}<Not>\n${astToXml(ast.operand, localToFgPath, depth + 1)}\n${p}</Not>`;
+      return `${p}<Not>\n${astToXml(ast.operand, localToFgPath, depth + 1, localToType, 'boolean')}\n${p}</Not>`;
     }
 
     case 'binary': {
       const { op } = ast;
 
-      // Flatten &&/|| chains into multi-child All/Any
+      // Flatten &&/|| chains into multi-child All/Any (always boolean context)
       if (op === '&&') {
-        const children = flattenBinary(ast, '&&').map(c => astToXml(c, localToFgPath, depth + 1));
+        const children = flattenBinary(ast, '&&').map(c => astToXml(c, localToFgPath, depth + 1, localToType, 'boolean'));
         return `${p}<All>\n${children.join('\n')}\n${p}</All>`;
       }
       if (op === '||') {
-        const children = flattenBinary(ast, '||').map(c => astToXml(c, localToFgPath, depth + 1));
+        const children = flattenBinary(ast, '||').map(c => astToXml(c, localToFgPath, depth + 1, localToType, 'boolean'));
         return `${p}<Any>\n${children.join('\n')}\n${p}</Any>`;
       }
 
       if (COMPARISON_TAG[op]) {
         const tag = COMPARISON_TAG[op];
+        // Infer comparison operand type from the left side if it's a named dependency.
+        // This lets literals on the right side use the correct type (e.g. Int for size comparisons).
+        const leftType = ast.left.type === 'id' ? (localToType[ast.left.name] ?? returnType) : returnType;
         return [
           `${p}<${tag}>`,
           `${p1}<Left>`,
-          astToXml(ast.left, localToFgPath, depth + 2),
+          astToXml(ast.left, localToFgPath, depth + 2, localToType, leftType),
           `${p1}</Left>`,
           `${p1}<Right>`,
-          astToXml(ast.right, localToFgPath, depth + 2),
+          astToXml(ast.right, localToFgPath, depth + 2, localToType, leftType),
           `${p1}</Right>`,
           `${p}</${tag}>`,
         ].join('\n');
       }
 
-      // Flatten + chains into multi-child Add
+      // Arithmetic ops propagate the return type
       if (op === '+') {
-        const children = flattenBinary(ast, '+').map(c => astToXml(c, localToFgPath, depth + 1));
+        const children = flattenBinary(ast, '+').map(c => astToXml(c, localToFgPath, depth + 1, localToType, returnType));
         return `${p}<Add>\n${children.join('\n')}\n${p}</Add>`;
       }
 
@@ -300,18 +312,17 @@ function astToXml(ast, localToFgPath, depth) {
         return [
           `${p}<Subtract>`,
           `${p1}<Minuend>`,
-          astToXml(ast.left, localToFgPath, depth + 2),
+          astToXml(ast.left, localToFgPath, depth + 2, localToType, returnType),
           `${p1}</Minuend>`,
           `${p1}<Subtrahends>`,
-          astToXml(ast.right, localToFgPath, depth + 2),
+          astToXml(ast.right, localToFgPath, depth + 2, localToType, returnType),
           `${p1}</Subtrahends>`,
           `${p}</Subtract>`,
         ].join('\n');
       }
 
-      // Flatten * chains into multi-child Multiply
       if (op === '*') {
-        const children = flattenBinary(ast, '*').map(c => astToXml(c, localToFgPath, depth + 1));
+        const children = flattenBinary(ast, '*').map(c => astToXml(c, localToFgPath, depth + 1, localToType, returnType));
         return `${p}<Multiply>\n${children.join('\n')}\n${p}</Multiply>`;
       }
 
@@ -320,20 +331,30 @@ function astToXml(ast, localToFgPath, depth) {
 
     case 'ternary': {
       const { cond, then, els } = ast;
+      const p3 = ind(depth + 3);
+      const p4 = ind(depth + 4);
+      // Use <Not>cond</Not> instead of <True/> for the else branch so the fact-graph
+      // returns indeterminate (rather than the else value) when the condition's
+      // dependencies are missing. <True/> would fire unconditionally through nested
+      // Switches, producing a spurious value when inputs haven't been provided.
       return [
         `${p}<Switch>`,
         `${p1}<Case>`,
         `${p2}<When>`,
-        astToXml(cond, localToFgPath, depth + 3),
+        astToXml(cond, localToFgPath, depth + 3, localToType, 'boolean'),
         `${p2}</When>`,
         `${p2}<Then>`,
-        astToXml(then, localToFgPath, depth + 3),
+        astToXml(then, localToFgPath, depth + 3, localToType, returnType),
         `${p2}</Then>`,
         `${p1}</Case>`,
         `${p1}<Case>`,
-        `${p2}<When><True/></When>`,
+        `${p2}<When>`,
+        `${p3}<Not>`,
+        astToXml(cond, localToFgPath, depth + 4, localToType, 'boolean'),
+        `${p3}</Not>`,
+        `${p2}</When>`,
         `${p2}<Then>`,
-        astToXml(els, localToFgPath, depth + 3),
+        astToXml(els, localToFgPath, depth + 3, localToType, returnType),
         `${p2}</Then>`,
         `${p1}</Case>`,
         `${p}</Switch>`,
@@ -356,16 +377,18 @@ function astToXml(ast, localToFgPath, depth) {
 export function toFactGraphXml(graph) {
   const { nodes = {} } = graph;
 
-  // Build localName → fact-graph path for expression translation.
+  // Build localName → fact-graph path and localName → type for expression translation.
   // If two nodes share the same local name (last segment), the input node wins;
   // otherwise last writer wins. This is a known limitation.
   const localToFgPath = {};
-  for (const nodePath of Object.keys(nodes)) {
+  const localToType = {}; // local name → 'integer'|'number'|'boolean'
+  for (const [nodePath, nodeInfo] of Object.entries(nodes)) {
     const local = nodePath.split('.').pop();
     const fgPath = nodePathToFgPath(nodePath);
     // Prefer input nodes ($.prefix) for resolution since expressions reference inputs
     if (!localToFgPath[local] || nodePath.startsWith('$.')) {
       localToFgPath[local] = fgPath;
+      localToType[local] = nodeInfo.type ?? 'number';
     }
   }
 
@@ -415,7 +438,7 @@ export function toFactGraphXml(graph) {
       let exprXml;
       try {
         const ast = parseCelExpr(expr.trim());
-        exprXml = astToXml(ast, localToFgPath, 4);
+        exprXml = astToXml(ast, localToFgPath, 4, localToType, type);
       } catch (e) {
         errors.push({ path: nodePath, message: e.message });
         exprXml = `        <!-- translation error: ${escXml(e.message)} -->`;

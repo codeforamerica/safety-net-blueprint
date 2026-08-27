@@ -638,6 +638,50 @@ function renderSandboxSection(graphData) {
       }
     }
 
+    // Returns an array of local variable names that are incomplete and were
+    // actually evaluated to reach this AST node — branch-aware, respects
+    // short-circuit and ternary selection so unreachable branches are excluded.
+    function collectBlockingLocals(ast, scope) {
+      if (!ast) return [];
+      switch (ast.type) {
+        case 'bool': case 'num': return [];
+        case 'id': {
+          var r = scope[ast.name];
+          // Not in scope = missing input; in scope as INCL = incomplete derived node
+          if (r === undefined || r.s === 'incomplete') return [ast.name];
+          return [];
+        }
+        case 'unary': return collectBlockingLocals(ast.operand, scope);
+        case 'binary': {
+          var bop = ast.op;
+          var lv = eval3(ast.left, scope), rv = eval3(ast.right, scope);
+          if (bop === '&&') {
+            // Either side being definitively false short-circuits — nothing is blocking
+            if (lv.s !== 'incomplete' && lv.v === false) return [];
+            if (rv.s !== 'incomplete' && rv.v === false) return [];
+          }
+          if (bop === '||') {
+            // Either side being definitively true short-circuits — nothing is blocking
+            if (lv.s !== 'incomplete' && lv.v === true) return [];
+            if (rv.s !== 'incomplete' && rv.v === true) return [];
+          }
+          var res = [];
+          if (lv.s === 'incomplete') { var lb = collectBlockingLocals(ast.left,  scope); for (var bli = 0; bli < lb.length; bli++) res.push(lb[bli]); }
+          if (rv.s === 'incomplete') { var rb = collectBlockingLocals(ast.right, scope); for (var bri = 0; bri < rb.length; bri++) res.push(rb[bri]); }
+          return res;
+        }
+        case 'ternary': {
+          var cv = eval3(ast.cond, scope);
+          // If the condition itself is incomplete, only its blocking locals matter —
+          // we don't know which branch would fire, so neither branch is consulted.
+          if (cv.s === 'incomplete') return collectBlockingLocals(ast.cond, scope);
+          // Condition resolved: only the taken branch matters.
+          return collectBlockingLocals(cv.v ? ast.then : ast.els, scope);
+        }
+        default: return [];
+      }
+    }
+
     function evaluateGraph(graph, inputs) {
       var allPairs = [];
       var edgesObj = graph.edges || {};
@@ -703,25 +747,47 @@ function renderSandboxSection(graphData) {
         }
       }
 
-      // Post-evaluation: for Incomplete nodes, collect which user-facing input
-      // nodes are still missing (excluding placeholder defaults).
+      // Post-evaluation: for Incomplete nodes, determine which user-facing input
+      // nodes are blocking resolution — branch-aware via collectBlockingLocals.
+      // Build maps from local name → full path for inputs and all nodes.
+      var localToInputPath = {}, localToNodePath = {};
+      for (var lp in nodesObj) {
+        var lln = localName(lp);
+        localToNodePath[lln] = lp;
+        if (lp.charAt(0) === '$') localToInputPath[lln] = lp;
+      }
+
+      // Compute blocking locals for each incomplete derived node (AST-level, branch-aware).
+      var blockingLocals = {};
+      for (var oi2a = 0; oi2a < ordered.length; oi2a++) {
+        var np2a = ordered[oi2a];
+        if (states[np2a] !== 'incomplete' || errors[np2a]) continue;
+        var ast2a = GRAPH_EXPRS[np2a];
+        if (ast2a) blockingLocals[np2a] = collectBlockingLocals(ast2a, scope);
+      }
+
+      // Resolve blocking locals (which may include incomplete derived nodes) to
+      // root input paths, recursing into derived nodes' own blocking sets.
       var missing = {}, provided = {};
-      function collectMissing(np, visitedM) {
-        if (visitedM[np]) return { miss: [], prov: [] };
-        visitedM[np] = true;
-        var deps = revDeps[np] || [];
+      function resolveBlocking(locals, visitedR) {
         var miss = [], prov = [];
-        for (var di = 0; di < deps.length; di++) {
-          var dep = deps[di];
-          if (dep.charAt(0) === '$') {
-            var st = states[dep];
-            if (st === 'complete') prov.push(dep);
-            else if (st === 'incomplete') miss.push(dep);
-            // placeholder inputs (policy defaults) are not shown as missing or provided
+        for (var rbi = 0; rbi < locals.length; rbi++) {
+          var rln = locals[rbi];
+          if (visitedR[rln]) continue;
+          visitedR[rln] = true;
+          var inputPath = localToInputPath[rln];
+          if (inputPath) {
+            var ist = states[inputPath];
+            if (ist === 'incomplete') miss.push(inputPath);
+            else if (ist === 'complete') prov.push(inputPath);
+            // placeholder: not shown as missing or provided
           } else {
-            var sub = collectMissing(dep, visitedM);
-            for (var mi = 0; mi < sub.miss.length; mi++) miss.push(sub.miss[mi]);
-            for (var pi = 0; pi < sub.prov.length; pi++) prov.push(sub.prov[pi]);
+            var dNodePath = localToNodePath[rln];
+            if (dNodePath && blockingLocals[dNodePath]) {
+              var sub = resolveBlocking(blockingLocals[dNodePath], visitedR);
+              for (var rmi = 0; rmi < sub.miss.length; rmi++) miss.push(sub.miss[rmi]);
+              for (var rpi = 0; rpi < sub.prov.length; rpi++) prov.push(sub.prov[rpi]);
+            }
           }
         }
         miss = miss.filter(function(x, i, a) { return a.indexOf(x) === i; });
@@ -731,7 +797,8 @@ function renderSandboxSection(graphData) {
       for (var oi2 = 0; oi2 < ordered.length; oi2++) {
         var np = ordered[oi2];
         if (states[np] !== 'incomplete' || errors[np]) continue;
-        var rc = collectMissing(np, {});
+        if (!blockingLocals[np] || blockingLocals[np].length === 0) continue;
+        var rc = resolveBlocking(blockingLocals[np], {});
         if (rc.miss.length > 0) { missing[np] = rc.miss; provided[np] = rc.prov; }
       }
 
@@ -834,39 +901,62 @@ function renderSandboxSection(graphData) {
 
       // ── Determination summary (sink nodes only — what the API would return) ──
       var sinkPaths = ordered.filter(function(p) { return sinkSet.has(p); });
-      var summaryHtml = '<div style="margin-bottom:20px;padding:14px 16px;border-radius:6px;background:#f5f3ff;border:1px solid #e0d9f7">';
-      summaryHtml += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#6b7280;margin-bottom:10px">Results</div>';
-      for (var si = 0; si < sinkPaths.length; si++) {
-        var sp = sinkPaths[si];
+
+      function sinkValueHtml(sp, resolvedColor) {
         var sState = states[sp];
-        var sShort = sp.split('.').slice(-2).join('.');
-        summaryHtml += '<div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:6px">';
-        summaryHtml += '<span style="font-family:' + MONO + ';font-size:12px;font-weight:700;color:#2B1A78">' + escHtml(sShort) + '</span>';
         if (sState === 'complete' || sState === 'placeholder') {
           var sv = sState === 'complete' ? completeVals[sp] : placeholderVals[sp];
           var sIsPlaceholder = sState === 'placeholder';
+          var h;
           if (typeof sv === 'boolean') {
-            summaryHtml += sv
+            h = sv
               ? '<span style="font-weight:700;color:' + (sIsPlaceholder ? '#65a30d' : '#16a34a') + ';font-size:14px">&#10003; true</span>'
               : '<span style="font-weight:700;color:' + (sIsPlaceholder ? '#d97706' : '#dc2626') + ';font-size:14px">&#10007; false</span>';
           } else {
-            summaryHtml += '<span style="font-family:' + MONO + ';font-weight:600;color:#0369a1">' + escHtml(String(sv)) + '</span>';
+            h = '<span style="font-family:' + MONO + ';font-weight:600;color:#0369a1">' + escHtml(String(sv)) + '</span>';
           }
-          if (sIsPlaceholder) summaryHtml += ' <span style="font-size:9px;font-weight:700;background:#fef3c7;color:#92400e;padding:1px 4px;border-radius:3px">default</span>';
+          if (sIsPlaceholder) h += ' <span style="font-size:9px;font-weight:700;background:#fef3c7;color:#92400e;padding:1px 4px;border-radius:3px">default</span>';
+          return h;
         } else if (missing[sp] && missing[sp].length > 0) {
           var sMiss = missing[sp], sProv = provided[sp] || [], sParts = [];
           for (var spi = 0; spi < sProv.length; spi++) sParts.push('<s style="color:#c4b5fd">' + sProv[spi].split('.').pop() + '</s>');
-          for (var smi = 0; smi < sMiss.length; smi++) sParts.push('<span style="color:#6b7280">' + sMiss[smi].split('.').pop() + '</span>');
-          summaryHtml += '<span style="font-size:11px;font-style:italic;color:#6b7280">missing: ' + sParts.join(', ') + '</span>';
-        } else {
-          summaryHtml += '<span style="color:#9ca3af;font-size:11px">—</span>';
+          for (var smi2 = 0; smi2 < sMiss.length; smi2++) sParts.push('<span style="color:#6b7280">' + sMiss[smi2].split('.').pop() + '</span>');
+          return '<span style="font-size:11px;font-style:italic;color:#6b7280">missing: ' + sParts.join(', ') + '</span>';
         }
+        return '<span style="color:#9ca3af;font-size:11px">—</span>';
+      }
+
+      var summaryHtml = '<div style="margin-bottom:20px;padding:14px 16px;border-radius:6px;background:#f5f3ff;border:1px solid #e0d9f7">';
+      summaryHtml += '<div style="display:flex;gap:24px">';
+      // Ours column
+      summaryHtml += '<div style="flex:1;min-width:0">';
+      summaryHtml += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#6b7280;margin-bottom:10px">Results</div>';
+      for (var si = 0; si < sinkPaths.length; si++) {
+        var sp = sinkPaths[si];
+        var sShort = sp.split('.').slice(-2).join('.');
+        summaryHtml += '<div style="margin-bottom:6px">';
+        summaryHtml += '<div style="font-family:' + MONO + ';font-size:12px;font-weight:700;color:#2B1A78;margin-bottom:2px">' + escHtml(sShort) + '</div>';
+        summaryHtml += sinkValueHtml(sp);
         summaryHtml += '</div>';
       }
       summaryHtml += '</div>';
+      // Fact-graph column — populated by applyFgComparison, hidden until FG loads
+      summaryHtml += '<div class="fg-col" style="display:none;border-left:1px solid #d8d1f0;padding-left:16px;min-width:120px">';
+      summaryHtml += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#6b7280;margin-bottom:10px">Fact-graph</div>';
+      for (var si2 = 0; si2 < sinkPaths.length; si2++) {
+        summaryHtml += '<div data-fg-sink="' + sinkPaths[si2].replace(/"/g,'&quot;') + '" style="margin-bottom:6px;margin-top:18px"><span style="color:#9ca3af;font-size:11px">—</span></div>';
+      }
+      summaryHtml += '</div>';
+      summaryHtml += '</div></div>';
 
+      var TH_STYLE = 'padding:4px 8px 4px 0;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#9ca3af;text-align:left;border-bottom:1px solid #e5e7eb';
       var html = summaryHtml + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#6b7280;margin-bottom:8px">Calculations</div>';
       html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+      html += '<thead><tr>';
+      html += '<th style="' + TH_STYLE + '">Node</th>';
+      html += '<th style="' + TH_STYLE + '">Ours</th>';
+      html += '<th class="fg-col" style="' + TH_STYLE + ';display:none">fact-graph</th>';
+      html += '</tr></thead>';
 
       for (var i = 0; i < ordered.length; i++) {
         var nodePath = ordered[i];
@@ -919,7 +1009,8 @@ function renderSandboxSection(graphData) {
         html += '<tr data-sb-path="' + nodePath.replace(/"/g,'&quot;') + '"' + (isSink ? ' data-sink="1"' : '') + ' style="border-bottom:1px solid #f3f4f6;' + rowBg + '">';
         html += '<td style="padding:7px 16px 7px 0;vertical-align:top;width:45%">';
         html += '<span style="' + nameStyle + '">' + (isSink ? '&#9679; ' : '') + shortPath + '</span>';
-        if (desc) html += '<div style="font-size:10px;color:#9ca3af;margin-top:2px;line-height:1.35;font-weight:400;font-family:sans-serif">' + desc + '</div>';
+        if (nodeInfo.expression) html += '<div style="font-size:10px;color:#6b7280;margin-top:2px;font-family:' + MONO + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis" data-title="' + nodeInfo.expression.replace(/"/g,'&quot;') + '">' + nodeInfo.expression.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
+        if (desc) html += '<div style="font-size:10px;color:#9ca3af;margin-top:1px;line-height:1.35;font-weight:400;font-family:sans-serif">' + desc + '</div>';
         html += '</td>';
         html += '<td style="padding:7px 8px 7px 0;vertical-align:top;word-break:break-word;overflow-wrap:anywhere">' + valueCellHtml + '</td>';
         html += '<td class="fg-col" style="padding:7px 0;vertical-align:top;display:none"></td>';
@@ -1034,7 +1125,11 @@ function renderSandboxSection(graphData) {
         var fgPath2 = nodePathToFgPath(nodePath);
         try {
           var r = _fgGraph.get(fgPath2);
-          comparison[nodePath] = getFgState(r);
+          var entry = getFgState(r);
+          if (entry.state === 'incomplete') {
+            try { entry.solves = _fgGraph.explainAndSolve(fgPath2); } catch(e2) { /* skip */ }
+          }
+          comparison[nodePath] = entry;
         } catch(e) { comparison[nodePath] = { state: 'error', message: e.message }; }
       }
       return comparison;
@@ -1046,105 +1141,71 @@ function renderSandboxSection(graphData) {
       var resultsEl = document.getElementById('sb-results');
       if (!resultsEl) return;
 
-      // Show the fg column header if not already present
       var table = resultsEl.querySelector('table');
       if (!table) return;
 
-      // Show all fg-col cells
-      var fgCells = table.querySelectorAll('td.fg-col');
-      fgCells.forEach(function(td) { td.style.display = ''; });
+      // Show all fg-col elements (table header + cells + results card column)
+      resultsEl.querySelectorAll('.fg-col').forEach(function(el) { el.style.display = ''; });
 
-      // Populate each cell
-      var tableMismatches = {}; // nodePath → true if mismatch
+      // Render a FG comparison value using the same visual language as our engine
+      function fgValHtml(c) {
+        if (!c || c.state === 'incomplete') {
+          var solves = c && c.solves;
+          if (solves && solves.length > 0) {
+            var parts = solves.map(function(set) { return set.join(', '); });
+            var label = parts.length === 1 ? parts[0] : parts.map(function(p, i) { return '[' + (i+1) + '] ' + p; }).join(' or ');
+            return '<span style="color:#9ca3af;font-size:10px;font-style:italic" title="' + escHtml(label) + '">needs: ' + escHtml(label) + '</span>';
+          }
+          return '<span style="color:#9ca3af;font-size:11px">—</span>';
+        }
+        if (c.state === 'error') return '<span style="color:#dc2626;font-size:10px" title="' + escHtml(c.message || '') + '">error</span>';
+        var v = c.value;
+        if (typeof v === 'boolean') {
+          return v ? '<span style="font-weight:700;color:#16a34a;font-size:13px">&#10003; true</span>'
+                   : '<span style="font-weight:700;color:#dc2626;font-size:13px">&#10007; false</span>';
+        }
+        return '<span style="font-family:' + MONO + ';color:#0369a1;font-weight:600;font-size:11px">' + escHtml(String(v)) + '</span>';
+      }
+
+      // Populate sink cells in the results card
+      resultsEl.querySelectorAll('[data-fg-sink]').forEach(function(el) {
+        var cmp = comparison[el.dataset.fgSink];
+        el.innerHTML = fgValHtml(cmp);
+      });
+
+      // Populate calculations table cells
+      var tableMismatches = {};
       var rows = table.querySelectorAll('tr[data-sb-path]');
       rows.forEach(function(row) {
         var nodePath = row.dataset.sbPath;
         var cell = row.querySelector('td.fg-col');
         if (!cell) return;
         var cmp = comparison[nodePath];
-        if (!cmp) { cell.innerHTML = '<span style="color:#9ca3af;font-size:11px">—</span>'; return; }
 
-        // What our engine says (from the value cell)
+        // Always show FG's own value — same visual language as our column
+        cell.innerHTML = fgValHtml(cmp);
+
+        // Detect mismatch: both sides resolved but values differ
+        var fgResolved = cmp && (cmp.state === 'complete' || cmp.state === 'placeholder');
         var ourEl = row.querySelectorAll('td')[1];
         var ourText = ourEl ? ourEl.textContent.trim() : '';
         var ourResolved = ourText && ourText !== '—' && ourText.indexOf('missing') < 0 && ourText.indexOf('error') < 0;
 
-        // Render fact-graph result
-        function fgValHtml(c) {
-          if (c.state === 'error') {
-            return '<span style="color:#dc2626;font-size:10px" title="' + escHtml(c.message || '') + '">fg error</span>';
-          }
-          if (c.state === 'incomplete') {
-            return '<span style="color:#9ca3af;font-size:11px">—</span>';
-          }
-          var v = c.value;
-          var h = typeof v === 'boolean'
-            ? (v ? '<span style="font-weight:700;color:#16a34a;font-size:13px">&#10003; true</span>'
-                 : '<span style="font-weight:700;color:#dc2626;font-size:13px">&#10007; false</span>')
-            : '<span style="font-family:' + MONO + ';color:#0369a1;font-weight:600;font-size:11px">' + escHtml(String(v)) + '</span>';
-          return h;
-        }
-
-        var fgResolved = cmp.state === 'complete' || cmp.state === 'placeholder';
-        var agrees;
+        var valuesMismatch = false;
         if (fgResolved && ourResolved) {
           var fgVal = String(cmp.value);
-          // Compare numerically when both sides look like numbers (handles "2750" vs "2750.00")
           var fgNum = parseFloat(fgVal), ourNum = parseFloat(ourText);
-          if (!isNaN(fgNum) && !isNaN(ourNum) && String(ourNum) === ourText.trim()) {
-            agrees = fgNum === ourNum;
-          } else {
-            agrees = ourText.indexOf(fgVal) >= 0 || (ourText.indexOf('true') >= 0 && fgVal === 'true') || (ourText.indexOf('false') >= 0 && fgVal === 'false');
-          }
-        } else {
-          agrees = !fgResolved && !ourResolved;
+          var numericMatch = !isNaN(fgNum) && !isNaN(ourNum) && String(ourNum) === ourText.trim() && fgNum === ourNum;
+          var textMatch = ourText.indexOf(fgVal) >= 0
+            || (ourText.indexOf('true') >= 0 && fgVal === 'true')
+            || (ourText.indexOf('false') >= 0 && fgVal === 'false');
+          valuesMismatch = !numericMatch && !textMatch;
         }
 
-        if (agrees) {
-          cell.innerHTML = fgValHtml(cmp);
-          row.style.background = row.dataset.sink === '1' ? '#f5f3ff' : '';
-          tableMismatches[nodePath] = false;
-        } else {
-          // Show both sides so the difference is visible
-          var ourDisplay = ourResolved ? ourText : '—';
-          cell.innerHTML = '<div style="font-size:10px;line-height:1.5">'
-            + '<div><span style="color:#6b7280;font-size:9px">ours:&nbsp;</span>' + escHtml(ourDisplay) + '</div>'
-            + '<div><span style="color:#6b7280;font-size:9px">fg:&nbsp;&nbsp;&nbsp;</span>' + fgValHtml(cmp) + '</div>'
-            + '</div>';
-          row.style.background = '#fff1f2';
-          tableMismatches[nodePath] = true;
-        }
+        tableMismatches[nodePath] = valuesMismatch;
+        row.style.background = valuesMismatch ? '#fff1f2' : (row.dataset.sink === '1' ? '#f5f3ff' : '');
       });
 
-      // Update determination badge
-      updateFgDeterminationBadge(tableMismatches);
-    }
-
-    function updateFgDeterminationBadge(tableMismatches) {
-      var resultsEl = document.getElementById('sb-results');
-      if (!resultsEl) return;
-      var existing = resultsEl.querySelector('#fg-det-badge');
-      if (existing) existing.remove();
-
-      // Count rows that are highlighted as mismatches in the table
-      var mismatchCount = Object.values(tableMismatches).filter(Boolean).length;
-
-      var badge = document.createElement('div');
-      badge.id = 'fg-det-badge';
-      var text, style;
-      if (mismatchCount === 0) {
-        text = '&#10003; fact-graph agrees';
-        style = 'background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0';
-      } else {
-        text = '&#9888; ' + mismatchCount + ' value mismatch' + (mismatchCount > 1 ? 'es' : '') + ' with fact-graph';
-        style = 'background:#fff1f2;color:#dc2626;border:1px solid #fecaca';
-      }
-      badge.style.cssText = 'display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;' + style;
-      badge.innerHTML = text;
-
-      // Insert after the determination card
-      var detCard = resultsEl.querySelector('div');
-      if (detCard) detCard.appendChild(badge);
     }
 
     function loadFg() {
