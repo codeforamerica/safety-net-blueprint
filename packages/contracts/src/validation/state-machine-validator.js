@@ -417,6 +417,74 @@ function* walkObjectCalls(steps) {
   }
 }
 
+export function* walkPushBodiesInCalls(steps) {
+  if (!Array.isArray(steps)) return;
+  for (const step of steps) {
+    if (!step || typeof step !== 'object') continue;
+    if (step.call && typeof step.call === 'object') {
+      for (const [method, callPath] of Object.entries(step.call)) {
+        if (['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()) && step.body && typeof step.body === 'object') {
+          for (const [bodyField, bodyVal] of Object.entries(step.body)) {
+            if (bodyVal && typeof bodyVal === 'object' && bodyVal.$push && typeof bodyVal.$push === 'object') {
+              yield { method: method.toUpperCase(), callPath: String(callPath), bodyField, pushBody: bodyVal.$push };
+            }
+          }
+        }
+      }
+    }
+    yield* walkPushBodiesInCalls(step.then);
+    yield* walkPushBodiesInCalls(step.else);
+    yield* walkPushBodiesInCalls(step.do);
+    if (step.when && typeof step.when === 'object') {
+      for (const substeps of Object.values(step.when)) yield* walkPushBodiesInCalls(substeps);
+    }
+    if (step.forEach?.do) yield* walkPushBodiesInCalls(step.forEach.do);
+  }
+}
+
+export function collectCallBodyLiterals(steps) {
+  const map = new Map();
+
+  function addLiteral(key, val) {
+    if (!map.has(key)) map.set(key, new Set());
+    map.get(key).add(val);
+  }
+
+  function walkBody(body) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return;
+    for (const [key, val] of Object.entries(body)) {
+      if (typeof val === 'string' && !val.startsWith('$')) {
+        addLiteral(key, val);
+      } else if (Array.isArray(val)) {
+        for (const item of val) {
+          if (typeof item === 'string' && !item.startsWith('$')) addLiteral(key, item);
+          else if (item && typeof item === 'object') walkBody(item);
+        }
+      } else if (val && typeof val === 'object') {
+        walkBody(val);
+      }
+    }
+  }
+
+  function walkSteps(stepsArr) {
+    if (!Array.isArray(stepsArr)) return;
+    for (const step of stepsArr) {
+      if (!step || typeof step !== 'object') continue;
+      if (step.call && typeof step.call === 'object' && step.body) walkBody(step.body);
+      walkSteps(step.then);
+      walkSteps(step.else);
+      walkSteps(step.do);
+      if (step.when && typeof step.when === 'object') {
+        for (const substeps of Object.values(step.when)) walkSteps(substeps);
+      }
+      if (step.forEach?.do) walkSteps(step.forEach.do);
+    }
+  }
+
+  walkSteps(steps);
+  return map;
+}
+
 // Walk all string values in a node, skipping description and $schema keys
 function* walkAllStrings(node) {
   if (typeof node === 'string') {
@@ -723,6 +791,94 @@ export function validateCrossArtifact(filePath, doc, schemaIndex, endpointIndex,
     for (const proc of (machine.procedures || [])) {
       const procSteps = [...(proc.steps || []), ...(proc.then || [])];
       validateCallPaths(procSteps, `${ctx}.procedures[${proc.id}]`);
+    }
+
+    // Validate $push body field values against the target array's items schema enum.
+    // For literal values: checks directly. For variable references like $this.data.serviceType:
+    // traces the trailing field name to all literal values used for that field elsewhere in
+    // the machine (call bodies + context where: clauses) and checks those against the enum.
+    const allMachineSteps = [
+      ...(machine.actions || []).flatMap(a => a.steps || []),
+      ...(machine.events || []).flatMap(e => e.steps || []),
+      ...(machine.procedures || []).flatMap(p => [...(p.steps || []), ...(p.then || [])]),
+    ];
+    const literalsByField = collectCallBodyLiterals(allMachineSteps);
+
+    // Merge in context where: literals (e.g. service lookup filters that name enum values)
+    const allContextItems = [
+      ...(machine.context || []),
+      ...(machine.actions || []).flatMap(a => a.context || []),
+      ...(machine.events || []).flatMap(e => e.context || []),
+      ...(machine.procedures || []).flatMap(p => p.context || []),
+    ];
+    for (const item of allContextItems) {
+      if (!item || typeof item !== 'object') continue;
+      for (const binding of Object.values(item)) {
+        if (binding?.where && typeof binding.where === 'object') {
+          for (const [field, val] of Object.entries(binding.where)) {
+            if (typeof val === 'string' && !val.startsWith('$')) {
+              if (!literalsByField.has(field)) literalsByField.set(field, new Set());
+              literalsByField.get(field).add(val);
+            }
+          }
+        }
+      }
+    }
+
+    for (const { method, callPath, bodyField, pushBody } of walkPushBodiesInCalls(allMachineSteps)) {
+      const staticPath = callPath
+        .replace(/\$[a-zA-Z_][a-zA-Z0-9_.]*(?=\/|$)/g, '')
+        .replace(/\/+/g, '/')
+        .replace(/\/$/, '')
+        .replace(/^\//, '');
+      const parts = staticPath.split('/').filter(p => p && !p.startsWith('{'));
+      if (parts.length < 2) continue;
+      const endpointKey = parts.join('/');
+
+      const pushSchemaName = endpointIndex.get(endpointKey);
+      if (!pushSchemaName) continue;
+      const pushSchemaEntry = schemaIndex.get(pushSchemaName);
+      if (!pushSchemaEntry) continue;
+
+      const arrayFieldSchema = getPropertyAtPath(pushSchemaEntry.spec, pushSchemaEntry.schema, bodyField);
+      if (!arrayFieldSchema?.items) continue;
+
+      let itemsSchema = arrayFieldSchema.items;
+      if (itemsSchema.$ref) itemsSchema = resolveRef(pushSchemaEntry.spec, itemsSchema.$ref) ?? itemsSchema;
+
+      const locationPath = `${ctx} (${method} ${callPath}, body.${bodyField}.$push)`;
+
+      for (const [pushField, pushVal] of Object.entries(pushBody)) {
+        if (typeof pushVal !== 'string') continue;
+
+        const pushFieldSchema = getPropertyAtPath(pushSchemaEntry.spec, itemsSchema, pushField);
+        if (!pushFieldSchema) continue;
+        const enumValues = pushFieldSchema.enum;
+        if (!enumValues) continue;
+
+        if (!pushVal.startsWith('$')) {
+          if (!enumValues.includes(pushVal)) {
+            errors.push({
+              rule: 'invalid-push-enum-value',
+              message: `"${pushVal}" is not a valid enum value for ${bodyField}[].${pushField} (valid: ${enumValues.join(', ')})`,
+              path: locationPath,
+            });
+          }
+        } else {
+          // Variable reference — trace trailing field name to literals collected from the machine
+          const varFieldName = pushVal.split('.').pop();
+          const tracedLiterals = literalsByField.get(varFieldName) || new Set();
+          for (const literal of tracedLiterals) {
+            if (!enumValues.includes(literal)) {
+              errors.push({
+                rule: 'invalid-push-enum-value',
+                message: `"${literal}" (via ${pushVal}) is not a valid enum value for ${bodyField}[].${pushField} (valid: ${enumValues.join(', ')})`,
+                path: locationPath,
+              });
+            }
+          }
+        }
+      }
     }
   }
 
