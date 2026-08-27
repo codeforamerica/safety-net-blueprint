@@ -1381,7 +1381,9 @@ $defs:
         description: Whether the service check confirmed the obligation.
         enum:
           - conclusive
+          - error
           - inconclusive
+          - partial
       serviceCallId:
         type: string
         format: uuid
