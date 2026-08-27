@@ -27,6 +27,8 @@ import {
   collectTopLevelProperties,
   getPropertyAtPath,
   resolveRef,
+  walkPushBodiesInCalls,
+  collectCallBodyLiterals,
 } from '../../src/validation/state-machine-validator.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -95,6 +97,24 @@ function makeSchemaIndex(extra = {}) {
             applicationId: { type: 'string' },
           },
         },
+        Verification: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            evidence: { type: 'array', items: { $ref: '#/components/schemas/VerificationEvidenceItem' } },
+          },
+        },
+        VerificationEvidenceItem: {
+          oneOf: [{ $ref: '#/components/schemas/VerificationElectronicEvidence' }],
+        },
+        VerificationElectronicEvidence: {
+          type: 'object',
+          properties: {
+            type: { type: 'string', enum: ['electronic'] },
+            source: { type: 'string', enum: ['fdsh_ssa', 'fdsh_vlp', 'ssa_ievs'] },
+            result: { type: 'string', enum: ['conclusive', 'inconclusive'] },
+          },
+        },
         ...extra,
       },
     },
@@ -115,7 +135,7 @@ function makeEndpointIndex(extra = {}) {
   return new Map([
     ['intake/applications', 'Application'],
     ['intake/application-members', 'ApplicationMember'],
-    ['intake/applications/verifications', null],
+    ['intake/applications/verifications', 'Verification'],
     ...Object.entries(extra),
   ]);
 }
@@ -195,6 +215,85 @@ describe('extractEnumComparisons', () => {
 
   test('returns empty for no comparisons', () => {
     assert.deepEqual(extractEnumComparisons('$application.programsAppliedFor.size() > 0'), []);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// walkPushBodiesInCalls
+// ---------------------------------------------------------------------------
+
+describe('walkPushBodiesInCalls', () => {
+  test('yields push body from a call with $push in body field', () => {
+    const steps = [{
+      call: { PATCH: 'intake/applications/verifications/$id' },
+      body: { evidence: { $push: { type: 'electronic', source: 'fdsh_ssa' } } },
+    }];
+    const results = [...walkPushBodiesInCalls(steps)];
+    assert.equal(results.length, 1);
+    assert.equal(results[0].method, 'PATCH');
+    assert.equal(results[0].bodyField, 'evidence');
+    assert.deepEqual(results[0].pushBody, { type: 'electronic', source: 'fdsh_ssa' });
+  });
+
+  test('finds push in nested when: branches', () => {
+    const steps = [{
+      match: '$this.data.result',
+      when: {
+        conclusive: [{
+          call: { PATCH: 'intake/applications/verifications/$id' },
+          body: { evidence: { $push: { type: 'electronic', source: 'fdsh_ssa' } } },
+        }],
+      },
+    }];
+    assert.equal([...walkPushBodiesInCalls(steps)].length, 1);
+  });
+
+  test('ignores calls without $push in body', () => {
+    const steps = [{ call: { POST: 'intake/applications' }, body: { status: 'draft' } }];
+    assert.equal([...walkPushBodiesInCalls(steps)].length, 0);
+  });
+
+  test('ignores $push with non-object value', () => {
+    const steps = [{
+      call: { PATCH: 'intake/applications/$id' },
+      body: { appointments: { $push: '$this.subject' } },
+    }];
+    assert.equal([...walkPushBodiesInCalls(steps)].length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// collectCallBodyLiterals
+// ---------------------------------------------------------------------------
+
+describe('collectCallBodyLiterals', () => {
+  test('collects literal values from call body fields', () => {
+    const steps = [{ call: { POST: 'data-exchange/service-calls' }, body: { serviceType: 'fdsh_ssa' } }];
+    const map = collectCallBodyLiterals(steps);
+    assert.ok(map.get('serviceType')?.has('fdsh_ssa'));
+  });
+
+  test('collects literals from multiple calls into the same field', () => {
+    const steps = [
+      { call: { POST: 'data-exchange/service-calls' }, body: { serviceType: 'fdsh_ssa' } },
+      { call: { POST: 'data-exchange/service-calls' }, body: { serviceType: 'ssa_ievs' } },
+    ];
+    const map = collectCallBodyLiterals(steps);
+    assert.ok(map.get('serviceType')?.has('fdsh_ssa'));
+    assert.ok(map.get('serviceType')?.has('ssa_ievs'));
+  });
+
+  test('does not collect $-prefixed variable references', () => {
+    const steps = [{ call: { POST: 'data-exchange/service-calls' }, body: { serviceType: '$params.serviceType' } }];
+    assert.equal(collectCallBodyLiterals(steps).has('serviceType'), false);
+  });
+
+  test('collects from nested when: branches', () => {
+    const steps = [{
+      match: '$this.data.x',
+      when: { done: [{ call: { POST: 'some/endpoint' }, body: { status: 'active' } }] },
+    }];
+    assert.ok(collectCallBodyLiterals(steps).get('status')?.has('active'));
   });
 });
 
@@ -731,6 +830,59 @@ describe('validateCrossArtifact — enum string literal values', () => {
     });
     const errors = validateCrossArtifact('/fake.yaml', doc, makeSchemaIndex(), makeEndpointIndex());
     assert.ok(hasRule(errors, 'invalid-enum-value'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateCrossArtifact — rule: invalid-push-enum-value
+// ---------------------------------------------------------------------------
+
+describe('validateCrossArtifact — invalid-push-enum-value', () => {
+  function makePushDoc(pushBody, extraSteps = []) {
+    return makeDoc({
+      procedures: [{
+        id: 'recordEvidence',
+        steps: [
+          ...extraSteps,
+          {
+            call: { PATCH: 'intake/applications/verifications/$id' },
+            body: { evidence: { $push: pushBody } },
+          },
+        ],
+      }],
+    });
+  }
+
+  test('passes when literal push field value is a valid enum value', () => {
+    const doc = makePushDoc({ type: 'electronic', source: 'fdsh_ssa', result: 'conclusive' });
+    const errors = validateCrossArtifact('/fake.yaml', doc, makeSchemaIndex(), makeEndpointIndex());
+    assert.equal(errors.filter(e => e.rule === 'invalid-push-enum-value').length, 0);
+  });
+
+  test('errors when literal push field value is not in enum', () => {
+    const doc = makePushDoc({ type: 'electronic', source: 'not_a_real_source', result: 'conclusive' });
+    const errors = validateCrossArtifact('/fake.yaml', doc, makeSchemaIndex(), makeEndpointIndex());
+    assert.ok(hasRule(errors, 'invalid-push-enum-value'));
+  });
+
+  test('passes when variable reference traces only to valid enum values', () => {
+    const extraSteps = [
+      { call: { POST: 'data-exchange/service-calls' }, body: { serviceType: 'fdsh_ssa' } },
+      { call: { POST: 'data-exchange/service-calls' }, body: { serviceType: 'ssa_ievs' } },
+    ];
+    const doc = makePushDoc({ type: 'electronic', source: '$this.data.serviceType', result: 'conclusive' }, extraSteps);
+    const errors = validateCrossArtifact('/fake.yaml', doc, makeSchemaIndex(), makeEndpointIndex());
+    assert.equal(errors.filter(e => e.rule === 'invalid-push-enum-value').length, 0);
+  });
+
+  test('errors when variable reference traces to a value not in enum', () => {
+    const extraSteps = [
+      { call: { POST: 'data-exchange/service-calls' }, body: { serviceType: 'fdsh_ssa' } },
+      { call: { POST: 'data-exchange/service-calls' }, body: { serviceType: 'unknown_service' } },
+    ];
+    const doc = makePushDoc({ type: 'electronic', source: '$this.data.serviceType', result: 'conclusive' }, extraSteps);
+    const errors = validateCrossArtifact('/fake.yaml', doc, makeSchemaIndex(), makeEndpointIndex());
+    assert.ok(hasRule(errors, 'invalid-push-enum-value'));
   });
 });
 

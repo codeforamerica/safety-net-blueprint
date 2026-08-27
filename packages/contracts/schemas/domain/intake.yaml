@@ -1374,8 +1374,11 @@ $defs:
           - fdsh_fti
           - fdsh_ssa
           - fdsh_vlp
+          - irs_ievs
           - save
           - ssa_ievs
+          - swica
+          - uib
       result:
         type: string
         description: Whether the service check confirmed the obligation.
