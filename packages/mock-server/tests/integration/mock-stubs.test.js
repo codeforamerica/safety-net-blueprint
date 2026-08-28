@@ -268,13 +268,20 @@ async function testStubResponseCausationid() {
   const trigger = await injectRes.json();
   assert(trigger.id, 'injected trigger event should have an id');
 
-  // The fired response event must reference the trigger via causationid
-  const eventsRes = await fetch(`${BASE_URL}/platform/events?type=data_exchange.call.completed`);
+  // The fired response event must be retrievable by the trigger's id via ?causationid=
+  const eventsRes = await fetch(`${BASE_URL}/platform/events?type=data_exchange.call.completed&causationid=${trigger.id}`);
   const events = await eventsRes.json();
-  const fired = events.items?.find(e => e.subject === 'sc-causation-1');
-  assert(fired, 'stub response event should have been emitted');
+  assert.strictEqual(events.items?.length, 1, `expected exactly 1 event for causationid=${trigger.id}, got ${events.items?.length}`);
+  const fired = events.items[0];
+  assert.strictEqual(fired.subject, 'sc-causation-1', 'filtered event should be the stub response for the trigger subject');
   assert.strictEqual(fired.causationid, trigger.id, 'response event causationid should be the trigger event id');
-  console.log('  ✓ Stub response event has causationid = trigger event id');
+  console.log('  ✓ GET /platform/events?causationid=<trigger id> returns the stub response event');
+
+  // A causationid that no event references must not match anything
+  const noneRes = await fetch(`${BASE_URL}/platform/events?causationid=00000000-0000-0000-0000-000000000000`);
+  const none = await noneRes.json();
+  assert.strictEqual(none.items?.length, 0, 'unknown causationid should match no events');
+  console.log('  ✓ Unknown causationid returns no events');
 }
 
 async function testTimerStubCausationid() {
@@ -295,12 +302,14 @@ async function testTimerStubCausationid() {
   assert(injectRes.status === 201, `inject → expected 201, got ${injectRes.status}`);
   const trigger = await injectRes.json();
 
-  const eventsRes = await fetch(`${BASE_URL}/platform/events?type=workflow.creation_deadline`);
+  const eventsRes = await fetch(`${BASE_URL}/platform/events?causationid=${trigger.id}`);
   const events = await eventsRes.json();
-  const callbackEvent = events.items?.find(e => e.subject === subjectId);
-  assert(callbackEvent, 'workflow.creation_deadline callback event should have been emitted');
+  assert.strictEqual(events.items?.length, 1, `expected exactly 1 event for causationid=${trigger.id}, got ${events.items?.length}`);
+  const callbackEvent = events.items[0];
+  assert.strictEqual(callbackEvent.type, 'workflow.creation_deadline', 'filtered event should be the timer callback');
+  assert.strictEqual(callbackEvent.subject, subjectId, 'timer callback should keep the trigger subject');
   assert.strictEqual(callbackEvent.causationid, trigger.id, 'timer callback causationid should be the scheduling.timer.requested event id');
-  console.log('  ✓ Timer callback event has causationid = scheduling.timer.requested event id');
+  console.log('  ✓ GET /platform/events?causationid=<timer.requested id> returns the timer callback event');
 
   await clearStubs();
 }
