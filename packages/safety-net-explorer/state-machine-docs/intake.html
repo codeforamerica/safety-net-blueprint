@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Intake — State Machine Docs</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; font-size: 14px; line-height: 1.6; }
+    a { color: #5650BE; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12px; background: #F7EDE8; padding: 1px 5px; border-radius: 3px; border: 1px solid #E9CCBE; color: #2a2a2a; }
+    table { border-collapse: collapse; width: 100%; }
+    th { background: #F7EDE8; color: #1a1a1a; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 8px 12px; text-align: left; border-bottom: 2px solid #E9CCBE; }
+    td { padding: 10px 12px; border-bottom: 1px solid #E9CCBE; vertical-align: top; font-size: 13px; word-break: break-word; overflow-wrap: anywhere; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #F7EDE8; }
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    
+  </style>
+</head>
+<body>
+  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">State Machine Docs</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Intake</a></div>
+  <div style="background:#2B1A78;padding:0 1.5rem;display:flex;align-items:center;gap:0.25rem;height:40px;border-bottom:3px solid #5650BE;">
+  <nav style="display:flex;align-items:center;gap:0.25rem;"><a href="index.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Overview</a><a href="eligibility.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Eligibility</a><a href="intake.html" style="color:#FFFFFF;font-size:12px;font-weight:700;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:rgba(255,255,255,0.15);">Intake</a><a href="workflow.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Workflow</a></nav>
+</div><div style="max-width:960px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
+    <div style="margin-bottom:2rem;">
+      <h1 style="font-size:1.5rem;font-weight:800;color:#2B1A78;margin-bottom:0.375rem;">Intake State Machine</h1>
+      <p style="font-size:12px;color:#666;">Domain: <code>intake</code> · API spec: <code>intake-openapi.yaml</code></p>
+    </div>
+    <section id="machine-application" style="margin-bottom:2.5rem;">
+      <h2 style="font-size:1.125rem;font-weight:800;color:#2B1A78;padding-bottom:0.5rem;border-bottom:2px solid #E6EBF9;margin-bottom:1rem;">Application</h2>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin-bottom:0.625rem;">States</h4>
+      <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;margin-bottom:0.5rem;">
+        <table>
+          <thead><tr>
+            <th>State</th><th>Description</th><th style="text-align:center;">SLA clock</th>
+          </tr></thead>
+          <tbody><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;white-space:nowrap;">draft</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Created but not yet filed; regulatory clock has not started</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;white-space:nowrap;">submitted</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Formally filed; regulatory clock starts; caseworker task and automated screening initiated</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#006152;">running</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;white-space:nowrap;">under_review</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Caseworker is actively reviewing; clock is running toward the 30/45-day deadline</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#006152;">running</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;white-space:nowrap;">pending_approval</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Determination awaiting supervisor approval; clock paused per agency policy</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;white-space:nowrap;">withdrawn</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Household withdrew; open tasks cancelled and household notified. Terminal.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;white-space:nowrap;">closed</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Intake complete; case management creates a benefit case if approved. Terminal.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr></tbody>
+        </table>
+      </div>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Actions</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table>
+            <thead><tr>
+              <th>Action</th><th>Actors</th><th>Transition</th><th>Steps</th>
+            </tr></thead>
+            <tbody><tr id="action-submit">
+          <td><strong style="color:#2B1A78;">submit</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-submit" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">Formally submits a draft application, starting the regulatory processing clock</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Applicant, Case Worker</span></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">draft</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">submitted</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record when the application was formally submitted <code>sets submittedAt</code></li><li>Emit <a href="../event-catalog/index.html#event-intake.application.submitted" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.application.submitted</a> — starts the regulatory clock; triggers caseworker task creation, confirmation notice, and person matching</li></ul></td>
+        </tr><tr id="action-open">
+          <td><strong style="color:#2B1A78;">open</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-open" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">System marks a submitted application as under active caseworker review</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">System</span></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">submitted</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">under_review</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-intake.application.opened" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.application.opened</a> — signals caseworker has begun active review</li></ul></td>
+        </tr><tr id="action-complete-review">
+          <td><strong style="color:#2B1A78;">complete-review</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-complete-review" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">Caseworker signals data collection is complete and the application is ready for determination</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Case Worker, Supervisor</span></td>
+          <td><span style="color:#999;font-size:11px;">no state change</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-intake.application.review_completed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.application.review_completed</a> — signals data collection is complete; triggers eligibility determination</li></ul></td>
+        </tr><tr id="action-submit-for-approval">
+          <td><strong style="color:#2B1A78;">submit-for-approval</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-submit-for-approval" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">System routes the application to supervisor review when state-configured approval thresholds are met</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">System</span></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">under_review</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending_approval</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-intake.determination.approval_needed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.determination.approval_needed</a> — triggers supervisor approval task creation; states configure approval thresholds via rules overlay</li></ul></td>
+        </tr><tr id="action-approve-determination">
+          <td><strong style="color:#2B1A78;">approve-determination</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-approve-determination" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">Supervisor approves the determination; closes the application and triggers NOA and case creation</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Supervisor</span></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending_approval</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">closed</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record when the intake phase closed <code>sets closedAt</code></li><li>Emit <a href="../event-catalog/index.html#event-intake.application.closed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.application.closed</a> — signals intake is complete; triggers case creation</li></ul></td>
+        </tr><tr id="action-reject-determination">
+          <td><strong style="color:#2B1A78;">reject-determination</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-reject-determination" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">Supervisor rejects the determination and returns the application to the caseworker for revision</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Supervisor</span></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending_approval</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">under_review</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-intake.determination.rejected" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.determination.rejected</a> — signals the determination was rejected; workflow returns the caseworker task to in_progress via return-to-worker</li></ul></td>
+        </tr><tr id="action-close">
+          <td><strong style="color:#2B1A78;">close</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-close" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">Marks a reviewed application as closed after all determinations are complete</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Case Worker, Supervisor, System</span></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">under_review</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">closed</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record when the intake phase closed <code>sets closedAt</code></li><li>Emit <a href="../event-catalog/index.html#event-intake.application.closed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.application.closed</a> — signals intake is complete; triggers case creation</li></ul></td>
+        </tr><tr id="action-withdraw">
+          <td><strong style="color:#2B1A78;">withdraw</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-withdraw" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">Applicant or caseworker withdraws the application before a decision is made</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Applicant, Case Worker, Supervisor</span></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">submitted</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">under_review</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">withdrawn</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record when the application was withdrawn <code>sets withdrawnAt</code></li><li>Emit <a href="../event-catalog/index.html#event-intake.application.withdrawn" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.application.withdrawn</a> — triggers open task cancellation and withdrawal notice</li></ul></td>
+        </tr></tbody>
+          </table>
+        </div>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Event Subscriptions</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table style="table-layout:fixed;">
+            <colgroup>
+              <col style="width:30%">
+              <col style="width:20%">
+              <col style="width:50%">
+            </colgroup>
+            <thead><tr>
+              <th>Event</th><th>Emitted by</th><th>Handler steps</th>
+            </tr></thead>
+            <tbody><tr>
+          <td><code>workflow.task.claimed</code></td>
+          <td><a href="workflow.html">Workflow/Task</a></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Transition the application from submitted to under_review when a caseworker claims the intake review task</li><li>Create an Interview record when a caseworker claims an application_review task; SNAP requires an interview before determination (7 CFR § 273.2(e))</li></ul></td>
+        </tr><tr>
+          <td><code>intake.application.submitted</code></td>
+          <td><a href="intake.html">Intake/Application</a></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Create electronic Verifications per member (identity, citizenship, immigration) and per income source (income), and document Verifications at the household level for the given program. Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.</li><li>Create electronic Verifications per member (identity, citizenship, immigration) and per income source (income), and document Verifications at the household level for the given program. Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.</li></ul></td>
+        </tr><tr>
+          <td><code>data_exchange.call.completed</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Transition the Verification based on the service call result; on inconclusive, creates a document fallback per ex parte rules (42 CFR § 435.911)</li></ul></td>
+        </tr><tr>
+          <td><code>scheduling.appointment.scheduled</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Append the appointmentId to Interview.appointments when an appointment is scheduled against an interview subject. Non-interview appointments (subjectType != interview) are ignored.</li></ul></td>
+        </tr><tr>
+          <td><code>document_management.document_version.uploaded</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Satisfy the Verification and record the uploaded document version as evidence; trigger only fires when metadata.intake.verificationId resolves to a known Verification</li></ul></td>
+        </tr><tr>
+          <td><code>eligibility.determination.created</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>For each:<ul style="margin:2px 0 0 14px;"></ul></li></ul></td>
+        </tr><tr>
+          <td><code>eligibility.application.decision_completed</code></td>
+          <td><a href="eligibility.html">Eligibility/Decision</a></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Write eligibility outcome to ApplicationMember.programDeterminations. Informational write-back only — does not trigger application close. Medicaid RTE results may arrive before intake closes; SNAP results typically arrive after.</li></ul></td>
+        </tr><tr>
+          <td><code>eligibility.application.determination_completed</code></td>
+          <td><a href="eligibility.html">Eligibility/Determination</a></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>false</code>:<ul style="margin:2px 0 0 14px;"><li>Route to supervisor approval when state-configured thresholds are met; states replace this condition with their CEL threshold expression via rules overlay</li></ul><br>Else:<ul style="margin:2px 0 0 14px;"><li>Close the application when all determinations are in and no supervisor approval is required</li></ul></li></ul></td>
+        </tr><tr>
+          <td><code>eligibility.application.expedited</code></td>
+          <td><a href="eligibility.html">Eligibility/Determination</a></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Set isExpedited on the application when eligibility screening confirms expedited criteria are met</li></ul></td>
+        </tr><tr>
+          <td><code>client_management.person.match_resolved</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Set personId and personMatch on ApplicationMember; personId is set only on confirmed matches</li></ul></td>
+        </tr><tr>
+          <td><code>intake.member_income.created</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>$application.status is not "draft" and $application.status is not "withdrawn" and $application.status is not "closed"</code>:<ul style="margin:2px 0 0 14px;"><li>If <code>"snap" in $application.programsAppliedFor</code>:<ul style="margin:2px 0 0 14px;"><li>{"POST":"intake/applications/verifications","body":{"applicationId":"$application.id","sourceId":"$this.data.id","sourceType":"income","category":"income","verificationType":"electronic"}}</li></ul></li></ul></li></ul></td>
+        </tr><tr>
+          <td><code>intake.application_member.created</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>$application.status is not "draft" and $application.status is not "withdrawn" and $application.status is not "closed"</code>:<ul style="margin:2px 0 0 14px;"><li>If <code>"snap" in $application.programsAppliedFor</code>:<ul style="margin:2px 0 0 14px;"><li>{"POST":"intake/applications/verifications","body":{"applicationId":"$application.id","sourceId":"$this.data.id","sourceType":"member","category":"identity","verificationType":"electronic"}}</li></ul></li><li>If <code>"medicaid" in $application.programsAppliedFor</code>:<ul style="margin:2px 0 0 14px;"><li>{"POST":"intake/applications/verifications","body":{"applicationId":"$application.id","sourceId":"$this.data.id","sourceType":"member","category":"citizenship","verificationType":"electronic"}}</li><li>{"POST":"intake/applications/verifications","body":{"applicationId":"$application.id","sourceId":"$this.data.id","sourceType":"member","category":"immigration","verificationType":"electronic"}}</li></ul></li></ul></li></ul></td>
+        </tr><tr>
+          <td><code>communication.notice.sent</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>{"PATCH":"intake/applications/verifications/$verification.id","body":{"documentRequests":{"$push":{"noticeId":"$this.subject","type":"$this.data.type","sentAt":"$this.time"}}}}</li></ul></td>
+        </tr></tbody>
+          </table>
+        </div>
+    </section><section id="machine-verification" style="margin-bottom:2.5rem;">
+      <h2 style="font-size:1.125rem;font-weight:800;color:#2B1A78;padding-bottom:0.5rem;border-bottom:2px solid #E6EBF9;margin-bottom:1rem;">Verification</h2>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin-bottom:0.625rem;">States</h4>
+      <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;margin-bottom:0.5rem;">
+        <table>
+          <thead><tr>
+            <th>State</th><th>Description</th><th style="text-align:center;">SLA clock</th>
+          </tr></thead>
+          <tbody><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;white-space:nowrap;">pending</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Verification item created; electronic check or document request not yet complete</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;white-space:nowrap;">inconclusive</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Electronic check returned insufficient data; document fallback triggered (42 CFR § 435.940)</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #b2e8e2;background:#E2F9F6;color:#006152;white-space:nowrap;">satisfied</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Verified — via electronic check, document review, or interview. Terminal.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #b2e8e2;background:#E2F9F6;color:#006152;white-space:nowrap;">waived</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Verification requirement waived by state policy. Terminal.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #f0b0b5;background:#F9C8CB;color:#AF121D;white-space:nowrap;">cannot_verify</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Verification could not be completed after all attempts; caseworker decides next step. Terminal.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr></tbody>
+        </table>
+      </div>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Actions</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table>
+            <thead><tr>
+              <th>Action</th><th>Actors</th><th>Transition</th><th>Steps</th>
+            </tr></thead>
+            <tbody><tr id="action-satisfy">
+          <td><strong style="color:#2B1A78;">satisfy</strong> <a href="../api-reference/intake.html#op-post-applications-verifications-verificationId-satisfy" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">System marks an obligation as satisfied after receiving conclusive service call or document evidence</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">System</span></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">inconclusive</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #b2e8e2;background:#E2F9F6;color:#006152;">satisfied</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-intake.verification.satisfied" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.verification.satisfied</a> — signals the obligation is fulfilled</li></ul></td>
+        </tr><tr id="action-mark-inconclusive">
+          <td><strong style="color:#2B1A78;">mark-inconclusive</strong> <a href="../api-reference/intake.html#op-post-applications-verifications-verificationId-mark-inconclusive" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">System records that a service call returned inconclusive, triggering document fallback</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">System</span></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">inconclusive</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-intake.verification.inconclusive" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.verification.inconclusive</a> — triggers document fallback creation via intake rule subscription</li></ul></td>
+        </tr><tr id="action-waive">
+          <td><strong style="color:#2B1A78;">waive</strong> <a href="../api-reference/intake.html#op-post-applications-verifications-verificationId-waive" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">Caseworker grants a waiver for an obligation that cannot be satisfied through normal means</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Case Worker, Supervisor</span></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">inconclusive</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #b2e8e2;background:#E2F9F6;color:#006152;">waived</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-intake.verification.waived" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.verification.waived</a> — signals the obligation is resolved without evidence</li></ul></td>
+        </tr><tr id="action-mark-cannot-verify">
+          <td><strong style="color:#2B1A78;">mark-cannot-verify</strong> <a href="../api-reference/intake.html#op-post-applications-verifications-verificationId-mark-cannot-verify" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">Caseworker closes an obligation when all available verification methods are exhausted</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Case Worker, Supervisor</span></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">inconclusive</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #f0b0b5;background:#F9C8CB;color:#AF121D;">cannot_verify</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-intake.verification.cannot_verify" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.verification.cannot_verify</a> — signals all available verification methods are exhausted</li></ul></td>
+        </tr></tbody>
+          </table>
+        </div>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Event Subscriptions</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table style="table-layout:fixed;">
+            <colgroup>
+              <col style="width:30%">
+              <col style="width:20%">
+              <col style="width:50%">
+            </colgroup>
+            <thead><tr>
+              <th>Event</th><th>Emitted by</th><th>Handler steps</th>
+            </tr></thead>
+            <tbody><tr>
+          <td><code>intake.verification.created</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Route each electronic Verification to its required service calls by category; document-type Verifications are skipped by initiateServiceCall</li></ul></td>
+        </tr></tbody>
+          </table>
+        </div>
+    </section></div>
+  <script>
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    
+  </script>
+</body>
+</html>

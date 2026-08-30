@@ -5,10 +5,13 @@
   "type": "module",
   "scripts": {
     "build": "node build.js",
+    "build:api-reference": "node build.js --only=api-reference",
+    "build:client-reference": "node build.js --only=client-reference",
     "build:context-map": "node build.js --only=context-map",
     "build:data-dictionaries": "node build.js --only=data-dictionaries",
+    "build:event-catalog": "node build.js --only=event-catalog",
+    "build:sequence-diagrams": "node build.js --only=sequence-diagrams",
     "build:state-machine-docs": "node build.js --only=state-machine-docs",
-    "build:adoption-model": "node build.js --only=adoption-model",
     "build:action-flow": "node src/sequence-diagrams/render-action-flow.js",
     "field-inventory:generate": "node src/data-dictionaries/generate-field-inventory.mjs",
     "test": "node --test tests/*.test.js tests/**/*.test.js"

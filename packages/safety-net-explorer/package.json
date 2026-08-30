@@ -1,0 +1,34 @@
+{
+  "name": "@codeforamerica/blueprint-safety-net-explorer",
+  "version": "1.2.0",
+  "description": "Explorer hub, diagrams, and reference outputs for the Safety Net Blueprint",
+  "type": "module",
+  "files": [
+    "config.yaml",
+    "index.html",
+    "diagrams/",
+    "api-reference/",
+    "client-reference/",
+    "data-dictionaries/",
+    "event-catalog/",
+    "state-machine-docs/"
+  ],
+  "scripts": {
+    "build": "node ../blueprint-explorer/build.js"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeforamerica/safety-net-blueprint",
+    "directory": "packages/safety-net-explorer"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@codeforamerica/blueprint-explorer": "^0.1.0"
+  }
+}

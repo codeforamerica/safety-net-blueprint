@@ -1,0 +1,38 @@
+domain: intake
+
+events:
+  intake.application.submitted:
+    label: Create verifications for each applied-for program
+
+  intake.verification.created:
+    label: Initiate service calls by verification category
+
+  eligibility.determination.created:
+    label: Create one Decision per member per program
+
+  intake.application_member.created:
+    label: Create member verifications
+
+  intake.member_income.created:
+    label: Create income verification
+
+  data_exchange.call.completed:
+    label: Update verification with service call result
+
+  workflow.task.claimed:
+    label: Open application for review; create interview record
+
+  document_management.document_version.uploaded:
+    label: Satisfy verification and record document as evidence
+
+procedures:
+  initiateServiceCalls:
+    match:
+      identity:
+        label: FDSH SSA — identity check
+      income:
+        label: SSA IEVS, IRS IEVS, SWICA, UIB — income checks
+      citizenship:
+        label: FDSH SSA — citizenship check
+      immigration:
+        label: FDSH VLP — immigration status check
