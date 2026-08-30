@@ -1,0 +1,56 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "schemas/common/identity.yaml"
+title: Identity
+description: >
+  Shared identity schemas for personal identification. Referenced by OpenAPI
+  specs, state machine schemas, and event schemas across blueprint deployments.
+
+$defs:
+  DateOfBirth:
+    title: DateOfBirth
+    type: string
+    format: date
+    description: Date of birth. Used in age-based eligibility criteria and as a
+      core identity-matching field for verification calls.
+
+  Name:
+    title: Name
+    type: object
+    description: Legal name of a person.
+    additionalProperties: false
+    required:
+      - firstName
+      - lastName
+    properties:
+      firstName:
+        type: string
+        description: First name.
+        minLength: 1
+        maxLength: 100
+      middleName:
+        type: string
+        description: Middle name.
+        maxLength: 100
+      middleInitial:
+        type: string
+        description: Middle initial.
+        maxLength: 1
+      lastName:
+        type: string
+        description: Last name.
+        minLength: 1
+        maxLength: 100
+      maidenName:
+        type: string
+        description: Maiden name if applicable.
+        maxLength: 100
+      suffix:
+        type: string
+        description: Name suffix such as Jr., Sr., III, etc.
+        maxLength: 20
+
+  SocialSecurityNumber:
+    title: SocialSecurityNumber
+    type: string
+    description: Social Security Number for identity verification.
+    pattern: "^\\d{3}-\\d{2}-\\d{4}$"

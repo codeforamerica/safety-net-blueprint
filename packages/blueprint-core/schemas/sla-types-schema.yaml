@@ -1,0 +1,100 @@
+# JSON Schema for SLA Types YAML
+# Validates structural correctness. Cross-artifact references
+# (e.g., slaTypeCode values matching state machine) are validated by the validation script.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: SLA Types
+description: Schema for behavioral contract SLA types YAML files.
+type: object
+required:
+  - version
+  - domain
+  - slaTypes
+additionalProperties: false
+
+properties:
+  version:
+    type: string
+    description: Schema version for change tracking.
+
+  domain:
+    type: string
+    description: Domain namespace (e.g., workflow).
+
+  slaTypes:
+    type: array
+    description: SLA type definitions.
+    items:
+      $ref: "#/$defs/SlaType"
+    minItems: 1
+
+$defs:
+  Duration:
+    type: object
+    description: A quantity with a time unit.
+    required:
+      - amount
+      - unit
+    properties:
+      amount:
+        type: number
+        minimum: 1
+      unit:
+        type: string
+        enum:
+          - minutes
+          - hours
+          - days
+        description: Federal regulatory deadlines use days; operational SLAs may use hours or minutes.
+    additionalProperties: false
+
+  SlaType:
+    type: object
+    description: A single SLA type with duration and optional clock conditions.
+    required:
+      - id
+      - name
+      - duration
+    properties:
+      id:
+        type: string
+        description: Unique identifier for overlay targeting (e.g., snap_expedited).
+      name:
+        type: string
+        description: Human-readable label.
+      duration:
+        $ref: "#/$defs/Duration"
+        description: Clock duration.
+      warningThresholdPercent:
+        type: integer
+        description: >
+          Percentage of SLA duration elapsed at which status transitions to `warning`.
+          E.g., 75 means warn after 75% of duration has elapsed.
+          Paused time is excluded from the elapsed calculation.
+        minimum: 1
+        maximum: 99
+      autoAssignWhen:
+        description: >
+          Optional JSON Logic condition evaluated at resource creation against the
+          resource's fields. When true, this SLA type is automatically assigned.
+          Auto-assigned and client-provided SLA types are merged — both apply.
+      startWhen:
+        description: >
+          Optional JSON Logic condition. When true, the SLA clock starts.
+          Defaults to onCreate.
+      pauseWhen:
+        description: >
+          Optional JSON Logic condition. When true, the SLA clock pauses.
+      resumeWhen:
+        description: >
+          Optional JSON Logic condition. When true, the SLA clock resumes.
+          Defaults to: pauseWhen no longer true.
+      completedWhen:
+        description: >
+          Optional JSON Logic condition. When true, the SLA is marked completed.
+          Defaults to resource status = completed.
+      resetWhen:
+        description: >
+          Optional JSON Logic condition. When true, completes the current SLA
+          cycle and starts a new one.
+    additionalProperties: false

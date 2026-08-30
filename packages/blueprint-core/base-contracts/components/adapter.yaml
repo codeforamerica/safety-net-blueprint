@@ -1,0 +1,40 @@
+# Base schemas for adapter request/response contracts.
+#
+# All adapter API request and response schemas extend these via allOf.
+# See docs/architecture/cross-cutting/adapters.md for the full pattern.
+#
+# Schemas: AdapterRequest, AdapterResponse
+
+AdapterRequest:
+  type: object
+  description: >
+    Base schema for all adapter request payloads. Defines the metadata
+    passthrough field that the blueprint sets for correlation. Adapters must
+    echo it back unchanged in the response — they must not inspect or depend
+    on its contents.
+  properties:
+    metadata:
+      type: object
+      additionalProperties: true
+      description: >
+        Opaque correlation context set by the blueprint. Echo back unchanged
+        in the response. The adapter must not inspect or modify this field.
+  additionalProperties: true
+
+AdapterResponse:
+  type: object
+  description: >
+    Base schema for all adapter response payloads. Requires the metadata
+    field to be echoed back unchanged from the request so the blueprint can
+    correlate the response to internal records.
+  required:
+    - metadata
+  properties:
+    metadata:
+      type: object
+      additionalProperties: true
+      description: >
+        Echoed back unchanged from the request. The blueprint uses this to
+        map the response to its internal records without exposing resource
+        identities to the adapter.
+  additionalProperties: true

@@ -1,0 +1,23 @@
+Pagination:
+  type: object
+  required:
+  - total
+  - limit
+  - offset
+  properties:
+    total:
+      type: integer
+      minimum: 0
+      description: Total number of items available.
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      description: Maximum number of items requested.
+    offset:
+      type: integer
+      minimum: 0
+      description: Number of items skipped before the current page.
+    hasNext:
+      type: boolean
+      description: Whether more items are available beyond the current page.
