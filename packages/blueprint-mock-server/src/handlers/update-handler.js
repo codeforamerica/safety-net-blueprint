@@ -1,0 +1,238 @@
+/**
+ * Handler for PATCH /resources/{id} (update)
+ */
+
+import { findById, update } from '../database-manager.js';
+import { validate, createErrorResponse } from '../validator.js';
+import { matchAndPopHttp } from '../mock-stub-engine.js';
+import { applyEffects, applySteps } from '../state-machine-engine.js';
+import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
+import { mergeByPrecedence, buildInlineRules, extractPrimaryParam, capitalize } from '../collection-utils.js';
+import { emitEvent } from '../emit-event.js';
+import { extractAuthContext, extractCallerRoles } from '../auth-context.js';
+import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
+
+export function deepEqual(a, b) {
+  if (a === b) return true;
+  if (a === null || b === null) return false;
+  if (typeof a !== typeof b) return false;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    return a.every((item, i) => deepEqual(item, b[i]));
+  }
+  if (typeof a === 'object' && !Array.isArray(a)) {
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) return false;
+    return keysA.every(k => deepEqual(a[k], b[k]));
+  }
+  return false;
+}
+
+export function buildChanges(before, after) {
+  const excluded = new Set(['id', 'createdAt', 'updatedAt']);
+  const changes = [];
+
+  function diffPaths(b, a, prefix) {
+    const allKeys = new Set([...Object.keys(b ?? {}), ...Object.keys(a ?? {})]);
+    for (const key of allKeys) {
+      if (!prefix && excluded.has(key)) continue;
+      const path = prefix ? `${prefix}.${key}` : key;
+      const beforeVal = b?.[key] ?? null;
+      const afterVal = a?.[key] ?? null;
+      if (deepEqual(beforeVal, afterVal)) continue;
+      if (beforeVal && afterVal && typeof beforeVal === 'object' && !Array.isArray(beforeVal)
+          && typeof afterVal === 'object' && !Array.isArray(afterVal)) {
+        diffPaths(beforeVal, afterVal, path);
+      } else {
+        changes.push({ field: path, before: beforeVal, after: afterVal });
+      }
+    }
+  }
+
+  diffPaths(before, after, '');
+  return changes;
+}
+
+/**
+ * Create update handler for a resource
+ * @param {Object} apiMetadata - API metadata from OpenAPI spec
+ * @param {Object} endpoint - Endpoint metadata
+ * @param {Object|null} stateMachine - State machine contract (for onUpdate effects)
+ * @returns {Function} Express handler
+ */
+export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, slaTypes = [], machine = null) {
+  const paramName = extractPrimaryParam(endpoint.path) ?? 'id';
+  return (req, res) => {
+    try {
+      const httpStub = matchAndPopHttp(req.method, req.path);
+      if (httpStub) {
+        return res.status(httpStub.response?.status ?? 200).json(httpStub.response?.body ?? {});
+      }
+
+      let resourceId = req.params[paramName] || req.params.id;
+
+      if (resourceId === 'me') {
+        const auth = extractAuthContext(req);
+        if (!auth) {
+          return res.status(401).json({
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required'
+          });
+        }
+        resourceId = auth.userId;
+      }
+
+      // Check if resource exists
+      const existing = findById(endpoint.collectionName, resourceId);
+      if (!existing) {
+        return res.status(404).json({
+          code: 'NOT_FOUND',
+          message: `${capitalize(paramName.replace(/Id$/, ''))} not found`
+        });
+      }
+
+      // Check if request body is an object (400 for malformed request)
+      if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        return res.status(400).json({
+          code: 'BAD_REQUEST',
+          message: 'Request body must be a JSON object',
+          details: [{ field: 'body', message: 'must be object' }]
+        });
+      }
+
+      // Check minProperties requirement for PATCH (at least 1 field)
+      if (Object.keys(req.body).length === 0) {
+        return res.status(400).json({
+          code: 'BAD_REQUEST',
+          message: 'Request body must contain at least one field to update',
+          details: [{ field: 'body', message: 'minProperties: 1' }]
+        });
+      }
+
+      // For PATCH, merge with existing data first, then validate the complete merged object.
+      // Exclude null values for fields the client didn't send — those are null-initialized
+      // placeholders from record creation and should not trigger validation failures.
+      const mergedData = { ...existing, ...req.body };
+
+      // Validate merged data (422 for validation errors)
+      if (endpoint.requestSchema) {
+        const clientFields = new Set(Object.keys(req.body));
+        const dataForValidation = Object.fromEntries(
+          Object.entries(mergedData).filter(([k, v]) => v !== null || clientFields.has(k))
+        );
+        const { valid, errors } = validate(
+          dataForValidation,
+          endpoint.requestSchema,
+          `${endpoint.collectionName}-update`
+        );
+
+        if (!valid) {
+          return res.status(422).json(createErrorResponse(errors, 422));
+        }
+      }
+
+      // Snapshot existing state before any mutations
+      const existingSnapshot = { ...existing };
+
+      // Update in database (database manager handles deep merge and updatedAt timestamp)
+      const updated = update(endpoint.collectionName, resourceId, req.body);
+
+      // Fire onUpdate steps/effects if any watched fields changed.
+      // Must run before emitting so rule-driven mutations (e.g. priority re-scored
+      // because isExpedited changed) are included in the event's changes array.
+      const onUpdate = machine?.triggers?.onUpdate ?? stateMachine?.onUpdate;
+      const hasOnUpdate = onUpdate?.steps?.length > 0 || onUpdate?.effects?.length > 0;
+
+      if (hasOnUpdate) {
+        const watchedFields = onUpdate?.fields;
+        const patchedFields = Object.keys(req.body);
+        const shouldFire = !watchedFields || watchedFields.length === 0
+          || patchedFields.some(f => watchedFields.includes(f));
+
+        if (shouldFire) {
+          const callerRoles = extractCallerRoles(req);
+          const baseContext = {
+            caller: {
+              id: req.headers['x-caller-id'],
+              roles: callerRoles
+            },
+            object: { ...existing },
+            request: req.body,
+            now: new Date().toISOString(),
+          };
+
+          const entities = resolveContextLayers(
+            [stateMachine?.context, machine?.context, onUpdate?.context],
+            updated,
+            baseContext
+          );
+          if (entities === null) {
+            console.error('onUpdate: required context binding failed — skipping trigger');
+          }
+          const context = entities !== null ? { ...baseContext, entities } : baseContext;
+
+          let pendingProcedures;
+          if (onUpdate?.steps?.length > 0) {
+            ({ pendingProcedures } = applySteps(onUpdate.steps, updated, context));
+          } else {
+            ({ pendingProcedures } = applyEffects(onUpdate.effects, updated, context));
+          }
+          const inlineRules = buildInlineRules(stateMachine, machine);
+          executeProcedures(pendingProcedures, updated, inlineRules, context);
+
+          // Persist any rule-driven mutations (e.g. priority, queueId) back to DB
+          const onUpdateDiff = {};
+          for (const [key, value] of Object.entries(updated)) {
+            if (existingSnapshot[key] !== value && !req.body.hasOwnProperty(key)
+                && key !== 'id' && key !== 'createdAt' && key !== 'updatedAt') {
+              onUpdateDiff[key] = value;
+            }
+          }
+          if (Object.keys(onUpdateDiff).length > 0) {
+            update(endpoint.collectionName, resourceId, onUpdateDiff);
+          }
+        }
+      }
+
+      // Build changes diff after all mutations have settled (PATCH fields + any rule-driven mutations)
+      const changes = buildChanges(existingSnapshot, updated);
+
+      // Emit updated event with complete field-level diff
+      try {
+        const domain = apiMetadata.serverBasePath.replace(/^\//, '');
+        const object = endpoint.collectionName.replace(/s$/, '');
+        emitEvent({
+          domain,
+          object,
+          action: 'updated',
+          resourceId,
+          source: apiMetadata.serverBasePath,
+          data: { changes },
+          callerId: req.headers['x-caller-id'] || null,
+          callerRoles: extractCallerRoles(req),
+          traceparent: req.headers['traceparent'] || null,
+          now: updated.updatedAt,
+        });
+      } catch (eventError) {
+        console.error('Failed to emit updated event:', eventError.message);
+      }
+
+      const expandFields = extractExpandFields(endpoint.responseSchema);
+      const linksFields = extractLinksFields(endpoint.responseSchema);
+      const derivedFields = extractDerivedFields(endpoint.responseSchema);
+      let responseBody = expandFields.length > 0 ? applyExpand(updated, expandFields, findById) : updated;
+      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+      if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
+      res.json(responseBody);
+    } catch (error) {
+      console.error('Update handler error:', error);
+      res.status(500).json({
+        code: 'INTERNAL_ERROR',
+        message: 'An unexpected error occurred',
+        details: [{ message: error.message }]
+      });
+    }
+  };
+}
+

@@ -1,0 +1,15 @@
+# Seed data for platform integration tests — policy registry entries.
+
+RegistryPolicyExample1:
+  id: snap-household-composition
+  citation: "7 CFR § 273.1"
+  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.1"
+  description: "All household members must be listed on the application regardless of whether they are individually applying for SNAP."
+  programs: [snap]
+
+RegistryPolicyExample2:
+  id: snap-processing-clock
+  citation: "7 CFR § 273.2(i)(1)"
+  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.2"
+  description: "Agency must act on an application and provide benefits or send a notice of denial within 30 days of the date of application."
+  programs: [snap]

@@ -1,0 +1,39 @@
+# Fixture case records for integration tests.
+# IDs use the namespace 00000005-xxxx.
+# primaryApplicantId references PersonExample1/2/3 IDs.
+# Key names match spec $ref expectations (CaseExample1 etc.).
+# Naming decoupling tracked in issue #167.
+
+CaseExample1:
+  id: "00000005-0000-4000-8000-000000000001"
+  status: active
+  effectiveStartDate: "2024-03-15"
+  primaryApplicantId: "00000001-0000-4000-8000-000000000001"
+  members:
+    - personId: "00000001-0000-4000-8000-000000000001"
+      relationship: self
+  createdAt: "2024-01-01T00:00:00Z"
+  updatedAt: "2024-01-01T00:00:00Z"
+
+CaseExample2:
+  id: "00000005-0000-4000-8000-000000000002"
+  status: active
+  effectiveStartDate: "2024-06-01"
+  primaryApplicantId: "00000001-0000-4000-8000-000000000002"
+  members:
+    - personId: "00000001-0000-4000-8000-000000000002"
+      relationship: self
+  createdAt: "2024-01-01T00:00:00Z"
+  updatedAt: "2024-01-01T00:00:00Z"
+
+CaseExample3:
+  id: "00000005-0000-4000-8000-000000000003"
+  status: closed
+  effectiveStartDate: "2023-01-01"
+  effectiveEndDate: "2024-01-01"
+  primaryApplicantId: "00000001-0000-4000-8000-000000000003"
+  members:
+    - personId: "00000001-0000-4000-8000-000000000003"
+      relationship: self
+  createdAt: "2024-01-01T00:00:00Z"
+  updatedAt: "2024-01-01T00:00:00Z"

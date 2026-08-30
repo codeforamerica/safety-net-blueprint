@@ -1,0 +1,27 @@
+# Fixture appointment records for integration tests.
+# IDs use the namespace 00000007-xxxx.
+# personId references PersonExample1/2 IDs.
+# Key names match spec $ref expectations (AppointmentExample1 etc.).
+# Naming decoupling tracked in issue #167.
+
+AppointmentExample1:
+  id: "00000007-0000-4000-8000-000000000001"
+  startAt: "2026-04-15T10:00:00Z"
+  endAt: "2026-04-15T10:30:00Z"
+  appointmentType: interview
+  status: scheduled
+  personId: "00000001-0000-4000-8000-000000000001"
+  notes: "Initial SNAP eligibility interview."
+  createdAt: "2024-01-01T00:00:00Z"
+  updatedAt: "2024-01-01T00:00:00Z"
+
+AppointmentExample2:
+  id: "00000007-0000-4000-8000-000000000002"
+  startAt: "2026-03-01T14:00:00Z"
+  endAt: "2026-03-01T14:45:00Z"
+  appointmentType: recertification
+  status: completed
+  personId: "00000001-0000-4000-8000-000000000002"
+  notes: "Annual SNAP recertification."
+  createdAt: "2024-01-01T00:00:00Z"
+  updatedAt: "2024-01-01T00:00:00Z"

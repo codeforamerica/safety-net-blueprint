@@ -1,0 +1,39 @@
+# Fixture user records for integration tests.
+# IDs use the namespace 00000002-xxxx.
+# Key names match spec $ref expectations (UserExample1 etc.).
+# Naming decoupling tracked in issue #167.
+
+UserExample1:
+  id: "00000002-0000-4000-8000-000000000001"
+  userId: "00000002-0000-4000-8000-000000000001"
+  idpSubject: "auth0|fixture000000000001"
+  email: "jane.smith@fixture.test"
+  role: "case_worker"
+  roles:
+    name: "case_worker"
+    permissions:
+      - "applications:read"
+      - "applications:create"
+      - "persons:read"
+  status: "active"
+  createdAt: "2024-01-01T00:00:00Z"
+  updatedAt: "2024-01-01T00:00:00Z"
+
+UserExample2:
+  id: "00000002-0000-4000-8000-000000000002"
+  userId: "00000002-0000-4000-8000-000000000002"
+  idpSubject: "auth0|fixture000000000002"
+  email: "john.doe@fixture.test"
+  role: "supervisor"
+  roles:
+    name: "supervisor"
+    permissions:
+      - "applications:read"
+      - "applications:create"
+      - "applications:update"
+      - "applications:approve"
+      - "persons:read"
+      - "persons:update"
+  status: "active"
+  createdAt: "2024-01-01T00:00:00Z"
+  updatedAt: "2024-01-01T00:00:00Z"
