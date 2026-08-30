@@ -1,0 +1,24 @@
+name: "Test Project"
+github: "https://github.com/example/test"
+
+domains:
+  - id: intake
+    label: Intake
+    status: partial
+    description: Application submission
+    entities: [Application]
+
+flows:
+  - id: submission
+    label: Application Submission
+    domain: intake
+    participants: [applicant, intake]
+    steps:
+      - label: Submit
+        from: applicant
+        to: intake
+        gap: true
+        gap_description: "Submit endpoint not yet implemented"
+      - label: Confirm
+        from: intake
+        to: applicant

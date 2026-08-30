@@ -1,0 +1,11 @@
+schema:
+  application.status:
+    reason: Tracks current processing state
+    programs: [SNAP]
+    policies: [test-policy-1]
+
+operations:
+  application.submit:
+    description: Submit an application for benefits
+    policies:
+      - test-policy-1

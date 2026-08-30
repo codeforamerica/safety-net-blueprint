@@ -1,0 +1,99 @@
+# changelog.schema.yaml
+#
+# JSON Schema for dictionary changelog files.
+#
+# A changelog tracks version history for a data dictionary artifact —
+# which fields were added, removed, renamed, or split across releases.
+# Versions are ordered newest-first. Git tags on the owning repository
+# are used for version-specific rendering in the HTML visualizer.
+
+$schema: 'https://json-schema.org/draft/2020-12/schema'
+title: Changelog
+description: >
+  Version history for a data dictionary. Each entry describes one release:
+  its version identifier, release date, optional narrative description, and
+  the list of field-level changes. Entries are ordered newest-first.
+  Git tags matching the version identifier are used to render historical
+  versions in the HTML visualizer's version dropdown.
+
+type: array
+minItems: 1
+items:
+  $ref: '#/$defs/Version'
+
+$defs:
+  # ── Version entry ────────────────────────────────────────────────────────────
+  Version:
+    type: object
+    required: [version, date, changes]
+    additionalProperties: false
+    properties:
+      version:
+        type: string
+        description: >
+          Version identifier. Should match the git tag used for this release
+          (e.g. '1.2.0', 'v1.2.0'). The visualizer uses this value to look
+          up the corresponding git tag when rendering historical versions.
+        minLength: 1
+
+      date:
+        type: string
+        description: Release date in ISO 8601 format (YYYY-MM-DD).
+        pattern: '^\d{4}-\d{2}-\d{2}$'
+
+      description:
+        type: string
+        description: >
+          Optional narrative summary of this release — what changed and why.
+          Rendered as prose in the changelog tab above the change list.
+
+      changes:
+        type: array
+        description: Ordered list of field-level changes in this release.
+        minItems: 1
+        items:
+          $ref: '#/$defs/Change'
+
+  # ── Change entry ─────────────────────────────────────────────────────────────
+  Change:
+    type: object
+    required: [type]
+    additionalProperties: false
+    properties:
+      type:
+        type: string
+        description: The kind of change.
+        enum:
+          - initial   # First release; no prior version to compare against
+          - added     # New field added to the inventory
+          - removed   # Field removed from the inventory
+          - renamed   # Field path changed (was → now)
+          - split     # One field split into multiple fields (was → now[])
+
+      field:
+        type: string
+        description: >
+          Field path affected. Used for `added` and `removed` changes.
+          Dot-notation matching the field inventory (e.g. application.channel).
+
+      was:
+        type: string
+        description: >
+          Previous field path. Used for `renamed` and `split` changes.
+
+      now:
+        description: >
+          New field path(s). A string for `renamed`; an array of strings for
+          `split` (when one field becomes multiple).
+        oneOf:
+          - type: string
+          - type: array
+            items:
+              type: string
+            minItems: 2
+
+      note:
+        type: string
+        description: >
+          Optional explanation for this change — why it was made, migration
+          guidance, or context for consumers updating their implementations.
