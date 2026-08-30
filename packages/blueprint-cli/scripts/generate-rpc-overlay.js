@@ -1,0 +1,415 @@
+#!/usr/bin/env node
+/**
+ * RPC Overlay Generator
+ *
+ * Reads state machine contracts and generates OpenAPI overlay files
+ * that add RPC (transition) endpoints to the base REST spec.
+ *
+ * Usage:
+ *   node scripts/generate-rpc-overlay.js --spec=.
+ *   npm run generate:rpc-overlay
+ */
+
+import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'fs';
+import { join, resolve } from 'path';
+import { fileURLToPath } from 'url';
+import { realpathSync } from 'fs';
+import yaml from 'js-yaml';
+
+// =============================================================================
+// Argument Parsing
+// =============================================================================
+
+function parseArgs() {
+  const args = process.argv.slice(2);
+  const options = { specsDir: null, help: false };
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i].startsWith('--spec=')) {
+      options.specsDir = args[i].split('=')[1];
+    } else if (args[i] === '--spec') {
+      options.specsDir = args[++i];
+    } else if (args[i] === '--help' || args[i] === '-h') {
+      options.help = true;
+    } else {
+      console.error(`Error: Unknown argument: ${args[i]}`);
+      process.exit(1);
+    }
+  }
+
+  return options;
+}
+
+// =============================================================================
+// State Machine Discovery
+// =============================================================================
+
+/**
+ * Discover state machine YAML files in the specs directory.
+ * @param {string} specsDir - Path to the specs directory
+ * @returns {Array<{ filePath: string, stateMachine: Object }>}
+ */
+export function discoverStateMachines(specsDir) {
+  let files;
+  try {
+    files = readdirSync(specsDir);
+  } catch {
+    return [];
+  }
+
+  const results = [];
+  for (const file of files) {
+    if (!file.endsWith('-state-machine.yaml')) continue;
+
+    const filePath = join(specsDir, file);
+    try {
+      const content = readFileSync(filePath, 'utf8');
+      const stateMachine = yaml.load(content);
+      if (!stateMachine || !stateMachine.domain) continue;
+      // New format: object lives inside machines[]; old format: top-level object
+      const hasMachines = Array.isArray(stateMachine.machines) && stateMachine.machines.length > 0;
+      if (!stateMachine.object && !hasMachines) continue;
+      results.push({ filePath, stateMachine });
+    } catch {
+      continue;
+    }
+  }
+
+  return results;
+}
+
+// =============================================================================
+// API Spec Reading
+// =============================================================================
+
+/**
+ * Extract the item endpoint path and parameter refs from a loaded API spec.
+ * @param {Object} spec - Loaded API spec object
+ * @param {string} [objectName] - State machine object name (e.g., "Task") to match the correct resource in multi-resource specs
+ * @returns {{ itemPath: string, paramRefs: Array, tag: string, schemaRef: string } | null}
+ */
+export function extractItemEndpointFromSpec(spec, objectName) {
+  const paths = spec?.paths || {};
+
+  // If objectName is provided, derive the expected collection path (e.g., "Task" → "/tasks")
+  const expectedCollection = objectName
+    ? `/${objectName.toLowerCase()}s`
+    : null;
+
+  let fallback = null;
+
+  for (const [pathKey, pathItem] of Object.entries(paths)) {
+    // Item endpoints contain a path parameter like {taskId}
+    if (!pathKey.includes('{')) continue;
+
+    // Get the parameter references from the path item
+    const paramRefs = pathItem.parameters || [];
+
+    // Get the tag from the GET operation if available
+    const getOp = pathItem.get || {};
+    const tag = getOp.tags?.[0] || null;
+
+    // Get the resource schema ref from the GET 200 response
+    const schemaRef = getOp.responses?.['200']?.content?.['application/json']?.schema?.$ref || null;
+
+    const result = { itemPath: pathKey, paramRefs, tag, schemaRef };
+
+    // If we have an object name, match the path to the correct resource
+    if (expectedCollection && pathKey.startsWith(expectedCollection + '/')) {
+      return result;
+    }
+
+    // Keep first match as fallback for single-resource specs
+    if (!fallback) {
+      fallback = result;
+    }
+  }
+
+  return fallback;
+}
+
+/**
+ * Read the base API spec and extract the item endpoint path and parameter refs.
+ * @param {string} specsDir - Path to the specs directory
+ * @param {string} apiSpecFile - Filename of the API spec (e.g., "workflow-openapi.yaml")
+ * @param {string} [objectName] - State machine object name (e.g., "Task") to match the correct resource in multi-resource specs
+ * @returns {{ itemPath: string, paramRefs: Array, tag: string } | null}
+ */
+export function extractItemEndpoint(specsDir, apiSpecFile, objectName) {
+  const specPath = join(specsDir, apiSpecFile);
+  let spec;
+  try {
+    spec = yaml.load(readFileSync(specPath, 'utf8'));
+  } catch {
+    return null;
+  }
+  return extractItemEndpointFromSpec(spec, objectName);
+}
+
+// =============================================================================
+// Overlay Generation
+// =============================================================================
+
+/**
+ * Build an operation ID from trigger name and object name.
+ * E.g., ("claim", "Task") → "claimTask"
+ * @param {string} trigger - Transition trigger name
+ * @param {string} objectName - Object name (e.g., "Task")
+ * @returns {string}
+ */
+export function buildOperationId(trigger, objectName) {
+  return `${trigger}${objectName}`;
+}
+
+/**
+ * Build an OpenAPI requestBody object from a transition's schema.request definition.
+ * @param {Object|null} requestSchema - The schema.request value (resolved JSON Schema object)
+ * @returns {Object|null} OpenAPI requestBody object, or null if no schema provided
+ */
+function buildRequestBody(requestSchema) {
+  if (!requestSchema) return null;
+  return {
+    required: true,
+    content: {
+      'application/json': {
+        // Deep-clone so rewriteLocalDefsRefs does not mutate the source
+        // state machine object (which would corrupt the resolved YAML output).
+        schema: JSON.parse(JSON.stringify(requestSchema))
+      }
+    }
+  };
+}
+
+/**
+ * Walk a JSON value in place. For every local `#/$defs/<Name>` $ref encountered,
+ * rewrite it to `#/components/schemas/<Name>` and add `<Name>` to `collected`.
+ * Cross-file refs (e.g. `./foo.yaml#/$defs/X`) and non-$defs refs are left alone.
+ *
+ * The state-machine YAML is a JSON Schema document with a root `$defs` block, so
+ * actions reference request/response shapes as `#/$defs/<Name>`. When those refs
+ * are inlined verbatim into an OpenAPI spec they dangle, because OpenAPI specs
+ * don't carry a root `$defs` block — schemas live under `#/components/schemas`.
+ *
+ * @param {*} node - The JSON value to walk (mutated in place)
+ * @param {Set<string>} collected - Set to add hoisted schema names to
+ */
+function rewriteLocalDefsRefs(node, collected) {
+  if (!node || typeof node !== 'object') return;
+  if (Array.isArray(node)) {
+    for (const item of node) rewriteLocalDefsRefs(item, collected);
+    return;
+  }
+  for (const [key, value] of Object.entries(node)) {
+    if (key === '$ref' && typeof value === 'string' && value.startsWith('#/$defs/')) {
+      const name = value.slice('#/$defs/'.length);
+      collected.add(name);
+      node[key] = `#/components/schemas/${name}`;
+    } else {
+      rewriteLocalDefsRefs(value, collected);
+    }
+  }
+}
+
+/**
+ * Build the transitive closure of `$defs` entries needed to satisfy `rootNames`
+ * against the state-machine's `$defs` block. Each hoisted entry is deep-cloned
+ * and has its own local `#/$defs/...` refs rewritten to `#/components/schemas/...`
+ * form before being added to the result.
+ *
+ * @param {Object|undefined} defs - The state machine's `$defs` object
+ * @param {Set<string>} rootNames - Initial set of needed schema names (from action ops)
+ * @param {string} domain - State machine domain (for warning messages)
+ * @returns {Object} Plain object (name → schema) suitable as an overlay `update` payload
+ */
+function hoistDefs(defs, rootNames, domain) {
+  const hoisted = {};
+  const queue = [...rootNames];
+  while (queue.length > 0) {
+    const name = queue.shift();
+    if (Object.prototype.hasOwnProperty.call(hoisted, name)) continue;
+    const original = defs && defs[name];
+    if (!original) {
+      console.warn(
+        `  ${domain}: state-machine action references #/$defs/${name} but no matching entry exists; ref will dangle`
+      );
+      continue;
+    }
+    const clone = JSON.parse(JSON.stringify(original));
+    const nested = new Set();
+    rewriteLocalDefsRefs(clone, nested);
+    hoisted[name] = clone;
+    for (const nestedName of nested) {
+      if (!Object.prototype.hasOwnProperty.call(hoisted, nestedName)) {
+        queue.push(nestedName);
+      }
+    }
+  }
+  return hoisted;
+}
+
+/**
+ * Generate an OpenAPI overlay for a single state machine.
+ * @param {Object} stateMachine - The parsed state machine contract
+ * @param {{ itemPath: string, paramRefs: Array, tag: string, schemaRef: string }} endpointInfo
+ * @returns {Object} Overlay document
+ */
+export function generateOverlay(stateMachine, endpointInfo) {
+  const { itemPath, paramRefs, tag, schemaRef } = endpointInfo;
+
+  const pathsUpdate = {};
+  const seenIds = new Set();
+
+  for (const machine of (stateMachine.machines || [])) {
+    const objectName = machine.object || stateMachine.object;
+
+    for (const transition of (machine.actions || [])) {
+      // Deduplicate — same id may appear for different from-states (e.g. escalate)
+      if (seenIds.has(transition.id)) continue;
+      seenIds.add(transition.id);
+
+      const rpcPath = `${itemPath}/${transition.id}`;
+      const operationId = buildOperationId(transition.id, objectName);
+      const from = transition.transition?.from;
+      const to = transition.transition?.to ?? '(in-place)';
+      const fromLabel = Array.isArray(from) ? from.join(' | ') : (from ?? '?');
+
+      const operation = {
+        summary: `${transition.id.charAt(0).toUpperCase() + transition.id.slice(1).replace(/-/g, ' ')} ${objectName.toLowerCase()}`,
+        description: transition.description || `Trigger the ${transition.id} transition (${fromLabel} → ${to}).`,
+        operationId
+      };
+
+      if (tag) {
+        operation.tags = [tag];
+      }
+
+      if (paramRefs.length > 0) {
+        operation.parameters = paramRefs.map(ref => ref.$ref ? { $ref: ref.$ref } : ref);
+      }
+
+      const requestBody = buildRequestBody(transition.schema?.request || null);
+      if (requestBody) {
+        operation.requestBody = requestBody;
+      }
+
+      const responseSchema = transition.schema?.response
+        ? JSON.parse(JSON.stringify(transition.schema.response))
+        : (schemaRef ? { $ref: schemaRef } : { type: 'object' });
+
+      operation.responses = {
+        '200': {
+          description: 'Transition applied successfully.',
+          content: { 'application/json': { schema: responseSchema } }
+        },
+        '400': { $ref: './components/responses.yaml#/BadRequest' },
+        '404': { $ref: './components/responses.yaml#/NotFound' },
+        '409': { $ref: './components/responses.yaml#/Conflict' },
+        '500': { $ref: './components/responses.yaml#/InternalError' }
+      };
+
+      pathsUpdate[rpcPath] = { post: operation };
+    }
+  }
+
+  // Walk the generated operations for local `#/$defs/<Name>` refs (carried over
+  // from the state-machine YAML's `$defs:` block) and rewrite them to
+  // `#/components/schemas/<Name>` so they resolve in the destination OpenAPI.
+  // Then build a second overlay action that hoists the referenced $defs entries
+  // (transitively) into `components.schemas`.
+  const neededDefs = new Set();
+  rewriteLocalDefsRefs(pathsUpdate, neededDefs);
+  const hoistedSchemas = hoistDefs(stateMachine.$defs, neededDefs, stateMachine.domain);
+
+  const actions = [
+    {
+      target: '$.paths',
+      file: stateMachine.apiSpec,
+      description: `Add state machine transition endpoints for ${stateMachine.domain}`,
+      update: pathsUpdate
+    }
+  ];
+
+  if (Object.keys(hoistedSchemas).length > 0) {
+    actions.push({
+      target: '$.components.schemas',
+      file: stateMachine.apiSpec,
+      description: `Hoist state-machine action $defs into components.schemas for ${stateMachine.domain}`,
+      update: hoistedSchemas
+    });
+  }
+
+  return {
+    overlay: '1.0.0',
+    info: {
+      title: `${stateMachine.domain} RPC Overlay`,
+      version: '1.0.0',
+      description: `Auto-generated RPC endpoints from ${stateMachine.domain}-state-machine.yaml`
+    },
+    actions
+  };
+}
+
+// =============================================================================
+// Main
+// =============================================================================
+
+function main() {
+  const options = parseArgs();
+
+  if (options.help) {
+    console.log('Usage: node scripts/generate-rpc-overlay.js --spec=<dir>');
+    console.log('');
+    console.log('Options:');
+    console.log('  --spec=<dir>   Directory containing spec and state machine files');
+    console.log('  --help, -h     Show this help message');
+    process.exit(0);
+  }
+
+  const specsDir = resolve(options.specsDir || '.');
+
+  console.log('Generating RPC overlays...');
+  console.log(`  Specs directory: ${specsDir}`);
+
+  const machines = discoverStateMachines(specsDir);
+
+  if (machines.length === 0) {
+    console.log('  No state machine contracts found.');
+    return;
+  }
+
+  const outDir = join(specsDir, 'overlays');
+  mkdirSync(outDir, { recursive: true });
+
+  for (const { stateMachine } of machines) {
+    const apiSpecFile = stateMachine.apiSpec;
+    if (!apiSpecFile) {
+      console.warn(`  Skipping ${stateMachine.domain}: no apiSpec field`);
+      continue;
+    }
+
+    const endpointInfo = extractItemEndpoint(specsDir, apiSpecFile, stateMachine.object);
+    if (!endpointInfo) {
+      console.warn(`  Skipping ${stateMachine.domain}: could not find item endpoint in ${apiSpecFile}`);
+      continue;
+    }
+
+    const overlay = generateOverlay(stateMachine, endpointInfo);
+    const overlayYaml = yaml.dump(overlay, { lineWidth: 120, noRefs: true, quotingType: '"' });
+    const outPath = join(outDir, `${stateMachine.domain}-rpc.yaml`);
+    writeFileSync(outPath, overlayYaml, 'utf8');
+
+    const actionCount = (stateMachine.machines || []).flatMap(m => m.actions || []).length;
+    console.log(`  ✓ ${stateMachine.domain}-rpc.yaml (${actionCount} action(s))`);
+  }
+
+  console.log('✓ RPC overlay generation complete');
+}
+
+// Export for testing
+export { parseArgs, buildRequestBody, rewriteLocalDefsRefs, hoistDefs };
+
+// Run main when executed directly
+const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(resolve(process.argv[1]));
+if (isDirectRun) {
+  main();
+}

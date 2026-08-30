@@ -1,0 +1,1344 @@
+#!/usr/bin/env node
+/**
+ * Resolve OpenAPI overlays for state-specific configurations.
+ *
+ * This script applies OpenAPI Overlay Specification (1.0.0) transformations
+ * to base schemas, producing resolved specifications.
+ *
+ * Two-pass processing:
+ *   1. Scan all files to determine where each target path exists
+ *   2. Apply actions with smart file scoping:
+ *      - Target in 0 files → warning
+ *      - Target in 1 file → auto-apply to that file
+ *      - Target in 2+ files → require file/files property
+ *
+ * Usage:
+ *   node scripts/resolve.js --spec=./openapi --out=./resolved
+ *   node scripts/resolve.js --spec=./openapi --overlay=./overlays/california --out=./resolved
+ *   node scripts/resolve.js --spec=./my-spec.yaml --overlay=./my-overlay.yaml --out=./resolved
+ *
+ * Flags:
+ *   --spec       Path to base spec file or directory (required)
+ *   --overlay    Path to overlay file or directory (optional; omit to copy base specs unchanged)
+ *   --out        Output directory for resolved specs (required)
+ *   --env        Target environment for x-environments filtering (optional)
+ *   --env-file   Path to env file with key=value pairs for placeholder substitution (optional)
+ */
+
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, cpSync, rmSync, realpathSync, statSync } from 'fs';
+import { join, dirname, relative, resolve, basename } from 'path';
+import { fileURLToPath } from 'url';
+import yaml from 'js-yaml';
+import { applyOverlay, checkPathExists, parsePath } from '@codeforamerica/blueprint-core/overlay';
+import { extractConfig, validateConfig } from '@codeforamerica/blueprint-core/config';
+import { discoverRelationships, buildSchemaIndex, resolveRelationships, buildExamplesIndex, resolveExampleRelationships, summarizeResolverDecisions } from '@codeforamerica/blueprint-core/relationships';
+import { bundleSpec } from '@codeforamerica/blueprint-core/bundle';
+import { extractItemEndpointFromSpec, generateOverlay } from './generate-rpc-overlay.js';
+import { generateCompositionOverlays } from '@codeforamerica/blueprint-core/compositions';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// =============================================================================
+// Argument Parsing
+// =============================================================================
+
+function parseArgs() {
+  const args = process.argv.slice(2);
+  const options = {
+    spec: null,
+    overlay: null,
+    out: null,
+    env: null,
+    envFile: null,
+    bundle: false,
+    reconcileExamples: false,
+    resolve: false,
+    verbose: false,
+    help: false
+  };
+
+  for (const arg of args) {
+    if (arg === '--help' || arg === '-h') {
+      options.help = true;
+    } else if (arg === '--bundle') {
+      options.bundle = true;
+    } else if (arg === '--resolve') {
+      options.resolve = true;
+    } else if (arg === '--verbose') {
+      options.verbose = true;
+    } else if (arg.startsWith('--spec=')) {
+      options.spec = arg.split('=')[1];
+    } else if (arg.startsWith('--overlay=')) {
+      options.overlay = arg.split('=')[1];
+    } else if (arg.startsWith('--out=')) {
+      options.out = arg.split('=')[1];
+    } else if (arg.startsWith('--env=')) {
+      options.env = arg.split('=')[1];
+    } else if (arg.startsWith('--env-file=')) {
+      options.envFile = arg.split('=')[1];
+    } else {
+      console.error(`Error: Unknown argument: ${arg}`);
+      process.exit(1);
+    }
+  }
+
+  return options;
+}
+
+function showHelp() {
+  console.log(`
+Resolve OpenAPI Specifications
+
+Bundles, applies overlays, and resolves specs into self-contained output.
+
+Usage:
+  npm run resolve [-- <flags>]
+
+Flags:
+  --spec=<path>      Path to base spec file or directory (default: packages/contracts)
+  --overlay=<path>   Path to overlay file or directory (optional)
+  --out=<dir>        Output directory for resolved specs (default: resolved)
+  --bundle           Inline all external $refs to produce self-contained specs
+  --resolve          Run relationship resolution even without an overlay
+  --env=<env>        Target environment for x-environments filtering (optional)
+  --env-file=<file>  Path to env file for \${VAR} placeholder substitution (optional)
+  --verbose          Print a per-schema relationship-resolution summary
+  -h, --help         Show this help message
+
+Without --overlay, base specs are copied to --out unchanged (unless --resolve is specified).
+With --bundle, all external $ref references are dereferenced inline.
+With --env, nodes whose x-environments array doesn't include the target env are removed.
+With --env-file, \${VAR} placeholders in string values are substituted (process.env overrides file values).
+
+Examples:
+  npm run resolve
+  npm run resolve -- --bundle --out=/tmp/demo
+  npm run resolve -- --overlay=packages/contracts/overlays/california --out=./resolved
+  npm run resolve -- --spec=eligibility-openapi.yaml --overlay=my-overlay.yaml --out=./resolved
+  npm run resolve -- --bundle --overlay=packages/contracts/overlays/california --out=./resolved
+`);
+}
+
+// =============================================================================
+// Event Type Prefix Injection
+// =============================================================================
+
+/**
+ * Prepend a state-specific prefix to all event type strings in a state machine spec.
+ * Updates emit.type in steps and type in events[] entries.
+ */
+function injectPrefixInStateMachine(spec, prefix) {
+  const copy = JSON.parse(JSON.stringify(spec));
+  if (!Array.isArray(copy.machines)) return copy;
+
+  for (const machine of copy.machines) {
+    if (Array.isArray(machine.events)) {
+      for (const evt of machine.events) {
+        if (typeof evt.type === 'string') evt.type = prefix + evt.type;
+      }
+    }
+    prefixEmitStepsInItems(machine.actions || [], prefix);
+    prefixEmitStepsInItems(machine.events || [], prefix);
+    prefixEmitStepsInItems(machine.procedures || [], prefix);
+  }
+  return copy;
+}
+
+function prefixEmitStepsInItems(items, prefix) {
+  for (const item of items) {
+    prefixEmitInSteps(item.steps || [], prefix);
+    if (item.then) prefixEmitInSteps(item.then, prefix);
+    if (item.do) prefixEmitInSteps(item.do, prefix);
+  }
+}
+
+function prefixEmitInSteps(steps, prefix) {
+  for (const step of steps) {
+    if (step.emit && typeof step.emit.type === 'string') {
+      step.emit.type = prefix + step.emit.type;
+    }
+    if (step.then) prefixEmitInSteps(step.then, prefix);
+    if (step.else) prefixEmitInSteps(step.else, prefix);
+    if (step.do) prefixEmitInSteps(step.do, prefix);
+    if (step.forEach?.do) prefixEmitInSteps(step.forEach.do, prefix);
+    if (step.match && typeof step.match === 'object') {
+      for (const matchBranch of Object.values(step.match)) {
+        if (Array.isArray(matchBranch)) prefixEmitInSteps(matchBranch, prefix);
+      }
+    }
+  }
+}
+
+/**
+ * Prepend a state-specific prefix to all event type strings in an AsyncAPI spec.
+ * Updates channel addresses, message names, and payload type consts.
+ */
+function injectPrefixInAsyncApi(spec, prefix) {
+  const copy = JSON.parse(JSON.stringify(spec));
+
+  if (copy.channels && typeof copy.channels === 'object') {
+    const updatedChannels = {};
+    for (const [addr, channel] of Object.entries(copy.channels)) {
+      const newAddr = prefix + addr;
+      if (typeof channel.address === 'string') channel.address = prefix + channel.address;
+      updatedChannels[newAddr] = channel;
+    }
+    copy.channels = updatedChannels;
+  }
+
+  if (copy.components?.messages && typeof copy.components.messages === 'object') {
+    for (const msg of Object.values(copy.components.messages)) {
+      if (typeof msg.name === 'string') msg.name = prefix + msg.name;
+    }
+  }
+
+  if (copy.components?.schemas && typeof copy.components.schemas === 'object') {
+    for (const schema of Object.values(copy.components.schemas)) {
+      if (Array.isArray(schema.allOf)) {
+        for (const allOfItem of schema.allOf) {
+          const typeConst = allOfItem?.properties?.type?.const;
+          if (typeof typeConst === 'string') {
+            allOfItem.properties.type.const = prefix + typeConst;
+          }
+        }
+      }
+    }
+  }
+
+  return copy;
+}
+
+// =============================================================================
+// File Collection
+// =============================================================================
+
+/**
+ * Recursively collect all YAML files with their relative paths and contents
+ */
+function collectYamlFiles(sourceDir, baseDir = sourceDir) {
+  const files = readdirSync(sourceDir, { withFileTypes: true });
+  let yamlFiles = [];
+
+  for (const file of files) {
+    const sourcePath = join(sourceDir, file.name);
+
+    if (file.isDirectory()) {
+      yamlFiles = yamlFiles.concat(collectYamlFiles(sourcePath, baseDir));
+    } else if (file.name.endsWith('.yaml')) {
+      const relativePath = relative(baseDir, sourcePath);
+      const content = readFileSync(sourcePath, 'utf8');
+      if (content.includes('x-status: deprecated')) continue;
+      const spec = yaml.load(content);
+      yamlFiles.push({ relativePath, sourcePath, spec });
+    }
+  }
+
+  return yamlFiles;
+}
+
+/**
+ * Recursively discover all overlay YAML files in the overlays directory.
+ * Each file must have `overlay: 1.0.0` at the top level to be recognized.
+ */
+function discoverOverlayFiles(overlaysDir) {
+  if (!existsSync(overlaysDir)) {
+    return [];
+  }
+
+  const overlayFiles = [];
+
+  function walk(dir) {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(fullPath);
+      } else if (entry.name.endsWith('.yaml')) {
+        try {
+          const content = readFileSync(fullPath, 'utf8');
+          const parsed = yaml.load(content);
+          if (parsed && parsed.overlay === '1.0.0') {
+            overlayFiles.push(fullPath);
+          }
+        } catch {
+          // Skip files that can't be parsed
+        }
+      }
+    }
+  }
+
+  walk(overlaysDir);
+  return overlayFiles.sort();
+}
+
+// =============================================================================
+// Overlay Resolution
+// =============================================================================
+
+/**
+ * Extract version number from a spec filename.
+ * No suffix = version 1, -v2 suffix = version 2, etc.
+ */
+function getVersionFromFilename(relativePath) {
+  const basename = relativePath.replace(/\.yaml$/, '').split('/').pop();
+  const match = basename.match(/-v(\d+)$/);
+  return match ? parseInt(match[1], 10) : 1;
+}
+
+/**
+ * For each action, find which files contain the full target path
+ */
+function analyzeTargetLocations(overlay, yamlFiles) {
+  const actionFileMap = new Map();
+
+  if (!overlay.actions || !Array.isArray(overlay.actions)) {
+    return actionFileMap;
+  }
+
+  for (let i = 0; i < overlay.actions.length; i++) {
+    const action = overlay.actions[i];
+    const { target } = action;
+
+    if (!target) continue;
+
+    // For `add` actions the target key does not exist yet — check the parent
+    // path instead. The parent must exist for addAtPath to succeed.
+    let checkTarget = target;
+    if (action.add !== undefined) {
+      const tokens = parsePath(target);
+      if (tokens.length > 1) {
+        const parentTokens = tokens.slice(0, -1);
+        checkTarget = '$.' + parentTokens.map(t =>
+          t.type === 'filter' ? `[?(@.${t.field} == '${t.value}')]` : t.value
+        ).join('.');
+      }
+    }
+
+    // Find all files where the full target path exists, with metadata
+    const matchingFiles = [];
+    for (const { relativePath, spec } of yamlFiles) {
+      const pathCheck = checkPathExists(spec, checkTarget);
+      if (pathCheck.fullPathExists) {
+        matchingFiles.push({
+          relativePath,
+          apiId: spec.info?.['x-api-id'] || null,
+          version: getVersionFromFilename(relativePath)
+        });
+      }
+    }
+
+    actionFileMap.set(i, {
+      action,
+      matchingFiles,
+      explicitFile: action.file,
+      explicitFiles: action.files
+    });
+  }
+
+  return actionFileMap;
+}
+
+/**
+ * Determine which files each action should apply to, generating warnings as needed.
+ * Supports disambiguation via:
+ *   - file/files: explicit file paths
+ *   - target-api: match spec's info.x-api-id
+ *   - target-version: match filename version suffix (no suffix = 1, -v2 = 2)
+ */
+function resolveActionTargets(actionFileMap) {
+  const warnings = [];
+  const actionTargets = new Map();
+
+  for (const [actionIndex, info] of actionFileMap) {
+    const { action, matchingFiles, explicitFile, explicitFiles } = info;
+    const actionDesc = action.description || action.target;
+    const targetApi = action['target-api'];
+    const targetVersion = action['target-version'];
+
+    // Handle explicit file/files specification
+    if (explicitFile || explicitFiles) {
+      const specifiedFiles = explicitFiles || [explicitFile];
+      const matchPaths = matchingFiles.map(m => m.relativePath);
+      const validFiles = specifiedFiles.filter(f => matchPaths.includes(f));
+      const invalidFiles = specifiedFiles.filter(f => !matchPaths.includes(f));
+
+      if (invalidFiles.length > 0) {
+        warnings.push(`Target ${action.target} does not exist in specified file(s): ${invalidFiles.join(', ')} (action: "${actionDesc}")`);
+      }
+
+      actionTargets.set(actionIndex, validFiles);
+      continue;
+    }
+
+    // Apply target-api and target-version filters
+    let filtered = matchingFiles;
+
+    if (targetApi) {
+      filtered = filtered.filter(m => m.apiId === targetApi);
+    }
+
+    if (targetVersion !== undefined && targetVersion !== null) {
+      const ver = parseInt(targetVersion, 10);
+      filtered = filtered.filter(m => m.version === ver);
+    }
+
+    const filteredPaths = filtered.map(m => m.relativePath);
+
+    // Auto-resolve based on filtered matches
+    if (filteredPaths.length === 0) {
+      if (matchingFiles.length === 0) {
+        warnings.push(`Target ${action.target} does not exist in any file (action: "${actionDesc}")`);
+      } else {
+        warnings.push(`Target ${action.target} matched ${matchingFiles.length} file(s) but none passed target-api/target-version filters (action: "${actionDesc}")`);
+      }
+      actionTargets.set(actionIndex, []);
+    } else if (filteredPaths.length === 1) {
+      actionTargets.set(actionIndex, filteredPaths);
+    } else {
+      warnings.push(`Target ${action.target} exists in multiple files (${filteredPaths.join(', ')}). Use file, target-api, or target-version to disambiguate (action: "${actionDesc}")`);
+      actionTargets.set(actionIndex, []);
+    }
+  }
+
+  return { actionTargets, warnings };
+}
+
+// Behavioral YAML filename patterns — update: on arrays in these files may be accidental
+const BEHAVIORAL_YAML_PATTERNS = ['-state-machine.yaml', '-sla-types.yaml', '-rules.yaml', '-metrics.yaml'];
+
+/**
+ * Apply overlay actions to files based on resolved targets.
+ * Returns { results, warnings }.
+ */
+function applyOverlayWithTargets(yamlFiles, overlay, actionTargets, overlayDir) {
+  const results = new Map();
+  const warnings = [];
+
+  // Initialize results with original specs
+  for (const { relativePath, spec } of yamlFiles) {
+    results.set(relativePath, JSON.parse(JSON.stringify(spec)));
+  }
+
+  if (!overlay.actions || !Array.isArray(overlay.actions)) {
+    return { results, warnings };
+  }
+
+  // Apply each action to its target files
+  for (let i = 0; i < overlay.actions.length; i++) {
+    const action = overlay.actions[i];
+    const targetFiles = actionTargets.get(i) || [];
+
+    for (const relativePath of targetFiles) {
+      const spec = results.get(relativePath);
+      if (!spec) continue;
+
+      // Warn when update: is used with an array value on a behavioral YAML —
+      // this replaces all baseline entries. append: is usually the right choice.
+      if (action.update !== undefined && Array.isArray(action.update) &&
+          BEHAVIORAL_YAML_PATTERNS.some(p => relativePath.endsWith(p))) {
+        warnings.push(
+          `"update:" on "${action.target}" in ${relativePath} replaces all baseline entries. ` +
+          `Use "append:" to add items without removing baseline content. ` +
+          `(action: "${action.description || action.target}")`
+        );
+      }
+
+      const singleOverlay = { actions: [action] };
+      const { result } = applyOverlay(spec, singleOverlay, { overlayDir, silent: true });
+      results.set(relativePath, result);
+
+      if (action.description) {
+        console.log(`  - Applied: ${action.description} -> ${relativePath}`);
+      }
+    }
+  }
+
+  return { results, warnings };
+}
+
+// =============================================================================
+// Environment Filtering
+// =============================================================================
+
+/**
+ * Recursively filter a spec tree by x-environments.
+ * Removes nodes whose x-environments array doesn't include the target env.
+ * Strips x-environments from surviving nodes.
+ * Returns the filtered tree (or null if the root node itself should be removed).
+ */
+function filterByEnvironment(node, targetEnv) {
+  if (node === null || node === undefined || typeof node !== 'object') {
+    return node;
+  }
+
+  if (Array.isArray(node)) {
+    return node
+      .filter(item => {
+        if (item && typeof item === 'object' && !Array.isArray(item) && item['x-environments']) {
+          return item['x-environments'].includes(targetEnv);
+        }
+        return true;
+      })
+      .map(item => filterByEnvironment(item, targetEnv));
+  }
+
+  // Check if this node should be removed
+  if (node['x-environments']) {
+    if (!node['x-environments'].includes(targetEnv)) {
+      return null;
+    }
+  }
+
+  // Recurse into object properties
+  const result = {};
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'x-environments') continue; // Strip from surviving nodes
+
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const filtered = filterByEnvironment(value, targetEnv);
+      if (filtered !== null) {
+        result[key] = filtered;
+      }
+    } else if (Array.isArray(value)) {
+      result[key] = filterByEnvironment(value, targetEnv);
+    } else {
+      result[key] = value;
+    }
+  }
+
+  return result;
+}
+
+// =============================================================================
+// Placeholder Substitution
+// =============================================================================
+
+/**
+ * Parse an env file (key=value pairs, one per line).
+ * Ignores blank lines and comments (lines starting with #).
+ * Supports quoted values (single or double quotes are stripped).
+ */
+function parseEnvFile(filePath) {
+  const vars = {};
+  const content = readFileSync(filePath, 'utf8');
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIndex = trimmed.indexOf('=');
+    if (eqIndex === -1) continue;
+    const key = trimmed.substring(0, eqIndex).trim();
+    let value = trimmed.substring(eqIndex + 1).trim();
+    // Strip surrounding quotes
+    if ((value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    vars[key] = value;
+  }
+  return vars;
+}
+
+/**
+ * Recursively substitute ${VAR} placeholders in all string values.
+ * Returns { result, warnings } where warnings lists unresolved variables.
+ */
+function substitutePlaceholders(node, vars, warnings = []) {
+  if (typeof node === 'string') {
+    const substituted = node.replace(/\$\{([^}]+)\}/g, (match, varName) => {
+      if (varName in vars) {
+        return vars[varName];
+      }
+      if (!warnings.includes(varName)) {
+        warnings.push(varName);
+      }
+      return match; // Leave unresolved placeholder as-is
+    });
+    return substituted;
+  }
+
+  if (node === null || node === undefined || typeof node !== 'object') {
+    return node;
+  }
+
+  if (Array.isArray(node)) {
+    return node.map(item => substitutePlaceholders(item, vars, warnings));
+  }
+
+  const result = {};
+  for (const [key, value] of Object.entries(node)) {
+    result[key] = substitutePlaceholders(value, vars, warnings);
+  }
+  return result;
+}
+
+// =============================================================================
+// RPC Overlay Auto-Generation
+// =============================================================================
+
+/**
+ * Detect the $ref prefix used for external component references in a spec.
+ * Walks the spec tree looking for $ref strings containing 'components/',
+ * then extracts whatever precedes 'components/' (e.g., './' or '../../contracts/').
+ * Returns './' as the default if no external component refs are found.
+ */
+function detectComponentPrefix(spec) {
+  function findRefPrefix(node) {
+    if (node === null || node === undefined || typeof node !== 'object') return null;
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        const found = findRefPrefix(item);
+        if (found !== null) return found;
+      }
+      return null;
+    }
+
+    for (const [key, value] of Object.entries(node)) {
+      if (key === '$ref' && typeof value === 'string') {
+        // Match external file refs like ./components/ or ../../contracts/components/
+        // Skip internal refs (#/components/...)
+        const match = value.match(/^(?!#)(.*?)components\//);
+        if (match) return match[1];
+      }
+      if (typeof value === 'object') {
+        const found = findRefPrefix(value);
+        if (found !== null) return found;
+      }
+    }
+    return null;
+  }
+
+  return findRefPrefix(spec) || './';
+}
+
+/**
+ * Rewrite $ref paths in an overlay, replacing one prefix with another.
+ * Used to align generated overlay refs with the target spec's conventions.
+ */
+function rewriteOverlayRefs(overlay, fromPrefix, toPrefix) {
+  if (fromPrefix === toPrefix) return overlay;
+
+  function walk(node) {
+    if (node === null || node === undefined || typeof node !== 'object') return node;
+    if (Array.isArray(node)) return node.map(walk);
+
+    const result = {};
+    for (const [key, value] of Object.entries(node)) {
+      if (key === '$ref' && typeof value === 'string' && value.startsWith(fromPrefix + 'components/')) {
+        result[key] = toPrefix + value.substring(fromPrefix.length);
+      } else {
+        result[key] = (typeof value === 'object') ? walk(value) : value;
+      }
+    }
+    return result;
+  }
+
+  return walk(overlay);
+}
+
+/**
+ * Rewrite base:// URI refs in a spec to real relative paths for the output file.
+ *
+ * base://schemas/enums.yaml#/$defs/RoleType becomes a path relative from the
+ * spec's output location to {outDir}/base/schemas/enums.yaml.
+ *
+ * @param {object} spec - The spec object to rewrite
+ * @param {string} specRelativePath - The relative output path of this spec file
+ */
+function rewriteBaseRefs(spec, specRelativePath) {
+  function walk(node) {
+    if (node === null || typeof node !== 'object') return node;
+    if (Array.isArray(node)) return node.map(walk);
+    const result = {};
+    for (const [key, value] of Object.entries(node)) {
+      if (key === '$ref' && typeof value === 'string' && value.startsWith('base://')) {
+        const rest = value.slice('base://'.length);
+        const [filePart, fragment] = rest.split('#');
+        const targetRelPath = `base/${filePart}`.replace(/\\/g, '/');
+        const specDir = dirname(specRelativePath);
+        const rel = relative(specDir || '.', targetRelPath).replace(/\\/g, '/');
+        result[key] = fragment ? `${rel}#${fragment}` : rel;
+      } else {
+        result[key] = typeof value === 'object' ? walk(value) : value;
+      }
+    }
+    return result;
+  }
+  return walk(spec);
+}
+
+/**
+ * Generate in-memory RPC overlays from state machine specs in inputFiles.
+ * Reads state machines from the post-overlay input so explicit overlay
+ * modifications are reflected in generated RPC endpoints.
+ * @param {Array<{relativePath: string, spec: Object}>} inputFiles
+ * @returns {Array<{overlay: Object, stateMachine: Object}>}
+ */
+function generateRpcOverlays(inputFiles) {
+  const machines = inputFiles
+    .filter(f => f.relativePath.endsWith('-state-machine.yaml'))
+    .map(f => f.spec)
+    .filter(sm => sm && sm.domain && (sm.object || (Array.isArray(sm.machines) && sm.machines.length > 0)));
+
+  if (machines.length === 0) return [];
+
+  const overlays = [];
+
+  for (const stateMachine of machines) {
+    const apiSpecFile = stateMachine.apiSpec;
+    if (!apiSpecFile) continue;
+
+    const targetFile = inputFiles.find(f => basename(f.relativePath) === basename(apiSpecFile));
+    if (!targetFile) continue;
+
+    // stateMachine.object is the top-level object name for single-machine specs.
+    // Multi-machine specs (like workflow) put object: inside each machines[] entry.
+    // Fall back to the first machine's object so the correct item path is found.
+    const smObjectName = stateMachine.object ?? stateMachine.machines?.[0]?.object;
+    const endpointInfo = extractItemEndpointFromSpec(targetFile.spec, smObjectName);
+    if (!endpointInfo) continue;
+
+    let overlay = generateOverlay(stateMachine, endpointInfo);
+
+    // Rewrite file: references from bare filename to actual relative path so the
+    // overlay engine can match them against inputFiles relativePaths.
+    for (const action of (overlay.actions || [])) {
+      if (typeof action.file === 'string' && basename(action.file) === basename(apiSpecFile)) {
+        action.file = targetFile.relativePath;
+      }
+    }
+
+    // Detect the component $ref prefix used by the target spec and rewrite if needed
+    const prefix = detectComponentPrefix(targetFile.spec);
+    overlay = rewriteOverlayRefs(overlay, './', prefix);
+
+    overlays.push({ overlay, stateMachine });
+  }
+
+  return overlays;
+}
+
+// =============================================================================
+// x-enum-source Injection
+// =============================================================================
+
+/**
+ * Build an index of enum values from behavioral YAML files in currentResults.
+ * Reads post-overlay versions so state customizations are included.
+ *
+ * Returns a flat index:
+ *   { 'slaTypes': ['id1', ...], 'states': ['id1', ...], 'states:Task': [...], ... }
+ *
+ * 'states' is the union of all machine states (used by the string form of x-enum-source).
+ * 'states:<MachineName>' keys are used by the object form when machine: is specified.
+ */
+function buildEnumSourceIndex(currentResults) {
+  const index = {};
+
+  for (const [relativePath, spec] of currentResults) {
+    if (!spec || typeof spec !== 'object') continue;
+
+    if (relativePath.endsWith('-sla-types.yaml') && Array.isArray(spec.slaTypes)) {
+      index['slaTypes'] = spec.slaTypes.map(t => t.id).filter(Boolean);
+    }
+
+    if (relativePath.endsWith('-state-machine.yaml')) {
+      if (Array.isArray(spec.states)) {
+        // Legacy / test format: top-level states array
+        index['states'] = spec.states.map(s => s.id).filter(Boolean);
+      } else if (Array.isArray(spec.machines)) {
+        // Standard format: machines[].states — flatten all for string form,
+        // also index per machine for the object form with machine:
+        const allStates = [];
+        for (const machine of spec.machines) {
+          if (Array.isArray(machine.states)) {
+            const ids = machine.states.map(s => s.id).filter(Boolean);
+            allStates.push(...ids);
+            if (machine.object) {
+              index[`states:${machine.object}`] = ids;
+            }
+          }
+        }
+        index['states'] = allStates;
+      }
+    }
+  }
+
+  return index;
+}
+
+/**
+ * Recursively find all x-enum-source annotations in a spec object.
+ *
+ * Supports two forms:
+ *   String: x-enum-source: "states[].id"
+ *   Object: x-enum-source: { source: "states[].id", machine: "Application" }
+ *
+ * Recurses into both objects and arrays (needed for allOf, oneOf, anyOf entries).
+ *
+ * Returns [{ path, source, machine, node }] where node is a direct reference to
+ * the annotated field object — used by applyEnumSourceInjections for direct mutation.
+ */
+function findEnumSources(node, path = '', findings = []) {
+  if (!node || typeof node !== 'object') return findings;
+
+  if (Array.isArray(node)) {
+    for (let i = 0; i < node.length; i++) {
+      findEnumSources(node[i], `${path}[${i}]`, findings);
+    }
+    return findings;
+  }
+
+  const xes = node['x-enum-source'];
+  if (xes) {
+    if (typeof xes === 'string') {
+      findings.push({ path, source: xes, machine: null, node });
+    } else if (typeof xes === 'object' && typeof xes.source === 'string') {
+      findings.push({ path, source: xes.source, machine: xes.machine || null, node });
+    }
+  }
+
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'x-enum-source') continue;
+    if (value && typeof value === 'object') {
+      const childPath = path ? `${path}.${key}` : key;
+      findEnumSources(value, childPath, findings);
+    }
+  }
+
+  return findings;
+}
+
+/**
+ * Parse x-enum-source syntax: "slaTypes[].id" → { collection: 'slaTypes', field: 'id' }
+ */
+function parseEnumSource(source) {
+  const match = source.match(/^(\w+)\[\]\.(\w+)$/);
+  if (!match) return null;
+  return { collection: match[1], field: match[2] };
+}
+
+/**
+ * Scan currentResults for x-enum-source annotations, inject enum values from
+ * behavioral YAMLs, and strip the annotation from the resolved output.
+ * Reads behavioral YAMLs from currentResults (post-overlay) so state
+ * customizations are reflected.
+ *
+ * Mutates field nodes directly (no overlay pass) so that annotations inside
+ * allOf/oneOf/anyOf arrays are reached correctly.
+ *
+ * Returns warnings for unresolvable sources.
+ */
+function applyEnumSourceInjections(currentResults) {
+  const warnings = [];
+  const enumIndex = buildEnumSourceIndex(currentResults);
+
+  if (Object.keys(enumIndex).length === 0) return warnings;
+
+  for (const [relativePath, spec] of currentResults) {
+    if (!spec || typeof spec !== 'object') continue;
+
+    const findings = findEnumSources(spec);
+    if (findings.length === 0) continue;
+
+    let injected = 0;
+
+    for (const { path, source, machine, node } of findings) {
+      const parsed = parseEnumSource(source);
+      if (!parsed) {
+        warnings.push(`x-enum-source: invalid syntax "${source}" at ${relativePath}#${path}`);
+        continue;
+      }
+
+      // When machine: is specified, look up per-machine index key (e.g. 'states:Application').
+      // Fall back to flat collection key for string form or when machine is omitted.
+      const indexKey = (parsed.collection === 'states' && machine)
+        ? `states:${machine}`
+        : parsed.collection;
+      const enumValues = enumIndex[indexKey];
+      if (!enumValues || enumValues.length === 0) {
+        const qualifier = machine ? ` (machine: ${machine})` : '';
+        warnings.push(`x-enum-source: no values found for "${parsed.collection}"${qualifier} (${relativePath}#${path})`);
+        continue;
+      }
+
+      // Directly mutate the field node — works at any nesting depth including inside allOf arrays
+      node.enum = enumValues;
+      delete node['x-enum-source'];
+      injected++;
+    }
+
+    if (injected > 0) {
+      console.log(`  \u2713 Auto-generated: enum injection (${injected} field(s) in ${relativePath})`);
+    }
+  }
+
+  return warnings;
+}
+
+// =============================================================================
+// Output
+// =============================================================================
+
+/**
+ * Write resolved specs to target directory
+ */
+function writeResolvedSpecs(results, targetDir) {
+  for (const [relativePath, spec] of results) {
+    const targetPath = join(targetDir, relativePath);
+    const targetDirPath = dirname(targetPath);
+
+    mkdirSync(targetDirPath, { recursive: true });
+
+    const output = yaml.dump(spec, {
+      lineWidth: -1,
+      noRefs: true,
+      quotingType: '"',
+      forceQuotes: false
+    });
+    writeFileSync(targetPath, output);
+  }
+}
+
+/**
+ * Copy base specs to output directory unchanged
+ */
+function copyBaseSpecs(baseDir, outDir) {
+  const skip = new Set(['package.json', 'node_modules', 'overlays']);
+  const files = readdirSync(baseDir, { withFileTypes: true });
+  for (const file of files) {
+    if (skip.has(file.name)) continue;
+
+    const source = join(baseDir, file.name);
+    const target = join(outDir, file.name);
+
+    // Skip the output directory itself (when outDir is inside baseDir)
+    if (resolve(source) === resolve(outDir)) continue;
+
+    if (file.isDirectory()) {
+      cpSync(source, target, { recursive: true });
+    } else {
+      cpSync(source, target);
+    }
+  }
+}
+
+// =============================================================================
+// Main
+// =============================================================================
+
+async function main() {
+  const options = parseArgs();
+
+  if (options.help) {
+    showHelp();
+    process.exit(0);
+  }
+
+  if (!options.spec) { console.error('Error: --spec is required'); process.exit(1); }
+  if (!options.out) { console.error('Error: --out is required'); process.exit(1); }
+
+  const specPath = resolve(options.spec);
+  const outDir = resolve(options.out);
+
+  if (!existsSync(specPath)) {
+    console.error(`Error: Spec path does not exist: ${specPath}`);
+    process.exit(1);
+  }
+
+  const specIsFile = statSync(specPath).isFile();
+
+  // Clean and recreate output directory (skip when resolving in place)
+  if (resolve(specPath) !== resolve(outDir)) {
+    if (existsSync(outDir)) {
+      rmSync(outDir, { recursive: true });
+    }
+  }
+  mkdirSync(outDir, { recursive: true });
+
+  // Quick check (no YAML parsing) whether generators will produce anything
+  const hasStateMachines = !specIsFile && readdirSync(specPath, { recursive: true }).filter(f => typeof f === 'string').some(f => f.endsWith('-state-machine.yaml'));
+  const hasCompositions = !specIsFile && readdirSync(specPath, { recursive: true }).filter(f => typeof f === 'string').some(f => f.endsWith('-compositions.yaml'));
+
+  if (!options.overlay && !options.env && !options.envFile && !options.bundle && !options.reconcileExamples && !options.resolve && !hasStateMachines && !hasCompositions) {
+    // No processing needed - copy base specs as-is
+    console.log('No flags specified, copying base specs unchanged');
+    if (specIsFile) {
+      cpSync(specPath, join(outDir, basename(specPath)));
+    } else {
+      copyBaseSpecs(specPath, outDir);
+    }
+    console.log(`Base specs copied to ${outDir}`);
+    return;
+  }
+
+  console.log(`Spec:   ${specPath}`);
+  console.log(`Output: ${outDir}`);
+
+  // Collect base YAML files
+  let yamlFiles;
+  if (specIsFile) {
+    const content = readFileSync(specPath, 'utf8');
+    const spec = yaml.load(content);
+    yamlFiles = [{ relativePath: basename(specPath), sourcePath: specPath, spec }];
+  } else {
+    yamlFiles = collectYamlFiles(specPath);
+  }
+
+  let allWarnings = [];
+  let currentResults = null;
+  let overlayConfig = null;
+
+  // Apply overlays if specified
+  if (options.overlay) {
+    const overlayInput = resolve(options.overlay);
+
+    if (!existsSync(overlayInput)) {
+      console.error(`Error: Overlay path does not exist: ${overlayInput}`);
+      process.exit(1);
+    }
+
+    const overlayIsFile = statSync(overlayInput).isFile();
+    const overlayFiles = overlayIsFile ? [overlayInput] : discoverOverlayFiles(overlayInput);
+    const overlayDir = overlayIsFile ? dirname(overlayInput) : overlayInput;
+
+    // Extract and validate config from overlay files
+    const { config, errors: configErrors } = extractConfig(overlayFiles);
+    overlayConfig = config;
+    allWarnings = allWarnings.concat(configErrors);
+
+    if (config) {
+      const { errors: validationErrors, warnings: configWarnings } = validateConfig(config);
+      allWarnings = allWarnings.concat(validationErrors);
+      allWarnings = allWarnings.concat(configWarnings);
+
+      const summary = Object.entries(config)
+        .map(([k, v]) => {
+          if (typeof v === 'object') {
+            return Object.entries(v).map(([prop, val]) => `${k}.${prop}=${val}`).join(', ');
+          }
+          return `${k}=${v}`;
+        })
+        .join(', ');
+      console.log(`Config: ${summary}`);
+
+      // Load base contract files if x-base is declared
+      if (config?.['x-base']) {
+        const basePath = resolve(overlayDir, config['x-base']);
+        if (!existsSync(basePath)) {
+          console.error(`Error: x-base path does not exist: ${basePath}`);
+          process.exit(1);
+        }
+        const baseFiles = collectYamlFiles(basePath);
+        for (const { relativePath, sourcePath, spec } of baseFiles) {
+          const baseRelPath = `base/${relativePath}`.replace(/\\/g, '/');
+          yamlFiles.push({ relativePath: baseRelPath, sourcePath, spec });
+        }
+        console.log(`Base contracts: ${basePath} (${baseFiles.length} file(s))`);
+      }
+    }
+
+    if (overlayFiles.length === 0) {
+      console.log('No overlay files found');
+    } else {
+      console.log(`Overlay: ${overlayInput}`);
+      console.log('');
+
+      for (const overlayPath of overlayFiles) {
+        const overlayContent = readFileSync(overlayPath, 'utf8');
+        const overlay = yaml.load(overlayContent);
+
+        console.log(`Overlay: ${overlay.info?.title || relative(overlayDir, overlayPath)}`);
+        if (overlay.info?.version) {
+          console.log(`Version: ${overlay.info.version}`);
+        }
+        console.log('');
+
+        const inputFiles = currentResults
+          ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
+          : yamlFiles;
+
+        const actionFileMap = analyzeTargetLocations(overlay, inputFiles);
+        const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
+        allWarnings = allWarnings.concat(warnings);
+
+        const { results: overlayResults, warnings: overlayWarnings } = applyOverlayWithTargets(inputFiles, overlay, actionTargets, overlayDir);
+        allWarnings = allWarnings.concat(overlayWarnings);
+        currentResults = overlayResults;
+      }
+    }
+  }
+
+  // Generate RPC and composition endpoints after explicit overlays.
+  // Both generators read from post-overlay specs so state customizations to
+  // *-state-machine.yaml and *-compositions.yaml files are reflected in the output.
+  if (!specIsFile && (hasStateMachines || hasCompositions)) {
+    const inputFiles = currentResults
+      ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
+      : yamlFiles;
+
+    // RPC overlays: derived from state machine specs in inputFiles
+    const rpcOverlays = generateRpcOverlays(inputFiles);
+    for (const { overlay, stateMachine } of rpcOverlays) {
+      // Rebuild from currentResults each iteration so earlier RPC patches aren't lost
+      const currentInputFiles = currentResults
+        ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
+        : inputFiles;
+      const actionFileMap = analyzeTargetLocations(overlay, currentInputFiles);
+      const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
+      allWarnings = allWarnings.concat(warnings);
+
+      const { results: rpcResults, warnings: rpcWarnings } = applyOverlayWithTargets(currentInputFiles, overlay, actionTargets, specPath);
+      allWarnings = allWarnings.concat(rpcWarnings);
+      currentResults = rpcResults;
+
+      const actionCount = (stateMachine.machines || []).flatMap(m => m.actions || []).length;
+      console.log(`  \u2713 Generated: ${stateMachine.domain} RPC endpoints (${actionCount} actions)`);
+    }
+
+    // Composition overlays: derived from *-compositions.yaml specs in inputFiles
+    const compositionFiles = inputFiles
+      .filter(f => f.relativePath.endsWith('-compositions.yaml') && f.spec?.compositions)
+      .map(f => ({
+        filePath: join(specPath, f.relativePath),
+        domain: f.relativePath.replace('-compositions.yaml', ''),
+        doc: f.spec
+      }));
+
+    if (compositionFiles.length > 0) {
+      const compositionOverlays = generateCompositionOverlays(compositionFiles, inputFiles);
+
+      for (const { overlay: rawOverlay, domain } of compositionOverlays) {
+        const apiSpecFile = `${domain}-openapi.yaml`;
+        const targetFile = inputFiles.find(f => basename(f.relativePath) === basename(apiSpecFile));
+        let overlay = rawOverlay;
+        if (targetFile) {
+          const prefix = detectComponentPrefix(targetFile.spec);
+          overlay = rewriteOverlayRefs(overlay, './', prefix);
+        }
+
+        const currentInputFiles = currentResults
+          ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
+          : yamlFiles;
+
+        const actionFileMap = analyzeTargetLocations(overlay, currentInputFiles);
+        const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
+        allWarnings = allWarnings.concat(warnings);
+
+        const { results: compResults, warnings: compWarnings } = applyOverlayWithTargets(currentInputFiles, overlay, actionTargets, specPath);
+        allWarnings = allWarnings.concat(compWarnings);
+        currentResults = compResults;
+
+        const compositionCount = Object.keys(rawOverlay.actions.find(a => a.target === '$.paths')?.update || {}).length;
+        console.log(`  \u2713 Generated: ${domain} composition endpoints (${compositionCount} endpoint(s))`);
+      }
+    }
+  }
+
+  // Build final results map (from overlays or original files)
+  if (!currentResults) {
+    currentResults = new Map();
+    for (const { relativePath, spec } of yamlFiles) {
+      currentResults.set(relativePath, JSON.parse(JSON.stringify(spec)));
+    }
+  }
+
+  // Inject x-enum-source enums (after overlays so state customizations are included)
+  {
+    const enumWarnings = applyEnumSourceInjections(currentResults);
+    allWarnings = allWarnings.concat(enumWarnings);
+  }
+
+  // Inject x-event-type-prefix into event type strings in state machine and AsyncAPI files
+  if (overlayConfig?.['x-event-type-prefix']) {
+    const prefix = overlayConfig['x-event-type-prefix'];
+    for (const [relativePath, spec] of currentResults) {
+      if (relativePath.endsWith('-state-machine.yaml')) {
+        currentResults.set(relativePath, injectPrefixInStateMachine(spec, prefix));
+        console.log(`Event prefix: ${relativePath} (prefix: ${prefix})`);
+      } else if (relativePath.match(/.*-asyncapi\.yaml$/)) {
+        currentResults.set(relativePath, injectPrefixInAsyncApi(spec, prefix));
+        console.log(`Event prefix: ${relativePath} (prefix: ${prefix})`);
+      }
+    }
+  }
+
+  // Resolve x-relationship annotations (after overlays, before env filtering)
+  {
+    const schemaIndex = buildSchemaIndex(currentResults);
+    const relationshipStyle = overlayConfig?.['x-relationship']?.style ?? null;
+    const allExpandRenames = [];
+    const allLinksData = [];
+
+    for (const [relativePath, spec] of currentResults) {
+      const found = discoverRelationships(spec, currentResults);
+      if (found.length === 0) continue;
+
+      const { result, warnings, expandRenames, linksData, decisions } = resolveRelationships(spec, relationshipStyle, schemaIndex, currentResults);
+      currentResults.set(relativePath, result);
+      allWarnings = allWarnings.concat(warnings);
+      if (expandRenames.length > 0) allExpandRenames.push(...expandRenames);
+      if (linksData.length > 0) allLinksData.push(...linksData);
+
+      console.log(`Relationships: ${relativePath} (${found.length} fields, style: ${relationshipStyle})`);
+
+      if (options.verbose && decisions) {
+        const summary = summarizeResolverDecisions(decisions);
+        for (const [schemaName, counts] of Object.entries(summary)) {
+          console.log(
+            `  ${schemaName}: ${counts.expandedForward} forward / ${counts.expandedExplicitBackRef} explicit upward / ${counts.backRefsDowngraded} back-ref kept scalar / ${counts.linksOnly} links-only`
+          );
+        }
+      }
+    }
+
+    // Transform example data to match resolved relationship fields
+    if (allExpandRenames.length > 0 || allLinksData.length > 0) {
+      const examplesEntries = [...currentResults.entries()]
+        .filter(([path]) => path.endsWith('-openapi-examples.yaml'));
+
+      const examplesIndex = buildExamplesIndex(examplesEntries.map(([, data]) => data));
+
+      for (const [relativePath, data] of examplesEntries) {
+        const { result, warnings } = resolveExampleRelationships(data, allExpandRenames, examplesIndex, allLinksData);
+        currentResults.set(relativePath, result);
+        allWarnings = allWarnings.concat(warnings);
+      }
+    }
+  }
+
+  // Filter by environment if --env specified
+  if (options.env) {
+    console.log(`Environment: ${options.env}`);
+    for (const [relativePath, spec] of currentResults) {
+      currentResults.set(relativePath, filterByEnvironment(spec, options.env));
+    }
+  }
+
+  // Substitute placeholders if --env-file specified or process.env has values
+  if (options.envFile) {
+    const envFilePath = resolve(options.envFile);
+    if (!existsSync(envFilePath)) {
+      console.error(`Error: Env file does not exist: ${envFilePath}`);
+      process.exit(1);
+    }
+
+    const fileVars = parseEnvFile(envFilePath);
+    // process.env overrides file values
+    const vars = { ...fileVars, ...process.env };
+
+    console.log(`Env file:   ${envFilePath}`);
+
+    const placeholderWarnings = [];
+    for (const [relativePath, spec] of currentResults) {
+      currentResults.set(relativePath, substitutePlaceholders(spec, vars, placeholderWarnings));
+    }
+
+    if (placeholderWarnings.length > 0) {
+      for (const varName of placeholderWarnings) {
+        allWarnings.push(`Unresolved placeholder: \${${varName}}`);
+      }
+    }
+  }
+
+  // Remove overlay files from output (they've been applied)
+  for (const [relativePath] of currentResults) {
+    if (relativePath.startsWith('overlays/') || relativePath.startsWith('overlays\\')) {
+      currentResults.delete(relativePath);
+    }
+  }
+
+  // Rewrite base:// URIs to real relative paths before writing
+  if (overlayConfig?.['x-base']) {
+    for (const [relativePath, spec] of currentResults) {
+      currentResults.set(relativePath, rewriteBaseRefs(spec, relativePath));
+    }
+  }
+
+  // Write resolved specs
+  writeResolvedSpecs(currentResults, outDir);
+
+  // Bundle: dereference all external $refs to produce self-contained specs
+  // Done after overlays so that $ref targets reflect overlay changes
+  if (options.bundle) {
+    console.log('\nBundling: inlining external $refs...');
+    for (const [relativePath] of currentResults) {
+      if (!relativePath.endsWith('-openapi.yaml')) continue;
+      const filePath = join(outDir, relativePath);
+      const dereferenced = await bundleSpec(filePath);
+      const output = yaml.dump(dereferenced, {
+        lineWidth: -1,
+        noRefs: true,
+        quotingType: '"',
+        forceQuotes: false
+      });
+      writeFileSync(filePath, output);
+      console.log(`  ✓ ${relativePath}`);
+    }
+
+    // Remove shared component files (they've been inlined).
+    // Preserve companion YAML files the mock server needs at runtime —
+    // *-compositions.yaml and *-state-machine.yaml are not $ref targets;
+    // they are standalone files that drive route registration.
+    for (const [relativePath] of currentResults) {
+      if (!relativePath.endsWith('-openapi.yaml') &&
+          !relativePath.endsWith('-compositions.yaml') &&
+          !relativePath.endsWith('-state-machine.yaml')) {
+        const filePath = join(outDir, relativePath);
+        if (existsSync(filePath)) {
+          rmSync(filePath, { recursive: true });
+        }
+      }
+    }
+    // Remove empty component directories
+    const outEntries = readdirSync(outDir, { withFileTypes: true });
+    for (const entry of outEntries) {
+      if (entry.isDirectory()) {
+        const dirPath = join(outDir, entry.name);
+        const contents = readdirSync(dirPath);
+        if (contents.length === 0) {
+          rmSync(dirPath, { recursive: true });
+        }
+      }
+    }
+  }
+
+  // Display warnings if any
+  if (allWarnings.length > 0) {
+    console.log('');
+    console.log('Warnings:');
+    for (const warning of allWarnings) {
+      console.log(`  ! ${warning}`);
+    }
+  }
+
+  console.log('');
+  console.log(`Resolved specs written to ${outDir}`);
+}
+
+// Export for testing
+export {
+  discoverOverlayFiles,
+  analyzeTargetLocations,
+  resolveActionTargets,
+  getVersionFromFilename,
+  filterByEnvironment,
+  parseEnvFile,
+  substitutePlaceholders,
+  applyOverlayWithTargets,
+  detectComponentPrefix,
+  rewriteOverlayRefs,
+  generateRpcOverlays,
+  buildEnumSourceIndex,
+  findEnumSources,
+  parseEnumSource,
+  applyEnumSourceInjections,
+  injectPrefixInStateMachine,
+  injectPrefixInAsyncApi
+};
+
+// Run main when executed directly
+const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(resolve(process.argv[1]));
+if (isDirectRun) {
+  main();
+}

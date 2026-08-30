@@ -1,0 +1,11 @@
+policies:
+  widget-processing-clock:
+    citation: "Example citation 1.0"
+    citationUrl: "https://example.gov/rules/1.0"
+    description: >
+      Example processing clock policy used in tests.
+      Widgets must be processed within a defined timeframe.
+  widget-eligibility-rule:
+    citation: "Example regulation 2.0"
+    description: >
+      Example eligibility rule used in tests.
