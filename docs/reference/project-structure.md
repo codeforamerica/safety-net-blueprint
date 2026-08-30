@@ -26,7 +26,7 @@ safety-net-blueprint/
 │   │   │   ├── responses.yaml      # Error responses
 │   │   │   └── {resource}.yaml     # Resource-specific shared schemas
 │   │   ├── patterns/               # API design patterns
-│   │   │   └── api-patterns.yaml
+│   │   │   └── conventions/
 │   │   ├── overlays/               # State-specific variations
 │   │   │   └── <state>/
 │   │   │       └── modifications.yaml
@@ -131,7 +131,7 @@ npm install -w @codeforamerica/safety-net-blueprint-contracts -w @codeforamerica
 |------|---------|
 | `package.json` | Root workspace config and command aliases |
 | `packages/*/package.json` | Package-specific dependencies and scripts |
-| `packages/contracts/patterns/api-patterns.yaml` | API design pattern rules |
+| `docs/conventions/` | API design pattern rules |
 
 ### Source of Truth
 

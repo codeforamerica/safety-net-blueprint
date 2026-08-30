@@ -1,0 +1,474 @@
+$schema: "../../../blueprint-core/schemas/annotations-schema.yaml"
+version: "1.0"
+domain: intake
+
+# ---------------------------------------------------------------------------
+# Schema annotations
+# Field paths use JSON path dot notation: object.field or object.collection[].field
+# Annotate at any granularity — application, application.incomes[], application.incomes[].type, etc.
+# ---------------------------------------------------------------------------
+
+schema:
+
+  # ── Application ────────────────────────────────────────────────────────────
+
+  application.programsAppliedFor[]:
+    programs: [snap, medicaid, tanf, chip]
+
+  application.channel:
+    programs: [snap, medicaid, tanf]
+
+  application.submittedAt:
+    policies: [snap-processing-clock, medicaid-processing-clock]
+    programs: [snap, medicaid]
+
+  application.isExpedited:
+    policies: [snap-expedited-processing, snap-expedited-screening]
+    programs: [snap]
+
+  application.registerToVote:
+    policies: [nvra-voter-registration-offer]
+    programs: [snap, medicaid, tanf, chip]
+
+  application.deniesIevsConsent:
+    policies: [snap-ssa-identity-check, snap-income-verification]
+    programs: [snap]
+
+  # ── Household info ──────────────────────────────────────────────────────────
+
+  application.householdInfo.roomers[]:
+    policies: [snap-roomers-boarders]
+    programs: [snap]
+
+  application.householdInfo.utilitiesIncludedInRent:
+    policies: [snap-utility-allowance-standards]
+    programs: [snap]
+
+  application.householdInfo.isSubsidizedHousing:
+    policies: [snap-utility-allowance-standards]
+    programs: [snap]
+
+  application.householdInfo.receivedTanfInAnotherState:
+    policies: [tanf-time-limits, tanf-work-activities]
+    programs: [tanf]
+
+  # ── Expedited SNAP ──────────────────────────────────────────────────────────
+
+  application.expeditedSnap:
+    policies: [snap-expedited-screening, snap-expedited-processing]
+    programs: [snap]
+
+  # ── Utilities ───────────────────────────────────────────────────────────────
+
+  application.utilities:
+    policies: [snap-utility-allowance-standards]
+    programs: [snap]
+
+  # ── Tax filers ──────────────────────────────────────────────────────────────
+
+  application.taxFilers[]:
+    policies: [medicaid-magi-methodology]
+    programs: [medicaid, chip]
+
+  application.taxFilers[].hasDomesticViolenceTaxFilingException:
+    policies: [irs-domestic-violence-filing-exception, medicaid-magi-methodology]
+    programs: [medicaid, chip]
+
+  # ── Health plans ────────────────────────────────────────────────────────────
+
+  application.healthPlans[]:
+    policies: [aca-minimum-essential-coverage, medicaid-medicare-savings-program]
+    programs: [medicaid, chip, aca]
+
+  application.healthPlans[].premiumAmount:
+    policies: [aca-employer-coverage-affordability]
+    programs: [aca]
+
+  application.healthPlans[].hasMinimumValuePlan:
+    policies: [aca-employer-coverage-affordability]
+    programs: [aca]
+
+  application.healthPlans[].lowestCostPlanPremium:
+    policies: [aca-employer-coverage-affordability, aca-premium-tax-credit]
+    programs: [aca]
+
+  application.healthPlans[].partA:
+    policies: [medicaid-medicare-savings-program, medicare-part-a-entitlement]
+    programs: [medicaid]
+
+  application.healthPlans[].partD.premiumAmount:
+    policies: [medicare-part-d-low-income-subsidy]
+    programs: [medicaid]
+
+  # ── Health enrollments ──────────────────────────────────────────────────────
+
+  application.healthEnrollments[].endDate:
+    policies: [aca-special-enrollment-periods]
+    programs: [aca]
+
+  application.healthEnrollments[].enrollmentStatus:
+    policies: [aca-special-enrollment-periods, medicaid-medicare-savings-program]
+    programs: [medicaid, aca]
+
+  application.healthEnrollments[].prefersSeparateMailing:
+    policies: [hipaa-confidential-communications, aca-section-1557-nondiscrimination]
+    programs: [medicaid, chip, aca]
+
+  # ── Child support ───────────────────────────────────────────────────────────
+
+  application.childSupport.goodCauseChildSupportWaiver:
+    policies: [snap-child-support-cooperation, tanf-child-support-cooperation, medicaid-medical-support-cooperation]
+    programs: [snap, medicaid, tanf]
+
+  application.childSupport.parentsOutsideHome[]:
+    policies: [tanf-child-support-cooperation, snap-child-support-cooperation]
+    programs: [snap, tanf]
+
+  application.childSupport.parentsOutsideHome[].attemptedMedicalSupportCooperation:
+    policies: [medicaid-medical-support-cooperation]
+    programs: [medicaid]
+
+  # ── Person relationships ────────────────────────────────────────────────────
+
+  application.personRelationships[]:
+    policies: [medicaid-caretaker-relative, snap-deeming-rules]
+    programs: [snap, medicaid]
+
+  # ── Authorized representatives ──────────────────────────────────────────────
+
+  application.authorizedRepresentatives[]:
+    policies: [snap-authorized-representative, medicaid-authorized-representative]
+    programs: [snap, medicaid]
+
+  # ── Signatures ──────────────────────────────────────────────────────────────
+
+  application.signatures[]:
+    policies: [medicaid-application-signature, esign-act]
+    programs: [snap, medicaid]
+
+  # ── Sponsors ────────────────────────────────────────────────────────────────
+
+  application.sponsors[]:
+    policies: [prwora-sponsor-deeming, prwora-affidavit-of-support]
+    programs: [snap, medicaid, tanf]
+
+  application.sponsors[].ssn:
+    dataClassification: [pii]
+    policies: [snap-ssa-identity-check]
+    programs: [snap, medicaid, tanf]
+
+  # ── Jobs ────────────────────────────────────────────────────────────────────
+
+  application.jobs[].status:
+    policies: [snap-strike-disqualification]
+    programs: [snap]
+
+  application.jobs[].hoursPerWeek:
+    policies: [tanf-work-participation, snap-abawd-work-requirement]
+    programs: [snap, tanf]
+
+  application.jobs[].endReason:
+    policies: [tanf-voluntary-quit, snap-strike-disqualification]
+    programs: [snap, tanf]
+
+  application.jobs[].expenses:
+    policies: [snap-self-employment-expenses]
+    programs: [snap]
+
+  # ── Income ──────────────────────────────────────────────────────────────────
+  # Income data is Federal Tax Information (FTI) under IRC § 6103 when sourced
+  # from IRS data matches (IEVS). It is also PII.
+
+  application.incomes[]:
+    dataClassification: [pii, fti]
+    policies: [snap-income-verification]
+    programs: [snap, medicaid]
+
+  application.incomes[].unearnedType:
+    policies: [snap-unearned-income]
+    programs: [snap]
+
+  application.incomes[].inKindSupportType:
+    policies: [ssi-in-kind-support]
+    programs: [medicaid]
+
+  application.incomes[].lumpSumType:
+    policies: [snap-lump-sum-income, medicaid-magi-methodology]
+    programs: [snap, medicaid]
+
+  application.incomes[].changeExplanation:
+    policies: [medicaid-magi-income-projection]
+    programs: [medicaid, chip]
+
+  # ── Asset ───────────────────────────────────────────────────────────────────
+
+  application.assets[]:
+    dataClassification: [pii]
+    policies: [snap-resource-limit, medicaid-asset-rules]
+    programs: [snap, medicaid]
+
+  application.assetDisposals[]:
+    policies: [snap-asset-disposal-lookback]
+    programs: [snap]
+
+  # ── Expenses ─────────────────────────────────────────────────────────────────
+
+  application.expenses[]:
+    policies: [snap-alimony-deduction, snap-elderly-disabled-deductions]
+    programs: [snap, medicaid]
+
+  # ── Disability benefits ──────────────────────────────────────────────────────
+
+  application.disabilityBenefits[]:
+    policies: [medicaid-ssi-categorical-eligibility, medicare-part-a-entitlement]
+    programs: [medicaid]
+
+  # ── Deductions ───────────────────────────────────────────────────────────────
+
+  application.deductions[]:
+    policies: [medicaid-magi-deductions, magi-above-line-deductions]
+    programs: [medicaid, chip]
+
+  # ── Job ─────────────────────────────────────────────────────────────────────
+
+  application.jobs[]:
+    dataClassification: [pii, fti]
+    policies: [snap-income-verification]
+    programs: [snap, medicaid]
+
+  # ── Verification ────────────────────────────────────────────────────────────
+
+  verification.category:
+    policies: [snap-verification-requirements, medicaid-electronic-verification-first]
+    programs: [snap, medicaid]
+
+  application.verifications[]:
+    policies: [medicaid-electronic-verification-first, snap-verification-requirements]
+    programs: [snap, medicaid]
+
+  # ── Interview ────────────────────────────────────────────────────────────────
+
+  application.interview:
+    policies: [snap-interview-requirement]
+    programs: [snap]
+
+  application.interview.completedAt:
+    policies: [snap-interview-requirement]
+    programs: [snap]
+
+  # ── ApplicationMember ───────────────────────────────────────────────────────
+
+  application.members[].purchasesAndPreparesFood:
+    policies: [snap-household-composition]
+    programs: [snap]
+
+  application.members[].isMigrantFarmWorker:
+    policies: [snap-expedited-screening]
+    programs: [snap]
+
+  application.members[].hasThirdPartyLiabilityClaim:
+    policies: [medicaid-third-party-liability]
+    programs: [medicaid]
+
+  application.members[].programsAppliedFor[]:
+    programs: [snap, medicaid, tanf]
+
+  application.members[].roles[]:
+    policies: [snap-authorized-representative, medicaid-authorized-representative]
+    programs: [snap, medicaid]
+
+  application.members[].personalInformation.ssn:
+    dataClassification: [pii]
+    policies: [snap-ssn-requirement, snap-ssa-identity-check]
+    programs: [snap, medicaid]
+
+  application.members[].personalInformation.dateOfBirth:
+    dataClassification: [pii]
+    policies: [chip-age-eligibility, medicaid-foster-care-extended-eligibility, snap-elderly-disabled-deductions]
+    programs: [snap, medicaid, chip]
+
+  application.members[].personalInformation.sexAssignedAtBirth:
+    policies: [aca-section-1557-nondiscrimination]
+    programs: [medicaid, chip]
+
+  application.members[].personalInformation.genderIdentity:
+    policies: [aca-section-1557-nondiscrimination]
+    programs: [medicaid, chip]
+
+  application.members[].personalInformation.maritalStatus:
+    policies: [snap-deeming-rules, medicaid-magi-methodology]
+    programs: [snap, medicaid]
+
+  application.members[].personalInformation.races[]:
+    policies: [omb-race-ethnicity-standards, title-vi-civil-rights]
+    programs: [snap, medicaid, tanf, chip]
+
+  application.members[].personalInformation.isHispanicOrLatino:
+    policies: [omb-race-ethnicity-standards, title-vi-civil-rights]
+    programs: [snap, medicaid, tanf, chip]
+
+  application.members[].personalInformation.preferredSpokenLanguage:
+    policies: [medicaid-language-access, eo-13166-language-access, title-vi-civil-rights]
+    programs: [snap, medicaid]
+
+  application.members[].personalInformation.preferredWrittenLanguage:
+    policies: [medicaid-language-access, eo-13166-language-access, title-vi-civil-rights]
+    programs: [snap, medicaid]
+
+  application.members[].contact.noticePreference:
+    policies: [medicaid-electronic-notices]
+    programs: [medicaid]
+
+  application.members[].contact.alternateNoticeAddress:
+    policies: [hipaa-confidential-communications, aca-section-1557-nondiscrimination]
+    programs: [medicaid, chip]
+
+  application.members[].contact.isExperiencingHomelessness:
+    policies: [snap-residency-requirement]
+    programs: [snap]
+
+  application.members[].residency.isStateResident:
+    policies: [snap-residency-requirement, medicaid-residency-requirement, tanf-residency-requirement]
+    programs: [snap, medicaid, tanf]
+
+  application.members[].citizenship.citizenshipStatus:
+    dataClassification: [pii]
+    policies: [snap-citizenship-eligibility, qualified-alien-eligibility, prwora-1996-grandfather-exemption, prwora-military-alien-exemption]
+    programs: [snap, medicaid]
+
+  application.members[].citizenship.immigrantStatus:
+    dataClassification: [pii]
+    policies: [qualified-alien-eligibility, medicaid-immigration-electronic-check, snap-citizenship-eligibility, prwora-sponsor-deeming]
+    programs: [snap, medicaid]
+
+  application.members[].citizenship:
+    dataClassification: [pii]
+    policies: [medicaid-immigration-electronic-check]
+    programs: [medicaid]
+
+  application.members[].citizenship.residedInUsSince1996:
+    policies: [prwora-1996-grandfather-exemption]
+    programs: [snap, medicaid, tanf]
+
+  application.members[].citizenship.hasQualifyingMilitaryConnection:
+    policies: [prwora-military-alien-exemption]
+    programs: [snap, medicaid, tanf]
+
+  application.members[].citizenship.sponsored:
+    policies: [prwora-sponsor-deeming, prwora-affidavit-of-support]
+    programs: [snap, medicaid, tanf]
+
+  application.members[].retroactiveMedicalCoverage:
+    policies: [medicaid-retroactive-coverage]
+    programs: [medicaid]
+
+  application.members[].disability:
+    policies: [snap-elderly-disabled-deductions, medicaid-disability-determination]
+    programs: [snap, medicaid]
+
+  application.members[].studentStatus:
+    policies: [snap-student-eligibility-restriction]
+    programs: [snap]
+
+  application.members[].pregnancy:
+    policies: [medicaid-pregnancy-eligibility, chip-unborn-child-coverage, snap-pregnancy-household-rules]
+    programs: [snap, medicaid, chip]
+
+  application.members[].fosterCare:
+    policies: [medicaid-foster-care-extended-eligibility]
+    programs: [medicaid]
+
+  application.members[].military.isActiveDuty:
+    policies: [snap-military-household-rules]
+    programs: [snap]
+
+  application.members[].military.dischargeStatus:
+    policies: [snap-ipv-disqualifications]
+    programs: [snap]
+
+  application.members[].institutionalStatus:
+    policies: [snap-institutionalized-household, medicaid-imd-exclusion, medicaid-incarceration-exclusion]
+    programs: [snap, medicaid]
+
+  application.members[].priorConvictions:
+    policies: [snap-fleeing-felon-disqualification, snap-ipv-disqualifications, snap-drug-felony-disqualification, tanf-felony-disqualifications]
+    programs: [snap, tanf]
+
+  application.members[].tribalStatus:
+    policies: [chip-ai-an-eligibility, indian-health-care-improvement-act]
+    programs: [medicaid, chip]
+
+# ---------------------------------------------------------------------------
+# Operations annotations
+# Keys are qualified by state machine object name: {object}.{actionId}
+# (e.g., application.submit, verification.satisfy).
+# ---------------------------------------------------------------------------
+
+operations:
+
+  application.submit:
+    policies: [snap-application-acceptance, snap-application-date-stamp, snap-processing-clock, snap-expedited-processing, medicaid-processing-clock, snap-right-to-apply, snap-household-composition]
+    programs: [snap, medicaid]
+
+  application.approve-determination:
+    policies: [snap-supervisor-review, snap-notice-of-eligibility, medicaid-notice-of-eligibility, snap-fair-hearing-rights, medicaid-determination-documentation]
+    programs: [snap, medicaid]
+
+  application.reject-determination:
+    policies: [snap-supervisor-review, medicaid-determination-documentation]
+    programs: [snap, medicaid]
+
+  application.close:
+    policies: [snap-notice-of-eligibility, medicaid-notice-of-eligibility, snap-fair-hearing-rights, medicaid-determination-documentation]
+    programs: [snap, medicaid]
+
+  application.withdraw:
+    policies: [snap-notice-of-action]
+    programs: [snap]
+
+  verification.satisfy:
+    policies: [snap-verification-requirements, medicaid-ex-parte-determination]
+    programs: [snap, medicaid]
+
+  verification.mark-inconclusive:
+    policies: [medicaid-ex-parte-determination, medicaid-electronic-verification-first]
+    programs: [medicaid]
+
+# ---------------------------------------------------------------------------
+# Events annotations
+# Keys are AsyncAPI event channel addresses.
+# ---------------------------------------------------------------------------
+
+events:
+
+  intake.application.submitted:
+    policies: [snap-application-acceptance, snap-application-date-stamp, snap-processing-clock, medicaid-processing-clock, snap-household-composition]
+    programs: [snap, medicaid]
+
+  intake.application.closed:
+    policies: [snap-notice-of-eligibility, medicaid-notice-of-eligibility, snap-fair-hearing-rights, snap-notice-of-action]
+    programs: [snap, medicaid]
+
+  intake.application.withdrawn:
+    policies: [snap-notice-of-action]
+    programs: [snap]
+
+  intake.determination.approval_needed:
+    policies: [snap-supervisor-review]
+    programs: [snap]
+
+  intake.determination.rejected:
+    policies: [snap-supervisor-review]
+    programs: [snap]
+
+  intake.verification.created:
+    policies: [snap-verification-requirements, medicaid-electronic-verification-first, snap-ssa-identity-check, snap-income-verification, medicaid-citizenship-electronic-check, medicaid-immigration-electronic-check, medicaid-data-sharing]
+    programs: [snap, medicaid]
+
+  intake.verification.inconclusive:
+    policies: [medicaid-ex-parte-determination, medicaid-electronic-verification-first]
+    programs: [medicaid]
+
+  intake.verification.satisfied:
+    policies: [snap-verification-requirements, snap-ssa-identity-check]
+    programs: [snap, medicaid]

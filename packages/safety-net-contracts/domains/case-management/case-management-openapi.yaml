@@ -1,0 +1,252 @@
+openapi: 3.1.0
+info:
+  title: Case Management Service API
+  version: 0.1.0
+  x-domain: case-management
+  x-status: alpha
+  x-visibility: internal
+  description: |
+    REST API for managing cases. A case is the long-lived relationship with a client or
+    household that spans years, multiple applications, and multiple programs.
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+- url: https://api.example.com/case-management
+  description: Production server
+- url: http://localhost:1080/case-management
+  description: Local development server
+tags:
+- name: Cases
+  description: Manage cases.
+paths:
+  "/cases":
+    get:
+      summary: List cases
+      description: Retrieve a paginated list of cases.
+      operationId: listCases
+      tags:
+      - Cases
+      x-sortable:
+        # Benefit-period dates leak case transitions but recertification views need them;
+        # threat model assumes listCases scope implies record-read (A01:2025).
+        fields: [createdAt, updatedAt, effectiveStartDate, effectiveEndDate, status]
+        default: -updatedAt
+        tieBreaker: id
+      parameters:
+      - "$ref": "base://components/parameters.yaml#/SearchQueryParam"
+      - "$ref": "base://components/parameters.yaml#/LimitParam"
+      - "$ref": "base://components/parameters.yaml#/OffsetParam"
+      - "$ref": "base://components/parameters.yaml#/SortParam"
+      responses:
+        '200':
+          description: A paginated collection of cases.
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CaseList"
+        '400':
+          "$ref": "base://components/responses.yaml#/BadRequest"
+        '500':
+          "$ref": "base://components/responses.yaml#/InternalError"
+    post:
+      summary: Create a case
+      description: Create a new case record.
+      operationId: createCase
+      tags:
+      - Cases
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/CaseCreate"
+      responses:
+        '201':
+          description: Case created successfully.
+          headers:
+            Location:
+              description: URL of the newly created case resource.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Case"
+        '400':
+          "$ref": "base://components/responses.yaml#/BadRequest"
+        '422':
+          "$ref": "base://components/responses.yaml#/UnprocessableEntity"
+        '500':
+          "$ref": "base://components/responses.yaml#/InternalError"
+  "/cases/{caseId}":
+    parameters:
+    - "$ref": "#/components/parameters/CaseIdParam"
+    get:
+      summary: Get a case
+      description: Retrieve a single case by identifier.
+      operationId: getCase
+      tags:
+      - Cases
+      responses:
+        '200':
+          description: Case retrieved successfully.
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Case"
+              examples:
+                CaseExample1:
+                  $ref: "#/components/examples/CaseExample1"
+        '404':
+          "$ref": "base://components/responses.yaml#/NotFound"
+        '500':
+          "$ref": "base://components/responses.yaml#/InternalError"
+    patch:
+      summary: Update a case
+      description: Apply partial updates to an existing case.
+      operationId: updateCase
+      tags:
+      - Cases
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/CaseUpdate"
+      responses:
+        '200':
+          description: Case updated successfully.
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Case"
+        '400':
+          "$ref": "base://components/responses.yaml#/BadRequest"
+        '404':
+          "$ref": "base://components/responses.yaml#/NotFound"
+        '422':
+          "$ref": "base://components/responses.yaml#/UnprocessableEntity"
+        '500':
+          "$ref": "base://components/responses.yaml#/InternalError"
+    delete:
+      summary: Delete a case
+      description: Permanently remove a case record.
+      operationId: deleteCase
+      tags:
+      - Cases
+      responses:
+        '204':
+          description: Case deleted successfully.
+        '404':
+          "$ref": "base://components/responses.yaml#/NotFound"
+        '500':
+          "$ref": "base://components/responses.yaml#/InternalError"
+components:
+  parameters:
+    CaseIdParam:
+      name: caseId
+      in: path
+      required: true
+      description: Unique identifier of the case.
+      schema:
+        type: string
+        format: uuid
+      example: 4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2
+  schemas:
+    # Primary schema — the long-lived relationship with a client/household
+    Case:
+      description: |
+        A case represents the ongoing relationship with a client or household. It spans
+        years, multiple applications, and multiple programs.
+      unevaluatedProperties: false
+      required:
+        - id
+        - status
+        - primaryApplicantId
+        - createdAt
+        - updatedAt
+      allOf:
+        - $ref: "../case-management/case-management-schema.yaml#/$defs/Case"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+              description: Unique identifier (server-generated).
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the case was created.
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the case was last updated.
+
+    # Ancillary schemas (alphabetical)
+
+    CaseMember:
+      $ref: "../case-management/case-management-schema.yaml#/$defs/CaseMember"
+
+    CaseStatus:
+      type: string
+      description: Current status of the case.
+      enum:
+        - active
+        - closed
+
+    # API schemas
+
+    CaseCreate:
+      allOf:
+      - $ref: "../case-management/case-management-schema.yaml#/$defs/Case"
+      - type: object
+        description: |
+          Payload to create a new case record.
+
+          Note: id, createdAt, and updatedAt are server-generated (readOnly) and will be returned in the response.
+        required:
+        - primaryApplicantId
+    CaseUpdate:
+      allOf:
+      - $ref: "../case-management/case-management-schema.yaml#/$defs/Case"
+      - type: object
+        description: |
+          Payload to update one or more mutable fields of an existing case. Partial updates are supported.
+
+          Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
+        minProperties: 1
+    CaseList:
+      unevaluatedProperties: false
+      allOf:
+      - "$ref": "base://components/pagination.yaml#/Pagination"
+      - type: object
+        required:
+        - items
+        properties:
+          items:
+            type: array
+            items:
+              "$ref": "#/components/schemas/Case"
+
+  examples:
+    CaseExample1:
+      summary: Active case for the Rivera household
+      value:
+        id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        status: active
+        effectiveStartDate: '2024-03-15'
+        effectiveEndDate: null
+        primaryApplicantId: 5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f
+        members:
+          - personId: 5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f
+            relationship: self
+          - personId: 6a7b8c9d-0e1f-2a3b-4c5d-6e7f8a9b0c1d
+            relationship: spouse
+        assignedToId: d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9a
+        createdAt: '2024-03-15T09:00:00Z'
+        updatedAt: '2024-11-01T14:30:00Z'

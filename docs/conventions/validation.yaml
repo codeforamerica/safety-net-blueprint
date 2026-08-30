@@ -1,0 +1,38 @@
+# API Design Conventions — Validation
+# Part of the blueprint conventions. See conventions/ for the full set.
+
+version: "1.0"
+
+validation:
+  # These are enforced by npm run validate
+  layers:
+    - name: syntax
+      command: "npm run validate:syntax"
+      checks:
+        - OpenAPI 3.1 compliance
+        - All $ref references resolve
+        - Examples match schemas
+    - name: lint
+      command: "npm run validate:lint"
+      checks:
+        - Naming conventions (paths, operations, schemas)
+        - Response codes (POST→201, DELETE→204)
+        - Content types (application/json)
+    - name: patterns
+      command: "npm run validate:patterns"
+      checks:
+        - List endpoints have search/pagination params
+        - List responses have required properties
+        - Error responses use shared $refs
+        - CRUD operations follow patterns
+      exemptions:
+        - description: |
+            Action/RPC endpoints (POST on paths with segments after the {id}
+            parameter, e.g. /pizzas/{pizzaId}/start-preparing) are exempt from
+            CRUD POST rules (request body, 201 response, Location header).
+            These are generated from state machine triggers and return 200
+            with the updated resource.
+
+# =============================================================================
+# Error Handling# =============================================================================
+# STATUS: Not yet implemented in mock server or validation

@@ -1,0 +1,54 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "domains/scheduling/scheduling-schema.yaml"
+title: Scheduling
+description: >
+  Shared scheduling domain types. These are the client-writable fields for
+  scheduling entities. OpenAPI specs compose these with system fields
+  (id, createdAt, updatedAt) to produce the full resource schema. AsyncAPI specs
+  and state machines reference these types directly.
+
+$defs:
+  Appointment:
+    type: object
+    description: A scheduled interaction between a staff member and a person at a given time.
+    properties:
+      startAt:
+        type: string
+        format: date-time
+        description: When the appointment begins.
+      endAt:
+        type: string
+        format: date-time
+        description: When the appointment ends.
+      appointmentType:
+        type: string
+        maxLength: 100
+        description: Type of appointment (e.g., interview, recertification, orientation). Free-text, not enum — states define their own types.
+      status:
+        type: string
+        enum:
+          - scheduled
+          - completed
+          - canceled
+          - no_show
+        description: >
+          Current status of the appointment. Will be driven by x-enum-source once a
+          scheduling state machine is defined.
+      personId:
+        type: string
+        format: uuid
+        description: Reference to the Person record (the subject of the appointment).
+        x-relationship:
+          resource: Person
+          domain: client-management
+      assignedToId:
+        type: string
+        format: uuid
+        description: Reference to the User record (staff member conducting the appointment).
+        x-relationship:
+          resource: User
+          domain: identity-access
+      notes:
+        type: string
+        maxLength: 2000
+        description: Free-text notes about the appointment.

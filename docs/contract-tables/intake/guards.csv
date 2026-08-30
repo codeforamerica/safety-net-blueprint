@@ -1,2 +1,0 @@
-Guard Name,Condition
-callerIsApplicant,"""applicant"" in caller.roles"

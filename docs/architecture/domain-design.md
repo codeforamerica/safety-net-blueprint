@@ -351,4 +351,4 @@ States can swap the pagination strategy (e.g., cursor-based) by applying a singl
 | [API Architecture](api-architecture.md) | API organization, vendor independence, operational architecture |
 | [Design Rationale](design-rationale.md) | Key decisions with rationale and alternatives |
 | [Roadmap](roadmap.md) | Implementation phases, prototypes, future considerations |
-| [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml) | Machine-readable API design patterns |
+| [conventions/](../conventions/) | Machine-readable API design patterns |

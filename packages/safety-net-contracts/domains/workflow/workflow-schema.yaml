@@ -1,0 +1,125 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "domains/workflow/workflow-schema.yaml"
+title: Workflow
+description: >
+  Shared workflow domain types. These are the client-writable fields for workflow
+  entities. OpenAPI specs compose these with system fields (id, createdAt, updatedAt)
+  to produce the full resource schema. AsyncAPI specs and state machines reference
+  these types directly.
+
+$defs:
+  Queue:
+    type: object
+    description: Client-writable queue fields.
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 200
+        description: Machine-readable name for the queue (e.g., snap-intake).
+      description:
+        type: string
+        maxLength: 2000
+        description: Human-readable description of the queue's purpose.
+
+  Task:
+    type: object
+    description: Client-writable task fields.
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 200
+        description: Human-readable label for the task.
+      description:
+        type: string
+        maxLength: 2000
+        description: Detailed information about the task.
+      status:
+        type: string
+        x-enum-source: states[].id
+        description: Current lifecycle state. Valid values are injected at resolve time from workflow-state-machine.yaml.
+      taskType:
+        type: string
+        description: >
+          The type of work this task represents (e.g., application_review, interview,
+          document_review). Used by state machine guards to enable type-specific
+          lifecycle branches and by routing rules for type-aware assignment.
+          Open string — states extend via overlay without schema changes.
+      subjectType:
+        type: string
+        enum:
+          - application
+          - case
+          - document
+          - appointment
+        description: >
+          The type of entity this task is associated with. Used together with subjectId
+          to form a polymorphic association. States extend the enum via overlay.
+          Resolution of subjectId is conditional on subjectType — no automatic expansion
+          is performed.
+      subjectId:
+        type: string
+        format: uuid
+        description: >
+          Reference to the entity this task is associated with. The target entity type
+          is determined by subjectType. Resolution is conditional on subjectType —
+          consumers must resolve by type; no automatic expansion is performed.
+        x-relationship:
+          resource: Polymorphic
+      programType:
+        $ref: "../../common/components/common.yaml#/Program"
+        description: >
+          The benefits program this task is associated with. Program-specific field
+          used for routing and SLA assignment on application review tasks. Candidate
+          for removal once context enrichment (#203) provides a generic alternative.
+      isExpedited:
+        type: boolean
+        description: >
+          Whether this task requires expedited processing. SNAP-specific concept tied
+          to the 7-day regulatory deadline. Candidate for removal once context enrichment
+          (#203) provides a generic alternative.
+      queueId:
+        type: string
+        format: uuid
+        description: Reference to the Queue this task is routed to.
+        x-relationship:
+          resource: Queue
+      priority:
+        type: integer
+        minimum: 1
+        maximum: 4
+        description: "Task processing priority (1=expedited, 2=high, 3=normal, 4=low). Lower number = higher urgency. Numeric representation enables correct ascending sort: expedited tasks surface first."
+      startedAt:
+        type: string
+        format: date-time
+        description: When work began (status transitioned to in_progress).
+      completedAt:
+        type: string
+        format: date-time
+        description: When work finished.
+      escalatedAt:
+        type: string
+        format: date-time
+        description: When the task was escalated.
+      cancelledAt:
+        type: [string, 'null']
+        format: date-time
+        description: When the task was cancelled.
+      blockedAt:
+        type: [string, 'null']
+        format: date-time
+        description: When the task entered a waiting state (awaiting_client or awaiting_verification).
+      assignedToId:
+        type: [string, 'null']
+        format: uuid
+        description: Reference to the User assigned to this task.
+        x-relationship:
+          resource: User
+          domain: identity-access
+      outcome:
+        type: string
+        description: Completion outcome recorded when the task was completed (e.g., approved, denied).
+      completionNotes:
+        type: [string, 'null']
+        description: Optional notes recorded when the task was completed.

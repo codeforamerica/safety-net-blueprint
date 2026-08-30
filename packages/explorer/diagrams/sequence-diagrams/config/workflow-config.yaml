@@ -1,8 +1,0 @@
-domain: workflow
-
-events:
-  intake.application.submitted:
-    label: Create application review task
-
-  workflow.task.created:
-    label: Route and prioritize task; schedule 72-hour creation deadline

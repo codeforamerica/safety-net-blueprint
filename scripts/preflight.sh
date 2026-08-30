@@ -48,14 +48,14 @@ lsof -ti :1080 | xargs kill -9 2>/dev/null || true
 pass "Mock server stopped (or was not running)"
 
 step "Clearing generated artifacts for a clean-slate run"
-rm -rf packages/resolved
-rm -rf packages/mock-server/tests/integration/generated
-rm -rf packages/mock-server/tests/functional/resolved
-rm -rf packages/mock-server/tests/functional/generated
-pass "Cleared packages/resolved, tests/integration/generated, and functional resolved/generated"
+rm -rf packages/generated
+rm -rf packages/blueprint-mock-server/tests/integration/generated
+rm -rf packages/blueprint-mock-server/tests/functional/resolved
+rm -rf packages/blueprint-mock-server/tests/functional/generated
+pass "Cleared resolved, tests/integration/generated, and functional resolved/generated"
 
-step "Validating base specs"
-if npm run validate 2>&1; then
+step "Validating base specs (syntax)"
+if npm run validate:syntax 2>&1; then
   pass "Base specs valid"
 else
   fail "Base spec validation failed"
@@ -76,34 +76,26 @@ if npm run resolve 2>&1; then
 else
   fail "Overlay resolution failed"
 fi
-
-step "Validating sequence diagram config files"
-if node packages/explorer/diagrams/sequence-diagrams/src/validate-config.js 2>&1; then
-  pass "Sequence diagram config valid"
-else
-  fail "Sequence diagram config validation failed"
-fi
 bail_if_failed
 
 step "Validating resolved specs"
-if npm run validate:resolved 2>&1; then
+if npm run validate 2>&1; then
   pass "Resolved specs valid"
 else
   fail "Resolved spec validation failed"
 fi
 
 step "Generating TypeScript clients from resolved specs"
-if npm run clients:typescript -- --spec=packages/resolved --out=packages/clients/generated 2>&1; then
-  git add packages/clients/generated/
-  pass "TypeScript clients generated and staged"
+if npm run clients:typescript -- --spec=packages/generated/contracts --out=packages/generated/clients 2>&1; then
+  pass "TypeScript clients generated"
 else
   fail "TypeScript client generation failed"
 fi
 bail_if_failed
 
 step "Rebuilding explorer outputs"
-if npm run build --workspace=packages/explorer 2>&1; then
-  git add packages/explorer/
+if node packages/blueprint-explorer/build.js --content=packages/safety-net-explorer --resolved=packages/generated/contracts --clients=packages/generated/clients 2>&1; then
+  git add packages/safety-net-explorer/
   pass "Explorer rebuilt and staged"
 else
   fail "Explorer build failed"
@@ -125,7 +117,7 @@ else
 fi
 
 step "Running functional tests"
-if node packages/mock-server/tests/run-all-tests.js --functional 2>&1; then
+if node packages/blueprint-mock-server/tests/run-all-tests.js --functional 2>&1; then
   pass "Functional tests passed"
 else
   fail "Functional tests failed"

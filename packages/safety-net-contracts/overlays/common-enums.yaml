@@ -1,0 +1,47 @@
+overlay: '1.0.0'
+info:
+  title: Safety Net common enum extensions
+  version: 1.0.0
+
+actions:
+  - target: "$.$defs.Domain"
+    file: base/schemas/enums.yaml
+    description: Add safety net program domains
+    replace:
+      type: string
+      description: >
+        Safety Net domain identifier. Extends the blueprint-core base Domain enum
+        with domains specific to safety net benefits programs.
+      enum:
+        - client-management
+        - data-exchange
+        - document-management
+        - eligibility
+        - intake
+        - platform
+        - workflow
+
+  - target: "$.$defs.RoleType"
+    file: base/schemas/enums.yaml
+    description: Add safety net program roles
+    replace:
+      type: string
+      description: >
+        Safety Net authorization roles. Extends the blueprint-core base RoleType
+        enum with roles specific to safety net benefits programs.
+
+        - applicant: Self-service access to own applications (scoped by personId)
+        - case_worker: Process applications for assigned county
+        - supervisor: Oversee case workers, approve determinations (may span counties)
+        - county_admin: Administer county staff and configuration
+        - state_admin: Statewide oversight and administration (all counties)
+        - partner_readonly: External partner with limited read access
+        - system: Automated service account for background and inter-service operations
+      enum:
+        - applicant
+        - case_worker
+        - supervisor
+        - county_admin
+        - state_admin
+        - partner_readonly
+        - system

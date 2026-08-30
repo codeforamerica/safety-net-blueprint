@@ -2,7 +2,7 @@
 
 All `x-` extensions used in Safety Net Blueprint contract artifacts, listed alphabetically.
 
-The machine-readable catalog is in [`packages/contracts/patterns/api-patterns.yaml`](../../packages/contracts/patterns/api-patterns.yaml) under `x_extensions`.
+The machine-readable catalog is in [`docs/conventions/`](../conventions/) under `x_extensions`.
 
 ---
 
@@ -224,7 +224,7 @@ paths:
 
 **Sort order is an oracle:** fields whose ordering would leak information (SSN, dateOfBirth, internal risk scores, sensitive flags) MUST NOT appear in `x-sortable.fields` even if they're technically sortable. The pattern validator emits a warning when fields tagged `x-pii: true` or matching common sensitive name patterns appear in `x-sortable.fields`.
 
-See `packages/contracts/patterns/api-patterns.yaml#sorting` for the full convention (syntax, error codes, null-value ordering) and `components/parameters.yaml#SortParam` for the shared query parameter component.
+See `conventions/http.yaml` (`sorting`) for the full convention (syntax, error codes, null-value ordering) and `components/parameters.yaml#SortParam` for the shared query parameter component.
 
 ---
 

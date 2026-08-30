@@ -80,7 +80,7 @@ These are the contract-driven invariants every adapter (mock or production) must
 4. **Information disclosure.** Sort order is an oracle — a field's ordering can leak information about records even when the field itself isn't projected (binary-search via pagination). Adapters SHOULD warn at deploy time if `x-sortable.fields` contains fields tagged `x-pii: true` or matching obvious sensitive patterns (`ssn`, `dateOfBirth`, internal risk scores). The pattern validator surfaces this as a Spectral warning.
 5. **Failed-parse logging.** Adapters SHOULD log failed sort parses at info level with the offending field name (not the raw query string, which may carry PII from other params).
 
-See [`x-extensions.md#x-sortable`](../architecture/x-extensions.md#x-sortable) for the extension shape and [`api-patterns.yaml#sorting`](../../packages/contracts/patterns/api-patterns.yaml) for the full convention.
+See [`x-extensions.md#x-sortable`](../architecture/x-extensions.md#x-sortable) for the extension shape and [`http.yaml` (sorting)](../conventions/http.yaml) for the full convention.
 
 ## TypeScript Search Helpers
 

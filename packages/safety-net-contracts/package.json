@@ -1,0 +1,45 @@
+{
+  "name": "@codeforamerica/blueprint-safety-net-contracts",
+  "version": "1.2.0",
+  "description": "OpenAPI specs, state machines, event schemas, and configuration contracts for Safety Net benefits programs",
+  "type": "module",
+  "files": [
+    "case-management/",
+    "client-management/",
+    "communication/",
+    "data-exchange/",
+    "document-management/",
+    "eligibility/",
+    "intake/",
+    "platform/",
+    "scheduling/",
+    "search/",
+    "users/",
+    "workflow/",
+    "components/",
+    "schemas/",
+    "examples/",
+    "authored/",
+    "seed/"
+  ],
+  "scripts": {
+    "prepack": "node ../../scripts/build-package-readme.js",
+    "validate": "node ../blueprint-cli/scripts/validate/openapi.js --spec=. --skip-examples",
+    "resolve": "node ../blueprint-cli/scripts/resolve.js --spec=. --out=../resolved"
+  },
+  "devDependencies": {
+    "@codeforamerica/blueprint-cli": "^0.1.0"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeforamerica/safety-net-blueprint",
+    "directory": "packages/safety-net-contracts"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

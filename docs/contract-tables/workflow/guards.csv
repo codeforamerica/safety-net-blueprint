@@ -1,3 +1,0 @@
-Guard Name,Condition
-taskIsUnassigned,object.assignedToId == null
-callerIsAssignedWorker,object.assignedToId == caller.id

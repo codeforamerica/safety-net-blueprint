@@ -1,0 +1,188 @@
+# API Design Conventions — Cross-Domain Communication
+# Part of the blueprint conventions. See conventions/ for the full set.
+
+version: "1.0"
+
+config_managed_resources:
+  description: >
+    Some collections contain both "system" resources (defined in a *-config.yaml
+    deployment artifact, present in every deployment) and "user" resources (created
+    at runtime via the API). The source field signals which is which, enabling
+    frontends to disable destructive actions for system resources upfront rather
+    than discovering the constraint via a 409.
+
+  industry_context: |
+    This pattern is consistent with how major platforms handle system vs. user resources:
+    - ServiceNow: sys_scope distinguishes system (global) from user/app-scoped records
+    - Salesforce: Type or source enum fields on Queue and other admin objects
+    - IBM Cúram: systemFlag boolean on reference data tables
+    - JSM: permission-based only (no field; 403/405 is the signal — less consumer-friendly)
+
+  source_field:
+    description: Required on any resource that has both config-managed and runtime variants.
+    type: string
+    enum:
+      - system   # Defined in *-config.yaml; cannot be deleted via API (409)
+      - user     # Created via POST; can be deleted
+    readOnly: true
+    placement: top-level resource schema property, alongside id/createdAt/updatedAt
+    example: |
+      Queue:
+        type: object
+        required:
+          - id
+          - name
+          - source
+          - createdAt
+          - updatedAt
+        properties:
+          source:
+            type: string
+            enum: [system, user]
+            readOnly: true
+            description: >
+              Origin of the queue. "system" queues are defined in workflow-config.yaml
+              and cannot be deleted via the API. "user" queues are created at runtime
+              and can be deleted.
+
+  mock_server_behavior:
+    config_seeding: Config entries are inserted with source set to "system".
+    runtime_create: POST handler sets source to "user" for collections that have config entries.
+    delete_guard: DELETE returns 409 CONFIG_MANAGED for any resource with a config-managed ID.
+
+# =============================================================================
+# Cross-Domain Communication
+# =============================================================================
+# Two patterns govern how domains interact. Choosing the wrong one creates
+# hidden coupling — see docs/architecture/inter-domain-communication.md for
+# the full decision rule.
+
+cross_domain_communication:
+  patterns:
+    command:
+      description: >
+        A direct synchronous API call from one domain to another. Use when the
+        calling domain needs a result to continue its own operation.
+      when_to_use: >
+        The caller cannot complete its current operation without a result from
+        the target domain. Examples: uploading a document and receiving the
+        document ID to attach to a verification record; resolving a person
+        identity match before continuing an application submission.
+      contract_surface: >
+        The calling domain depends on the target domain's OpenAPI contract.
+        The dependency is explicit and versioned.
+
+    domain_event:
+      description: >
+        An async signal emitted when a domain's own state changes. Other domains
+        subscribe and react independently. Use when notifying that something
+        happened — not when expecting a result.
+      when_to_use: >
+        The producing domain's operation is already complete and other domains
+        may optionally react. The producer has no knowledge of its consumers.
+        Examples: application submitted, task claimed, determination completed.
+      contract_surface: >
+        Declared in the producing domain's x-events section. Payload schema is
+        the contract; adding a new consumer requires no change to the producer.
+
+    async_command:
+      description: >
+        A command that initiates a long-running operation, with a domain event
+        delivering the result when it is ready. Use when a synchronous result
+        is not available within a single request.
+      when_to_use: >
+        The operation crosses a system boundary or takes time (e.g. an external
+        agency call). The calling domain initiates via a command, then reacts to
+        the result event. Use the context_passthrough pattern to correlate the
+        result back to the originating record.
+      example: >
+        Intake creates a data-exchange service call (command). The external
+        service responds asynchronously. A domain event delivers the result.
+        Intake reads metadata.intake.verificationId from the event payload and
+        transitions the correct verification record.
+
+  decision_rule: >
+    Does the calling domain need a result from the other domain to complete its
+    current operation? → command. Is the calling domain notifying that its own
+    state changed? → domain_event. If neither fits cleanly, consider the
+    async_command variant.
+
+# =============================================================================
+# Context Pass-Through (Cross-Domain Metadata)
+# =============================================================================
+# Opaque metadata attached to a resource by one domain so that an async event
+# handler in another domain can correlate the result back to the originating
+# resource without a database lookup.
+#
+# Example: at submission, intake creates a Verification and a data-exchange
+# service call. It PUTs { intake: { verificationId: "ver-abc" } } onto the
+# service call. When data-exchange.service-call.completed fires, the intake
+# rule reads event.data.metadata.intake.verificationId and transitions the
+# correct Verification directly.
+
+context_passthrough:
+  description: |
+    Opaque namespace-keyed metadata attached to resources to enable async
+    correlation across domains. Each domain owns its namespace; namespace-level
+    mutations prevent callers from clobbering each other's keys.
+
+  structure:
+    description: Nested object — top-level keys are domain names; values are domain-defined key/value pairs.
+    schema:
+      type: object
+      additionalProperties:
+        type: object
+        additionalProperties: true
+    example: |
+      {
+        "intake":   { "verificationId": "ver-abc-123" },
+        "workflow": { "taskId": "tsk-xyz-456" }
+      }
+
+  json_logic_access:
+    description: |
+      Use the JSON Logic var operator with dot notation to traverse the nested
+      structure. Nested objects are required — flat keys with dots (e.g.,
+      "intake.verificationId" as a single top-level key) are unreachable via var.
+    example: |
+      # Read intake.verificationId from a data-exchange completion event:
+      { "var": "event.data.metadata.intake.verificationId" }
+
+  mutation_endpoints:
+    description: |
+      Namespace-level PUT and DELETE. Each caller replaces or removes its own
+      domain namespace entirely. No key-level merging; callers never touch
+      another domain's namespace.
+    put:
+      path: "PUT /{resources}/{id}/metadata/{domain}"
+      description: Replace the caller's entire namespace with the provided object.
+      path_parameter:
+        name: domain
+        schema:
+          $ref: "components/common.yaml#/Domain"
+      request_body:
+        type: object
+        additionalProperties: true
+      response: 200 with updated resource
+      example: |
+        PUT /service-calls/{id}/metadata/intake
+        Content-Type: application/json
+        { "verificationId": "ver-abc-123" }
+    delete:
+      path: "DELETE /{resources}/{id}/metadata/{domain}"
+      description: Remove the caller's entire namespace from metadata.
+      path_parameter:
+        name: domain
+        schema:
+          $ref: "components/common.yaml#/Domain"
+      response: 204
+
+  use_case:
+    name: Verification write-back
+    description: |
+      Intake creates a Verification and a data-exchange service call at
+      submission. It sets metadata.intake.verificationId on the service call
+      (via the createResource metadata field in rules). When
+      data-exchange.service-call.completed fires, the intake rule reads
+      event.data.metadata.intake.verificationId and calls triggerTransition
+      on the correct Verification — no query needed.

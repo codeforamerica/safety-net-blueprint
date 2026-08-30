@@ -14,7 +14,7 @@ A domain event is an async signal. The producing domain has no knowledge of who 
 
 **The async command variant**
 
-Some interactions combine both patterns: a command initiates a long-running operation, and an async domain event delivers the result when it is ready. Data exchange verification calls use this variant — intake creates a service call (command), the external service responds asynchronously, and a domain event delivers the result when it arrives. The context passthrough pattern (see `api-patterns.yaml`) is used to correlate the result event back to the originating record.
+Some interactions combine both patterns: a command initiates a long-running operation, and an async domain event delivers the result when it is ready. Data exchange verification calls use this variant — intake creates a service call (command), the external service responds asynchronously, and a domain event delivers the result when it arrives. The context passthrough pattern (see `conventions/`) is used to correlate the result event back to the originating record.
 
 **Decision rule**
 
@@ -191,7 +191,7 @@ The target architecture is pub/sub with CloudEvents messages. Most implementatio
 
 Event payloads may contain PII, FTI (Federal Tax Information), or PHI (Protected Health Information). How states safeguard this data in their event infrastructure is an implementation concern, not a blueprint contract concern — the blueprint does not prescribe an encryption mechanism, access control policy, or key management approach.
 
-The blueprint's responsibility is to mark which fields are sensitive so that adapters know what requires protection. Schema fields carrying regulated data are annotated with `x-data-classification` (see [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml)). Classifications: `pii`, `fti`, `phi`.
+The blueprint's responsibility is to mark which fields are sensitive so that adapters know what requires protection. Schema fields carrying regulated data are annotated with `x-data-classification` (see [conventions/](../conventions/)). Classifications: `pii`, `fti`, `phi`.
 
 States are responsible for:
 - Applying appropriate safeguards to classified fields in event payloads (encryption, access control, log masking)

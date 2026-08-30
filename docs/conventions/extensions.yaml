@@ -1,0 +1,254 @@
+# API Design Conventions — OpenAPI Extensions
+# Part of the blueprint conventions. See conventions/ for the full set.
+
+version: "1.0"
+
+x_data_classification:
+  description: |
+    The x-data-classification OpenAPI extension marks schema fields that contain
+    sensitive or regulated data. Adapters use these annotations to identify which
+    fields require special handling — encryption, masking in logs, access control,
+    or regulatory safeguards. The blueprint defines the classification; the
+    specific safeguarding mechanism (encryption algorithm, key management, access
+    control policy) is a state infrastructure concern, not a blueprint contract concern.
+
+  values:
+    - value: pii
+      description: |
+        Personally Identifiable Information — general catch-all for names, SSNs,
+        dates of birth, addresses, and other data that directly identifies a person.
+        Governed by the Privacy Act (5 U.S.C. § 552a) and state privacy laws.
+    - value: fti
+      description: |
+        Federal Tax Information — income, tax records, and other data received from
+        IRS under 26 U.S.C. § 6103. Governed by IRS Publication 1075, which requires
+        FIPS 140-validated encryption in transit and, in cloud environments, at rest.
+    - value: phi
+      description: |
+        Protected Health Information — health and medical data governed by HIPAA.
+        Applies to Medicaid-related data and any health information received from
+        CMS FDSH or other health data sources.
+
+  usage: |
+    Apply as an array on any schema property that contains regulated data.
+    A field may carry multiple classifications if it falls under more than one regime.
+
+  example: |
+    properties:
+      ssn:
+        type: string
+        x-data-classification: [pii, fti]
+      adjustedGrossIncome:
+        type: number
+        x-data-classification: [fti]
+      immigrationStatus:
+        type: string
+        x-data-classification: [pii]
+      medicareEnrollmentStatus:
+        type: string
+        x-data-classification: [phi]
+
+# =============================================================================
+# Behavioral YAML Conventions
+# =============================================================================
+# State machine, rules, metrics, and SLA type YAML files are collectively called
+# "behavioral artifacts". They follow these conventions:
+
+x_extensions:
+
+  x-domain:
+    description: >
+      The business domain this API belongs to. Required on all API specs.
+      Enables filtering, domain-specific documentation generation, and future
+      folder reorganization without changing file locations.
+    location: info level (entire API) or operation level (multi-domain specs)
+    type: string
+    required: true
+    values:
+      - case-management
+      - client-management
+      - communication
+      - data-exchange
+      - document-management
+      - eligibility
+      - identity-access
+      - intake
+      - platform
+      - reporting
+      - scheduling
+      - search
+      - workflow
+    example: |
+      info:
+        title: Workflow Service API
+        x-domain: workflow
+
+  x-events:
+    description: >
+      Declares the domain events emitted by an API. Placed at the top level of
+      an OpenAPI spec (peer to info:, paths:). Each key is an event name in
+      dot notation (e.g., task.created). AsyncAPI specs and event documentation
+      are generated from this section combined with the domain's state machine.
+      See x-events Convention section for full schema.
+    location: top-level (peer to info, paths)
+    type: object
+    example: |
+      x-events:
+        task.created:
+          type: org.codeforamerica.safety-net-blueprint.workflow.task.created
+          summary: Emitted when a task is first created
+          payload:
+            $ref: "#/components/schemas/TaskCreatedEvent"
+
+  x-enum-source:
+    description: >
+      Declares that a string field's valid enum values are derived from another
+      contract artifact rather than being hardcoded in the OpenAPI spec. Supports
+      a string form (path expression, e.g. states[].id or slaTypes[].id) and an
+      object form with an optional machine: property to scope to a specific state
+      machine when a state machine file defines multiple machines. The resolve
+      pipeline injects the actual enum values at build time and strips the annotation,
+      keeping the OpenAPI spec in sync with behavioral contracts without duplication.
+    location: schema property level (on string fields whose valid values come from another artifact)
+    type: string | object
+    fields:
+      source: >
+        (object form only) Collection expression — states[].id or slaTypes[].id.
+      machine: >
+        (object form only, optional) The object name of the machine to scope to
+        (matches machines[].object in the state machine file). When omitted, all
+        states across all machines are pooled.
+    example: |
+      # String form — single-machine state files or SLA types
+      status:
+        type: string
+        x-enum-source: states[].id
+        description: Current lifecycle state.
+
+      slaTypeCode:
+        type: string
+        x-enum-source: slaTypes[].id
+        description: SLA type code.
+
+      # Object form — multi-machine state files, scoped to a specific machine
+      status:
+        type: string
+        x-enum-source:
+          source: states[].id
+          machine: Application
+        description: Current lifecycle status.
+
+  x-relationship:
+    description: >
+      Annotates a UUID foreign-key field to identify the related resource.
+      Required on all fields that end in Id and have format: uuid. Enables
+      tooling to generate relationship diagrams, validate referential integrity,
+      and optionally expand related resources inline (style: expand).
+    location: schema property level (on FK fields)
+    type: object
+    fields:
+      resource: Name of the related schema (PascalCase, e.g., Queue)
+      domain: >
+        Optional. The blueprint domain that owns the related resource (e.g., intake,
+        workflow). Required when the referenced resource lives in a different domain
+        than the spec declaring the relationship. Omit for same-domain references.
+        Values must be a valid Domain enum value (see schemas/common/enums.yaml).
+      style: >
+        Optional. "expand" causes the mock server to replace the Id field with
+        an inline object of the related resource. Default: reference by ID only.
+    example: |
+      queueId:
+        type: string
+        format: uuid
+        x-relationship:
+          resource: Queue
+
+      # Cross-domain reference
+      applicationId:
+        type: string
+        format: uuid
+        x-relationship:
+          resource: Application
+          domain: intake
+
+  x-sortable:
+    description: >
+      Declares the sort behavior of a list operation — which fields a client
+      may include in ?sort=, the default sort when ?sort= is omitted, the
+      tie-breaker appended for stable pagination, and an optional cap on the
+      number of fields a client may send. Operations referencing the
+      SortParam component MUST declare x-sortable; operations without
+      x-sortable reject any ?sort= query parameter with 400 INVALID_SORT_FIELD.
+      See the `sorting` section of this file for the runtime convention and
+      the field-name lexical rule.
+    location: list operation level (peer to parameters and responses)
+    type: object
+    fields:
+      fields: >
+        Required. Array of field names a client may include in ?sort=.
+        Dot-notation for nested fields (e.g., name.lastName). Every entry
+        must reference a real property on the resource's response schema.
+      default: >
+        Optional. Comma-separated sort applied when the client omits ?sort=.
+        Same syntax as the query parameter. Every field referenced here must
+        appear in `fields`. If absent, no client-driven sort is applied when
+        ?sort= is omitted — only the tie-breaker.
+      tieBreaker: >
+        Optional, defaults to "id". Single field name appended to every
+        effective sort to guarantee deterministic ordering for stable
+        pagination. Explicit null disables it (rare — not recommended).
+      maxFields: >
+        Optional. Hard cap on the number of fields a client may include in
+        ?sort=. If absent, adapters apply an implicit ceiling (5 in the
+        reference implementation).
+    example: |
+      paths:
+        /tasks:
+          get:
+            operationId: listTasks
+            x-sortable:
+              fields: [createdAt, priority, dueDate, status]
+              default: -priority,dueDate
+              tieBreaker: id
+              maxFields: 3
+            parameters:
+              - $ref: "./components/parameters.yaml#/SortParam"
+
+  x-status:
+    description: >
+      Implementation or lifecycle status of the API or a specific operation.
+      Applied at info level for the entire API, or at operation level for
+      partial implementations. Tooling uses this to generate status banners
+      and filter documentation views.
+    location: info level or operation level
+    type: string
+    values:
+      - planned     # Designed but not implemented
+      - alpha       # Early implementation, breaking changes expected
+      - beta        # Feature complete, stabilizing
+      - stable      # Production ready, follows semver
+      - deprecated  # Still functional but being phased out
+    example: |
+      info:
+        title: Workflow Service API
+        x-status: alpha
+
+  x-visibility:
+    description: >
+      Who can access this API or operation. Drives documentation visibility,
+      API gateway policies, and client generation scoping.
+    location: info level or operation level
+    type: string
+    default: internal
+    values:
+      - public    # External consumers (clients, partners)
+      - partner   # Authorized integration partners
+      - internal  # Staff and system-to-system only
+    example: |
+      info:
+        title: Applications API
+        x-visibility: public
+
+# =============================================================================
+# Validation Rules
+# =============================================================================

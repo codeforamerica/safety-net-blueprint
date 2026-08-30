@@ -360,7 +360,7 @@ info:
   x-visibility: public
 ```
 
-See [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml) for full documentation.
+See [conventions/](../conventions/) for full documentation.
 
 *Reconsider if*: The flat file structure becomes unwieldy with many APIs, or if physical separation is needed for access control or separate deployment.
 

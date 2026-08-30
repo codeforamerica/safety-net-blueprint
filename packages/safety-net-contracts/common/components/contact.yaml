@@ -1,0 +1,14 @@
+# Contact shared schemas
+#
+# Schemas: Address, Email, PhoneNumber
+#
+# See also: schemas/common/contact.yaml (canonical JSON Schema definitions)
+
+Address:
+  $ref: "../schemas/contact.yaml#/$defs/Address"
+
+Email:
+  $ref: "../schemas/contact.yaml#/$defs/Email"
+
+PhoneNumber:
+  $ref: "../schemas/contact.yaml#/$defs/PhoneNumber"
