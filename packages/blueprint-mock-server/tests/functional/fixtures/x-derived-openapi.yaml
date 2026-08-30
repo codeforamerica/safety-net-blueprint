@@ -26,10 +26,10 @@ paths:
       operationId: listWidgets
       tags: [Widgets]
       parameters:
-        - $ref: "../../../../safety-net-contracts/common/components/parameters.yaml#/SearchQueryParam"
-        - $ref: "../../../../safety-net-contracts/common/components/parameters.yaml#/LimitParam"
-        - $ref: "../../../../safety-net-contracts/common/components/parameters.yaml#/OffsetParam"
-        - $ref: "../../../../safety-net-contracts/common/components/parameters.yaml#/SortParam"
+        - $ref: "base://components/parameters.yaml#/SearchQueryParam"
+        - $ref: "base://components/parameters.yaml#/LimitParam"
+        - $ref: "base://components/parameters.yaml#/OffsetParam"
+        - $ref: "base://components/parameters.yaml#/SortParam"
       responses:
         "200":
           description: List of widgets.
@@ -38,7 +38,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/WidgetList"
         "500":
-          $ref: "../../../../safety-net-contracts/common/components/responses.yaml#/InternalError"
+          $ref: "base://components/responses.yaml#/InternalError"
 
     post:
       summary: Create widget
@@ -58,9 +58,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Widget"
         "422":
-          $ref: "../../../../safety-net-contracts/common/components/responses.yaml#/UnprocessableEntity"
+          $ref: "base://components/responses.yaml#/UnprocessableEntity"
         "500":
-          $ref: "../../../../safety-net-contracts/common/components/responses.yaml#/InternalError"
+          $ref: "base://components/responses.yaml#/InternalError"
 
   /widgets/{widgetId}:
     parameters:
@@ -82,9 +82,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Widget"
         "404":
-          $ref: "../../../../safety-net-contracts/common/components/responses.yaml#/NotFound"
+          $ref: "base://components/responses.yaml#/NotFound"
         "500":
-          $ref: "../../../../safety-net-contracts/common/components/responses.yaml#/InternalError"
+          $ref: "base://components/responses.yaml#/InternalError"
 
 components:
   schemas:
@@ -127,7 +127,7 @@ components:
 
     WidgetList:
       allOf:
-        - $ref: "../../../../safety-net-contracts/common/components/pagination.yaml#/Pagination"
+        - $ref: "base://components/pagination.yaml#/Pagination"
         - type: object
           required:
             - items

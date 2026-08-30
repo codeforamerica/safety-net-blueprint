@@ -79,10 +79,10 @@ paths:
       tags:
         - Owners
       parameters:
-        - $ref: ../../../../safety-net-contracts/common/components/parameters.yaml#/SearchQueryParam
-        - $ref: ../../../../safety-net-contracts/common/components/parameters.yaml#/LimitParam
-        - $ref: ../../../../safety-net-contracts/common/components/parameters.yaml#/OffsetParam
-        - $ref: ../../../../safety-net-contracts/common/components/parameters.yaml#/SortParam
+        - $ref: base://components/parameters.yaml#/SearchQueryParam
+        - $ref: base://components/parameters.yaml#/LimitParam
+        - $ref: base://components/parameters.yaml#/OffsetParam
+        - $ref: base://components/parameters.yaml#/SortParam
       responses:
         "200":
           description: A paginated collection of owners.
@@ -91,9 +91,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/OwnerList"
         "400":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/BadRequest
+          $ref: base://components/responses.yaml#/BadRequest
         "500":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/InternalError
+          $ref: base://components/responses.yaml#/InternalError
     post:
       summary: Create an owner
       description: Create a new owner record.
@@ -120,11 +120,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/Owner"
         "400":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/BadRequest
+          $ref: base://components/responses.yaml#/BadRequest
         "422":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/UnprocessableEntity
+          $ref: base://components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/InternalError
+          $ref: base://components/responses.yaml#/InternalError
   /owners/{ownerId}:
     parameters:
       - $ref: "#/components/parameters/OwnerIdParam"
@@ -145,9 +145,9 @@ paths:
                 OwnerExample1:
                   $ref: "#/components/examples/OwnerExample1"
         "404":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/NotFound
+          $ref: base://components/responses.yaml#/NotFound
         "500":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/InternalError
+          $ref: base://components/responses.yaml#/InternalError
     patch:
       summary: Update an owner
       description: Apply partial updates to an existing owner.
@@ -168,13 +168,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/Owner"
         "400":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/BadRequest
+          $ref: base://components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/NotFound
+          $ref: base://components/responses.yaml#/NotFound
         "422":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/UnprocessableEntity
+          $ref: base://components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/InternalError
+          $ref: base://components/responses.yaml#/InternalError
     delete:
       summary: Delete an owner
       description: Permanently remove an owner record.
@@ -185,9 +185,9 @@ paths:
         "204":
           description: Owner deleted successfully.
         "404":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/NotFound
+          $ref: base://components/responses.yaml#/NotFound
         "500":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/InternalError
+          $ref: base://components/responses.yaml#/InternalError
   /parents:
     get:
       summary: List parents
@@ -196,10 +196,10 @@ paths:
       tags:
         - Parents
       parameters:
-        - $ref: ../../../../safety-net-contracts/common/components/parameters.yaml#/SearchQueryParam
-        - $ref: ../../../../safety-net-contracts/common/components/parameters.yaml#/LimitParam
-        - $ref: ../../../../safety-net-contracts/common/components/parameters.yaml#/OffsetParam
-        - $ref: ../../../../safety-net-contracts/common/components/parameters.yaml#/SortParam
+        - $ref: base://components/parameters.yaml#/SearchQueryParam
+        - $ref: base://components/parameters.yaml#/LimitParam
+        - $ref: base://components/parameters.yaml#/OffsetParam
+        - $ref: base://components/parameters.yaml#/SortParam
       responses:
         "200":
           description: A paginated collection of parents.
@@ -208,9 +208,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ParentList"
         "400":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/BadRequest
+          $ref: base://components/responses.yaml#/BadRequest
         "500":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/InternalError
+          $ref: base://components/responses.yaml#/InternalError
     post:
       summary: Create a parent
       description: Create a new parent record.
@@ -237,11 +237,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/Parent"
         "400":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/BadRequest
+          $ref: base://components/responses.yaml#/BadRequest
         "422":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/UnprocessableEntity
+          $ref: base://components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/InternalError
+          $ref: base://components/responses.yaml#/InternalError
   /parents/{parentId}:
     parameters:
       - $ref: "#/components/parameters/ParentIdParam"
@@ -262,9 +262,9 @@ paths:
                 ParentExample1:
                   $ref: "#/components/examples/ParentExample1"
         "404":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/NotFound
+          $ref: base://components/responses.yaml#/NotFound
         "500":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/InternalError
+          $ref: base://components/responses.yaml#/InternalError
     patch:
       summary: Update a parent
       description: Apply partial updates to an existing parent.
@@ -285,13 +285,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/Parent"
         "400":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/BadRequest
+          $ref: base://components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/NotFound
+          $ref: base://components/responses.yaml#/NotFound
         "422":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/UnprocessableEntity
+          $ref: base://components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/InternalError
+          $ref: base://components/responses.yaml#/InternalError
     delete:
       summary: Delete a parent
       description: Permanently remove a parent record.
@@ -302,9 +302,9 @@ paths:
         "204":
           description: Parent deleted successfully.
         "404":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/NotFound
+          $ref: base://components/responses.yaml#/NotFound
         "500":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/InternalError
+          $ref: base://components/responses.yaml#/InternalError
   /children:
     get:
       summary: List children
@@ -313,10 +313,10 @@ paths:
       tags:
         - Children
       parameters:
-        - $ref: ../../../../safety-net-contracts/common/components/parameters.yaml#/SearchQueryParam
-        - $ref: ../../../../safety-net-contracts/common/components/parameters.yaml#/LimitParam
-        - $ref: ../../../../safety-net-contracts/common/components/parameters.yaml#/OffsetParam
-        - $ref: ../../../../safety-net-contracts/common/components/parameters.yaml#/SortParam
+        - $ref: base://components/parameters.yaml#/SearchQueryParam
+        - $ref: base://components/parameters.yaml#/LimitParam
+        - $ref: base://components/parameters.yaml#/OffsetParam
+        - $ref: base://components/parameters.yaml#/SortParam
       responses:
         "200":
           description: A paginated collection of children.
@@ -325,9 +325,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ChildList"
         "400":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/BadRequest
+          $ref: base://components/responses.yaml#/BadRequest
         "500":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/InternalError
+          $ref: base://components/responses.yaml#/InternalError
     post:
       summary: Create a child
       description: Create a new child record.
@@ -354,11 +354,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/Child"
         "400":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/BadRequest
+          $ref: base://components/responses.yaml#/BadRequest
         "422":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/UnprocessableEntity
+          $ref: base://components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/InternalError
+          $ref: base://components/responses.yaml#/InternalError
   /children/{childId}:
     parameters:
       - $ref: "#/components/parameters/ChildIdParam"
@@ -379,9 +379,9 @@ paths:
                 ChildExample1:
                   $ref: "#/components/examples/ChildExample1"
         "404":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/NotFound
+          $ref: base://components/responses.yaml#/NotFound
         "500":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/InternalError
+          $ref: base://components/responses.yaml#/InternalError
     patch:
       summary: Update a child
       description: Apply partial updates to an existing child.
@@ -402,13 +402,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/Child"
         "400":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/BadRequest
+          $ref: base://components/responses.yaml#/BadRequest
         "404":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/NotFound
+          $ref: base://components/responses.yaml#/NotFound
         "422":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/UnprocessableEntity
+          $ref: base://components/responses.yaml#/UnprocessableEntity
         "500":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/InternalError
+          $ref: base://components/responses.yaml#/InternalError
     delete:
       summary: Delete a child
       description: Permanently remove a child record.
@@ -419,9 +419,9 @@ paths:
         "204":
           description: Child deleted successfully.
         "404":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/NotFound
+          $ref: base://components/responses.yaml#/NotFound
         "500":
-          $ref: ../../../../safety-net-contracts/common/components/responses.yaml#/InternalError
+          $ref: base://components/responses.yaml#/InternalError
 components:
   parameters:
     OwnerIdParam:
@@ -537,9 +537,9 @@ components:
       description: Snapshot of the newly created owner resource.
       $ref: "#/components/schemas/Owner"
     OwnerUpdatedEvent:
-      $ref: ../../../../blueprint-core/schemas/events.yaml#/ResourceUpdatedEvent
+      $ref: base://schemas/events.yaml#/ResourceUpdatedEvent
     OwnerDeletedEvent:
-      $ref: ../../../../blueprint-core/schemas/events.yaml#/ResourceDeletedEvent
+      $ref: base://schemas/events.yaml#/ResourceDeletedEvent
 
     # ---------------------------------------------------------------------------
     # Parent — ownerId has x-relationship: expand (set on the read schema only)
@@ -640,9 +640,9 @@ components:
       description: Snapshot of the newly created parent resource.
       $ref: "#/components/schemas/Parent"
     ParentUpdatedEvent:
-      $ref: ../../../../blueprint-core/schemas/events.yaml#/ResourceUpdatedEvent
+      $ref: base://schemas/events.yaml#/ResourceUpdatedEvent
     ParentDeletedEvent:
-      $ref: ../../../../blueprint-core/schemas/events.yaml#/ResourceDeletedEvent
+      $ref: base://schemas/events.yaml#/ResourceDeletedEvent
 
     # ---------------------------------------------------------------------------
     # Child — parentId has x-relationship: links-only (set on the read schema only)
@@ -740,9 +740,9 @@ components:
       description: Snapshot of the newly created child resource.
       $ref: "#/components/schemas/Child"
     ChildUpdatedEvent:
-      $ref: ../../../../blueprint-core/schemas/events.yaml#/ResourceUpdatedEvent
+      $ref: base://schemas/events.yaml#/ResourceUpdatedEvent
     ChildDeletedEvent:
-      $ref: ../../../../blueprint-core/schemas/events.yaml#/ResourceDeletedEvent
+      $ref: base://schemas/events.yaml#/ResourceDeletedEvent
   examples:
     OwnerExample1:
       summary: Example Owner record

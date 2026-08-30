@@ -1,0 +1,7 @@
+overlay: "1.0.0"
+info:
+  title: Functional test fixture config
+  version: 1.0.0
+config:
+  x-base: ../../../../../blueprint-core/base-contracts
+actions: []

@@ -25,6 +25,7 @@ import yaml from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { faker } from '@faker-js/faker';
 import { discoverApiSpecs } from '@codeforamerica/blueprint-core/loader';
+import { rawContractsDir, defaultSeedDir } from '../config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -283,9 +284,7 @@ function topologicalSort(nodes) {
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const contractsDir = resolve(__dirname, '..', '..', '..', 'packages', 'contracts');
-  const seedDir = resolve(__dirname, '..', 'seed');
-  const options = { spec: contractsDir, out: seedDir, count: 2, help: false };
+  const options = { spec: rawContractsDir, out: defaultSeedDir, count: 2, help: false };
 
   for (const arg of args) {
     if (arg === '--help' || arg === '-h') options.help = true;

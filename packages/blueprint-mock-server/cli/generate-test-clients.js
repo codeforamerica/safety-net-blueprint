@@ -10,16 +10,17 @@
  */
 
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, resolve } from 'path';
 import { spawn } from 'child_process';
 import { existsSync, readdirSync } from 'fs';
+import { generatedContractsDir, rawContractsDir } from '../config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const projectRoot = join(__dirname, '..', '..', '..');
-const specDir = join(__dirname, '..', '..', 'resolved', 'contracts');
+const projectRoot = resolve(__dirname, '..', '..', '..');
+const specDir = generatedContractsDir;
 const outDir = join(__dirname, '..', 'tests', 'integration', 'generated');
-const generatorScript = join(__dirname, '..', '..', 'blueprint-cli', 'scripts', 'generate', 'clients-typescript.js');
-const resolveScript = join(projectRoot, 'packages', 'blueprint-cli', 'scripts', 'resolve.js');
+const generatorScript = join(__dirname, '..', '..', 'blueprint-cli', 'scripts', 'generate-ts-clients.js');
+const resolveScript = join(__dirname, '..', '..', 'blueprint-cli', 'scripts', 'resolve.js');
 
 /**
  * Ensure resolved specs exist. Runs the resolve pipeline if packages/generated/ is missing or empty.
@@ -28,7 +29,12 @@ async function ensureResolvedSpecs() {
   if (existsSync(specDir) && readdirSync(specDir).length > 0) return;
   console.log('Resolved specs not found — running resolve pipeline...');
   await new Promise((res, rej) => {
-    const proc = spawn(process.execPath, [resolveScript], { stdio: 'inherit' });
+    const proc = spawn(process.execPath, [
+      resolveScript,
+      `--spec=${rawContractsDir}`,
+      `--overlay=${join(rawContractsDir, 'overlays')}`,
+      `--out=${generatedContractsDir}`
+    ], { stdio: 'inherit' });
     proc.on('close', code => code === 0 ? res() : rej(new Error(`resolve failed with exit code ${code}`)));
     proc.on('error', rej);
   });

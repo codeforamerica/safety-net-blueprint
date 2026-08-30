@@ -8,8 +8,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { writeFileSync, readFileSync, mkdirSync, rmSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 import yaml from 'js-yaml';
 import {
   discoverOverlayFiles,
@@ -22,6 +25,7 @@ import {
   substitutePlaceholders,
   detectComponentPrefix,
   rewriteOverlayRefs,
+  rewriteBaseRefs,
   generateRpcOverlays,
   buildEnumSourceIndex,
   findEnumSources,
@@ -1586,6 +1590,137 @@ test('x-enum-source injection', async (t) => {
       assert.strictEqual(resolved.policies['state-specific-income-disregard'].citation, 'State Admin Code § 400.1');
       // Platform policy should be unaffected
       assert.strictEqual(resolved.policies['snap-household-composition'].citation, '7 CFR § 273.1');
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
+  // ===========================================================================
+  // rewriteBaseRefs
+  // ===========================================================================
+
+  await t.test('rewriteBaseRefs - rewrites base:// ref in root-level spec', () => {
+    const spec = {
+      paths: {
+        '/items': {
+          get: {
+            parameters: [{ $ref: 'base://components/parameters.yaml#/LimitParam' }]
+          }
+        }
+      }
+    };
+    const result = rewriteBaseRefs(spec, 'items-openapi.yaml');
+    const ref = result.paths['/items'].get.parameters[0].$ref;
+    // From root, base/components/parameters.yaml is a sibling path
+    assert.strictEqual(ref, 'base/components/parameters.yaml#/LimitParam');
+  });
+
+  await t.test('rewriteBaseRefs - rewrites base:// ref in nested spec', () => {
+    const spec = {
+      paths: {
+        '/items': {
+          get: {
+            parameters: [{ $ref: 'base://components/parameters.yaml#/LimitParam' }]
+          }
+        }
+      }
+    };
+    const result = rewriteBaseRefs(spec, 'domains/intake/intake-openapi.yaml');
+    const ref = result.paths['/items'].get.parameters[0].$ref;
+    assert.strictEqual(ref, '../../base/components/parameters.yaml#/LimitParam');
+  });
+
+  await t.test('rewriteBaseRefs - preserves fragment', () => {
+    const spec = { $ref: 'base://schemas/enums.yaml#/$defs/RoleType' };
+    const result = rewriteBaseRefs(spec, 'foo-openapi.yaml');
+    assert.strictEqual(result.$ref, 'base/schemas/enums.yaml#/$defs/RoleType');
+  });
+
+  await t.test('rewriteBaseRefs - handles ref without fragment', () => {
+    const spec = { $ref: 'base://components/responses.yaml' };
+    const result = rewriteBaseRefs(spec, 'foo-openapi.yaml');
+    assert.strictEqual(result.$ref, 'base/components/responses.yaml');
+  });
+
+  await t.test('rewriteBaseRefs - leaves non-base:// refs unchanged', () => {
+    const spec = {
+      $ref: './components/responses.yaml#/BadRequest',
+      other: { $ref: '#/components/schemas/Foo' }
+    };
+    const result = rewriteBaseRefs(spec, 'foo-openapi.yaml');
+    assert.strictEqual(result.$ref, './components/responses.yaml#/BadRequest');
+    assert.strictEqual(result.other.$ref, '#/components/schemas/Foo');
+  });
+
+  await t.test('rewriteBaseRefs - rewrites multiple refs in one spec', () => {
+    const spec = {
+      a: { $ref: 'base://components/parameters.yaml#/SortParam' },
+      b: { $ref: 'base://schemas/enums.yaml#/$defs/Status' }
+    };
+    const result = rewriteBaseRefs(spec, 'foo-openapi.yaml');
+    assert.strictEqual(result.a.$ref, 'base/components/parameters.yaml#/SortParam');
+    assert.strictEqual(result.b.$ref, 'base/schemas/enums.yaml#/$defs/Status');
+  });
+
+  // ===========================================================================
+  // x-base end-to-end (resolve pipeline)
+  // ===========================================================================
+
+  await t.test('x-base: resolve rewrites base:// refs and copies base contracts to output', async () => {
+    const { spawnSync } = await import('child_process');
+    const { existsSync } = await import('fs');
+
+    const dir = createTmpDir();
+    try {
+      // Base contracts dir (simulates blueprint-core/base-contracts)
+      writeYaml(join(dir, 'base-contracts', 'components'), 'parameters.yaml', {
+        LimitParam: { name: 'limit', in: 'query', schema: { type: 'integer' } }
+      });
+
+      // Spec using base:// ref
+      writeYaml(join(dir, 'spec'), 'items-openapi.yaml', {
+        openapi: '3.1.0',
+        info: { title: 'Items', version: '1.0.0' },
+        paths: {
+          '/items': {
+            get: {
+              operationId: 'listItems',
+              parameters: [{ $ref: 'base://components/parameters.yaml#/LimitParam' }],
+              responses: { '200': { description: 'ok' } }
+            }
+          }
+        }
+      });
+
+      // Overlay declaring x-base (path relative to overlay file)
+      writeYaml(join(dir, 'overlay'), 'config.yaml', {
+        overlay: '1.0.0',
+        info: { title: 'Test config', version: '1.0.0' },
+        config: { 'x-base': '../base-contracts' },
+        actions: []
+      });
+
+      const outDir = join(dir, 'out');
+      const resolveScript = join(__dirname, '..', 'scripts', 'resolve.js');
+
+      const result = spawnSync(
+        process.execPath,
+        [resolveScript, `--spec=${join(dir, 'spec')}`, `--overlay=${join(dir, 'overlay')}`, `--out=${outDir}`],
+        { encoding: 'utf8' }
+      );
+
+      assert.strictEqual(result.status, 0, `resolve failed:\n${result.stderr}`);
+
+      // Base contracts should be copied into out/base/
+      assert.ok(
+        existsSync(join(outDir, 'base', 'components', 'parameters.yaml')),
+        'base contracts should be copied to out/base/'
+      );
+
+      // The spec in out/ should have the base:// ref rewritten to a real relative path
+      const outSpec = yaml.load(readFileSync(join(outDir, 'items-openapi.yaml'), 'utf8'));
+      const ref = outSpec.paths['/items'].get.parameters[0].$ref;
+      assert.strictEqual(ref, 'base/components/parameters.yaml#/LimitParam');
     } finally {
       rmSync(dir, { recursive: true });
     }

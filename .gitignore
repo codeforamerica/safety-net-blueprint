@@ -12,6 +12,7 @@ dist/
 dist-packages/
 data/
 generated/
+packages/blueprint-mock-server/tests/functional/resolved/
 
 # Generated READMEs (built from README.content.md + template at prepack time)
 packages/*/README.md

@@ -1328,6 +1328,7 @@ export {
   applyOverlayWithTargets,
   detectComponentPrefix,
   rewriteOverlayRefs,
+  rewriteBaseRefs,
   generateRpcOverlays,
   buildEnumSourceIndex,
   findEnumSources,

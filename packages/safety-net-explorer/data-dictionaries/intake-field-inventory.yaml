@@ -159,6 +159,8 @@ application.members[].programDeterminations[]: { type: list(ApplicationMemberPro
 application.members[].programDeterminations[].program: { type: string }
 application.members[].programDeterminations[].outcome: { type: enum, values: [approved, denied] }
 application.members[].programDeterminations[].determinedAt: { type: datetime }
+application.members[].links: { type: object }
+application.members[].links.application: { type: string }
 
 # ── household-info ──────────────────────────────────────────────────────────────
 
@@ -172,6 +174,8 @@ application.householdInfo.roomers[].mealsIncludedWithRent: { type: boolean }
 application.householdInfo.utilitiesIncludedInRent: { type: boolean }
 application.householdInfo.isSubsidizedHousing: { type: boolean }
 application.householdInfo.receivedTanfInAnotherState: { type: boolean }
+application.householdInfo.links: { type: object }
+application.householdInfo.links.application: { type: string }
 
 # ── tax-filers ──────────────────────────────────────────────────────────────────
 
@@ -193,6 +197,9 @@ application.taxFilers[].personClaiming.id: { type: uuid }
 application.taxFilers[].personClaiming.type: { type: enum, values: [member, contact] }
 application.taxFilers[].isNonCustodialParent: { type: boolean }
 application.taxFilers[].hasDomesticViolenceTaxFilingException: { type: boolean }
+application.taxFilers[].links: { type: object }
+application.taxFilers[].links.member: { type: string }
+application.taxFilers[].links.application: { type: string }
 
 # ── health-plans ────────────────────────────────────────────────────────────────
 
@@ -244,6 +251,8 @@ application.healthPlans[].partD.premiumPaidBy: { type: enum, values: [self, stat
 application.healthPlans[].programType: { type: string, appliesWhen: 'type = tricare' }
 application.healthPlans[].insuranceCompanyName: { type: string, appliesWhen: 'type = tricare' }
 application.healthPlans[].policyNumber: { type: string, appliesWhen: 'type = tricare' }
+application.healthPlans[].links: { type: object }
+application.healthPlans[].links.application: { type: string }
 
 # ── health-enrollments ──────────────────────────────────────────────────────────
 
@@ -262,6 +271,9 @@ application.healthEnrollments[].prefersSeparateMailing: { type: boolean }
 application.healthEnrollments[].sponsor: { type: PersonRef }
 application.healthEnrollments[].sponsor.id: { type: uuid }
 application.healthEnrollments[].sponsor.type: { type: enum, values: [member, contact] }
+application.healthEnrollments[].links: { type: object }
+application.healthEnrollments[].links.member: { type: string }
+application.healthEnrollments[].links.application: { type: string }
 
 # ── child-support ───────────────────────────────────────────────────────────────
 
@@ -275,6 +287,8 @@ application.childSupport.parentsOutsideHome[].children[]: { type: list(PersonRef
 application.childSupport.parentsOutsideHome[].children[].id: { type: uuid }
 application.childSupport.parentsOutsideHome[].children[].type: { type: enum, values: [member, contact] }
 application.childSupport.parentsOutsideHome[].attemptedMedicalSupportCooperation: { type: boolean }
+application.childSupport.links: { type: object }
+application.childSupport.links.application: { type: string }
 
 # ── contacts ────────────────────────────────────────────────────────────────────
 
@@ -297,6 +311,8 @@ application.contacts[].primaryAddress.zip: { type: string }
 application.contacts[].primaryAddress.county: { type: string }
 application.contacts[].primaryPhone: { type: string }
 application.contacts[].email: { type: email }
+application.contacts[].links: { type: object }
+application.contacts[].links.application: { type: string }
 
 # ── organizations ───────────────────────────────────────────────────────────────
 
@@ -313,6 +329,8 @@ application.organizations[].address.state: { type: string }
 application.organizations[].address.zip: { type: string }
 application.organizations[].address.county: { type: string }
 application.organizations[].phone: { type: string }
+application.organizations[].links: { type: object }
+application.organizations[].links.application: { type: string }
 
 # ── person-relationships ────────────────────────────────────────────────────────
 
@@ -326,6 +344,8 @@ application.personRelationships[].to: { type: PersonRef }
 application.personRelationships[].to.id: { type: uuid }
 application.personRelationships[].to.type: { type: enum, values: [member, contact] }
 application.personRelationships[].relationshipTypes[]: { type: enum, values: [parent, child, spouse, domestic_partner, sibling, grandparent, grandchild, legal_guardian, caregiver, primary_caregiver, other_relative, unrelated] }
+application.personRelationships[].links: { type: object }
+application.personRelationships[].links.application: { type: string }
 
 # ── authorized-representatives ──────────────────────────────────────────────────
 
@@ -339,6 +359,8 @@ application.authorizedRepresentatives[].inCareOf.id: { type: uuid }
 application.authorizedRepresentatives[].inCareOf.type: { type: enum, values: [member, contact] }
 application.authorizedRepresentatives[].receivesNotices: { type: boolean }
 application.authorizedRepresentatives[].programs[]: { type: enum, values: [snap, medicaid, chip, tanf, aca] }
+application.authorizedRepresentatives[].links: { type: object }
+application.authorizedRepresentatives[].links.application: { type: string }
 
 # ── signatures ──────────────────────────────────────────────────────────────────
 
@@ -352,6 +374,8 @@ application.signatures[].signer.role: { type: enum, values: [applicant, authoriz
 application.signatures[].purpose: { type: enum, values: [application, authorized_representative_appointment, authorized_representative_acceptance, rights_and_responsibilities, hipaa_consent, other] }
 application.signatures[].signedAt: { type: datetime }
 application.signatures[].signatureMethod: { type: enum, values: [electronic, wet_signature, verbal] }
+application.signatures[].links: { type: object }
+application.signatures[].links.application: { type: string }
 
 # ── sponsors ────────────────────────────────────────────────────────────────────
 
@@ -369,6 +393,8 @@ application.sponsors[].spouse.signedAffidavit: { type: boolean }
 application.sponsors[].householdSize: { type: integer }
 application.sponsors[].income: { type: number }
 application.sponsors[].livesWithSponsored: { type: boolean }
+application.sponsors[].links: { type: object }
+application.sponsors[].links.application: { type: string }
 
 # ── jobs ────────────────────────────────────────────────────────────────────────
 
@@ -397,6 +423,9 @@ application.jobs[].expenses.interest: { type: number, appliesWhen: 'type = self_
 application.jobs[].expenses.laborCosts: { type: number, appliesWhen: 'type = self_employed' }
 application.jobs[].expenses.costOfMerchandise: { type: number, appliesWhen: 'type = self_employed' }
 application.jobs[].expenses.other: { type: number, appliesWhen: 'type = self_employed' }
+application.jobs[].links: { type: object }
+application.jobs[].links.member: { type: string }
+application.jobs[].links.application: { type: string }
 
 # ── incomes ─────────────────────────────────────────────────────────────────────
 
@@ -416,6 +445,9 @@ application.incomes[].unearnedType: { type: enum, values: [unemployment, kinship
 application.incomes[].inKindSupportType: { type: enum, values: [shelter, food, utilities, other], appliesWhen: 'type = in_kind_support' }
 application.incomes[].payerName: { type: string, appliesWhen: 'type = in_kind_support' }
 application.incomes[].lumpSumType: { type: enum, values: [lawsuit_settlement, insurance_settlement, social_security_ssi_ssdi_payment, veterans, inheritance, surrender_of_annuity, life_insurance_payout, lottery_gambling_winnings, other], appliesWhen: 'type = lump_sum' }
+application.incomes[].links: { type: object }
+application.incomes[].links.member: { type: string }
+application.incomes[].links.application: { type: string }
 
 # ── assets ──────────────────────────────────────────────────────────────────────
 
@@ -445,6 +477,9 @@ application.assets[].address.zip: { type: string, appliesWhen: 'type = real_prop
 application.assets[].address.county: { type: string, appliesWhen: 'type = real_property' }
 application.assets[].primaryUse: { type: enum, values: [primary_residence, rental, self_employment, for_sale, other], appliesWhen: 'type = real_property' }
 application.assets[].primaryUseOther: { type: string, appliesWhen: 'type = real_property' }
+application.assets[].links: { type: object }
+application.assets[].links.member: { type: string }
+application.assets[].links.application: { type: string }
 
 # ── asset-disposals ─────────────────────────────────────────────────────────────
 
@@ -457,6 +492,9 @@ application.assetDisposals[].typeOther: { type: string }
 application.assetDisposals[].dateOfDisposal: { type: date }
 application.assetDisposals[].amountReceived: { type: number }
 application.assetDisposals[].fairMarketValue: { type: number }
+application.assetDisposals[].links: { type: object }
+application.assetDisposals[].links.member: { type: string }
+application.assetDisposals[].links.application: { type: string }
 
 # ── expenses ────────────────────────────────────────────────────────────────────
 
@@ -468,6 +506,9 @@ application.expenses[].type: { type: enum, values: [rent, mortgage, dependent_ca
 application.expenses[].typeOther: { type: string }
 application.expenses[].amount: { type: number }
 application.expenses[].legallyObligatedAmount: { type: number }
+application.expenses[].links: { type: object }
+application.expenses[].links.member: { type: string }
+application.expenses[].links.application: { type: string }
 
 # ── disability-benefits ─────────────────────────────────────────────────────────
 
@@ -480,6 +521,9 @@ application.disabilityBenefits[].status: { type: enum, values: [pending, approve
 application.disabilityBenefits[].applicationDate: { type: date }
 application.disabilityBenefits[].startDate: { type: date }
 application.disabilityBenefits[].endDate: { type: date }
+application.disabilityBenefits[].links: { type: object }
+application.disabilityBenefits[].links.member: { type: string }
+application.disabilityBenefits[].links.application: { type: string }
 
 # ── deductions ──────────────────────────────────────────────────────────────────
 
@@ -492,6 +536,9 @@ application.deductions[].typeOther: { type: string }
 application.deductions[].frequency: { type: enum, values: [one_time_only, weekly, every_two_weeks, twice_monthly, monthly, yearly, variable] }
 application.deductions[].amount: { type: number }
 application.deductions[].annualAmount: { type: number }
+application.deductions[].links: { type: object }
+application.deductions[].links.member: { type: string }
+application.deductions[].links.application: { type: string }
 
 # ── verifications ───────────────────────────────────────────────────────────────
 

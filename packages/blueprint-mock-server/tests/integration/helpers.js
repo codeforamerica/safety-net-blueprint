@@ -4,9 +4,10 @@
 
 import http from 'http';
 import { URL } from 'url';
-import { resolve, dirname } from 'path';
+import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { startMockServer, stopServer, isServerRunning } from '../../cli/server.js';
+import { generatedContractsDir } from '../../config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -14,7 +15,7 @@ export const BASE_URL = 'http://localhost:1080';
 // Event types are short-form (no org prefix). The x-event-type-prefix overlay config
 // adds org prefixes at resolve time for state deployments.
 export const EVENT_PREFIX = '';
-export const contractsDir = resolve(__dirname, '..', '..', '..', 'resolved');
+export const contractsDir = generatedContractsDir;
 export const seedDir = resolve(__dirname, 'seed');
 
 export function fetch(url, options = {}) {

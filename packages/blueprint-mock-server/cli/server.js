@@ -12,6 +12,7 @@ import { realpathSync, openSync, statSync, mkdirSync } from 'fs';
 import { resolve } from 'path';
 import { resolveUploadsDir } from '../src/handlers/document-upload-handler.js';
 import { fileURLToPath } from 'url';
+import { generatedContractsDir } from '../config.js';
 import { performSetup } from '../src/setup.js';
 import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes } from '../src/route-generator.js';
 import { registerEventSubscriptions } from '../src/event-subscription.js';
@@ -474,7 +475,7 @@ if (import.meta.url === entryUrl) {
       try { logFile = statSync(logResolved).isDirectory() ? resolve(logResolved, 'mock-server.log') : logResolved; }
       catch { logFile = logResolved; }
     } else {
-      const specDir = args.find(a => a.startsWith('--spec='))?.split('=')[1] || 'packages/contracts';
+      const specDir = args.find(a => a.startsWith('--spec='))?.split('=')[1] || generatedContractsDir;
       logFile = resolve(specDir, 'mock-server.log');
     }
     const out = openSync(logFile, 'w');

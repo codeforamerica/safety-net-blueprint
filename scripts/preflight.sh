@@ -54,14 +54,6 @@ rm -rf packages/blueprint-mock-server/tests/functional/resolved
 rm -rf packages/blueprint-mock-server/tests/functional/generated
 pass "Cleared resolved, tests/integration/generated, and functional resolved/generated"
 
-step "Validating base specs (syntax)"
-if npm run validate:syntax 2>&1; then
-  pass "Base specs valid"
-else
-  fail "Base spec validation failed"
-fi
-bail_if_failed
-
 step "Running unit tests"
 if npm test 2>&1; then
   pass "Unit tests passed"

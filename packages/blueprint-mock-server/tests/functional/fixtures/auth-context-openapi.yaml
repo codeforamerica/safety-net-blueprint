@@ -24,10 +24,10 @@ paths:
       operationId: listUsers
       tags: [Users]
       parameters:
-        - $ref: "../../../../safety-net-contracts/common/components/parameters.yaml#/SearchQueryParam"
-        - $ref: "../../../../safety-net-contracts/common/components/parameters.yaml#/LimitParam"
-        - $ref: "../../../../safety-net-contracts/common/components/parameters.yaml#/OffsetParam"
-        - $ref: "../../../../safety-net-contracts/common/components/parameters.yaml#/SortParam"
+        - $ref: "base://components/parameters.yaml#/SearchQueryParam"
+        - $ref: "base://components/parameters.yaml#/LimitParam"
+        - $ref: "base://components/parameters.yaml#/OffsetParam"
+        - $ref: "base://components/parameters.yaml#/SortParam"
       responses:
         "200":
           description: List of users.
@@ -36,7 +36,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserList"
         "500":
-          $ref: "../../../../safety-net-contracts/common/components/responses.yaml#/InternalError"
+          $ref: "base://components/responses.yaml#/InternalError"
 
     post:
       summary: Create user
@@ -56,9 +56,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/User"
         "422":
-          $ref: "../../../../safety-net-contracts/common/components/responses.yaml#/UnprocessableEntity"
+          $ref: "base://components/responses.yaml#/UnprocessableEntity"
         "500":
-          $ref: "../../../../safety-net-contracts/common/components/responses.yaml#/InternalError"
+          $ref: "base://components/responses.yaml#/InternalError"
 
   /users/me:
     get:
@@ -81,11 +81,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/User"
         "401":
-          $ref: "../../../../safety-net-contracts/common/components/responses.yaml#/Unauthorized"
+          $ref: "base://components/responses.yaml#/Unauthorized"
         "404":
-          $ref: "../../../../safety-net-contracts/common/components/responses.yaml#/NotFound"
+          $ref: "base://components/responses.yaml#/NotFound"
         "500":
-          $ref: "../../../../safety-net-contracts/common/components/responses.yaml#/InternalError"
+          $ref: "base://components/responses.yaml#/InternalError"
 
   /users/{userId}:
     parameters:
@@ -107,9 +107,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/User"
         "404":
-          $ref: "../../../../safety-net-contracts/common/components/responses.yaml#/NotFound"
+          $ref: "base://components/responses.yaml#/NotFound"
         "500":
-          $ref: "../../../../safety-net-contracts/common/components/responses.yaml#/InternalError"
+          $ref: "base://components/responses.yaml#/InternalError"
 
 components:
   schemas:
@@ -151,7 +151,7 @@ components:
 
     UserList:
       allOf:
-        - $ref: "../../../../safety-net-contracts/common/components/pagination.yaml#/Pagination"
+        - $ref: "base://components/pagination.yaml#/Pagination"
         - type: object
           required:
             - items

@@ -24,7 +24,7 @@ export const generatedDir = join(__dirname, 'generated', 'typescript');
 // Path to contracts resolve.js (in blueprint-cli package)
 const resolveScript = resolve(__dirname, '..', '..', '..', 'blueprint-cli', 'scripts', 'resolve.js');
 // Path to clients-typescript.js (in blueprint-cli package)
-const generateScript = resolve(__dirname, '..', '..', '..', 'blueprint-cli', 'scripts', 'generate', 'clients-typescript.js');
+const generateScript = resolve(__dirname, '..', '..', '..', 'blueprint-cli', 'scripts', 'generate-ts-clients.js');
 
 /**
  * Spawn a node script and wait for it to complete.
@@ -64,7 +64,8 @@ export async function setupFunctional() {
   // Resolve entire fixtures directory into resolvedDir in one pass.
   // resolve.js discovers all *-openapi.yaml files in the spec dir and copies
   // them to outDir, applying relationship resolution on the way.
-  await runScript(resolveScript, [`--spec=${fixturesDir}`, `--out=${resolvedDir}`, '--resolve', '--bundle']);
+  const overlayDir = join(fixturesDir, 'overlay');
+  await runScript(resolveScript, [`--spec=${fixturesDir}`, `--overlay=${overlayDir}`, `--out=${resolvedDir}`, '--resolve', '--bundle']);
 
   // Generate TypeScript clients for all resolved specs
   console.log('\nGenerating TypeScript clients...');

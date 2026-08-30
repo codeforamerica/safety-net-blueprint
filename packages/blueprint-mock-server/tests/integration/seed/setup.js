@@ -21,13 +21,14 @@
 
 import { mkdtempSync, rmSync, cpSync, readdirSync } from 'fs';
 import { tmpdir } from 'os';
-import { join, dirname, resolve } from 'path';
+import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { rawContractsDir } from '../../../config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const CONTRACTS_DIR = resolve(__dirname, '..', '..', '..', '..', '..', 'packages', 'contracts');
+const CONTRACTS_DIR = rawContractsDir;
 
 /**
  * Create a temp directory with the real contract specs and fixture seed

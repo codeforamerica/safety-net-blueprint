@@ -15,6 +15,7 @@ import { dirname, join, resolve } from 'path';
 import { readdirSync, existsSync } from 'fs';
 import { startMockServer, stopServer, isServerRunning } from '../cli/server.js';
 import { setupFunctional, startFunctionalServer, stopFunctionalServer } from './functional/setup.js';
+import { generatedContractsDir, rawContractsDir } from '../config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -139,7 +140,7 @@ const resolveScript = resolve(__dirname, '..', '..', 'blueprint-cli', 'scripts',
 async function resolveContracts() {
   console.log('Resolving contracts...');
   await new Promise((res, rej) => {
-    const proc = spawn('node', [resolveScript, '--overlay=packages/safety-net-contracts/overlays'], { stdio: 'inherit', shell: false });
+    const proc = spawn('node', [resolveScript, `--spec=${rawContractsDir}`, `--overlay=${join(rawContractsDir, 'overlays')}`, `--out=${generatedContractsDir}`], { stdio: 'inherit', shell: false });
     proc.on('close', code => code === 0 ? res() : rej(new Error(`resolve failed with exit code ${code}`)));
     proc.on('error', rej);
   });
@@ -224,7 +225,7 @@ async function runAllTests() {
     // Start the mock server once for all integration and Postman tests.
     // Individual test files check isServerRunning() and skip startup when
     // the server is already available, so teardownServer() is a no-op for them.
-    const integrationResolvedDir = resolve(__dirname, '..', '..', 'resolved', 'contracts');
+    const integrationResolvedDir = generatedContractsDir;
     const integrationSeedDir = resolve(__dirname, 'integration', 'seed');
     const integrationAlreadyRunning = await isServerRunning().catch(() => false);
     if (!integrationAlreadyRunning) {
