@@ -7,8 +7,13 @@
     "scripts/"
   ],
   "bin": {
+    "blueprint-validate": "./scripts/validate.js",
+    "blueprint-add-api-entity": "./scripts/add-api-entity.js",
+    "blueprint-generate-postman-collection": "./scripts/generate-postman-collection.js",
+    "blueprint-generate-rpc-overlay": "./scripts/generate-rpc-overlay.js",
+    "blueprint-generate-ts-clients": "./scripts/generate-ts-clients.js",
     "blueprint-resolve": "./scripts/resolve.js",
-    "blueprint-generate-api": "./scripts/scaffold-api.js"
+    "blueprint-scaffold-api": "./scripts/scaffold-api.js"
   },
   "scripts": {
     "prepack": "node ../../scripts/build-package-readme.js",
