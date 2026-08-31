@@ -1,0 +1,119 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Patterns",
+  "description": "Classification output for a rule source. Contains sink candidates and universal pattern findings, plus optional source-specific context.",
+  "type": "object",
+  "required": ["sourceFile", "sourceType", "classification"],
+  "additionalProperties": false,
+  "properties": {
+    "sourceFile": {
+      "type": "string",
+      "description": "Path to the ingested source file this classification was produced from."
+    },
+    "sourceType": {
+      "type": "string",
+      "enum": ["corticon", "rulespec"],
+      "description": "The rule source format."
+    },
+    "sourceContext": {
+      "type": "object",
+      "description": "Source-specific classification context not expressible in universal terms (e.g. ruleflow invocation order for Corticon)."
+    },
+    "classification": {
+      "type": "object",
+      "required": ["sinkCandidates", "patterns"],
+      "additionalProperties": false,
+      "properties": {
+        "sinkCandidates": {
+          "type": "object",
+          "description": "Facts identified as graph outputs — derived facts not referenced by any other derived fact. Keys are fact node identifiers.",
+          "additionalProperties": { "$ref": "#/definitions/SinkCandidate" }
+        },
+        "patterns": {
+          "type": "array",
+          "description": "Universal pattern findings from the translation-patterns catalog. Both Corticon and rulespec classifiers populate this.",
+          "items": { "$ref": "#/definitions/PatternFinding" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "SinkCandidate": {
+      "type": "object",
+      "required": ["definitionCount", "totalDefinitions", "totalPositions"],
+      "additionalProperties": true,
+      "properties": {
+        "definitionCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of rules that write to this fact."
+        },
+        "totalDefinitions": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total rules in the source, used as the denominator for definitionCount."
+        },
+        "latestPosition": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Latest execution position of any rule writing to this fact. Null if position is unknown."
+        },
+        "totalPositions": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total execution positions in the source, used as the denominator for latestPosition."
+        },
+        "isOutput": {
+          "type": "boolean",
+          "description": "True if this fact is declared as an explicit output in the source configuration."
+        }
+      }
+    },
+    "PatternFinding": {
+      "type": "object",
+      "required": ["pattern"],
+      "additionalProperties": false,
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "description": "Pattern name from the translation-patterns catalog."
+        },
+        "variant": {
+          "type": "string",
+          "description": "Sub-type of the pattern, for patterns with type-of relationships in the catalog (e.g. null-guard variants: default, fallback, table; call variants: function, procedure, opaque)."
+        },
+        "node": {
+          "type": "string",
+          "description": "The fact node this finding applies to, in entity.attribute form."
+        },
+        "nodes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Ordered list of fact nodes forming a cycle path. Used for multi-hop cycle findings."
+        },
+        "ruleId": {
+          "type": "string",
+          "description": "The rule this finding applies to. Format: file.ers:N for a specific rule, file.ers:* for all rules in a rulesheet."
+        },
+        "ruleIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Multiple rule identifiers. Used when a finding spans more than one rulesheet (e.g. composition: ['file1.ers:*', 'file2.ers:*'])."
+        },
+        "expression": {
+          "type": "string",
+          "description": "Source expression text. Used for guard and expression-level pattern findings."
+        },
+        "entityType": {
+          "type": "string",
+          "description": "The entity type being constructed. Used for constructor pattern findings."
+        },
+        "connector": {
+          "type": "object",
+          "description": "External connector definition. Used for call pattern findings.",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

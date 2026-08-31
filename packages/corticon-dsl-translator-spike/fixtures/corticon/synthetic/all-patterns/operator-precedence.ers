@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<com.corticon.rulesemf.assetmodel:RulesheetAsset xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:com.corticon.rulesemf.asg="http:///com/corticon/rulesemf/asg.ecore" xmlns:com.corticon.rulesemf.assetmodel="http:///com/corticon/rulesemf/assetmodel.ecore" majorVersionNumber="2" buildNumber="8020" updateStamp="_ap0000000000000042" externalChecksum="0:0:0" studioType="Javascript">
+  <languageCode>en_US</languageCode>
+  <ruleset vocabularyUpdateStamp="_ap0000000000000000" vocabulary="vocab.ecore#/">
+    <ruleStatement post="Info" ruleModelElements="#//@ruleset/@rules.0">
+      <text expression="Computes household net monthly income after the 20% earned income deduction">
+        <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Computes household net monthly income after the 20% earned income deduction" expressiontype="BRSTATEMENT">
+          <referencedTermList/>
+        </parserOutput>
+      </text>
+    </ruleStatement>
+
+    <rule documentingRuleStatements="0"/>
+    <rule>
+      <action>
+        <opaqueExpression expression="Application.netMonthlyIncome = Application.incomeRounded - Application.incomeRounded * 0.2">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.netMonthlyIncome = Application.incomeRounded - Application.incomeRounded * 0.2" datatype="Decimal" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
+            <modifiedTermList>
+              <terms text="netMonthlyIncome" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.netMonthlyIncome">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </modifiedTermList>
+            <referencedTermList>
+              <terms text="incomeRounded" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.incomeRounded">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </action>
+    </rule>
+    <logicalVariable explicit="true" entity="vocab.ecore#//Application">
+      <alias value="Application"/>
+    </logicalVariable>
+  </ruleset>
+  <rulesheetViewList xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:DecisionTable">
+    <actionSection rowCount="50" columnWidthFactor="0.5">
+      <actionItemList>
+        <valueSetCell/>
+        <expressionCell external="Application.netMonthlyIncome">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.netMonthlyIncome" datatype="Decimal" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <referencedTermList>
+              <terms text="netMonthlyIncome" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.netMonthlyIncome">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </expressionCell>
+      </actionItemList>
+    </actionSection>
+    <scopeSection>
+      <rootNode>
+        <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeEntity" logicalVariable="#//@ruleset/@logicalVariables.0"/>
+      </rootNode>
+    </scopeSection>
+    <filterSection rowCount="50"/>
+    <ruleStatementSection rowCount="50"/>
+    <conditionSection rowCount="50" columnWidthFactor="0.5"/>
+    <ruleSection columnCount="20">
+      <ruleColumnList ruleId="0" pRule="#//@ruleset/@rules.0"/>
+      <ruleColumnList ruleId="1" pRule="#//@ruleset/@rules.1"/>
+    </ruleSection>
+  </rulesheetViewList>
+</com.corticon.rulesemf.assetmodel:RulesheetAsset>

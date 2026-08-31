@@ -47,6 +47,7 @@ step "Stopping any running mock server for a clean-slate run"
 lsof -ti :1080 | xargs kill -9 2>/dev/null || true
 pass "Mock server stopped (or was not running)"
 
+
 step "Clearing generated artifacts for a clean-slate run"
 rm -rf packages/resolved
 rm -rf packages/mock-server/tests/integration/generated

@@ -1,0 +1,17 @@
+{
+  "name": "@codeforamerica/safety-net-blueprint-corticon-dsl-translator-spike",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Feasibility spike (issue #388): translating a real Corticon ruleset into the decision-rules DSL's dependency-graph structure",
+  "type": "module",
+  "scripts": {
+    "test": "node --test src/tests/",
+    "build": "node src/build-all.js",
+    "build:fixture": "node src/build.js"
+  },
+  "dependencies": {
+    "@marcbachmann/cel-js": "^7.6.1",
+    "ajv": "^8.20.0",
+    "fast-xml-parser": "^5.10.1"
+  }
+}

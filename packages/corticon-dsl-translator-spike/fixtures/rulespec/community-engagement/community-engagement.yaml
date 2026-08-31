@@ -1,0 +1,204 @@
+format: rulespec/v1+cc-implementation-layer
+module:
+  jurisdiction: us
+  program: medicaid
+  summary: |
+    Community engagement requirement fixture (minimal, for translator tests).
+    Covers the core patterns from 42 CFR Part 435 Subpart — Community Engagement
+    Requirement, selected to exercise every translation pattern without the full
+    rule set.
+
+types:
+  - name: QualifyingActivityKind
+    kind: enum
+    values: [work, community_service, work_program, education, monthly_income, seasonal_average_income]
+    source: 42 CFR 435.552(a)
+
+rules:
+
+  # =========================================================================
+  # PARAMETERS
+  # =========================================================================
+
+  - name: ce_min_monthly_hours
+    kind: parameter
+    dtype: Integer
+    unit: hours
+    source: 42 CFR 435.552(a)(1)-(5)
+    versions:
+      - effective_from: '2027-01-01'
+        formula: '80'
+    description: The core monthly 80-hour threshold.
+
+  - name: federal_minimum_wage_hourly
+    kind: parameter
+    dtype: Money
+    unit: currency-USD
+    source: 29 U.S.C. 206(a)(1)(C)
+    versions:
+      - effective_from: '2009-07-24'
+        formula: '7.25'
+    description: Federal minimum wage used in the income test.
+
+  - name: ce_applicable_min_age
+    kind: parameter
+    dtype: Integer
+    unit: years
+    source: 42 CFR 435.551(b)(1)
+    versions:
+      - effective_from: '2027-01-01'
+        formula: '19'
+    description: Minimum age of an applicable individual.
+
+  - name: ce_applicable_max_age
+    kind: parameter
+    dtype: Integer
+    unit: years
+    source: 42 CFR 435.551(b)(1)
+    versions:
+      - effective_from: '2027-01-01'
+        formula: '65'
+    description: Upper age bound (exclusive) of an applicable individual.
+
+  # =========================================================================
+  # DATA RELATIONS
+  # =========================================================================
+
+  - name: hours_of_activity_in_month
+    kind: data_relation
+    arity: 4
+    signature: [Person, QualifyingActivityKind, Month, Integer]
+    period: Month
+    source: 42 CFR 435.552(a), (e)
+    description: |
+      Hours the individual engaged in a given qualifying activity in a month.
+      Supplied per activity kind so the combination rule can sum them.
+
+  - name: enrolled_in_education_at_least_half_time
+    kind: data_relation
+    arity: 2
+    signature: [Person, Month]
+    period: Month
+    source: 42 CFR 435.552(a)(4), (c)
+    description: Enrollment status (at least half-time) as determined by the school/institution.
+
+  - name: magi_monthly_income
+    kind: data_relation
+    arity: 3
+    signature: [Person, Month, Money]
+    period: Month
+    source: 42 CFR 435.552(f); 435.603
+    description: MAGI-based monthly income for the individual's MAGI household.
+
+  - name: avg_magi_income_prior_6_months
+    kind: data_relation
+    arity: 3
+    signature: [Person, Month, Money]
+    period: Month
+    source: 42 CFR 435.552(g)
+    description: Average MAGI-based monthly income over the preceding 6 months.
+
+  - name: age_in_years
+    kind: data_relation
+    arity: 3
+    signature: [Person, Month, Integer]
+    period: Month
+    source: 42 CFR 435.551(b)(1)
+    description: Age of the individual in whole years for the given month.
+
+  - name: is_seasonal_worker
+    kind: data_relation
+    arity: 2
+    signature: [Person, Month]
+    period: Month
+    source: 42 CFR 435.552(a)(7); 26 U.S.C. 45R(d)(5)(B)
+    description: Whether the individual is a seasonal worker under 26 U.S.C. 45R(d)(5)(B).
+
+  # =========================================================================
+  # DERIVED RULES
+  # =========================================================================
+
+  - name: combined_qualifying_hours
+    kind: derived
+    entity: Person
+    dtype: Integer
+    period: Month
+    source: 42 CFR 435.552(e)
+    versions:
+      - effective_from: '2027-01-01'
+        formula: |-
+          hours_of_activity_in_month(person, work, month)
+          + hours_of_activity_in_month(person, community_service, month)
+          + hours_of_activity_in_month(person, work_program, month)
+          + (if enrolled_in_education_at_least_half_time(person, month)
+             then 0
+             else hours_of_activity_in_month(person, education, month))
+    description: |
+      Sum of hours per 435.552(e). Education hours only added when enrolled
+      less than half-time; half-time-plus is handled by meets_education_test.
+
+  - name: meets_education_test
+    kind: derived
+    entity: Person
+    dtype: Boolean
+    period: Month
+    source: 42 CFR 435.552(a)(4)
+    versions:
+      - effective_from: '2027-01-01'
+        formula: enrolled_in_education_at_least_half_time(person, month)
+    description: At-least-half-time enrollment satisfies the requirement standalone.
+
+  - name: meets_income_test
+    kind: derived
+    entity: Person
+    dtype: Boolean
+    period: Month
+    source: 42 CFR 435.552(a)(6), (f)
+    versions:
+      - effective_from: '2027-01-01'
+        formula: |-
+          magi_monthly_income(person, month)
+          >= (federal_minimum_wage_hourly * ce_min_monthly_hours)
+    description: Monthly MAGI income >= federal minimum wage x 80 hours.
+
+  - name: meets_seasonal_income_test
+    kind: derived
+    entity: Person
+    dtype: Boolean
+    period: Month
+    source: 42 CFR 435.552(a)(7), (g)
+    versions:
+      - effective_from: '2027-01-01'
+        formula: |-
+          is_seasonal_worker(person, month)
+          and avg_magi_income_prior_6_months(person, month)
+              >= (federal_minimum_wage_hourly * ce_min_monthly_hours)
+    description: Seasonal worker whose 6-month average MAGI income >= min wage x 80.
+
+  - name: in_age_range
+    kind: derived
+    entity: Person
+    dtype: Boolean
+    period: Month
+    source: 42 CFR 435.551(b)(1)
+    versions:
+      - effective_from: '2027-01-01'
+        formula: |-
+          age_in_years(person, month) >= ce_applicable_min_age
+          and age_in_years(person, month) < ce_applicable_max_age
+
+  - name: demonstrates_community_engagement
+    kind: derived
+    entity: Person
+    dtype: Boolean
+    period: Month
+    source: 42 CFR 435.552(a)
+    versions:
+      - effective_from: '2027-01-01'
+        formula: |-
+          meets_education_test(person, month)
+          or meets_income_test(person, month)
+          or meets_seasonal_income_test(person, month)
+          or combined_qualifying_hours(person, month) >= ce_min_monthly_hours
+    description: |
+      True if the individual met any pathway in 435.552(a) for the month.
