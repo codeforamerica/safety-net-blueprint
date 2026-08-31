@@ -8,7 +8,7 @@
   ],
   "bin": {
     "blueprint-validate": "./scripts/validate.js",
-    "blueprint-add-api-entity": "./scripts/add-api-entity.js",
+    "blueprint-add-api-resource": "./scripts/add-api-resource.js",
     "blueprint-generate-postman-collection": "./scripts/generate-postman-collection.js",
     "blueprint-generate-rpc-overlay": "./scripts/generate-rpc-overlay.js",
     "blueprint-generate-ts-clients": "./scripts/generate-ts-clients.js",
@@ -17,7 +17,8 @@
   },
   "scripts": {
     "prepack": "node ../../scripts/build-package-readme.js",
-    "test": "node --test tests/"
+    "test": "node --test tests/",
+    "test:unit": "node --test tests/"
   },
   "engines": {
     "node": ">=20.19.0"
@@ -32,8 +33,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@codeforamerica/blueprint-core": "^0.1.0",
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
+    "@codeforamerica/blueprint-core": "^0.1.0",
     "ajv": "^8.12.0",
     "ajv-formats": "^3.0.1",
     "js-yaml": "^4.1.0",
@@ -41,6 +42,7 @@
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.90.3",
-    "@redocly/cli": "^2.31.3"
+    "@redocly/cli": "^2.31.3",
+    "typescript": "^5.3.3"
   }
 }

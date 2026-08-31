@@ -10,126 +10,202 @@
  * (clients:generate runs automatically as a pre-step)
  */
 
-import { describe, it, before, after } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { createClient as createIntakeClient } from './generated/intake/client/index.js';
-import {
-  createApplication,
-  updateApplication,
-  createApplicationMember,
-  createIncome,
-  updateIncome,
-  listIncome,
-  getIncome,
-  createJob,
-  createHealthEnrollment,
-  createAsset,
-  createExpense,
-  getHousehold,
-  updateHousehold,
-  createTaxFiler,
-  listTaxFilers,
-  getTaxFiler,
-  createDeduction,
-  listDeductions,
-  getDeduction,
-  updateDeduction,
-  getApplicationReview,
-  getApplicationReviewDemographicsSection,
-  getApplicationReviewIdentitySection,
-  getApplicationReviewIncomeSection,
-  getApplicationReviewEmploymentSection,
-  getApplicationReviewHealthCoverageSection,
-  getApplicationReviewAssetsSection,
-  getApplicationReviewContactSection,
-  getApplicationReviewExpensesSection,
-  getApplicationReviewHouseholdSection,
-} from './generated/intake/sdk.gen.js';
-import { createClient as createUsersClient } from './generated/users/client/index.js';
-import { listUsers, createUser, getUser, updateUser } from './generated/users/sdk.gen.js';
-import { createClient as createWorkflowClient } from './generated/workflow/client/index.js';
-import { listQueues, getQueue, listTasks, createTask, getTask, updateTask, claimTask, completeTask } from './generated/workflow/sdk.gen.js';
-import { createClient as createCaseManagementClient } from './generated/case-management/client/index.js';
-import { listCases, createCase, getCase, updateCase } from './generated/case-management/sdk.gen.js';
-import { createClient as createClientManagementClient } from './generated/client-management/client/index.js';
-import { listPersons, createPerson, getPerson, updatePerson } from './generated/client-management/sdk.gen.js';
-import { createClient as createSchedulingClient } from './generated/scheduling/client/index.js';
-import { listAppointments, createAppointment, getAppointment, updateAppointment } from './generated/scheduling/sdk.gen.js';
-import { createClient as createDocumentManagementClient } from './generated/document-management/client/index.js';
-import { listDocuments, listDocumentTypes } from './generated/document-management/sdk.gen.js';
-import { createClient as createEligibilityClient } from './generated/eligibility/client/index.js';
-import { listDeterminations, listDecisions } from './generated/eligibility/sdk.gen.js';
-import { createClient as createPlatformClient } from './generated/platform/client/index.js';
-import { listPolicies } from './generated/platform/sdk.gen.js';
-import { createClient as createDataExchangeClient } from './generated/data-exchange/client/index.js';
-import { listServices } from './generated/data-exchange/sdk.gen.js';
-import { setupServer, teardownServer, fetch, BASE_URL } from './helpers.js';
+import { resetServer, fetch, BASE_URL } from '@codeforamerica/blueprint-mock-server/test-utils';
 
-// Additional intake CRUD functions
-import {
-  listApplications, getApplication, deleteApplication,
-  createApplicationVerification, listApplicationVerifications, getApplicationVerification,
-  updateApplicationVerification, deleteApplicationVerification,
-  listApplicationMembers, getApplicationMember, updateApplicationMember, deleteApplicationMember,
-  createContact, listContacts, getContact, updateContact, deleteContact,
-  createOrganization, listOrganizations, getOrganization, updateOrganization, deleteOrganization,
-  createPersonRelationship, listPersonRelationships, getPersonRelationship,
-  updatePersonRelationship, deletePersonRelationship,
-  createAuthorizedRepresentative, listAuthorizedRepresentatives, getAuthorizedRepresentative,
-  updateAuthorizedRepresentative, deleteAuthorizedRepresentative,
-  createDisabilityBenefit, listDisabilityBenefits, getDisabilityBenefit,
-  updateDisabilityBenefit, deleteDisabilityBenefit,
-  createHealthPlan, listHealthPlans, getHealthPlan, updateHealthPlan, deleteHealthPlan,
-  listHealthEnrollments, getHealthEnrollment, updateHealthEnrollment, deleteHealthEnrollment,
-  listJobs, getJob, updateJob, deleteJob,
-  listAssets, getAsset, updateAsset, deleteAsset,
-  createAssetDisposal, listAssetDisposals, getAssetDisposal, updateAssetDisposal, deleteAssetDisposal,
-  listExpenses, getExpense, updateExpense, deleteExpense,
-  createSignature, listSignatures, getSignature, updateSignature, deleteSignature,
-  getInterview, updateInterview,
-  getChildSupport, updateChildSupport,
-  createSponsor, listSponsors, getSponsor, updateSponsor, deleteSponsor,
-  deleteIncome, deleteTaxFiler, deleteDeduction,
-  listReviewProgressBySection,
-} from './generated/intake/sdk.gen.js';
-// Additional workflow RPC functions
-import {
-  createQueue, updateQueue, deleteQueue, deleteTask,
-  escalateTask, deEscalateTask, cancelTask, reopenTask, releaseTask,
-  awaitClientTask, awaitVerificationTask, resumeTask, autoResumeTask,
-  autoCancelTask, submitForReviewTask, approveTask, returnToWorkerTask,
-  assignTask, setPriorityTask, slaEscalateTask,
-  listMetrics, getMetric,
-} from './generated/workflow/sdk.gen.js';
-// Additional eligibility, platform, data-exchange, users, document-management functions
-import { getDetermination, getDecision } from './generated/eligibility/sdk.gen.js';
-import { getPolicy, listEvents, getEvent, publishEvent } from './generated/platform/sdk.gen.js';
-import { getService, createServiceCall, listServiceCalls, getServiceCall } from './generated/data-exchange/sdk.gen.js';
-import { getCurrentUser, deactivateUser } from './generated/users/sdk.gen.js';
-import { createDocumentType, getDocumentType, deleteDocumentType } from './generated/document-management/sdk.gen.js';
+// All generated client imports are dynamic — the clients dir is passed via --clients=
+// so the test file itself has no hardcoded path to the generated output.
 
-// Clients for each API
-const intakeClient = createIntakeClient({ baseURL: 'http://localhost:1080/intake' });
-const usersClient = createUsersClient({ baseURL: 'http://localhost:1080/identity-access' });
-const workflowClient = createWorkflowClient({ baseURL: 'http://localhost:1080/workflow' });
-const caseManagementClient = createCaseManagementClient({ baseURL: 'http://localhost:1080/case-management' });
-const clientManagementClient = createClientManagementClient({ baseURL: 'http://localhost:1080' });
-const schedulingClient = createSchedulingClient({ baseURL: 'http://localhost:1080/scheduling' });
-const documentManagementClient = createDocumentManagementClient({ baseURL: 'http://localhost:1080/document-management' });
-const eligibilityClient = createEligibilityClient({ baseURL: 'http://localhost:1080/eligibility' });
-const platformClient = createPlatformClient({ baseURL: 'http://localhost:1080/platform' });
-const dataExchangeClient = createDataExchangeClient({ baseURL: 'http://localhost:1080/data-exchange' });
+// Client instances (initialized in before())
+let intakeClient: any;
+let usersClient: any;
+let workflowClient: any;
+let caseManagementClient: any;
+let clientManagementClient: any;
+let schedulingClient: any;
+let documentManagementClient: any;
+let eligibilityClient: any;
+let platformClient: any;
+let dataExchangeClient: any;
+
+// Intake SDK functions (initialized in before())
+let createApplication: any, updateApplication: any, createApplicationMember: any;
+let createIncome: any, updateIncome: any, listIncome: any, getIncome: any, deleteIncome: any;
+let createJob: any, listJobs: any, getJob: any, updateJob: any, deleteJob: any;
+let createHealthEnrollment: any, listHealthEnrollments: any, getHealthEnrollment: any, updateHealthEnrollment: any, deleteHealthEnrollment: any;
+let createAsset: any, listAssets: any, getAsset: any, updateAsset: any, deleteAsset: any;
+let createAssetDisposal: any, listAssetDisposals: any, getAssetDisposal: any, updateAssetDisposal: any, deleteAssetDisposal: any;
+let createExpense: any, listExpenses: any, getExpense: any, updateExpense: any, deleteExpense: any;
+let getHousehold: any, updateHousehold: any;
+let createTaxFiler: any, listTaxFilers: any, getTaxFiler: any, deleteTaxFiler: any;
+let createDeduction: any, listDeductions: any, getDeduction: any, updateDeduction: any, deleteDeduction: any;
+let getApplicationReview: any;
+let getApplicationReviewDemographicsSection: any, getApplicationReviewIdentitySection: any;
+let getApplicationReviewIncomeSection: any, getApplicationReviewEmploymentSection: any;
+let getApplicationReviewHealthCoverageSection: any, getApplicationReviewAssetsSection: any;
+let getApplicationReviewContactSection: any, getApplicationReviewExpensesSection: any;
+let getApplicationReviewHouseholdSection: any, listReviewProgressBySection: any;
+let listApplications: any, getApplication: any, deleteApplication: any;
+let createApplicationVerification: any, listApplicationVerifications: any, getApplicationVerification: any;
+let updateApplicationVerification: any, deleteApplicationVerification: any;
+let listApplicationMembers: any, getApplicationMember: any, updateApplicationMember: any, deleteApplicationMember: any;
+let createContact: any, listContacts: any, getContact: any, updateContact: any, deleteContact: any;
+let createOrganization: any, listOrganizations: any, getOrganization: any, updateOrganization: any, deleteOrganization: any;
+let createPersonRelationship: any, listPersonRelationships: any, getPersonRelationship: any;
+let updatePersonRelationship: any, deletePersonRelationship: any;
+let createAuthorizedRepresentative: any, listAuthorizedRepresentatives: any, getAuthorizedRepresentative: any;
+let updateAuthorizedRepresentative: any, deleteAuthorizedRepresentative: any;
+let createDisabilityBenefit: any, listDisabilityBenefits: any, getDisabilityBenefit: any;
+let updateDisabilityBenefit: any, deleteDisabilityBenefit: any;
+let createHealthPlan: any, listHealthPlans: any, getHealthPlan: any, updateHealthPlan: any, deleteHealthPlan: any;
+let createSignature: any, listSignatures: any, getSignature: any, updateSignature: any, deleteSignature: any;
+let getInterview: any, updateInterview: any;
+let getChildSupport: any, updateChildSupport: any;
+let createSponsor: any, listSponsors: any, getSponsor: any, updateSponsor: any, deleteSponsor: any;
+
+// Users SDK functions (initialized in before())
+let listUsers: any, createUser: any, getUser: any, updateUser: any;
+let getCurrentUser: any, deactivateUser: any;
+
+// Workflow SDK functions (initialized in before())
+let listQueues: any, getQueue: any, createQueue: any, updateQueue: any, deleteQueue: any;
+let listTasks: any, createTask: any, getTask: any, updateTask: any, deleteTask: any;
+let claimTask: any, completeTask: any, releaseTask: any, cancelTask: any, reopenTask: any;
+let escalateTask: any, deEscalateTask: any;
+let awaitClientTask: any, awaitVerificationTask: any, resumeTask: any, autoResumeTask: any;
+let autoCancelTask: any, submitForReviewTask: any, approveTask: any, returnToWorkerTask: any;
+let assignTask: any, setPriorityTask: any, slaEscalateTask: any;
+let listMetrics: any, getMetric: any;
+
+// Case management SDK functions (initialized in before())
+let listCases: any, createCase: any, getCase: any, updateCase: any;
+
+// Client management SDK functions (initialized in before())
+let listPersons: any, createPerson: any, getPerson: any, updatePerson: any;
+
+// Scheduling SDK functions (initialized in before())
+let listAppointments: any, createAppointment: any, getAppointment: any, updateAppointment: any;
+
+// Document management SDK functions (initialized in before())
+let listDocuments: any, listDocumentTypes: any;
+let createDocumentType: any, getDocumentType: any, deleteDocumentType: any;
+
+// Eligibility SDK functions (initialized in before())
+let listDeterminations: any, listDecisions: any, getDetermination: any, getDecision: any;
+
+// Platform SDK functions (initialized in before())
+let listPolicies: any, getPolicy: any, listEvents: any, getEvent: any, publishEvent: any;
+
+// Data exchange SDK functions (initialized in before())
+let listServices: any, getService: any, createServiceCall: any, listServiceCalls: any, getServiceCall: any;
 
 // IDs generated during test setup — shared across tests in the suite.
 let applicationId: string;
 let memberId: string;
 let incomeId: string;
 
-// File-level server lifecycle — one start/stop shared across all suites.
-// Each suite resets DB state in its own before() hook.
-let serverStartedByTests = false;
-before(async () => { serverStartedByTests = await setupServer(); });
-after(async () => { await teardownServer(serverStartedByTests); });
+before(async () => {
+  const clientsArg = process.argv.find((a: string) => a.startsWith('--clients='));
+  if (!clientsArg) throw new Error('--clients= is required');
+  const clientsDir = clientsArg.slice('--clients='.length);
+
+  await resetServer();
+
+  // Dynamic imports — path is determined at runtime from --clients= arg
+  const intakeSdk           = await import(`${clientsDir}/intake/sdk.gen.js`);
+  const intakeClientMod     = await import(`${clientsDir}/intake/client/index.js`);
+  const usersSdk            = await import(`${clientsDir}/users/sdk.gen.js`);
+  const usersClientMod      = await import(`${clientsDir}/users/client/index.js`);
+  const workflowSdk         = await import(`${clientsDir}/workflow/sdk.gen.js`);
+  const workflowClientMod   = await import(`${clientsDir}/workflow/client/index.js`);
+  const caseMgmtSdk         = await import(`${clientsDir}/case-management/sdk.gen.js`);
+  const caseMgmtClientMod   = await import(`${clientsDir}/case-management/client/index.js`);
+  const clientMgmtSdk       = await import(`${clientsDir}/client-management/sdk.gen.js`);
+  const clientMgmtClientMod = await import(`${clientsDir}/client-management/client/index.js`);
+  const schedulingSdk       = await import(`${clientsDir}/scheduling/sdk.gen.js`);
+  const schedulingClientMod = await import(`${clientsDir}/scheduling/client/index.js`);
+  const docMgmtSdk          = await import(`${clientsDir}/document-management/sdk.gen.js`);
+  const docMgmtClientMod    = await import(`${clientsDir}/document-management/client/index.js`);
+  const eligibilitySdk      = await import(`${clientsDir}/eligibility/sdk.gen.js`);
+  const eligibilityClientMod = await import(`${clientsDir}/eligibility/client/index.js`);
+  const platformSdk         = await import(`${clientsDir}/platform/sdk.gen.js`);
+  const platformClientMod   = await import(`${clientsDir}/platform/client/index.js`);
+  const dataExchangeSdk     = await import(`${clientsDir}/data-exchange/sdk.gen.js`);
+  const dataExchangeClientMod = await import(`${clientsDir}/data-exchange/client/index.js`);
+
+  // Initialize client instances
+  intakeClient           = intakeClientMod.createClient({ baseURL: 'http://localhost:1080/intake' });
+  usersClient            = usersClientMod.createClient({ baseURL: 'http://localhost:1080/identity-access' });
+  workflowClient         = workflowClientMod.createClient({ baseURL: 'http://localhost:1080/workflow' });
+  caseManagementClient   = caseMgmtClientMod.createClient({ baseURL: 'http://localhost:1080/case-management' });
+  clientManagementClient = clientMgmtClientMod.createClient({ baseURL: 'http://localhost:1080' });
+  schedulingClient       = schedulingClientMod.createClient({ baseURL: 'http://localhost:1080/scheduling' });
+  documentManagementClient = docMgmtClientMod.createClient({ baseURL: 'http://localhost:1080/document-management' });
+  eligibilityClient      = eligibilityClientMod.createClient({ baseURL: 'http://localhost:1080/eligibility' });
+  platformClient         = platformClientMod.createClient({ baseURL: 'http://localhost:1080/platform' });
+  dataExchangeClient     = dataExchangeClientMod.createClient({ baseURL: 'http://localhost:1080/data-exchange' });
+
+  // Destructure intake SDK
+  ({
+    createApplication, updateApplication, createApplicationMember,
+    createIncome, updateIncome, listIncome, getIncome, deleteIncome,
+    createJob, listJobs, getJob, updateJob, deleteJob,
+    createHealthEnrollment, listHealthEnrollments, getHealthEnrollment, updateHealthEnrollment, deleteHealthEnrollment,
+    createAsset, listAssets, getAsset, updateAsset, deleteAsset,
+    createAssetDisposal, listAssetDisposals, getAssetDisposal, updateAssetDisposal, deleteAssetDisposal,
+    createExpense, listExpenses, getExpense, updateExpense, deleteExpense,
+    getHousehold, updateHousehold,
+    createTaxFiler, listTaxFilers, getTaxFiler, deleteTaxFiler,
+    createDeduction, listDeductions, getDeduction, updateDeduction, deleteDeduction,
+    getApplicationReview,
+    getApplicationReviewDemographicsSection, getApplicationReviewIdentitySection,
+    getApplicationReviewIncomeSection, getApplicationReviewEmploymentSection,
+    getApplicationReviewHealthCoverageSection, getApplicationReviewAssetsSection,
+    getApplicationReviewContactSection, getApplicationReviewExpensesSection,
+    getApplicationReviewHouseholdSection, listReviewProgressBySection,
+    listApplications, getApplication, deleteApplication,
+    createApplicationVerification, listApplicationVerifications, getApplicationVerification,
+    updateApplicationVerification, deleteApplicationVerification,
+    listApplicationMembers, getApplicationMember, updateApplicationMember, deleteApplicationMember,
+    createContact, listContacts, getContact, updateContact, deleteContact,
+    createOrganization, listOrganizations, getOrganization, updateOrganization, deleteOrganization,
+    createPersonRelationship, listPersonRelationships, getPersonRelationship,
+    updatePersonRelationship, deletePersonRelationship,
+    createAuthorizedRepresentative, listAuthorizedRepresentatives, getAuthorizedRepresentative,
+    updateAuthorizedRepresentative, deleteAuthorizedRepresentative,
+    createDisabilityBenefit, listDisabilityBenefits, getDisabilityBenefit,
+    updateDisabilityBenefit, deleteDisabilityBenefit,
+    createHealthPlan, listHealthPlans, getHealthPlan, updateHealthPlan, deleteHealthPlan,
+    createSignature, listSignatures, getSignature, updateSignature, deleteSignature,
+    getInterview, updateInterview, getChildSupport, updateChildSupport,
+    createSponsor, listSponsors, getSponsor, updateSponsor, deleteSponsor,
+  } = intakeSdk);
+
+  // Destructure users SDK
+  ({ listUsers, createUser, getUser, updateUser, getCurrentUser, deactivateUser } = usersSdk);
+
+  // Destructure workflow SDK
+  ({
+    listQueues, getQueue, createQueue, updateQueue, deleteQueue,
+    listTasks, createTask, getTask, updateTask, deleteTask,
+    claimTask, completeTask, releaseTask, cancelTask, reopenTask,
+    escalateTask, deEscalateTask,
+    awaitClientTask, awaitVerificationTask, resumeTask, autoResumeTask,
+    autoCancelTask, submitForReviewTask, approveTask, returnToWorkerTask,
+    assignTask, setPriorityTask, slaEscalateTask,
+    listMetrics, getMetric,
+  } = workflowSdk);
+
+  // Destructure remaining SDKs
+  ({ listCases, createCase, getCase, updateCase } = caseMgmtSdk);
+  ({ listPersons, createPerson, getPerson, updatePerson } = clientMgmtSdk);
+  ({ listAppointments, createAppointment, getAppointment, updateAppointment } = schedulingSdk);
+  ({ listDocuments, listDocumentTypes, createDocumentType, getDocumentType, deleteDocumentType } = docMgmtSdk);
+  ({ listDeterminations, listDecisions, getDetermination, getDecision } = eligibilitySdk);
+  ({ listPolicies, getPolicy, listEvents, getEvent, publishEvent } = platformSdk);
+  ({ listServices, getService, createServiceCall, listServiceCalls, getServiceCall } = dataExchangeSdk);
+});
 
 describe('Client-side schema validation — income flow', () => {
   before(async () => { await fetch(`${BASE_URL}/mock/reset`, { method: 'POST' }); });
@@ -349,14 +425,14 @@ describe('Zod sweep — workflow', () => {
 
   it('claimTask — RPC response validates against schema', async () => {
     if (!taskId) throw new Error('skipped: createTask must pass first');
-    const res = await claimTask({ client: workflowClient, path: { taskId }, headers: { 'x-caller-id': '00000000-0000-0000-0000-000000000001', 'x-caller-roles': 'case_worker' } });
+    const res = await claimTask({ client: workflowClient, path: { taskId }, headers: { 'x-caller-id': '00000002-0000-4000-8000-000000000001', 'x-caller-roles': 'case_worker' } });
     assert.equal(res.status, 200);
     assert.ok((res.data as { id: string }).id, 'claimed task must have an id');
   });
 
   it('completeTask — RPC response validates against schema', async () => {
     if (!taskId) throw new Error('skipped: claimTask must pass first');
-    const res = await completeTask({ client: workflowClient, path: { taskId }, body: { outcome: 'approved' }, headers: { 'x-caller-id': '00000000-0000-0000-0000-000000000001', 'x-caller-roles': 'case_worker' } });
+    const res = await completeTask({ client: workflowClient, path: { taskId }, body: { outcome: 'approved' }, headers: { 'x-caller-id': '00000002-0000-4000-8000-000000000001', 'x-caller-roles': 'case_worker' } });
     assert.equal(res.status, 200);
     assert.ok((res.data as { id: string }).id, 'completed task must have an id');
   });
@@ -623,11 +699,11 @@ const SEED_POLICY_ID = 'snap-household-composition';
 const SEED_SERVICE_ID = '65b5d4d9-3578-4a58-a4bd-c404ca380e08'; // fdsh_ssa
 const SEED_DOC_TYPE_ID = 'a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5'; // birth_certificate
 const CASEWORKER_HEADERS = {
-  'x-caller-id': '00000000-0000-0000-0000-000000000001',
+  'x-caller-id': '00000002-0000-4000-8000-000000000001',
   'x-caller-roles': 'case_worker',
 };
 const SUPERVISOR_HEADERS = {
-  'x-caller-id': '00000000-0000-0000-0000-000000000001',
+  'x-caller-id': '00000002-0000-4000-8000-000000000001',
   'x-caller-roles': 'supervisor',
 };
 const SYSTEM_HEADERS = {
@@ -1595,7 +1671,7 @@ describe('Zod sweep — workflow RPC: system transitions', () => {
     const res = await assignTask({
       client: workflowClient,
       path: { taskId },
-      body: { assignedToId: '00000000-0000-0000-0000-000000000001' },
+      body: { assignedToId: '00000002-0000-4000-8000-000000000001' },
       headers: SUPERVISOR_HEADERS,
     });
     assert.equal(res.status, 200);
@@ -1680,9 +1756,9 @@ describe('Zod sweep — platform (extended)', () => {
       body: {
         type: 'intake.application.submitted',
         specversion: '1.0',
-        id: '00000000-0000-0000-0000-000000000099',
+        id: '8be7e1db-06a4-4f88-ab56-8793d580d942',
         source: '/intake',
-        subject: '00000000-0000-0000-0000-000000000001',
+        subject: '00000002-0000-4000-8000-000000000001',
         time: '2025-01-01T10:00:00Z',
         datacontenttype: 'application/json',
       },
@@ -1723,7 +1799,7 @@ describe('Zod sweep — data-exchange (extended)', () => {
   it('createServiceCall — response validates against schema', async () => {
     const res = await createServiceCall({
       client: dataExchangeClient,
-      body: { serviceId: SEED_SERVICE_ID, requestingResourceId: '00000000-0000-0000-0000-000000000001' },
+      body: { serviceId: SEED_SERVICE_ID, requestingResourceId: '00000002-0000-4000-8000-000000000001' },
     });
     assert.equal(res.status, 201);
     serviceCallId = (res.data as { id: string }).id;
@@ -1954,6 +2030,3 @@ describe('Error response shapes', () => {
   });
 });
 
-// Node.js v20: file-level after() fires before the last registered item completes.
-// This dummy test ensures after(teardownServer) runs after all suites finish.
-it('teardown guard', () => {});

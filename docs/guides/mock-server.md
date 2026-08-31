@@ -27,7 +27,7 @@ Adding a new operation or resource requires only a contract change.
 
 At startup, the server populates its databases from two sources:
 
-- **Seed files** (`packages/mock-server/seed/`) — hand-edited YAML files with example data for local development.
+- **Seed files** (`packages/blueprint-mock-server/seed/`) — hand-edited YAML files with example data for local development.
 - **Config files** (`*-config.yaml`) — catalog entries like queues, services, and document types that the server treats as system-managed records.
 
 **`POST /mock/reset`** clears all runtime data and restores the config-managed catalog entries. It does not reseed from the seed files — you get an empty database plus the catalog. Use it at the start of each integration test suite to start from a clean, known state.

@@ -12,9 +12,9 @@
     "build:event-catalog": "node build.js --only=event-catalog",
     "build:sequence-diagrams": "node build.js --only=sequence-diagrams",
     "build:state-machine-docs": "node build.js --only=state-machine-docs",
-    "build:action-flow": "node src/sequence-diagrams/render-action-flow.js",
-    "field-inventory:generate": "node src/data-dictionaries/generate-field-inventory.mjs",
-    "test": "node --test tests/*.test.js tests/**/*.test.js"
+    "build:field-inventory": "node src/data-dictionaries/generate-field-inventory.mjs",
+    "test": "node --test tests/*.test.js tests/**/*.test.js",
+    "test:unit": "node --test tests/*.test.js tests/**/*.test.js"
   },
   "engines": {
     "node": ">=20.19.0"
@@ -30,8 +30,5 @@
     "@codeforamerica/blueprint-core": "^0.1.0",
     "ajv": "^8.17.1",
     "js-yaml": "^4.1.0"
-  },
-  "optionalDependencies": {
-    "puppeteer": "^22.0.0"
   }
 }

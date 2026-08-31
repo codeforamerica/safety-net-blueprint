@@ -437,7 +437,7 @@ components:
       schema:
         type: string
         format: uuid
-      example: d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f90
+      example: b1028b88-bcb7-4f80-ba22-cb578f84458e
 
     MetricIdParam:
       name: metricId
@@ -769,7 +769,7 @@ components:
     TaskExample1:
       summary: In-progress SNAP application review task
       value:
-        id: d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f90
+        id: b1028b88-bcb7-4f80-ba22-cb578f84458e
         name: Review SNAP application - Rivera household
         description: Review the submitted SNAP application for the Rivera household and verify income documentation.
         status: in_progress

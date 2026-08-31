@@ -643,4 +643,4 @@ States replace or extend `workflow-metrics.yaml`. `targets` values can be overri
 
 - Regulatory: [7 CFR Part 273](https://www.ecfr.gov/current/title-7/subtitle-B/chapter-II/subchapter-C/part-273) (SNAP), [42 CFR Part 435](https://www.ecfr.gov/current/title-42/chapter-IV/subchapter-C/part-435) (Medicaid)
 - Standards: [BPMN 2.0](https://www.omg.org/spec/BPMN/2.0/), [WS-HumanTask](https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=bpel4people), [OpenAPI 3.x](https://spec.openapis.org/oas/v3.1.0)
-- Related docs: [Domain Design Overview](../domain-design.md), [Contract-Driven Architecture](../contract-driven-architecture.md), [Behavioral Contract DSL](../cross-cutting/behavioral-contract-dsl.md) (expression language, rule context, event subscriptions), [Case Management](case-management.md), [Scheduling](scheduling.md)
+- Related docs: [Domain Design Overview](domain-design.md), [Contract-Driven Architecture](../contract-driven-architecture.md), [Behavioral Contract DSL](../cross-cutting/behavioral-contract-dsl.md) (expression language, rule context, event subscriptions), [Case Management](case-management.md), [Scheduling](scheduling.md)

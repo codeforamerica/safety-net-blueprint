@@ -9,7 +9,7 @@ import yaml from 'js-yaml';
 import {
   detectUrlPrefix,
   mergeResource
-} from '../scripts/add-api-entity.js';
+} from '../scripts/add-api-resource.js';
 
 // Helper: minimal existing spec with a /workflow prefix
 function makeWorkflowSpec() {

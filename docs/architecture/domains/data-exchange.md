@@ -462,7 +462,7 @@ States customize the Data Exchange domain primarily through `data-exchange-confi
 
 - Regulatory: 7 CFR § 272.8, 42 CFR § 435.940–965, 5 U.S.C. § 552a
 - Standards: MITA 3.0 Business Architecture, CloudEvents
-- Related docs: [Domain Design Overview](../domain-design.md), [Contract-Driven Architecture](../contract-driven-architecture.md), [Workflow Domain](workflow.md)
+- Related docs: [Domain Design Overview](domain-design.md), [Contract-Driven Architecture](../contract-driven-architecture.md), [Workflow Domain](workflow.md)
 
 ### Federal service specifications
 

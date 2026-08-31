@@ -1,100 +1,153 @@
 # Project Structure
 
-> **Status: Draft**
-
 Overview of the repository layout and file conventions.
 
 ## Directory Layout
 
-This project uses npm workspaces with three packages:
+This project uses npm workspaces with six packages:
 
 ```
 safety-net-blueprint/
 ├── package.json                    # Root workspace config + command aliases
 │
 ├── packages/
-│   ├── contracts/                  # Behavioral contracts, OpenAPI specs, validation, overlays
-│   │   ├── package.json
-│   │   ├── *-openapi.yaml          # Main API specs (persons-openapi.yaml, workflow-openapi.yaml, etc.)
-│   │   ├── *-state-machine.yaml    # State machine definitions (transitions, guards, effects)
-│   │   ├── *-rules.yaml            # Assignment and priority rule sets (JSON Logic)
-│   │   ├── *-sla-types.yaml        # SLA type definitions (deadlines, pauseWhen, autoAssignWhen)
-│   │   ├── *-metrics.yaml          # Metrics definitions (aggregates, sources, JSON Logic filters)
-│   │   ├── components/             # Shared schemas and parameters
-│   │   │   ├── common.yaml         # Reusable schemas (Address, Name)
-│   │   │   ├── parameters.yaml     # Query params (limit, offset)
-│   │   │   ├── responses.yaml      # Error responses
-│   │   │   └── {resource}.yaml     # Resource-specific shared schemas
-│   │   ├── patterns/               # API design patterns
-│   │   │   └── conventions/
-│   │   ├── overlays/               # State-specific variations
-│   │   │   └── <state>/
-│   │   │       └── modifications.yaml
-│   │   ├── authored/               # Source tables for generated contracts (CSV)
-│   │   ├── examples/               # Runnable examples (prototypes)
-│   │   ├── resolved/               # Generated state specs (gitignored)
-│   │   ├── src/
-│   │   │   ├── overlay/            # Overlay resolution logic
-│   │   │   └── validation/         # OpenAPI loader & validator
-│   │   └── scripts/                # Validation & generation scripts
 │   │
-│   ├── mock-server/                # Development mock server
+│   ├── blueprint-core/             # Framework library (domain-agnostic)
 │   │   ├── package.json
+│   │   ├── base-contracts/         # Shared OpenAPI components used by all domains
+│   │   │   ├── components/         # parameters.yaml, responses.yaml, pagination.yaml, sla.yaml, adapter.yaml
+│   │   │   └── schemas/            # events.yaml, enums.yaml, auth.yaml, identity.yaml
+│   │   ├── schemas/                # JSON schemas for validating contract artifacts
+│   │   │   └── config-schema.yaml  # Schema for overlay config.yaml files
+│   │   └── src/                    # Library source
+│   │       ├── overlay/            # Overlay resolution logic
+│   │       ├── validation/         # OpenAPI loader, validator, pattern validator
+│   │       ├── annotations.js      # Field annotation utilities
+│   │       ├── bundle.js           # Spec bundling (inline $refs)
+│   │       ├── compositions.js     # Composition endpoint generation
+│   │       ├── relationships.js    # x-relationship resolver
+│   │       └── state-machines.js   # State machine engine
+│   │
+│   ├── blueprint-cli/              # CLI scripts (domain-agnostic)
+│   │   ├── package.json
+│   │   ├── scripts/
+│   │   │   ├── resolve.js          # Overlay pipeline + base:// ref rewriting
+│   │   │   ├── validate.js         # Consolidated validator (all layers)
+│   │   │   ├── validate/           # Individual validators (openapi, refs, annotations, state-machines)
+│   │   │   ├── scaffold-api.js     # New API scaffolding
+│   │   │   ├── add-api-resource.js # Add resource to existing API
+│   │   │   ├── generate-ts-clients.js          # TypeScript client generation
+│   │   │   ├── generate-postman-collection.js  # Postman collection generation
+│   │   │   └── generate-rpc-overlay.js         # RPC endpoint overlay generation
+│   │   └── tests/
+│   │
+│   ├── blueprint-mock-server/      # Mock API server (domain-agnostic)
+│   │   ├── package.json
+│   │   ├── config.js               # Canonical path configuration (import paths from here)
 │   │   ├── src/                    # Server implementation
-│   │   │   ├── handlers/           # CRUD + transition handlers
+│   │   │   ├── handlers/           # CRUD, transition, upload handlers
 │   │   │   ├── database-manager.js
-│   │   │   ├── state-machine-engine.js  # Transitions, guards, set/create effects
+│   │   │   ├── state-machine-engine.js
 │   │   │   ├── seeder.js
-│   │   │   └── ...
-│   │   ├── scripts/                # Server startup scripts
-│   │   │   ├── server.js
-│   │   │   ├── setup.js
-│   │   │   ├── reset.js
+│   │   │   └── route-generator.js
+│   │   ├── cli/                    # Server startup scripts
+│   │   │   ├── server.js           # Main server process
+│   │   │   ├── generate-mock-data.js
 │   │   │   └── swagger/
-│   │   └── tests/                  # Unit and integration tests
+│   │   └── tests/
 │   │       ├── unit/
-│   │       └── integration/
+│   │       ├── integration/
+│   │       └── functional/
 │   │
-│   └── clients/                    # API client generation
-│       ├── package.json
-│       ├── scripts/
-│       │   └── build-state-package.js  # Main build script
-│       ├── templates/
-│       │   ├── package.template.json   # npm package template
-│       │   └── search-helpers.ts       # Query builder utilities (q, search)
-│       └── dist-packages/              # Output directory (gitignored)
-│           └── {state}/                # State-specific packages
+│   ├── blueprint-explorer/         # Explorer build tooling
+│   │   └── build.js               # Generates safety-net-explorer/ HTML output
+│   │
+│   ├── safety-net-contracts/       # Safety-net domain contracts
+│   │   ├── package.json
+│   │   ├── common/                 # Cross-domain shared schemas
+│   │   │   ├── components/         # Domain-specific shared components
+│   │   │   └── schemas/            # Domain-specific shared schemas (policies, enums)
+│   │   ├── domains/                # One subdirectory per domain
+│   │   │   ├── case-management/
+│   │   │   ├── client-management/
+│   │   │   ├── communication/
+│   │   │   ├── data-exchange/
+│   │   │   ├── document-management/
+│   │   │   ├── eligibility/
+│   │   │   ├── identity-access/
+│   │   │   ├── intake/
+│   │   │   ├── platform/
+│   │   │   ├── scheduling/
+│   │   │   └── workflow/
+│   │   └── overlays/               # Safety-net-level overlay config
+│   │       ├── config.yaml         # x-base, x-casing, x-pagination, x-relationship defaults
+│   │       ├── common-enums.yaml   # Shared enum overlays applied across domains
+│   │       └── policies-schema.yaml
+│   │
+│   ├── safety-net-explorer/        # Built Explorer HTML output (committed)
+│   │   ├── api-reference/
+│   │   ├── client-reference/
+│   │   ├── data-dictionaries/
+│   │   └── state-machine-docs/
+│   │
+│   └── generated/                  # Generated artifacts (gitignored, regenerated by pipeline)
+│       ├── contracts/              # Resolved + bundled specs (output of npm run resolve)
+│       ├── clients/                # TypeScript clients (output of npm run clients:generate)
+│       └── postman/                # Postman collection
 │
 └── docs/                           # Documentation
     ├── architecture/               # Architecture docs
-    ├── decisions/                  # Architectural decision records
     ├── getting-started/            # Persona-based onboarding
     ├── guides/                     # How-to guides
-    ├── integration/                # CI/CD guides
-    ├── presentation/               # Executive summary and slide deck
-    ├── prototypes/                 # Implementation specs (steel threads)
     └── reference/                  # Reference docs
 ```
 
+## Domain Artifact Layout
+
+Each domain under `packages/safety-net-contracts/domains/{domain}/` follows the same file naming convention:
+
+```
+domains/intake/
+  intake-openapi.yaml            # OpenAPI spec (hand-authored or scaffolded)
+  intake-openapi-examples.yaml   # Seed/example data (included in mock server)
+  intake-state-machine.yaml      # State machine (transitions, guards, effects)
+  intake-compositions.yaml       # Composite view endpoints
+  intake-annotations.yaml        # Field annotation metadata
+  intake-annotations-docs.yaml   # Annotation documentation
+  intake-asyncapi.yaml           # AsyncAPI event catalog
+  intake-schema.yaml             # Shared domain schemas
+  intake-mock-data.yaml          # Mock server seed data
+  authored/                      # Source tables for generated YAML (CSV)
+```
+
+Not every domain has every artifact — only the ones relevant to the domain.
+
+**Pattern:** `{domain}-{artifact-type}[-{version}][-examples].{ext}`
+
+| Artifact type | Suffix | Source |
+|---|---|---|
+| OpenAPI spec | `-openapi` | Hand-authored or scaffolded |
+| OpenAPI examples | `-openapi-examples` | Hand-authored |
+| State machine | `-state-machine` | Authored table (CSV) or hand-authored |
+| Compositions | `-compositions` | Hand-authored |
+| Annotations | `-annotations` | Hand-authored |
+| Async events | `-asyncapi` | Generated from state machine |
+
 ## Workspaces
 
-| Package | Purpose | Key Dependencies |
-|---------|---------|------------------|
-| `@codeforamerica/safety-net-blueprint-contracts` | OpenAPI specs, validation, overlay resolution | `js-yaml`, `ajv` |
-| `@codeforamerica/safety-net-blueprint-mock-server` | Mock API server for development | `express`, `better-sqlite3` |
-| `@codeforamerica/safety-net-blueprint-clients` | Generate TypeScript SDK packages | `@hey-api/openapi-ts`, `zod` |
+| Package | npm name | Purpose | Key Dependencies |
+|---------|----------|---------|------------------|
+| `blueprint-core` | `@codeforamerica/blueprint-core` | Framework library | `js-yaml`, `ajv`, `@apidevtools/json-schema-ref-parser` |
+| `blueprint-cli` | `@codeforamerica/blueprint-cli` | CLI scripts | `blueprint-core`, `@hey-api/openapi-ts`, `@redocly/cli` |
+| `blueprint-mock-server` | `@codeforamerica/blueprint-mock-server` | Mock API server | `blueprint-core`, `express`, `better-sqlite3` |
+| `blueprint-explorer` | `@codeforamerica/blueprint-explorer` | Explorer build | `blueprint-core` |
+| `safety-net-contracts` | `@codeforamerica/blueprint-safety-net-contracts` | Domain contracts | `blueprint-cli` (devDep) |
 
-### CI/CD Usage
+### Framework vs. Domain Separation
 
-Install only what you need:
+`blueprint-core`, `blueprint-cli`, and `blueprint-mock-server` are domain-agnostic. They have no knowledge of safety-net schemas or domain structure. Any contract-driven project can depend on them.
 
-```bash
-# Client generation only
-npm install -w @codeforamerica/safety-net-blueprint-contracts -w @codeforamerica/safety-net-blueprint-clients
-
-# Mock server only
-npm install -w @codeforamerica/safety-net-blueprint-contracts -w @codeforamerica/safety-net-blueprint-mock-server
-```
+`safety-net-contracts` contains everything specific to the safety net benefits domain — OpenAPI specs, state machines, overlays, annotations, and seed data. It uses `blueprint-cli` (as a dev dependency) to run the resolve pipeline and validation.
 
 ## Naming Conventions
 
@@ -102,14 +155,12 @@ npm install -w @codeforamerica/safety-net-blueprint-contracts -w @codeforamerica
 
 | Type | Convention | Example |
 |------|------------|---------|
-| API specs | `{domain}-openapi.yaml` | `case-workers-openapi.yaml` |
+| API specs | `{domain}-openapi.yaml` | `intake-openapi.yaml` |
 | State machine | `{domain}-state-machine.yaml` | `workflow-state-machine.yaml` |
-| Rules | `{domain}-rules.yaml` | `workflow-rules.yaml` |
-| SLA types | `{domain}-sla-types.yaml` | `workflow-sla-types.yaml` |
-| Metrics | `{domain}-metrics.yaml` | `workflow-metrics.yaml` |
-| Component schemas | kebab-case in `components/` | `components/common.yaml` |
-| Overlay files | `overlays/{state}/modifications.yaml` | `overlays/california/modifications.yaml` |
-| Scripts | kebab-case | `generate-clients-typescript.js` |
+| Compositions | `{domain}-compositions.yaml` | `intake-compositions.yaml` |
+| Annotations | `{domain}-annotations.yaml` | `intake-annotations.yaml` |
+| Component schemas | kebab-case in `components/` | `components/parameters.yaml` |
+| Scripts | kebab-case | `generate-ts-clients.js` |
 | Tests | kebab-case + `.test` | `overlay-resolver.test.js` |
 
 ### OpenAPI Elements
@@ -131,29 +182,28 @@ npm install -w @codeforamerica/safety-net-blueprint-contracts -w @codeforamerica
 |------|---------|
 | `package.json` | Root workspace config and command aliases |
 | `packages/*/package.json` | Package-specific dependencies and scripts |
+| `packages/blueprint-mock-server/config.js` | Canonical path configuration for mock server scripts |
+| `packages/safety-net-contracts/overlays/config.yaml` | Overlay pipeline configuration (x-base, x-casing, x-pagination, etc.) |
 | `docs/conventions/` | API design pattern rules |
 
 ### Source of Truth
 
 | File | Purpose |
 |------|---------|
-| `packages/contracts/*-openapi.yaml` | Main API specifications (inline examples in `components/examples`) |
-| `packages/contracts/components/*.yaml` | Shared schemas and parameters |
-| `packages/contracts/overlays/*/modifications.yaml` | State variations |
+| `packages/safety-net-contracts/domains/*/{domain}-openapi.yaml` | Main API specifications |
+| `packages/blueprint-core/base-contracts/` | Shared components referenced via `base://` |
+| `packages/safety-net-contracts/overlays/` | Safety-net-level overlay configuration |
 
 ### Generated (Gitignored)
 
-| File | Purpose | Regenerate |
-|------|---------|------------|
-| `packages/contracts/resolved/*.yaml` | State-resolved specs | `npm run resolve` |
-| `packages/clients/dist-packages/{state}/` | State npm packages | `node packages/clients/scripts/build-state-package.js` |
-| `packages/mock-server/data/*.db` | SQLite databases | `npm run mock:reset` |
+| Path | Purpose | Regenerate with |
+|------|---------|-----------------|
+| `packages/generated/contracts/` | Resolved + bundled specs | `npm run resolve` |
+| `packages/generated/clients/` | TypeScript clients | `npm run clients:generate` |
+| `packages/generated/postman/` | Postman collection | `npm run postman:generate` |
+| `packages/blueprint-mock-server/tests/functional/resolved/` | Functional test resolved specs | `npm run test:functional` |
 
 ## Adding New Resources
-
-When adding a new API resource:
-
-1. **API spec**: `packages/contracts/{resources}-openapi.yaml` — schemas inline, one `components/examples/{Resource}Example1` entry in `components/examples`
 
 Use the generator:
 
@@ -161,22 +211,25 @@ Use the generator:
 npm run api:new -- --name "benefits" --resource "Benefit"
 ```
 
+This scaffolds a new domain spec in `packages/safety-net-contracts/domains/`.
+
 ## Adding State Overlays
 
-1. Create overlay directory and file: `packages/contracts/overlays/{state}/modifications.yaml`
-2. Define actions for state-specific changes
-3. Validate: `npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>`
+State-specific overlays live in the state adopter's repository, not this repo. See [Overlay Guide](../guides/overlay-guide.md).
+
+The safety-net-contracts package ships with a base `overlays/config.yaml` that configures the pipeline defaults (x-base, x-casing, x-pagination, x-relationship style). State overlays extend these defaults.
 
 ## Testing
 
 | Directory | Purpose |
 |-----------|---------|
-| `packages/mock-server/tests/unit/` | Fast, isolated tests |
-| `packages/mock-server/tests/integration/` | End-to-end API tests |
-
-Run tests:
+| `packages/blueprint-mock-server/tests/unit/` | Fast, isolated unit tests |
+| `packages/blueprint-mock-server/tests/integration/` | End-to-end API tests against live mock server |
+| `packages/blueprint-mock-server/tests/functional/` | Full pipeline tests (resolve → bundle → start → request) |
+| `packages/blueprint-cli/tests/` | CLI script tests (resolve, validate) |
 
 ```bash
-npm test              # Unit tests
-npm run test:all      # All tests
+npm test              # Unit tests (all workspaces)
+npm run test:integration  # Integration tests
+npm run preflight     # Full check: validate + unit + integration + postman
 ```

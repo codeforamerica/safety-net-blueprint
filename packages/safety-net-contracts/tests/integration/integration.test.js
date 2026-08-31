@@ -10,18 +10,18 @@
  * Run with: npm run test:integration
  */
 
-import { join, dirname, resolve } from 'path';
-import { fileURLToPath } from 'url';
 import { readFileSync } from 'fs';
 import yaml from 'js-yaml';
 import { loadAllSpecs } from '@codeforamerica/blueprint-core/loader';
-import { BASE_URL, contractsDir, fetch, setupServer, teardownServer } from './helpers.js';
+import { BASE_URL, fetch, resetServer } from '@codeforamerica/blueprint-mock-server/test-utils';
 import { ROLES } from '../roles.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-const fixturesDir = resolve(__dirname, 'seed');
-let serverStartedByTests = false;
+const contractsArg = process.argv.find(a => a.startsWith('--contracts='));
+const seedArg      = process.argv.find(a => a.startsWith('--seed='));
+if (!contractsArg) { console.error('--contracts= is required'); process.exit(1); }
+if (!seedArg)      { console.error('--seed= is required');      process.exit(1); }
+const contractsDir = contractsArg.slice('--contracts='.length);
+const fixturesDir  = seedArg.slice('--seed='.length);
 
 // Simple fetch polyfill using Node.js http module
 function loadExamples(apiName, collectionPrefix = null) {
@@ -395,12 +395,12 @@ async function runTests() {
   let totalTests = 0;
 
   // =========================================================================
-  // Setup: start mock server if needed, then reset to a clean state
+  // Setup: reset server to a clean state
   // =========================================================================
   try {
-    serverStartedByTests = await setupServer();
+    await resetServer();
   } catch (error) {
-    console.log(`  ✗ FAIL: Cannot start server: ${error.message}`);
+    console.log(`  ✗ FAIL: Cannot reset server: ${error.message}`);
     process.exit(1);
   }
 
@@ -412,7 +412,6 @@ async function runTests() {
 
   if (apis.length === 0) {
     console.log('  ⚠️  No APIs found');
-    await cleanup();
     process.exit(0);
   }
 
@@ -1009,7 +1008,7 @@ async function runTests() {
     if (supTaskId) {
       try {
         console.log(`\n  SUP-2. Supervisor assigns task to worker-aaa — status stays pending`);
-        const workerAaaId = '00000000-0000-0000-0000-000000000001';
+        const workerAaaId = '00000002-0000-4000-8000-000000000001';
         const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/assign`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': ROLES.SUPERVISOR },
@@ -1035,7 +1034,7 @@ async function runTests() {
     if (supTaskId) {
       try {
         console.log(`\n  SUP-3. Supervisor reassigns to worker-bbb — status stays pending`);
-        const workerBbbId = '00000000-0000-0000-0000-000000000002';
+        const workerBbbId = '00000002-0000-4000-8000-000000000002';
         const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/assign`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': ROLES.SUPERVISOR },
@@ -1129,10 +1128,10 @@ async function runTests() {
       const response = await fetch(`${BASE_URL}${taskPath}/${supTask2Id}/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': ROLES.SUPERVISOR },
-        body: JSON.stringify({ assignedToId: '00000000-0000-0000-0000-000000000002' })
+        body: JSON.stringify({ assignedToId: '00000002-0000-4000-8000-000000000002' })
       });
       const data = await response.json();
-      if (response.status === 200 && data.status === 'in_progress' && data.assignedToId === '00000000-0000-0000-0000-000000000002') {
+      if (response.status === 200 && data.status === 'in_progress' && data.assignedToId === '00000002-0000-4000-8000-000000000002') {
         console.log('     ✓ PASS: Assigned in_progress task, status stays in_progress');
         totalPassed++;
       } else {
@@ -1153,7 +1152,7 @@ async function runTests() {
         const response = await fetch(`${BASE_URL}${taskPath}/${supTaskId}/assign`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'worker-aaa', 'X-Caller-Roles': ROLES.CASE_WORKER },
-          body: JSON.stringify({ assignedToId: '00000000-0000-0000-0000-000000000002' })
+          body: JSON.stringify({ assignedToId: '00000002-0000-4000-8000-000000000002' })
         });
         if (response.status === 403) {
           console.log('     ✓ PASS: Returns 403 FORBIDDEN for caseworker');
@@ -1201,13 +1200,13 @@ async function runTests() {
         console.log(`\n  SUP-9. Assign on completed task → 409`);
         await fetch(`${BASE_URL}${taskPath}/${supTask2Id}/complete`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': '00000000-0000-0000-0000-000000000002', 'X-Caller-Roles': ROLES.CASE_WORKER },
+          headers: { 'Content-Type': 'application/json', 'X-Caller-Id': '00000002-0000-4000-8000-000000000002', 'X-Caller-Roles': ROLES.CASE_WORKER },
           body: JSON.stringify({ outcome: 'approved' })
         });
         const response = await fetch(`${BASE_URL}${taskPath}/${supTask2Id}/assign`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Caller-Id': 'sup-1', 'X-Caller-Roles': ROLES.SUPERVISOR },
-          body: JSON.stringify({ assignedToId: '00000000-0000-0000-0000-000000000001' })
+          body: JSON.stringify({ assignedToId: '00000002-0000-4000-8000-000000000001' })
         });
         if (response.status === 409) {
           console.log('     ✓ PASS: Returns 409 — assign not available in completed state');
@@ -1273,8 +1272,6 @@ async function runTests() {
   console.log(`Passed: ${totalPassed}`);
   console.log(`Failed: ${totalFailed}`);
 
-  await cleanup();
-
   if (totalFailed > 0) {
     console.log('\n❌ Some tests failed\n');
     process.exit(1);
@@ -1283,12 +1280,7 @@ async function runTests() {
   }
 }
 
-async function cleanup() {
-  await teardownServer(serverStartedByTests);
-}
-
 runTests().catch(async (error) => {
   console.error('Test runner error:', error);
-  await cleanup();
   process.exit(1);
 });

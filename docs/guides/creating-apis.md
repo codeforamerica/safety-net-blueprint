@@ -272,4 +272,4 @@ Before submitting a new API:
 - **Shared responses**: `packages/contracts/components/responses.yaml`
 - **Shared schemas**: `packages/contracts/components/common.yaml`
 - [Validation Guide](./validation.md)
-- [Search Patterns](../decisions/search-patterns.md)
+- [Search Patterns](search-patterns.md)

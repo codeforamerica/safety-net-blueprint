@@ -14,7 +14,7 @@
     "state-machine-docs/"
   ],
   "scripts": {
-    "build": "node ../blueprint-explorer/build.js"
+    "build": "node ../blueprint-explorer/build.js --resolved=../generated/contracts --clients=../generated/clients"
   },
   "engines": {
     "node": ">=20.19.0"

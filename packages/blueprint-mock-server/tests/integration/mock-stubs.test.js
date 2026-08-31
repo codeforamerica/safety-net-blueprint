@@ -8,7 +8,7 @@
  * Run with: npm run test:integration
  */
 
-import { BASE_URL, fetch, injectEvent, clearStubs, setupServer, teardownServer } from './helpers.js';
+import { BASE_URL, fetch, injectEvent, clearStubs } from './helpers.js';
 
 // =============================================================================
 // /mock/stubs/events CRUD
@@ -265,7 +265,7 @@ async function run() {
   console.log('Mock Stubs Integration Tests');
   console.log('='.repeat(70));
 
-  const serverStartedByTests = await setupServer();
+  await fetch(`${BASE_URL}/mock/reset`, { method: 'POST' });
 
   const suites = [
     testStubCrud,
@@ -290,7 +290,6 @@ async function run() {
   }
 
   await clearStubs();
-  await teardownServer(serverStartedByTests);
 
   console.log('\n' + '='.repeat(70));
   console.log(`Mock Stubs: ${passed} passed, ${failed} failed`);

@@ -3,35 +3,37 @@
 ## Quick Start
 
 ```bash
-npm run validate              # Run all validations (base specs: syntax, lint, patterns)
-npm run validate:syntax       # OpenAPI syntax and examples only
-npm run validate:patterns     # API design patterns only
+npm run resolve               # Resolve base specs to packages/generated/contracts/
+npm run validate              # Validate resolved specs (all layers)
 npm run validate:lint         # Redocly lint only
-npm run validate:resolved     # Validate resolved output (run after npm run resolve)
+npm run validate:patterns     # API design patterns only
 ```
 
 For a description of all validation layers and the tools used, see [Contracts Build and Validation Pipeline](../architecture/contracts-pipeline.md).
 
+## How Validation Works
+
+Validation runs against the **resolved** output in `packages/generated/contracts/`, not the raw source specs. Raw specs use `base://` URI references (e.g. `base://components/parameters.yaml#/LimitParam`) that point to `blueprint-core/base-contracts/` — these can't be resolved pre-resolve. Always run `npm run resolve` before validating.
+
+`npm run validate` runs four layers in sequence:
+
+1. **OpenAPI** — valid OpenAPI 3.x format, all `$ref` references resolve, examples match their schemas
+2. **Refs** — fragment references are valid (no dangling `#/components/...` pointers)
+3. **Annotations** — dot-notation field paths in annotation files resolve to real schema properties
+4. **State machines** — within-file consistency and cross-artifact checks (see below)
+
 ## State-Specific Validation
 
-When working with state overlays, resolve the overlay and validate the resolved output:
+When working with state overlays, resolve the overlay first and validate the resolved output:
 
 ```bash
-npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>
-npm run validate:resolved
+npm run resolve -- --spec=packages/safety-net-contracts --overlay=path/to/state/overlay --out=packages/generated/contracts
+npm run validate
 ```
 
-## Three Validation Layers
+## Validation Layers
 
-### 1. Syntax Validation (`validate:syntax`)
-
-- Valid OpenAPI 3.x format
-- All `$ref` references resolve
-- Examples match their schemas
-
-### 2. Lint (`validate:lint`)
-
-Run from the schemas package: `npm run validate:lint -w @codeforamerica/safety-net-blueprint-contracts`
+### Lint (`validate:lint`)
 
 HTTP method rules:
 - POST must return 201
@@ -43,7 +45,7 @@ Naming conventions:
 - Operation IDs: camelCase (`listPersons`)
 - Schemas: PascalCase (`PersonCreate`)
 
-### 3. Pattern Validation (`validate:patterns`)
+### Pattern Validation (`validate:patterns`)
 
 List endpoints must have:
 - `SearchQueryParam` or `q` parameter
@@ -51,7 +53,7 @@ List endpoints must have:
 - `OffsetParam` or `offset` parameter
 - Response with `items`, `total`, `limit`, `offset`
 
-POST/PATCH must have request body.
+POST/PATCH must have a request body.
 
 ---
 
@@ -63,7 +65,7 @@ POST/PATCH must have request body.
 Error: homeAddress must NOT have additional property 'country'
 ```
 
-**Fix:** Remove the property from example, or add it to schema.
+**Fix:** Remove the property from the example, or add it to the schema.
 
 ### Missing Required Properties
 
@@ -79,7 +81,7 @@ Error: must have required property 'signature'
 Error: price must be number
 ```
 
-**Fix:** Use correct type (`99.99` not `"99.99"`).
+**Fix:** Use the correct type (`99.99` not `"99.99"`).
 
 ---
 
@@ -95,7 +97,7 @@ rules:
 
 ### Pattern Validation
 
-Edit `scripts/validate-patterns.js` to modify custom rules.
+Edit `packages/blueprint-cli/scripts/validate/openapi.js` to modify custom rules.
 
 ---
 
@@ -115,10 +117,7 @@ Several artifact types reference OpenAPI schema field names by string — rename
 
 ### State Machine Validation
 
-```bash
-npm run validate:state-machines           # Within-file consistency (no resolved specs needed)
-npm run validate:state-machines-resolved  # Cross-artifact checks (requires resolved specs)
-```
+State machine validation runs as part of `npm run validate`. It performs:
 
 **Within-file consistency:**
 - Transition `from`/`to` states are declared in the machine's `states` list
@@ -132,40 +131,34 @@ npm run validate:state-machines-resolved  # Cross-artifact checks (requires reso
 - Machine `object:` names exist in the resolved spec
 - Context `from:` paths resolve to known API endpoints
 - `$variable.field` references in all string values exist on the bound schema
-- String literals in CEL enum comparisons are valid values for the field (e.g. `"snap" in $application.programsAppliedFor`)
+- String literals in CEL enum comparisons are valid values for the field
 - `set: {field:}` steps target fields that exist on the machine object schema
 - `call: {METHOD: path}` paths exist in the resolved spec
 
 ### Composition Validation
 
 ```bash
-npm run validate:compositions             # bind: and fields: field references against schema
+npm run validate:compositions
 ```
 
-- `bind:` field names exist on the referenced resource schema (existing)
+- `bind:` field names exist on the referenced resource schema
 - `fields:` array entries exist on the referenced resource schema
 
 ### Annotation Validation
 
-```bash
-npm run validate:annotations              # Dot-notation field paths against schema
-```
-
-- Each `schema:` key (e.g. `application.programsAppliedFor[]`) resolves to a field that exists on the referenced resource schema
+Runs as part of `npm run validate`. Each `schema:` key (e.g. `application.programsAppliedFor[]`) resolves to a field that exists on the referenced resource schema.
 
 ### SLA and Metrics Validation
 
 ```bash
-npm run validate:sla-metrics              # var: field references in SLA types and metrics
+npm run validate:sla-metrics
 ```
 
 - `var:` field names in SLA type `pauseWhen` conditions exist on the target resource schema
 - `var:` field names in metric `filter` and `source.filter` expressions exist on the source resource schema
 
-All cross-artifact validators run as part of `npm run validate:resolved` after overlay application.
-
 ---
 
 ## CI/CD
 
-See [CI/CD for Backend](../integration/ci-cd-backend.md) for complete CI/CD examples.
+See [CI/CD for Backend](../guides/ci-cd-backend.md) for complete CI/CD examples.

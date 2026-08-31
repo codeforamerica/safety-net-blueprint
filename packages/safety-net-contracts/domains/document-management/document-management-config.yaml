@@ -23,7 +23,7 @@ document-types:
     retentionTrigger: case_closure
     description: State-issued photo ID or driver's license. Used for identity verification.
 
-  - id: c3d4e5f6-a7b8-4c9d-0e1f-a2b3c4d5e6f7
+  - id: 27c4bc3e-d772-43d7-a76d-44fda0bbb9a9
     name: social_security_card
     retentionYears: 3
     retentionTrigger: case_closure
@@ -33,19 +33,19 @@ document-types:
   # Citizenship and immigration
   # ---------------------------------------------------------------------------
 
-  - id: d4e5f6a7-b8c9-4d0e-1f2a-b3c4d5e6f7a8
+  - id: 76200c4f-4bf0-40c5-b49f-f35faa70d5b8
     name: citizenship_certificate
     retentionYears: 3
     retentionTrigger: case_closure
     description: Certificate of U.S. Citizenship (Form N-560). Used to verify citizenship status for non-U.S.-born applicants.
 
-  - id: e5f6a7b8-c9d0-4e1f-2a3b-c4d5e6f7a8b9
+  - id: 08b3a72d-9646-4b12-8f78-377da81a28f7
     name: naturalization_certificate
     retentionYears: 3
     retentionTrigger: case_closure
     description: Certificate of Naturalization (Form N-550). Used to verify citizenship status for naturalized citizens.
 
-  - id: f6a7b8c9-d0e1-4f2a-3b4c-d5e6f7a8b9c0
+  - id: 4ce990d1-cd29-435e-b0fd-bf18e6e22a18
     name: immigration_document
     retentionYears: 3
     retentionTrigger: case_closure
@@ -58,19 +58,19 @@ document-types:
   # Income
   # ---------------------------------------------------------------------------
 
-  - id: a7b8c9d0-e1f2-4a3b-4c5d-e6f7a8b9c0d1
+  - id: f72beb50-9f77-441b-9353-e1775f6870f1
     name: pay_stub
     retentionYears: 3
     retentionTrigger: case_closure
     description: Employer-issued pay stub. Used to verify earned income. Caseworkers typically request the two most recent stubs.
 
-  - id: b8c9d0e1-f2a3-4b4c-5d6e-f7a8b9c0d1e2
+  - id: 655b3dfb-5c6f-4f2f-9028-05f24e161555
     name: benefit_award_letter
     retentionYears: 3
     retentionTrigger: case_closure
     description: Award letter from SSA (SSDI, SSI) or state unemployment agency. Used to verify unearned income amounts.
 
-  - id: c9d0e1f2-a3b4-4c5d-6e7f-a8b9c0d1e2f3
+  - id: 8fe48595-51f1-43af-b2f6-79fe8cb1b415
     name: self_employment_statement
     retentionYears: 3
     retentionTrigger: case_closure
@@ -80,7 +80,7 @@ document-types:
   # Residency
   # ---------------------------------------------------------------------------
 
-  - id: d0e1f2a3-b4c5-4d6e-7f8a-b9c0d1e2f3a4
+  - id: 65ebaaf6-101c-46c5-8a40-97be23670cda
     name: utility_bill
     retentionYears: 3
     retentionTrigger: case_closure
@@ -106,7 +106,7 @@ document-types:
   # Medical expenses (SNAP deductions)
   # ---------------------------------------------------------------------------
 
-  - id: a3b4c5d6-e7f8-4a9b-0c1d-e2f3a4b5c6d7
+  - id: 95175921-4483-4b27-8f9b-465e2bfabec4
     name: medical_bill
     retentionYears: 3
     retentionTrigger: case_closure

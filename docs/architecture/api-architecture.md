@@ -4,13 +4,13 @@
 
 How the Safety Net Benefits API is organized and operated.
 
-See also: [Contract-Driven Architecture](contract-driven-architecture.md) | [Domain Design](domain-design.md) | [Design Rationale](design-rationale.md) | [Roadmap](roadmap.md)
+See also: [Contract-Driven Architecture](contract-driven-architecture.md) | [Domain Design](domains/domain-design.md)
 
 ---
 
 ## API Organization
 
-APIs are organized by [domain](domain-design.md), with two API types:
+APIs are organized by [domain](domains/domain-design.md), with two API types:
 
 - **REST** — CRUD operations on resources (`GET /workflow/tasks`, `POST /workflow/tasks`, `GET /workflow/tasks/:id`)
 - **RPC** — Behavioral operations generated from state machine triggers (`POST /workflow/tasks/:id/claim`, `POST /workflow/tasks/:id/complete`)
@@ -74,7 +74,7 @@ PII is encrypted at rest, masked in logs, and access is audited. Authentication,
 
 | Concern | Notes |
 |---------|-------|
-| Data retention | Retention periods are program-specific. See [Roadmap](roadmap.md). |
+| Data retention | Retention periods are program-specific. |
 | Right to deletion | Must balance client rights against audit requirements. Application data may be anonymized rather than deleted. |
 | Regulatory references | SNAP (7 CFR 272.1), Medicaid (42 CFR 431.17), TANF (45 CFR 265.2), HIPAA (Medicaid health info), FERPA (education data) |
 
@@ -83,6 +83,41 @@ Detailed compliance mapping is state-specific. States should map these requireme
 ### Reliability
 
 Idempotency, circuit breakers, error handling, and long-running operation patterns are defined in [conventions/](../conventions/). Circuit breaker locations include external verification sources, vendor system adapters, and notice delivery services.
+
+---
+
+## Key design decisions
+
+| # | Decision | Summary |
+|---|---|---|
+| 1 | [Search and filtering syntax](#decision-1-search-and-filtering-syntax) | Single `q` parameter with `field:value` syntax; no per-resource filter parameters |
+
+---
+
+### Decision 1: Search and filtering syntax
+
+**Status:** Decided
+
+**What's being decided:** How list endpoints expose filtering — whether to use resource-specific query parameters, a structured filter body, OData-style expressions, or a generic search string.
+
+**Considerations:**
+- Resource-specific query parameters (`?status=active&role=admin`) require spec changes whenever a new field becomes filterable and have no standard way to express comparison operators (`>=`, `contains`). Used by GitHub, Stripe, and Twilio for simple filtered collections, but not suited for the varied filtering needs across safety net domains.
+- OData `$filter=status eq 'approved'` is the pattern used by Microsoft Graph and Salesforce SOQL, but requires a dedicated parser library and adds complexity disproportionate to the gain.
+- JSON-encoded bodies (`POST /search`) are not RESTful, not cacheable, and prevent URL sharing — a practical problem for caseworkers sharing filtered views.
+- `field:value` query syntax is used by GitHub Search, Elasticsearch, and Jira JQL. Developers already know the pattern; it's RESTful, cacheable, and human-readable. A single shared `SearchQueryParam` component works across all resources without per-resource spec changes.
+
+**Options:**
+
+| Option | Considered | Chosen |
+|--------|------------|--------|
+| Per-resource query parameters | Yes | No |
+| OData `$filter` expression | Yes | No |
+| JSON body (`POST /search`) | Yes | No |
+| Single `q` parameter with `field:value` syntax | Yes | **Yes** |
+
+**Customization:** The `q` parameter accepts any field name at runtime — no spec changes are needed when adding filterable fields. Adapters control which fields are actually searchable.
+
+*Reconsider if:* List endpoints need complex boolean logic (nested AND/OR groups) that can't be expressed as space-separated conditions, or if URL length limits become a practical constraint.
 
 ---
 

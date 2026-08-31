@@ -553,5 +553,4 @@ Adjacent concerns a reader might assume this domain owns, but that are not docum
 - ISO 15489:2016 — Information and documentation — Records management
 - [Intake domain architecture](intake.md)
 - [Case management domain architecture](case-management.md)
-- [Contracts package restructure ADR](../decisions/contracts-package-restructure.md)
 - [x-extensions reference](../x-extensions.md)

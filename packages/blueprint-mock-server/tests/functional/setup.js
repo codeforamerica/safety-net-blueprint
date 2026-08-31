@@ -4,7 +4,7 @@
  * Discovers all *-openapi.yaml fixtures, resolves them through the overlay
  * pipeline, generates TypeScript clients, and provides server start/stop helpers.
  *
- * Use from run-all-tests.js (--functional flag) or directly:
+ * Use from run-tests.js (--functional flag) or directly:
  *   node tests/functional/setup.js
  */
 

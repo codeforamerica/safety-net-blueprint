@@ -129,4 +129,4 @@ This is a `@hey-api/openapi-ts` code generator limitation, not a bug in our buil
 
 The issue is tracked upstream as an unchecked item ("object with unknown additional properties") in [hey-api/openapi-ts#1320 (Zod plugin tasks)](https://github.com/hey-api/openapi-ts/issues/1320). This needs a PR to the `@hey-api/openapi-ts` Zod plugin to resolve properly.
 
-See the [client generation ADR](../decisions/openapi-ts-client-generation.md) for generator context.
+See the [API Clients guide](../guides/api-clients.md) for generator context.

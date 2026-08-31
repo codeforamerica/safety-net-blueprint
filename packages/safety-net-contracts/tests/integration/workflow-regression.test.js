@@ -14,7 +14,7 @@
  */
 
 import assert from 'assert';
-import { BASE_URL, EVENT_PREFIX, contractsDir, fetch, caller, injectEvent, clearStubs, createTestRunner, setupServer, teardownServer } from './helpers.js';
+import { BASE_URL, EVENT_PREFIX, fetch, caller, injectEvent, clearStubs, createTestRunner } from '@codeforamerica/blueprint-mock-server/test-utils';
 import { ROLES } from '../roles.js';
 
 const { test, section, results } = createTestRunner();
@@ -479,11 +479,11 @@ async function testWorkflowLifecycle() {
     })).json();
     const res = await fetch(`${BASE_URL}${TASK}/${id}/assign`, {
       method: 'POST', headers: SUPERVISOR,
-      body: { assignedToId: '00000000-0000-0000-0000-000000000002', queueId: originalQueueId },
+      body: { assignedToId: '00000002-0000-4000-8000-000000000002', queueId: originalQueueId },
     });
     assert.strictEqual(res.status, 200, `expected 200, got ${res.status}`);
     const data = await res.json();
-    assert.strictEqual(data.assignedToId, '00000000-0000-0000-0000-000000000002');
+    assert.strictEqual(data.assignedToId, '00000002-0000-4000-8000-000000000002');
     assert.strictEqual(data.queueId, originalQueueId ?? null);
     assert.strictEqual(data.status, 'pending', 'status should not change');
   });
@@ -494,7 +494,7 @@ async function testWorkflowLifecycle() {
       body: { name: 'Assign guard test', programType: 'snap' },
     })).json();
     const res = await fetch(`${BASE_URL}${TASK}/${id}/assign`, {
-      method: 'POST', headers: CASEWORKER, body: { assignedToId: '00000000-0000-0000-0000-000000000002' },
+      method: 'POST', headers: CASEWORKER, body: { assignedToId: '00000002-0000-4000-8000-000000000002' },
     });
     assert.strictEqual(res.status, 403);
   });
@@ -661,7 +661,7 @@ async function testWorkflowEventEmission() {
     const id = await createTask();
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
     await fetch(`${BASE_URL}${TASK}/${id}/await-verification`, { method: 'POST', headers: CASEWORKER });
-    const causeId = '00000000-0000-0000-0000-000000000001';
+    const causeId = '00000002-0000-4000-8000-000000000001';
     await fetch(`${BASE_URL}${TASK}/${id}/auto-resume`, {
       method: 'POST', headers: SYSTEM,
       body: { causationid: causeId },
@@ -738,11 +738,11 @@ async function testWorkflowEventEmission() {
     const { queueId } = await (await fetch(`${BASE_URL}${TASK}/${id}`)).json();
     await fetch(`${BASE_URL}${TASK}/${id}/assign`, {
       method: 'POST', headers: SUPERVISOR,
-      body: { assignedToId: '00000000-0000-0000-0000-000000000002', queueId },
+      body: { assignedToId: '00000002-0000-4000-8000-000000000002', queueId },
     });
     const e = findEvent(await allEvents(id), 'workflow.task.assigned', id);
     assert.ok(e, 'workflow.task.assigned should be emitted');
-    assert.strictEqual(e.data?.assignedToId, '00000000-0000-0000-0000-000000000002');
+    assert.strictEqual(e.data?.assignedToId, '00000002-0000-4000-8000-000000000002');
     assert.strictEqual(e.data?.queueId, queueId);
   });
 
@@ -985,7 +985,7 @@ async function runTests() {
   console.log('Workflow State Machine Regression Tests\n');
   console.log('='.repeat(60));
 
-  const serverStartedByTests = await setupServer();
+  await fetch(`${BASE_URL}/mock/reset`, { method: 'POST' });
 
   try {
     await testWorkflowLifecycle();
@@ -994,7 +994,6 @@ async function runTests() {
     await testWorkflowEventSubscriptions();
   } finally {
     await clearStubs();
-    await teardownServer(serverStartedByTests);
   }
 
   const { passed, failed } = results();

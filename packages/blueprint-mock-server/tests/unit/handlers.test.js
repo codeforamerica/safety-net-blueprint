@@ -16,12 +16,9 @@ import {
   clearAll,
   insertResource
 } from '../../src/database-manager.js';
-import { fileURLToPath } from 'url';
-import { join, dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const seedDir = join(__dirname, '../integration/seed');
+const seedArg = process.argv.find(a => a.startsWith('--seed='));
+if (!seedArg) { console.error('--seed= is required'); process.exit(1); }
+const seedDir = seedArg.slice('--seed='.length);
 
 const cleanup = () => { clearAll('persons'); };
 

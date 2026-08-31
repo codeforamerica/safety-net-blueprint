@@ -41,7 +41,7 @@ import { bundleSpec } from '@codeforamerica/blueprint-core/bundle';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const clientsRoot = join(__dirname, '..');
-const templatesDir = join(__dirname, '..', '..', '..', 'blueprint-core', 'assets');
+const assetsDir = join(__dirname, '..', '..', 'blueprint-core', 'assets');
 
 /**
  * Parse command line arguments
@@ -524,7 +524,8 @@ async function main() {
   // Create index.ts that re-exports all domains and search helpers.
   // Annotations are part of each domain namespace (intake.Annotations) — no root-level re-export needed.
   console.log('\nCreating index exports...');
-  const domainExports = domains.map(d => `export * as ${d} from './${d}/index.js';`).join('\n');
+  const toCamel = s => s.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+  const domainExports = domains.map(d => `export * as ${toCamel(d)} from './${d}/index.js';`).join('\n');
   const indexContent = [
     domainExports,
     `export { q, search } from './search-helpers.js';`,
@@ -532,16 +533,31 @@ async function main() {
   writeFileSync(join(outputDir, 'index.ts'), indexContent);
   console.log('  ✓ Created index.ts');
 
+  // Write tsconfig.json so consumers can typecheck the generated clients
+  // and so preflight can run tsc --noEmit to validate the output.
+  const tsconfig = {
+    compilerOptions: {
+      target: 'ES2020',
+      module: 'ESNext',
+      moduleResolution: 'Bundler',
+      strict: true,
+      noImplicitAny: false,
+      noEmit: true,
+      skipLibCheck: true,
+    },
+    include: ['./**/*.ts'],
+  };
+  writeFileSync(join(outputDir, 'tsconfig.json'), JSON.stringify(tsconfig, null, 2) + '\n');
+  console.log('  ✓ Created tsconfig.json');
+
   // Copy search helpers
-  const searchHelpersSource = join(templatesDir, 'search-helpers.ts');
-  console.log(searchHelpersSource);
-  if (existsSync(searchHelpersSource)) {
-    const searchHelpersDest = join(outputDir, 'search-helpers.ts');
-    copyFileSync(searchHelpersSource, searchHelpersDest);
-    console.log('  ✓ Copied search-helpers.ts');
-  } else {
-    console.warn('  ⚠ Warning: search-helpers.ts template not found, skipping');
+  const searchHelpersSource = join(assetsDir, 'search-helpers.ts');
+  if (!existsSync(searchHelpersSource)) {
+    console.error(`  ✗ Error: search-helpers.ts not found at ${searchHelpersSource}`);
+    process.exit(1);
   }
+  copyFileSync(searchHelpersSource, join(outputDir, 'search-helpers.ts'));
+  console.log('  ✓ Copied search-helpers.ts');
 
   console.log(`\nDone! Generated clients in ${outputDir}`);
   console.log(`\nYou can now import from your API clients:`);

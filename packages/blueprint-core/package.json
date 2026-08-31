@@ -27,7 +27,8 @@
   },
   "scripts": {
     "prepack": "node ../../scripts/build-package-readme.js",
-    "test": "node --test tests/unit/"
+    "test": "node --test tests/unit/",
+    "test:unit": "node --test tests/unit/"
   },
   "engines": {
     "node": ">=20.19.0"

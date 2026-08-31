@@ -1,9 +1,13 @@
 /**
  * Shared utilities for integration test suites.
+ * Parameterized version of tests/integration/helpers.js — accepts
+ * contractsDir and seedDir as parameters rather than hardcoding them.
  */
 
 import http from 'http';
 import { URL } from 'url';
+import { startMockServer, stopServer, isServerRunning } from './cli/server.js';
+
 export const BASE_URL = 'http://localhost:1080';
 // Event types are short-form (no org prefix). The x-event-type-prefix overlay config
 // adds org prefixes at resolve time for state deployments.
@@ -104,3 +108,24 @@ export function createTestRunner() {
   return { test, section, results };
 }
 
+export async function resetServer() {
+  await fetch(`${BASE_URL}/mock/reset`, { method: 'POST' });
+}
+
+export async function setupServer(contractsDir, seedDir) {
+  const isRunning = await isServerRunning().catch(() => false);
+  if (!isRunning) {
+    console.log('Starting mock server...');
+    await startMockServer([contractsDir], seedDir);
+    await new Promise(res => setTimeout(res, 1500));
+    console.log('Mock server started\n');
+  } else {
+    console.log('Using existing mock server\n');
+  }
+  await fetch(`${BASE_URL}/mock/reset`, { method: 'POST' });
+  return !isRunning;
+}
+
+export async function teardownServer(serverStartedByTests) {
+  if (serverStartedByTests) await stopServer(false);
+}

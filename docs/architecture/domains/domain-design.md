@@ -4,7 +4,7 @@
 
 Domain organization, entities, data flow, and safety net specific concerns for the Safety Net Benefits API.
 
-See also: [API Architecture](api-architecture.md) | [Design Rationale](design-rationale.md) | [Roadmap](roadmap.md)
+See also: [API Architecture](api-architecture.md)
 
 ---
 
@@ -339,7 +339,7 @@ For operational concerns (Configuration Management, Observability), see [API Arc
 
 All list endpoints share a single `Pagination` schema ([`components/pagination.yaml`](../../packages/contracts/components/pagination.yaml)) composed into each `{Resource}List` schema via `allOf`. The default strategy uses offset-based pagination (`total`, `limit`, `offset`, `hasNext`).
 
-States can swap the pagination strategy (e.g., cursor-based) by applying a single overlay to the `Pagination` component. See [`overlays/example/cursor-pagination.yaml`](../../packages/contracts/overlays/example/cursor-pagination.yaml) for an example.
+States can swap the pagination strategy (e.g., cursor-based) by applying a single overlay to the `Pagination` component. See the [Overlay Guide](../../docs/guides/overlay-guide.md) for how to author overlay modifications.
 
 ---
 
@@ -349,6 +349,4 @@ States can swap the pagination strategy (e.g., cursor-based) by applying a singl
 |----------|-------------|
 | [Contract-Driven Architecture](contract-driven-architecture.md) | Contract artifacts for backend and frontend portability |
 | [API Architecture](api-architecture.md) | API organization, vendor independence, operational architecture |
-| [Design Rationale](design-rationale.md) | Key decisions with rationale and alternatives |
-| [Roadmap](roadmap.md) | Implementation phases, prototypes, future considerations |
 | [conventions/](../conventions/) | Machine-readable API design patterns |

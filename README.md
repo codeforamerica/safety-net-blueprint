@@ -1,12 +1,10 @@
 # Safety Net Blueprint
 
-> **Status: Active development** — See the [roadmap](./docs/architecture/roadmap.md).
-
 A systems integration blueprint for safety net benefits programs. Contract artifacts — OpenAPI specs, state machines, decision rules, metrics, and field metadata — define the full API surface for backend development. States adopt the blueprint, customize it with overlays, and build adapters to their vendor systems. Frontends develop against a mock server without waiting for a production backend.
 
 > **Frontend harness packages** (form engine, safety harness, harness designer) live in a separate repository: [codeforamerica/safety-net-harness](https://github.com/codeforamerica/safety-net-harness).
 
-**New here?** Browse all diagrams and reference tools in the [Explorer hub](https://codeforamerica.github.io/safety-net-blueprint/packages/explorer/).
+**New here?** Browse all diagrams and reference tools in the [Explorer hub](https://codeforamerica.github.io/safety-net-blueprint/packages/safety-net-explorer/).
 
 ## About This Repository
 
@@ -20,7 +18,22 @@ This repository contains the base contract artifacts, tooling, and documentation
 - **Client generation** — typed TypeScript SDK and Zod schemas from resolved specs
 - **State overlays** — states customize contracts without forking the base files
 
-The architecture is being proven through [steel thread prototypes](./docs/architecture/roadmap.md) that exercise the most complex parts of the design before domains are built out at scale.
+## Repository Structure
+
+The monorepo separates domain-agnostic framework tooling from safety-net-specific contracts:
+
+| Package | npm name | Purpose |
+|---------|----------|---------|
+| `packages/blueprint-core` | `@codeforamerica/blueprint-core` | Framework library: overlay resolution, validation, state machines, annotations |
+| `packages/blueprint-cli` | `@codeforamerica/blueprint-cli` | CLI scripts: `blueprint-resolve`, `blueprint-validate`, `blueprint-generate-ts-clients`, etc. |
+| `packages/blueprint-mock-server` | `@codeforamerica/blueprint-mock-server` | Mock API server: `blueprint-mock`, `blueprint-swagger` |
+| `packages/blueprint-explorer` | `@codeforamerica/blueprint-explorer` | Explorer build tooling (outputs to `packages/safety-net-explorer/`) |
+| `packages/safety-net-contracts` | `@codeforamerica/blueprint-safety-net-contracts` | Safety-net domain contracts: OpenAPI specs, state machines, overlays |
+| `packages/generated` | — | Generated artifacts: resolved specs, TypeScript clients, Postman collection (gitignored) |
+
+`blueprint-core` and `blueprint-cli` are domain-agnostic — they can be used for any contract-driven project. `safety-net-contracts` depends on `blueprint-cli` and uses `blueprint-core` as its framework.
+
+At the core of the blueprint is a domain-agnostic framework (`blueprint-core`) that implements the architectural patterns — contract-first API design, overlay-based customization, state machine-driven behavior, event-driven integration — as reusable tooling. The safety net contracts package applies these patterns to the safety net benefits domain. Other domains could use the same framework to build their own contract-driven systems.
 
 ## Adopting the Blueprint
 
@@ -66,8 +79,8 @@ This installs a hook that runs before every push. The hook rebuilds explorer out
 | `npm run mock:start:all` | Start mock server + Swagger UI |
 | `npm run validate` | Validate OpenAPI specs |
 | `npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>` | Resolve overlays against base specs |
-| `npm run build --workspace=packages/explorer` | Build all explorer reference tools |
-| `node packages/explorer/build.js --resolved=<dir> --clients=<dir>` | Build explorer from state-specific resolved specs |
+| `npm run build --workspace=packages/blueprint-explorer` | Build all explorer reference tools |
+| `node packages/blueprint-explorer/build.js --resolved=<dir> --clients=<dir>` | Build explorer from state-specific resolved specs |
 | `npm run api:new` | Scaffold a new API spec |
 | `npm run mock:reset` | Reset database to example data |
 | `npm test` | Run unit tests |
@@ -79,9 +92,8 @@ This installs a hook that runs before every push. The hook rebuilds explorer out
 
 ### Architecture
 - [Contract-Driven Architecture](./docs/architecture/contract-driven-architecture.md) — Contract artifacts, portability, adapter pattern
-- [Domain Design](./docs/architecture/domain-design.md) — Domain organization, entities, data flow
+- [Domain Design](./docs/architecture/domains/domain-design.md) — Domain organization, entities, data flow
 - [API Architecture](./docs/architecture/api-architecture.md) — API organization, operational concerns
-- [Roadmap](./docs/architecture/roadmap.md) — Phases, prototypes, future considerations
 
 ### Guides
 - [Setup Guide](./docs/guides/setup-guide.md) — Set up a repository with overlays and CI
@@ -101,15 +113,10 @@ This installs a hook that runs before every push. The hook rebuilds explorer out
 - [Project Structure](./docs/reference/project-structure.md) — File layout and conventions
 - [Troubleshooting](./docs/reference/troubleshooting.md) — Common issues and solutions
 
-### Decisions
-- [Multi-State Overlays](./docs/decisions/multi-state-overlays.md)
-- [Search Patterns](./docs/decisions/search-patterns.md)
-
 ## Changelogs
 
-- [Contracts](./packages/contracts/CHANGELOG.md)
-- [Mock Server](./packages/mock-server/CHANGELOG.md)
-- [Clients](./packages/clients/CHANGELOG.md)
+- [Safety Net Contracts](./packages/safety-net-contracts/CHANGELOG.md)
+- [Mock Server](./packages/blueprint-mock-server/CHANGELOG.md)
 
 ## Requirements
 

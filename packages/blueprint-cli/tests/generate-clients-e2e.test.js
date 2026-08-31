@@ -432,6 +432,31 @@ components:
     }
   });
 
+  it('full pipeline: search-helpers.ts is copied to the output directory', async () => {
+    const workDir = mkdtempSync(join(tmpdir(), 'snb-e2e-'));
+    try {
+      const specDir = join(workDir, 'specs');
+      const outDir = join(workDir, 'clients');
+      mkdirSync(specDir);
+
+      writeFileSync(join(specDir, 'test-openapi.yaml'), MINIMAL_SPEC);
+
+      const script = join(__dirname, '..', 'scripts', 'generate-ts-clients.js');
+      const result = spawnSync(process.execPath, [script, `--spec=${specDir}`, `--out=${outDir}`], {
+        cwd: projectRoot,
+        encoding: 'utf8',
+      });
+
+      assert.equal(result.status, 0, `generate-ts-clients.js exited with ${result.status}:\n${result.stderr}`);
+      assert.ok(
+        existsSync(join(outDir, 'search-helpers.ts')),
+        'search-helpers.ts was not copied to the output directory'
+      );
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
   it('patchDomainBarrelForNamedEnums: does not skip enum whose name is a substring of an existing export', () => {
     // Regression: existing.includes(name) is a substring match — a barrel containing
     // UserRoleType would falsely block RoleType from being added, silently dropping its export.

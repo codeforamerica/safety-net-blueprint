@@ -19,10 +19,10 @@
     "validate:patterns": "node packages/blueprint-cli/scripts/validate/patterns.js --spec=packages/safety-net-contracts",
     "validate:schemas": "node packages/blueprint-cli/scripts/validate/schemas.js --spec=packages/safety-net-contracts",
     "api:new": "node packages/blueprint-cli/scripts/scaffold-api.js",
-    "api:update": "node packages/blueprint-cli/scripts/add-api-entity.js",
+    "api:update": "node packages/blueprint-cli/scripts/add-api-resource.js",
     "resolve": "node packages/blueprint-cli/scripts/resolve.js --spec=packages/safety-net-contracts --overlay=packages/safety-net-contracts/overlays --out=packages/generated/contracts",
     "clients:typescript": "node packages/blueprint-cli/scripts/generate-ts-clients.js",
-    "postman:generate": "node packages/blueprint-cli/scripts/resolve.js --spec=packages/safety-net-contracts --overlay=packages/safety-net-contracts/overlays --out=packages/generated/contracts && node packages/blueprint-cli/scripts/generate-postman-collection.js --spec=packages/generated/contracts --out=packages/generated/postman",
+    "postman:generate": "node packages/blueprint-cli/scripts/generate-postman-collection.js --spec=packages/generated/contracts --out=packages/generated/postman",
     "contract-tables:export": "node packages/blueprint-cli/scripts/contract-tables/export.js --out=packages/generated/contract-tables",
     "contract-tables:import": "node packages/blueprint-cli/scripts/contract-tables/import.js --tables=packages/generated/contract-tables",
     "mock:start": "node packages/blueprint-mock-server/cli/server.js",
@@ -30,19 +30,18 @@
     "mock:start:all": "node packages/blueprint-mock-server/cli/start-all.js --spec=packages/safety-net-contracts",
     "mock:swagger": "node packages/blueprint-mock-server/cli/swagger/server.js --spec=packages/safety-net-contracts",
     "mock:seed": "node packages/blueprint-mock-server/cli/generate-mock-data.js --spec=packages/safety-net-contracts --out=packages/safety-net-contracts/mock-data",
-    "validate:seed": "node packages/blueprint-mock-server/cli/validate-mock-data.js --spec=packages/safety-net-contracts",
+    "validate:mock-data": "node packages/blueprint-mock-server/cli/validate-mock-data.js --spec=packages/safety-net-contracts",
     "mock:setup": "node packages/blueprint-mock-server/cli/setup.js --spec=packages/safety-net-contracts",
     "mock:reset": "node packages/blueprint-mock-server/cli/reset.js --spec=packages/safety-net-contracts",
     "test": "npm test --workspaces --if-present",
-    "test:unit": "node packages/blueprint-mock-server/tests/run-all-tests.js --unit",
-    "test:integration": "node packages/blueprint-mock-server/tests/run-all-tests.js --integration",
-    "test:functional": "node packages/blueprint-mock-server/tests/run-all-tests.js --functional",
-    "test:all": "node packages/blueprint-mock-server/tests/run-all-tests.js --all",
+    "test:unit": "node packages/blueprint-mock-server/tests/run-tests.js --unit",
+    "test:integration": "node packages/blueprint-mock-server/tests/run-tests.js --integration",
+    "test:functional": "node packages/blueprint-mock-server/tests/run-tests.js --functional",
     "preflight": "bash scripts/preflight.sh",
     "setup:hooks": "git config core.hooksPath scripts/hooks && echo 'Git hooks installed. Pre-push hook will run preflight before every push. Use git push --no-verify to skip.'"
   },
   "devDependencies": {
     "jszip": "^3.10.1",
-    "puppeteer": "^24.0.0"
+    "zod": "^4.0.0"
   }
 }

@@ -8,13 +8,14 @@ import assert from 'node:assert';
 import { seedDatabase, seedAllDatabases, deriveAllCollectionNames } from '../../src/seeder.js';
 import { loadAllSpecs } from '@codeforamerica/blueprint-core/loader';
 import { count, findAll, clearAll, insertResource } from '../../src/database-manager.js';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const fixtureSpecDir = join(__dirname, '../fixtures/spec');
-const seedDir = join(__dirname, '../fixtures');
+const fixturesArg = process.argv.find(a => a.startsWith('--fixtures='));
+const seedArg     = process.argv.find(a => a.startsWith('--seed='));
+if (!fixturesArg) { console.error('--fixtures= is required'); process.exit(1); }
+if (!seedArg)     { console.error('--seed= is required');     process.exit(1); }
+const fixtureSpecDir = join(fixturesArg.slice('--fixtures='.length), 'spec');
+const seedDir        = seedArg.slice('--seed='.length);
 
 // Cleanup function — uses SQL DELETE rather than file deletion to
 // avoid SQLite WAL replay issues (deleting .db but not .db-wal/.db-shm

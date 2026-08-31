@@ -131,7 +131,7 @@ describe('Functional — x-relationship: expand and links-only', () => {
   it('expand — schema rejects a response where the expanded owner field is missing', () => {
     // owner is a required field in zParent — if the mock omits it, clients would get a validation failure
     const responseWithoutOwner = {
-      id: '00000000-0000-0000-0000-000000000001',
+      id: '00000002-0000-4000-8000-000000000001',
       name: 'Some Parent',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

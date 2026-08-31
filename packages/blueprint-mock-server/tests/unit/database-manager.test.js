@@ -17,13 +17,12 @@ import {
   closeAll
 } from '../../src/database-manager.js';
 import { unlinkSync, existsSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
+// The db path is determined by database-manager.js's own storage logic
+// (src/ → ../generated/mock-data/). The test mirrors that path for cleanup.
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const testDbName = 'test-db';
 
 const cleanup = () => {

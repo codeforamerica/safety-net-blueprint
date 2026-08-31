@@ -168,7 +168,7 @@ include:
 
 ## Search and filtering
 
-Composition panel and index endpoints support the same search, pagination, and sort params as other list endpoints in the blueprint. The specific params depend on the state's configured search capability — see the [Search and Filtering Pattern ADR](../../decisions/search-patterns.md) for the baseline approach.
+Composition panel and index endpoints support the same search, pagination, and sort params as other list endpoints in the blueprint. The specific params depend on the state's configured search capability — see the [Search Patterns](../../guides/search-patterns.md) guide for the baseline approach.
 
 Runtime filtering (e.g. "items where a field matches a value") is expressed through these params. Annotation-based filtering (e.g. "elements relevant to a given program") is a client-side concern — see the [Contract Metadata](contract-metadata.md) architecture doc.
 

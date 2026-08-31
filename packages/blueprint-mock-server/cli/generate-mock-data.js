@@ -25,8 +25,6 @@ import yaml from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { faker } from '@faker-js/faker';
 import { discoverApiSpecs } from '@codeforamerica/blueprint-core/loader';
-import { rawContractsDir, defaultSeedDir } from '../config.js';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -284,7 +282,7 @@ function topologicalSort(nodes) {
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const options = { spec: rawContractsDir, out: defaultSeedDir, count: 2, help: false };
+  const options = { spec: null, out: null, count: 2, help: false };
 
   for (const arg of args) {
     if (arg === '--help' || arg === '-h') options.help = true;
@@ -298,6 +296,11 @@ function parseArgs() {
 
 async function main() {
   const options = parseArgs();
+
+  if (!options.spec || !options.out) {
+    console.error('Error: --spec and --out are required.');
+    process.exit(1);
+  }
 
   if (options.help) {
     console.log(`

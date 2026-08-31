@@ -2,7 +2,7 @@
 
 > **Status: Draft**
 
-Use the `q` parameter on list endpoints to filter results. See [Search Patterns Decision](../decisions/search-patterns.md) for the design rationale.
+Use the `q` parameter on list endpoints to filter results. See [Search Patterns Guide](search-patterns.md) for the design rationale.
 
 ## Quick Examples
 

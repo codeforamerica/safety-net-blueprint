@@ -16,7 +16,7 @@
  */
 
 import assert from 'assert';
-import { BASE_URL, EVENT_PREFIX, contractsDir, fetch, caller, injectEvent, createTestRunner, setupServer, teardownServer } from './helpers.js';
+import { BASE_URL, EVENT_PREFIX, fetch, caller, injectEvent, createTestRunner } from '@codeforamerica/blueprint-mock-server/test-utils';
 import { ROLES } from '../roles.js';
 
 const { test, section, results } = createTestRunner();
@@ -1639,7 +1639,7 @@ async function runTests() {
   console.log('Intake Domain Regression Tests\n');
   console.log('='.repeat(60));
 
-  const serverStartedByTests = await setupServer();
+  await fetch(`${BASE_URL}/mock/reset`, { method: 'POST' });
 
   // Check which optional API endpoints are available
   const verificationsAvailable = await fetch(`${BASE_URL}/intake/applications/verifications`)
@@ -1682,7 +1682,6 @@ async function runTests() {
     await testSectionView();
     await testTraceparentPropagation();
   } finally {
-    await teardownServer(serverStartedByTests);
   }
 
   const { passed, failed } = results();

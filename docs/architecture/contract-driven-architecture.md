@@ -2,7 +2,7 @@
 
 **Status:** Approved
 
-See also: [API Architecture](api-architecture.md) | [Domain Design](domain-design.md) | [Design Rationale](design-rationale.md) | [Roadmap](roadmap.md)
+See also: [API Architecture](api-architecture.md)
 
 **Sections:**
 

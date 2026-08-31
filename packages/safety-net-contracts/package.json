@@ -25,7 +25,13 @@
   "scripts": {
     "prepack": "node ../../scripts/build-package-readme.js",
     "validate": "node ../blueprint-cli/scripts/validate/openapi.js --spec=. --skip-examples",
-    "resolve": "node ../blueprint-cli/scripts/resolve.js --spec=. --out=../resolved"
+    "resolve": "node ../blueprint-cli/scripts/resolve.js --spec=. --out=../resolved",
+    "test": "node tests/run-tests.js --all --contracts=../generated/contracts --seed=tests/integration/seed --clients=../generated/clients --stop",
+    "test:unit": "node tests/run-tests.js --unit",
+    "test:integration": "node tests/run-tests.js --integration --contracts=../generated/contracts --seed=tests/integration/seed --clients=../generated/clients --stop"
+  },
+  "dependencies": {
+    "@codeforamerica/blueprint-mock-server": "^0.1.0"
   },
   "devDependencies": {
     "@codeforamerica/blueprint-cli": "^0.1.0"

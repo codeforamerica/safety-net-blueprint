@@ -1,11 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { mkdtempSync, writeFileSync, mkdirSync, readFileSync, readdirSync, existsSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, mkdirSync, readFileSync, readdirSync, existsSync, rmSync } from 'node:fs';
 import { join, resolve as resolvePath } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
-import { parseArgs, createOpenApiTsConfig, domainToAnnotationExportName, generateAnnotationsAndPolicies, collectNullableFieldNames, patchZodGenForNullable } from '../scripts/generate-ts-clients.js';
+import { parseArgs, createOpenApiTsConfig, domainToAnnotationExportName, generateAnnotationsAndPolicies, collectNullableFieldNames, patchZodGenForNullable, collectNamedEnumDefs, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums } from '../scripts/generate-ts-clients.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

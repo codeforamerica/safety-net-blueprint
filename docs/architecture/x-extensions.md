@@ -2,23 +2,79 @@
 
 All `x-` extensions used in Safety Net Blueprint contract artifacts, listed alphabetically.
 
+Extensions fall into two categories:
+
+- **Spec extensions** — appear inside `*-openapi.yaml` files, on schemas, operations, or info nodes
+- **Config extensions** — appear in overlay `config.yaml` files, under the `config:` key, and control pipeline behavior
+
 The machine-readable catalog is in [`docs/conventions/`](../conventions/) under `x_extensions`.
 
 ---
 
 ## Summary
 
-| Extension | File type(s) | Location within file |
-|---|---|---|
-| `x-derived` | `*-openapi.yaml` | Schema property (on computed fields) |
-| `x-domain` | `*-openapi.yaml` | `info` level or operation level |
-| `x-environments` | Any spec node | `paths`, operations, schemas, or any other node |
-| `x-events` | `*-openapi.yaml` | Top-level (peer to `info:`, `paths:`) |
-| `x-enum-source` | `*-openapi.yaml` | Schema property (on string fields with contract-derived enum values) |
-| `x-relationship` | `*-openapi.yaml` | Schema property (on FK fields ending in `Id`) |
-| `x-sortable` | `*-openapi.yaml` | List operation level |
-| `x-status` | `*-openapi.yaml` | `info` level or operation level |
-| `x-visibility` | `*-openapi.yaml` | `info` level or operation level |
+| Extension | Category | File type(s) | Location within file |
+|---|---|---|---|
+| `x-base` | Config | `overlays/config.yaml` | `config:` section |
+| `x-casing` | Config | `overlays/config.yaml` | `config:` section |
+| `x-pagination` | Config | `overlays/config.yaml` | `config:` section |
+| `x-derived` | Spec | `*-openapi.yaml` | Schema property (on computed fields) |
+| `x-domain` | Spec | `*-openapi.yaml` | `info` level or operation level |
+| `x-environments` | Spec | Any spec node | `paths`, operations, schemas, or any other node |
+| `x-events` | Spec | `*-openapi.yaml` | Top-level (peer to `info:`, `paths:`) |
+| `x-enum-source` | Spec | `*-openapi.yaml` | Schema property (on string fields with contract-derived enum values) |
+| `x-relationship` | Spec + Config | `*-openapi.yaml`, `overlays/config.yaml` | Schema property; or `config:` for default style |
+| `x-sortable` | Spec | `*-openapi.yaml` | List operation level |
+| `x-status` | Spec | `*-openapi.yaml` | `info` level or operation level |
+| `x-visibility` | Spec | `*-openapi.yaml` | `info` level or operation level |
+
+---
+
+## x-base
+
+**Category:** Config — appears in `overlays/config.yaml` under the `config:` key.
+
+Declares the path to the `blueprint-core/base-contracts/` directory, relative to the overlay config file. The resolve pipeline uses this to:
+
+1. Copy base contract files (shared parameters, responses, schemas) into the output at `base/`
+2. Rewrite `base://` URI references in specs to real relative paths pointing to `base/` in the output
+
+This allows domain specs to reference shared components using a stable, location-independent URI scheme (`base://components/parameters.yaml#/LimitParam`) rather than fragile relative paths that would break if files move.
+
+```yaml
+# packages/safety-net-contracts/overlays/config.yaml
+overlay: '1.0.0'
+info:
+  title: Safety Net contracts configuration
+  version: 1.0.0
+
+config:
+  x-base: ../../blueprint-core/base-contracts
+```
+
+**In domain specs**, shared components are referenced using the `base://` URI scheme:
+
+```yaml
+# intake-openapi.yaml
+parameters:
+  - $ref: "base://components/parameters.yaml#/LimitParam"
+  - $ref: "base://components/parameters.yaml#/OffsetParam"
+```
+
+After the resolve pipeline runs, these become real relative paths in the output:
+
+```yaml
+# packages/generated/contracts/domains/intake/intake-openapi.yaml
+parameters:
+  - $ref: "../../base/components/parameters.yaml#/LimitParam"
+  - $ref: "../../base/components/parameters.yaml#/OffsetParam"
+```
+
+`x-base` is required if any spec in the package uses `base://` references. Without it, `base://` refs will remain unresolved in the output.
+
+See [Resolve Pipeline Architecture](resolve-pipeline.md#base-ref-rewriting) for how this stage fits into the overall pipeline.
+
+---
 
 ---
 

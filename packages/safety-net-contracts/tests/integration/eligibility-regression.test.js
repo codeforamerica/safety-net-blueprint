@@ -9,7 +9,7 @@
  */
 
 import assert from 'assert';
-import { BASE_URL, EVENT_PREFIX, contractsDir, fetch, caller, injectEvent, createTestRunner, setupServer, teardownServer, clearHttpStubs, registerHttpStub } from './helpers.js';
+import { BASE_URL, EVENT_PREFIX, fetch, caller, injectEvent, createTestRunner, clearHttpStubs, registerHttpStub } from '@codeforamerica/blueprint-mock-server/test-utils';
 import { ROLES } from '../roles.js';
 
 const { test, section, results } = createTestRunner();
@@ -582,7 +582,7 @@ async function runTests() {
   console.log('Eligibility Domain Regression Tests\n');
   console.log('='.repeat(60));
 
-  const serverStartedByTests = await setupServer();
+  await fetch(`${BASE_URL}/mock/reset`, { method: 'POST' });
 
   try {
     await testQueryEndpoints();
@@ -597,7 +597,6 @@ async function runTests() {
     await testWithdrawal();
     await testCrossDomainWriteBack();
   } finally {
-    await teardownServer(serverStartedByTests);
   }
 
   const { passed, failed } = results();

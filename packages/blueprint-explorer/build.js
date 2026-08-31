@@ -25,16 +25,13 @@
  *               Contains diagram configs and output HTML. Defaults to ../safety-net-explorer.
  *   --resolved  Path to a directory of resolved OpenAPI + state machine files
  *               (output of the contracts resolve pipeline with state overlays applied).
- *               Defaults to packages/generated. When provided, auto-resolve is skipped.
- *   --clients   Path to the root clients directory containing generated/ subdirectory.
- *               Defaults to packages/safety-net-clients.
+ *   --clients   Path to the generated clients directory (output of clients:generate).
  */
 
 import { readdirSync, rmSync, existsSync } from 'fs';
 import { resolve, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
-import { resolvedDir } from './src/lib/paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const node = process.execPath;
@@ -50,13 +47,7 @@ const contentDir = contentArg
   ? resolve(process.cwd(), contentArg.slice('--content='.length))
   : resolve(__dirname, '..', 'safety-net-explorer');
 
-// ── Self-heal: resolve contracts if resolved/ is missing or empty ─────────────
-
-if (!resolvedArg && (!existsSync(resolvedDir) || readdirSync(resolvedDir).length === 0)) {
-  console.log('resolved/ is missing — running resolve step first...');
-  const resolveScript = resolve(__dirname, '..', 'blueprint-cli', 'scripts', 'resolve.js');
-  execFileSync(node, [resolveScript, '--out=packages/generated/contracts'], { stdio: 'inherit' });
-}
+const resolvedDir = resolvedArg ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length)) : null;
 
 // Args forwarded to all subprocesses that respect them.
 const fwdContent  = [`--content=${contentDir}`];

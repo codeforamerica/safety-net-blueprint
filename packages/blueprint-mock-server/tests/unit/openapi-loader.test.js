@@ -6,12 +6,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { discoverApiSpecs, loadSpec, extractMetadata } from '@codeforamerica/blueprint-core/loader';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const fixtureSpecDir = join(__dirname, '../fixtures/spec');
+const fixturesArg = process.argv.find(a => a.startsWith('--fixtures='));
+if (!fixturesArg) { console.error('--fixtures= is required'); process.exit(1); }
+const fixtureSpecDir = join(fixturesArg.slice('--fixtures='.length), 'spec');
 
 test('OpenAPI Loader Tests', async (t) => {
 

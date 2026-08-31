@@ -250,7 +250,7 @@ components:
         appointmentType: interview
         status: scheduled
         personId: 5f8e3d2c-1a9b-4e6f-8d7c-3a2b1c4d5e6f
-        assignedToId: d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9a
+        assignedToId: f26dc4db-b133-4675-9de3-c21553b9c13d
         notes: Initial SNAP eligibility interview. Interpreter requested for Spanish.
         createdAt: '2026-03-01T09:00:00Z'
         updatedAt: '2026-03-01T09:00:00Z'

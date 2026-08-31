@@ -12,7 +12,7 @@ The resolve pipeline merges base specs with your overlay files into a resolved o
 npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>
 ```
 
-The example overlay in this repo is at `packages/contracts/overlays/example/`. See [Resolve Pipeline Architecture](../architecture/resolve-pipeline.md) for the full pipeline stages.
+The safety-net overlays in this repo are at `packages/safety-net-contracts/overlays/`. See [Resolve Pipeline Architecture](../architecture/resolve-pipeline.md) for the full pipeline stages.
 
 ## Overlay File Structure
 
@@ -481,7 +481,7 @@ When multiple API versions exist (e.g., `applications.yaml` and `applications-v2
 Copy the example overlay as a starting point, then add actions for each modification needed:
 
 ```bash
-cp packages/contracts/overlays/example/modifications.yaml <your-overlay-dir>/modifications.yaml
+cp packages/safety-net-contracts/overlays/config.yaml <your-overlay-dir>/config.yaml
 ```
 
 ## Working with Shared Types
@@ -627,5 +627,5 @@ If validation fails after applying an overlay:
 
 ## Reference
 
-- [Customization Strategy](../decisions/state-customization.md)
+- [Overlay Guide](overlay-guide.md)
 - [OpenAPI Overlay Specification](https://github.com/OAI/Overlay-Specification)

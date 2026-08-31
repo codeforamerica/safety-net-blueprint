@@ -2,7 +2,7 @@
 
 > **Status:** Case API implemented (alpha). Other entities (CaseWorker, Supervisor, Office, Team, Assignment, Caseload) are future work.
 
-See [Domain Design Overview](../domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
+See [Domain Design Overview](domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
 
 ## Overview
 
@@ -78,7 +78,7 @@ Case Management is primarily **data-shaped** — most interactions are CRUD on c
 
 | Document | Description |
 |----------|-------------|
-| [Domain Design](../domain-design.md) | Case Management section in the domain overview |
+| [Domain Design](domain-design.md) | Case Management section in the domain overview |
 | [Workflow](workflow.md) | Task lifecycle and routing — closely related domain |
 | [Scheduling](scheduling.md) | Appointments involve assigned staff from Case Management |
 | [Contract-Driven Architecture](../contract-driven-architecture.md) | Contract artifacts and the adapter pattern |

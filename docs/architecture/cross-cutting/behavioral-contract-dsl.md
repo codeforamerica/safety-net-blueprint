@@ -464,4 +464,4 @@ Step types: `set` (update fields), `emit` (fire a domain event), `call` (invoke 
 - [ISO 8601 Duration format](https://en.wikipedia.org/wiki/ISO_8601#Durations)
 - [Workflow Domain](../domains/workflow.md)
 - [Resolve Pipeline Architecture](../resolve-pipeline.md)
-- [Inter-Domain Communication](../../decisions/inter-domain-communication.md)
+- [Inter-Domain Communication](../inter-domain-communication.md)

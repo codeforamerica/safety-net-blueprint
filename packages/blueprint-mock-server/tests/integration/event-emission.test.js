@@ -10,7 +10,7 @@
 
 import http from 'http';
 import assert from 'assert';
-import { BASE_URL, fetch, caller, createTestRunner, setupServer, teardownServer } from './helpers.js';
+import { BASE_URL, fetch, caller, createTestRunner } from './helpers.js';
 import { ROLES } from '../roles.js';
 
 const { test, section, results } = createTestRunner();
@@ -93,9 +93,7 @@ function withSseStream(fn) {
 // Setup
 // ---------------------------------------------------------------------------
 
-let serverStartedByTests = false;
-
-serverStartedByTests = await setupServer();
+await fetch(`${BASE_URL}/mock/reset`, { method: 'POST' });
 
 // ---------------------------------------------------------------------------
 // CloudEvents envelope shape
@@ -282,8 +280,6 @@ await test('SSE event payload is a valid CloudEvents 1.0 envelope', async () => 
 // ---------------------------------------------------------------------------
 // Teardown
 // ---------------------------------------------------------------------------
-
-await teardownServer(serverStartedByTests);
 
 const { passed, failed } = results();
 process.exitCode = failed > 0 ? 1 : 0;

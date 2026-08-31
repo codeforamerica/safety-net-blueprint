@@ -1,6 +1,6 @@
 /**
  * Run all mock server tests
- * Run with: node tests/mock-server/run-all-tests.js
+ * Run with: node tests/run-tests.js
  *
  * Options:
  *   --unit         Run only unit tests (default)
@@ -15,11 +15,9 @@ import { dirname, join, resolve } from 'path';
 import { readdirSync, existsSync } from 'fs';
 import { startMockServer, stopServer, isServerRunning } from '../cli/server.js';
 import { setupFunctional, startFunctionalServer, stopFunctionalServer } from './functional/setup.js';
-import { generatedContractsDir, rawContractsDir } from '../config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const seedDir = resolve(__dirname, '..', 'seed');
 
 // Discover all test files in unit/ and integration/ directories
 const unitDir = join(__dirname, 'unit');
@@ -52,11 +50,20 @@ const functionalTestFiles = existsSync(functionalDir)
   : [];
 
 const args = process.argv.slice(2);
-const runUnit = args.includes('--unit') || args.includes('--all') || args.length === 0;
+const contractsArg    = args.find(a => a.startsWith('--contracts='));
+const rawContractsArg = args.find(a => a.startsWith('--raw-contracts='));
+const seedArg         = args.find(a => a.startsWith('--seed='));
+const fixturesArg     = args.find(a => a.startsWith('--fixtures='));
+const contractsDir    = contractsArg    ? resolve(process.cwd(), contractsArg.slice('--contracts='.length))       : null;
+const rawContractsDir = rawContractsArg ? resolve(process.cwd(), rawContractsArg.slice('--raw-contracts='.length)) : null;
+const seedDir         = seedArg         ? resolve(process.cwd(), seedArg.slice('--seed='.length))                 : null;
+const fixturesDir     = fixturesArg     ? resolve(process.cwd(), fixturesArg.slice('--fixtures='.length))         : null;
+const runUnit        = args.includes('--unit') || args.includes('--all') || args.length === 0;
 const runIntegration = args.includes('--integration') || args.includes('--all');
-const runFunctional = args.includes('--functional') || args.includes('--all');
+const runFunctional  = args.includes('--functional') || args.includes('--all');
+const doStop         = args.includes('--stop');
 
-async function runTest(testFile) {
+async function runTest(testFile, extraArgs = []) {
   return new Promise((resolve, reject) => {
     const testPath = join(__dirname, testFile);
     console.log(`\n${'='.repeat(70)}`);
@@ -68,15 +75,14 @@ async function runTest(testFile) {
     const tsxRoot = join(__dirname, '..', '..', '..', 'node_modules', '.bin', 'tsx');
     const tsxBin = existsSync(tsxLocal) ? tsxLocal : tsxRoot;
     const runner = isTs ? tsxBin : 'node';
-    const runnerArgs = isTs ? ['--test', testPath] : [testPath];
-    // Close fd3 for tsx/--test runs: Node.js test runner uses fd3 for its IPC
-    // pipe between the orchestrator and the test file subprocess. If fd3 is
-    // already open in the environment (e.g. bash's exec > >(tee ...) pipe from
-    // preflight.sh, or npm's internal pipes), tsx inherits it and the IPC
-    // channel gets corrupted, causing "Unable to deserialize cloned data".
+    // tsx is run without --test: node:test's describe/it/before work as a
+    // standalone script, and this lets extra args land in process.argv rather
+    // than being misinterpreted as test file patterns by the Node.js test
+    // runner orchestrator.
+    const runnerArgs = [testPath, ...extraArgs];
     const proc = spawn(runner, runnerArgs, {
-      stdio: isTs ? ['inherit', 'inherit', 'inherit', 'ignore'] : 'inherit',
-      shell: !isTs && process.platform === 'win32'
+      stdio: 'inherit',
+      shell: !isTs && process.platform === 'win32',
     });
 
     proc.on('close', (code) => {
@@ -130,8 +136,6 @@ async function runPostmanCollection(collectionFile) {
   });
 }
 
-const generatedDir = join(__dirname, 'integration', 'generated');
-const generateTestClientsScript = resolve(__dirname, '..', 'cli', 'generate-test-clients.js');
 const resolveScript = resolve(__dirname, '..', '..', 'blueprint-cli', 'scripts', 'resolve.js');
 
 /**
@@ -140,21 +144,8 @@ const resolveScript = resolve(__dirname, '..', '..', 'blueprint-cli', 'scripts',
 async function resolveContracts() {
   console.log('Resolving contracts...');
   await new Promise((res, rej) => {
-    const proc = spawn('node', [resolveScript, `--spec=${rawContractsDir}`, `--overlay=${join(rawContractsDir, 'overlays')}`, `--out=${generatedContractsDir}`], { stdio: 'inherit', shell: false });
+    const proc = spawn('node', [resolveScript, `--spec=${rawContractsDir}`, `--overlay=${join(rawContractsDir, 'overlays')}`, `--out=${contractsDir}`], { stdio: 'inherit', shell: false });
     proc.on('close', code => code === 0 ? res() : rej(new Error(`resolve failed with exit code ${code}`)));
-    proc.on('error', rej);
-  });
-}
-
-/**
- * Generate TypeScript clients for integration tests from already-resolved specs.
- */
-async function ensureIntegrationClients() {
-  if (existsSync(generatedDir) && readdirSync(generatedDir).length > 0) return;
-  console.log('Generated clients not found — running clients:generate...');
-  await new Promise((res, rej) => {
-    const proc = spawn('node', [generateTestClientsScript], { stdio: 'inherit', shell: false });
-    proc.on('close', code => code === 0 ? res() : rej(new Error(`clients:generate failed with exit code ${code}`)));
     proc.on('error', rej);
   });
 }
@@ -180,7 +171,7 @@ async function runAllTests() {
     console.error(`\n✗ ${label} failed: ${error.message}`);
     console.error('\nStopping — fix the failure above before continuing.');
     console.error(`  ✗ ${label}`);
-    if (integrationServerStarted) await stopServer(false).catch(() => {});
+    if (integrationServerStarted && doStop) await stopServer(false).catch(() => {});
     if (functionalServerStarted) await stopFunctionalServer().catch(() => {});
     process.exit(1);
   }
@@ -194,13 +185,9 @@ async function runAllTests() {
       withTimeout(resolveContracts(), SETUP_TIMEOUT_MS, 'resolveContracts'),
       withTimeout(setupFunctional(), SETUP_TIMEOUT_MS, 'setupFunctional'),
     ]).catch(err => bail('resolve pipelines', err));
-    await withTimeout(ensureIntegrationClients(), SETUP_TIMEOUT_MS, 'ensureIntegrationClients')
-      .catch(err => bail('ensureIntegrationClients', err));
   } else if (runIntegration) {
     await withTimeout(resolveContracts(), SETUP_TIMEOUT_MS, 'resolveContracts')
       .catch(err => bail('resolveContracts', err));
-    await withTimeout(ensureIntegrationClients(), SETUP_TIMEOUT_MS, 'ensureIntegrationClients')
-      .catch(err => bail('ensureIntegrationClients', err));
   } else if (runFunctional) {
     await withTimeout(setupFunctional(), SETUP_TIMEOUT_MS, 'setupFunctional')
       .catch(err => bail('setupFunctional', err));
@@ -210,8 +197,12 @@ async function runAllTests() {
   if (runUnit) {
     console.log('\n📋 Unit Tests');
     console.log('-'.repeat(70));
+    const unitArgs = [
+      ...(seedDir     ? [`--seed=${seedDir}`]         : []),
+      ...(fixturesDir ? [`--fixtures=${fixturesDir}`] : []),
+    ];
     for (const testFile of unitTestFiles) {
-      await withTimeout(runTest(testFile), TEST_TIMEOUT_MS, testFile)
+      await withTimeout(runTest(testFile, unitArgs), TEST_TIMEOUT_MS, testFile)
         .then(() => passed++)
         .catch(err => bail(testFile, err));
     }
@@ -225,8 +216,8 @@ async function runAllTests() {
     // Start the mock server once for all integration and Postman tests.
     // Individual test files check isServerRunning() and skip startup when
     // the server is already available, so teardownServer() is a no-op for them.
-    const integrationResolvedDir = generatedContractsDir;
-    const integrationSeedDir = resolve(__dirname, 'integration', 'seed');
+    const integrationResolvedDir = contractsDir;
+    const integrationSeedDir = null;
     const integrationAlreadyRunning = await isServerRunning().catch(() => false);
     if (!integrationAlreadyRunning) {
       console.log('Starting mock server...');
@@ -259,7 +250,7 @@ async function runAllTests() {
       }
     }
 
-    if (integrationServerStarted) await stopServer(false);
+    if (integrationServerStarted && doStop) await stopServer(false);
     integrationServerStarted = false;
   }
 

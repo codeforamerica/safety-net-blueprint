@@ -2,7 +2,7 @@
 
 > **Status:** Appointment API implemented (alpha). Schedule and Slot entities are future work.
 
-See [Domain Design Overview](../domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
+See [Domain Design Overview](domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
 
 ## Overview
 
@@ -82,7 +82,7 @@ The scheduling domain is primarily **data-shaped** — most interactions are CRU
 
 | Document | Description |
 |----------|-------------|
-| [Domain Design](../domain-design.md) | Scheduling section in the domain overview |
+| [Domain Design](domain-design.md) | Scheduling section in the domain overview |
 | [Case Management](case-management.md) | Staff assignments — closely related domain |
 | [Workflow](workflow.md) | Task lifecycle — appointments may trigger tasks |
 | [Communication](../cross-cutting/communication.md) | Reminders and notifications belong here |

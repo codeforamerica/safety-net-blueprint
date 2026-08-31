@@ -13,7 +13,7 @@ The blueprint has three levels of testing:
 
 ## Unit Tests
 
-Unit tests live in `packages/mock-server/tests/unit/` and `packages/contracts/tests/unit/`. They use a lightweight custom test runner (no external framework) and run in isolation without a running server.
+Unit tests live in `packages/blueprint-mock-server/tests/unit/` and `packages/blueprint-cli/tests/`. They use a lightweight custom test runner (no external framework) and run in isolation without a running server.
 
 ```bash
 npm test            # Run all unit tests across all packages
@@ -31,7 +31,7 @@ Unit tests cover:
 
 ## Integration Tests
 
-Integration tests (`packages/mock-server/tests/integration/integration.test.js`) start the mock server, make HTTP requests, and assert on responses.
+Integration tests (`packages/blueprint-mock-server/tests/integration/integration.test.js`) start the mock server, make HTTP requests, and assert on responses.
 
 ```bash
 npm run test:integration
@@ -39,9 +39,9 @@ npm run test:integration
 
 ### How integration tests work
 
-The integration test suite runs the mock server against `packages/resolved` (the resolved contracts with overlay applied):
+The integration test suite runs the mock server against `packages/generated/contracts` (the resolved contracts with overlay applied):
 
-1. The mock server is started against `packages/resolved` with seed data from `packages/mock-server/seed/`
+1. The mock server is started against `packages/generated/contracts` with seed data from `packages/blueprint-mock-server/tests/integration/seed/`
 2. Tests make HTTP requests and assert on responses — CRUD, state machine RPC, domain events, rule evaluation
 3. A Postman collection is run via Newman for additional coverage
 4. Server is stopped after all tests complete
@@ -92,7 +92,7 @@ Postman RPC tests require a task with `status: pending` (the state machine's `in
 
 ### Fixture files
 
-Seed data files are in `packages/mock-server/tests/integration/seed/`. The key names in each file match the key names in the corresponding docs example file — this ensures that `$ref` pointers in the spec files (e.g., `"$ref": "./persons-openapi-examples.yaml#/PersonExample1"`) remain valid during fixture dir validation.
+Seed data files are in `packages/blueprint-mock-server/tests/integration/seed/`. The key names in each file match the key names in the corresponding docs example file — this ensures that `$ref` pointers in the spec files (e.g., `"$ref": "./persons-openapi-examples.yaml#/PersonExample1"`) remain valid during fixture dir validation.
 
 ## Postman/Newman Tests
 
@@ -111,8 +111,8 @@ npm run test:integration
 npm run postman:generate
 
 # Or generate from resolved specs (with overlay):
-node packages/contracts/scripts/resolve.js --spec=packages/contracts --overlay=packages/contracts/overlays --out=packages/resolved
-node packages/contracts/scripts/generate-postman.js --spec=packages/resolved
+npm run resolve -- --spec=packages/safety-net-contracts --overlay=packages/safety-net-contracts/overlays --out=packages/generated/contracts
+npm run postman:generate
 ```
 
 ## Preflight Checks
@@ -129,13 +129,13 @@ This runs: validation, pattern checks, unit tests, overlay resolution, Postman g
 
 ### New unit test
 
-Create a file in `packages/mock-server/tests/unit/` or `packages/contracts/tests/unit/`. The custom runner auto-discovers `*.test.js` files.
+Create a file in `packages/blueprint-mock-server/tests/unit/` or `packages/blueprint-cli/tests/`. The custom runner auto-discovers `*.test.js` files.
 
 ### New integration test case
 
-Add to the appropriate section in `packages/mock-server/tests/integration/integration.test.js`.
+Add to the appropriate section in `packages/blueprint-mock-server/tests/integration/integration.test.js`.
 
-If the test requires new seed data, add records to `packages/mock-server/tests/integration/seed/`. Use the established ID namespace for the resource type.
+If the test requires new seed data, add records to `packages/blueprint-mock-server/tests/integration/seed/`. Use the established ID namespace for the resource type.
 
 ### New API (integration test coverage)
 

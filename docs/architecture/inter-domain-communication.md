@@ -41,6 +41,20 @@ When both conditions are met, a cross-domain write is simpler than the alternati
 
 ---
 
+## Why event-driven
+
+Three requirements drive the pub/sub, choreography-based design:
+
+- **Regulatory audit trails** — federal QC reviews (SNAP, Medicaid) require documentation of who made what eligibility decision, when, and on what basis. Current state alone cannot reconstruct this.
+- **Version tracking** — caseworkers need to compare the original submitted application against corrections made during interview and review. Without field-level change history, this view cannot be built.
+- **Cross-domain coordination** — multiple independent services must react to the same domain events without tight coupling between them.
+
+**Choreography over orchestration:** Domains react to events independently. No central coordinator directs the sequence of interactions. Each domain publishes events when its state machine transitions; consumers subscribe and act without any change to the producer. Adding a new consumer is additive — it requires no change to any existing domain.
+
+Direct API calls, batch polling, and webhooks were all considered and rejected: direct calls are ephemeral (no event history), batch polling loses intermediate steps (incompatible with audit and version tracking requirements), and webhooks would require each producing domain to own fan-out delivery — rebuilding what a message broker already provides.
+
+---
+
 ## Domain Events
 
 ### CloudEvents envelope
@@ -235,7 +249,6 @@ States are responsible for:
 
 ## Further Reading
 
-- [ADR: Inter-Domain Communication](../decisions/inter-domain-communication.md)
 - [CloudEvents Specification](https://cloudevents.io/)
 - [CloudEvents Extension Attributes](https://github.com/cloudevents/spec/blob/main/cloudevents/documented-extensions.md) — including `traceparent`
 - [W3C Trace Context](https://www.w3.org/TR/trace-context/)
