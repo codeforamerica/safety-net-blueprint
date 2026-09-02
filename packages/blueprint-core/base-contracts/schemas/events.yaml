@@ -20,6 +20,7 @@
 # Used by: workflow-openapi.yaml, platform-openapi.yaml, domain *-asyncapi.yaml files,
 # and any domain OpenAPI spec that emits CRUD lifecycle or scheduling events.
 
+$id: "https://blueprint.codeforamerica.org/base/schemas/events.yaml"
 $defs:
   # Minimum event reference — just the type identifier and an optional annotation.
   # Used as the schema for state machine onEvent handlers (OnEvent.type).

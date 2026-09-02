@@ -4,6 +4,7 @@
 # schema changes.
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/schemas/annotations-schema.yaml"
 title: Domain Annotations
 description: >
   Schema for domain annotation files ({domain}-annotations.yaml).
@@ -35,7 +36,7 @@ properties:
     description: Schema version for change tracking.
 
   domain:
-    $ref: "common/schemas/enums.yaml#/$defs/Domain"
+    $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/Domain"
 
   schema:
     description: >
@@ -130,7 +131,7 @@ $defs:
         oneOf:
           - type: array
             items:
-              $ref: "common/schemas/enums.yaml#/$defs/Program"
+              type: string
             minItems: 1
           - type: object
             additionalProperties:

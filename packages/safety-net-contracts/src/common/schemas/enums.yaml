@@ -1,0 +1,34 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/safety-net/common/schemas/enums.yaml"
+title: CommonEnums
+description: >
+  Safety Net specific enumerations. Domain, Frequency, Language, and RoleType
+  are defined in blueprint-core and extended via overlay. Program is safety
+  net specific and defined here.
+
+$defs:
+  Domain:
+    $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/Domain"
+
+  Language:
+    $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/Language"
+
+  RoleType:
+    $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/RoleType"
+
+  Program:
+    type: string
+    enum:
+      - snap          # Supplemental Nutrition Assistance Program
+      - medicaid      # Medicaid / MAGI Medicaid
+      - chip          # Children's Health Insurance Program (Title XXI)
+      - tanf          # Temporary Assistance for Needy Families
+      - aca           # ACA Marketplace / premium tax credits
+    description: >
+      Baseline public assistance programs. SNAP, Medicaid/MAGI, and CHIP are
+      first-class programs with full intake and eligibility support. TANF is a
+      thin baseline — federal requirements are minimal; state-specific intake
+      behavior is an overlay concern. ACA covers marketplace eligibility rules
+      (premium tax credits, employer affordability, special enrollment periods).
+      Values use the federal program name; state-specific names are overlay
+      concerns. States may extend this list via overlay.

@@ -10,7 +10,7 @@ The resolve pipeline transforms base OpenAPI specifications and state-specific o
 base spec directory (--spec)         overlay directory (--overlay)
   domains/*/
     *-openapi.yaml                     modifications.yaml
-    *-openapi-examples.yaml            config.yaml  ← x-base, x-relationship, etc.
+    *-openapi-examples.yaml            config.yaml  ← x-casing, x-relationship, etc.
     *-state-machine.yaml               (any structure)
     *-compositions.yaml                │
   common/                              │
@@ -21,9 +21,9 @@ base spec directory (--spec)         overlay directory (--overlay)
                                        │
                     ┌──────────────────┘
                     ▼
-           2. base:// ref rewriting
+           2. Canonical URI ref rewriting
            (copy blueprint-core/base-contracts → out/base/,
-            rewrite base:// URIs to real relative paths)
+            rewrite https://blueprint.codeforamerica.org/base/ URIs to relative paths)
                     │
                     ▼
            3. OpenAPI generation
@@ -46,7 +46,7 @@ base spec directory (--spec)         overlay directory (--overlay)
                     ▼
               --out directory (packages/generated/contracts/)
                 domains/*/
-                  *-openapi.yaml        (merged spec, base:// rewritten)
+                  *-openapi.yaml        (merged spec, canonical URIs rewritten)
                   *-openapi-examples.yaml  (transformed)
                   *-state-machine.yaml  (copied)
                   *-sla-types.yaml      (copied)
@@ -70,34 +70,90 @@ The overlay resolver (`packages/blueprint-core/src/overlay/overlay-resolver.js`)
 
 The overlay path is specified via the `--overlay` flag to `resolve.js`. It can be a single file or a directory. When given a directory, the resolver walks it recursively and discovers all `.yaml` files with `overlay: 1.0.0` at the top level, applying them in alphabetical order.
 
-The overlay directory may also contain a `config.yaml` file (not an overlay file itself — no `overlay:` key) that configures pipeline behavior via `config:` keys such as `x-base`, `x-casing`, `x-pagination`, and `x-relationship`. See [x-extensions](x-extensions.md) for the full config key reference.
+The overlay directory may also contain a `config.yaml` file (not an overlay file itself — no `overlay:` key) that configures pipeline behavior via `config:` keys such as `x-casing`, `x-pagination`, and `x-relationship`. See [x-extensions](x-extensions.md) for the full config key reference.
 
-### 2. base:// Ref Rewriting {#base-ref-rewriting}
+**File type identification:** Throughout the pipeline, asset types are identified from spec content rather than filename patterns. Each spec type declares its type explicitly:
 
-If the overlay `config.yaml` declares `x-base`, the pipeline:
+| Field | Value | Asset type |
+|-------|-------|-----------|
+| `$schema` | ends with `state-machine-schema.yaml` | State machine |
+| `$schema` | ends with `sla-types-schema.yaml` | SLA types |
+| `$schema` | ends with `compositions-schema.yaml` | Compositions |
+| `$schema` | ends with `metrics-schema.yaml` | Metrics |
+| `$schema` | ends with `rules-schema.yaml` | Rules |
+| `openapi` | any string | OpenAPI spec |
+| `asyncapi` | any string | AsyncAPI spec |
+| `overlay` | `'1.0.0'` | Overlay file |
 
-1. Copies all files from the declared `blueprint-core/base-contracts/` directory into `{out}/base/`
-2. Walks every spec file and rewrites `base://` URI references to real relative paths pointing to `{out}/base/`
+Filename patterns are only used in two places where no parsed spec is available: the startup quick-check that decides whether generators will run (avoids loading YAML for a no-op pipeline), and extracting a domain name for composition file → OpenAPI file matching.
 
-This allows domain specs to use a stable, location-independent URI scheme for shared components:
+### 2. Canonical URI Ref Rewriting {#base-ref-rewriting}
+
+Shared components from `blueprint-core/base-contracts/` are referenced in domain specs using canonical `https://blueprint.codeforamerica.org/base/` URIs — stable identifiers that don't depend on relative file paths:
 
 ```yaml
 # In source spec (intake-openapi.yaml)
 parameters:
-  - $ref: "base://components/parameters.yaml#/LimitParam"
+  - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam"
+  - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam"
 ```
+
+The resolve pipeline automatically:
+
+1. Copies all files from `blueprint-core/base-contracts/` into `{out}/base/`
+2. Walks every spec file and rewrites `https://blueprint.codeforamerica.org/base/` URIs to real relative paths pointing to `{out}/base/`
 
 ```yaml
 # In resolved output (packages/generated/contracts/domains/intake/intake-openapi.yaml)
 parameters:
   - $ref: "../../base/components/parameters.yaml#/LimitParam"
+  - $ref: "../../base/components/parameters.yaml#/OffsetParam"
 ```
 
-The rewriting computes the correct relative path based on the spec file's location in the output directory, so specs at different nesting depths get different relative prefix depths. Without `x-base`, any `base://` refs remain in the output as-is and will fail to resolve.
+The rewriting computes the correct relative path based on the spec file's location in the output directory, so specs at different nesting depths get different relative prefix depths.
 
-See [x-base](x-extensions.md#x-base) for the config key reference.
+This follows the standard JSON Schema / OpenAPI pattern of using canonical `$id` URIs as stable identifiers. The `blueprint-core` package exports a `resolverMap` that maps these URI prefixes to local directory paths, so validation tools (AJV) and other consumers can pre-load schemas by their canonical URI without hardcoding paths.
 
-### 3. OpenAPI Generation
+### 3. JSON Schema Validation {#json-schema-validation}
+
+After all overlays, RPC endpoints, composition endpoints, enum source injections,
+and event type prefix injections are applied, the pipeline validates all in-memory
+YAML files that declare a `$schema` field against their referenced schemas.
+
+**Why here and not earlier or later:**
+
+- **After overlays** — schemas like `annotations-schema.yaml` reference `RoleType`
+  and `Domain` from `base-contracts/schemas/enums.yaml`. Those enums are minimal
+  in the base package; states extend them via overlay (e.g. adding `case_worker`,
+  `applicant` to `RoleType`). Validating before overlays would reject every
+  safety-net file that uses an extended value. Running here, the in-memory specs
+  already contain the overlay-extended enums.
+- **Before canonical URI rewriting** — cross-schema `$ref`s are still canonical
+  `https://blueprint.codeforamerica.org/...` URIs at this point. AJV resolves
+  these by URI lookup in its internal registry. After URI rewriting (step 8), refs
+  become relative file paths that AJV cannot resolve via the registry.
+
+**Schema loading order:**
+
+In-memory specs are loaded into AJV first so overlay-extended schemas win. Then
+blueprint-core validation schemas (`state-machine-schema.yaml`,
+`annotations-schema.yaml`, etc.) are loaded via `resolverMap`, skipping any `$id`
+already registered. This ensures `base/schemas/enums.yaml` always uses the
+overlay-extended version.
+
+**Files validated:**
+
+Any YAML file declaring `$schema` with a non-HTTP value is validated. This includes
+state machines, annotations, policies, config files, and domain-specific config
+schemas. OpenAPI specs are validated separately by the OpenAPI validator post-resolve.
+
+**Implementation:** `packages/blueprint-cli/scripts/validate/json-schema-core.js`
+exports `validateSchemas(specs, { resolverMap })` — a pure function that works on
+in-memory spec objects. This makes it usable both here and from the standalone CLI
+(`validate/json-schema.js`). The standalone CLI is useful for ad-hoc debugging but
+may produce false negatives on source files since overlays have not been applied.
+
+### 4. OpenAPI Generation {#openapi-generation}
 
 After overlays have been applied, `resolve.js` generates OpenAPI paths and schemas from two source types:
 
@@ -107,7 +163,7 @@ After overlays have been applied, `resolve.js` generates OpenAPI paths and schem
 
 Because generation runs after overlays, any overlay modifications to `*-state-machine.yaml` or `*-compositions.yaml` files are reflected in the generated output.
 
-### 4. Relationship Resolution
+### 5. Relationship Resolution
 
 The relationship resolver (`packages/blueprint-core/src/relationships.js`) processes `x-relationship` annotations on FK fields to determine how related resources should be represented in responses. The `style` property on each annotation controls the behavior:
 
@@ -123,7 +179,7 @@ For the behavioral contract of each style, see [x-relationship](../x-extensions.
 
 By default, relationship resolution only runs when an overlay is present. Pass `--resolve` to run it on base specs without an overlay — useful for testing the resolver in isolation.
 
-### 5. Example Transform
+### 6. Example Transform
 
 After resolving relationships, `resolveExampleRelationships` applies the same transformations to the corresponding `*-openapi-examples.yaml` file:
 
@@ -132,7 +188,7 @@ After resolving relationships, `resolveExampleRelationships` applies the same tr
 
 The examples index is built from all examples files by resource type so cross-API lookups work.
 
-### 6. Environment Filtering
+### 7. Environment Filtering
 
 When `--env` is provided, the pipeline removes any spec node annotated with `x-environments` that doesn't include the target environment, then strips the `x-environments` key from remaining nodes.
 
@@ -154,7 +210,7 @@ blueprint-resolve --spec=... --overlay=... --out=./resolved --env=development
 
 Without `--env`, all sections are included as-is. See [x-environments](../x-extensions.md#x-environments) for the full extension reference.
 
-### 7. Placeholder Substitution
+### 8. Placeholder Substitution
 
 When `--env-file` is provided or environment variables exist, `${VAR}` placeholders in string values are replaced with their resolved values.
 
@@ -173,9 +229,9 @@ blueprint-resolve --spec=... --overlay=... --out=./resolved --env-file=.env
 
 Environment variables (`process.env`) take precedence over `.env` file values. Unresolved placeholders produce warnings but don't fail the build.
 
-### 8. Output
+### 9. Output
 
-Resolved specs are written to the path specified by `--out` (default: `packages/generated/contracts/`). The resolved directory mirrors the domain structure of the source specs but contains fully-merged, base://-rewritten, relationship-resolved artifacts alongside the copied `base/` directory.
+Resolved specs are written to the path specified by `--out` (default: `packages/generated/contracts/`). The resolved directory mirrors the domain structure of the source specs but contains fully-merged, canonical-URI-rewritten, relationship-resolved artifacts alongside the copied `base/` directory.
 
 By default, resolved specs preserve all `$ref` references — they are not inlined. This keeps the output readable and allows downstream tools (mock server, Postman generator) to follow references normally. Pass `--bundle` to inline all `$ref`s and produce self-contained single-file specs per domain — useful when distributing specs to external consumers or feeding them to tools that don't handle multi-file specs well.
 

@@ -104,7 +104,7 @@
       </div>
     <div class="nav-section">
         <div class="nav-section-label">Types</div>
-        <a href="#type-ExternalService" class="nav-link">ExternalService</a><a href="#type-ExternalServiceList" class="nav-link">ExternalServiceList</a><a href="#type-ExternalServiceCall" class="nav-link">ExternalServiceCall</a><a href="#type-ExternalServiceCallList" class="nav-link">ExternalServiceCallList</a><a href="#type-ExternalServiceWritable" class="nav-link">ExternalServiceWritable</a><a href="#type-ExternalServiceListWritable" class="nav-link">ExternalServiceListWritable</a><a href="#type-ExternalServiceCallWritable" class="nav-link">ExternalServiceCallWritable</a><a href="#type-ExternalServiceCallListWritable" class="nav-link">ExternalServiceCallListWritable</a>
+        <a href="#type-ExternalService" class="nav-link">ExternalService</a><a href="#type-ExternalServiceList" class="nav-link">ExternalServiceList</a><a href="#type-ExternalServiceCall" class="nav-link">ExternalServiceCall</a><a href="#type-ExternalServiceCallList" class="nav-link">ExternalServiceCallList</a><a href="#type-ExternalServiceWritable" class="nav-link">ExternalServiceWritable</a><a href="#type-ExternalServiceListWritable" class="nav-link">ExternalServiceListWritable</a>
       </div>
       </div>
     </nav>
@@ -387,7 +387,7 @@
   </details>
 </div>
       </section><section id="section-types" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (8)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (6)</h2>
         <div id="type-ExternalService" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -468,34 +468,6 @@
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ExternalServiceListWritable</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">items</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">:</span> <span style="color:#006152;">boolean</span></div>
-      <div style="line-height:1.8;color:#666;">}</div>
-    </div>
-  </details>
-</div><div id="type-ExternalServiceCallWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ExternalServiceCallWritable</code>
-      <span style="font-size:11px;color:#aaa;">11 fields</span>
-      <a href="#type-ExternalServiceCallWritable" class="permalink" title="Link to this type">#</a>
-    </summary>
-    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
-      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ExternalServiceCallWritable</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">id</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">serviceId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">serviceType</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum (12 values)</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">requestingResourceId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">requestingResourceType</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">callMode</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;async&quot;, &quot;sync&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">status</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;pending&quot;, &quot;completed&quot;, &quot;failed&quot;, &quot;timed_out&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">data</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">metadata</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">createdAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">updatedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
-      <div style="line-height:1.8;color:#666;">}</div>
-    </div>
-  </details>
-</div><div id="type-ExternalServiceCallListWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ExternalServiceCallListWritable</code>
-      <span style="font-size:11px;color:#aaa;">5 fields</span>
-      <a href="#type-ExternalServiceCallListWritable" class="permalink" title="Link to this type">#</a>
-    </summary>
-    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
-      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ExternalServiceCallListWritable</span> <span style="color:#666;">{</span></div>
       <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">items</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">:</span> <span style="color:#006152;">boolean</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>

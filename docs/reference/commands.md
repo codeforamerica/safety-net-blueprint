@@ -82,7 +82,7 @@ npm run resolve -- --help
 
 ### `npm run api:new`
 
-Scaffolds a new API spec in `packages/safety-net-contracts/domains/`.
+Scaffolds a new API spec in `packages/safety-net-contracts/src/domains/`.
 
 ```bash
 npm run api:new -- --name "benefits" --resource "Benefit"

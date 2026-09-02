@@ -20,12 +20,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { readdirSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { join, dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const specArg = process.argv.find(a => a.startsWith('--spec='));
-if (!specArg) { console.error('--spec= is required'); process.exit(1); }
-const CONTRACTS_DIR = specArg.slice('--spec='.length);
+const CONTRACTS_DIR = specArg ? specArg.slice('--spec='.length) : resolve(__dirname, '..', '..', 'src');
 
 /**
  * Endpoints we deliberately do not extend with x-sortable. Listed here as

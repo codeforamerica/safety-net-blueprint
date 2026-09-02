@@ -34,6 +34,7 @@
 #         methods: [put, patch]
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/schemas/compositions-schema.yaml"
 title: Domain Compositions
 description: >
   Schema for domain composition YAML files ({domain}-compositions.yaml).

@@ -2,7 +2,7 @@
 
 **Status:** Approved
 
-See also: [API Architecture](api-architecture.md)
+See also: [API Architecture](api-architecture.md) | [Domain Design](domain-design.md) | [Design Rationale](design-rationale.md) | [Roadmap](roadmap.md)
 
 **Sections:**
 
@@ -148,7 +148,7 @@ The field metadata format is custom but informed by established standards. No si
 **Design decisions:**
 
 - **Why field metadata in the backend, not form rendering?** Field metadata (what annotations a field carries, who can see it, what it's called in different languages) is data model metadata — it applies regardless of which frontend renders it. Form rendering (layout, sections, component mapping, navigation) is a frontend concern that varies by application. Separating them follows the same pattern as FHIR, where ElementDefinition is part of the data model and rendering is left to the presentation layer.
-- **Why JSON Logic over alternatives?** JSON Logic is the lightest serializable expression language with broad adoption. Alternatives: FHIRPath (healthcare-specific), XPath (verbose, XML-oriented), CEL (more powerful but less adopted). JSON Logic fits our authoring model — conditions that non-developers can read in a table cell.
+- **Why JSON Logic over alternatives?** JSON Logic is the lightest serializable expression language with broad adoption. Alternatives: FHIRPath (healthcare-specific), XPath (verbose, XML-oriented), CEL (more powerful but less adopted). JSON Logic fits our authoring model — conditions that non-developers can read in a table cell. This choice is scoped to field metadata's own conditions specifically; it does not extend to the behavioral contract surface (guards, procedure/step conditions, SLA conditions, metric filters), which uses CEL instead — see [behavioral-contract-dsl.md Decision 1](cross-cutting/behavioral-contract-dsl.md#decision-1-cel-as-the-expression-language) for why that surface made a different choice.
 
 ### Extensibility and customization
 

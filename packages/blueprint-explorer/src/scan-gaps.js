@@ -31,11 +31,10 @@ function flattenSteps(steps) {
   return result;
 }
 
-export function scanGaps(config) {
+export function scanGaps(config, contractsDir, archDir) {
   // Load all contract YAML files as a single searchable text blob
-  const contractsDir = resolve(__dirname, '..', '..', '..', 'contracts');
   let contractText = '';
-  if (existsSync(contractsDir)) {
+  if (contractsDir && existsSync(contractsDir)) {
     for (const f of readdirSync(contractsDir)) {
       if (f.endsWith('.yaml') || f.endsWith('.json')) {
         contractText += readFileSync(resolve(contractsDir, f), 'utf8') + '\n';
@@ -44,9 +43,8 @@ export function scanGaps(config) {
   }
 
   // Load architecture docs as a single searchable text blob
-  const archDir = resolve(__dirname, '..', '..', '..', '..', '..', 'docs', 'architecture', 'domains');
   let archText = '';
-  if (existsSync(archDir)) {
+  if (archDir && existsSync(archDir)) {
     for (const f of readdirSync(archDir)) {
       if (f.endsWith('.md')) {
         archText += readFileSync(resolve(archDir, f), 'utf8') + '\n';

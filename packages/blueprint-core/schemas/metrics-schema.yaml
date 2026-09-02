@@ -4,6 +4,7 @@
 # are validated by the validation script.
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/schemas/metrics-schema.yaml"
 title: Metrics
 description: Schema for behavioral contract metrics YAML files.
 type: object

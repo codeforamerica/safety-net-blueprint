@@ -27,12 +27,11 @@ import { fileURLToPath } from 'url';
 import { dirname, join, resolve, relative, basename, sep } from 'path';
 import yaml from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
+import { loadContractFiles } from '@codeforamerica/blueprint-core';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const CONTRACTS_DIR = resolve(__dirname, '../../../contracts');
-const OUTPUT_DIR = join(__dirname, '..', '..', '..', '..', 'safety-net-explorer', 'data-dictionaries');
 const PROJECT_ROOT = resolve(__dirname, '../../..');
 const RESOLVE_SCRIPT = resolve(__dirname, '../../../blueprint-cli/scripts/resolve.js');
 
@@ -49,16 +48,15 @@ const cliArgs = Object.fromEntries(
 
 const { domain, spec: specArg, out: outArg } = cliArgs;
 
-if (!domain && !specArg) {
-  console.error('Usage: node generate-field-inventory.mjs --domain=<domain>');
-  console.error('       node generate-field-inventory.mjs --spec=<file-or-folder> [--out=<file-or-folder>]');
+if (!specArg || !outArg) {
+  console.error('Usage: node generate-field-inventory.mjs --spec=<file-or-folder> --out=<file-or-folder> [--domain=<domain>]');
   process.exit(1);
 }
 
 // ─── Input/output resolution ──────────────────────────────────────────────────
 
 // Top-level search directory — used by resolveSpecPaths and processSpec.
-const searchDir = specArg ? resolve(specArg) : CONTRACTS_DIR;
+const searchDir = resolve(specArg);
 
 // If --spec was provided and points to a non-empty directory of resolved specs,
 // use them directly without running the internal resolve pipeline.
@@ -68,9 +66,11 @@ const specDirIsPreResolved = specArg &&
   searchDirStat?.isDirectory() &&
   readdirSync(searchDir, { recursive: true }).some(f => typeof f === 'string' && f.endsWith('-openapi.yaml'));
 
-/** Resolve the list of spec file paths to process. */
+/**
+ * Resolve the list of [specPath, domain] pairs to process.
+ * Uses loadContractFiles so domain is derived consistently for all file types.
+ */
 function resolveSpecPaths() {
-  // No --spec: use CONTRACTS_DIR (filtered by --domain if given)
   const stat = specArg ? statSync(searchDir, { throwIfNoEntry: false }) : null;
 
   if (specArg && !stat) {
@@ -78,38 +78,38 @@ function resolveSpecPaths() {
     process.exit(1);
   }
 
-  // Single file
-  if (stat?.isFile()) return [searchDir];
-
-  // Folder (or default CONTRACTS_DIR): find all *-openapi.yaml files (recursive)
-  let files = readdirSync(searchDir, { recursive: true })
-    .filter(f => typeof f === 'string' && f.endsWith('-openapi.yaml') && !f.endsWith('-openapi-examples.yaml'));
-
-  if (domain) {
-    files = files.filter(f => basename(f).includes(domain));
+  // Single file — read its domain from the fileMap
+  if (stat?.isFile()) {
+    const fileMap = loadContractFiles(dirname(searchDir));
+    const entry = fileMap.get(searchDir);
+    return [[searchDir, entry?.domain ?? null]];
   }
 
-  if (files.length === 0) {
+  const fileMap = loadContractFiles(searchDir);
+  let entries = [...fileMap.entries()]
+    .filter(([absPath, e]) => e.type === 'openapi' && !absPath.endsWith('-openapi-examples.yaml'));
+
+  if (domain) {
+    entries = entries.filter(([, e]) => e.domain === domain);
+  }
+
+  if (entries.length === 0) {
     const hint = domain ? ` matching domain "${domain}"` : '';
-    console.error(`No *-openapi.yaml files found${hint} in ${searchDir}`);
+    console.error(`No openapi files found${hint} in ${searchDir}`);
     process.exit(1);
   }
 
-  return files.map(f => join(searchDir, f));
+  return entries.map(([absPath, e]) => [absPath, e.domain]);
 }
 
 /**
- * Resolve the output file path for a given spec.
+ * Resolve the output file path for a given domain.
  * If --out ends with .yaml/.yml, use it as-is (explicit file).
- * If --out is a directory path, derive the filename from the spec stem.
+ * If --out is a directory path, derive the filename from the domain.
  * If --out is omitted, write to the default output/ dir.
  */
-function resolveOutputPath(specPath) {
-  const stem = basename(specPath).replace(/-openapi\.ya?ml$/, '');
-  const filename = `${stem}-field-inventory.yaml`;
-
-  if (!outArg) return join(OUTPUT_DIR, filename);
-
+function resolveOutputPath(fileDomain) {
+  const filename = `${fileDomain}-field-inventory.yaml`;
   const outPath = resolve(outArg);
   if (outPath.endsWith('.yaml') || outPath.endsWith('.yml')) return outPath;
   return join(outPath, filename);
@@ -389,7 +389,6 @@ function requestBodySchemaName(rawOp) {
 
 async function processSpec(specPath, outputPath) {
   const specFilename = basename(specPath);
-  const stem = specFilename.replace(/-openapi\.ya?ml$/, '');
   const resolvedSpecPath = resolve(specPath);
 
   let rawPaths = {};
@@ -544,22 +543,49 @@ async function processSpec(specPath, outputPath) {
     }
   }
 
+  const xDomain = spec.info?.['x-domain'] ?? basename(specPath).replace(/-openapi\.ya?ml$/, '');
+
+  // ── Merge with existing field inventory if present ────────────────────────
+  // Parse existing sections by title so specs sharing a domain can append.
+  const existingSections = new Map(); // title → lines[]
+  if (existsSync(outputPath)) {
+    const existing = readFileSync(outputPath, 'utf8').split('\n');
+    let currentTitle = null;
+    let currentLines = [];
+    for (const line of existing) {
+      const headerMatch = line.match(/^# ── (.+?) ─+$/);
+      if (headerMatch) {
+        if (currentTitle !== null) existingSections.set(currentTitle, currentLines);
+        currentTitle = headerMatch[1].trim();
+        currentLines = [line];
+      } else if (currentTitle !== null) {
+        currentLines.push(line);
+      }
+    }
+    if (currentTitle !== null) existingSections.set(currentTitle, currentLines);
+  }
+
   // ── Write field inventory (no descriptions) ───────────────────────────────
-  const lines = [
-    `# ${stem} field inventory`,
-    `# Generated from ${specFilename}`,
-    `# Do not edit — regenerate with: node generate-field-inventory.mjs --domain=${stem}`,
+  const header = existingSections.size === 0 ? [
+    `# ${xDomain} field inventory`,
+    `# Do not edit — regenerate with: node generate-field-inventory.mjs --domain=${xDomain}`,
     '',
-  ];
+  ] : [];
+
+  const newSectionLines = [];
   for (const { title, entries } of sections) {
-    lines.push(section(title));
-    lines.push('');
+    if (existingSections.has(title)) continue; // already present — skip
+    newSectionLines.push(section(title));
+    newSectionLines.push('');
     for (const [path, entry] of entries) {
       const [modelEntry] = splitEntry(entry);
-      lines.push(`${path}: ${serializeEntry(modelEntry)}`);
+      newSectionLines.push(`${path}: ${serializeEntry(modelEntry)}`);
     }
-    lines.push('');
+    newSectionLines.push('');
   }
+
+  const existingLines = [...existingSections.values()].flat();
+  const lines = [...header, ...existingLines, ...newSectionLines];
 
   const outDir = dirname(outputPath);
   if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
@@ -570,10 +596,10 @@ async function processSpec(specPath, outputPath) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  const specPaths = resolveSpecPaths();
+  const specEntries = resolveSpecPaths();
 
-  for (const specPath of specPaths) {
-    const outputPath = resolveOutputPath(specPath);
+  for (const [specPath, fileDomain] of specEntries) {
+    const outputPath = resolveOutputPath(fileDomain ?? basename(specPath).replace(/-openapi\.ya?ml$/, ''));
     await processSpec(specPath, outputPath);
   }
 }

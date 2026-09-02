@@ -24,13 +24,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
  * Load packages/explorer/config.yaml and return it enriched with resolved
  * annotation data from the contracts package.
  *
- * @param {string} [contractsDir] path to the contracts package root.
- *   Defaults to packages/contracts relative to the explorer package.
+ * @param {string} contractsDir path to the contracts package root.
  * @returns {Object} enriched config — same shape as config.yaml but with
  *   step.policies: [...] replacing step.ref annotation paths and step.regulatory arrays.
  */
 export function resolveConfig(contractsDir) {
-  contractsDir = contractsDir || resolve(__dirname, '..', '..', 'contracts');
 
   const config = yaml.load(readFileSync(join(__dirname, 'config.yaml'), 'utf8'));
 

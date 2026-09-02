@@ -2,6 +2,7 @@ openapi: 3.0.3
 info:
   title: Field Inventory Generator Test Fixture
   version: 1.0.0
+  x-domain: test-domain
   description: >
     Minimal spec exercising all field types the generator must handle:
     scalars, enums, uuid with x-relationship, date/datetime/email,

@@ -81,6 +81,48 @@ test('loadAnnotations', async (t) => {
       rmSync(dir, { recursive: true });
     }
   });
+
+  await t.test('accepts a fileMap and matches on content.domain field', () => {
+    const fileMap = new Map();
+    fileMap.set('/fake/intake-annotations.yaml', {
+      content: {
+        domain: 'intake',
+        schema: { 'Application.status': { programs: ['snap'] } },
+        operations: {},
+        events: {},
+      },
+      type: 'annotations',
+      relativePath: 'intake-annotations.yaml',
+      domain: 'intake',
+    });
+    fileMap.set('/fake/workflow-annotations.yaml', {
+      content: {
+        domain: 'workflow',
+        schema: { 'Task.status': { programs: ['snap'] } },
+        operations: {},
+        events: {},
+      },
+      type: 'annotations',
+      relativePath: 'workflow-annotations.yaml',
+      domain: 'workflow',
+    });
+
+    const result = loadAnnotations('intake', fileMap);
+    assert.deepStrictEqual(result.schema['Application.status'], { programs: ['snap'] });
+    assert.ok(!result.schema['Task.status'], 'workflow annotation should not appear for intake domain');
+  });
+
+  await t.test('fileMap path returns empty sections when no matching domain', () => {
+    const fileMap = new Map();
+    fileMap.set('/fake/workflow-annotations.yaml', {
+      content: { domain: 'workflow', schema: { 'Task.status': {} }, operations: {}, events: {} },
+      type: 'annotations',
+      relativePath: 'workflow-annotations.yaml',
+      domain: 'workflow',
+    });
+    const result = loadAnnotations('intake', fileMap);
+    assert.deepStrictEqual(result, { schema: {}, operations: {}, events: {} });
+  });
 });
 
 test('loadPolicies', async (t) => {

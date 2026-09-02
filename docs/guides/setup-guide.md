@@ -78,7 +78,7 @@ Use an exact version in `package.json` to control when you pick up base spec cha
 
 Overlays modify the base specs without forking them. See the [Overlay Guide](overlay-guide.md) for overlay syntax, action types, target path expressions, file disambiguation, and global config options.
 
-The safety-net overlays in the base repo (`packages/safety-net-contracts/overlays/`) show a working example. Use the `config.yaml` there as a starting point for your own overlay configuration.
+The safety-net overlays in the base repo (`packages/safety-net-contracts/src/overlays/`) show a working example. Use the `config.yaml` there as a starting point for your own overlay configuration.
 
 ## CI pipeline
 

@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { seedDatabase } from '../../src/seeder.js';
+import { seedAllDatabases } from '../../src/seeder.js';
 import {
   findAll,
   findById,
@@ -24,9 +24,17 @@ const cleanup = () => { clearAll('persons'); };
 
 test('CRUD Handler Tests', async (t) => {
   
-  // Setup before tests
+  // Setup before tests — seed using the *-mock-data.yaml files under seedDir
   cleanup();
-  seedDatabase('persons', seedDir, 'client-management');
+  const clientManagementApi = {
+    name: 'client-management',
+    serverBasePath: '/client-management',
+    endpoints: [
+      { path: '/client-management/persons' },
+      { path: '/client-management/persons/{personId}' },
+    ],
+  };
+  seedAllDatabases([clientManagementApi], '', seedDir);
   
   await t.test('LIST - returns all resources', () => {
     const results = findAll('persons', {});

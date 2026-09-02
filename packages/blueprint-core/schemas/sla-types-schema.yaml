@@ -3,6 +3,7 @@
 # (e.g., slaTypeCode values matching state machine) are validated by the validation script.
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/schemas/sla-types-schema.yaml"
 title: SLA Types
 description: Schema for behavioral contract SLA types YAML files.
 type: object

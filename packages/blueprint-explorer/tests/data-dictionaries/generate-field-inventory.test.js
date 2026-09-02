@@ -7,8 +7,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { readFileSync, mkdirSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { readFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -157,4 +157,48 @@ test('resolves external $defs with internal #/$defs/ self-references', () => {
 
   assert.match(inv['application.externalContact'], /type: ContactDetails/);
   assert.match(inv['application.externalContact.phone'], /type: PhoneNumber/);
+});
+
+// ── Domain-based output naming ─────────────────────────────────────────────────
+
+test('output filename is derived from x-domain, not spec filename', () => {
+  // Fixture has x-domain: test-domain; output should be test-domain-field-inventory.yaml
+  const outDir = join(OUT_DIR, 'domain-naming');
+  mkdirSync(outDir, { recursive: true });
+  run([`--spec=${FIXTURE_SPEC}`, `--out=${outDir}`]);
+  assert.ok(existsSync(join(outDir, 'test-domain-field-inventory.yaml')), 'file named after x-domain should exist');
+  assert.ok(!existsSync(join(outDir, 'test-openapi-field-inventory.yaml')), 'file named after spec filename should not exist');
+});
+
+test('output header uses x-domain value', () => {
+  const out = join(OUT_DIR, 'domain-naming', 'test-domain-field-inventory.yaml');
+  const content = readFileSync(out, 'utf8');
+  assert.ok(content.startsWith('# test-domain field inventory'), 'header should use x-domain');
+});
+
+// ── Append / merge logic ───────────────────────────────────────────────────────
+
+test('running twice on same output appends without duplicating sections', () => {
+  const outDir = join(OUT_DIR, 'append-test');
+  mkdirSync(outDir, { recursive: true });
+  run([`--spec=${FIXTURE_SPEC}`, `--out=${outDir}`]);
+  run([`--spec=${FIXTURE_SPEC}`, `--out=${outDir}`]);
+  const content = readFileSync(join(outDir, 'test-domain-field-inventory.yaml'), 'utf8');
+  // Section headers should appear exactly once each
+  const applicationSections = (content.match(/# ── application/g) || []).length;
+  assert.strictEqual(applicationSections, 1, 'application section should appear exactly once after two runs');
+});
+
+// ── Required args ──────────────────────────────────────────────────────────────
+
+test('exits with error when --spec is missing', () => {
+  const result = spawnSync(process.execPath, [SCRIPT, `--out=${OUT_DIR}`], { encoding: 'utf8' });
+  assert.notStrictEqual(result.status, 0, 'should exit non-zero');
+  assert.match(result.stderr, /--spec/);
+});
+
+test('exits with error when --out is missing', () => {
+  const result = spawnSync(process.execPath, [SCRIPT, `--spec=${FIXTURE_SPEC}`], { encoding: 'utf8' });
+  assert.notStrictEqual(result.status, 0, 'should exit non-zero');
+  assert.match(result.stderr, /--out/);
 });

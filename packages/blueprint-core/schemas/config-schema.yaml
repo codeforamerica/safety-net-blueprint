@@ -3,6 +3,7 @@
 # Domain-specific schemas extend this for catalog entry validation.
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/schemas/config-schema.yaml"
 title: Domain Config
 description: Schema for domain configuration YAML files. Validates the common envelope.
 type: object
@@ -20,4 +21,4 @@ properties:
     description: Schema version for change tracking.
 
   domain:
-    $ref: "../base-contracts/schemas/enums.yaml#/$defs/Domain"
+    $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/Domain"

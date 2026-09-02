@@ -56,8 +56,10 @@ const seedArg         = args.find(a => a.startsWith('--seed='));
 const fixturesArg     = args.find(a => a.startsWith('--fixtures='));
 const contractsDir    = contractsArg    ? resolve(process.cwd(), contractsArg.slice('--contracts='.length))       : null;
 const rawContractsDir = rawContractsArg ? resolve(process.cwd(), rawContractsArg.slice('--raw-contracts='.length)) : null;
-const seedDir         = seedArg         ? resolve(process.cwd(), seedArg.slice('--seed='.length))                 : null;
-const fixturesDir     = fixturesArg     ? resolve(process.cwd(), fixturesArg.slice('--fixtures='.length))         : null;
+// Unit tests always use tests/fixtures as the default seed and fixtures dir
+const defaultUnitFixturesDir = join(__dirname, 'fixtures');
+const seedDir         = seedArg         ? resolve(process.cwd(), seedArg.slice('--seed='.length))         : defaultUnitFixturesDir;
+const fixturesDir     = fixturesArg     ? resolve(process.cwd(), fixturesArg.slice('--fixtures='.length)) : defaultUnitFixturesDir;
 const runUnit        = args.includes('--unit') || args.includes('--all') || args.length === 0;
 const runIntegration = args.includes('--integration') || args.includes('--all');
 const runFunctional  = args.includes('--functional') || args.includes('--all');
@@ -291,6 +293,7 @@ async function runAllTests() {
     process.exit(1);
   } else {
     console.log('\n✓ All tests passed!');
+    process.exit(0);
   }
 }
 

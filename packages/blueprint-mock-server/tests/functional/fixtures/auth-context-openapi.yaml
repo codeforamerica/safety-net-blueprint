@@ -24,10 +24,10 @@ paths:
       operationId: listUsers
       tags: [Users]
       parameters:
-        - $ref: "base://components/parameters.yaml#/SearchQueryParam"
-        - $ref: "base://components/parameters.yaml#/LimitParam"
-        - $ref: "base://components/parameters.yaml#/OffsetParam"
-        - $ref: "base://components/parameters.yaml#/SortParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SortParam"
       responses:
         "200":
           description: List of users.
@@ -36,7 +36,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserList"
         "500":
-          $ref: "base://components/responses.yaml#/InternalError"
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
     post:
       summary: Create user
@@ -56,9 +56,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/User"
         "422":
-          $ref: "base://components/responses.yaml#/UnprocessableEntity"
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
-          $ref: "base://components/responses.yaml#/InternalError"
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
   /users/me:
     get:
@@ -81,11 +81,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/User"
         "401":
-          $ref: "base://components/responses.yaml#/Unauthorized"
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Unauthorized"
         "404":
-          $ref: "base://components/responses.yaml#/NotFound"
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         "500":
-          $ref: "base://components/responses.yaml#/InternalError"
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
   /users/{userId}:
     parameters:
@@ -107,9 +107,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/User"
         "404":
-          $ref: "base://components/responses.yaml#/NotFound"
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         "500":
-          $ref: "base://components/responses.yaml#/InternalError"
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
 components:
   schemas:
@@ -151,7 +151,7 @@ components:
 
     UserList:
       allOf:
-        - $ref: "base://components/pagination.yaml#/Pagination"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/pagination.yaml#/Pagination"
         - type: object
           required:
             - items

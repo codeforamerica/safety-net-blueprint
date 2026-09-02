@@ -33,8 +33,10 @@ import { applyOverlay, checkPathExists, parsePath } from '@codeforamerica/bluepr
 import { extractConfig, validateConfig } from '@codeforamerica/blueprint-core/config';
 import { discoverRelationships, buildSchemaIndex, resolveRelationships, buildExamplesIndex, resolveExampleRelationships, summarizeResolverDecisions } from '@codeforamerica/blueprint-core/relationships';
 import { bundleSpec } from '@codeforamerica/blueprint-core/bundle';
+import { baseContractsDir, resolverMap } from '@codeforamerica/blueprint-core';
 import { extractItemEndpointFromSpec, generateOverlay } from './generate-rpc-overlay.js';
 import { generateCompositionOverlays } from '@codeforamerica/blueprint-core/compositions';
+import { validateSchemas } from './validate/json-schema-core.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -224,12 +226,13 @@ function collectYamlFiles(sourceDir, baseDir = sourceDir) {
     const sourcePath = join(sourceDir, file.name);
 
     if (file.isDirectory()) {
+      if (file.name === 'node_modules') continue;
       yamlFiles = yamlFiles.concat(collectYamlFiles(sourcePath, baseDir));
     } else if (file.name.endsWith('.yaml')) {
       const relativePath = relative(baseDir, sourcePath);
       const content = readFileSync(sourcePath, 'utf8');
-      if (content.includes('x-status: deprecated')) continue;
       const spec = yaml.load(content);
+      if (spec?.info?.['x-status'] === 'deprecated') continue;
       yamlFiles.push({ relativePath, sourcePath, spec });
     }
   }
@@ -322,6 +325,7 @@ function analyzeTargetLocations(overlay, yamlFiles) {
       if (pathCheck.fullPathExists) {
         matchingFiles.push({
           relativePath,
+          schemaId: spec.$id || null,  // canonical URI for matching file: https://... values
           apiId: spec.info?.['x-api-id'] || null,
           version: getVersionFromFilename(relativePath)
         });
@@ -356,18 +360,35 @@ function resolveActionTargets(actionFileMap) {
     const targetApi = action['target-api'];
     const targetVersion = action['target-version'];
 
-    // Handle explicit file/files specification
+    // Handle explicit file/files specification.
+    // file: accepts either a relative path (matched against relativePath) or a
+    // canonical schema URI starting with https:// (matched against spec.$id).
+    // Canonical URIs are preferred for JSON Schema files — they are stable and
+    // self-documenting, avoiding the need to know internal path conventions like
+    // the base/ prefix used for blueprint-core base-contracts files.
     if (explicitFile || explicitFiles) {
       const specifiedFiles = explicitFiles || [explicitFile];
-      const matchPaths = matchingFiles.map(m => m.relativePath);
-      const validFiles = specifiedFiles.filter(f => matchPaths.includes(f));
-      const invalidFiles = specifiedFiles.filter(f => !matchPaths.includes(f));
+      const validFiles = specifiedFiles.filter(f => {
+        if (f.startsWith('https://')) {
+          return matchingFiles.some(m => m.schemaId === f);
+        }
+        return matchingFiles.some(m => m.relativePath === f);
+      });
+      const invalidFiles = specifiedFiles.filter(f => !validFiles.includes(f));
 
       if (invalidFiles.length > 0) {
         warnings.push(`Target ${action.target} does not exist in specified file(s): ${invalidFiles.join(', ')} (action: "${actionDesc}")`);
       }
 
-      actionTargets.set(actionIndex, validFiles);
+      // Return relative paths for valid files (pipeline works with relative paths internally)
+      const resolvedPaths = validFiles.map(f => {
+        if (f.startsWith('https://')) {
+          return matchingFiles.find(m => m.schemaId === f)?.relativePath;
+        }
+        return f;
+      }).filter(Boolean);
+
+      actionTargets.set(actionIndex, resolvedPaths);
       continue;
     }
 
@@ -404,8 +425,50 @@ function resolveActionTargets(actionFileMap) {
   return { actionTargets, warnings };
 }
 
-// Behavioral YAML filename patterns — update: on arrays in these files may be accidental
-const BEHAVIORAL_YAML_PATTERNS = ['-state-machine.yaml', '-sla-types.yaml', '-rules.yaml', '-metrics.yaml'];
+// =============================================================================
+// File Type Predicates
+// =============================================================================
+//
+// Asset type is identified from the spec content itself — $schema field for
+// blueprint YAML files, openapi/asyncapi fields for API specs — rather than
+// from filename patterns. This is more robust: the content explicitly declares
+// its type, independent of the naming convention used by a given deployment.
+//
+// Filename-based checks remain only where no parsed spec is available (e.g.,
+// the pre-parse quick check at startup to decide whether generators will run).
+
+function isStateMachine(spec) {
+  return typeof spec?.['$schema'] === 'string' && spec['$schema'].endsWith('state-machine-schema.yaml');
+}
+
+function isSlaTypes(spec) {
+  return typeof spec?.['$schema'] === 'string' && spec['$schema'].endsWith('sla-types-schema.yaml');
+}
+
+function isCompositions(spec) {
+  return typeof spec?.['$schema'] === 'string' && spec['$schema'].endsWith('compositions-schema.yaml');
+}
+
+function isMetrics(spec) {
+  return typeof spec?.['$schema'] === 'string' && spec['$schema'].endsWith('metrics-schema.yaml');
+}
+
+function isRules(spec) {
+  return typeof spec?.['$schema'] === 'string' && spec['$schema'].endsWith('rules-schema.yaml');
+}
+
+function isOpenApi(spec) {
+  return typeof spec?.openapi === 'string';
+}
+
+function isAsyncApi(spec) {
+  return typeof spec?.asyncapi === 'string';
+}
+
+/** True for behavioral spec types where update: on arrays may accidentally replace baseline entries. */
+function isBehavioralYaml(spec) {
+  return isStateMachine(spec) || isSlaTypes(spec) || isMetrics(spec) || isRules(spec);
+}
 
 /**
  * Apply overlay actions to files based on resolved targets.
@@ -436,7 +499,7 @@ function applyOverlayWithTargets(yamlFiles, overlay, actionTargets, overlayDir) 
       // Warn when update: is used with an array value on a behavioral YAML —
       // this replaces all baseline entries. append: is usually the right choice.
       if (action.update !== undefined && Array.isArray(action.update) &&
-          BEHAVIORAL_YAML_PATTERNS.some(p => relativePath.endsWith(p))) {
+          isBehavioralYaml(spec)) {
         warnings.push(
           `"update:" on "${action.target}" in ${relativePath} replaces all baseline entries. ` +
           `Use "append:" to add items without removing baseline content. ` +
@@ -636,11 +699,13 @@ function rewriteOverlayRefs(overlay, fromPrefix, toPrefix) {
   return walk(overlay);
 }
 
+const BLUEPRINT_BASE_URI = 'https://blueprint.codeforamerica.org/base/';
+
 /**
- * Rewrite base:// URI refs in a spec to real relative paths for the output file.
+ * Rewrite blueprint canonical URI refs in a spec to real relative paths for the output file.
  *
- * base://schemas/enums.yaml#/$defs/RoleType becomes a path relative from the
- * spec's output location to {outDir}/base/schemas/enums.yaml.
+ * https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/RoleType becomes
+ * a path relative from the spec's output location to {outDir}/base/schemas/enums.yaml.
  *
  * @param {object} spec - The spec object to rewrite
  * @param {string} specRelativePath - The relative output path of this spec file
@@ -651,8 +716,8 @@ function rewriteBaseRefs(spec, specRelativePath) {
     if (Array.isArray(node)) return node.map(walk);
     const result = {};
     for (const [key, value] of Object.entries(node)) {
-      if (key === '$ref' && typeof value === 'string' && value.startsWith('base://')) {
-        const rest = value.slice('base://'.length);
+      if (key === '$ref' && typeof value === 'string' && value.startsWith(BLUEPRINT_BASE_URI)) {
+        const rest = value.slice(BLUEPRINT_BASE_URI.length);
         const [filePart, fragment] = rest.split('#');
         const targetRelPath = `base/${filePart}`.replace(/\\/g, '/');
         const specDir = dirname(specRelativePath);
@@ -676,7 +741,7 @@ function rewriteBaseRefs(spec, specRelativePath) {
  */
 function generateRpcOverlays(inputFiles) {
   const machines = inputFiles
-    .filter(f => f.relativePath.endsWith('-state-machine.yaml'))
+    .filter(f => isStateMachine(f.spec))
     .map(f => f.spec)
     .filter(sm => sm && sm.domain && (sm.object || (Array.isArray(sm.machines) && sm.machines.length > 0)));
 
@@ -738,11 +803,11 @@ function buildEnumSourceIndex(currentResults) {
   for (const [relativePath, spec] of currentResults) {
     if (!spec || typeof spec !== 'object') continue;
 
-    if (relativePath.endsWith('-sla-types.yaml') && Array.isArray(spec.slaTypes)) {
+    if (isSlaTypes(spec) && Array.isArray(spec.slaTypes)) {
       index['slaTypes'] = spec.slaTypes.map(t => t.id).filter(Boolean);
     }
 
-    if (relativePath.endsWith('-state-machine.yaml')) {
+    if (isStateMachine(spec)) {
       if (Array.isArray(spec.states)) {
         // Legacy / test format: top-level states array
         index['states'] = spec.states.map(s => s.id).filter(Boolean);
@@ -904,10 +969,10 @@ function writeResolvedSpecs(results, targetDir) {
  * Copy base specs to output directory unchanged
  */
 function copyBaseSpecs(baseDir, outDir) {
-  const skip = new Set(['package.json', 'node_modules', 'overlays']);
+  const skipByName = new Set(['package.json', 'node_modules', 'overlays']);
   const files = readdirSync(baseDir, { withFileTypes: true });
   for (const file of files) {
-    if (skip.has(file.name)) continue;
+    if (skipByName.has(file.name)) continue;
 
     const source = join(baseDir, file.name);
     const target = join(outDir, file.name);
@@ -916,8 +981,9 @@ function copyBaseSpecs(baseDir, outDir) {
     if (resolve(source) === resolve(outDir)) continue;
 
     if (file.isDirectory()) {
-      cpSync(source, target, { recursive: true });
-    } else {
+      copyBaseSpecs(source, target);
+    } else if (file.name.endsWith('.yaml')) {
+      mkdirSync(dirname(target), { recursive: true });
       cpSync(source, target);
     }
   }
@@ -985,6 +1051,16 @@ async function main() {
     yamlFiles = collectYamlFiles(specPath);
   }
 
+  // Always include blueprint-core base contracts in the output
+  if (existsSync(baseContractsDir)) {
+    const baseFiles = collectYamlFiles(baseContractsDir);
+    for (const { relativePath, sourcePath, spec } of baseFiles) {
+      const baseRelPath = `base/${relativePath}`.replace(/\\/g, '/');
+      yamlFiles.push({ relativePath: baseRelPath, sourcePath, spec });
+    }
+    console.log(`Base contracts: ${baseContractsDir} (${baseFiles.length} file(s))`);
+  }
+
   let allWarnings = [];
   let currentResults = null;
   let overlayConfig = null;
@@ -1022,20 +1098,6 @@ async function main() {
         .join(', ');
       console.log(`Config: ${summary}`);
 
-      // Load base contract files if x-base is declared
-      if (config?.['x-base']) {
-        const basePath = resolve(overlayDir, config['x-base']);
-        if (!existsSync(basePath)) {
-          console.error(`Error: x-base path does not exist: ${basePath}`);
-          process.exit(1);
-        }
-        const baseFiles = collectYamlFiles(basePath);
-        for (const { relativePath, sourcePath, spec } of baseFiles) {
-          const baseRelPath = `base/${relativePath}`.replace(/\\/g, '/');
-          yamlFiles.push({ relativePath: baseRelPath, sourcePath, spec });
-        }
-        console.log(`Base contracts: ${basePath} (${baseFiles.length} file(s))`);
-      }
     }
 
     if (overlayFiles.length === 0) {
@@ -1098,7 +1160,7 @@ async function main() {
 
     // Composition overlays: derived from *-compositions.yaml specs in inputFiles
     const compositionFiles = inputFiles
-      .filter(f => f.relativePath.endsWith('-compositions.yaml') && f.spec?.compositions)
+      .filter(f => isCompositions(f.spec) && f.spec?.compositions)
       .map(f => ({
         filePath: join(specPath, f.relativePath),
         domain: f.relativePath.replace('-compositions.yaml', ''),
@@ -1153,13 +1215,50 @@ async function main() {
   if (overlayConfig?.['x-event-type-prefix']) {
     const prefix = overlayConfig['x-event-type-prefix'];
     for (const [relativePath, spec] of currentResults) {
-      if (relativePath.endsWith('-state-machine.yaml')) {
+      if (isStateMachine(spec)) {
         currentResults.set(relativePath, injectPrefixInStateMachine(spec, prefix));
         console.log(`Event prefix: ${relativePath} (prefix: ${prefix})`);
-      } else if (relativePath.match(/.*-asyncapi\.yaml$/)) {
+      } else if (isAsyncApi(spec)) {
         currentResults.set(relativePath, injectPrefixInAsyncApi(spec, prefix));
         console.log(`Event prefix: ${relativePath} (prefix: ${prefix})`);
       }
+    }
+  }
+
+  // JSON Schema validation
+  // Runs after all overlays (explicit, RPC, composition) and injections are
+  // applied, but before canonical URI rewriting. At this point:
+  //   - Overlay-extended enums (RoleType, Domain, etc.) are in place
+  //   - Canonical $ref URIs are still intact for AJV resolution
+  // In-memory specs are loaded into AJV first so overlay-extended schemas win
+  // over the base versions in resolverMap. See validate/json-schema-core.js.
+  {
+    const specsForValidation = [...currentResults.entries()]
+      .map(([relativePath, spec]) => ({ relativePath, spec }));
+
+    const { valid, results } = validateSchemas(specsForValidation, { resolverMap });
+
+    console.log('');
+    console.log('Schema validation:');
+    for (const r of results) {
+      if (r.valid) {
+        console.log(`  ✓ ${r.relativePath}`);
+      } else {
+        console.log(`  ✗ ${r.relativePath} (${r.schemaRef})`);
+        for (const err of r.errors) {
+          const path = err.instancePath || '(root)';
+          console.log(`    - ${path}: ${err.message}`);
+        }
+      }
+    }
+
+    if (results.length === 0) {
+      console.log('  (no files with $schema declarations)');
+    }
+
+    if (!valid) {
+      console.error('\nSchema validation failed. Fix errors above before resolving.');
+      process.exit(1);
     }
   }
 
@@ -1248,11 +1347,9 @@ async function main() {
     }
   }
 
-  // Rewrite base:// URIs to real relative paths before writing
-  if (overlayConfig?.['x-base']) {
-    for (const [relativePath, spec] of currentResults) {
-      currentResults.set(relativePath, rewriteBaseRefs(spec, relativePath));
-    }
+  // Rewrite canonical blueprint URIs to real relative paths before writing
+  for (const [relativePath, spec] of currentResults) {
+    currentResults.set(relativePath, rewriteBaseRefs(spec, relativePath));
   }
 
   // Write resolved specs
@@ -1262,8 +1359,8 @@ async function main() {
   // Done after overlays so that $ref targets reflect overlay changes
   if (options.bundle) {
     console.log('\nBundling: inlining external $refs...');
-    for (const [relativePath] of currentResults) {
-      if (!relativePath.endsWith('-openapi.yaml')) continue;
+    for (const [relativePath, spec] of currentResults) {
+      if (!isOpenApi(spec)) continue;
       const filePath = join(outDir, relativePath);
       const dereferenced = await bundleSpec(filePath);
       const output = yaml.dump(dereferenced, {
@@ -1280,10 +1377,8 @@ async function main() {
     // Preserve companion YAML files the mock server needs at runtime —
     // *-compositions.yaml and *-state-machine.yaml are not $ref targets;
     // they are standalone files that drive route registration.
-    for (const [relativePath] of currentResults) {
-      if (!relativePath.endsWith('-openapi.yaml') &&
-          !relativePath.endsWith('-compositions.yaml') &&
-          !relativePath.endsWith('-state-machine.yaml')) {
+    for (const [relativePath, spec] of currentResults) {
+      if (!isOpenApi(spec) && !isCompositions(spec) && !isStateMachine(spec)) {
         const filePath = join(outDir, relativePath);
         if (existsSync(filePath)) {
           rmSync(filePath, { recursive: true });

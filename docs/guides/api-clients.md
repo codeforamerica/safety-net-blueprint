@@ -378,7 +378,7 @@ Each generated package includes state-specific schema fields defined by that sta
 - Eligibility flags for state programs
 - State-specific income source types
 
-Check your state's overlay files to see what customizations are applied. In this repo, overlays are under `packages/safety-net-contracts/overlays/`. In a state repo, they live wherever the `--overlay` argument points. See [Overlay Guide](../guides/overlay-guide.md) for overlay syntax.
+Check your state's overlay files to see what customizations are applied. In this repo, overlays are under `packages/safety-net-contracts/src/overlays/`. In a state repo, they live wherever the `--overlay` argument points. See [Overlay Guide](../guides/overlay-guide.md) for overlay syntax.
 
 ## Annotations
 

@@ -1,5 +1,4 @@
 # case-management field inventory
-# Generated from case-management-openapi.yaml
 # Do not edit — regenerate with: node generate-field-inventory.mjs --domain=case-management
 
 # ── case ────────────────────────────────────────────────────────────────────────

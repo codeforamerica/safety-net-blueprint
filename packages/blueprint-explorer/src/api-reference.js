@@ -13,24 +13,27 @@
  * Usage: node build.js
  */
 
-import { writeFileSync, readdirSync, readFileSync, mkdirSync, existsSync, rmSync } from 'fs';
+import { writeFileSync, readdirSync, mkdirSync, rmSync } from 'fs';
 import { resolve, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
-import { load } from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { COLORS, FONT } from './lib/theme.js';
 import { esc, titleCase, breadcrumb, statusBadge, methodBadge, typeBadge, nextEid, expandHidden, expandChip, headerMetaSubtitle } from './lib/html.js';
 import { inlineMd, renderMarkdown } from './lib/markdown.js';
 import { twoColumnPage, singleColumnPage } from './lib/layout.js';
 import { resolvedDir, resolvedSourcePairs } from './lib/paths.js';
-import { resolveExternalDefRef } from '@codeforamerica/blueprint-core';
+import { resolveExternalDefRef, loadContractFiles, loadExternalRefs } from '@codeforamerica/blueprint-core';
 
 const __dirname  = dirname(fileURLToPath(import.meta.url));
 
+const contractFiles = loadContractFiles(resolvedDir);
+
 const contentArg = process.argv.find(a => a.startsWith('--content='));
-const contentDir = contentArg
-  ? resolve(process.cwd(), contentArg.slice('--content='.length))
-  : resolve(__dirname, '..', '..', '..', '..', 'safety-net-explorer');
+if (!contentArg) {
+  console.error('Usage: node api-reference.js --content=<path> [--resolved=<path>]');
+  process.exit(1);
+}
+const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
 const outDir = resolve(contentDir, 'api-reference');
 mkdirSync(outDir, { recursive: true });
 readdirSync(outDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(resolve(outDir, f)));
@@ -39,61 +42,32 @@ readdirSync(outDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(resolve
 const SOURCE_SUFFIXES = ['openapi', 'state-machine'];
 
 // Shared parameters from the resolved components — covers SearchQueryParam, LimitParam, etc.
-const sharedParams = (() => {
-  try { return load(readFileSync(resolve(resolvedDir, 'components/parameters.yaml'), 'utf8')) ?? {}; } catch { return {}; }
-})();
+const sharedParams = [...contractFiles.values()].find(e => e.type === 'parameters')?.content ?? {};
 
 // Shared responses (BadRequest, NotFound, etc.) from the resolved components.
 // Filter to only response objects (have `description`) — excludes the Error schema entry.
-const sharedResponses = (() => {
-  try {
-    const raw = load(readFileSync(resolve(resolvedDir, 'components/responses.yaml'), 'utf8')) ?? {};
-    return Object.fromEntries(Object.entries(raw).filter(([, v]) => v?.description && !v?.type));
-  } catch { return {}; }
-})();
-
-// ── Domain schema file map — used by resolveExternalDefRef to follow allOf $refs ──
-// Keyed by relative path matching the $ref file part (e.g. 'schemas/domain/intake.yaml').
-// Loaded from resolved/ so overlay-applied schemas are reflected.
-
-const domainSchemaFileMap = (() => {
-  const map = new Map();
-  const schemasDir = resolve(resolvedDir, 'schemas');
-  try {
-    for (const subdir of readdirSync(schemasDir)) {
-      const subdirPath = resolve(schemasDir, subdir);
-      try {
-        for (const f of readdirSync(subdirPath).filter(f => f.endsWith('.yaml'))) {
-          try {
-            const rel = `schemas/${subdir}/${f}`;
-            map.set(rel, load(readFileSync(resolve(subdirPath, f), 'utf8')));
-          } catch { /* skip unreadable files */ }
-        }
-      } catch { /* skip unreadable subdirs */ }
-    }
-  } catch { /* schemas dir absent — resolveExternalDefRef will return {} for all refs */ }
-  return map;
-})();
+const rawSharedResponses = [...contractFiles.values()].find(e => e.type === 'responses')?.content ?? {};
+const sharedResponses = Object.fromEntries(Object.entries(rawSharedResponses).filter(([, v]) => v?.description && !v?.type));
 
 // ── Load + dereference all OpenAPI specs ──────────────────────────────────
 
-const specFiles = readdirSync(resolvedDir, { recursive: true })
-  .filter(f => typeof f === 'string' && f.endsWith('-openapi.yaml'))
-  .sort();
-
 const specs = (
   await Promise.all(
-    specFiles.map(async f => {
-      const slug = basename(f).replace('-openapi.yaml', '');
-      try {
-        const raw  = load(readFileSync(resolve(resolvedDir, f), 'utf8'));
-        const spec = await $RefParser.dereference(resolve(resolvedDir, f));
-        if (!spec?.info || !spec?.paths) return null;
-        return { slug, spec, raw };
-      } catch {
-        return null;
-      }
-    })
+    [...contractFiles.entries()]
+      .filter(([, e]) => e.type === 'openapi')
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(async ([absPath, entry]) => {
+        const slug = basename(absPath).replace('-openapi.yaml', '');
+        try {
+          const raw  = entry.content;
+          const spec = await $RefParser.dereference(absPath);
+          if (!spec?.info || !spec?.paths) return null;
+          const fileMap = loadExternalRefs(absPath, raw, contractFiles);
+          return { slug, spec, raw, fileMap };
+        } catch {
+          return null;
+        }
+      })
   )
 ).filter(Boolean);
 
@@ -108,10 +82,9 @@ const SM_RPC_RE = /^(GET|POST|PATCH|PUT|DELETE)\s+(\S+)/i;
 const smActionIndex = new Map(); // "method:path" → [{domain, actionId, actionDesc}]
 
 try {
-  const smFiles = readdirSync(resolvedDir, { recursive: true }).filter(f => typeof f === 'string' && f.endsWith('-state-machine.yaml'));
-  for (const smFile of smFiles) {
-    let sm;
-    try { sm = load(readFileSync(resolve(resolvedDir, smFile), 'utf8')); } catch { continue; }
+  const smEntries = [...contractFiles.entries()].filter(([, e]) => e.type === 'state-machine');
+  for (const [, smEntry] of smEntries) {
+    const sm = smEntry.content;
     if (!sm?.apiSpec) continue;
     const domain = sm.domain;
     for (const machine of sm.machines ?? []) {
@@ -595,7 +568,7 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
 
 // ── Domain page ───────────────────────────────────────────────────────────
 
-function buildDomainPage({ slug, spec, raw }) {
+function buildDomainPage({ slug, spec, raw, fileMap = new Map() }) {
   const metaSubtitle = headerMetaSubtitle(slug, resolvedSourcePairs(slug, { include: SOURCE_SUFFIXES }));
 
   const info       = spec.info ?? {};
@@ -692,7 +665,7 @@ function buildDomainPage({ slug, spec, raw }) {
   // Main content sections — nav links point to tag sections; endpoint cards are content-items within
   const sections = [...byTag.entries()].map(([tag, ops]) => {
     const tagDesc = tagMap.get(tag) ?? '';
-    const endpoints = ops.map(({ path, method, op, rawOp }) => renderEndpoint(path, method, op, rawOp, paramNameByKey, rawSchemas, domainSchemaFileMap)).join('');
+    const endpoints = ops.map(({ path, method, op, rawOp }) => renderEndpoint(path, method, op, rawOp, paramNameByKey, rawSchemas, fileMap)).join('');
     return `<section id="${sectionId(tag)}" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
         <h2 style="font-size:1rem;font-weight:800;color:${COLORS.darkBlue};margin-bottom:0.25rem;">${esc(tag)}</h2>

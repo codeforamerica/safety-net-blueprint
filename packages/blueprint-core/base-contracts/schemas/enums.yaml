@@ -1,4 +1,5 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml"
 $defs:
   Domain:
     type: string

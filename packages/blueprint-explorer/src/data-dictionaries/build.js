@@ -13,6 +13,7 @@ import { resolve, dirname, sep } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { loadAnnotations } from '@codeforamerica/blueprint-core/annotations';
+import { loadContractFiles } from '@codeforamerica/blueprint-core';
 import { loadPolicies } from '@codeforamerica/blueprint-core/policies';
 import { COLORS } from '../lib/theme.js';
 import { esc as h, titleCase, breadcrumb, headerMetaSubtitle, HEADER_CODE_STYLE } from '../lib/html.js';
@@ -22,9 +23,11 @@ import { resolvedDir, resolvedSourcePairs } from '../lib/paths.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const contentArg = process.argv.find(a => a.startsWith('--content='));
-const contentDir = contentArg
-  ? resolve(process.cwd(), contentArg.slice('--content='.length))
-  : resolve(__dirname, '..', '..', '..', '..', 'safety-net-explorer');
+if (!contentArg) {
+  console.error('Usage: node build.js --content=<path> [--resolved=<path>]');
+  process.exit(1);
+}
+const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
 const outputDir = resolve(contentDir, 'data-dictionaries');
 const PROJECT_ROOT  = resolve(__dirname, '../../..');
 mkdirSync(outputDir, { recursive: true });
@@ -397,6 +400,15 @@ function main() {
     return;
   }
 
+  const fileMap = loadContractFiles(resolvedDir);
+
+  // Index openapi files by x-domain for version lookup
+  const openApiByDomain = new Map();
+  for (const { content, type } of fileMap.values()) {
+    const domain = content?.info?.['x-domain'];
+    if (type === 'openapi' && domain) openApiByDomain.set(domain, content);
+  }
+
   const domains = [];
 
   for (const dmFile of dataModelFiles) {
@@ -406,15 +418,11 @@ function main() {
     console.log(`  Processing ${domain}...`);
 
     let ann = { schema: {} };
-    try { ann = loadAnnotations(domain, resolvedDir); } catch { /* run without annotations if missing */ }
+    try { ann = loadAnnotations(domain, fileMap); } catch { /* run without annotations if missing */ }
     const resolveAnn = buildAnnotationResolver(ann.schema);
     const sections = parseDataModel(dataModelPath);
 
-    let version = null;
-    const resolvedSpec = resolve(resolvedDir, `${domain}-openapi.yaml`);
-    if (existsSync(resolvedSpec)) {
-      try { version = safeLoad(resolvedSpec)?.info?.version ?? null; } catch { /* ignore */ }
-    }
+    const version = openApiByDomain.get(domain)?.info?.version ?? null;
 
     domains.push({ domain, sections, version, resolveAnn });
   }

@@ -2,7 +2,7 @@
  * Data seeder - loads example data from YAML files into SQLite
  */
 
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, readdirSync, statSync } from 'fs';
 import yaml from 'js-yaml';
 import { insertResource, clearAll } from './database-manager.js';
 import { collectionToSchemaPrefix, extractIndividualResources } from '@codeforamerica/blueprint-core/loader';
@@ -11,67 +11,41 @@ import { join } from 'path';
 import { resolveTimeTokens } from './time-tokens.js';
 
 /**
- * Load examples from YAML file
- * @param {string} examplesPath - Path to examples YAML file
- * @returns {Object} Examples object
+ * Recursively find all *-mock-data.yaml files under rootDir.
+ * Returns an array of file paths.
  */
-function loadExamples(examplesPath) {
-  if (!existsSync(examplesPath)) {
-    return {};
+function findMockDataFiles(rootDir) {
+  const results = [];
+  function walk(dir) {
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry);
+      if (statSync(full).isDirectory()) {
+        walk(full);
+      } else if (entry.endsWith('-mock-data.yaml')) {
+        results.push(full);
+      }
+    }
   }
-  const content = readFileSync(examplesPath, 'utf8');
-  return yaml.load(content) || {};
+  walk(rootDir);
+  return results;
 }
 
 /**
- * Seed database with examples from a seed YAML file.
- * @param {string} collectionName - Database collection name (e.g., 'tasks')
- * @param {string} seedDir - Path to seed directory
- * @param {string} [apiName] - API name for finding the seed file (defaults to collectionName)
- * @returns {number} Number of resources seeded
+ * Load and merge all *-mock-data.yaml files found under seedDir into a
+ * single examples map. Keys are record names (e.g. TaskExample1).
  */
-export function seedDatabase(collectionName, seedDir, apiName) {
-  const resourceName = apiName || collectionName;
-  try {
-    const examples = loadExamples(join(seedDir, `${resourceName}.yaml`));
-
-    if (Object.keys(examples).length === 0) {
-      console.log(`  No seed file found for ${resourceName}, database will be empty`);
-      return 0;
+function loadAllExamples(seedDir) {
+  const files = findMockDataFiles(seedDir);
+  const combined = {};
+  for (const filePath of files) {
+    try {
+      const data = yaml.load(readFileSync(filePath, 'utf8')) || {};
+      Object.assign(combined, data);
+    } catch (err) {
+      console.warn(`  Warning: Could not load seed file ${filePath}: ${err.message}`);
     }
-
-    const resources = extractIndividualResources(examples);
-
-    if (resources.length === 0) {
-      console.log(`  No valid resources found in ${resourceName}.yaml`);
-      return 0;
-    }
-
-    let seededCount = 0;
-    const baseTimestamp = new Date('2024-01-01T00:00:00Z').getTime();
-    const now = new Date();
-
-    for (let i = 0; i < resources.length; i++) {
-      try {
-        const resource = resolveTimeTokens({ ...resources[i].data }, now);
-        // Example1 (i=0) gets newest timestamp so it appears first when sorted DESC
-        const minutesOffset = (resources.length - 1 - i) * 60000;
-        const timestamp = new Date(baseTimestamp + minutesOffset).toISOString();
-        resource.createdAt = timestamp;
-        resource.updatedAt = timestamp;
-        insertResource(collectionName, resource);
-        seededCount++;
-      } catch (error) {
-        console.warn(`  Warning: Could not seed resource ${resources[i].data.id}:`, error.message);
-      }
-    }
-
-    console.log(`  Seeded ${seededCount} ${collectionName}`);
-    return seededCount;
-  } catch (error) {
-    console.error(`  Error seeding ${collectionName}:`, error.message);
-    return 0;
   }
+  return combined;
 }
 
 /**
@@ -158,67 +132,87 @@ function extractResourcesForCollection(examples, collectionName, allCollections)
 }
 
 /**
- * Seed all databases for all discovered APIs
+ * Seed all databases for all discovered APIs.
+ *
+ * Recursively discovers all *-mock-data.yaml files under seedDir, merges them
+ * into a single examples pool, then routes records to collections by key-prefix
+ * matching (e.g. TaskExample1 → tasks). No per-API file lookup — any
+ * *-mock-data.yaml file under seedDir contributes to the pool regardless of
+ * its location or name.
+ *
  * @param {Array} apiSpecs - Array of API specification objects
- * @param {string} specsDir - Path to specs directory (unused, kept for backward compat)
- * @param {string} seedDir - Path to seed directory
+ * @param {string} specsDir - Path to specs directory (unused, kept for compat)
+ * @param {string|null} seedDir - Directory to recurse for *-mock-data.yaml files.
+ *   When null, seeding is skipped and all collections start empty.
  * @returns {Object} Summary of seeded data
  */
 export function seedAllDatabases(apiSpecs, specsDir, seedDir) {
-  console.log('\nSeeding databases from seed files...');
+  // Clear all collections first
+  for (const api of apiSpecs) {
+    for (const name of deriveAllCollectionNames(api)) {
+      clearAll(name);
+    }
+  }
+
+  if (!seedDir) {
+    console.log('\nNo --seed directory specified; databases will be empty.');
+    const summary = {};
+    for (const api of apiSpecs) {
+      for (const name of deriveAllCollectionNames(api)) summary[name] = 0;
+    }
+    return summary;
+  }
+
+  console.log(`\nSeeding databases from ${seedDir}...`);
+
+  // Load all *-mock-data.yaml files into one combined pool
+  const allExamples = loadAllExamples(seedDir);
+
+  if (Object.keys(allExamples).length === 0) {
+    console.log('  No *-mock-data.yaml files found; databases will be empty.');
+    const summary = {};
+    for (const api of apiSpecs) {
+      for (const name of deriveAllCollectionNames(api)) summary[name] = 0;
+    }
+    return summary;
+  }
+
+  // Collect all collection names across all APIs for disambiguation
+  const allCollections = [...new Set(apiSpecs.flatMap(api => deriveAllCollectionNames(api)))];
 
   const summary = {};
   const now = new Date();
+  const baseTimestamp = new Date('2024-01-01T00:00:00Z').getTime();
 
-  for (const api of apiSpecs) {
+  for (const collectionName of allCollections) {
     try {
-      const allCollections = deriveAllCollectionNames(api);
+      const resources = extractResourcesForCollection(allExamples, collectionName, allCollections);
 
-      for (const name of allCollections) {
-        clearAll(name);
-      }
-
-      const examples = loadExamples(join(seedDir, `${api.name}.yaml`));
-
-      if (Object.keys(examples).length === 0) {
-        console.log(`  No seed file found for ${api.name}, databases will be empty`);
-        for (const name of allCollections) {
-          summary[name] = 0;
-        }
+      if (resources.length === 0) {
+        summary[collectionName] = 0;
         continue;
       }
 
-      for (const collectionName of allCollections) {
-        const resources = extractResourcesForCollection(examples, collectionName, allCollections);
-
-        if (resources.length === 0) {
-          summary[collectionName] = 0;
-          continue;
+      let seededCount = 0;
+      for (let i = 0; i < resources.length; i++) {
+        try {
+          const resource = resolveTimeTokens({ ...resources[i].data }, now);
+          const minutesOffset = (resources.length - 1 - i) * 60000;
+          const timestamp = new Date(baseTimestamp + minutesOffset).toISOString();
+          resource.createdAt = timestamp;
+          resource.updatedAt = timestamp;
+          insertResource(collectionName, resource);
+          seededCount++;
+        } catch (error) {
+          console.warn(`  Warning: Could not seed resource ${resources[i].data?.id}: ${error.message}`);
         }
-
-        let seededCount = 0;
-        const baseTimestamp = new Date('2024-01-01T00:00:00Z').getTime();
-
-        for (let i = 0; i < resources.length; i++) {
-          try {
-            const resource = resolveTimeTokens({ ...resources[i].data }, now);
-            const minutesOffset = (resources.length - 1 - i) * 60000;
-            const timestamp = new Date(baseTimestamp + minutesOffset).toISOString();
-            resource.createdAt = timestamp;
-            resource.updatedAt = timestamp;
-            insertResource(collectionName, resource);
-            seededCount++;
-          } catch (error) {
-            console.warn(`  Warning: Could not seed resource ${resources[i].data.id}:`, error.message);
-          }
-        }
-
-        console.log(`  Seeded ${seededCount} ${collectionName}`);
-        summary[collectionName] = seededCount;
       }
+
+      console.log(`  Seeded ${seededCount} ${collectionName}`);
+      summary[collectionName] = seededCount;
     } catch (error) {
-      console.warn(`  Warning: Could not seed ${api.name}:`, error.message);
-      summary[api.name] = 0;
+      console.warn(`  Warning: Could not seed ${collectionName}: ${error.message}`);
+      summary[collectionName] = 0;
     }
   }
 

@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { seedDatabase, seedAllDatabases, deriveAllCollectionNames } from '../../src/seeder.js';
+import { seedAllDatabases, deriveAllCollectionNames } from '../../src/seeder.js';
 import { loadAllSpecs } from '@codeforamerica/blueprint-core/loader';
 import { count, findAll, clearAll, insertResource } from '../../src/database-manager.js';
 import { join } from 'path';
@@ -24,13 +24,23 @@ const cleanup = () => { clearAll('persons'); };
 
 test('Database Seeder Tests', async (t) => {
   
-  await t.test('seedDatabase - seeds from examples file', () => {
-    cleanup(); // Start clean
-    
-    const seededCount = seedDatabase('persons', seedDir);
-    
+  await t.test('seedAllDatabases - seeds from *-mock-data.yaml files', () => {
+    cleanup();
+
+    const api = {
+      name: 'client-management',
+      serverBasePath: '/client-management',
+      endpoints: [
+        { path: '/client-management/persons' },
+        { path: '/client-management/persons/{personId}' },
+      ],
+    };
+    const summary = seedAllDatabases([api], '', seedDir);
+
+    assert.ok(typeof summary === 'object', 'Should return summary object');
+    const seededCount = summary['persons'] ?? 0;
     assert.ok(seededCount >= 0, 'Should return count');
-    
+
     if (seededCount > 0) {
       const dbCount = count('persons');
       assert.strictEqual(dbCount, seededCount, 'Database should have seeded count');
@@ -39,62 +49,85 @@ test('Database Seeder Tests', async (t) => {
       console.log(`  ℹ No examples found (this is OK)`);
     }
   });
-  
-  await t.test('seedDatabase - skips if database already has data', () => {
-    // Seed once
-    const firstCount = seedDatabase('persons', seedDir);
-    
-    // Try to seed again
-    const secondCount = seedDatabase('persons', seedDir);
-    
-    // Should return existing count, not re-seed
-    assert.strictEqual(firstCount, secondCount, 'Should not re-seed existing data');
-    console.log(`  ✓ Skipped re-seeding (${secondCount} existing records)`);
-  });
-  
-  await t.test('seedDatabase - handles missing examples', () => {
+
+  await t.test('seedAllDatabases - sets timestamps correctly', () => {
     cleanup();
-    
-    const count = seedDatabase('nonexistent-api', seedDir);
-    
-    assert.strictEqual(count, 0, 'Should return 0 for missing examples');
-    console.log(`  ✓ Handled missing examples gracefully`);
-  });
-  
-  await t.test('seedDatabase - sets timestamps correctly', () => {
-    cleanup();
-    
-    seedDatabase('persons', seedDir);
+
+    const api = {
+      name: 'client-management',
+      serverBasePath: '/client-management',
+      endpoints: [
+        { path: '/client-management/persons' },
+        { path: '/client-management/persons/{personId}' },
+      ],
+    };
+    seedAllDatabases([api], '', seedDir);
     const records = findAll('persons', {});
-    
+
     if (records.length > 0) {
       const first = records[0];
       assert.ok(first.createdAt, 'Should have createdAt');
       assert.ok(first.updatedAt, 'Should have updatedAt');
-      assert.ok(first.createdAt.match(/^\d{4}-\d{2}-\d{2}T/), 
-                'Should be ISO timestamp');
-      
+      assert.ok(first.createdAt.match(/^\d{4}-\d{2}-\d{2}T/), 'Should be ISO timestamp');
       console.log(`  ✓ Timestamps: ${first.createdAt}`);
     }
   });
-  
-  await t.test('seedDatabase - maintains example order', () => {
+
+  await t.test('seedAllDatabases - maintains example order (DESC by createdAt)', () => {
     cleanup();
-    
-    seedDatabase('persons', seedDir);
+
+    const api = {
+      name: 'client-management',
+      serverBasePath: '/client-management',
+      endpoints: [
+        { path: '/client-management/persons' },
+        { path: '/client-management/persons/{personId}' },
+      ],
+    };
+    seedAllDatabases([api], '', seedDir);
     const records = findAll('persons', {});
-    
+
     if (records.length > 1) {
-      // Records should be ordered by createdAt DESC (newest first)
-      // So Example1 should appear before Example2
       for (let i = 0; i < records.length - 1; i++) {
         const current = new Date(records[i].createdAt);
         const next = new Date(records[i + 1].createdAt);
         assert.ok(current >= next, 'Records should be in DESC order by createdAt');
       }
-      
       console.log(`  ✓ ${records.length} records in correct order`);
     }
+  });
+
+  await t.test('seedAllDatabases - starts empty when seedDir is null', () => {
+    cleanup();
+
+    const api = {
+      name: 'client-management',
+      serverBasePath: '/client-management',
+      endpoints: [{ path: '/client-management/persons' }],
+    };
+    seedAllDatabases([api], '', null);
+
+    assert.strictEqual(count('persons'), 0, 'Should be empty with no seedDir');
+    console.log('  ✓ Empty databases with null seedDir');
+  });
+
+  await t.test('seedAllDatabases - empty when no *-mock-data.yaml files found', async () => {
+    cleanup();
+
+    const { mkdtempSync } = await import('fs');
+    const { join: pathJoin } = await import('path');
+    const { tmpdir } = await import('os');
+    const emptyDir = mkdtempSync(pathJoin(tmpdir(), 'snb-empty-'));
+
+    const api = {
+      name: 'client-management',
+      serverBasePath: '/client-management',
+      endpoints: [{ path: '/client-management/persons' }],
+    };
+    seedAllDatabases([api], '', emptyDir);
+
+    assert.strictEqual(count('persons'), 0, 'Should be empty when no seed files found');
+    console.log('  ✓ Empty databases when no mock-data files present');
   });
   
   await t.test('seedAllDatabases - seeds all discovered APIs', async () => {
@@ -266,7 +299,7 @@ test('Database Seeder Tests', async (t) => {
     const { tmpdir } = await import('os');
     const tmpSeedDir = mkdtempSync(pathJoin(tmpdir(), 'snb-test-'));
     const yaml = (await import('js-yaml')).default;
-    writeFileSync(pathJoin(tmpSeedDir, 'intake.yaml'), yaml.dump(examples));
+    writeFileSync(pathJoin(tmpSeedDir, 'intake-mock-data.yaml'), yaml.dump(examples));
 
     const { seedAllDatabases: seed } = await import('../../src/seeder.js');
     seed([api], '', tmpSeedDir);
@@ -296,7 +329,7 @@ test('Database Seeder Tests', async (t) => {
     const yaml = (await import('js-yaml')).default;
 
     const tmpSeedDir = mkdtempSync(pathJoin(tmpdir(), 'snb-seed-test-'));
-    writeFileSync(pathJoin(tmpSeedDir, 'widgets.yaml'), yaml.dump({
+    writeFileSync(pathJoin(tmpSeedDir, 'widgets-mock-data.yaml'), yaml.dump({
       WidgetExample1: {
         id: 'f0000001-0000-4000-8000-000000000001',
         name: 'Test Widget',

@@ -1,5 +1,4 @@
 # workflow field inventory
-# Generated from workflow-openapi.yaml
 # Do not edit — regenerate with: node generate-field-inventory.mjs --domain=workflow
 
 # ── queue ───────────────────────────────────────────────────────────────────────

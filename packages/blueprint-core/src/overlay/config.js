@@ -40,10 +40,6 @@ const CONFIG_SCHEMA = {
   },
   'x-event-type-prefix': {
     type: 'string'
-  },
-  'x-base': {
-    type: 'string',
-    description: 'Path to base contract artifacts (components and schemas) provided by the upstream blueprint package. Resolved relative to the overlay file. Used as the base:// URI scheme in $ref values.'
   }
 };
 

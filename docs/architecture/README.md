@@ -13,10 +13,12 @@ This directory contains architecture documentation for the Safety Net Benefits A
 
 | Document | What it covers |
 |----------|---------------|
-| [Domain Design](domains/domain-design.md) | Domain organization, entities, data flow, and domain status |
+| [Domain Design](domain-design.md) | Domain organization, entities, data flow, and domain status |
 | [Contract-Driven Architecture](contract-driven-architecture.md) | Contract artifacts for backend and frontend portability. Frontend harness packages are in a [separate repo](https://github.com/codeforamerica/safety-net-harness). |
 | [API Architecture](api-architecture.md) | API organization, operational concerns, quality attributes |
+| [Design Rationale](design-rationale.md) | Key decisions with rationale and alternatives |
 | [Resolve Pipeline](resolve-pipeline.md) | How base specs and overlays are merged into deployment artifacts |
+| [Roadmap](roadmap.md) | Implementation phases, prototypes, future considerations |
 
 ## Domain and cross-cutting docs
 
@@ -27,12 +29,12 @@ This directory contains architecture documentation for the Safety Net Benefits A
 | [Identity & Access](cross-cutting/identity-access.md) | Authentication, authorization, JWT claims, and User Service |
 | [Communication](cross-cutting/communication.md) | Notices and correspondence |
 
-See [Domain Design](domains/domain-design.md) for the full list of domains, cross-cutting concerns, and their current design status.
+See [Domain Design](domain-design.md) for the full list of domains, cross-cutting concerns, and their current design status.
 
 ## Other resources
 
 | Resource | Description |
 |----------|-------------|
-| [conventions/](../conventions/) | Machine-readable API design patterns |
-| [Prototypes](../prototypes/) | Implementation specs for proving architecture patterns |
+| [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml) | Machine-readable API design patterns |
+| [Decisions](../decisions/) | Architectural decisions (auth, search, state customization, tooling) |
 | [Guides](../guides/) | How-to guides for working with the toolkit |

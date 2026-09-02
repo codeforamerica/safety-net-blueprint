@@ -136,7 +136,7 @@ npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>
 npm run resolve
 ```
 
-If you're working in the base repository rather than a state repository, you can use the safety-net overlays (`packages/safety-net-contracts/overlays/`) to test overlay behavior without setting up a full state configuration.
+If you're working in the base repository rather than a state repository, you can use the safety-net overlays (`packages/safety-net-contracts/src/overlays/`) to test overlay behavior without setting up a full state configuration.
 
 See [Overlay Guide](../guides/overlay-guide.md) for overlay syntax and the [Setup Guide](../guides/setup-guide.md) for the full repository setup.
 

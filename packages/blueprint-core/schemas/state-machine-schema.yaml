@@ -3,6 +3,7 @@
 # (e.g., states matching OpenAPI enums) are validated by the validation script.
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/schemas/state-machine-schema.yaml"
 title: State Machine
 description: >
   Schema for behavioral contract state machine YAML files.
@@ -228,7 +229,7 @@ $defs:
         context     — data available to all steps; inherits machine context.
         steps       — steps to execute.
     allOf:
-      - $ref: '../base-contracts/schemas/events.yaml#/$defs/EventRef'
+      - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/EventRef'
       - type: object
         required:
           - steps
@@ -358,7 +359,7 @@ $defs:
       actors:
         type: array
         items:
-          $ref: '../base-contracts/schemas/enums.yaml#/$defs/RoleType'
+          $ref: 'https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/RoleType'
         description: >
           Roles authorized to trigger this handler. Checked before conditions.
           Omit to allow any authenticated caller (conditions still apply).
@@ -553,7 +554,7 @@ $defs:
     properties:
       emit:
         allOf:
-          - $ref: '../base-contracts/schemas/events.yaml#/$defs/EventBase'
+          - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/EventBase'
         unevaluatedProperties: false
 
   CallStep:

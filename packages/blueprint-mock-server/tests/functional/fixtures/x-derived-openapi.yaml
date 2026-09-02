@@ -26,10 +26,10 @@ paths:
       operationId: listWidgets
       tags: [Widgets]
       parameters:
-        - $ref: "base://components/parameters.yaml#/SearchQueryParam"
-        - $ref: "base://components/parameters.yaml#/LimitParam"
-        - $ref: "base://components/parameters.yaml#/OffsetParam"
-        - $ref: "base://components/parameters.yaml#/SortParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SortParam"
       responses:
         "200":
           description: List of widgets.
@@ -38,7 +38,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/WidgetList"
         "500":
-          $ref: "base://components/responses.yaml#/InternalError"
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
     post:
       summary: Create widget
@@ -58,9 +58,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Widget"
         "422":
-          $ref: "base://components/responses.yaml#/UnprocessableEntity"
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
-          $ref: "base://components/responses.yaml#/InternalError"
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
   /widgets/{widgetId}:
     parameters:
@@ -82,9 +82,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Widget"
         "404":
-          $ref: "base://components/responses.yaml#/NotFound"
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         "500":
-          $ref: "base://components/responses.yaml#/InternalError"
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 
 components:
   schemas:
@@ -127,7 +127,7 @@ components:
 
     WidgetList:
       allOf:
-        - $ref: "base://components/pagination.yaml#/Pagination"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/pagination.yaml#/Pagination"
         - type: object
           required:
             - items

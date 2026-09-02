@@ -10,9 +10,11 @@ import { resolvedDir } from '../lib/paths.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const contentArg = process.argv.find(a => a.startsWith('--content='));
-const contentDir = contentArg
-  ? resolve(process.cwd(), contentArg.slice('--content='.length))
-  : resolve(__dirname, '..', '..', '..', '..', 'safety-net-explorer');
+if (!contentArg) {
+  console.error('Usage: node build.js --content=<path> [--resolved=<path>]');
+  process.exit(1);
+}
+const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
 const outputDir = join(contentDir, 'state-machine-docs');
 mkdirSync(outputDir, { recursive: true });
 readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(join(outputDir, f)));

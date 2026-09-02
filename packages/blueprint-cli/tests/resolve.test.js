@@ -58,20 +58,20 @@ test('resolve-overlay tests', async (t) => {
   // ===========================================================================
 
   await t.test('getVersionFromFilename - no suffix returns 1', () => {
-    assert.strictEqual(getVersionFromFilename('applications.yaml'), 1);
-    assert.strictEqual(getVersionFromFilename('persons.yaml'), 1);
+    assert.strictEqual(getVersionFromFilename('items.yaml'), 1);
+    assert.strictEqual(getVersionFromFilename('things.yaml'), 1);
   });
 
   await t.test('getVersionFromFilename - v2 suffix returns 2', () => {
-    assert.strictEqual(getVersionFromFilename('applications-v2.yaml'), 2);
+    assert.strictEqual(getVersionFromFilename('items-v2.yaml'), 2);
   });
 
   await t.test('getVersionFromFilename - v3 suffix returns 3', () => {
-    assert.strictEqual(getVersionFromFilename('persons-v3.yaml'), 3);
+    assert.strictEqual(getVersionFromFilename('things-v3.yaml'), 3);
   });
 
   await t.test('getVersionFromFilename - handles nested paths', () => {
-    assert.strictEqual(getVersionFromFilename('components/applications-v2.yaml'), 2);
+    assert.strictEqual(getVersionFromFilename('components/items-v2.yaml'), 2);
     assert.strictEqual(getVersionFromFilename('deep/nested/foo.yaml'), 1);
   });
 
@@ -131,17 +131,17 @@ test('resolve-overlay tests', async (t) => {
   await t.test('target-api - matches correct spec by x-api-id', () => {
     const yamlFiles = [
       {
-        relativePath: 'persons.yaml',
+        relativePath: 'things.yaml',
         spec: {
-          info: { 'x-api-id': 'persons-api' },
-          components: { schemas: { Person: { properties: { name: { type: 'string' } } } } }
+          info: { 'x-api-id': 'things-api' },
+          components: { schemas: { Thing: { properties: { name: { type: 'string' } } } } }
         }
       },
       {
-        relativePath: 'applications.yaml',
+        relativePath: 'items.yaml',
         spec: {
-          info: { 'x-api-id': 'applications-api' },
-          components: { schemas: { Person: { properties: { name: { type: 'string' } } } } }
+          info: { 'x-api-id': 'items-api' },
+          components: { schemas: { Thing: { properties: { name: { type: 'string' } } } } }
         }
       }
     ];
@@ -149,8 +149,8 @@ test('resolve-overlay tests', async (t) => {
     const overlay = {
       actions: [
         {
-          target: '$.components.schemas.Person.properties.name',
-          'target-api': 'persons-api',
+          target: '$.components.schemas.Thing.properties.name',
+          'target-api': 'things-api',
           update: { maxLength: 100 }
         }
       ]
@@ -162,16 +162,16 @@ test('resolve-overlay tests', async (t) => {
     assert.strictEqual(warnings.length, 0);
     const targets = actionTargets.get(0);
     assert.strictEqual(targets.length, 1);
-    assert.strictEqual(targets[0], 'persons.yaml');
+    assert.strictEqual(targets[0], 'things.yaml');
   });
 
   await t.test('target-api - no match produces warning', () => {
     const yamlFiles = [
       {
-        relativePath: 'persons.yaml',
+        relativePath: 'things.yaml',
         spec: {
-          info: { 'x-api-id': 'persons-api' },
-          components: { schemas: { Person: { properties: { name: { type: 'string' } } } } }
+          info: { 'x-api-id': 'things-api' },
+          components: { schemas: { Thing: { properties: { name: { type: 'string' } } } } }
         }
       }
     ];
@@ -179,7 +179,7 @@ test('resolve-overlay tests', async (t) => {
     const overlay = {
       actions: [
         {
-          target: '$.components.schemas.Person.properties.name',
+          target: '$.components.schemas.Thing.properties.name',
           'target-api': 'nonexistent-api',
           description: 'Bad target-api',
           update: { maxLength: 100 }
@@ -325,17 +325,17 @@ test('resolve-overlay tests', async (t) => {
   // ===========================================================================
 
   await t.test('add: action matches file via parent path when target key does not exist', () => {
-    // The target $.compositions.applicationReview.include does not exist, but
-    // $.compositions.applicationReview does. analyzeTargetLocations should use
+    // The target $.compositions.itemReview.include does not exist, but
+    // $.compositions.itemReview does. analyzeTargetLocations should use
     // the parent path so the file is matched and the action is applied.
     const yamlFiles = [
       {
-        relativePath: 'intake-compositions.yaml',
+        relativePath: 'test-compositions.yaml',
         spec: {
           compositions: {
-            applicationReview: {
+            itemReview: {
               compositeType: 'sectionView',
-              resource: 'applications',
+              resource: 'items',
             },
           },
         },
@@ -345,10 +345,10 @@ test('resolve-overlay tests', async (t) => {
     const overlay = {
       actions: [
         {
-          target: '$.compositions.applicationReview.include',
-          file: 'intake-compositions.yaml',
+          target: '$.compositions.itemReview.include',
+          file: 'test-compositions.yaml',
           description: 'Add root-level include',
-          add: { members: { resource: 'application-members', bind: 'applicationId' } },
+          add: { members: { resource: 'item-parts', bind: 'itemId' } },
         },
       ],
     };
@@ -357,13 +357,13 @@ test('resolve-overlay tests', async (t) => {
     const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
 
     assert.strictEqual(warnings.length, 0);
-    assert.deepStrictEqual(actionTargets.get(0), ['intake-compositions.yaml']);
+    assert.deepStrictEqual(actionTargets.get(0), ['test-compositions.yaml']);
   });
 
   await t.test('add: action with explicit file warns when parent path does not exist in that file', () => {
     const yamlFiles = [
       {
-        relativePath: 'intake-compositions.yaml',
+        relativePath: 'test-compositions.yaml',
         spec: { compositions: {} },
       },
     ];
@@ -372,7 +372,7 @@ test('resolve-overlay tests', async (t) => {
       actions: [
         {
           target: '$.compositions.nonExistent.include',
-          file: 'intake-compositions.yaml',
+          file: 'test-compositions.yaml',
           description: 'Bad parent path',
           add: { members: {} },
         },
@@ -389,10 +389,10 @@ test('resolve-overlay tests', async (t) => {
   await t.test('add: action auto-resolves to single file via parent path', () => {
     const yamlFiles = [
       {
-        relativePath: 'intake-compositions.yaml',
+        relativePath: 'test-compositions.yaml',
         spec: {
           compositions: {
-            applicationReview: { compositeType: 'sectionView' },
+            itemReview: { compositeType: 'sectionView' },
           },
         },
       },
@@ -405,7 +405,7 @@ test('resolve-overlay tests', async (t) => {
     const overlay = {
       actions: [
         {
-          target: '$.compositions.applicationReview.newKey',
+          target: '$.compositions.itemReview.newKey',
           description: 'Add new key without explicit file',
           add: { value: 42 },
         },
@@ -416,7 +416,7 @@ test('resolve-overlay tests', async (t) => {
     const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
 
     assert.strictEqual(warnings.length, 0);
-    assert.deepStrictEqual(actionTargets.get(0), ['intake-compositions.yaml']);
+    assert.deepStrictEqual(actionTargets.get(0), ['test-compositions.yaml']);
   });
 
   // ===========================================================================
@@ -802,6 +802,7 @@ test('resolve-overlay tests', async (t) => {
 
       // Write a state machine
       writeYaml(dir, 'test-state-machine.yaml', {
+        '$schema': 'state-machine-schema.yaml',
         version: '1.0',
         domain: 'test',
         apiSpec: 'test-openapi.yaml',
@@ -874,6 +875,7 @@ test('resolve-overlay tests', async (t) => {
       });
 
       writeYaml(dir, 'test-state-machine.yaml', {
+        '$schema': 'state-machine-schema.yaml',
         version: '1.0',
         domain: 'test',
         apiSpec: 'test-openapi.yaml',
@@ -937,6 +939,7 @@ test('resolve-overlay tests', async (t) => {
       });
 
       const makeStateMachine = (domain, resource, apiSpec) => ({
+        '$schema': 'state-machine-schema.yaml',
         version: '1.0',
         domain,
         apiSpec,
@@ -985,6 +988,7 @@ test('resolve-overlay tests', async (t) => {
     const dir = createTmpDir();
     try {
       const stateMachineYaml = {
+        '$schema': 'state-machine-schema.yaml',
         domain: 'test',
         object: 'Item',
         states: [{ id: 'draft' }, { id: 'published' }],
@@ -1056,6 +1060,7 @@ test('resolve-overlay tests', async (t) => {
       });
 
       writeYaml(dir, 'test-state-machine.yaml', {
+        '$schema': 'state-machine-schema.yaml',
         version: '1.0',
         domain: 'test',
         apiSpec: 'test-openapi.yaml',
@@ -1131,17 +1136,17 @@ test('x-enum-source injection', async (t) => {
 
   await t.test('findEnumSources - finds object form annotation with machine', () => {
     const spec = {
-      Application: {
+      Widget: {
         properties: {
-          status: { type: 'string', 'x-enum-source': { source: 'states[].id', machine: 'Application' } }
+          status: { type: 'string', 'x-enum-source': { source: 'states[].id', machine: 'Widget' } }
         }
       }
     };
     const findings = findEnumSources(spec);
     assert.strictEqual(findings.length, 1);
-    assert.strictEqual(findings[0].path, 'Application.properties.status');
+    assert.strictEqual(findings[0].path, 'Widget.properties.status');
     assert.strictEqual(findings[0].source, 'states[].id');
-    assert.strictEqual(findings[0].machine, 'Application');
+    assert.strictEqual(findings[0].machine, 'Widget');
   });
 
   await t.test('findEnumSources - object form without machine defaults to null', () => {
@@ -1171,26 +1176,28 @@ test('x-enum-source injection', async (t) => {
   });
 
   await t.test('findEnumSources - returns empty when no annotations', () => {
-    const spec = { Task: { properties: { status: { type: 'string' } } } };
+    const spec = { Item: { properties: { status: { type: 'string' } } } };
     assert.deepStrictEqual(findEnumSources(spec), []);
   });
 
   await t.test('buildEnumSourceIndex - indexes slaTypes from sla-types yaml', () => {
     const currentResults = new Map([
-      ['workflow-sla-types.yaml', {
+      ['test-sla-types.yaml', {
+        '$schema': 'sla-types-schema.yaml',
         slaTypes: [
-          { id: 'snap_expedited', name: 'SNAP Expedited' },
-          { id: 'snap_standard', name: 'SNAP Standard' }
+          { id: 'type_a', name: 'Type A' },
+          { id: 'type_b', name: 'Type B' }
         ]
       }]
     ]);
     const index = buildEnumSourceIndex(currentResults);
-    assert.deepStrictEqual(index['slaTypes'], ['snap_expedited', 'snap_standard']);
+    assert.deepStrictEqual(index['slaTypes'], ['type_a', 'type_b']);
   });
 
   await t.test('buildEnumSourceIndex - indexes states from state-machine yaml (legacy top-level format)', () => {
     const currentResults = new Map([
-      ['workflow-state-machine.yaml', {
+      ['test-state-machine.yaml', {
+        '$schema': 'state-machine-schema.yaml',
         states: [
           { id: 'pending', slaClock: 'running' },
           { id: 'completed', slaClock: 'stopped' }
@@ -1203,23 +1210,25 @@ test('x-enum-source injection', async (t) => {
 
   await t.test('buildEnumSourceIndex - indexes states from machines[].states format', () => {
     const currentResults = new Map([
-      ['workflow-state-machine.yaml', {
+      ['test-state-machine.yaml', {
+        '$schema': 'state-machine-schema.yaml',
         machines: [
-          { object: 'Task', states: [{ id: 'pending' }, { id: 'in_progress' }, { id: 'completed' }] }
+          { object: 'Item', states: [{ id: 'pending' }, { id: 'in_progress' }, { id: 'completed' }] }
         ]
       }]
     ]);
     const index = buildEnumSourceIndex(currentResults);
     assert.deepStrictEqual(index['states'], ['pending', 'in_progress', 'completed']);
-    assert.deepStrictEqual(index['states:Task'], ['pending', 'in_progress', 'completed']);
+    assert.deepStrictEqual(index['states:Item'], ['pending', 'in_progress', 'completed']);
   });
 
   await t.test('buildEnumSourceIndex - indexes per-machine states for multi-machine state files', () => {
     const currentResults = new Map([
-      ['intake-state-machine.yaml', {
+      ['test-state-machine.yaml', {
+        '$schema': 'state-machine-schema.yaml',
         machines: [
-          { object: 'Application', states: [{ id: 'draft' }, { id: 'submitted' }, { id: 'closed' }] },
-          { object: 'Verification', states: [{ id: 'pending' }, { id: 'satisfied' }, { id: 'waived' }] }
+          { object: 'Widget', states: [{ id: 'draft' }, { id: 'submitted' }, { id: 'closed' }] },
+          { object: 'Part', states: [{ id: 'pending' }, { id: 'satisfied' }, { id: 'waived' }] }
         ]
       }]
     ]);
@@ -1227,21 +1236,22 @@ test('x-enum-source injection', async (t) => {
     // Flat union for string form
     assert.deepStrictEqual(index['states'], ['draft', 'submitted', 'closed', 'pending', 'satisfied', 'waived']);
     // Per-machine keys for object form
-    assert.deepStrictEqual(index['states:Application'], ['draft', 'submitted', 'closed']);
-    assert.deepStrictEqual(index['states:Verification'], ['pending', 'satisfied', 'waived']);
+    assert.deepStrictEqual(index['states:Widget'], ['draft', 'submitted', 'closed']);
+    assert.deepStrictEqual(index['states:Part'], ['pending', 'satisfied', 'waived']);
   });
 
   await t.test('buildEnumSourceIndex - returns empty when no behavioral yamls', () => {
     const currentResults = new Map([
-      ['workflow-openapi.yaml', { openapi: '3.1.0' }]
+      ['test-openapi.yaml', { openapi: '3.1.0' }]
     ]);
     assert.deepStrictEqual(buildEnumSourceIndex(currentResults), {});
   });
 
   await t.test('applyEnumSourceInjections - injects enum and strips annotation', () => {
     const currentResults = new Map([
-      ['workflow-sla-types.yaml', {
-        slaTypes: [{ id: 'snap_expedited' }, { id: 'snap_standard' }]
+      ['test-sla-types.yaml', {
+        '$schema': 'sla-types-schema.yaml',
+        slaTypes: [{ id: 'type_a' }, { id: 'type_b' }]
       }],
       ['components/sla.yaml', {
         SlaInfo: {
@@ -1257,7 +1267,7 @@ test('x-enum-source injection', async (t) => {
 
     const resolved = currentResults.get('components/sla.yaml');
     const field = resolved.SlaInfo.properties.slaTypeCode;
-    assert.deepStrictEqual(field.enum, ['snap_expedited', 'snap_standard']);
+    assert.deepStrictEqual(field.enum, ['type_a', 'type_b']);
     assert.strictEqual(field.type, 'string');
     assert.strictEqual(field.description, 'SLA type');
     assert.strictEqual(field['x-enum-source'], undefined);
@@ -1265,11 +1275,12 @@ test('x-enum-source injection', async (t) => {
 
   await t.test('applyEnumSourceInjections - injects states enum', () => {
     const currentResults = new Map([
-      ['workflow-state-machine.yaml', {
+      ['test-state-machine.yaml', {
+        '$schema': 'state-machine-schema.yaml',
         states: [{ id: 'pending' }, { id: 'in_progress' }, { id: 'completed' }]
       }],
-      ['workflow-openapi.yaml', {
-        Task: {
+      ['test-openapi.yaml', {
+        Item: {
           properties: {
             status: { type: 'string', 'x-enum-source': 'states[].id', description: 'Lifecycle state' }
           }
@@ -1278,28 +1289,29 @@ test('x-enum-source injection', async (t) => {
     ]);
 
     applyEnumSourceInjections(currentResults);
-    const field = currentResults.get('workflow-openapi.yaml').Task.properties.status;
+    const field = currentResults.get('test-openapi.yaml').Item.properties.status;
     assert.deepStrictEqual(field.enum, ['pending', 'in_progress', 'completed']);
     assert.strictEqual(field['x-enum-source'], undefined);
   });
 
   await t.test('applyEnumSourceInjections - object form with machine scopes to correct machine', () => {
     const currentResults = new Map([
-      ['intake-state-machine.yaml', {
+      ['test-state-machine.yaml', {
+        '$schema': 'state-machine-schema.yaml',
         machines: [
-          { object: 'Application', states: [{ id: 'draft' }, { id: 'submitted' }, { id: 'closed' }] },
-          { object: 'Verification', states: [{ id: 'pending' }, { id: 'satisfied' }, { id: 'waived' }] }
+          { object: 'Widget', states: [{ id: 'draft' }, { id: 'submitted' }, { id: 'closed' }] },
+          { object: 'Part', states: [{ id: 'pending' }, { id: 'satisfied' }, { id: 'waived' }] }
         ]
       }],
-      ['intake-openapi.yaml', {
-        Application: {
+      ['test-openapi.yaml', {
+        Widget: {
           properties: {
-            status: { type: 'string', 'x-enum-source': { source: 'states[].id', machine: 'Application' } }
+            status: { type: 'string', 'x-enum-source': { source: 'states[].id', machine: 'Widget' } }
           }
         },
-        Verification: {
+        Part: {
           properties: {
-            status: { type: 'string', 'x-enum-source': { source: 'states[].id', machine: 'Verification' } }
+            status: { type: 'string', 'x-enum-source': { source: 'states[].id', machine: 'Part' } }
           }
         }
       }]
@@ -1308,21 +1320,22 @@ test('x-enum-source injection', async (t) => {
     const warnings = applyEnumSourceInjections(currentResults);
     assert.strictEqual(warnings.length, 0);
 
-    const resolved = currentResults.get('intake-openapi.yaml');
-    assert.deepStrictEqual(resolved.Application.properties.status.enum, ['draft', 'submitted', 'closed']);
-    assert.deepStrictEqual(resolved.Verification.properties.status.enum, ['pending', 'satisfied', 'waived']);
-    assert.strictEqual(resolved.Application.properties.status['x-enum-source'], undefined);
-    assert.strictEqual(resolved.Verification.properties.status['x-enum-source'], undefined);
+    const resolved = currentResults.get('test-openapi.yaml');
+    assert.deepStrictEqual(resolved.Widget.properties.status.enum, ['draft', 'submitted', 'closed']);
+    assert.deepStrictEqual(resolved.Part.properties.status.enum, ['pending', 'satisfied', 'waived']);
+    assert.strictEqual(resolved.Widget.properties.status['x-enum-source'], undefined);
+    assert.strictEqual(resolved.Part.properties.status['x-enum-source'], undefined);
   });
 
   await t.test('applyEnumSourceInjections - warns when machine name not found in index', () => {
     const currentResults = new Map([
-      ['intake-state-machine.yaml', {
+      ['test-state-machine.yaml', {
+        '$schema': 'state-machine-schema.yaml',
         machines: [
-          { object: 'Application', states: [{ id: 'draft' }] }
+          { object: 'Widget', states: [{ id: 'draft' }] }
         ]
       }],
-      ['intake-openapi.yaml', {
+      ['test-openapi.yaml', {
         Schema: {
           properties: {
             status: { type: 'string', 'x-enum-source': { source: 'states[].id', machine: 'UnknownMachine' } }
@@ -1338,7 +1351,8 @@ test('x-enum-source injection', async (t) => {
 
   await t.test('applyEnumSourceInjections - warns on missing collection', () => {
     const currentResults = new Map([
-      ['workflow-state-machine.yaml', {
+      ['test-state-machine.yaml', {
+        '$schema': 'state-machine-schema.yaml',
         states: [{ id: 'pending' }]
       }],
       ['some-openapi.yaml', {
@@ -1357,7 +1371,7 @@ test('x-enum-source injection', async (t) => {
 
   await t.test('applyEnumSourceInjections - warns on invalid syntax', () => {
     const currentResults = new Map([
-      ['workflow-sla-types.yaml', { slaTypes: [{ id: 'snap' }] }],
+      ['test-sla-types.yaml', { '$schema': 'sla-types-schema.yaml', slaTypes: [{ id: 'type_a' }] }],
       ['some-openapi.yaml', {
         Schema: {
           properties: {
@@ -1393,45 +1407,45 @@ test('x-enum-source injection', async (t) => {
   await t.test('injectPrefixInStateMachine - prepends prefix to machine events and emit steps', () => {
     const spec = {
       machines: [{
-        object: 'Application',
-        events: [{ type: 'intake.application.submitted', steps: [] }],
+        object: 'Widget',
+        events: [{ type: 'test.widget.submitted', steps: [] }],
         actions: [{
           id: 'submit',
-          steps: [{ emit: { type: 'intake.application.submitted', data: {} } }]
+          steps: [{ emit: { type: 'test.widget.submitted', data: {} } }]
         }]
       }]
     };
 
     const result = injectPrefixInStateMachine(spec, 'org.example.');
 
-    assert.strictEqual(result.machines[0].events[0].type, 'org.example.intake.application.submitted');
-    assert.strictEqual(result.machines[0].actions[0].steps[0].emit.type, 'org.example.intake.application.submitted');
+    assert.strictEqual(result.machines[0].events[0].type, 'org.example.test.widget.submitted');
+    assert.strictEqual(result.machines[0].actions[0].steps[0].emit.type, 'org.example.test.widget.submitted');
   });
 
   await t.test('injectPrefixInStateMachine - passes through unchanged when no machines array', () => {
-    const spec = { domain: 'intake', context: null };
+    const spec = { domain: 'test', context: null };
     const result = injectPrefixInStateMachine(spec, 'org.example.');
     assert.deepStrictEqual(result, spec);
   });
 
   await t.test('injectPrefixInStateMachine - does not mutate the original spec', () => {
     const spec = {
-      machines: [{ object: 'Application', actions: [{ id: 'submit', steps: [{ emit: { type: 'intake.application.submitted' } }] }] }]
+      machines: [{ object: 'Widget', actions: [{ id: 'submit', steps: [{ emit: { type: 'test.widget.submitted' } }] }] }]
     };
     injectPrefixInStateMachine(spec, 'org.example.');
-    assert.strictEqual(spec.machines[0].actions[0].steps[0].emit.type, 'intake.application.submitted');
+    assert.strictEqual(spec.machines[0].actions[0].steps[0].emit.type, 'test.widget.submitted');
   });
 
   await t.test('injectPrefixInStateMachine - prepends prefix to emit steps nested in then/do/forEach.do', () => {
     const spec = {
       machines: [{
-        object: 'Application',
+        object: 'Widget',
         actions: [{
           id: 'route',
           steps: [{
             if: '$object.isExpedited == true',
-            then: [{ emit: { type: 'intake.application.expedited' } }],
-            else: [{ emit: { type: 'intake.application.standard' } }]
+            then: [{ emit: { type: 'test.widget.expedited' } }],
+            else: [{ emit: { type: 'test.widget.standard' } }]
           }]
         }]
       }]
@@ -1439,8 +1453,8 @@ test('x-enum-source injection', async (t) => {
 
     const result = injectPrefixInStateMachine(spec, 'org.example.');
     const ifStep = result.machines[0].actions[0].steps[0];
-    assert.strictEqual(ifStep.then[0].emit.type, 'org.example.intake.application.expedited');
-    assert.strictEqual(ifStep.else[0].emit.type, 'org.example.intake.application.standard');
+    assert.strictEqual(ifStep.then[0].emit.type, 'org.example.test.widget.expedited');
+    assert.strictEqual(ifStep.else[0].emit.type, 'org.example.test.widget.standard');
   });
 
   // ===========================================================================
@@ -1450,14 +1464,14 @@ test('x-enum-source injection', async (t) => {
   await t.test('injectPrefixInAsyncApi - prepends prefix to channel addresses and message names', () => {
     const spec = {
       channels: {
-        'intake.application.submitted': {
-          address: 'intake.application.submitted',
+        'test.widget.submitted': {
+          address: 'test.widget.submitted',
           messages: {}
         }
       },
       components: {
         messages: {
-          ApplicationSubmitted: { name: 'intake.application.submitted' }
+          WidgetSubmitted: { name: 'test.widget.submitted' }
         },
         schemas: {}
       }
@@ -1465,9 +1479,9 @@ test('x-enum-source injection', async (t) => {
 
     const result = injectPrefixInAsyncApi(spec, 'org.example.');
 
-    assert.ok('org.example.intake.application.submitted' in result.channels);
-    assert.strictEqual(result.channels['org.example.intake.application.submitted'].address, 'org.example.intake.application.submitted');
-    assert.strictEqual(result.components.messages.ApplicationSubmitted.name, 'org.example.intake.application.submitted');
+    assert.ok('org.example.test.widget.submitted' in result.channels);
+    assert.strictEqual(result.channels['org.example.test.widget.submitted'].address, 'org.example.test.widget.submitted');
+    assert.strictEqual(result.components.messages.WidgetSubmitted.name, 'org.example.test.widget.submitted');
   });
 
   await t.test('injectPrefixInAsyncApi - passes through unchanged when no channels', () => {
@@ -1478,10 +1492,10 @@ test('x-enum-source injection', async (t) => {
 
   await t.test('injectPrefixInAsyncApi - does not mutate the original spec', () => {
     const spec = {
-      channels: { 'intake.application.submitted': { address: 'intake.application.submitted' } }
+      channels: { 'test.widget.submitted': { address: 'test.widget.submitted' } }
     };
     injectPrefixInAsyncApi(spec, 'org.example.');
-    assert.ok('intake.application.submitted' in spec.channels);
+    assert.ok('test.widget.submitted' in spec.channels);
   });
 
   // ===========================================================================
@@ -1491,37 +1505,37 @@ test('x-enum-source injection', async (t) => {
   await t.test('applyOverlayWithTargets - overlay can update an existing platform policy', () => {
     const dir = createTmpDir();
     try {
-      writeYaml(dir, 'platform-registry-policies.yaml', {
+      writeYaml(dir, 'test-registry-policies.yaml', {
         version: '1.0',
         policies: {
-          'snap-household-composition': {
-            citation: '7 CFR § 273.1',
-            description: 'All persons living together and purchasing food together.',
-            programs: ['snap']
+          'test-policy-alpha': {
+            citation: '§ 1.1',
+            description: 'All members of group alpha.',
+            programs: ['program_a']
           },
-          'snap-right-to-apply': {
-            citation: '7 CFR § 273.2(a)',
-            description: 'Any household may apply for SNAP benefits.',
-            programs: ['snap']
+          'test-policy-beta': {
+            citation: '§ 1.2',
+            description: 'Any member may apply for program_a benefits.',
+            programs: ['program_a']
           }
         }
       });
 
       const yamlFiles = [
         {
-          relativePath: 'platform-registry-policies.yaml',
-          sourcePath: join(dir, 'platform-registry-policies.yaml'),
-          spec: yaml.load(readFileSync(join(dir, 'platform-registry-policies.yaml'), 'utf8'))
+          relativePath: 'test-registry-policies.yaml',
+          sourcePath: join(dir, 'test-registry-policies.yaml'),
+          spec: yaml.load(readFileSync(join(dir, 'test-registry-policies.yaml'), 'utf8'))
         }
       ];
 
       const overlay = {
         overlay: '1.0.0',
-        info: { title: 'State policy overlay', version: '1.0.0' },
+        info: { title: 'Test state overlay', version: '1.0.0' },
         actions: [
           {
-            target: '$.policies.snap-household-composition.description',
-            update: 'All persons living and purchasing food together — state-specific definition.'
+            target: '$.policies.test-policy-alpha.description',
+            update: 'All members of group alpha — state-specific definition.'
           }
         ]
       };
@@ -1530,13 +1544,13 @@ test('x-enum-source injection', async (t) => {
       const { actionTargets } = resolveActionTargets(actionFileMap);
       const { results } = applyOverlayWithTargets(yamlFiles, overlay, actionTargets, dir);
 
-      const resolved = results.get('platform-registry-policies.yaml');
+      const resolved = results.get('test-registry-policies.yaml');
       assert.strictEqual(
-        resolved.policies['snap-household-composition'].description,
-        'All persons living and purchasing food together — state-specific definition.'
+        resolved.policies['test-policy-alpha'].description,
+        'All members of group alpha — state-specific definition.'
       );
       // Unchanged policy should be unaffected
-      assert.strictEqual(resolved.policies['snap-right-to-apply'].citation, '7 CFR § 273.2(a)');
+      assert.strictEqual(resolved.policies['test-policy-beta'].citation, '§ 1.2');
     } finally {
       rmSync(dir, { recursive: true });
     }
@@ -1545,36 +1559,36 @@ test('x-enum-source injection', async (t) => {
   await t.test('applyOverlayWithTargets - overlay can add a state-specific policy to the registry', () => {
     const dir = createTmpDir();
     try {
-      writeYaml(dir, 'platform-registry-policies.yaml', {
+      writeYaml(dir, 'test-registry-policies.yaml', {
         version: '1.0',
         policies: {
-          'snap-household-composition': {
-            citation: '7 CFR § 273.1',
-            description: 'All persons living together and purchasing food together.',
-            programs: ['snap']
+          'test-policy-alpha': {
+            citation: '§ 1.1',
+            description: 'All members of group alpha.',
+            programs: ['program_a']
           }
         }
       });
 
       const yamlFiles = [
         {
-          relativePath: 'platform-registry-policies.yaml',
-          sourcePath: join(dir, 'platform-registry-policies.yaml'),
-          spec: yaml.load(readFileSync(join(dir, 'platform-registry-policies.yaml'), 'utf8'))
+          relativePath: 'test-registry-policies.yaml',
+          sourcePath: join(dir, 'test-registry-policies.yaml'),
+          spec: yaml.load(readFileSync(join(dir, 'test-registry-policies.yaml'), 'utf8'))
         }
       ];
 
       const overlay = {
         overlay: '1.0.0',
-        info: { title: 'State policy overlay', version: '1.0.0' },
+        info: { title: 'Test state overlay', version: '1.0.0' },
         actions: [
           {
             target: '$.policies',
             update: {
-              'state-specific-income-disregard': {
-                citation: 'State Admin Code § 400.1',
-                description: 'State-specific earned income disregard for working households.',
-                programs: ['snap']
+              'state-policy-gamma': {
+                citation: '§ 2.1',
+                description: 'State-specific adjustment for qualifying households.',
+                programs: ['program_a']
               }
             }
           }
@@ -1585,11 +1599,11 @@ test('x-enum-source injection', async (t) => {
       const { actionTargets } = resolveActionTargets(actionFileMap);
       const { results } = applyOverlayWithTargets(yamlFiles, overlay, actionTargets, dir);
 
-      const resolved = results.get('platform-registry-policies.yaml');
-      assert.ok(resolved.policies['state-specific-income-disregard'], 'State-specific policy should be present');
-      assert.strictEqual(resolved.policies['state-specific-income-disregard'].citation, 'State Admin Code § 400.1');
+      const resolved = results.get('test-registry-policies.yaml');
+      assert.ok(resolved.policies['state-policy-gamma'], 'State-specific policy should be present');
+      assert.strictEqual(resolved.policies['state-policy-gamma'].citation, '§ 2.1');
       // Platform policy should be unaffected
-      assert.strictEqual(resolved.policies['snap-household-composition'].citation, '7 CFR § 273.1');
+      assert.strictEqual(resolved.policies['test-policy-alpha'].citation, '§ 1.1');
     } finally {
       rmSync(dir, { recursive: true });
     }
@@ -1599,50 +1613,49 @@ test('x-enum-source injection', async (t) => {
   // rewriteBaseRefs
   // ===========================================================================
 
-  await t.test('rewriteBaseRefs - rewrites base:// ref in root-level spec', () => {
+  await t.test('rewriteBaseRefs - rewrites canonical URI ref in root-level spec', () => {
     const spec = {
       paths: {
         '/items': {
           get: {
-            parameters: [{ $ref: 'base://components/parameters.yaml#/LimitParam' }]
+            parameters: [{ $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam' }]
           }
         }
       }
     };
     const result = rewriteBaseRefs(spec, 'items-openapi.yaml');
     const ref = result.paths['/items'].get.parameters[0].$ref;
-    // From root, base/components/parameters.yaml is a sibling path
     assert.strictEqual(ref, 'base/components/parameters.yaml#/LimitParam');
   });
 
-  await t.test('rewriteBaseRefs - rewrites base:// ref in nested spec', () => {
+  await t.test('rewriteBaseRefs - rewrites canonical URI ref in nested spec', () => {
     const spec = {
       paths: {
         '/items': {
           get: {
-            parameters: [{ $ref: 'base://components/parameters.yaml#/LimitParam' }]
+            parameters: [{ $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam' }]
           }
         }
       }
     };
-    const result = rewriteBaseRefs(spec, 'domains/intake/intake-openapi.yaml');
+    const result = rewriteBaseRefs(spec, 'domains/test/test-openapi.yaml');
     const ref = result.paths['/items'].get.parameters[0].$ref;
     assert.strictEqual(ref, '../../base/components/parameters.yaml#/LimitParam');
   });
 
   await t.test('rewriteBaseRefs - preserves fragment', () => {
-    const spec = { $ref: 'base://schemas/enums.yaml#/$defs/RoleType' };
+    const spec = { $ref: 'https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/RoleType' };
     const result = rewriteBaseRefs(spec, 'foo-openapi.yaml');
     assert.strictEqual(result.$ref, 'base/schemas/enums.yaml#/$defs/RoleType');
   });
 
   await t.test('rewriteBaseRefs - handles ref without fragment', () => {
-    const spec = { $ref: 'base://components/responses.yaml' };
+    const spec = { $ref: 'https://blueprint.codeforamerica.org/base/components/responses.yaml' };
     const result = rewriteBaseRefs(spec, 'foo-openapi.yaml');
     assert.strictEqual(result.$ref, 'base/components/responses.yaml');
   });
 
-  await t.test('rewriteBaseRefs - leaves non-base:// refs unchanged', () => {
+  await t.test('rewriteBaseRefs - leaves non-blueprint refs unchanged', () => {
     const spec = {
       $ref: './components/responses.yaml#/BadRequest',
       other: { $ref: '#/components/schemas/Foo' }
@@ -1654,8 +1667,8 @@ test('x-enum-source injection', async (t) => {
 
   await t.test('rewriteBaseRefs - rewrites multiple refs in one spec', () => {
     const spec = {
-      a: { $ref: 'base://components/parameters.yaml#/SortParam' },
-      b: { $ref: 'base://schemas/enums.yaml#/$defs/Status' }
+      a: { $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SortParam' },
+      b: { $ref: 'https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/Status' }
     };
     const result = rewriteBaseRefs(spec, 'foo-openapi.yaml');
     assert.strictEqual(result.a.$ref, 'base/components/parameters.yaml#/SortParam');
@@ -1663,21 +1676,16 @@ test('x-enum-source injection', async (t) => {
   });
 
   // ===========================================================================
-  // x-base end-to-end (resolve pipeline)
+  // Canonical URI end-to-end (resolve pipeline)
   // ===========================================================================
 
-  await t.test('x-base: resolve rewrites base:// refs and copies base contracts to output', async () => {
+  await t.test('resolve rewrites canonical blueprint URIs and copies base contracts to output', async () => {
     const { spawnSync } = await import('child_process');
     const { existsSync } = await import('fs');
 
     const dir = createTmpDir();
     try {
-      // Base contracts dir (simulates blueprint-core/base-contracts)
-      writeYaml(join(dir, 'base-contracts', 'components'), 'parameters.yaml', {
-        LimitParam: { name: 'limit', in: 'query', schema: { type: 'integer' } }
-      });
-
-      // Spec using base:// ref
+      // Spec using canonical blueprint URI ref
       writeYaml(join(dir, 'spec'), 'items-openapi.yaml', {
         openapi: '3.1.0',
         info: { title: 'Items', version: '1.0.0' },
@@ -1685,18 +1693,17 @@ test('x-enum-source injection', async (t) => {
           '/items': {
             get: {
               operationId: 'listItems',
-              parameters: [{ $ref: 'base://components/parameters.yaml#/LimitParam' }],
+              parameters: [{ $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam' }],
               responses: { '200': { description: 'ok' } }
             }
           }
         }
       });
 
-      // Overlay declaring x-base (path relative to overlay file)
+      // Minimal overlay (no x-base needed)
       writeYaml(join(dir, 'overlay'), 'config.yaml', {
         overlay: '1.0.0',
         info: { title: 'Test config', version: '1.0.0' },
-        config: { 'x-base': '../base-contracts' },
         actions: []
       });
 
@@ -1711,13 +1718,13 @@ test('x-enum-source injection', async (t) => {
 
       assert.strictEqual(result.status, 0, `resolve failed:\n${result.stderr}`);
 
-      // Base contracts should be copied into out/base/
+      // Blueprint-core base contracts should be copied into out/base/
       assert.ok(
         existsSync(join(outDir, 'base', 'components', 'parameters.yaml')),
         'base contracts should be copied to out/base/'
       );
 
-      // The spec in out/ should have the base:// ref rewritten to a real relative path
+      // The spec in out/ should have the canonical URI rewritten to a real relative path
       const outSpec = yaml.load(readFileSync(join(outDir, 'items-openapi.yaml'), 'utf8'));
       const ref = outSpec.paths['/items'].get.parameters[0].$ref;
       assert.strictEqual(ref, 'base/components/parameters.yaml#/LimitParam');

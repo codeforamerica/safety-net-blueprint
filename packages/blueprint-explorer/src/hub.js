@@ -22,9 +22,11 @@ import yaml from 'js-yaml';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const contentArg = process.argv.slice(2).find(a => a.startsWith('--content='));
-const contentDir = contentArg
-  ? resolve(process.cwd(), contentArg.slice('--content='.length))
-  : resolve(__dirname, '..', '..', '..', '..', 'safety-net-explorer');
+if (!contentArg) {
+  console.error('Usage: node hub.js --content=<path>');
+  process.exit(1);
+}
+const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
 
 // ── Load content config ───────────────────────────────────────────────────────
 

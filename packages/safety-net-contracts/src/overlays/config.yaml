@@ -1,0 +1,11 @@
+overlay: '1.0.0'
+info:
+  title: Safety Net contracts configuration
+  version: 1.0.0
+
+config:
+  x-casing: camelCase
+  x-pagination:
+    style: offset
+  x-search:
+    style: simple

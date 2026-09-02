@@ -18,9 +18,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const authoredDir = resolve(__dirname, '..', 'authored');
 
 const contentArg = process.argv.find(a => a.startsWith('--content='));
-const contentDir = contentArg
-  ? resolve(process.cwd(), contentArg.slice('--content='.length))
-  : resolve(__dirname, '..', '..', '..', 'safety-net-explorer');
+if (!contentArg) {
+  console.error('Usage: node authored.js --content=<path>');
+  process.exit(1);
+}
+const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
 
 const outDir = join(contentDir, 'authored');
 rmSync(outDir, { recursive: true, force: true });

@@ -189,12 +189,12 @@ export function extractMetadata(spec, resourceName) {
         responseSchema: null,
         errorSchemas: {}
       };
-      
+
       // Extract request schema
       if (operation.requestBody?.content?.['application/json']?.schema) {
         endpoint.requestSchema = operation.requestBody.content['application/json'].schema;
       }
-      
+
       // Extract response schema (200/201)
       const successStatus = method === 'post' ? '201' : '200';
       if (operation.responses?.[successStatus]?.content?.['application/json']?.schema) {

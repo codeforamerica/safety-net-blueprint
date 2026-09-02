@@ -2,6 +2,7 @@
 # Validates *-registry-policies.yaml files.
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/schemas/policies-schema.yaml"
 title: Policy Registry
 description: >
   Schema for policy registry files (*-registry-policies*.yaml).
@@ -65,3 +66,11 @@ $defs:
         description: >
           Human-readable explanation of what this policy requires and why it matters.
           Used as card subtext in the service blueprint and design reference.
+      programs:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        description: >
+          Program identifiers this policy applies to (e.g., snap, medicaid).
+          Used to filter policies by program in tooling and design references.

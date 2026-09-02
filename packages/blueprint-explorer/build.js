@@ -43,15 +43,18 @@ const contentArg  = args.find(a => a.startsWith('--content='));
 const resolvedArg = args.find(a => a.startsWith('--resolved='));
 const clientsArg  = args.find(a => a.startsWith('--clients='));
 
-const contentDir = contentArg
-  ? resolve(process.cwd(), contentArg.slice('--content='.length))
-  : resolve(__dirname, '..', 'safety-net-explorer');
+if (!contentArg || !resolvedArg) {
+  console.error('Usage: node build.js --content=<path> --resolved=<path> [--clients=<path>] [--only=<tool>]');
+  process.exit(1);
+}
 
-const resolvedDir = resolvedArg ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length)) : null;
+const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
+
+const resolvedDir = resolve(process.cwd(), resolvedArg.slice('--resolved='.length));
 
 // Args forwarded to all subprocesses that respect them.
 const fwdContent  = [`--content=${contentDir}`];
-const fwdResolved = resolvedArg ? [resolvedArg] : [];
+const fwdResolved = [resolvedArg];
 const fwdClients  = clientsArg  ? [clientsArg]  : [];
 
 const doBuild = tool => !only || only === tool;
@@ -91,17 +94,8 @@ if (doBuild('data-dictionaries')) {
       .forEach(f => rmSync(resolve(ddOutDir, f)));
   } catch { /* dir may not exist yet */ }
 
-  const domains = readdirSync(resolvedDir, { recursive: true })
-    .filter(f => typeof f === 'string' && f.endsWith('-openapi.yaml'))
-    .map(f => basename(f).replace('-openapi.yaml', ''));
   const generateDataModel = resolve(__dirname, 'src', 'data-dictionaries', 'generate-field-inventory.mjs');
-  for (const domain of domains) {
-    try {
-      execFileSync(node, [generateDataModel, `--domain=${domain}`, `--spec=${resolvedDir}`, `--out=${ddOutDir}`], { stdio: 'inherit' });
-    } catch {
-      // Domain doesn't have the right structure for data model generation — skip
-    }
-  }
+  execFileSync(node, [generateDataModel, `--spec=${resolvedDir}`, `--out=${ddOutDir}`], { stdio: 'inherit' });
   execFileSync(node, [resolve(__dirname, 'src', 'data-dictionaries', 'build.js'), ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
 }
 

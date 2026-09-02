@@ -15,7 +15,6 @@ The machine-readable catalog is in [`docs/conventions/`](../conventions/) under 
 
 | Extension | Category | File type(s) | Location within file |
 |---|---|---|---|
-| `x-base` | Config | `overlays/config.yaml` | `config:` section |
 | `x-casing` | Config | `overlays/config.yaml` | `config:` section |
 | `x-pagination` | Config | `overlays/config.yaml` | `config:` section |
 | `x-derived` | Spec | `*-openapi.yaml` | Schema property (on computed fields) |
@@ -27,52 +26,6 @@ The machine-readable catalog is in [`docs/conventions/`](../conventions/) under 
 | `x-sortable` | Spec | `*-openapi.yaml` | List operation level |
 | `x-status` | Spec | `*-openapi.yaml` | `info` level or operation level |
 | `x-visibility` | Spec | `*-openapi.yaml` | `info` level or operation level |
-
----
-
-## x-base
-
-**Category:** Config — appears in `overlays/config.yaml` under the `config:` key.
-
-Declares the path to the `blueprint-core/base-contracts/` directory, relative to the overlay config file. The resolve pipeline uses this to:
-
-1. Copy base contract files (shared parameters, responses, schemas) into the output at `base/`
-2. Rewrite `base://` URI references in specs to real relative paths pointing to `base/` in the output
-
-This allows domain specs to reference shared components using a stable, location-independent URI scheme (`base://components/parameters.yaml#/LimitParam`) rather than fragile relative paths that would break if files move.
-
-```yaml
-# packages/safety-net-contracts/overlays/config.yaml
-overlay: '1.0.0'
-info:
-  title: Safety Net contracts configuration
-  version: 1.0.0
-
-config:
-  x-base: ../../blueprint-core/base-contracts
-```
-
-**In domain specs**, shared components are referenced using the `base://` URI scheme:
-
-```yaml
-# intake-openapi.yaml
-parameters:
-  - $ref: "base://components/parameters.yaml#/LimitParam"
-  - $ref: "base://components/parameters.yaml#/OffsetParam"
-```
-
-After the resolve pipeline runs, these become real relative paths in the output:
-
-```yaml
-# packages/generated/contracts/domains/intake/intake-openapi.yaml
-parameters:
-  - $ref: "../../base/components/parameters.yaml#/LimitParam"
-  - $ref: "../../base/components/parameters.yaml#/OffsetParam"
-```
-
-`x-base` is required if any spec in the package uses `base://` references. Without it, `base://` refs will remain unresolved in the output.
-
-See [Resolve Pipeline Architecture](resolve-pipeline.md#base-ref-rewriting) for how this stage fits into the overall pipeline.
 
 ---
 
@@ -138,7 +91,7 @@ paths:
 
 Without `--env`, all sections are included as-is regardless of `x-environments` annotations.
 
-See [Resolve Pipeline Architecture](resolve-pipeline.md#5-environment-filtering) for how this is applied during the pipeline.
+See [Resolve Pipeline Architecture](resolve-pipeline.md#7-environment-filtering) for how this is applied during the pipeline.
 
 ---
 

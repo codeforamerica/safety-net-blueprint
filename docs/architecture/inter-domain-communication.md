@@ -14,7 +14,7 @@ A domain event is an async signal. The producing domain has no knowledge of who 
 
 **The async command variant**
 
-Some interactions combine both patterns: a command initiates a long-running operation, and an async domain event delivers the result when it is ready. Data exchange verification calls use this variant — intake creates a service call (command), the external service responds asynchronously, and a domain event delivers the result when it arrives. The context passthrough pattern (see `conventions/`) is used to correlate the result event back to the originating record.
+Some interactions combine both patterns: a command initiates a long-running operation, and an async domain event delivers the result when it is ready. Data exchange verification calls use this variant — intake creates a service call (command), the external service responds asynchronously, and a domain event delivers the result when it arrives. The context passthrough pattern (see `api-patterns.yaml`) is used to correlate the result event back to the originating record.
 
 **Decision rule**
 
@@ -38,20 +38,6 @@ When both conditions are met, a cross-domain write is simpler than the alternati
 **Reverse direction — Eligibility writing back to Intake:** Eligibility writing determination outcomes back to Application Member records (as a denormalized copy for caseworker-facing display) is also acceptable. Eligibility is authoritative for outcomes; the write is fire-and-forget. Both conditions are met.
 
 **Counter-example:** A domain writing records into another domain and then subscribing to the result of that write violates condition 2. A domain writing data it received from a third domain violates condition 1. Neither is a cross-domain write — they are coupling in disguise.
-
----
-
-## Why event-driven
-
-Three requirements drive the pub/sub, choreography-based design:
-
-- **Regulatory audit trails** — federal QC reviews (SNAP, Medicaid) require documentation of who made what eligibility decision, when, and on what basis. Current state alone cannot reconstruct this.
-- **Version tracking** — caseworkers need to compare the original submitted application against corrections made during interview and review. Without field-level change history, this view cannot be built.
-- **Cross-domain coordination** — multiple independent services must react to the same domain events without tight coupling between them.
-
-**Choreography over orchestration:** Domains react to events independently. No central coordinator directs the sequence of interactions. Each domain publishes events when its state machine transitions; consumers subscribe and act without any change to the producer. Adding a new consumer is additive — it requires no change to any existing domain.
-
-Direct API calls, batch polling, and webhooks were all considered and rejected: direct calls are ephemeral (no event history), batch polling loses intermediate steps (incompatible with audit and version tracking requirements), and webhooks would require each producing domain to own fan-out delivery — rebuilding what a message broker already provides.
 
 ---
 
@@ -81,7 +67,7 @@ State partners may overlay the `type` prefix to match their own namespace.
 Event contracts for each domain live in two artifacts:
 
 - **OpenAPI spec** (`x-events` section) — declares each event's CloudEvents type name and payload schema reference
-- **State machine** — declares which hooks emit which events. Three hooks are available: `onCreate` (object creation), `onUpdate` (field changes outside a transition), and `transitions` (state changes and non-state-changing actor actions)
+- **State machine** — declares which events cause the machine to emit further events. Object creation, field changes, and timer callbacks all arrive as named events in the machine's `events:` subscriptions, the same as any other domain event — there are no special-cased hook types (`onCreate`/`onUpdate`/`onTimer`); see [Fully event-driven model](cross-cutting/behavioral-contract-dsl.md#decision-4-fully-event-driven-model).
 
 AsyncAPI specs are generated from these two sources. State partners do not author AsyncAPI directly — they overlay the source artifacts and regenerate.
 
@@ -205,7 +191,7 @@ The target architecture is pub/sub with CloudEvents messages. Most implementatio
 
 Event payloads may contain PII, FTI (Federal Tax Information), or PHI (Protected Health Information). How states safeguard this data in their event infrastructure is an implementation concern, not a blueprint contract concern — the blueprint does not prescribe an encryption mechanism, access control policy, or key management approach.
 
-The blueprint's responsibility is to mark which fields are sensitive so that adapters know what requires protection. Schema fields carrying regulated data are annotated with `x-data-classification` (see [conventions/](../conventions/)). Classifications: `pii`, `fti`, `phi`.
+The blueprint's responsibility is to mark which fields are sensitive so that adapters know what requires protection. Schema fields carrying regulated data are annotated with `x-data-classification` (see [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml)). Classifications: `pii`, `fti`, `phi`.
 
 States are responsible for:
 - Applying appropriate safeguards to classified fields in event payloads (encryption, access control, log masking)
@@ -249,6 +235,7 @@ States are responsible for:
 
 ## Further Reading
 
+- [ADR: Inter-Domain Communication](../decisions/inter-domain-communication.md)
 - [CloudEvents Specification](https://cloudevents.io/)
 - [CloudEvents Extension Attributes](https://github.com/cloudevents/spec/blob/main/cloudevents/documented-extensions.md) — including `traceparent`
 - [W3C Trace Context](https://www.w3.org/TR/trace-context/)

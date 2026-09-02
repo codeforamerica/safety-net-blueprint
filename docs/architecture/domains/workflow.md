@@ -493,7 +493,7 @@ Baseline timer transitions:
 
 **Options:**
 - **(A)** Metric definitions in a proprietary GUI or database
-- **(B) ✓** Metrics as YAML contract artifacts in `workflow-metrics.yaml`; each metric declares `collection`, `aggregate`, and optional JSON Logic `filter`
+- **(B) ✓** Metrics as YAML contract artifacts in `workflow-metrics.yaml`; each metric declares `collection`, `aggregate`, and optional CEL `filter` (see [Decision 1](../cross-cutting/behavioral-contract-dsl.md#decision-1-cel-as-the-expression-language) — CEL replaced JSON Logic across the full behavioral contract surface, metric filters included)
 
 **Customization:** States replace or extend `workflow-metrics.yaml` via overlay.
 
@@ -643,4 +643,4 @@ States replace or extend `workflow-metrics.yaml`. `targets` values can be overri
 
 - Regulatory: [7 CFR Part 273](https://www.ecfr.gov/current/title-7/subtitle-B/chapter-II/subchapter-C/part-273) (SNAP), [42 CFR Part 435](https://www.ecfr.gov/current/title-42/chapter-IV/subchapter-C/part-435) (Medicaid)
 - Standards: [BPMN 2.0](https://www.omg.org/spec/BPMN/2.0/), [WS-HumanTask](https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=bpel4people), [OpenAPI 3.x](https://spec.openapis.org/oas/v3.1.0)
-- Related docs: [Domain Design Overview](domain-design.md), [Contract-Driven Architecture](../contract-driven-architecture.md), [Behavioral Contract DSL](../cross-cutting/behavioral-contract-dsl.md) (expression language, rule context, event subscriptions), [Case Management](case-management.md), [Scheduling](scheduling.md)
+- Related docs: [Domain Design Overview](../domain-design.md), [Contract-Driven Architecture](../contract-driven-architecture.md), [Behavioral Contract DSL](../cross-cutting/behavioral-contract-dsl.md) (expression language, rule context, event subscriptions), [Case Management](case-management.md), [Scheduling](scheduling.md)

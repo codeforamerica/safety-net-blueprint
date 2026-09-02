@@ -37,6 +37,8 @@ import { join, dirname, basename, resolve as resolvePath } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { bundleSpec } from '@codeforamerica/blueprint-core/bundle';
+import { loadContractFiles } from '@codeforamerica/blueprint-core';
+import { collectNamedEnumDefs } from './collect-named-enum-defs.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -436,6 +438,10 @@ async function main() {
 
   console.log(`Found ${specFiles.length} API specs: ${specFiles.map(f => basename(f)).join(', ')}\n`);
 
+  // Build file map once for the whole resolved contracts directory.
+  // Used by collectNamedEnumDefs to resolve external $refs without re-reading from disk.
+  const fileMap = loadContractFiles(specsDir);
+
   const domains = [];
 
   // Generate client for each domain
@@ -481,7 +487,7 @@ async function main() {
     // schemas — we append the exports ourselves so consumers can iterate values at runtime.
     const typesGenPath = join(domainOutputDir, 'types.gen.ts');
     if (existsSync(typesGenPath)) {
-      const namedEnums = collectNamedEnumDefs(resolvePath(specPath));
+      const namedEnums = collectNamedEnumDefs(resolvePath(specPath), fileMap);
       if (namedEnums.length > 0) {
         patchTypesGenForNamedEnums(typesGenPath, namedEnums);
         // Also patch the domain index.ts barrel — hey-api generates type-only re-exports
@@ -613,44 +619,6 @@ function validateDiscriminatorLiterals(bundledSpec, zodGenPath) {
   }
 }
 
-/**
- * Collect named string enum $defs from all external schema files referenced in the spec.
- * Returns an array of { name, values } objects, deduplicated by name.
- *
- * @param {string} specPath - absolute path to the original (unbundled) spec file
- */
-function collectNamedEnumDefs(specPath) {
-  const specDir = dirname(specPath);
-  const rawSpec = readFileSync(resolvePath(specPath), 'utf8');
-
-  // Find all external file refs: ./path/to/file.yaml (before any # anchor)
-  const externalRefs = new Set();
-  for (const match of rawSpec.matchAll(/\$ref:\s*['"]?(\.\/[^\s'"#]+\.yaml)/g)) {
-    externalRefs.add(match[1]);
-  }
-
-  // Use the def name directly — it already carries semantic meaning (e.g. IncomeType, JobStatus).
-  // Prefixing with the file stem produced redundant names (IncomeIncomeType, IntakeImmigrantStatus).
-  const seen = new Set();
-  const namedEnums = [];
-  for (const ref of externalRefs) {
-    const filePath = resolvePath(specDir, ref);
-    if (!existsSync(filePath)) continue;
-    let schema;
-    try { schema = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA }); } catch { continue; }
-    const defs = schema?.$defs ?? schema?.definitions ?? {};
-    for (const [defName, def] of Object.entries(defs)) {
-      if (def.type === 'string' && Array.isArray(def.enum)) {
-        const name = defName;
-        if (!seen.has(name)) {
-          seen.add(name);
-          namedEnums.push({ name, values: def.enum });
-        }
-      }
-    }
-  }
-  return namedEnums;
-}
 
 /**
  * Patch the domain index.ts barrel to add value exports for named enum consts.
@@ -701,7 +669,8 @@ function patchDomainBarrelForAnnotations(domainIndexPath) {
 }
 
 // Export for testing
-export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, generateAnnotationsAndPolicies, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, collectNamedEnumDefs, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums, patchDomainBarrelForAnnotations };
+export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, generateAnnotationsAndPolicies, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums, patchDomainBarrelForAnnotations };
+export { collectNamedEnumDefs } from './collect-named-enum-defs.js';
 
 // Run main function only if this is the entry point
 if (import.meta.url === `file://${realpathSync(process.argv[1])}`) {

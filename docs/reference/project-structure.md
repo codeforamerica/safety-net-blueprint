@@ -64,25 +64,26 @@ safety-net-blueprint/
 │   │
 │   ├── safety-net-contracts/       # Safety-net domain contracts
 │   │   ├── package.json
-│   │   ├── common/                 # Cross-domain shared schemas
-│   │   │   ├── components/         # Domain-specific shared components
-│   │   │   └── schemas/            # Domain-specific shared schemas (policies, enums)
-│   │   ├── domains/                # One subdirectory per domain
-│   │   │   ├── case-management/
-│   │   │   ├── client-management/
-│   │   │   ├── communication/
-│   │   │   ├── data-exchange/
-│   │   │   ├── document-management/
-│   │   │   ├── eligibility/
-│   │   │   ├── identity-access/
-│   │   │   ├── intake/
-│   │   │   ├── platform/
-│   │   │   ├── scheduling/
-│   │   │   └── workflow/
-│   │   └── overlays/               # Safety-net-level overlay config
-│   │       ├── config.yaml         # x-base, x-casing, x-pagination, x-relationship defaults
-│   │       ├── common-enums.yaml   # Shared enum overlays applied across domains
-│   │       └── policies-schema.yaml
+│   │   └── src/
+│   │       ├── common/             # Cross-domain shared schemas
+│   │       │   ├── components/     # Domain-specific shared components
+│   │       │   └── schemas/        # Domain-specific shared schemas (policies, enums)
+│   │       ├── domains/            # One subdirectory per domain
+│   │       │   ├── case-management/
+│   │       │   ├── client-management/
+│   │       │   ├── communication/
+│   │       │   ├── data-exchange/
+│   │       │   ├── document-management/
+│   │       │   ├── eligibility/
+│   │       │   ├── identity-access/
+│   │       │   ├── intake/
+│   │       │   ├── platform/
+│   │       │   ├── scheduling/
+│   │       │   └── workflow/
+│   │       └── overlays/           # Safety-net-level overlay config
+│   │           ├── config.yaml     # x-base, x-casing, x-pagination, x-relationship defaults
+│   │           ├── common-enums.yaml # Shared enum overlays applied across domains
+│   │           └── policies-schema.yaml
 │   │
 │   ├── safety-net-explorer/        # Built Explorer HTML output (committed)
 │   │   ├── api-reference/
@@ -104,7 +105,7 @@ safety-net-blueprint/
 
 ## Domain Artifact Layout
 
-Each domain under `packages/safety-net-contracts/domains/{domain}/` follows the same file naming convention:
+Each domain under `packages/safety-net-contracts/src/domains/{domain}/` follows the same file naming convention:
 
 ```
 domains/intake/
@@ -183,16 +184,16 @@ Not every domain has every artifact — only the ones relevant to the domain.
 | `package.json` | Root workspace config and command aliases |
 | `packages/*/package.json` | Package-specific dependencies and scripts |
 | `packages/blueprint-mock-server/config.js` | Canonical path configuration for mock server scripts |
-| `packages/safety-net-contracts/overlays/config.yaml` | Overlay pipeline configuration (x-base, x-casing, x-pagination, etc.) |
+| `packages/safety-net-contracts/src/overlays/config.yaml` | Overlay pipeline configuration (x-base, x-casing, x-pagination, etc.) |
 | `docs/conventions/` | API design pattern rules |
 
 ### Source of Truth
 
 | File | Purpose |
 |------|---------|
-| `packages/safety-net-contracts/domains/*/{domain}-openapi.yaml` | Main API specifications |
+| `packages/safety-net-contracts/src/domains/*/{domain}-openapi.yaml` | Main API specifications |
 | `packages/blueprint-core/base-contracts/` | Shared components referenced via `base://` |
-| `packages/safety-net-contracts/overlays/` | Safety-net-level overlay configuration |
+| `packages/safety-net-contracts/src/overlays/` | Safety-net-level overlay configuration |
 
 ### Generated (Gitignored)
 
@@ -211,7 +212,7 @@ Use the generator:
 npm run api:new -- --name "benefits" --resource "Benefit"
 ```
 
-This scaffolds a new domain spec in `packages/safety-net-contracts/domains/`.
+This scaffolds a new domain spec in `packages/safety-net-contracts/src/domains/`.
 
 ## Adding State Overlays
 

@@ -104,7 +104,7 @@
       </div>
     <div class="nav-section">
         <div class="nav-section-label">Types</div>
-        <a href="#type-Document" class="nav-link">Document</a><a href="#type-DocumentUpdate" class="nav-link">DocumentUpdate</a><a href="#type-DocumentList" class="nav-link">DocumentList</a><a href="#type-DocumentVersion" class="nav-link">DocumentVersion</a><a href="#type-DocumentType" class="nav-link">DocumentType</a><a href="#type-DocumentTypeCreate" class="nav-link">DocumentTypeCreate</a><a href="#type-DocumentTypeList" class="nav-link">DocumentTypeList</a><a href="#type-DocumentLink" class="nav-link">DocumentLink</a><a href="#type-DocumentLinkCreate" class="nav-link">DocumentLinkCreate</a><a href="#type-DocumentLinkList" class="nav-link">DocumentLinkList</a><a href="#type-DocumentWritable" class="nav-link">DocumentWritable</a><a href="#type-DocumentListWritable" class="nav-link">DocumentListWritable</a><a href="#type-DocumentVersionWritable" class="nav-link">DocumentVersionWritable</a><a href="#type-DocumentTypeWritable" class="nav-link">DocumentTypeWritable</a><a href="#type-DocumentTypeListWritable" class="nav-link">DocumentTypeListWritable</a><a href="#type-DocumentLinkWritable" class="nav-link">DocumentLinkWritable</a><a href="#type-DocumentLinkListWritable" class="nav-link">DocumentLinkListWritable</a>
+        <a href="#type-Document" class="nav-link">Document</a><a href="#type-DocumentUpdate" class="nav-link">DocumentUpdate</a><a href="#type-DocumentList" class="nav-link">DocumentList</a><a href="#type-DocumentVersion" class="nav-link">DocumentVersion</a><a href="#type-DocumentType" class="nav-link">DocumentType</a><a href="#type-DocumentTypeCreate" class="nav-link">DocumentTypeCreate</a><a href="#type-DocumentTypeList" class="nav-link">DocumentTypeList</a><a href="#type-DocumentLink" class="nav-link">DocumentLink</a><a href="#type-DocumentLinkCreate" class="nav-link">DocumentLinkCreate</a><a href="#type-DocumentLinkList" class="nav-link">DocumentLinkList</a><a href="#type-DocumentTypeWritable" class="nav-link">DocumentTypeWritable</a><a href="#type-DocumentTypeListWritable" class="nav-link">DocumentTypeListWritable</a>
       </div>
       </div>
     </nav>
@@ -641,7 +641,7 @@
   </details>
 </div>
       </section><section id="section-types" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (17)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (12)</h2>
         <div id="type-Document" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -782,48 +782,6 @@
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
-</div><div id="type-DocumentWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DocumentWritable</code>
-      <span style="font-size:11px;color:#aaa;">13 fields</span>
-      <a href="#type-DocumentWritable" class="permalink" title="Link to this type">#</a>
-    </summary>
-    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
-      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DocumentWritable</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">id</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">documentTypeId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">title</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">documentDate</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">lifecycleState</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;active&quot;, &quot;retained&quot;, &quot;pending_disposition&quot;, &quot;destroyed&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">legalHold</span><span style="color:#888;">:</span> <span style="color:#006152;">boolean</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">latestVersionId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">retentionDeadline</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">metadata</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">dispositionApprovedBy</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">dispositionApprovedAt</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">createdAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">updatedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
-      <div style="line-height:1.8;color:#666;">}</div>
-    </div>
-  </details>
-</div><div id="type-DocumentListWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DocumentListWritable</code>
-      <span style="font-size:11px;color:#aaa;">5 fields</span>
-      <a href="#type-DocumentListWritable" class="permalink" title="Link to this type">#</a>
-    </summary>
-    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
-      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DocumentListWritable</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">items</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">:</span> <span style="color:#006152;">boolean</span></div>
-      <div style="line-height:1.8;color:#666;">}</div>
-    </div>
-  </details>
-</div><div id="type-DocumentVersionWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DocumentVersionWritable</code>
-      <span style="font-size:11px;color:#aaa;">9 fields</span>
-      <a href="#type-DocumentVersionWritable" class="permalink" title="Link to this type">#</a>
-    </summary>
-    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
-      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DocumentVersionWritable</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">id</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">documentId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">versionNumber</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">fileName</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">mimeType</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">sizeBytes</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">contentHash</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">uploadedById</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">createdAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
-      <div style="line-height:1.8;color:#666;">}</div>
-    </div>
-  </details>
 </div><div id="type-DocumentTypeWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -848,34 +806,6 @@
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DocumentTypeListWritable</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">items</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">:</span> <span style="color:#006152;">boolean</span></div>
-      <div style="line-height:1.8;color:#666;">}</div>
-    </div>
-  </details>
-</div><div id="type-DocumentLinkWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DocumentLinkWritable</code>
-      <span style="font-size:11px;color:#aaa;">7 fields</span>
-      <a href="#type-DocumentLinkWritable" class="permalink" title="Link to this type">#</a>
-    </summary>
-    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
-      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DocumentLinkWritable</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">id</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">documentId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">subjectType</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;application&quot;, &quot;case&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">subjectId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">linkedBy</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">closedAt</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">createdAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
-      <div style="line-height:1.8;color:#666;">}</div>
-    </div>
-  </details>
-</div><div id="type-DocumentLinkListWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DocumentLinkListWritable</code>
-      <span style="font-size:11px;color:#aaa;">5 fields</span>
-      <a href="#type-DocumentLinkListWritable" class="permalink" title="Link to this type">#</a>
-    </summary>
-    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
-      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DocumentLinkListWritable</span> <span style="color:#666;">{</span></div>
       <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">items</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">:</span> <span style="color:#006152;">boolean</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>

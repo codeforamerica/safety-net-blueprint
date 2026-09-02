@@ -1,5 +1,5 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
-$id: "schemas/common/auth.yaml"
+$id: "https://blueprint.codeforamerica.org/base/schemas/auth.yaml"
 title: CommonAuth
 description: >
   Shared connection and credential configuration schemas. Used in domain config

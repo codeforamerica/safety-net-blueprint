@@ -26,13 +26,15 @@ import { resolvedDir, resolvedSourcePairs } from './lib/paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const clientsArg = process.argv.find(a => a.startsWith('--clients='));
-const clientsBase = clientsArg
-  ? resolve(process.cwd(), clientsArg.slice('--clients='.length))
-  : resolve(__dirname, '..', '..', '..', 'resolved', 'clients');
 const contentArg = process.argv.find(a => a.startsWith('--content='));
-const contentDir = contentArg
-  ? resolve(process.cwd(), contentArg.slice('--content='.length))
-  : resolve(__dirname, '..', '..', '..', '..', 'safety-net-explorer');
+
+if (!clientsArg || !contentArg) {
+  console.error('Usage: node client-reference.js --clients=<path> --content=<path> [--resolved=<path>]');
+  process.exit(1);
+}
+
+const clientsBase = resolve(process.cwd(), clientsArg.slice('--clients='.length));
+const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
 const generatedClientsDir = clientsBase;
 const outputDir = resolve(contentDir, 'client-reference');
 mkdirSync(outputDir, { recursive: true });

@@ -24,9 +24,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const node = process.execPath;
 
 const contentArg = process.argv.find(a => a.startsWith('--content='));
-const contentDir = contentArg
-  ? resolve(process.cwd(), contentArg.slice('--content='.length))
-  : resolve(__dirname, '..', '..', '..', 'safety-net-explorer');
+if (!contentArg) {
+  console.error('Usage: node build.js --content=<path> [--resolved=<path>]');
+  process.exit(1);
+}
+const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
 
 const mapConfigPath = resolve(contentDir, 'context-map', 'config', 'config.yaml');
 const mapConfig = yaml.load(readFileSync(mapConfigPath, 'utf8'));
@@ -46,4 +48,5 @@ try {
 } finally {
   rmSync(fragDir, { recursive: true, force: true });
 }
-scanGaps(enrichedConfig);
+const archDir = resolve(__dirname, '..', '..', '..', '..', '..', 'docs', 'architecture', 'domains');
+scanGaps(enrichedConfig, resolvedDir, archDir);

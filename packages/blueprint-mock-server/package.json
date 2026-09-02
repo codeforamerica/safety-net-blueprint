@@ -21,7 +21,7 @@
     "start": "node cli/server.js --spec=../safety-net-contracts",
     "start:all": "node cli/start-all.js --spec=../safety-net-contracts",
     "swagger": "node cli/swagger/server.js --spec=../safety-net-contracts",
-    "seed": "node cli/generate-mock-data.js --spec=../safety-net-contracts --out=../safety-net-contracts/mock-data",
+    "seed": "node cli/generate-mock-data.js --spec=../safety-net-contracts --out=../generated/mock-data",
     "validate:mock-data": "node cli/validate-mock-data.js --spec=../safety-net-contracts",
     "setup": "node cli/setup.js --spec=../safety-net-contracts",
     "reset": "node cli/reset.js --spec=../safety-net-contracts",

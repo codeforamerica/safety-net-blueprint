@@ -27,7 +27,7 @@ const specArg        = args.find(a => a.startsWith('--spec='));
 const contractsDir   = contractsArg ? resolve(process.cwd(), contractsArg.slice('--contracts='.length)) : null;
 const seedDir        = seedArg      ? resolve(process.cwd(), seedArg.slice('--seed='.length))           : null;
 const clientsDir     = clientsArg   ? resolve(process.cwd(), clientsArg.slice('--clients='.length))     : null;
-const specDir        = specArg      ? resolve(process.cwd(), specArg.slice('--spec='.length))           : resolve(__dirname, '..');
+const specDir        = specArg      ? resolve(process.cwd(), specArg.slice('--spec='.length))           : null;
 const doStop         = args.includes('--stop');
 const runUnit        = args.includes('--unit') || args.includes('--all') || args.length === 0;
 const runIntegration = args.includes('--integration') || args.includes('--all');
@@ -120,7 +120,7 @@ async function runAllTests() {
   if (runUnit) {
     console.log('\nUnit Tests');
     console.log('-'.repeat(70));
-    const unitArgs = [`--spec=${specDir}`];
+    const unitArgs = specDir ? [`--spec=${specDir}`] : [];
     for (const testFile of unitTestFiles) {
       await withTimeout(runTest(testFile, unitArgs), TEST_TIMEOUT_MS, testFile)
         .then(() => passed++)

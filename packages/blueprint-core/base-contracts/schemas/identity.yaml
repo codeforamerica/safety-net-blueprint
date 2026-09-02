@@ -1,5 +1,5 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
-$id: "schemas/common/identity.yaml"
+$id: "https://blueprint.codeforamerica.org/base/schemas/identity.yaml"
 title: Identity
 description: >
   Shared identity schemas for personal identification. Referenced by OpenAPI
