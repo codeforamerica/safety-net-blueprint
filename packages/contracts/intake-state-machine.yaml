@@ -407,7 +407,7 @@ machines:
             - {call: initiateServiceCall, with: {serviceId: $ssaIevsService.id}}
             - {call: initiateServiceCall, with: {serviceId: $irsIevsService.id}}
             - {call: initiateServiceCall, with: {serviceId: $swicaService.id}}
-            - {call: initiateServiceCall, with: {serviceId: $uibService.id}, description: SSA IEVS, IRS IEVS, SWICA, and UIB income checks (7 CFR § 272.8)}
+            - {call: initiateServiceCall, with: {serviceId: $uibService.id}, description: "SSA IEVS, IRS IEVS, SWICA, and UIB income checks (7 CFR § 272.8)"}
           citizenship:
             - {call: initiateServiceCall, with: {serviceId: $fdshSsaService.id}, description: "FDSH SSA citizenship check for Medicaid; electronic check required before paper documents (42 CFR § 435.956(b))"}
           immigration:
