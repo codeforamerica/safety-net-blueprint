@@ -6,6 +6,8 @@ For anyone evaluating or adopting this blueprint who wants to understand why it'
 
 Individual domain docs and decision logs explain *what* was decided, in the technical detail engineers need to build against them. This document explains the handful of design philosophies that recur across all of them — what each one means in practice, and why this blueprint relies on it.
 
+A concern that runs through many of these philosophies is the set of qualities a benefits system needs to remain operable over the long haul: that new consumers and integrations can be added without unpicking what already works, that vendors can be replaced without rewriting the business logic that depended on them, that the system stays comprehensible as the people responsible for it change, that contracts can be tested before any real implementation exists, and that a complete record of every change is always recoverable. Several of the philosophies below are direct responses to that pressure, each from a different angle.
+
 ## Design philosophies
 
 ### 1. Contract-first / spec-first design
@@ -48,13 +50,23 @@ Individual domain docs and decision logs explain *what* was decided, in the tech
 
 *Reference:* [JSON Merge Patch, RFC 7396](https://www.rfc-editor.org/rfc/rfc7396); [Kubernetes Kustomize overlays](https://kubectl.docs.kubernetes.io/references/kustomize/) (same technique, different domain).
 
-### 6. Prefer open standards over bespoke formats
+### 6. Prefer established over novel
 
-**Why:** A format only this blueprint uses has no existing tooling, no developers who already know it, and no guarantee it'll still be maintained in ten years — the same lock-in risk this blueprint protects states from with their runtime vendors, just applied one layer up, to the format the contracts themselves are written in. An open standard already has an ecosystem: validators, code generators, documentation tools, and people who've used it before, none of which this project would have to build or teach from scratch.
+**Why:** Every custom solution carries costs that an established one doesn't: no existing tooling, no developers who already know it, no external validation that it works at scale, and no guarantee it'll be maintained beyond the team that built it. The same lock-in risk this blueprint protects states from with their runtime vendors applies one layer up — to the formats, patterns, and approaches the blueprint itself is built from. An established standard or widely-adopted pattern already has an ecosystem: tooling, documentation, prior art, and people who've encountered its failure modes before. A novel approach has none of that until someone builds it, and the cost of that gap falls on whoever adopts the blueprint.
 
-**In practice:** The API shape is OpenAPI, not a bespoke schema language. Events use CloudEvents and are documented with AsyncAPI, not a custom envelope. Resource schemas and validation rules are JSON Schema, which also means the same schema describing a resource's shape for the API can be referenced by that resource's state machine, instead of maintaining two separate descriptions of the same data. State customizations are JSON Merge Patch, an actual IETF standard, not a purpose-built diffing format. Where no established standard exists — expressing form conditions and decision rules, for example — the blueprint reaches for the most widely adopted general-purpose option (CEL) rather than inventing something from scratch.
+This applies across the full stack of decisions — not just file formats, but architectural patterns, integration approaches, security protocols, and tooling choices. The question to ask before designing something custom isn't "could I build this?" but "does something that solves this problem already exist and have traction?"
+
+**In practice:** Contract formats use open standards with established tooling ecosystems rather than bespoke alternatives — OpenAPI for APIs, CloudEvents and AsyncAPI for events, JSON Schema for validation, JSON Merge Patch for overlays. Where no established standard covers a need exactly, the blueprint reaches for the most widely adopted general-purpose option rather than inventing from scratch — CEL for expressions rather than a custom DSL, for example. The same principle applies to architectural patterns: the blueprint's use of hexagonal architecture, domain-driven design, event-driven choreography, and statecharts reflects a preference for recognized patterns with documented trade-offs over novel approaches whose failure modes aren't yet known.
 
 *Reference:* [OpenAPI Specification](https://spec.openapis.org/oas/latest.html); [CloudEvents](https://cloudevents.io/); [AsyncAPI](https://www.asyncapi.com/); [JSON Schema](https://json-schema.org/); [CEL (Common Expression Language)](https://cel.dev/).
+
+### 7. DRY (Don't Repeat Yourself)
+
+**Why:** The same piece of knowledge — what an income type looks like, what states a workflow task can be in, what threshold qualifies a household for an expense deduction — will be referenced from many places across the blueprint: the API schema, the state machine that governs lifecycle, the decision rules that produce an eligibility outcome, the overlay that customizes it for a specific state. If each reference carries its own inline copy, those copies will eventually disagree. A field gets added in one place and missed in another. An enum value gets renamed in the canonical definition but not in the five places it was duplicated. A rule gets updated to reflect a policy change in one consumer but not the others. The problem isn't redundancy in isolation — it's that redundancy creates multiple sources of truth, and when they drift, there's no authority to say which one is right. In a system where the contracts are supposed to be the authoritative answer, silent drift between them defeats the point.
+
+**In practice:** Every shared concept is defined once and referenced everywhere it's needed — never redefined inline in a second place that can silently diverge. State-specific customization is a targeted patch against one canonical base, not a fork that duplicates the entire base and accumulates its own divergent history. Decision rules that determine an outcome are encoded once and evaluated wherever that outcome matters, rather than restated in each consumer. The practical consequence is that a policy change — a new income type, a threshold update — happens in one place and flows everywhere that references it, rather than requiring a search for every place the knowledge was duplicated.
+
+*Reference:* Hunt & Thomas, [*The Pragmatic Programmer*](https://pragprog.com/titles/tpp20/the-pragmatic-programmer-20th-anniversary-edition/) ("Don't Repeat Yourself").
 
 ## Where to go deeper
 

@@ -45,6 +45,7 @@ For architects and technical leaders who want the specific, recognized software 
 **Patterns used:**
 
 - **Choreography.** A domain notifies that its own state changed by emitting an event, with no particular consumer in mind; every other domain that cares subscribes and decides independently how to react, with no central coordinator sequencing that reaction across domains. That's what makes it possible to add an entirely new kind of consumer later — an audit trail, a new reporting need — without the producing domain ever needing to change, or even know that consumer exists. This is distinct from Orchestration (§1), which is the right choice when a domain needs a result back to continue its own operation — choreography is specifically for the opposite case, where the producer doesn't need anything back and shouldn't need to know who's listening. Without this, adding a new reaction to an existing event means modifying the producing domain's own code to explicitly call the new consumer, so its change surface grows with every consumer anyone ever adds — and a central coordinator becomes a single place that has to know about every domain's reaction, reintroducing the coupling this was meant to remove. *Reference:* [Fowler, "What do you mean by Event-Driven?"](https://martinfowler.com/articles/201701-event-driven.html); [Fowler, "Orchestration vs. Choreography"](https://martinfowler.com/articles/microservices.html#Orchestration-vs-Choreography).
+- **CQRS (Command Query Responsibility Segregation).** Write operations and read operations use separate models — the write model is the authoritative record owned by the domain; any read-optimized view of that data is built separately, often by a different domain entirely, rather than each domain extending its own write model to serve every possible reader's needs. The mechanism is the same as Choreography above: a consumer subscribes to events and builds its own read model independently. The audit trail is the clearest case — assembled by subscribing to every domain's mutation events, without any domain maintaining its own audit store. Eligibility writing denormalized outcomes back to Intake for caseworker display is another: Eligibility is authoritative for outcomes; Intake holds a read-optimized copy only. Without this, every new read need — a new report, a new aggregated view — gets answered by adding complexity to the originating domain's write model, coupling its internal structure to an ever-growing set of external consumers' requirements. *Reference:* [Fowler, "CQRS"](https://martinfowler.com/bliki/CQRS.html); [Young, "CQRS Documents"](https://cqrs.files.wordpress.com/2010/11/cqrs_documents.pdf).
 
 ### 5. Overlay-based customization
 
@@ -54,9 +55,9 @@ For architects and technical leaders who want the specific, recognized software 
 
 - **JSON Merge Patch** (a standard being borrowed, not an architecture pattern like the others here). A base configuration and a separate, targeted patch file are combined by a build step (this blueprint calls it "resolving") into the final result, so a customization layers on top of an untouched base rather than editing it directly. Without this, upgrading the base later means manually re-merging every state's edits by hand, forever, with divergence guaranteed over time. The merged (base + overlay) output is then checked with the exact same validation as the base itself, not a separate or looser pass — without that, an overlay could silently produce something structurally broken (a link pointing to something that no longer exists, or data that doesn't match its required shape) that nobody catches until the system is actually live and being used. *Reference:* [JSON Merge Patch, RFC 7396](https://www.rfc-editor.org/rfc/rfc7396); [Kubernetes Kustomize overlays](https://kubectl.docs.kubernetes.io/references/kustomize/) (same technique, different domain).
 
-### 6. Prefer open standards over bespoke formats
+### 6. Prefer established over novel
 
-*Why this matters:* see [Architecture Philosophy §6](architecture-philosophy.md#6-prefer-open-standards-over-bespoke-formats).
+*Why this matters:* see [Architecture Philosophy §6](architecture-philosophy.md#6-prefer-established-over-novel).
 
 **Patterns used:**
 
@@ -64,6 +65,15 @@ For architects and technical leaders who want the specific, recognized software 
 - **CloudEvents / AsyncAPI.** CloudEvents standardizes the envelope every event in this blueprint is wrapped in (type, source, time, data), so any tool built to consume CloudEvents works here without modification; AsyncAPI documents the event contracts the same way OpenAPI documents REST contracts. Without this, a custom event envelope means every consumer — internal, or a state's own tooling — has to be taught this project's specific format instead of one an event-driven system would already understand. *Reference:* [CloudEvents](https://cloudevents.io/); [AsyncAPI](https://www.asyncapi.com/).
 - **JSON Schema.** Validation rules for a resource's shape are expressed in JSON Schema, not a bespoke validation DSL, so any existing JSON Schema validator can check a request or an overlay's output without this project writing and maintaining its own. *Reference:* [JSON Schema](https://json-schema.org/).
 - **CEL (Common Expression Language).** Conditions inside decision rules, form visibility, SLA timers, and metric filters are expressed in CEL rather than a purpose-built expression language — already used by Kubernetes and other infrastructure projects, with parsers and evaluators available off the shelf. Without this, every consumer of a condition — the mock server, a production adapter, a future tool — needs its own hand-written interpreter for a format that exists nowhere else. *Reference:* [CEL (Common Expression Language)](https://cel.dev/).
+
+### 7. DRY (Don't Repeat Yourself)
+
+*Why this matters:* see [Architecture Philosophy §7](architecture-philosophy.md#7-dry-dont-repeat-yourself).
+
+**Patterns used:**
+
+- **Schema composition by reference** (JSON Schema `$ref` / OpenAPI Components). A shared concept — a status enum, a paginated list shape, a common identifier type — is defined once in a shared component and referenced from every spec that needs it, rather than each spec inlining its own copy. A policy change updates one definition and flows to every reference automatically; a structural inconsistency between two copies becomes impossible by construction, because there is only one copy. *Reference:* [JSON Schema `$ref`](https://json-schema.org/understanding-json-schema/structuring); [OpenAPI Components](https://spec.openapis.org/oas/latest.html#components-object).
+- **Patch-based customization** (already covered in §5, referenced here for completeness). State customizations are expressed as targeted patches against an unmodified base — each state defines only what it changes, not a full copy of the entire base. This is DRY applied at the state customization layer: a base update propagates everywhere rather than requiring each state to manually incorporate it into its own divergent fork.
 
 ## Where to go deeper
 
