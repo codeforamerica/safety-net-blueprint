@@ -123,7 +123,7 @@ else
 fi
 
 step "Running blueprint-mock-server integration tests"
-if node packages/blueprint-mock-server/tests/run-tests.js --integration --contracts=packages/generated/contracts --raw-contracts=packages/safety-net-contracts/src 2>&1; then
+if node packages/blueprint-mock-server/tests/run-tests.js --integration --contracts=packages/generated/contracts --raw-contracts=packages/safety-net-contracts/src --stop 2>&1; then
   pass "Integration tests passed"
 else
   fail "Integration tests failed"
