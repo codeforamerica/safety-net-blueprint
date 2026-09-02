@@ -417,6 +417,8 @@ machines:
             conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
         transition: {from: [pending, inconclusive], to: satisfied}
         steps:
+          - set: {field: reviewedBy, value: $actor.id, description: Record the caseworker who accepted the electronic result}
+          - set: {field: reviewedAt, value: $now, description: Record when the caseworker accepted the electronic result}
           - emit: {type: intake.verification.accepted, data: {reason: $request.reason}, description: Emit intake.verification.accepted — caseworker has reviewed and accepted the electronic evidence as sufficient}
     events:
       - type: intake.verification.created
