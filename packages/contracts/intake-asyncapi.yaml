@@ -109,6 +109,12 @@ channels:
       verificationWaived:
         $ref: '#/components/messages/VerificationWaivedMessage'
 
+  intake.verification.accepted:
+    address: intake.verification.accepted
+    messages:
+      verificationAccepted:
+        $ref: '#/components/messages/VerificationAcceptedMessage'
+
   intake.verification.cannot_verify:
     address: intake.verification.cannot_verify
     messages:
@@ -206,6 +212,12 @@ components:
       summary: Signals the obligation is fulfilled.
       payload:
         $ref: '#/components/schemas/VerificationSatisfiedEvent'
+
+    VerificationAcceptedMessage:
+      name: intake.verification.accepted
+      summary: Caseworker has reviewed and accepted electronic evidence as sufficient to satisfy the obligation.
+      payload:
+        $ref: '#/components/schemas/VerificationAcceptedEvent'
 
     VerificationCannotVerifyMessage:
       name: intake.verification.cannot_verify
@@ -454,6 +466,26 @@ components:
               const: intake.verification.waived
             data:
               $ref: '#/components/schemas/VerificationWaivedData'
+
+    # subject: verificationId
+    VerificationAcceptedEvent:
+      allOf:
+        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.verification.accepted
+            data:
+              $ref: '#/components/schemas/VerificationAcceptedData'
+
+    VerificationAcceptedData:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          description: Why the caseworker accepted the electronic result as sufficient.
 
     VerificationWaivedData:
       type: object
