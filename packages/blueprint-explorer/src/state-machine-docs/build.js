@@ -1,10 +1,10 @@
 import { readdirSync, readFileSync, rmSync, mkdirSync } from 'fs';
-import { dirname, join, resolve } from 'path';
+import { dirname, join, resolve, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { load } from 'js-yaml';
 import { generate, generateOverview, generateEventsPage } from './generate.js';
 import { buildEventIndex } from '@codeforamerica/blueprint-core';
-import { generateHtml, generateOverviewHtml } from './generate-html.js';
+import { generateHtml, generateOverviewHtml, generateEventsHtml } from './generate-html.js';
 import { resolvedDir } from '../lib/paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -16,6 +16,7 @@ if (!contentArg) {
 }
 const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
 const outputDir = join(contentDir, 'state-machine-docs');
+const hubHref = relative(outputDir, join(contentDir, 'index.html'));
 mkdirSync(outputDir, { recursive: true });
 readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(join(outputDir, f)));
 
@@ -41,10 +42,11 @@ console.log(`Generating state machine docs for ${domainFiles.length} domain(s)..
 
 for (const file of domainFiles) {
   generate(file, outputDir, eventIndex, allStateMachines);
-  generateHtml(file, outputDir, eventIndex, allStateMachines);
+  generateHtml(file, outputDir, eventIndex, allStateMachines, hubHref);
 }
 
 generateOverview(allStateMachines, outputDir);
-generateOverviewHtml(allStateMachines, outputDir, eventIndex);
+generateOverviewHtml(allStateMachines, outputDir, eventIndex, hubHref);
 generateEventsPage(eventIndex, allStateMachines, outputDir);
+generateEventsHtml(eventIndex, allStateMachines, outputDir, hubHref);
 console.log('Done.');

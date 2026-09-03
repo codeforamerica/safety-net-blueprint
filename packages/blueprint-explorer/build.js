@@ -32,6 +32,7 @@ import { readdirSync, rmSync, existsSync } from 'fs';
 import { resolve, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
+import { loadConfig } from './src/lib/config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const node = process.execPath;
@@ -49,6 +50,9 @@ if (!contentArg || !resolvedArg) {
 }
 
 const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
+
+// Validate config early — fails fast before any tools run.
+loadConfig(contentDir);
 
 const resolvedDir = resolve(process.cwd(), resolvedArg.slice('--resolved='.length));
 
@@ -78,8 +82,8 @@ if (buildSeqDiagrams) {
   const seqConfigDir = resolve(contentDir, 'sequence-diagrams', 'config');
   const seqOutDir    = resolve(contentDir, 'sequence-diagrams');
   execFileSync(node, [resolve(seqSrcDir, 'validate-config.js'), `--config-dir=${seqConfigDir}`, ...fwdResolved], { stdio: 'inherit' });
-  execFileSync(node, [resolve(seqSrcDir, 'render-action-flow.js'), seqOutDir, `--config-dir=${seqConfigDir}`, ...fwdResolved], { stdio: 'inherit' });
-  execFileSync(node, [resolve(seqSrcDir, 'build-phases-html.js'), seqOutDir, `--config-dir=${seqConfigDir}`, ...fwdResolved], { stdio: 'inherit' });
+  execFileSync(node, [resolve(seqSrcDir, 'render-action-flow.js'), seqOutDir, `--config-dir=${seqConfigDir}`, ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
+  execFileSync(node, [resolve(seqSrcDir, 'build-phases-html.js'), seqOutDir, seqOutDir, `--config-dir=${seqConfigDir}`, ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
 }
 
 // ── Data dictionaries (reads contracts directly — subprocess) ─────────────────

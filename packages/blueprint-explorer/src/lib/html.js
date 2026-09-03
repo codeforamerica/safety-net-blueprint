@@ -103,7 +103,12 @@ export const HEADER_CODE_STYLE = `color:rgba(255,255,255,0.8);background:rgba(25
  */
 export function headerMetaSubtitle(domain, pairs, trailingHtml = '') {
   const c = HEADER_CODE_STYLE;
-  const pairsHtml = pairs.map(([label, value]) => `${label}: <code style="${c}">${esc(value)}</code>`).join(' · ');
+  const pairsHtml = pairs.map(([label, value, href]) => {
+    const inner = href
+      ? `<a href="${href}" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="${c}">${esc(value)}</code></a>`
+      : `<code style="${c}">${esc(value)}</code>`;
+    return `${label}: ${inner}`;
+  }).join(' · ');
   const trailing = trailingHtml ? `<span style="margin-left:auto;">${trailingHtml}</span>` : '';
   return `<div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="${c}">${esc(domain)}</code> · ${pairsHtml}${trailing}</div>`;
 }

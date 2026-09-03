@@ -1,12 +1,16 @@
 name: "Safety Net Blueprint"
-github: "https://github.com/codeforamerica/safety-net-blueprint"
+repo:
+  url: "https://github.com/codeforamerica/safety-net-blueprint"
+  branch: "refactor/blueprint-core-package"
+  spec_path: "packages/safety-net-contracts/src"
+  link_template: "{url}/blob/{branch}/{spec_path}"
 
 # Optional hero links shown in the explorer hub (e.g. for leadership audiences)
 featured_links:
   - label: "Executive Summary"
     href: "authored/executive-summary.html"
-  - label: "Slide Deck"
-    href: "authored/adoption-model.html"
+  - label: "Architecture Principles"
+    href: "authored/architecture-principles.html"
 
 # Cross-cutting concerns shown as a banner on the context-map overview.
 cross_cutting:

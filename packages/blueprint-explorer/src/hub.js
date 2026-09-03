@@ -14,10 +14,10 @@
  *              Defaults to ../safety-net-explorer.
  */
 
-import { readFileSync, readdirSync, writeFileSync, existsSync } from 'fs';
+import { readdirSync, writeFileSync, existsSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import yaml from 'js-yaml';
+import { loadConfig } from './lib/config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -30,9 +30,9 @@ const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length))
 
 // ── Load content config ───────────────────────────────────────────────────────
 
-const hubConfig     = yaml.load(readFileSync(join(contentDir, 'config.yaml'), 'utf8'));
+const hubConfig     = loadConfig(contentDir);
 const projectName   = hubConfig.name;
-const githubUrl     = hubConfig.github;
+const repoUrl       = hubConfig.repo?.url;
 const featuredLinks = hubConfig.featured_links ?? [];
 
 // ── Directory scanning ────────────────────────────────────────────────────────
@@ -184,20 +184,6 @@ const html = `<!DOCTYPE html>
         radial-gradient(circle at 20% 50%, rgba(194,192,232,0.12) 0%, transparent 50%),
         radial-gradient(circle at 80% 20%, rgba(0,173,147,0.08) 0%, transparent 40%);
       pointer-events: none;
-    }
-
-    .hero-badge {
-      display: inline-block;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 100px;
-      padding: 0.25rem 0.875rem;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--light-blue);
-      margin-bottom: 1.25rem;
     }
 
     .hero h2 {
@@ -450,13 +436,12 @@ const html = `<!DOCTYPE html>
       <h1>${projectName}</h1>
     </div>
     <nav>
-      <a href="${githubUrl}">GitHub</a>
+      <a href="${repoUrl}">GitHub</a>
     </nav>
   </header>
 
   <div class="hero">
-    <div class="hero-badge">Explorer</div>
-    <h2>Systems integration artifacts</h2>
+    <h2>${projectName} Explorer</h2>
     <p>Diagrams, tools, and reference outputs for the ${projectName} — a shared contract layer for state benefits programs.</p>${featuredLinksHtml}
   </div>
 
@@ -638,7 +623,7 @@ const html = `<!DOCTYPE html>
   </main>
 
   <footer>
-    <a href="${githubUrl}">${projectName}</a>
+    <a href="${repoUrl}">${projectName}</a>
     &nbsp;·&nbsp;
     Code for America
   </footer>

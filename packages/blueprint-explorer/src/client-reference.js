@@ -17,12 +17,13 @@
  */
 
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'fs';
-import { resolve, dirname, join, basename } from 'path';
+import { resolve, dirname, join, basename, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { COLORS } from './lib/theme.js';
 import { esc, titleCase, headerMetaSubtitle } from './lib/html.js';
 import { twoColumnPage, singleColumnPage } from './lib/layout.js';
 import { resolvedDir, resolvedSourcePairs } from './lib/paths.js';
+import { loadConfig } from './lib/config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const clientsArg = process.argv.find(a => a.startsWith('--clients='));
@@ -37,6 +38,8 @@ const clientsBase = resolve(process.cwd(), clientsArg.slice('--clients='.length)
 const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
 const generatedClientsDir = clientsBase;
 const outputDir = resolve(contentDir, 'client-reference');
+const hubHref = relative(outputDir, join(contentDir, 'index.html'));
+const { name: projectName, repo } = loadConfig(contentDir);
 mkdirSync(outputDir, { recursive: true });
 readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(join(outputDir, f)));
 
@@ -465,7 +468,7 @@ function buildDomainPage(d) {
 
   // Group endpoints by primary resource derived from URL.
   // Clients are generated from OpenAPI, so exclude asyncapi from source metadata.
-  const sourcePairs = resolvedSourcePairs(d.slug, { include: SOURCE_SUFFIXES });
+  const sourcePairs = resolvedSourcePairs(d.slug, { include: SOURCE_SUFFIXES }, repo);
 
   const groups = new Map();
   for (const ep of d.endpoints) {
@@ -531,9 +534,9 @@ function buildDomainPage(d) {
   const mainHtml = methodsMainHtml + constantsSectionHtml + typesSectionHtml;
 
   const html = twoColumnPage({
-    title: `Safety Net Blueprint \u2014 Client Reference: ${esc(d.label)}`,
+    title: `${projectName} \u2014 Client Reference: ${esc(d.label)}`,
     breadcrumbs: [
-      { label: 'Explorer',         href: '../../index.html' },
+      { label: 'Explorer',         href: hubHref },
       { label: 'Client Reference', href: 'index.html'       },
       { label: d.label },
     ],
@@ -656,9 +659,9 @@ function buildHelperPage(helper) {
     </div>`).join('');
 
   const html = singleColumnPage({
-    title: `Safety Net Blueprint \u2014 Client Reference: ${esc(helper.label)}`,
+    title: `${projectName} \u2014 Client Reference: ${esc(helper.label)}`,
     breadcrumbs: [
-      { label: 'Explorer',         href: '../../index.html' },
+      { label: 'Explorer',         href: hubHref },
       { label: 'Client Reference', href: 'index.html'       },
       { label: helper.label                                  },
     ],
@@ -710,9 +713,9 @@ function buildIndexPage() {
     </a>`).join('');
 
   const html = singleColumnPage({
-    title: 'Safety Net Blueprint \u2014 Client Reference',
+    title: `${projectName} \u2014 Client Reference`,
     breadcrumbs: [
-      { label: 'Explorer',         href: '../../index.html' },
+      { label: 'Explorer',         href: hubHref },
       { label: 'Client Reference'                           },
     ],
     bodyHtml: `

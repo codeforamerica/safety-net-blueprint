@@ -8,20 +8,25 @@
  */
 
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'fs';
-import { resolve, dirname, basename, extname } from 'path';
+import { resolve, dirname, basename, extname, relative, join } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
+import { loadConfig } from '../lib/config.js';
 import { COLORS, FONT } from '../lib/theme.js';
 import { esc, titleCase, breadcrumb, statusBadge } from '../lib/html.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const args         = process.argv.slice(2);
 const configDirArg = args.find(a => a.startsWith('--config-dir='));
+const contentArg   = args.find(a => a.startsWith('--content='));
 const positional   = args.filter(a => !a.startsWith('--'));
 const configDir    = configDirArg ? resolve(configDirArg.slice('--config-dir='.length)) : resolve(__dirname, '../config');
 const configPath   = resolve(configDir, 'index-config.yaml');
 const distDir      = positional[0] ? resolve(positional[0]) : resolve(__dirname, '../dist');
 const outDir       = positional[1] ? resolve(positional[1]) : resolve(__dirname, '..');
+const contentDir   = contentArg ? resolve(contentArg.slice('--content='.length)) : null;
+const { name: projectName, repo } = contentDir ? loadConfig(contentDir) : { name: 'Blueprint', repo: null };
+const hubHref      = contentDir ? relative(outDir, join(contentDir, 'index.html')) : '../index.html';
 mkdirSync(outDir, { recursive: true });
 
 const config  = yaml.load(readFileSync(configPath, 'utf8'));
@@ -100,7 +105,7 @@ const indexHtml = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Safety Net Blueprint — Sequence Diagrams</title>
+  <title>${projectName} — Sequence Diagrams</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: ${FONT}; background: ${COLORS.bg}; color: ${COLORS.text}; min-height: 100vh; }
@@ -118,7 +123,7 @@ const indexHtml = `<!DOCTYPE html>
 </head>
 <body>
 
-  ${breadcrumb([{ label: 'Explorer', href: '../../index.html' }, { label: 'Sequence Diagrams' }])}
+  ${breadcrumb([{ label: 'Explorer', href: hubHref }, { label: 'Sequence Diagrams' }])}
 
   <div class="page-title">
     <h2>Sequence Diagrams</h2>
@@ -140,7 +145,7 @@ const indexHtml = `<!DOCTYPE html>
   </div>
 
   <footer>
-    <a href="https://github.com/codeforamerica/safety-net-blueprint">Safety Net Blueprint</a>
+    <a href="${repo?.url ?? '#'}">${projectName}</a>
     &nbsp;·&nbsp; Code for America
   </footer>
 
@@ -176,7 +181,7 @@ if (existsSync(distDir)) {
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Safety Net Blueprint \u2014 ${id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</title>
+  <title>${projectName} \u2014 ${id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: ${FONT}; background: ${COLORS.bg}; }

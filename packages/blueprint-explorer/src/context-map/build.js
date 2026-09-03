@@ -43,7 +43,7 @@ try {
   renderContextMap(enrichedConfig, mapConfig, fragDir);
   execFileSync(node, [
     resolve(__dirname, 'build-html.js'),
-    fragDir, outDir, `--config=${mapConfigPath}`,
+    fragDir, outDir, `--config=${mapConfigPath}`, `--content=${contentDir}`,
   ], { stdio: 'inherit' });
 } finally {
   rmSync(fragDir, { recursive: true, force: true });

@@ -14,7 +14,7 @@
  */
 
 import { writeFileSync, readdirSync, mkdirSync, rmSync } from 'fs';
-import { resolve, dirname, basename } from 'path';
+import { resolve, dirname, basename, relative, join } from 'path';
 import { fileURLToPath } from 'url';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { COLORS, FONT } from './lib/theme.js';
@@ -23,6 +23,7 @@ import { inlineMd, renderMarkdown } from './lib/markdown.js';
 import { twoColumnPage, singleColumnPage } from './lib/layout.js';
 import { resolvedDir, resolvedSourcePairs } from './lib/paths.js';
 import { resolveExternalDefRef, loadContractFiles, loadExternalRefs } from '@codeforamerica/blueprint-core';
+import { loadConfig } from './lib/config.js';
 
 const __dirname  = dirname(fileURLToPath(import.meta.url));
 
@@ -35,6 +36,8 @@ if (!contentArg) {
 }
 const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
 const outDir = resolve(contentDir, 'api-reference');
+const hubHref = relative(outDir, join(contentDir, 'index.html'));
+const { name: projectName, repo } = loadConfig(contentDir);
 mkdirSync(outDir, { recursive: true });
 readdirSync(outDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(resolve(outDir, f)));
 
@@ -569,7 +572,7 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
 // ── Domain page ───────────────────────────────────────────────────────────
 
 function buildDomainPage({ slug, spec, raw, fileMap = new Map() }) {
-  const metaSubtitle = headerMetaSubtitle(slug, resolvedSourcePairs(slug, { include: SOURCE_SUFFIXES }));
+  const metaSubtitle = headerMetaSubtitle(slug, resolvedSourcePairs(slug, { include: SOURCE_SUFFIXES }, repo));
 
   const info       = spec.info ?? {};
   const paths      = spec.paths ?? {};
@@ -695,9 +698,9 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map() }) {
     ${sections}`;
 
   return twoColumnPage({
-    title: `Safety Net Blueprint \u2014 ${esc(info.title ?? slug)}`,
+    title: `${projectName} \u2014 ${esc(info.title ?? slug)}`,
     breadcrumbs: [
-      { label: 'Explorer',      href: '../../index.html' },
+      { label: 'Explorer',      href: hubHref },
       { label: 'API Reference', href: 'index.html'       },
       { label: info.title ?? slug },
     ],
@@ -769,7 +772,7 @@ function buildIndexPage(entries) {
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Safety Net Blueprint \u2014 API Reference</title>
+  <title>${projectName} \u2014 API Reference</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: ${FONT}; background: ${COLORS.bg}; color: ${COLORS.text}; min-height: 100vh; }
@@ -778,7 +781,7 @@ function buildIndexPage(entries) {
 <body>
 
   ${breadcrumb([
-    { label: 'Explorer',      href: '../../index.html' },
+    { label: 'Explorer',      href: hubHref },
     { label: 'API Reference' },
   ])}
 
@@ -794,7 +797,7 @@ function buildIndexPage(entries) {
   </div>
 
   <footer style="border-top:1px solid ${COLORS.sandDark};background:${COLORS.white};padding:1.5rem 2rem;text-align:center;font-size:12px;color:${COLORS.textLight};">
-    <a href="https://github.com/codeforamerica/safety-net-blueprint" style="color:${COLORS.midBlue};text-decoration:none;">Safety Net Blueprint</a>
+    <a href="${repo?.url ?? '#'}" style="color:${COLORS.midBlue};text-decoration:none;">${projectName}</a>
     &nbsp;·&nbsp; Code for America
   </footer>
 

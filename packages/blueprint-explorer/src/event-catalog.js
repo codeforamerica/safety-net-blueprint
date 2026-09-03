@@ -8,7 +8,7 @@
  */
 
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'fs';
-import { dirname, join, resolve } from 'path';
+import { dirname, join, resolve, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { load } from 'js-yaml';
 import { buildEventIndex } from '@codeforamerica/blueprint-core';
@@ -16,6 +16,7 @@ import { COLORS, FONT } from './lib/theme.js';
 import { esc as h, titleCase, breadcrumb } from './lib/html.js';
 import { singleColumnPage } from './lib/layout.js';
 import { resolvedDir } from './lib/paths.js';
+import { loadConfig } from './lib/config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -26,6 +27,8 @@ if (!contentArg) {
 }
 const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
 const outputDir = join(contentDir, 'event-catalog');
+const hubHref = relative(outputDir, join(contentDir, 'index.html'));
+const { name: projectName } = loadConfig(contentDir);
 mkdirSync(outputDir, { recursive: true });
 readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(join(outputDir, f)));
 
@@ -79,8 +82,8 @@ const orphanSection = noPublisher.length ? `
 // ── HTML page ─────────────────────────────────────────────────────────────────
 
 const html = singleColumnPage({
-  title: 'Safety Net Blueprint \u2014 Event Catalog',
-  breadcrumbs: [{ label: 'Explorer', href: '../../index.html' }, { label: 'Event Catalog' }],
+  title: `${projectName} \u2014 Event Catalog`,
+  breadcrumbs: [{ label: 'Explorer', href: hubHref }, { label: 'Event Catalog' }],
   bodyHtml: `
   <div style="max-width:960px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
     <h1 style="font-size:1.5rem;font-weight:800;color:${COLORS.darkBlue};margin-bottom:0.375rem;">Event Catalog</h1>

@@ -11,9 +11,10 @@
  */
 
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, rmSync } from 'fs';
-import { resolve, dirname, basename, extname } from 'path';
+import { resolve, dirname, basename, extname, relative, join } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
+import { loadConfig } from '../lib/config.js';
 import { COLORS, FONT } from '../lib/theme.js';
 import { breadcrumb } from '../lib/html.js';
 
@@ -22,11 +23,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // srcDir: where render.js wrote the fragments
 // outDir: where to write per-page HTML files
 // --config=<path>: path to context-map config.yaml (contains nav definition)
-const args      = process.argv.slice(2);
-const configArg = args.find(a => a.startsWith('--config='));
+const args       = process.argv.slice(2);
+const configArg  = args.find(a => a.startsWith('--config='));
+const contentArg = args.find(a => a.startsWith('--content='));
 const positional = args.filter(a => !a.startsWith('--'));
-const srcDir    = positional[0] ? resolve(positional[0]) : resolve(__dirname, '../dist');
-const outDir    = positional[1] ? resolve(positional[1]) : resolve(__dirname, '..');
+const srcDir     = positional[0] ? resolve(positional[0]) : resolve(__dirname, '../dist');
+const outDir     = positional[1] ? resolve(positional[1]) : resolve(__dirname, '..');
+const contentDir = contentArg ? resolve(contentArg.slice('--content='.length)) : null;
+const hubHref    = contentDir ? relative(outDir, join(contentDir, 'index.html')) : '../../index.html';
+const { name: projectName } = contentDir ? loadConfig(contentDir) : { name: 'Blueprint' };
 mkdirSync(outDir, { recursive: true });
 readdirSync(outDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(resolve(outDir, f)));
 
@@ -81,7 +86,7 @@ function buildPage(fragmentName, svgContent) {
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Safety Net Blueprint \u2014 Context Map \u2014 ${pageTitle}</title>
+  <title>${projectName} \u2014 Context Map \u2014 ${pageTitle}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: ${FONT}; background: ${COLORS.bg}; }
@@ -90,7 +95,7 @@ function buildPage(fragmentName, svgContent) {
   </style>
 </head>
 <body>
-  ${breadcrumb([{ label: 'Explorer', href: '../../index.html' }, { label: 'Context Map', href: 'domains.html' }, { label: pageTitle }])}
+  ${breadcrumb([{ label: 'Explorer', href: hubHref }, { label: 'Context Map', href: 'domains.html' }, { label: pageTitle }])}
   ${nav}
   <div id="container">
     <div id="map-wrapper">

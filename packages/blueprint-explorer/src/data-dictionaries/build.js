@@ -9,7 +9,7 @@
  */
 
 import { readFileSync, writeFileSync, readdirSync, existsSync, rmSync, mkdirSync } from 'fs';
-import { resolve, dirname, sep } from 'path';
+import { resolve, dirname, sep, relative, join } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { loadAnnotations } from '@codeforamerica/blueprint-core/annotations';
@@ -19,6 +19,7 @@ import { COLORS } from '../lib/theme.js';
 import { esc as h, titleCase, breadcrumb, headerMetaSubtitle, HEADER_CODE_STYLE } from '../lib/html.js';
 import { twoColumnPage, singleColumnPage } from '../lib/layout.js';
 import { resolvedDir, resolvedSourcePairs } from '../lib/paths.js';
+import { loadConfig } from '../lib/config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -29,6 +30,8 @@ if (!contentArg) {
 }
 const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
 const outputDir = resolve(contentDir, 'data-dictionaries');
+const hubHref = relative(outputDir, join(contentDir, 'index.html'));
+const { name: projectName, repo } = loadConfig(contentDir);
 const PROJECT_ROOT  = resolve(__dirname, '../../..');
 mkdirSync(outputDir, { recursive: true });
 readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(resolve(outputDir, f)));
@@ -328,13 +331,13 @@ function buildIndexPage(domains) {
   }).join('');
 
   return singleColumnPage({
-    title: 'Safety Net Blueprint \u2014 Data Dictionary',
-    breadcrumbs: [{ label: 'Explorer', href: '../../index.html' }, { label: 'Data Dictionary' }],
+    title: `${projectName} \u2014 Data Dictionary`,
+    breadcrumbs: [{ label: 'Explorer', href: hubHref }, { label: 'Data Dictionary' }],
     bodyHtml: `
       <div class="index-layout">
         <div class="index-header">
           <h1>Data Dictionary</h1>
-          <p class="index-sub">Field-level reference for the Safety Net Blueprint data model. Select a domain to browse its fields.</p>
+          <p class="index-sub">Field-level reference for the ${projectName} data model. Select a domain to browse its fields.</p>
         </div>
         <div class="domain-grid">${cards}</div>
       </div>`,
@@ -351,7 +354,7 @@ function buildDomainPage(domain, sections, resolveAnn) {
     return `<a href="#${h(id)}" class="nav-link">${h(s.name)} <span class="nav-count">${s.fields.length}</span></a>`;
   }).join('');
 
-  const metaSubtitle = headerMetaSubtitle(domain, resolvedSourcePairs(domain, { include: SOURCE_SUFFIXES }));
+  const metaSubtitle = headerMetaSubtitle(domain, resolvedSourcePairs(domain, { include: SOURCE_SUFFIXES }, repo));
 
   const mainHtml = sections.map(s => {
     const id = `sec-${s.name}`;
@@ -372,9 +375,9 @@ function buildDomainPage(domain, sections, resolveAnn) {
   </div>`;
 
   return twoColumnPage({
-    title: `Safety Net Blueprint \u2014 Data Dictionary \u2014 ${h(label)}`,
+    title: `${projectName} \u2014 Data Dictionary \u2014 ${h(label)}`,
     breadcrumbs: [
-      { label: 'Explorer',        href: '../../index.html' },
+      { label: 'Explorer',        href: hubHref },
       { label: 'Data Dictionary', href: 'index.html'       },
       { label: label },
     ],

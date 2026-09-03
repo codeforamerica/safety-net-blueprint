@@ -25,16 +25,38 @@ const LABEL_MAP = {
 const PRIORITY = ['openapi', 'state-machine'];
 
 /**
+ * Build a source file link from repo config and a path relative to the resolved dir.
+ * Returns null if repo.url is not configured.
+ *
+ * @param {object|null} repo  - The repo object from config.yaml
+ * @param {string} relPath    - Path relative to the resolved contracts dir (mirrors source structure)
+ * @returns {string|null}
+ */
+export function buildSpecLink(repo, relPath) {
+  if (!repo?.url) return null;
+  const template = repo.link_template ?? '{url}/blob/{branch}/{spec_path}';
+  const branch = repo.branch ?? 'main';
+  const normalized = relPath.replace(/\\/g, '/');
+  const fullPath = repo.spec_path ? `${repo.spec_path}/${normalized}` : normalized;
+  return template
+    .replace('{url}', repo.url)
+    .replace('{branch}', branch)
+    .replace('{spec_path}', fullPath);
+}
+
+/**
  * Dynamically discover all resolved source files for a domain slug.
- * Returns [['Label', 'resolved/{file}']] — API spec and state machine first,
- * then remaining files alphabetically. annotations-docs is merged into annotations.
+ * Returns [label, filename, href?] tuples — href present when repo config is provided.
+ * API spec and state machine first, then remaining files alphabetically.
+ * annotations-docs is merged into annotations.
  *
  * @param {string} slug  - domain slug, e.g. 'intake'
  * @param {{ include?: string[], exclude?: string[] }} [opts]
  *   include — only show these suffixes (e.g. ['openapi', 'state-machine']); if omitted, show all
  *   exclude — suffixes to omit (ignored when include is set)
+ * @param {object|null} [repo] - repo config from config.yaml; if provided, pairs include a link href
  */
-export function resolvedSourcePairs(slug, { include, exclude = [] } = {}) {
+export function resolvedSourcePairs(slug, { include, exclude = [] } = {}, repo = null) {
   if (!existsSync(resolvedDir)) return [];
 
   // Collect all matching relative paths — search recursively since resolved
@@ -65,6 +87,8 @@ export function resolvedSourcePairs(slug, { include, exclude = [] } = {}) {
 
   return [...priorityEntries, ...restEntries].map(([suffix, relPath]) => {
     const label = LABEL_MAP[suffix] ?? suffix.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    return [label, `packages/generated/contracts/${relPath}`];
+    const filename = basename(relPath);
+    const href = buildSpecLink(repo, relPath);
+    return href ? [label, filename, href] : [label, filename];
   });
 }

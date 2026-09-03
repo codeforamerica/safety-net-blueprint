@@ -10,10 +10,29 @@
       "description": "Display name for the project (used in hub title and footer).",
       "type": "string"
     },
-    "github": {
-      "description": "GitHub repository URL (used in hub nav and footer).",
-      "type": "string",
-      "format": "uri"
+    "repo": {
+      "description": "Source repository configuration for generating spec links in the explorer.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "description": "Repository base URL.",
+          "type": "string",
+          "format": "uri"
+        },
+        "branch": {
+          "description": "Branch to link to. Defaults to 'main' if omitted.",
+          "type": "string"
+        },
+        "spec_path": {
+          "description": "Path from the repository root to the source contracts directory.",
+          "type": "string"
+        },
+        "link_template": {
+          "description": "URL template for spec links. Placeholders: {url}, {branch}, {spec_path}. Defaults to '{url}/blob/{branch}/{spec_path}'.",
+          "type": "string"
+        }
+      }
     },
     "featured_links": {
       "description": "Optional hero links shown in the explorer hub (e.g. for leadership audiences).",
@@ -144,7 +163,7 @@
     "flows": {
       "description": "Ordered sequences of steps for key business processes. Used to generate sequence diagrams in the context map.",
       "type": "array",
-      "items": { "$ref": "#/definitions/Flow" }
+      "items": { "type": "object" }
     }
   },
   "definitions": {
@@ -169,7 +188,6 @@
       "description": "A named sequence of steps representing a key business process.",
       "type": "object",
       "required": ["id", "label", "domain", "participants", "steps"],
-      "additionalProperties": false,
       "properties": {
         "id": {
           "description": "Unique identifier. Must be snake_case. Used as the navigation target for ref steps.",
@@ -254,7 +272,6 @@
       "description": "A directed action or API call from one participant to another, drawn as a labeled arrow.",
       "type": "object",
       "required": ["label", "from", "to"],
-      "additionalProperties": false,
       "properties": {
         "label": {
           "description": "Short label shown on the arrow.",
@@ -302,7 +319,6 @@
       "description": "An internal action taken by a single participant, drawn as a self-loop or inline note in its swimlane.",
       "type": "object",
       "required": ["self", "label"],
-      "additionalProperties": false,
       "properties": {
         "self": {
           "description": "Participant ID performing the internal action. Must appear in the flow's participants list.",
@@ -342,7 +358,6 @@
       "description": "An asynchronous domain event emitted by one participant and received by another, drawn as a dashed arrow.",
       "type": "object",
       "required": ["event", "from", "to"],
-      "additionalProperties": false,
       "properties": {
         "event": {
           "description": "Event name, matching an entry in the events registry.",
@@ -374,7 +389,6 @@
       "description": "A visual grouping box with no conditional semantics. Groups related steps under an implicit label derived from the fragment identifier.",
       "type": "object",
       "required": ["fragment", "steps"],
-      "additionalProperties": false,
       "properties": {
         "fragment": {
           "description": "Unique identifier for this fragment within the flow. Used as the implicit label in the diagram.",
@@ -392,7 +406,6 @@
       "description": "A conditional block ('opt' in UML sequence diagram notation). The labeled condition is shown in the fragment header; steps inside execute only when the condition is met.",
       "type": "object",
       "required": ["fragment", "type", "label", "steps"],
-      "additionalProperties": false,
       "properties": {
         "fragment": {
           "description": "Unique identifier for this fragment within the flow.",
@@ -418,7 +431,6 @@
       "description": "A parallel block ('par' in UML sequence diagram notation). Operands represent independently triggered branches that occur concurrently.",
       "type": "object",
       "required": ["fragment", "type", "label", "operands"],
-      "additionalProperties": false,
       "properties": {
         "fragment": {
           "description": "Unique identifier for this fragment within the flow.",
@@ -444,7 +456,6 @@
       "description": "A named parallel branch inside a par fragment.",
       "type": "object",
       "required": ["label", "steps"],
-      "additionalProperties": false,
       "properties": {
         "label": {
           "description": "Branch label shown in the par fragment header.",
@@ -462,7 +473,6 @@
       "description": "A clickable navigation box that links to another flow. Shows where the referenced flow fits in context without duplicating its content.",
       "type": "object",
       "required": ["ref"],
-      "additionalProperties": false,
       "properties": {
         "ref": {
           "description": "The id of the flow this step links to. Must match a flow id in the flows list.",

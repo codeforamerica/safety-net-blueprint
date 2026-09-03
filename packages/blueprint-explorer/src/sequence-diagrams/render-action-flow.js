@@ -10,9 +10,10 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync } from 'fs';
-import { resolve, dirname, relative, isAbsolute } from 'path';
+import { resolve, dirname, join, relative, isAbsolute } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
+import { loadConfig } from '../lib/config.js';
 import { COLORS, FONT } from '../lib/theme.js';
 import { esc as escXml, breadcrumb } from '../lib/html.js';
 
@@ -26,6 +27,7 @@ function safeResolve(base, filename) {
 
 const resolvedArg   = process.argv.find(a => a.startsWith('--resolved='));
 const configDirArg  = process.argv.find(a => a.startsWith('--config-dir='));
+const contentArg    = process.argv.find(a => a.startsWith('--content='));
 const contractsDir  = resolvedArg
   ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length))
   : resolve(__dirname, '../../../../resolved');
@@ -34,6 +36,9 @@ const configDir     = configDirArg
   : resolve(__dirname, '../config');
 const positional    = process.argv.slice(2).filter(a => !a.startsWith('--'));
 const outDir        = positional[0] ? resolve(positional[0]) : resolve(__dirname, '..');
+const contentDir    = contentArg ? resolve(contentArg.slice('--content='.length)) : null;
+const { name: projectName, repo } = contentDir ? loadConfig(contentDir) : { name: 'Blueprint', repo: null };
+const hubHref       = contentDir ? relative(outDir, join(contentDir, 'index.html')) : '../index.html';
 mkdirSync(outDir, { recursive: true });
 readdirSync(outDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(resolve(outDir, f)));
 
@@ -758,7 +763,7 @@ for (const def of diagramDefs) {
   </style>
 </head>
 <body>
-  ${breadcrumb([{ label: 'Explorer', href: '../../index.html' }, { label: 'Sequence Diagrams', href: 'index.html' }, { label: escXml(def.title.replace(' \u2014 Event Chain', '')) }])}
+  ${breadcrumb([{ label: 'Explorer', href: hubHref }, { label: 'Sequence Diagrams', href: 'index.html' }, { label: escXml(def.title.replace(' \u2014 Event Chain', '')) }])}
   <div id="container"><div id="map-wrapper">${svg}</div></div>
   <script>
     var w = document.getElementById('map-wrapper');

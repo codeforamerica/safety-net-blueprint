@@ -38,7 +38,7 @@ function stateBadge(stateId) {
 
 // ── Shared HTML shell ─────────────────────────────────────────────────────────
 
-function shell(title, navLinks, body, allDomains) {
+function shell(title, navLinks, body, allDomains, hubHref = '../index.html') {
   const navItems = [
     { label: 'Overview', href: 'index.html' },
     ...allDomains.map(d => ({ label: titleCase(d), href: `${d}.html` })),
@@ -61,7 +61,7 @@ function shell(title, navLinks, body, allDomains) {
   return singleColumnPage({
     title: `${title} — State Machine Docs`,
     breadcrumbs: [
-      { label: 'Explorer',           href: '../../index.html' },
+      { label: 'Explorer',           href: hubHref },
       { label: 'State Machine Docs', href: 'index.html'       },
       { label: activeLabel },
     ],
@@ -180,7 +180,7 @@ function collectStepHtml(steps, sm, machine, eventIndex, allStateMachines) {
 
 // ── Overview page ─────────────────────────────────────────────────────────────
 
-export function generateOverviewHtml(allStateMachines, outputDir, eventIndex) {
+export function generateOverviewHtml(allStateMachines, outputDir, eventIndex, hubHref = '../index.html') {
   mkdirSync(outputDir, { recursive: true });
   const allDomains = allStateMachines.map(sm => sm.domain);
 
@@ -219,14 +219,14 @@ export function generateOverviewHtml(allStateMachines, outputDir, eventIndex) {
 
   writeFileSync(
     path.join(outputDir, 'index.html'),
-    shell('Overview', { active: 'index.html' }, body, allDomains)
+    shell('Overview', { active: 'index.html' }, body, allDomains, hubHref)
   );
   console.log('  wrote index.html');
 }
 
 // ── Domain detail page ────────────────────────────────────────────────────────
 
-export function generateHtml(inputPath, outputDir, eventIndex, allStateMachines) {
+export function generateHtml(inputPath, outputDir, eventIndex, allStateMachines, hubHref = '../index.html') {
   const sm = load(readFileSync(inputPath, 'utf8'));
   mkdirSync(outputDir, { recursive: true });
   const allDomains = allStateMachines.map(s => s.domain);
@@ -345,14 +345,14 @@ export function generateHtml(inputPath, outputDir, eventIndex, allStateMachines)
 
   writeFileSync(
     path.join(outputDir, `${sm.domain}.html`),
-    shell(titleCase(sm.domain), { active: `${sm.domain}.html` }, body, allDomains)
+    shell(titleCase(sm.domain), { active: `${sm.domain}.html` }, body, allDomains, hubHref)
   );
   console.log(`  wrote ${sm.domain}.html`);
 }
 
 // ── Events page ───────────────────────────────────────────────────────────────
 
-export function generateEventsHtml(eventIndex, allStateMachines, outputDir) {
+export function generateEventsHtml(eventIndex, allStateMachines, outputDir, hubHref = '../index.html') {
   mkdirSync(outputDir, { recursive: true });
   const allDomains = allStateMachines.map(sm => sm.domain);
 
@@ -401,7 +401,7 @@ export function generateEventsHtml(eventIndex, allStateMachines, outputDir) {
 
   writeFileSync(
     path.join(outputDir, 'events.html'),
-    shell('Events', { active: 'events.html' }, body, allDomains)
+    shell('Events', { active: 'events.html' }, body, allDomains, hubHref)
   );
   console.log('  wrote events.html');
 }

@@ -11,17 +11,21 @@
  */
 
 import { readFileSync, writeFileSync, readdirSync, mkdirSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
+import { loadConfig } from '../lib/config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const resolvedArg  = process.argv.find(a => a.startsWith('--resolved='));
+const contentArg   = process.argv.find(a => a.startsWith('--content='));
 const contractsDir = resolvedArg
   ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length))
   : resolve(__dirname, '../../../../resolved');
 const configPath   = resolve(__dirname, '../config/index-config.yaml');
 const distDir      = process.argv[2] ? resolve(process.argv[2]) : resolve(__dirname, '../dist');
+const contentDir   = contentArg ? resolve(contentArg.slice('--content='.length)) : null;
+const { name: projectName } = contentDir ? loadConfig(contentDir) : { name: 'Blueprint' };
 mkdirSync(distDir, { recursive: true });
 
 // ── Colors ────────────────────────────────────────────────────────────────────
@@ -327,7 +331,7 @@ function render() {
   // Header
   parts.push(`<rect x="0" y="0" width="${W}" height="${HEADER_H}" fill="${DARK_BLUE}"/>`);
   parts.push(t('Program Processes', W / 2, 27, { size: 13, weight: '700', fill: WHITE }));
-  parts.push(t('Safety Net Blueprint', W - 20, 27, { size: 10, fill: LT_BLUE, anchor: 'end' }));
+  parts.push(t(projectName, W - 20, 27, { size: 10, fill: LT_BLUE, anchor: 'end' }));
 
   // Pool containers + labels
   for (const [id, pool] of Object.entries(POOLS)) {
