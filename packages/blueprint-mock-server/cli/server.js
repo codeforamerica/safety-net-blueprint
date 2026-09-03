@@ -5,7 +5,6 @@
  */
 
 import express from 'express';
-import helmet from 'helmet';
 import cors from 'cors';
 import http from 'http';
 import { execSync, spawn } from 'child_process';
@@ -136,7 +135,6 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
 
     // Create Express app
     const app = express();
-    app.use(helmet());
 
     // Middleware
     app.use(cors({
