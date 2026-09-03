@@ -1,6 +1,6 @@
 # Safety Net Blueprint
 
-A systems integration blueprint for safety net benefits programs. Contract artifacts — OpenAPI specs, state machines, decision rules, metrics, and field metadata — define the full API surface for backend development. States adopt the blueprint, customize it with overlays, and build adapters to their vendor systems. Frontends develop against a mock server without waiting for a production backend.
+A systems integration blueprint for safety net benefits programs, built on a reusable contract-driven development framework. Contract artifacts — OpenAPI specs, state machines, decision rules, metrics, and field metadata — define the full API surface for backend development. States adopt the blueprint, customize it with overlays, and build adapters to their vendor systems. Frontends develop against a mock server without waiting for a production backend.
 
 > **Frontend harness packages** (form engine, safety harness, harness designer) live in a separate repository: [codeforamerica/safety-net-harness](https://github.com/codeforamerica/safety-net-harness).
 
@@ -8,14 +8,18 @@ A systems integration blueprint for safety net benefits programs. Contract artif
 
 ## About This Repository
 
-This repository contains the base contract artifacts, tooling, and documentation for the [contract-driven architecture](./docs/architecture/contract-driven-architecture.md). It provides:
+This repository has two layers:
 
-- **Base contract artifacts** — OpenAPI specs, state machine definitions, decision rules, metrics, and field metadata that define both data operations (REST) and behavioral operations (RPC)
-- **Conversion scripts** — generate contract YAML from tables (spreadsheets) so business users can author requirements directly
+- **The Blueprint Framework** — domain-agnostic tooling for contract-driven API development: overlay resolution, validation, state machine engine, mock server, client generation, and explorer. The framework packages (`blueprint-core`, `blueprint-cli`, `blueprint-mock-server`, `blueprint-explorer`) can be used independently to build contract-driven systems for any domain.
+- **The Safety Net Contracts** — the reference implementation of the framework for safety net benefits programs: OpenAPI specs, state machines, annotations, and overlays across a dozen domains.
+
+Together they provide:
+
+- **Base contract artifacts** — OpenAPI specs, state machine definitions, metrics, and field metadata that define both data operations (REST) and behavioral operations (RPC)
 - **Validation** — check OpenAPI specs and cross-artifact consistency
 - **Mock server** — interprets contracts with an in-memory database for development without a production backend, serving REST APIs, RPC APIs, and event streams
-- **Field metadata** — annotations (program relevance, verification requirements, regulatory citations), field-level permissions, and multilingual labels as contract artifacts served by the backend
-- **Client generation** — typed TypeScript SDK and Zod schemas from resolved specs
+- **Field metadata** — annotations, field-level permissions, and multilingual labels as contract artifacts served by the backend
+- **Client generation** — typed TypeScript SDK from resolved specs
 - **State overlays** — states customize contracts without forking the base files
 
 ## Repository Structure
@@ -41,7 +45,7 @@ To adopt the blueprint, create a repository, install the base packages, apply ov
 
 ## Getting Started
 
-Choose your path based on your role:
+### Adopting the Safety Net Blueprint
 
 | Role | You want to... | Start here |
 |------|----------------|------------|
@@ -49,6 +53,10 @@ Choose your path based on your role:
 | **Backend Developer** | Author contracts, validate specs, build production adapters | [Backend Developer Guide](./docs/getting-started/backend-developers.md) |
 | **Frontend Developer** | Build UIs against REST and RPC APIs, use generated clients | [Frontend Developer Guide](./docs/getting-started/frontend-developers.md) |
 | **Tester** | Run tests, write integration tests, test against the mock | [Tester Guide](./docs/getting-started/testers.md) |
+
+### Building a new domain
+
+Using the framework to define a new contract-driven API domain — whether extending safety net or building something in the same space? Start here: [Building a New Domain](./docs/getting-started/new-domain-builders.md)
 
 ## Quick Start
 
