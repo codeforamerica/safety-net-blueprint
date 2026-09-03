@@ -246,7 +246,7 @@ npm run resolve -- --bundle
 The resolved output (`packages/generated/contracts/`) is consumed by:
 - `npm run postman:generate` — produces the Postman collection
 - `npm run mock:start` — the mock server relies on `x-relationship` annotations being present to drive expand and links-only behavior at runtime
-- `npm run clients:generate` — generates TypeScript clients; the client generator strips `x-relationship` annotations before passing specs to `@hey-api/openapi-ts`
+- `npm run clients:typescript` — generates TypeScript clients; the client generator strips `x-relationship` annotations before passing specs to `@hey-api/openapi-ts`
 
 ## Invoking the Pipeline
 

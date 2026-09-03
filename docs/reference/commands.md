@@ -88,12 +88,12 @@ Scaffolds a new API spec in `packages/safety-net-contracts/src/domains/`.
 npm run api:new -- --name "benefits" --resource "Benefit"
 ```
 
-### `npm run clients:generate`
+### `npm run clients:typescript`
 
 Generates TypeScript clients from the resolved specs into `packages/generated/clients/`.
 
 ```bash
-npm run clients:generate
+npm run clients:typescript
 ```
 
 ### `npm run postman:generate`
@@ -237,5 +237,5 @@ npm run resolve && npm run validate
 npm run mock:reset && npm start
 
 # Full pipeline: resolve, generate clients, run all tests
-npm run resolve && npm run clients:generate && npm run test:all
+npm run resolve && npm run clients:typescript && npm run test:all
 ```

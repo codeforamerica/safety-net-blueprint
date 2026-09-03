@@ -12,9 +12,9 @@ The DSL appears in three artifact types across all domains:
 
 | Artifact | Purpose | Schema |
 |---|---|---|
-| `*-state-machine.yaml` | Domain object lifecycle: states, authorized transitions, event subscriptions, procedures, and named handlers | [`state-machine-schema.yaml`](../../../packages/contracts/schemas/state-machine-schema.yaml) |
-| `*-sla-types.yaml` | SLA definitions: pause/resume conditions and deadline thresholds | [`sla-types-schema.yaml`](../../../packages/contracts/schemas/sla-types-schema.yaml) |
-| `*-metrics.yaml` | Metric definitions: filter predicates and aggregation expressions | [`metrics-schema.yaml`](../../../packages/contracts/schemas/metrics-schema.yaml) |
+| `*-state-machine.yaml` | Domain object lifecycle: states, authorized transitions, event subscriptions, procedures, and named handlers | [`state-machine-schema.yaml`](../../../packages/blueprint-core/schemas/state-machine-schema.yaml) |
+| `*-sla-types.yaml` | SLA definitions: pause/resume conditions and deadline thresholds | [`sla-types-schema.yaml`](../../../packages/blueprint-core/schemas/sla-types-schema.yaml) |
+| `*-metrics.yaml` | Metric definitions: filter predicates and aggregation expressions | [`metrics-schema.yaml`](../../../packages/blueprint-core/schemas/metrics-schema.yaml) |
 
 These artifacts define the behavioral contracts that all state implementations must conform to. States implement the defined behavior in their vendor system of choice (Salesforce, IBM Cúram, Camunda, etc.) — the DSL is the specification, not the runtime. The mock server provides a reference implementation for development and testing.
 

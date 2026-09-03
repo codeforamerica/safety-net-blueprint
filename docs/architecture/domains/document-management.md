@@ -232,7 +232,7 @@ The document management domain emits events across four categories: document and
 **Considerations:**
 - Baseline types (pay stub, bank statement, birth certificate, lease agreement, utility bill) are common across states and programs. Seeding them via configuration provides a consistent starting point.
 - States need to add program-specific types (tribal enrollment documents, state-specific income verification forms, etc.) without requiring a contract change.
-- The blueprint's `config_managed_resources` pattern (defined in `api-patterns.yaml`) uses a `source` field (`system` vs. `user`) to distinguish seeded from runtime-created entities and gates deletion accordingly. This pattern is already established for other config-managed resources.
+- The blueprint's `config_managed_resources` pattern (defined in the [API conventions](../../conventions/resources.yaml)) uses a `source` field (`system` vs. `user`) to distinguish seeded from runtime-created entities and gates deletion accordingly. This pattern is already established for other config-managed resources.
 - Per-type retention configuration follows the Laserfiche and Hyland OnBase model — each record type carries its own retention schedule rather than relying on a global default.
 
 **Options:**

@@ -40,7 +40,7 @@ If you need more control or are building a complex API, follow these steps.
 
 ### Step 1: Understand the File Structure
 
-Specs can live anywhere — the tooling takes a `--spec` argument pointing to any directory. The default is `packages/contracts/`. The `{domain}-openapi.yaml` naming pattern is what matters: validators and the resolve pipeline auto-discover files matching that suffix.
+Specs can live anywhere — the tooling takes a `--spec` argument pointing to any directory. The default is `packages/safety-net-contracts/src/`. The `{domain}-openapi.yaml` naming pattern is what matters: validators and the resolve pipeline auto-discover files matching that suffix.
 
 ```
 {your-spec-dir}/
@@ -268,8 +268,8 @@ Before submitting a new API:
 ## Reference
 
 - **Pattern configuration**: `docs/conventions/`
-- **Shared parameters**: `packages/contracts/components/parameters.yaml`
-- **Shared responses**: `packages/contracts/components/responses.yaml`
-- **Shared schemas**: `packages/contracts/components/common.yaml`
+- **Shared parameters**: `packages/blueprint-core/base-contracts/components/parameters.yaml`
+- **Shared responses**: `packages/blueprint-core/base-contracts/components/responses.yaml`
+- **Shared schemas**: `packages/safety-net-contracts/src/common/components/common.yaml`
 - [Validation Guide](./validation.md)
 - [Search Patterns](search-patterns.md)

@@ -208,7 +208,7 @@ because the annotation leaf level uses `additionalProperties: true`.
 
 ## TypeScript client integration
 
-Annotation files are compiled into the generated domain package at `npm run clients:generate` and
+Annotation files are compiled into the generated domain package at `npm run clients:typescript` and
 accessible as `Annotations` on the domain namespace — no separate import required:
 
 ```typescript

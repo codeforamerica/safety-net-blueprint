@@ -196,7 +196,7 @@ compositions:
 - Expression references `items` → **collection scope**: evaluated once against the full item array; result is a top-level field on the assembled response
 - Expression does not reference `items` → **item scope**: evaluated per item; result added as a new field on each item
 
-Expressions use the same CEL syntax as state machine conditions. Cross-domain reuse is supported via a root-level shared file (`packages/contracts/derives.yaml`), referenced with a relative path: `$ref: './derives.yaml#/memberComplete'`. Derived fields are runtime-only and are not emitted into the static OpenAPI schema.
+Expressions use the same CEL syntax as state machine conditions. Derived fields are runtime-only and are not emitted into the static OpenAPI schema. For field-level derived expressions on individual schema properties, see [`x-derived`](../x-extensions.md#x-derived).
 
 ## Composition state
 
@@ -336,10 +336,9 @@ See the [Overlay Guide](../../guides/overlay-guide.md#composition-overlays) for 
 
 | Artifact | Location |
 |---|---|
-| Domain composition configs | `packages/contracts/{domain}-compositions.yaml` |
-| Compositions config schema (JSON Schema for the config format) | `packages/contracts/schemas/compositions-schema.yaml` |
-| Shared derived expressions | `packages/contracts/derives.yaml` |
-| State machines for `state:` resources | `packages/contracts/{domain}-state-machine.yaml` |
+| Domain composition configs | `packages/safety-net-contracts/src/domains/{domain}/{domain}-compositions.yaml` |
+| Compositions config schema (JSON Schema for the config format) | `packages/blueprint-core/schemas/compositions-schema.yaml` |
+| State machines for `state:` resources | `packages/safety-net-contracts/src/domains/{domain}/{domain}-state-machine.yaml` |
 
 ## Key design decisions
 
@@ -546,8 +545,8 @@ See the [Overlay Guide](../../guides/overlay-guide.md#composition-overlays) for 
 
 ## References
 
-- [Composition config schema](../../../packages/contracts/schemas/compositions-schema.yaml)
-- [Intake composition config](../../../packages/contracts/intake-compositions.yaml)
+- [Composition config schema](../../../packages/blueprint-core/schemas/compositions-schema.yaml)
+- [Intake composition config](../../../packages/safety-net-contracts/src/domains/intake/intake-compositions.yaml)
 - [Resolve Pipeline Architecture](../resolve-pipeline.md)
 - [Behavioral Contract DSL](behavioral-contract-dsl.md)
 - [Intake Domain](../domains/intake.md)

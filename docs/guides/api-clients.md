@@ -22,7 +22,7 @@ This separates static types from runtime validation: type-only imports carry no 
 ### Within this repository
 
 ```bash
-npm run clients:generate
+npm run clients:typescript
 ```
 
 This generates TypeScript clients from `packages/generated/contracts/` into `packages/generated/clients/`.
@@ -412,9 +412,9 @@ package will have an `Annotations` export. Domains without annotations do not ex
 
 ## Updating Clients
 
-When the base specs (`@codeforamerica/safety-net-blueprint-contracts`) are updated:
+When the base specs (`@codeforamerica/blueprint-safety-net-contracts`) are updated:
 
-1. Update the dependency: `npm install @codeforamerica/safety-net-blueprint-contracts@<new-version>`
+1. Update the dependency: `npm install @codeforamerica/blueprint-safety-net-contracts@<new-version>`
 2. Re-resolve overlays: `npm run resolve`
 3. Regenerate clients from the updated resolved specs
 4. Check the changelog for breaking changes to schema fields or API endpoints

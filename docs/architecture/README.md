@@ -35,6 +35,6 @@ See [Domain Design](domain-design.md) for the full list of domains, cross-cuttin
 
 | Resource | Description |
 |----------|-------------|
-| [api-patterns.yaml](../../packages/contracts/patterns/api-patterns.yaml) | Machine-readable API design patterns |
+| [API conventions](../conventions/) | Machine-readable API design conventions |
 | [Decisions](../decisions/) | Architectural decisions (auth, search, state customization, tooling) |
 | [Guides](../guides/) | How-to guides for working with the toolkit |

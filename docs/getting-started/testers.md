@@ -68,7 +68,7 @@ npm run postman:generate
 The generated collection covers all CRUD endpoints and RPC state machine operations. Import it into Postman or run it headlessly with Newman:
 
 ```bash
-npx newman run packages/contracts/postman-collection.json --env-var baseUrl=http://localhost:1080
+npx newman run packages/generated/postman --env-var baseUrl=http://localhost:1080
 ```
 
 ## Adding Tests

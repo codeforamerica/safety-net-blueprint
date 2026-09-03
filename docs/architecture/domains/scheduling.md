@@ -12,7 +12,7 @@ Time-based coordination for safety net benefits programs. The scheduling domain 
 
 ### Appointment
 
-A scheduled interaction between a staff member and a person at a given time. [Spec: `scheduling-openapi.yaml`](../../../packages/contracts/scheduling-openapi.yaml)
+A scheduled interaction between a staff member and a person at a given time. [Spec: `scheduling-openapi.yaml`](../../../packages/safety-net-contracts/src/domains/scheduling/scheduling-openapi.yaml)
 
 | Field | Type | Industry Source |
 |-------|------|-----------------|
@@ -25,7 +25,7 @@ A scheduled interaction between a staff member and a person at a given time. [Sp
 | `assignedToId` | uuid (ref User) | FHIR Appointment: `participant` where type = Practitioner; RFC 5545: `ORGANIZER` |
 | `notes` | string | FHIR Appointment: `note` (Annotation[]); RFC 5545: `DESCRIPTION` |
 | `createdAt` | date-time, readOnly | Universal; FHIR Appointment: `created` |
-| `updatedAt` | date-time, readOnly | Universal; required by `api-patterns.yaml` |
+| `updatedAt` | date-time, readOnly | Universal; required by the [API conventions](../../conventions/resources.yaml) |
 
 **Status values:** `scheduled`, `completed`, `canceled`, `no_show`
 

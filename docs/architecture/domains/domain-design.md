@@ -337,7 +337,7 @@ For operational concerns (Configuration Management, Observability), see [API Arc
 
 ### Pagination
 
-All list endpoints share a single `Pagination` schema ([`components/pagination.yaml`](../../packages/contracts/components/pagination.yaml)) composed into each `{Resource}List` schema via `allOf`. The default strategy uses offset-based pagination (`total`, `limit`, `offset`, `hasNext`).
+All list endpoints share a single `Pagination` schema ([`components/pagination.yaml`](../../packages/blueprint-core/base-contracts/components/pagination.yaml)) composed into each `{Resource}List` schema via `allOf`. The default strategy uses offset-based pagination (`total`, `limit`, `offset`, `hasNext`).
 
 States can swap the pagination strategy (e.g., cursor-based) by applying a single overlay to the `Pagination` component. See the [Overlay Guide](../../docs/guides/overlay-guide.md) for how to author overlay modifications.
 
