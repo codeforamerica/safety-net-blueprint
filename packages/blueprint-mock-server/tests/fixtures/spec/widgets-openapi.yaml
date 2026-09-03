@@ -1,0 +1,151 @@
+openapi: 3.1.0
+info:
+  title: Widgets API
+  version: 1.0.0
+  x-api-id: widgets
+servers:
+  - url: /
+paths:
+  /widgets:
+    get:
+      operationId: listWidgets
+      summary: List widgets
+      x-sortable: [name, createdAt]
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer }
+        - name: offset
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: List of widgets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WidgetList'
+        '400':
+          description: Bad request
+    post:
+      operationId: createWidget
+      summary: Create a widget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WidgetCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Widget'
+  /widgets/{widgetId}:
+    get:
+      operationId: getWidget
+      summary: Get a widget
+      parameters:
+        - name: widgetId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Widget
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Widget'
+        '404':
+          description: Not found
+    patch:
+      operationId: updateWidget
+      summary: Update a widget
+      parameters:
+        - name: widgetId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WidgetUpdate'
+      responses:
+        '200':
+          description: Updated widget
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Widget'
+    delete:
+      operationId: deleteWidget
+      summary: Delete a widget
+      parameters:
+        - name: widgetId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Deleted
+components:
+  schemas:
+    Widget:
+      type: object
+      required: [id, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+    WidgetCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    WidgetUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    WidgetList:
+      type: object
+      required: [items, total, limit, offset, hasNext]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Widget'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasNext:
+          type: boolean

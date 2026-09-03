@@ -39,7 +39,7 @@ A registry entry becomes relevant to a contract element when an annotation refer
 |------|---------|
 | `platform-registry-policies.yaml` | Baseline policy definitions, keyed by stable ID |
 | `platform-registry-policies-{name}.yaml` | Additional policy files when the baseline grows large |
-| `schemas/platform-registry-policies-schema.yaml` | JSON Schema that validates all policy files |
+| `schemas/policies-schema.yaml` | JSON Schema that validates all policy files |
 | `{domain}-annotations.yaml` | Domain-specific annotations, keyed by element path |
 | `{domain}-annotations-{name}.yaml` | Additional annotation files when a domain's file grows large |
 | `schemas/annotations-schema.yaml` | JSON Schema that validates all annotation files |
@@ -118,7 +118,7 @@ Policy files (`platform-registry-policies.yaml`, `platform-registry-policies-{na
 standalone regulatory and program rules keyed by stable ID:
 
 ```yaml
-$schema: "./schemas/platform-registry-policies-schema.yaml"
+$schema: "./schemas/policies-schema.yaml"
 version: "1.0"
 
 policies:
@@ -208,7 +208,7 @@ because the annotation leaf level uses `additionalProperties: true`.
 
 ## TypeScript client integration
 
-Annotation files are compiled into the generated domain package at `npm run clients:generate` and
+Annotation files are compiled into the generated domain package at `npm run clients:typescript` and
 accessible as `Annotations` on the domain namespace — no separate import required:
 
 ```typescript

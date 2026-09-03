@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Safety Net Blueprint — Data Dictionary</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; font-size: 14px; line-height: 1.6; }
+    a { color: #5650BE; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12px; background: #F7EDE8; padding: 1px 5px; border-radius: 3px; border: 1px solid #E9CCBE; color: #2a2a2a; }
+    table { border-collapse: collapse; width: 100%; }
+    th { background: #F7EDE8; color: #1a1a1a; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 8px 12px; text-align: left; border-bottom: 2px solid #E9CCBE; }
+    td { padding: 10px 12px; border-bottom: 1px solid #E9CCBE; vertical-align: top; font-size: 13px; word-break: break-word; overflow-wrap: anywhere; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #F7EDE8; }
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    
+.index-layout { max-width: 900px; margin: 0 auto; padding: 3rem 2rem; }
+.index-header { margin-bottom: 2.5rem; }
+.index-header h1 { font-size: 2rem; font-weight: 700; color: #2B1A78; margin-bottom: 0.5rem; }
+.index-sub { color: #555; font-size: 0.9rem; max-width: 560px; line-height: 1.5; }
+.domain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+.domain-card {
+  display: block; text-decoration: none; background: #fff;
+  border: 1px solid #E9CCBE; border-radius: 8px; padding: 1.25rem 1rem;
+  cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;
+}
+.domain-card:hover { border-color: #5650BE; box-shadow: 0 2px 8px rgba(86,80,190,0.12); }
+.domain-card-title { font-size: 1rem; font-weight: 700; color: #2B1A78; margin-bottom: 0.3rem; }
+.domain-card-meta { font-size: 0.75rem; color: #888; }
+
+  </style>
+</head>
+<body>
+  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Data Dictionary</a></div>
+  
+      <div class="index-layout">
+        <div class="index-header">
+          <h1>Data Dictionary</h1>
+          <p class="index-sub">Field-level reference for the Safety Net Blueprint data model. Select a domain to browse its fields.</p>
+        </div>
+        <div class="domain-grid"><a href="case-management.html" class="domain-card"><div class="domain-card-title">Case Management</div><div class="domain-card-meta">v0.1.0 · 8 fields</div></a><a href="client-management.html" class="domain-card"><div class="domain-card-title">Client Management</div><div class="domain-card-meta">v0.1.0 · 0 fields</div></a><a href="document-management.html" class="domain-card"><div class="domain-card-title">Document Management</div><div class="domain-card-meta">v0.1.0 · 2 fields</div></a><a href="identity-access.html" class="domain-card"><div class="domain-card-title">Identity Access</div><div class="domain-card-meta">v0.1.0 · 12 fields</div></a><a href="intake.html" class="domain-card"><div class="domain-card-title">Intake</div><div class="domain-card-meta">v1.1.0 · 465 fields · 399 annotated</div></a><a href="scheduling.html" class="domain-card"><div class="domain-card-title">Scheduling</div><div class="domain-card-meta">v0.1.0 · 7 fields</div></a><a href="workflow.html" class="domain-card"><div class="domain-card-title">Workflow</div><div class="domain-card-meta">v0.1.0 · 20 fields</div></a></div>
+      </div>
+  <script>
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    
+  </script>
+</body>
+</html>

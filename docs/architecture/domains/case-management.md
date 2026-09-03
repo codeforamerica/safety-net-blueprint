@@ -2,7 +2,7 @@
 
 > **Status:** Case API implemented (alpha). Other entities (CaseWorker, Supervisor, Office, Team, Assignment, Caseload) are future work.
 
-See [Domain Design Overview](../domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
+See [Domain Design Overview](domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
 
 ## Overview
 
@@ -12,7 +12,7 @@ The Case Management domain manages ongoing client relationships, staff, and orga
 
 ### Case
 
-The long-lived relationship with a client or household — it spans years, multiple applications, and multiple programs. [Spec: `case-management-openapi.yaml`](../../../packages/contracts/case-management-openapi.yaml)
+The long-lived relationship with a client or household — it spans years, multiple applications, and multiple programs. [Spec: `case-management-openapi.yaml`](../../../packages/safety-net-contracts/src/domains/case-management/case-management-openapi.yaml)
 
 | Field | Type | Industry Source |
 |-------|------|-----------------|
@@ -23,8 +23,8 @@ The long-lived relationship with a client or household — it spans years, multi
 | `primaryApplicantId` | uuid (ref Person) | Salesforce: `ContactId`; [FHIR EpisodeOfCare](https://hl7.org/fhir/episodeofcare.html): `patient` (subject); NIEM: case subject |
 | `members` | CaseMember[] | Salesforce: `CaseContactRole` (junction object with role info); [CMMN](https://www.omg.org/spec/CMMN/1.1/About-CMMN): CaseFile |
 | `assignedToId` | uuid (ref User) | Salesforce: `OwnerId`; FHIR EpisodeOfCare: `careManager`; CMMN: case roles |
-| `createdAt` | date-time, readOnly | Universal; required by `api-patterns.yaml` |
-| `updatedAt` | date-time, readOnly | Universal; required by `api-patterns.yaml` |
+| `createdAt` | date-time, readOnly | Universal; required by the [API conventions](../../conventions/resources.yaml) |
+| `updatedAt` | date-time, readOnly | Universal; required by the [API conventions](../../conventions/resources.yaml) |
 
 **Status values:** `active`, `closed`
 
@@ -78,7 +78,7 @@ Case Management is primarily **data-shaped** — most interactions are CRUD on c
 
 | Document | Description |
 |----------|-------------|
-| [Domain Design](../domain-design.md) | Case Management section in the domain overview |
+| [Domain Design](domain-design.md) | Case Management section in the domain overview |
 | [Workflow](workflow.md) | Task lifecycle and routing — closely related domain |
 | [Scheduling](scheduling.md) | Appointments involve assigned staff from Case Management |
 | [Contract-Driven Architecture](../contract-driven-architecture.md) | Contract artifacts and the adapter pattern |

@@ -1,0 +1,469 @@
+$schema: state-machine-schema.yaml
+extends: ../platform/platform-state-machine.yaml
+version: "1.0"
+domain: intake
+apiSpec: intake-openapi.yaml
+eventsSpec: intake-asyncapi.yaml
+machines:
+  - object: Application
+    states:
+      - {id: draft, slaClock: stopped, description: "Created but not yet filed; regulatory clock has not started"}
+      - {id: submitted, slaClock: running, description: "Formally filed; regulatory clock starts; caseworker task and automated screening initiated"}
+      - {id: under_review, slaClock: running, description: "Caseworker is actively reviewing; clock is running toward the 30/45-day deadline"}
+      - {id: pending_approval, slaClock: stopped, description: "Determination awaiting supervisor approval; clock paused per agency policy"}
+      - {id: withdrawn, slaClock: stopped, description: "Household withdrew; open tasks cancelled and household notified. Terminal."}
+      - {id: closed, slaClock: stopped, description: "Intake complete; case management creates a benefit case if approved. Terminal."}
+    initialState: draft
+    actions:
+      - id: submit
+        description: POST /applications/{applicationId}/submit — Formally submits a draft application, starting the regulatory processing clock
+        context:
+          - members: {from: intake/application-members, where: {applicationId: $object.id}}
+        guards:
+          - actors: [applicant, case_worker]
+            conditions: [{any: [callerIsApplicant, callerIsCaseworker]}]
+        transition: {from: draft, to: submitted}
+        steps:
+          - set: {field: submittedAt, value: $now, description: Record when the application was formally submitted}
+          - emit: {type: intake.application.submitted, data: {programs: $object.programsAppliedFor, channel: $object.channel, memberIds: $members.*.id}, description: "Emit intake.application.submitted — starts the regulatory clock; triggers caseworker task creation, confirmation notice, and person matching"}
+      - id: open
+        description: POST /applications/{applicationId}/open — System marks a submitted application as under active caseworker review
+        guards:
+          - actors: [system]
+            conditions: [callerIsSystem]
+        transition: {from: submitted, to: under_review}
+        steps:
+          - emit: {type: intake.application.opened, data: {programs: $object.programsAppliedFor}, description: Emit intake.application.opened — signals caseworker has begun active review}
+      - id: complete-review
+        description: POST /applications/{applicationId}/complete-review — Caseworker signals data collection is complete and the application is ready for determination
+        guards:
+          - actors: [case_worker, supervisor]
+            conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
+        transition: {from: under_review}
+        steps:
+          - emit: {type: intake.application.review_completed, description: Emit intake.application.review_completed — signals data collection is complete; triggers eligibility determination}
+      - id: submit-for-approval
+        description: POST /applications/{applicationId}/submit-for-approval — System routes the application to supervisor review when state-configured approval thresholds are met
+        guards:
+          - actors: [system]
+            conditions: [callerIsSystem]
+        transition: {from: under_review, to: pending_approval}
+        steps:
+          - emit: {type: intake.determination.approval_needed, description: Emit intake.determination.approval_needed — triggers supervisor approval task creation; states configure approval thresholds via rules overlay}
+      - id: approve-determination
+        description: POST /applications/{applicationId}/approve-determination — Supervisor approves the determination; closes the application and triggers NOA and case creation
+        guards:
+          - actors: [supervisor]
+            conditions: [callerIsSupervisor]
+        transition: {from: pending_approval, to: closed}
+        steps:
+          - set: {field: closedAt, value: $now, description: Record when the intake phase closed}
+          - emit: {type: intake.application.closed, description: Emit intake.application.closed — signals intake is complete; triggers case creation}
+      - id: reject-determination
+        description: POST /applications/{applicationId}/reject-determination — Supervisor rejects the determination and returns the application to the caseworker for revision
+        guards:
+          - actors: [supervisor]
+            conditions: [callerIsSupervisor]
+        transition: {from: pending_approval, to: under_review}
+        steps:
+          - emit: {type: intake.determination.rejected, description: Emit intake.determination.rejected — signals the determination was rejected; workflow returns the caseworker task to in_progress via return-to-worker}
+      - id: close
+        description: POST /applications/{applicationId}/close — Marks a reviewed application as closed after all determinations are complete
+        guards:
+          - actors: [case_worker, supervisor, system]
+            conditions: [{any: [callerIsCaseworker, callerIsSupervisor, callerIsSystem]}]
+        transition: {from: under_review, to: closed}
+        steps:
+          - set: {field: closedAt, value: $now, description: Record when the intake phase closed}
+          - emit: {type: intake.application.closed, description: Emit intake.application.closed — signals intake is complete; triggers case creation}
+      - id: withdraw
+        description: POST /applications/{applicationId}/withdraw — Applicant or caseworker withdraws the application before a decision is made
+        schema:
+          request:
+            $ref: '#/$defs/WithdrawApplicationRequest'
+        guards:
+          - actors: [applicant, case_worker, supervisor]
+            conditions: [{any: [callerIsApplicant, callerIsCaseworker, callerIsSupervisor]}]
+        transition: {from: [submitted, under_review], to: withdrawn}
+        steps:
+          - set: {field: withdrawnAt, value: $now, description: Record when the application was withdrawn}
+          - emit: {type: intake.application.withdrawn, data: {reason: $request.reason}, description: Emit intake.application.withdrawn — triggers open task cancellation and withdrawal notice}
+    events:
+      - type: workflow.task.claimed
+        description: Open the application for review and create an interview record when a caseworker claims the intake review task
+        context:
+          - task: {from: workflow/tasks, where: {id: $this.subject}}
+        steps:
+          - call: openApplication
+          - call: createInterview
+      - type: intake.application.submitted
+        description: Initiate electronic verification requests for each applicable program when an application is submitted
+        context:
+          - application: {from: intake/applications, where: {id: $this.subject}}
+        steps:
+          - call: createProgramVerifications
+            with: {program: snap, memberCategories: [identity], householdCategories: [residency], incomeCategories: [income]}
+          - call: createProgramVerifications
+            with: {program: medicaid, memberCategories: [citizenship, immigration], householdCategories: []}
+      - type: data_exchange.call.completed
+        description: Update the verification status based on the service call result; create a document fallback if the result is inconclusive
+        context:
+          - verification: {from: intake/applications/verifications, where: {id: $this.data.metadata.intake.verificationId}}
+        steps:
+          - call: updateVerificationOnCallResult
+      - type: scheduling.appointment.scheduled
+        description: Link a scheduled appointment to the associated interview record
+        steps:
+          - call: linkAppointment
+      - type: document_management.document_version.uploaded
+        description: Satisfy the verification obligation and record the uploaded document as evidence when a document is uploaded
+        context:
+          - verification: {from: intake/applications/verifications, where: {id: $this.data.metadata.intake.verificationId}}
+        steps:
+          - call: satisfyVerificationOnDocumentUpload
+      - type: eligibility.determination.created
+        description: Create one Decision per household member per applied-for program when an eligibility Determination is created for this application
+        steps:
+          - forEach:
+              from: intake/application-members
+              where: {applicationId: $this.data.applicationId}
+              as: member
+            do:
+              - forEach:
+                  in: $member.programsAppliedFor
+                  as: program
+                do:
+                  - call: {POST: eligibility/determinations/decisions, body: {determinationId: $this.subject, applicationId: $this.data.applicationId, memberId: $member.id, program: $program, status: pending}}
+      - type: eligibility.application.decision_completed
+        description: Write the eligibility outcome back to the application member record when a per-member program decision is completed
+        context:
+          - member: {from: intake/application-members, where: {id: $this.data.memberId}}
+        steps:
+          - call: recordDetermination
+      - type: eligibility.application.determination_completed
+        description: Close the application or route to supervisor approval when all program and member combinations have received a determination
+        steps:
+          - if: "false"
+            then:
+              - call: {POST: intake/applications/$this.subject/submit-for-approval, description: Route to supervisor approval when state-configured thresholds are met; states replace this condition with their CEL threshold expression via rules overlay}
+            else:
+              - call: {POST: intake/applications/$this.subject/close, description: Close the application when all determinations are in and no supervisor approval is required}
+      - type: eligibility.application.expedited
+        description: Flag the application as expedited when eligibility screening confirms the applicant meets expedited processing criteria
+        steps:
+          - call: {PATCH: intake/applications/$this.subject, body: {isExpedited: true}, description: Set isExpedited on the application when eligibility screening confirms expedited criteria are met}
+      - type: client_management.person.match_resolved
+        description: Write person match results back to the ApplicationMember when Client Management resolves a match
+        context:
+          - member: {from: intake/application-members, where: {id: $this.subject}}
+        steps:
+          - call: recordPersonMatch
+      - type: intake.member_income.created
+        description: Create an income verification when an income record is added to a submitted application; mirrors the income verification created by createProgramVerifications at submission time
+        context:
+          - member: {from: intake/application-members, where: {id: $this.subject}}
+          - application: {from: intake/applications, where: {id: $member.applicationId}}
+        steps:
+          - if: $application.status != "draft" && $application.status != "withdrawn" && $application.status != "closed"
+            then:
+              - if: '"snap" in $application.programsAppliedFor'
+                then:
+                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $this.data.id, sourceType: income, category: income, verificationType: electronic}}
+      - type: intake.application_member.created
+        description: Create member verifications when a member is added to a submitted application; mirrors the member verifications created by createProgramVerifications at submission time
+        context:
+          - application: {from: intake/applications, where: {id: $this.subject}}
+        steps:
+          - if: $application.status != "draft" && $application.status != "withdrawn" && $application.status != "closed"
+            then:
+              - if: '"snap" in $application.programsAppliedFor'
+                then:
+                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $this.data.id, sourceType: member, category: identity, verificationType: electronic}}
+              - if: '"medicaid" in $application.programsAppliedFor'
+                then:
+                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $this.data.id, sourceType: member, category: citizenship, verificationType: electronic}}
+                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $this.data.id, sourceType: member, category: immigration, verificationType: electronic}}
+      - type: communication.notice.sent
+        description: Append the document request notice to the Verification's documentRequests when Communication sends a notice
+        context:
+          - verification: {from: intake/applications/verifications, where: {id: $this.data.metadata.intake.verificationId}}
+        steps:
+          - call:
+              PATCH: intake/applications/verifications/$verification.id
+              body:
+                documentRequests:
+                  $push: {noticeId: $this.subject, type: $this.data.type, sentAt: $this.time}
+    procedures:
+      - id: openApplication
+        description: Transition the application from submitted to under_review when a caseworker claims the intake review task
+        context:
+          - application: {from: intake/applications, where: {id: $task.subjectId}}
+        if: $task.taskType == "application_review" && $application.status == "submitted"
+        then:
+          - call: {POST: intake/applications/$application.id/open}
+      - id: createInterview
+        description: Create an Interview record when a caseworker claims an application_review task; SNAP requires an interview before determination (7 CFR § 273.2(e))
+        if: $task.taskType == "application_review"
+        then:
+          - call: {POST: intake/applications/interview, body: {applicationId: $task.subjectId}}
+      - id: createProgramVerifications
+        description: >
+          Create electronic Verifications per member (identity, citizenship, immigration) and per income source (income),
+          and document Verifications at the household level for the given program.
+          Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.
+        parameters: [program, memberCategories, householdCategories, incomeCategories]
+        if: $params.program in $application.programsAppliedFor
+        then:
+          - forEach:
+              in: $params.memberCategories
+              as: category
+            do:
+              - forEach:
+                  from: intake/application-members
+                  where: {applicationId: $application.id}
+                  as: member
+                do:
+                  - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $member.id, sourceType: member, category: $category, verificationType: electronic}}
+          - forEach:
+              in: $params.incomeCategories
+              as: category
+            do:
+              - forEach:
+                  from: intake/application-members
+                  where: {applicationId: $application.id}
+                  as: member
+                do:
+                  - forEach:
+                      from: intake/application-incomes
+                      where: {memberId: $member.id}
+                      as: income
+                    do:
+                      - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, sourceId: $income.id, sourceType: income, category: $category, verificationType: electronic}}
+          - forEach:
+              in: $params.householdCategories
+              as: category
+            do:
+              - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, category: $category, verificationType: document}}
+      - id: updateVerificationOnCallResult
+        description: Transition the Verification based on the service call result; on inconclusive/partial/error, creates a document fallback per ex parte rules (42 CFR § 435.911)
+        if: $verification.id != null
+        then:
+          - match: $this.data.result
+            when:
+              conclusive:
+                - call:
+                    PATCH: intake/applications/verifications/$verification.id
+                    body:
+                      evidence:
+                        $push: {type: electronic, source: $this.data.serviceType, result: $this.data.result, serviceCallId: $this.subject, receivedAt: $now}
+                    description: Record the electronic verification result as evidence
+                - call: {POST: intake/applications/verifications/$verification.id/satisfy}
+              inconclusive:
+                - call:
+                    PATCH: intake/applications/verifications/$verification.id
+                    body:
+                      evidence:
+                        $push: {type: electronic, source: $this.data.serviceType, result: $this.data.result, serviceCallId: $this.subject, receivedAt: $now}
+                    description: Record the electronic verification result as evidence
+                - call: {POST: intake/applications/verifications/$verification.id/mark-inconclusive}
+                - call: {POST: intake/applications/verifications, body: {applicationId: $verification.applicationId, sourceId: $verification.sourceId, sourceType: $verification.sourceType, category: $verification.category, verificationType: document}}
+              partial:
+                - call:
+                    PATCH: intake/applications/verifications/$verification.id
+                    body:
+                      evidence:
+                        $push: {type: electronic, source: $this.data.serviceType, result: $this.data.result, serviceCallId: $this.subject, receivedAt: $now}
+                    description: Record the partial result as evidence; source found a record but values conflict — caseworker must resolve via document fallback
+                - call: {POST: intake/applications/verifications/$verification.id/mark-inconclusive}
+                - call: {POST: intake/applications/verifications, body: {applicationId: $verification.applicationId, sourceId: $verification.sourceId, sourceType: $verification.sourceType, category: $verification.category, verificationType: document}}
+              error:
+                - call:
+                    PATCH: intake/applications/verifications/$verification.id
+                    body:
+                      evidence:
+                        $push: {type: electronic, source: $this.data.serviceType, result: $this.data.result, serviceCallId: $this.subject, receivedAt: $now}
+                    description: Record the error as evidence; no retry mechanism in base contracts — treated as inconclusive pending #407
+                - call: {POST: intake/applications/verifications/$verification.id/mark-inconclusive}
+                - call: {POST: intake/applications/verifications, body: {applicationId: $verification.applicationId, sourceId: $verification.sourceId, sourceType: $verification.sourceType, category: $verification.category, verificationType: document}}
+      - id: linkAppointment
+        description: Append the appointmentId to Interview.appointments when an appointment is scheduled against an interview subject. Non-interview appointments (subjectType != interview) are ignored.
+        if: $this.data.subjectType == "interview"
+        then:
+          - call:
+              PATCH: intake/applications/interview/$this.data.subjectId
+              body:
+                appointments:
+                  $push: $this.subject
+      - id: satisfyVerificationOnDocumentUpload
+        description: Satisfy the Verification and record the uploaded document version as evidence; trigger only fires when metadata.intake.verificationId resolves to a known Verification
+        steps:
+          - call: {POST: intake/applications/verifications/$verification.id/satisfy, description: Satisfy the Verification obligation}
+          - call:
+              PATCH: intake/applications/verifications/$verification.id
+              body:
+                evidence:
+                  $push: {type: document, documentId: $this.data.documentId, receivedAt: $now}
+              description: Record the uploaded document as evidence on the Verification
+      - id: recordDetermination
+        description: Write eligibility outcome to ApplicationMember.programDeterminations. Informational write-back only — does not trigger application close. Medicaid RTE results may arrive before intake closes; SNAP results typically arrive after.
+        if: $member.id != null
+        then:
+          - call:
+              PATCH: intake/application-members/$member.id
+              body:
+                programDeterminations:
+                  $push: {program: $this.data.program, outcome: $this.data.status, determinedAt: $this.time}
+      - id: recordPersonMatch
+        description: Set personId and personMatch on ApplicationMember; personId is set only on confirmed matches
+        if: $member.id != null
+        then:
+          - match: $this.data.matchType
+            when:
+              confirmed:
+                - call:
+                    PATCH: intake/application-members/$member.id
+                    body:
+                      personId: $this.data.candidates[0].personId
+                      personMatch: {matchStatus: confirmed, candidates: $this.data.candidates}
+              review_required:
+                - call:
+                    PATCH: intake/application-members/$member.id
+                    body:
+                      personMatch: {matchStatus: review_required, candidates: $this.data.candidates}
+              no_match:
+                - call:
+                    PATCH: intake/application-members/$member.id
+                    body:
+                      personMatch: {matchStatus: no_match, candidates: []}
+  - object: Verification
+    states:
+      - {id: pending, slaClock: stopped, description: "Verification item created; electronic check or document request not yet complete"}
+      - {id: inconclusive, slaClock: stopped, description: "Electronic check returned insufficient data; document fallback triggered (42 CFR § 435.940)"}
+      - {id: satisfied, slaClock: stopped, description: "Verified — via electronic check, document review, or interview. Terminal."}
+      - {id: waived, slaClock: stopped, description: "Verification requirement waived by state policy. Terminal."}
+      - {id: cannot_verify, slaClock: stopped, description: "Verification could not be completed after all attempts; caseworker decides next step. Terminal."}
+    initialState: pending
+    context:
+      - fdshSsaService:
+          from: data-exchange/services
+          where:
+            serviceType: fdsh_ssa
+      - fdshVlpService:
+          from: data-exchange/services
+          where:
+            serviceType: fdsh_vlp
+      - ssaIevsService:
+          from: data-exchange/services
+          where:
+            serviceType: ssa_ievs
+      - irsIevsService:
+          from: data-exchange/services
+          where:
+            serviceType: irs_ievs
+      - swicaService:
+          from: data-exchange/services
+          where:
+            serviceType: swica
+      - uibService:
+          from: data-exchange/services
+          where:
+            serviceType: uib
+    actions:
+      - id: satisfy
+        description: POST /applications/verifications/{verificationId}/satisfy — System marks an obligation as satisfied after receiving conclusive service call or document evidence
+        guards:
+          - actors: [system]
+            conditions: [callerIsSystem]
+        transition: {from: [pending, inconclusive], to: satisfied}
+        steps:
+          - emit: {type: intake.verification.satisfied, description: Emit intake.verification.satisfied — signals the obligation is fulfilled}
+      - id: mark-inconclusive
+        description: POST /applications/verifications/{verificationId}/mark-inconclusive — System records that a service call returned inconclusive, triggering document fallback
+        guards:
+          - actors: [system]
+            conditions: [callerIsSystem]
+        transition: {from: pending, to: inconclusive}
+        steps:
+          - emit: {type: intake.verification.inconclusive, description: Emit intake.verification.inconclusive — triggers document fallback creation via intake rule subscription}
+      - id: waive
+        description: POST /applications/verifications/{verificationId}/waive — Caseworker grants a waiver for an obligation that cannot be satisfied through normal means
+        schema:
+          request:
+            $ref: '#/$defs/WaiveVerificationRequest'
+        guards:
+          - actors: [case_worker, supervisor]
+            conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
+        transition: {from: [pending, inconclusive], to: waived}
+        steps:
+          - emit: {type: intake.verification.waived, data: {reason: $request.reason}, description: Emit intake.verification.waived — signals the obligation is resolved without evidence}
+      - id: mark-cannot-verify
+        description: POST /applications/verifications/{verificationId}/mark-cannot-verify — Caseworker closes an obligation when all available verification methods are exhausted
+        schema:
+          request:
+            $ref: '#/$defs/MarkCannotVerifyRequest'
+        guards:
+          - actors: [case_worker, supervisor]
+            conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
+        transition: {from: [pending, inconclusive], to: cannot_verify}
+        steps:
+          - emit: {type: intake.verification.cannot_verify, description: Emit intake.verification.cannot_verify — signals all available verification methods are exhausted}
+    events:
+      - type: intake.verification.created
+        description: Initiate the appropriate service calls for a newly created electronic verification
+        context:
+          - application: {from: intake/applications, where: {id: $this.data.applicationId}}
+        steps:
+          - call: initiateServiceCalls
+    procedures:
+      - id: initiateServiceCalls
+        description: Route each electronic Verification to its required service calls by category; document-type Verifications are skipped by initiateServiceCall
+        match: $object.category
+        "on":
+          identity:
+            - {call: initiateServiceCall, with: {serviceId: $fdshSsaService.id}, description: "FDSH SSA identity check for SNAP (42 U.S.C. § 1320b-7)"}
+          income:
+            - {call: initiateServiceCall, with: {serviceId: $ssaIevsService.id}}
+            - {call: initiateServiceCall, with: {serviceId: $irsIevsService.id}}
+            - {call: initiateServiceCall, with: {serviceId: $swicaService.id}}
+            - {call: initiateServiceCall, with: {serviceId: $uibService.id}, description: "SSA IEVS, IRS IEVS, SWICA, and UIB income checks (7 CFR § 272.8)"}
+          citizenship:
+            - {call: initiateServiceCall, with: {serviceId: $fdshSsaService.id}, description: "FDSH SSA citizenship check for Medicaid; electronic check required before paper documents (42 CFR § 435.956(b))"}
+          immigration:
+            - {call: initiateServiceCall, with: {serviceId: $fdshVlpService.id}, description: "FDSH VLP immigration status check for Medicaid; electronic check required before paper documents (42 CFR § 435.956(c))"}
+      - id: initiateServiceCall
+        description: Post a single service call for this Verification; no-ops for document-type Verifications
+        parameters: [serviceId]
+        if: $object.verificationType == "electronic"
+        then:
+          - call: {POST: data-exchange/service-calls, body: {serviceId: $params.serviceId, requestingResourceId: $object.sourceId, metadata: {intake: {verificationId: $object.id, applicationId: $object.applicationId}}}}
+guards:
+  - id: callerIsApplicant
+    condition: "\"applicant\" in caller.roles"
+
+$defs:
+  MarkCannotVerifyRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the obligation cannot be satisfied after exhausting available options
+
+  WaiveVerificationRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the verification requirement is being waived
+
+  WithdrawApplicationRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the application is being withdrawn

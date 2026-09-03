@@ -1,0 +1,396 @@
+openapi: 3.0.3
+info:
+  title: Field Inventory Generator Test Fixture
+  version: 1.0.0
+  x-domain: test-domain
+  description: >
+    Minimal spec exercising all field types the generator must handle:
+    scalars, enums, uuid with x-relationship, date/datetime/email,
+    arrays of scalars, arrays of objects, nested objects, and
+    discriminated oneOf variants.
+
+paths:
+  /applications:
+    get:
+      operationId: listApplications
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationList'
+
+  /applications/{applicationId}:
+    get:
+      operationId: getApplication
+      parameters:
+        - $ref: '#/components/parameters/applicationId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+    patch:
+      operationId: updateApplication
+      parameters:
+        - $ref: '#/components/parameters/applicationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationUpdate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+
+  /applications/{applicationId}/members:
+    get:
+      operationId: listMembers
+      parameters:
+        - $ref: '#/components/parameters/applicationId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberList'
+
+  /applications/{applicationId}/members/{memberId}:
+    get:
+      operationId: getMember
+      parameters:
+        - $ref: '#/components/parameters/applicationId'
+        - $ref: '#/components/parameters/memberId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+
+components:
+  parameters:
+    applicationId:
+      name: applicationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    memberId:
+      name: memberId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    # ── Root resource ──────────────────────────────────────────────────────────
+
+    Application:
+      allOf:
+        - $ref: '#/components/schemas/ApplicationUpdate'
+        - type: object
+          required: [id, createdAt, updatedAt]
+          properties:
+            id:
+              type: string
+              format: uuid
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    ApplicationList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Application'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasNext:
+          type: boolean
+
+    # ApplicationUpdate is the writable schema — detected by the generator via
+    # PATCH /applications/{applicationId} requestBody.
+    ApplicationUpdate:
+      type: object
+      properties:
+        # Scalar types
+        referenceNumber:
+          type: string
+          description: Human-readable application reference number.
+
+        submittedAt:
+          type: string
+          format: date-time
+          description: When the application was submitted.
+
+        interviewDate:
+          type: string
+          format: date
+          description: Scheduled interview date.
+
+        contactEmail:
+          type: string
+          format: email
+          description: Primary contact email address.
+
+        isExpedited:
+          type: boolean
+          description: Whether the application qualifies for expedited processing.
+
+        householdSize:
+          type: integer
+          description: Number of people in the household.
+
+        monthlyIncome:
+          type: number
+          description: Total reported monthly household income.
+
+        # Enum (single value)
+        channel:
+          type: string
+          enum: [online, in_person, phone, mail]
+          description: How the application was submitted.
+
+        status:
+          type: string
+          enum: [draft, submitted, under_review, approved, denied, withdrawn]
+          description: Current application status.
+
+        # UUID with x-relationship
+        caseWorkerId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: CaseWorker
+          description: ID of the assigned case worker.
+
+        # Enum sourced from state machine via x-enum-source
+        verificationStatus:
+          type: string
+          x-enum-source:
+            source: states[].id
+            machine: Verification
+          description: Current verification status.
+
+        # External $defs ref — regression test for $RefParser resolving #/$defs/
+        # self-references inside external schema files.
+        externalContact:
+          $ref: './schemas/domain.yaml#/$defs/ContactDetails'
+
+        # Array of enum scalars
+        programsAppliedFor:
+          type: array
+          description: Programs the household is applying for.
+          items:
+            type: string
+            enum: [snap, medicaid, chip, tanf]
+
+        # Array of plain scalars
+        documentIds:
+          type: array
+          description: IDs of supporting documents attached to the application.
+          items:
+            type: string
+            format: uuid
+
+        # Nested object
+        contact:
+          $ref: '#/components/schemas/ContactInfo'
+
+        # Discriminated oneOf — income source varies by type
+        primaryIncome:
+          $ref: '#/components/schemas/IncomeSource'
+
+        # Array of objects (sub-resource — rendered via /members endpoint)
+        # (members[] appears via sub-resource detection, not inline here)
+
+    # ── Sub-resource: Member ───────────────────────────────────────────────────
+
+    Member:
+      type: object
+      required: [id, applicationId]
+      properties:
+        id:
+          type: string
+          format: uuid
+
+        applicationId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: Application
+
+        personId:
+          type: string
+          format: uuid
+          x-relationship:
+            resource: Person
+          description: Links this member to a canonical person record.
+
+        createdAt:
+          type: string
+          format: date-time
+
+        updatedAt:
+          type: string
+          format: date-time
+
+        roles:
+          type: array
+          description: Roles this member plays in the application.
+          items:
+            type: string
+            enum: [primary_applicant, household_member, authorized_representative]
+
+        dateOfBirth:
+          type: string
+          format: date
+
+        isDisabled:
+          type: boolean
+
+        name:
+          $ref: '#/components/schemas/Name'
+
+    MemberList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Member'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasNext:
+          type: boolean
+
+    # ── Shared schemas ─────────────────────────────────────────────────────────
+
+    ContactInfo:
+      type: object
+      description: Contact details for the application.
+      properties:
+        name:
+          $ref: '#/components/schemas/Name'
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        address:
+          $ref: '#/components/schemas/Address'
+
+    Name:
+      type: object
+      properties:
+        firstName:
+          type: string
+        middleName:
+          type: string
+        lastName:
+          type: string
+
+    Address:
+      type: object
+      properties:
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zip:
+          type: string
+
+    # ── Discriminated oneOf: IncomeSource ──────────────────────────────────────
+    # Base fields shared across all income types, with type-specific additions.
+
+    IncomeSource:
+      oneOf:
+        - $ref: '#/components/schemas/EmploymentIncome'
+        - $ref: '#/components/schemas/SelfEmploymentIncome'
+        - $ref: '#/components/schemas/BenefitIncome'
+      discriminator:
+        propertyName: type
+
+    IncomeSourceBase:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [employment, self_employment, benefit]
+        monthlyAmount:
+          type: number
+        startDate:
+          type: string
+          format: date
+
+    EmploymentIncome:
+      allOf:
+        - $ref: '#/components/schemas/IncomeSourceBase'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [employment]
+            employerName:
+              type: string
+            hoursPerWeek:
+              type: number
+
+    SelfEmploymentIncome:
+      allOf:
+        - $ref: '#/components/schemas/IncomeSourceBase'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [self_employment]
+            businessName:
+              type: string
+            netMonthlyProfit:
+              type: number
+
+    BenefitIncome:
+      allOf:
+        - $ref: '#/components/schemas/IncomeSourceBase'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum: [benefit]
+            benefitType:
+              type: string
+              enum: [ssi, ssdi, unemployment, veterans, other]
+            agencyName:
+              type: string

@@ -2,7 +2,7 @@
 
 **Status:** Approved
 
-See also: [API Architecture](api-architecture.md) | [Domain Design](domain-design.md) | [Design Rationale](design-rationale.md) | [Roadmap](roadmap.md)
+See also: [API Architecture](api-architecture.md) | [Domain Design](domain-design.md) | [Design Rationale](design-rationale.md) | [Roadmap](roadmap.md) | [Building a New Domain](../getting-started/new-domain-builders.md)
 
 **Sections:**
 
@@ -17,11 +17,13 @@ See also: [API Architecture](api-architecture.md) | [Domain Design](domain-desig
 
 ## Context
 
-Safety net program implementations depend on a range of backend systems and must render context-dependent UI across multiple programs. This project uses a contract-driven architecture to achieve portability at both layers — APIs and UI are defined as contracts, and implementations are swappable without changing what depends on them.
+Systems that depend on multiple vendor backends face a common portability problem: implementations are tightly coupled to specific vendors, making it expensive to swap systems or evolve independently. At the same time, UIs that hardcode rendering logic based on context — which fields to show, what labels to use, what rules apply — become brittle as requirements change. A contract-driven architecture solves portability at both layers: APIs and UI behavior are defined as contracts, and implementations are swappable without changing what depends on them.
+
+The Safety Net Blueprint applies this architecture to safety net benefits programs, but the patterns are domain-agnostic and reusable for any system with similar characteristics.
 
 At the **backend**, contracts provide vendor independence. The adapter pattern translates between contracts and vendor-specific systems — swap vendors by reimplementing the adapter, not the frontend. The contract complexity varies by system type: **data-shaped** systems (databases, document stores, identity providers) need only an API interface (OpenAPI spec), while **behavior-shaped** systems (workflow engines, rules engines, notification platforms) need richer behavioral contracts — state machines, rules, and metrics — that capture what the system must enforce, decide, and measure.
 
-At the **frontend**, field metadata contracts provide independence from domain-specific rendering logic. The backend serves field-level metadata — annotations (program relevance, verification requirements, regulatory citations), permissions, and labels — as contract artifacts. The frontend consumes this metadata to render context-dependent UI without hardcoding decisions about what to show based on programs, roles, or eligibility groups. Adding a program or changing which fields a role sees is a contract change, not a code change. Form rendering and layout are frontend concerns handled by the [safety-net-harness](https://github.com/codeforamerica/safety-net-harness) packages.
+At the **frontend**, field metadata contracts provide independence from domain-specific rendering logic. The backend serves field-level metadata — annotations, permissions, and labels — as contract artifacts. The frontend consumes this metadata to render context-dependent UI without hardcoding what to show based on context, roles, or eligibility groups. Adding a new context or changing which fields a role sees is a contract change, not a code change. Form rendering and layout are frontend concerns handled by a presentation layer — in the Safety Net Blueprint, the [safety-net-harness](https://github.com/codeforamerica/safety-net-harness) packages.
 
 This proposal describes how to define contracts for both layers, organized around two API types. **REST** (Representational State Transfer) APIs model resources with standard CRUD operations — create, read, update, delete. These serve data-shaped domains where the value is in the data model itself. **RPC** (Remote Procedure Call) APIs expose named operations that trigger behavior — state transitions, rule evaluation, and side effects. These serve behavior-shaped domains where the value is in orchestration and enforcement. The contract complexity differs: REST APIs need only an interface definition, while RPC APIs need richer behavioral contracts.
 
@@ -148,7 +150,7 @@ The field metadata format is custom but informed by established standards. No si
 **Design decisions:**
 
 - **Why field metadata in the backend, not form rendering?** Field metadata (what annotations a field carries, who can see it, what it's called in different languages) is data model metadata — it applies regardless of which frontend renders it. Form rendering (layout, sections, component mapping, navigation) is a frontend concern that varies by application. Separating them follows the same pattern as FHIR, where ElementDefinition is part of the data model and rendering is left to the presentation layer.
-- **Why JSON Logic over alternatives?** JSON Logic is the lightest serializable expression language with broad adoption. Alternatives: FHIRPath (healthcare-specific), XPath (verbose, XML-oriented), CEL (more powerful but less adopted). JSON Logic fits our authoring model — conditions that non-developers can read in a table cell.
+- **Why JSON Logic over alternatives?** JSON Logic is the lightest serializable expression language with broad adoption. Alternatives: FHIRPath (healthcare-specific), XPath (verbose, XML-oriented), CEL (more powerful but less adopted). JSON Logic fits our authoring model — conditions that non-developers can read in a table cell. This choice is scoped to field metadata's own conditions specifically; it does not extend to the behavioral contract surface (guards, procedure/step conditions, SLA conditions, metric filters), which uses CEL instead — see [behavioral-contract-dsl.md Decision 1](cross-cutting/behavioral-contract-dsl.md#decision-1-cel-as-the-expression-language) for why that surface made a different choice.
 
 ### Extensibility and customization
 
@@ -266,9 +268,9 @@ The contracts double as a **vendor evaluation checklist**: can this system suppo
 
 ---
 
-## What States Get From This Project
+## What You Get
 
-This project provides contracts and development tooling. States build their own production backends — in whatever language or framework they use — that satisfy those contracts.
+This project provides contracts and development tooling. Adopters build their own production backends — in whatever language or framework they use — that satisfy those contracts.
 
 | Artifact | Audience | Purpose |
 |----------|----------|---------|
@@ -279,22 +281,19 @@ This project provides contracts and development tooling. States build their own 
 | Validation script | Developers | Verify contract artifacts are internally consistent (state machine states match OpenAPI enums, effect targets reference real schemas, event payloads resolve, audit requirements satisfied) — runs in CI |
 | Mock server | Developers | Self-contained adapter with in-memory database for frontend development and integration testing |
 | Integration test suite | Developers | Auto-generated from contracts (transition tests, guard tests, effect verification, event emission checks). Tests verify outcomes, not implementation — it doesn't matter whether the adapter or vendor executed an effect, as long as the expected side effects occurred |
-| Decision tables | Business analysts + developers | Spreadsheets defining conditions and actions for routing, assignment, priority — conversion scripts generate the `rules:` section of the state machine YAML |
-| State transition tables | Business analysts + developers | Spreadsheets defining transitions, guards, and effects across related tables — conversion scripts generate the state machine YAML |
-| Field metadata tables | Developers + business analysts | Spreadsheets defining field annotations, permissions, and labels — conversion scripts generate the field metadata YAML |
 | State machine visualizations | Business analysts | Auto-generated diagrams from the state machine YAML showing states, transitions, and actors |
-| ORCA data explorer | All | Interactive tool for exploring API contracts — schemas, endpoints, relationships, and domain structure |
+| Explorer | All | Reference site generated from contracts — API docs, state machine diagrams, event catalog, data dictionaries |
 
-Adding a new domain to the mock server is declarative — define artifacts, not code. Add an OpenAPI spec and the mock auto-generates CRUD endpoints; add a state machine YAML and it auto-generates RPC API endpoints with transition enforcement, effects, and rule evaluation. Add field metadata YAML and the mock serves it via a metadata API endpoint.
+Adding a new domain to the mock server is declarative — define artifacts, not code. Add an OpenAPI spec and the mock auto-generates CRUD endpoints; add a state machine YAML and it auto-generates RPC API endpoints with transition enforcement, effects, and rule evaluation.
 
-States don't have to use the base contracts as-is. An overlay system lets states customize any contract artifact — OpenAPI specs, state machine YAML, metrics, field metadata — without forking the base files. Overlays use JSONPath targeting to add, modify, or remove specific elements (e.g., add a state-specific rule, adjust a metric target, modify a transition's guard, add fields to a form section). The base contracts plus overlays produce a merged result that the validation script and integration tests run against, so customizations are still verified for consistency.
+Adopters don't have to use the base contracts as-is. An overlay system lets anyone customize any contract artifact — OpenAPI specs, state machine YAML, metrics, field metadata — without forking the base files. Overlays use JSONPath targeting to add, modify, or remove specific elements. The base contracts plus overlays produce a merged result that the validation script and integration tests run against, so customizations are still verified for consistency.
 
-**How a state uses this:**
+**How to use this:**
 
-1. Install the contracts as a dependency
-2. Apply overlays to customize contracts for state-specific needs
+1. Install the contracts (or define your own) as a dependency
+2. Apply overlays to customize contracts for your context
 3. Develop frontends against the mock server
-4. Build a production backend (the adapter) that exposes the same API surface, translating to their vendor systems
+4. Build a production backend (the adapter) that exposes the same API surface, translating to your vendor systems
 5. Run the integration test suite against the production backend to verify conformance
 6. Swap the frontend from mock server to production backend
 

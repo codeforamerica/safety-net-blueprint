@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Safety Net Blueprint — Client Reference: Eligibility Adapter</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    details summary::-webkit-details-marker { display: none; }
+
+    /* Full-viewport layout: header pinned, sidebar + content fill remaining height */
+    #page-header { flex-shrink: 0; }
+    .page-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+    #sidebar {
+      width: 220px;
+      min-width: 220px;
+      background: #2B1A78;
+      color: white;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #sidebar-nav { padding: 0.5rem 0; overflow-y: auto; flex: 1; min-height: 0; }
+    #content { flex: 1; min-width: 0; padding: 2rem 2.5rem 4rem; overflow-y: auto; }
+    mark.search-hl { background: #fff176; color: inherit; border-radius: 2px; padding: 0 1px; }
+    #content [id]:target { scroll-margin-top: 1rem; outline: none; box-shadow: none; }
+
+    /* Nav links */
+    a.nav-link {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 4px 0.75rem; font-size: 11px;
+      color: rgba(255,255,255,0.65); text-decoration: none;
+      transition: background 0.1s;
+    }
+    a.nav-link:hover { background: rgba(255,255,255,0.08); color: white; }
+    a.nav-link.nav-active { background: rgba(255,255,255,0.15); color: white; font-weight: 700; }
+    /* Make inline code readable on the dark sidebar */
+    #sidebar a.nav-link code {
+      color: rgba(255,255,255,0.55); background: transparent; border: none; font-size: 10px;
+    }
+    .nav-section-label {
+      font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35); padding: 0.75rem 0.75rem 0.2rem;
+    }
+    .nav-count {
+      font-size: 0.65rem; font-weight: 400;
+      background: rgba(255,255,255,0.15); border-radius: 8px;
+      padding: 0.1rem 0.35rem; margin-left: auto;
+    }
+
+    /* Interactive element hover states — applied centrally so all tools get consistent behavior */
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    a { color: #5650BE; }
+  </style>
+</head>
+<body>
+  <div id="page-header">
+    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Client Reference</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Eligibility Adapter</a></div>
+    <div style="background:#2B1A78;color:white;">
+      <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:0.9375rem;font-weight:800;">Eligibility Adapter</span>
+        <code style="font-size:11px;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:3px;">packages/generated/clients/eligibility-adapter</code>
+      </div>
+      <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">eligibility-adapter</code> · API spec: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/refactor/blueprint-core-package/packages/safety-net-contracts/src/domains/eligibility/eligibility-adapter-openapi.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">eligibility-adapter-openapi.yaml</code></a><span style="margin-left:auto;"><a href="../api-reference/eligibility-adapter.html" style="font-size:12px;color:#5650BE;">View full API reference →</a></span></div>
+    </div>
+  </div>
+  <div class="page-layout">
+    <nav id="sidebar">
+      
+      <div style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;">
+        <input id="nav-search" type="search" placeholder="Filter…"
+          style="width:100%;padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.2);border-radius:4px;background:rgba(255,255,255,0.1);color:white;font-size:0.75rem;outline:none;"
+          aria-label="Filter navigation" />
+      </div>
+      <div id="sidebar-nav">
+        <div class="nav-section">
+      <div class="nav-section-label">Methods</div>
+      <a href="#section-methods" class="nav-link">All methods <span class="nav-count">3</span></a>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-label">Constants</div>
+        <a href="#const-AssetType" class="nav-link">AssetType</a><a href="#const-DecisionPath" class="nav-link">DecisionPath</a><a href="#const-DecisionStatus" class="nav-link">DecisionStatus</a><a href="#const-DeductionFrequency" class="nav-link">DeductionFrequency</a><a href="#const-DeductionType" class="nav-link">DeductionType</a><a href="#const-ExpenseType" class="nav-link">ExpenseType</a><a href="#const-HealthPlanType" class="nav-link">HealthPlanType</a><a href="#const-ImmigrantStatus" class="nav-link">ImmigrantStatus</a><a href="#const-IncomeChangeReason" class="nav-link">IncomeChangeReason</a><a href="#const-IncomeFrequency" class="nav-link">IncomeFrequency</a><a href="#const-IncomeType" class="nav-link">IncomeType</a><a href="#const-InKindSupportType" class="nav-link">InKindSupportType</a><a href="#const-InsurancePolicyType" class="nav-link">InsurancePolicyType</a><a href="#const-JobEndReason" class="nav-link">JobEndReason</a><a href="#const-JobStatus" class="nav-link">JobStatus</a><a href="#const-JobType" class="nav-link">JobType</a><a href="#const-LumpSumType" class="nav-link">LumpSumType</a><a href="#const-PremiumFrequency" class="nav-link">PremiumFrequency</a><a href="#const-RealPropertyUse" class="nav-link">RealPropertyUse</a><a href="#const-ServiceType" class="nav-link">ServiceType</a><a href="#const-UnearnedIncomeType" class="nav-link">UnearnedIncomeType</a>
+      </div>
+    <div class="nav-section">
+        <div class="nav-section-label">Types</div>
+        <a href="#type-MemberContext" class="nav-link">MemberContext</a><a href="#type-ElectronicCheckResult" class="nav-link">ElectronicCheckResult</a><a href="#type-VerificationSummary" class="nav-link">VerificationSummary</a><a href="#type-PerMemberProgramRequest" class="nav-link">PerMemberProgramRequest</a><a href="#type-PerHouseholdProgramRequest" class="nav-link">PerHouseholdProgramRequest</a><a href="#type-ProgramDecision" class="nav-link">ProgramDecision</a><a href="#type-ExpeditedScreeningRequest" class="nav-link">ExpeditedScreeningRequest</a><a href="#type-ExpeditedScreeningResponse" class="nav-link">ExpeditedScreeningResponse</a><a href="#type-MedicaidExParteRequest" class="nav-link">MedicaidExParteRequest</a><a href="#type-IndividualDeterminationRequest" class="nav-link">IndividualDeterminationRequest</a><a href="#type-HouseholdDeterminationRequest" class="nav-link">HouseholdDeterminationRequest</a>
+      </div>
+      </div>
+    </nav>
+    <main id="content">
+      <section id="section-methods" style="margin-bottom:2.5rem;">
+      <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Methods (3)</h2>
+      <div id="ep-evaluateExpeditedScreening" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">evaluateExpeditedScreening<span style="color:#aaa;font-weight:400;">()</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">You can provide a client instance returned by `createClient()` instead of</span>
+      <a href="../api-reference/eligibility-adapter.html#op-post-evaluate-expedited-screening" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-evaluateExpeditedScreening" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility-adapter.evaluateExpeditedScreening({ body: { ... } })</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div><div id="ep-evaluateMedicaidExParte" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">evaluateMedicaidExParte<span style="color:#aaa;font-weight:400;">()</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Evaluate Medicaid ex parte</span>
+      <a href="../api-reference/eligibility-adapter.html#op-post-evaluate-medicaid-ex-parte" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-evaluateMedicaidExParte" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility-adapter.evaluateMedicaidExParte({ body: { ... } })</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div><div id="ep-evaluateDetermination" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">evaluateDetermination<span style="color:#aaa;font-weight:400;">()</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Evaluate final determination</span>
+      <a href="../api-reference/eligibility-adapter.html#op-post-evaluate-determination" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-evaluateDetermination" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility-adapter.evaluateDetermination({ body: { ... } })</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div>
+    </section><section id="section-constants" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Constants (21)</h2>
+        <div id="const-AssetType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">AssetType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (6 values)</span>
+      <a href="#const-AssetType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'liquid'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'vehicle'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'real_property'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'retirement_account'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'insurance'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'other'</span></div></div></div>
+  </details>
+</div><div id="const-DecisionPath" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DecisionPath</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (2 values)</span>
+      <a href="#const-DecisionPath" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'auto'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'manual'</span></div></div></div>
+  </details>
+</div><div id="const-DecisionStatus" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DecisionStatus</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (4 values)</span>
+      <a href="#const-DecisionStatus" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'pending'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'approved'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'denied'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'ineligible'</span></div></div></div>
+  </details>
+</div><div id="const-DeductionFrequency" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DeductionFrequency</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (7 values)</span>
+      <a href="#const-DeductionFrequency" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'one_time_only'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'weekly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'every_two_weeks'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'twice_monthly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'monthly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'yearly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'variable'</span></div></div></div>
+  </details>
+</div><div id="const-DeductionType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DeductionType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (12 values)</span>
+      <a href="#const-DeductionType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'alimony_paid'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'capital_losses'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'early_withdrawal_penalty'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'student_loan_interest'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'domestic_production_activities'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'reimbursement_of_expenses'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'hsa_deduction'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'moving_expenses'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'traditional_ira_contribution'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'reservist_performing_artist_government_official_expenses'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'other'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'prior_period'</span></div></div></div>
+  </details>
+</div><div id="const-ExpenseType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ExpenseType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (7 values)</span>
+      <a href="#const-ExpenseType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'rent'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'mortgage'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'dependent_care'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'medical'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'child_support'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'alimony'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'other'</span></div></div></div>
+  </details>
+</div><div id="const-HealthPlanType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">HealthPlanType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (12 values)</span>
+      <a href="#const-HealthPlanType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'employer_sponsored'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'cobra'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'medicare'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'tricare'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'va'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'marketplace'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'peace_corps'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'chip'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'medicaid'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'tribal_health_services'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'other_federal'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'other'</span></div></div></div>
+  </details>
+</div><div id="const-ImmigrantStatus" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ImmigrantStatus</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (12 values)</span>
+      <a href="#const-ImmigrantStatus" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'lawful_permanent_resident'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'refugee'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'asylee'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'deportation_withheld'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'parolee'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'conditional_entrant'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'cuban_haitian_entrant'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'amerasian'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'battered_non_citizen'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'trafficking_victim'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'temporary_protected_status'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'other'</span></div></div></div>
+  </details>
+</div><div id="const-IncomeChangeReason" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">IncomeChangeReason</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (6 values)</span>
+      <a href="#const-IncomeChangeReason" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'stopped_working'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'hours_reduced'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'new_job'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'change_in_employment'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'marital_status_change'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'other'</span></div></div></div>
+  </details>
+</div><div id="const-IncomeFrequency" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">IncomeFrequency</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (7 values)</span>
+      <a href="#const-IncomeFrequency" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'daily'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'weekly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'every_two_weeks'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'twice_monthly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'monthly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'yearly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'variable'</span></div></div></div>
+  </details>
+</div><div id="const-IncomeType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">IncomeType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (9 values)</span>
+      <a href="#const-IncomeType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'employed'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'self_employed'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'unearned'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'lump_sum'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'in_kind_support'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'tribal'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'education_grant'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'other'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'prior_period'</span></div></div></div>
+  </details>
+</div><div id="const-InKindSupportType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">InKindSupportType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (4 values)</span>
+      <a href="#const-InKindSupportType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'shelter'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'food'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'utilities'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'other'</span></div></div></div>
+  </details>
+</div><div id="const-InsurancePolicyType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">InsurancePolicyType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (4 values)</span>
+      <a href="#const-InsurancePolicyType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'term'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'permanent'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'burial'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'other'</span></div></div></div>
+  </details>
+</div><div id="const-JobEndReason" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">JobEndReason</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (2 values)</span>
+      <a href="#const-JobEndReason" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'voluntary_separation'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'involuntary_separation'</span></div></div></div>
+  </details>
+</div><div id="const-JobStatus" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">JobStatus</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (3 values)</span>
+      <a href="#const-JobStatus" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'active'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'on_strike'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'ended'</span></div></div></div>
+  </details>
+</div><div id="const-JobType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">JobType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (2 values)</span>
+      <a href="#const-JobType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'employed'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'self_employed'</span></div></div></div>
+  </details>
+</div><div id="const-LumpSumType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">LumpSumType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (9 values)</span>
+      <a href="#const-LumpSumType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'lawsuit_settlement'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'insurance_settlement'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'social_security_ssi_ssdi_payment'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'veterans'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'inheritance'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'surrender_of_annuity'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'life_insurance_payout'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'lottery_gambling_winnings'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'other'</span></div></div></div>
+  </details>
+</div><div id="const-PremiumFrequency" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">PremiumFrequency</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (5 values)</span>
+      <a href="#const-PremiumFrequency" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'weekly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'every_two_weeks'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'twice_monthly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'monthly'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'yearly'</span></div></div></div>
+  </details>
+</div><div id="const-RealPropertyUse" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">RealPropertyUse</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (5 values)</span>
+      <a href="#const-RealPropertyUse" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'primary_residence'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'rental'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'self_employment'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'for_sale'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'other'</span></div></div></div>
+  </details>
+</div><div id="const-ServiceType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ServiceType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (12 values)</span>
+      <a href="#const-ServiceType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'fdsh_ssa'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'fdsh_vlp'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'fdsh_fti'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'fdsh_medicare'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'fdsh_vci'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'ssa_ievs'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'irs_ievs'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'swica'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'uib'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'save'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'enrollment_check'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'incarceration_check'</span></div></div></div>
+  </details>
+</div><div id="const-UnearnedIncomeType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">UnearnedIncomeType</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (23 values)</span>
+      <a href="#const-UnearnedIncomeType" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'unemployment'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'kinship_payment'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'veterans_programs'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'adoption_and_refugee_services'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'ssi_or_ssdi'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'private_disability'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'workers_compensation'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'disability_from_veterans_programs'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'legal_settlement'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'scholarship'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'educational_grant'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'work_study'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'spousal_support'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'child_support'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'retirement_or_pension'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'investment_interest_and_dividends'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'social_security_retirement'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'rental_income'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'gambling_or_lottery_winnings'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'gifts_or_donations'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'loan_or_mortgage_income'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'research_participation'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'other'</span></div></div></div>
+  </details>
+</div>
+      </section><section id="section-types" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (11)</h2>
+        <div id="type-MemberContext" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">MemberContext</code>
+      <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <a href="#type-MemberContext" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">MemberContext</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">income</span><span style="color:#888;">?:</span> <span style="color:#006152;">array[union]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">expenses</span><span style="color:#888;">?:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">assets</span><span style="color:#888;">?:</span> <span style="color:#006152;">array[union]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">employment</span><span style="color:#888;">?:</span> <span style="color:#006152;">array[union]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">healthCoverage</span><span style="color:#888;">?:</span> <span style="color:#006152;">array[union]</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-ElectronicCheckResult" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ElectronicCheckResult</code>
+      <span style="font-size:11px;color:#aaa;">4 fields</span>
+      <a href="#type-ElectronicCheckResult" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ElectronicCheckResult</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">serviceType</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum (12 values)</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">result</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;conclusive&quot;, &quot;inconclusive&quot;, &quot;partial&quot;, &quot;error&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">receivedAt</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">serviceResult</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-VerificationSummary" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">VerificationSummary</code>
+      <span style="font-size:11px;color:#aaa;">2 fields</span>
+      <a href="#type-VerificationSummary" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">VerificationSummary</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">category</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">status</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;pending&quot;, &quot;inconclusive&quot;, &quot;satisfied&quot;, &quot;waived&quot;, &quot;cannot_verify&quot;</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-PerMemberProgramRequest" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">PerMemberProgramRequest</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-PerMemberProgramRequest" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">PerMemberProgramRequest</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">metadata</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-PerHouseholdProgramRequest" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">PerHouseholdProgramRequest</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-PerHouseholdProgramRequest" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">PerHouseholdProgramRequest</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">metadata</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-ProgramDecision" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ProgramDecision</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-ProgramDecision" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ProgramDecision</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">metadata</span><span style="color:#888;">:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-ExpeditedScreeningRequest" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ExpeditedScreeningRequest</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-ExpeditedScreeningRequest" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ExpeditedScreeningRequest</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">metadata</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-ExpeditedScreeningResponse" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ExpeditedScreeningResponse</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-ExpeditedScreeningResponse" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ExpeditedScreeningResponse</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">metadata</span><span style="color:#888;">:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-MedicaidExParteRequest" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">MedicaidExParteRequest</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-MedicaidExParteRequest" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">MedicaidExParteRequest</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">metadata</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-IndividualDeterminationRequest" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">IndividualDeterminationRequest</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-IndividualDeterminationRequest" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">IndividualDeterminationRequest</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">metadata</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-HouseholdDeterminationRequest" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">HouseholdDeterminationRequest</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-HouseholdDeterminationRequest" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">HouseholdDeterminationRequest</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">metadata</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div>
+      </section>
+    </main>
+  </div>
+  <script>
+    // Chevron toggle for <details> — set initial state and keep in sync on toggle
+    document.querySelectorAll('details').forEach(d => {
+      const ch = d.querySelector('.chevron');
+      if (ch) ch.textContent = d.open ? '▼' : '▶';
+      d.addEventListener('toggle', () => {
+        const ch = d.querySelector('.chevron');
+        if (ch) ch.textContent = d.open ? '▼' : '▶';
+      });
+    });
+    // data-expand-id toggles — click any [data-expand-id] element to show/hide the
+    // element with the matching id. Works for any target element type (<div>, <tr>, etc.)
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    // Active nav highlighting — click sets immediately; IntersectionObserver keeps it current on scroll
+    (function () {
+      const links = Array.from(document.querySelectorAll('#sidebar a.nav-link[href^="#"]'));
+      if (!links.length) return;
+      function setActive(id) {
+        links.forEach(a => a.classList.toggle('nav-active', a.getAttribute('href') === '#' + id));
+      }
+      // Highlight immediately on click so there's instant feedback
+      links.forEach(a => a.addEventListener('click', () => setActive(a.getAttribute('href').slice(1))));
+      const sections = links
+        .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+        .filter(Boolean);
+      if (!sections.length) return;
+      const io = new IntersectionObserver(entries => {
+        const hit = entries.find(e => e.isIntersecting);
+        if (hit) setActive(hit.target.id);
+      }, { root: document.getElementById('content'), rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      sections.forEach(s => io.observe(s));
+      setActive(sections[0].id);
+    })();
+    
+    (function () {
+      // Returns only text that is currently visible — skips content inside closed <details>
+      function visibleText(node) {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+        if (node.tagName === 'DETAILS' && !node.open) {
+          const summary = node.querySelector('summary');
+          return summary ? summary.textContent : '';
+        }
+        return [...node.childNodes].map(visibleText).join('');
+      }
+      function clearHighlights() {
+        document.querySelectorAll('#content mark.search-hl').forEach(el => {
+          const parent = el.parentNode;
+          el.replaceWith(document.createTextNode(el.textContent));
+          parent?.normalize();
+        });
+      }
+      // Only highlight text in visible nodes (skip closed <details> bodies)
+      function highlightInElement(root, q) {
+        function walk(node) {
+          if (node.tagName === 'DETAILS' && !node.open) {
+            // Only walk the summary
+            const summary = node.querySelector('summary');
+            if (summary) walk(summary);
+            return;
+          }
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            const lower = text.toLowerCase();
+            if (!lower.includes(q)) return;
+            const frag = document.createDocumentFragment();
+            let last = 0, idx = lower.indexOf(q);
+            while (idx !== -1) {
+              if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+              const mark = document.createElement('mark');
+              mark.className = 'search-hl';
+              mark.textContent = text.slice(idx, idx + q.length);
+              frag.appendChild(mark);
+              last = idx + q.length;
+              idx = lower.indexOf(q, last);
+            }
+            if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+            node.parentNode.replaceChild(frag, node);
+            return;
+          }
+          for (const child of [...node.childNodes]) walk(child);
+        }
+        walk(root);
+      }
+      document.getElementById('nav-search')?.addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        clearHighlights();
+        document.querySelectorAll('#sidebar .nav-link[href^="#"]').forEach(a => {
+          const id = a.getAttribute('href').slice(1);
+          const el = document.getElementById(id);
+          const items = el ? [...el.querySelectorAll('.content-item')] : [];
+          const navMatches = !q || a.textContent.toLowerCase().includes(q);
+          const anyItemMatches = q && items.some(item => visibleText(item).toLowerCase().includes(q));
+          // Section visible if nav label matches, any item matches, or (no items) visible section text matches
+          const sectionMatches = !q || navMatches || anyItemMatches ||
+            (el && !items.length && visibleText(el).toLowerCase().includes(q));
+          a.style.display = sectionMatches ? '' : 'none';
+          if (el) {
+            el.style.display = sectionMatches ? '' : 'none';
+            if (items.length > 0) {
+              items.forEach(item => {
+                // Show all items when nav label matched; otherwise filter by visible text only
+                item.style.display = (!q || navMatches || visibleText(item).toLowerCase().includes(q)) ? '' : 'none';
+              });
+            }
+          }
+        });
+        document.querySelectorAll('#sidebar .nav-section').forEach(sec => {
+          const any = [...sec.querySelectorAll('.nav-link')].some(a => a.style.display !== 'none');
+          sec.style.display = any ? '' : 'none';
+        });
+        if (q) {
+          // Highlight within visible content items; fall back to top-level id'd sections without content items
+          document.querySelectorAll('#content .content-item:not([style*="display: none"])').forEach(el => highlightInElement(el, q));
+          document.querySelectorAll('#content > *[id]:not([style*="display: none"])').forEach(el => {
+            if (!el.querySelector('.content-item')) highlightInElement(el, q);
+          });
+        }
+      });
+    })();
+    
+  </script>
+</body>
+</html>

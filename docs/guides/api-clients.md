@@ -1,32 +1,35 @@
 # API Client Packages
 
-> **Status: Draft**
-
 Generated TypeScript SDK functions and Zod schemas for type-safe API consumption.
 
-The `@codeforamerica/safety-net-blueprint-clients` package generates typed clients from resolved OpenAPI specs. States build client packages from their resolved specs (base + overlays) and consume them locally or publish under their own package name.
+Clients are generated from resolved OpenAPI specs using `@hey-api/openapi-ts`. States generate clients from their resolved specs (base + overlays applied) and consume them locally or publish under their own package name.
 
-> **Note:** Client generation currently covers REST APIs (CRUD operations). As RPC endpoints are added via behavioral contracts (state machines), the generated clients will include those operations as well. See the [Frontend Developer Guide](../getting-started/frontend-developers.md) for the full API surface including RPC and event streams.
+## Tooling
+
+Client generation uses [`@hey-api/openapi-ts`](https://github.com/hey-api/openapi-ts) with a plugin architecture:
+
+- `@hey-api/typescript` — TypeScript interfaces (compile-time only, no runtime cost)
+- `@hey-api/zod` — Zod schemas for runtime request/response validation
+- `@hey-api/sdk` — typed SDK functions with built-in validation
+- `@hey-api/client-axios` — Axios HTTP adapter
+
+This separates static types from runtime validation: type-only imports carry no Zod overhead; the SDK validates automatically when used.
+
+`openapi-zod-client` (Zodios) was the previous generator. It was replaced because Zodios is unmaintained (no releases since early 2024) and has unresolved TypeScript issues with complex schemas.
 
 ## Generating Clients
 
 ### Within this repository
 
 ```bash
-# Build a state-specific client package
-node packages/clients/scripts/build-state-package.js --state=<your-state> --version=1.0.0
+npm run clients:typescript
 ```
 
-This generates a complete npm package in `packages/clients/dist-packages/<your-state>/` containing:
-- Typed SDK functions (`getTask`, `listApplications`, etc.)
-- TypeScript interfaces
-- Zod schemas for runtime validation
-- Axios-based HTTP client
-- Search query helpers
+This generates TypeScript clients from `packages/generated/contracts/` into `packages/generated/clients/`.
 
 ### In a state repository
 
-States install `@codeforamerica/safety-net-blueprint-clients` and generate clients from their resolved specs. See the [Setup Guide](../guides/setup-guide.md) for the full setup.
+States run the resolve pipeline against their overlay, then generate clients from the resolved output. See the [Setup Guide](../guides/setup-guide.md) for the full setup.
 
 ## Package Structure
 
@@ -375,7 +378,7 @@ Each generated package includes state-specific schema fields defined by that sta
 - Eligibility flags for state programs
 - State-specific income source types
 
-Check your state's overlay files to see what customizations are applied. In this repo, overlays are under `packages/contracts/overlays/`. In a state repo, they live wherever the `--overlay` argument points. See [Overlay Guide](../guides/overlay-guide.md) for overlay syntax.
+Check your state's overlay files to see what customizations are applied. In this repo, overlays are under `packages/safety-net-contracts/src/overlays/`. In a state repo, they live wherever the `--overlay` argument points. See [Overlay Guide](../guides/overlay-guide.md) for overlay syntax.
 
 ## Annotations
 
@@ -409,9 +412,9 @@ package will have an `Annotations` export. Domains without annotations do not ex
 
 ## Updating Clients
 
-When the base specs (`@codeforamerica/safety-net-blueprint-contracts`) are updated:
+When the base specs (`@codeforamerica/blueprint-safety-net-contracts`) are updated:
 
-1. Update the dependency: `npm install @codeforamerica/safety-net-blueprint-contracts@<new-version>`
+1. Update the dependency: `npm install @codeforamerica/blueprint-safety-net-contracts@<new-version>`
 2. Re-resolve overlays: `npm run resolve`
 3. Regenerate clients from the updated resolved specs
 4. Check the changelog for breaking changes to schema fields or API endpoints

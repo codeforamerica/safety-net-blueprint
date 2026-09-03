@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Safety Net Blueprint — Event Catalog</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; font-size: 14px; line-height: 1.6; }
+    a { color: #5650BE; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12px; background: #F7EDE8; padding: 1px 5px; border-radius: 3px; border: 1px solid #E9CCBE; color: #2a2a2a; }
+    table { border-collapse: collapse; width: 100%; }
+    th { background: #F7EDE8; color: #1a1a1a; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 8px 12px; text-align: left; border-bottom: 2px solid #E9CCBE; }
+    td { padding: 10px 12px; border-bottom: 1px solid #E9CCBE; vertical-align: top; font-size: 13px; word-break: break-word; overflow-wrap: anywhere; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #F7EDE8; }
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    
+  </style>
+</head>
+<body>
+  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Event Catalog</a></div>
+  
+  <div style="max-width:960px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
+    <h1 style="font-size:1.5rem;font-weight:800;color:#2B1A78;margin-bottom:0.375rem;">Event Catalog</h1>
+    <p style="color:#666;margin-bottom:2rem;font-size:13px;">Cross-domain event reference auto-generated from state machine <code>emit</code> and subscription declarations.</p>
+    <div style="background:white;border:1px solid #E9CCBE;border-radius:8px;overflow:hidden;">
+      <table>
+        <thead><tr>
+          <th>Event</th><th>Published by</th><th>Subscribers</th>
+        </tr></thead>
+        <tbody><tr id="event-client_management.person.match_resolved">
+    <td><code>client_management.person.match_resolved</code> <a href="#event-client_management.person.match_resolved" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+  </tr><tr id="event-communication.notice.sent">
+    <td><code>communication.notice.sent</code> <a href="#event-communication.notice.sent" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+  </tr><tr id="event-data_exchange.call.completed">
+    <td><code>data_exchange.call.completed</code> <a href="#event-data_exchange.call.completed" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/eligibility.html#machine-decision">Eligibility / Decision</a><br><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+  </tr><tr id="event-document_management.document_version.uploaded">
+    <td><code>document_management.document_version.uploaded</code> <a href="#event-document_management.document_version.uploaded" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+  </tr><tr id="event-eligibility.application.decision_completed">
+    <td><code>eligibility.application.decision_completed</code> <a href="#event-eligibility.application.decision_completed" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/eligibility.html#machine-decision">Eligibility / Decision</a></td>
+    <td><a href="../state-machine-docs/eligibility.html#machine-determination">Eligibility / Determination</a><br><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+  </tr><tr id="event-eligibility.application.determination_completed">
+    <td><code>eligibility.application.determination_completed</code> <a href="#event-eligibility.application.determination_completed" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/eligibility.html#machine-determination">Eligibility / Determination</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+  </tr><tr id="event-eligibility.application.expedited">
+    <td><code>eligibility.application.expedited</code> <a href="#event-eligibility.application.expedited" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/eligibility.html#machine-determination">Eligibility / Determination</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a><br><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+  </tr><tr id="event-eligibility.decision.created">
+    <td><code>eligibility.decision.created</code> <a href="#event-eligibility.decision.created" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/eligibility.html#machine-decision">Eligibility / Decision</a></td>
+  </tr><tr id="event-eligibility.determination.created">
+    <td><code>eligibility.determination.created</code> <a href="#event-eligibility.determination.created" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+  </tr><tr id="event-eligibility.determination.withdrawn">
+    <td><code>eligibility.determination.withdrawn</code> <a href="#event-eligibility.determination.withdrawn" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/eligibility.html#machine-determination">Eligibility / Determination</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-intake.application.closed">
+    <td><code>intake.application.closed</code> <a href="#event-intake.application.closed" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+  </tr><tr id="event-intake.application.opened">
+    <td><code>intake.application.opened</code> <a href="#event-intake.application.opened" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-intake.application.review_completed">
+    <td><code>intake.application.review_completed</code> <a href="#event-intake.application.review_completed" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+    <td><a href="../state-machine-docs/eligibility.html#machine-determination">Eligibility / Determination</a></td>
+  </tr><tr id="event-intake.application.submitted">
+    <td><code>intake.application.submitted</code> <a href="#event-intake.application.submitted" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+    <td><a href="../state-machine-docs/eligibility.html#machine-determination">Eligibility / Determination</a><br><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a><br><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+  </tr><tr id="event-intake.application.withdrawn">
+    <td><code>intake.application.withdrawn</code> <a href="#event-intake.application.withdrawn" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+    <td><a href="../state-machine-docs/eligibility.html#machine-determination">Eligibility / Determination</a></td>
+  </tr><tr id="event-intake.application_member.created">
+    <td><code>intake.application_member.created</code> <a href="#event-intake.application_member.created" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+  </tr><tr id="event-intake.determination.approval_needed">
+    <td><code>intake.determination.approval_needed</code> <a href="#event-intake.determination.approval_needed" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+  </tr><tr id="event-intake.determination.rejected">
+    <td><code>intake.determination.rejected</code> <a href="#event-intake.determination.rejected" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+  </tr><tr id="event-intake.member_income.created">
+    <td><code>intake.member_income.created</code> <a href="#event-intake.member_income.created" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+  </tr><tr id="event-intake.verification.cannot_verify">
+    <td><code>intake.verification.cannot_verify</code> <a href="#event-intake.verification.cannot_verify" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-verification">Intake / Verification</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-intake.verification.created">
+    <td><code>intake.verification.created</code> <a href="#event-intake.verification.created" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/intake.html#machine-verification">Intake / Verification</a></td>
+  </tr><tr id="event-intake.verification.inconclusive">
+    <td><code>intake.verification.inconclusive</code> <a href="#event-intake.verification.inconclusive" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-verification">Intake / Verification</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-intake.verification.satisfied">
+    <td><code>intake.verification.satisfied</code> <a href="#event-intake.verification.satisfied" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-verification">Intake / Verification</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-intake.verification.waived">
+    <td><code>intake.verification.waived</code> <a href="#event-intake.verification.waived" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-verification">Intake / Verification</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-scheduling.appointment.scheduled">
+    <td><code>scheduling.appointment.scheduled</code> <a href="#event-scheduling.appointment.scheduled" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+  </tr><tr id="event-workflow.client_timeout">
+    <td><code>workflow.client_timeout</code> <a href="#event-workflow.client_timeout" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+  </tr><tr id="event-workflow.creation_deadline">
+    <td><code>workflow.creation_deadline</code> <a href="#event-workflow.creation_deadline" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+  </tr><tr id="event-workflow.sla_breach">
+    <td><code>workflow.sla_breach</code> <a href="#event-workflow.sla_breach" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+  </tr><tr id="event-workflow.sla_warning">
+    <td><code>workflow.sla_warning</code> <a href="#event-workflow.sla_warning" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+  </tr><tr id="event-workflow.task.approved">
+    <td><code>workflow.task.approved</code> <a href="#event-workflow.task.approved" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-workflow.task.assigned">
+    <td><code>workflow.task.assigned</code> <a href="#event-workflow.task.assigned" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-workflow.task.awaiting_client">
+    <td><code>workflow.task.awaiting_client</code> <a href="#event-workflow.task.awaiting_client" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-workflow.task.awaiting_verification">
+    <td><code>workflow.task.awaiting_verification</code> <a href="#event-workflow.task.awaiting_verification" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-workflow.task.cancelled">
+    <td><code>workflow.task.cancelled</code> <a href="#event-workflow.task.cancelled" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-workflow.task.claimed">
+    <td><code>workflow.task.claimed</code> <a href="#event-workflow.task.claimed" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+  </tr><tr id="event-workflow.task.completed">
+    <td><code>workflow.task.completed</code> <a href="#event-workflow.task.completed" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-workflow.task.created">
+    <td><code>workflow.task.created</code> <a href="#event-workflow.task.created" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+  </tr><tr id="event-workflow.task.de-escalated">
+    <td><code>workflow.task.de-escalated</code> <a href="#event-workflow.task.de-escalated" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-workflow.task.escalated">
+    <td><code>workflow.task.escalated</code> <a href="#event-workflow.task.escalated" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-workflow.task.priority_changed">
+    <td><code>workflow.task.priority_changed</code> <a href="#event-workflow.task.priority_changed" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-workflow.task.released">
+    <td><code>workflow.task.released</code> <a href="#event-workflow.task.released" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-workflow.task.reopened">
+    <td><code>workflow.task.reopened</code> <a href="#event-workflow.task.reopened" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-workflow.task.resumed">
+    <td><code>workflow.task.resumed</code> <a href="#event-workflow.task.resumed" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-workflow.task.returned_to_worker">
+    <td><code>workflow.task.returned_to_worker</code> <a href="#event-workflow.task.returned_to_worker" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-workflow.task.sla_breached">
+    <td><code>workflow.task.sla_breached</code> <a href="#event-workflow.task.sla_breached" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-workflow.task.submitted_for_review">
+    <td><code>workflow.task.submitted_for_review</code> <a href="#event-workflow.task.submitted_for_review" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-workflow.task.updated">
+    <td><code>workflow.task.updated</code> <a href="#event-workflow.task.updated" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+  </tr><tr id="event-workflow.verification_timeout">
+    <td><code>workflow.verification_timeout</code> <a href="#event-workflow.verification_timeout" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/workflow.html#machine-task">Workflow / Task</a></td>
+  </tr></tbody>
+      </table>
+    </div>
+    
+  <h2 style="font-size:1rem;font-weight:700;color:#2B1A78;margin:2.5rem 0 0.5rem;">Subscribed but not emitted</h2>
+  <p style="font-size:13px;color:#666;margin-bottom:0.75rem;">These events are subscribed to but have no emitter in the current state machines.</p>
+  <ul style="font-size:13px;color:#666;padding-left:1.25rem;">
+    <li><code>client_management.person.match_resolved</code></li><li><code>communication.notice.sent</code></li><li><code>data_exchange.call.completed</code></li><li><code>document_management.document_version.uploaded</code></li><li><code>eligibility.decision.created</code></li><li><code>eligibility.determination.created</code></li><li><code>intake.application_member.created</code></li><li><code>intake.member_income.created</code></li><li><code>intake.verification.created</code></li><li><code>scheduling.appointment.scheduled</code></li><li><code>workflow.client_timeout</code></li><li><code>workflow.creation_deadline</code></li><li><code>workflow.sla_breach</code></li><li><code>workflow.sla_warning</code></li><li><code>workflow.task.created</code></li><li><code>workflow.task.updated</code></li><li><code>workflow.verification_timeout</code></li>
+  </ul>
+  </div>
+  <script>
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    
+  </script>
+</body>
+</html>

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safety Net Blueprint — Architecture Principles</title>
+  <style>
+    :root {
+      --dark-blue:   #2B1A78;
+      --mid-blue:    #5650BE;
+      --light-blue:  #C2C0E8;
+      --pale-blue:   #E6EBF9;
+      --deep-green:  #006152;
+      --mid-green:   #00AD93;
+      --light-green: #E2F9F6;
+      --warm-yellow: #FFB446;
+      --light-yellow:#FFF3E0;
+      --rich-red:    #AF121D;
+      --light-red:   #F9C8CB;
+      --sand-dark:   #E9CCBE;
+      --sand-mid:    #F7EDE8;
+      --bg:          #F3F3F3;
+      --white:       #FFFFFF;
+      --text:        #1a1a1a;
+      --text-light:  #4a4a4a;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+
+    .page-header {
+      background: linear-gradient(135deg, var(--dark-blue) 0%, #3d2a9a 60%, var(--mid-blue) 100%);
+      color: var(--white);
+      padding: 3.5rem 2rem 3rem;
+      text-align: center;
+    }
+
+    .page-header .eyebrow {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--light-blue);
+      margin-bottom: 0.875rem;
+    }
+
+    .page-header h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 0.875rem;
+    }
+
+    .page-header .lead {
+      font-size: 1.0625rem;
+      color: rgba(255,255,255,0.8);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────── */
+
+    .content {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 3rem 2rem 4rem;
+    }
+
+    .intro {
+      font-size: 0.9375rem;
+      color: var(--text-light);
+      margin-bottom: 2.5rem;
+      max-width: 680px;
+    }
+
+    /* ── Principle cards ─────────────────────────────────────── */
+
+    .principles {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .principle {
+      background: var(--white);
+      border: 1px solid var(--sand-dark);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .principle-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.125rem 1.5rem;
+      border-bottom: 1px solid var(--sand-dark);
+      background: var(--sand-mid);
+    }
+
+    .principle-num {
+      flex-shrink: 0;
+      width: 30px;
+      height: 30px;
+      background: var(--dark-blue);
+      color: var(--white);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .principle-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--dark-blue);
+      line-height: 1.3;
+    }
+
+    .principle-body {
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .principle-section-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mid-blue);
+      margin-bottom: 0.3rem;
+    }
+
+    .principle-body p {
+      font-size: 0.875rem;
+      color: var(--text-light);
+      line-height: 1.65;
+      margin: 0;
+    }
+
+    .principle-refs {
+      border-top: 1px solid var(--sand-dark);
+      padding: 0.75rem 1.5rem;
+      font-size: 0.8125rem;
+      color: var(--text-light);
+    }
+
+    .principle-refs a {
+      color: var(--mid-blue);
+      text-decoration: none;
+    }
+
+    .principle-refs a:hover { text-decoration: underline; }
+
+    /* ── CTA ─────────────────────────────────────────────────── */
+
+    .cta {
+      background: var(--pale-blue);
+      border: 1px solid var(--light-blue);
+      border-radius: 8px;
+      padding: 1.375rem 1.5rem;
+      margin-top: 2.5rem;
+    }
+
+    .cta h3 {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--dark-blue);
+      margin-bottom: 0.5rem;
+    }
+
+    .cta p { margin: 0; font-size: 0.875rem; color: var(--text-light); }
+    .cta a { color: var(--mid-blue); text-decoration: none; font-weight: 600; }
+    .cta a:hover { text-decoration: underline; }
+
+    /* ── Footer ──────────────────────────────────────────────── */
+
+    footer {
+      border-top: 1px solid var(--sand-dark);
+      background: var(--white);
+      padding: 1.25rem 2rem;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-light);
+    }
+
+    footer a { color: var(--mid-blue); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      .page-header h1 { font-size: 1.625rem; }
+      .content { padding: 2rem 1rem 3rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-header">
+    <div class="eyebrow">Safety Net Blueprint</div>
+    <h1>Architecture Principles</h1>
+    <p class="lead">The design philosophies that recur across every domain and decision in this blueprint — what each one means in practice, and why it's here.</p>
+  </div>
+
+  <div class="content">
+
+    <p class="intro">Individual domain docs and decision logs explain <em>what</em> was decided, in the technical detail engineers need to build against them. This document explains the handful of design philosophies that recur across all of them — what each one means in practice, and why this blueprint relies on it.</p>
+    <p class="intro">A concern that runs through many of these philosophies is the set of qualities a benefits system needs to remain operable over the long haul: that new consumers and integrations can be added without unpicking what already works, that vendors can be replaced without rewriting the business logic that depended on them, that the system stays comprehensible as the people responsible for it change, that contracts can be tested before any real implementation exists, and that a complete record of every change is always recoverable. Several of the philosophies below are direct responses to that pressure, each from a different angle.</p>
+
+    <div class="principles">
+
+      <div class="principle">
+        <div class="principle-header">
+          <div class="principle-num">1</div>
+          <div class="principle-title">Contract-first / spec-first design</div>
+        </div>
+        <div class="principle-body">
+          <div>
+            <div class="principle-section-label">Why</div>
+            <p>A contract in this blueprint says exactly what an implementation needs to do — not roughly, but completely: what a resource looks like, how a workflow moves through its lifecycle, what the business logic is supposed to produce. That completeness means work doesn't have to happen one step at a time, waiting on a real system to exist first. A vendor can build directly from the contract. A mock server can be generated from it. A coding agent can generate an implementation straight from it. And whoever picks up the work next builds from that same precise answer, not a guess reverse-engineered from someone else's code.</p>
+          </div>
+          <div>
+            <div class="principle-section-label">In practice</div>
+            <p>A resource's shape, lifecycle states and transitions, decision logic, process sequencing, and data assembly are all written down and agreed on before anyone builds — not written afterward to describe whatever the code happened to do.</p>
+          </div>
+        </div>
+        <div class="principle-refs">Reference: <a href="https://swagger.io/resources/articles/adopting-an-api-first-approach/" target="_blank">OpenAPI-first / design-first API development</a></div>
+      </div>
+
+      <div class="principle">
+        <div class="principle-header">
+          <div class="principle-num">2</div>
+          <div class="principle-title">Domain-Driven Design</div>
+        </div>
+        <div class="principle-body">
+          <div>
+            <div class="principle-section-label">Why</div>
+            <p>A benefits program isn't one undifferentiated thing — intake, eligibility, workflow, and client records are different areas of work, each with its own staff, its own rules, and its own vocabulary. Organizing the system around those same real-world groupings makes it something program staff can recognize and reason about, not just developers. It also keeps the system coherent as it grows: each area stays a self-contained piece with a clear job, instead of every new feature getting piled into one tangled whole.</p>
+          </div>
+          <div>
+            <div class="principle-section-label">In practice</div>
+            <p>The blueprint is organized into domains that mirror how the business itself is organized — Intake, Eligibility, Workflow, Client Management, and so on — each owning its own data and rules. The same word can mean two different things in two different domains, on purpose (e.g. <code>Income</code> in both Client Management and Intake). Nothing in the contracts lets one domain reach into another's storage directly — every cross-domain access goes through the owning domain's published interface.</p>
+          </div>
+        </div>
+        <div class="principle-refs">Reference: <a href="https://www.domainlanguage.com/ddd/" target="_blank">Evans, <em>Domain-Driven Design</em></a>; <a href="https://martinfowler.com/bliki/BoundedContext.html" target="_blank">Fowler, "Bounded Context"</a></div>
+      </div>
+
+      <div class="principle">
+        <div class="principle-header">
+          <div class="principle-num">3</div>
+          <div class="principle-title">Adapters (Ports &amp; Adapters / Hexagonal Architecture)</div>
+        </div>
+        <div class="principle-body">
+          <div>
+            <div class="principle-section-label">Why</div>
+            <p>A state picks a workflow engine, case management platform, or database once — but lives with that choice for years, long after the conditions that made it right can change: pricing, vendor roadmap, support quality, or whether the vendor is still in business. If business logic calls that vendor directly, leaving gets harder every year. The goal is: swap the vendor, not the logic that depends on it.</p>
+          </div>
+          <div>
+            <div class="principle-section-label">In practice</div>
+            <p>The core logic never talks to a vendor directly — a separate, replaceable layer does the translation, so a vendor's quirks stay on the vendor's side of the line. That layer must genuinely translate, not just relay concepts under a different name. Where several parts of the system need to talk to the same category of outside service, they go through one shared door instead of each building their own.</p>
+          </div>
+        </div>
+        <div class="principle-refs">Reference: <a href="https://alistair.cockburn.us/hexagonal-architecture/" target="_blank">Cockburn, "Hexagonal Architecture"</a>; <a href="https://en.wikipedia.org/wiki/Facade_pattern" target="_blank">Gang of Four, "Facade"</a></div>
+      </div>
+
+      <div class="principle">
+        <div class="principle-header">
+          <div class="principle-num">4</div>
+          <div class="principle-title">Event-Driven Architecture</div>
+        </div>
+        <div class="principle-body">
+          <div>
+            <div class="principle-section-label">Why</div>
+            <p>New consumers of information a domain produces show up throughout the life of a benefits system — a new report, a new downstream process, a new integration nobody anticipated when the domain was first built. If adding a consumer means modifying the domain that produces the information, the amount of code that has to change grows with every consumer added, and "what happened" ends up tangled with "what to do about it" in the same place.</p>
+          </div>
+          <div>
+            <div class="principle-section-label">In practice</div>
+            <p>A part of the system announces that something happened, with no particular consumer in mind; anything else that cares subscribes and decides independently how to react, with no central coordinator. A complete audit record — who did what, and when — can be built entirely this way, just by listening to what every domain already announces, rather than asking each domain to separately report to an audit system.</p>
+          </div>
+        </div>
+        <div class="principle-refs">Reference: <a href="https://martinfowler.com/articles/201701-event-driven.html" target="_blank">Fowler, "What do you mean by Event-Driven?"</a></div>
+      </div>
+
+      <div class="principle">
+        <div class="principle-header">
+          <div class="principle-num">5</div>
+          <div class="principle-title">Overlay-based customization</div>
+        </div>
+        <div class="principle-body">
+          <div>
+            <div class="principle-section-label">Why</div>
+            <p>A state adopting this blueprint starts with a base that already has the common shape of a benefits system built into it. States still need to customize that base for their own programs, rules, and constraints — and the base keeps evolving after they do. If a state customizes by editing the base directly, every future update has to be manually re-applied on top of every change the state already made, by hand, forever, with the two versions drifting further apart every time.</p>
+          </div>
+          <div>
+            <div class="principle-section-label">In practice</div>
+            <p>A state's customization is a separate, targeted patch layered on top of an untouched base, combined by a build step into the final result — so upgrading the base means re-applying that patch, not manually redoing every edit. The combined result is validated exactly the same way the base is, so a customization can't quietly produce something broken that nobody notices until the system is live.</p>
+          </div>
+        </div>
+        <div class="principle-refs">Reference: <a href="https://www.rfc-editor.org/rfc/rfc7396" target="_blank">JSON Merge Patch, RFC 7396</a>; <a href="https://kubectl.docs.kubernetes.io/references/kustomize/" target="_blank">Kubernetes Kustomize overlays</a></div>
+      </div>
+
+      <div class="principle">
+        <div class="principle-header">
+          <div class="principle-num">6</div>
+          <div class="principle-title">Prefer established over novel</div>
+        </div>
+        <div class="principle-body">
+          <div>
+            <div class="principle-section-label">Why</div>
+            <p>Every custom solution carries costs an established one doesn't: no existing tooling, no developers who already know it, no external validation that it works at scale, and no guarantee it'll be maintained beyond the team that built it. An established standard already has an ecosystem: tooling, documentation, prior art, and people who've encountered its failure modes before. The question before designing something custom isn't "could I build this?" but "does something that solves this problem already exist and have traction?"</p>
+          </div>
+          <div>
+            <div class="principle-section-label">In practice</div>
+            <p>Contract formats use open standards with established tooling ecosystems: OpenAPI for APIs, CloudEvents and AsyncAPI for events, JSON Schema for validation, JSON Merge Patch for overlays. Where no established standard covers a need exactly, the blueprint reaches for the most widely adopted general-purpose option — CEL for expressions rather than a custom DSL. The same preference applies to architectural patterns: hexagonal architecture, DDD, event-driven choreography, and statecharts are used because they're recognized patterns with documented trade-offs.</p>
+          </div>
+        </div>
+        <div class="principle-refs">Reference: <a href="https://spec.openapis.org/oas/latest.html" target="_blank">OpenAPI Specification</a>; <a href="https://cloudevents.io/" target="_blank">CloudEvents</a>; <a href="https://www.asyncapi.com/" target="_blank">AsyncAPI</a>; <a href="https://json-schema.org/" target="_blank">JSON Schema</a>; <a href="https://cel.dev/" target="_blank">CEL</a></div>
+      </div>
+
+      <div class="principle">
+        <div class="principle-header">
+          <div class="principle-num">7</div>
+          <div class="principle-title">DRY (Don't Repeat Yourself)</div>
+        </div>
+        <div class="principle-body">
+          <div>
+            <div class="principle-section-label">Why</div>
+            <p>The same piece of knowledge — what an income type looks like, what states a workflow task can be in, what threshold qualifies a household for an expense deduction — will be referenced from many places: the API schema, the state machine, the decision rules, the overlay. If each reference carries its own inline copy, those copies will eventually disagree. The problem isn't redundancy in isolation — it's that redundancy creates multiple sources of truth, and when they drift, there's no authority to say which one is right. In a system where the contracts are supposed to be the authoritative answer, silent drift between them defeats the point.</p>
+          </div>
+          <div>
+            <div class="principle-section-label">In practice</div>
+            <p>Every shared concept is defined once and referenced everywhere it's needed — never redefined inline in a second place that can silently diverge. State-specific customization is a targeted patch against one canonical base, not a fork that duplicates the entire base. A policy change — a new income type, a threshold update — happens in one place and flows everywhere that references it.</p>
+          </div>
+        </div>
+        <div class="principle-refs">Reference: Hunt &amp; Thomas, <a href="https://pragprog.com/titles/tpp20/the-pragmatic-programmer-20th-anniversary-edition/" target="_blank"><em>The Pragmatic Programmer</em></a> ("Don't Repeat Yourself")</div>
+      </div>
+
+    </div>
+
+    <div class="cta">
+      <h3>Go deeper</h3>
+      <p>
+        For the specific software patterns used to realize these principles, see <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/refactor/blueprint-core-package/docs/architecture/architecture-patterns.md">Architecture Patterns</a> in the repository.
+        For the specific decisions made in each domain, see the <a href="https://github.com/codeforamerica/safety-net-blueprint/tree/refactor/blueprint-core-package/docs/architecture">architecture docs</a>.
+      </p>
+    </div>
+
+  </div>
+
+  <footer>
+    <a href="https://github.com/codeforamerica/safety-net-blueprint">Safety Net Blueprint</a>
+    &nbsp;·&nbsp;
+    Code for America
+  </footer>
+
+</body>
+</html>

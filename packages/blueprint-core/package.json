@@ -1,0 +1,52 @@
+{
+  "name": "@codeforamerica/blueprint-core",
+  "version": "0.1.0",
+  "description": "Core library for contract-driven API development \u2014 overlay resolution, validation, state machines, and annotations",
+  "type": "module",
+  "files": [
+    "src/",
+    "schemas/",
+    "components/",
+    "templates/"
+  ],
+  "exports": {
+    ".": "./src/index.js",
+    "./annotations": "./src/annotations.js",
+    "./policies": "./src/policies.js",
+    "./bundle": "./src/bundle.js",
+    "./state-machines": "./src/state-machines.js",
+    "./config": "./src/overlay/config.js",
+    "./overlay": "./src/overlay/overlay-resolver.js",
+    "./validation": "./src/validation/openapi-validator.js",
+    "./loader": "./src/validation/openapi-loader.js",
+    "./patterns": "./src/validation/pattern-validator.js",
+    "./example-validator": "./src/validation/example-validator.js",
+    "./relationships": "./src/relationships.js",
+    "./compositions": "./src/compositions.js",
+    "./state-machine-validator": "./src/validation/state-machine-validator.js"
+  },
+  "scripts": {
+    "prepack": "node ../../scripts/build-package-readme.js",
+    "test": "node --test tests/unit/",
+    "test:unit": "node --test tests/unit/"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeforamerica/safety-net-blueprint",
+    "directory": "packages/blueprint-core"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@apidevtools/json-schema-ref-parser": "^11.7.2",
+    "ajv": "^8.12.0",
+    "ajv-formats": "^3.0.1",
+    "js-yaml": "^4.1.0",
+    "pluralize": "^8.0.0"
+  }
+}

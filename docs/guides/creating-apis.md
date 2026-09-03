@@ -40,7 +40,7 @@ If you need more control or are building a complex API, follow these steps.
 
 ### Step 1: Understand the File Structure
 
-Specs can live anywhere — the tooling takes a `--spec` argument pointing to any directory. The default is `packages/contracts/`. The `{domain}-openapi.yaml` naming pattern is what matters: validators and the resolve pipeline auto-discover files matching that suffix.
+Specs can live anywhere — the tooling takes a `--spec` argument pointing to any directory. The default is `packages/safety-net-contracts/src/`. The `{domain}-openapi.yaml` naming pattern is what matters: validators and the resolve pipeline auto-discover files matching that suffix.
 
 ```
 {your-spec-dir}/
@@ -209,7 +209,7 @@ IncomeUpdate:
     - minProperties: 1
 ```
 
-See `api-patterns.yaml#schema_patterns.immutable_type_pattern` for the full pattern definition.
+See `conventions/resources.yaml` (`schema_patterns.immutable_type_pattern`) for the full pattern definition.
 
 ---
 
@@ -217,7 +217,7 @@ See `api-patterns.yaml#schema_patterns.immutable_type_pattern` for the full patt
 
 ### Standard Resource Fields (Required)
 
-Every resource must include `id` (uuid, readOnly), `createdAt` (date-time, readOnly), and `updatedAt` (date-time, readOnly). The generator scaffolds these automatically. See `packages/contracts/patterns/api-patterns.yaml#schema_patterns.resource_base_fields` for the canonical definitions and `components/common.yaml` for reusable schemas (Address, Name, Email, PhoneNumber).
+Every resource must include `id` (uuid, readOnly), `createdAt` (date-time, readOnly), and `updatedAt` (date-time, readOnly). The generator scaffolds these automatically. See `docs/conventions/resources.yaml` (`schema_patterns.resource_base_fields`) for the canonical definitions and `components/common.yaml` for reusable schemas (Address, Name, Email, PhoneNumber).
 
 ---
 
@@ -234,7 +234,7 @@ Every resource must include `id` (uuid, readOnly), `createdAt` (date-time, readO
 - Must return 201 Created
 - Should have Location header
 - Must have request body
-- For sub-resource POSTs (`/resources/{id}/sub-resources`), the request schema **must** use `additionalProperties: true` (or omit the constraint entirely). The mock-server spreads URL path params into the body so denormalized parent FKs persist on the child record; a schema with `additionalProperties: false` would reject the auto-injected params. See `patterns/api-patterns.yaml` → `sub_resource_paths` → `collection.collection_path.methods.POST` for the full rationale.
+- For sub-resource POSTs (`/resources/{id}/sub-resources`), the request schema **must** use `additionalProperties: true` (or omit the constraint entirely). The mock-server spreads URL path params into the body so denormalized parent FKs persist on the child record; a schema with `additionalProperties: false` would reject the auto-injected params. See `conventions/resources.yaml` → `sub_resource_paths` → `collection.collection_path.methods.POST` for the full rationale.
 
 ### Required for PATCH Endpoints
 - Must return 200 OK
@@ -267,9 +267,9 @@ Before submitting a new API:
 
 ## Reference
 
-- **Pattern configuration**: `packages/contracts/patterns/api-patterns.yaml`
-- **Shared parameters**: `packages/contracts/components/parameters.yaml`
-- **Shared responses**: `packages/contracts/components/responses.yaml`
-- **Shared schemas**: `packages/contracts/components/common.yaml`
+- **Pattern configuration**: `docs/conventions/`
+- **Shared parameters**: `packages/blueprint-core/base-contracts/components/parameters.yaml`
+- **Shared responses**: `packages/blueprint-core/base-contracts/components/responses.yaml`
+- **Shared schemas**: `packages/safety-net-contracts/src/common/components/common.yaml`
 - [Validation Guide](./validation.md)
-- [Search Patterns](../decisions/search-patterns.md)
+- [Search Patterns](search-patterns.md)

@@ -1,0 +1,170 @@
+# API Design Conventions — Naming & Authoring Style
+# Part of the blueprint conventions. See conventions/ for the full set.
+
+version: "1.0"
+
+naming:
+  # URL path segments: kebab-case (lowercase with hyphens)
+  # REST example: /user-profiles, /order-items
+  # RPC example: /tasks/{id}/claim
+  paths: kebab-case
+
+  # Path parameters: camelCase inside braces
+  # Example: /users/{userId}, /orders/{orderId}
+  path_parameters: camelCase
+
+  # Query parameters: camelCase
+  # Example: ?pageSize=10, ?sortOrder=desc
+  query_parameters: camelCase
+
+  # Operation IDs: camelCase verb + noun
+  # REST example: listPersons, createApplication, getHouseholdById
+  # RPC example: claimTask, completeTask, submitApplication
+  operation_ids: camelCase
+
+  # Schema/component names: PascalCase
+  # Example: Person, ApplicationCreate, HouseholdList
+  schemas: PascalCase
+
+  # File names: kebab-case
+  # Example: user-profiles.yaml, common-parameters.yaml
+  files: kebab-case
+
+  # CloudEvents type segments: snake_case (underscores for multi-word segments)
+  # Full format: org.codeforamerica.safety-net-blueprint.{domain}.{object}.{action}
+  # Example: org.codeforamerica.safety-net-blueprint.data_exchange.service_call.created
+  # Rule: URL paths use hyphens (kebab-case); CloudEvents type segments use underscores (snake_case).
+  # Never mix conventions — data-exchange in a path becomes data_exchange in an event type.
+  # The `on:` field in rules files uses the short suffix form (omit the platform prefix) but
+  # must still use underscores: on: data_exchange.call.completed, not data-exchange.call.completed.
+  event_type_segments: snake_case
+
+# =============================================================================
+# Spec Authoring Style
+# =============================================================================
+
+authoring_style:
+  # Do not specify OpenAPI properties that merely restate the default behavior.
+  # Omitting defaults keeps specs concise and consistent.
+  omit_defaults:
+    description: |
+      Do not include OpenAPI fields whose values are already the default.
+      Examples of defaults to omit:
+      - style: form (default for query parameters)
+      - explode: true (default for query style: form)
+      - explode: false (prefer omitting; only include when behavior is ambiguous)
+      - required: false (default for parameters)
+
+  schema_titles:
+    description: |
+      Every named schema defined in a $defs block must include a title: field
+      that matches the schema key. The title is the authoritative type name used
+      by code generators, data model visualizers, and documentation tooling.
+      Without it, tools emit { type: object } instead of a meaningful type name.
+    rule: title must equal the $defs key (PascalCase schema name)
+    example: |
+      $defs:
+        HouseholdMember:
+          title: HouseholdMember
+          type: object
+          properties:
+            ...
+
+  json_schema_files:
+    description: |
+      Domain schemas and shared component schemas must be defined in standalone
+      JSON Schema files under schemas/domain/ or schemas/common/, with a $schema
+      header and a $defs map. OpenAPI specs reference them via $ref. Do not define
+      domain schemas inline in OpenAPI components/schemas — that couples the schema
+      to a single spec and prevents reuse across specs.
+
+      Operation-specific wrapper schemas (ApplicationCreate, ApplicationList, etc.)
+      are the exception: they are thin allOf compositions that only make sense in
+      the context of a specific API, so they live inline in components/schemas.
+
+    schema_locations:
+      openapi_components_schemas:
+        purpose: REST API scaffolding — adds system fields and composes API variants
+        contains: |
+          - {Resource}: allOf [domain schema, system fields (id, createdAt, updatedAt)]
+          - {Resource}Create: allOf [domain schema, required declaration] — no system fields
+          - {Resource}Update: allOf [domain schema, minProperties: 1] — no system fields
+          - {Resource}List: pagination envelope with an items array
+        rule: |
+          id, createdAt, and updatedAt belong here, not in the domain schema.
+          They are API mechanics (server-generated, readOnly), not domain knowledge.
+          Keeping them out of the domain schema means Create/Update schemas can
+          reference the domain schema directly without needing to strip readOnly fields.
+
+      schemas_domain:
+        purpose: Domain-specific field definitions — no system fields
+        location: schemas/domain/{domain-name}.yaml
+        contains: |
+          - All domain-specific property definitions for the resource
+          - Domain-specific FK fields (e.g., applicationId, memberId)
+        rule: |
+          Do not include id, createdAt, or updatedAt here — those are added at
+          the OpenAPI components/schemas layer. Each domain gets one file. Fields
+          that carry domain-specific FKs belong here, not in schemas/common/.
+
+      schemas_common:
+        purpose: Reusable value types shared verbatim across multiple domains
+        location: schemas/common/ or components/common.yaml
+        contains: |
+          - Value objects: Address, Name, Email, PhoneNumber, and similar
+          - Types that carry no domain-specific FK fields
+        rule: |
+          A type belongs in common/ only if it can be used verbatim in any
+          domain without carrying domain-specific FK fields (applicationId,
+          memberId, etc.). If it needs domain FKs to be useful, it is a
+          domain schema, not a common one.
+
+    file_structure: |
+      # schemas/domain/example.yaml — domain fields only, no id/createdAt/updatedAt
+      $schema: https://json-schema.org/draft/2020-12/schema
+      $defs:
+        MyResource:
+          title: MyResource
+          type: object
+          properties:
+            status: { type: string }
+            # ... domain-specific fields
+    reference_pattern: |
+      # In OpenAPI spec (components/schemas):
+      MyResource:                    # full resource — domain fields + system fields
+        allOf:
+          - $ref: "./schemas/domain/example.yaml#/$defs/MyResource"
+          - type: object
+            required: [id, createdAt, updatedAt]
+            properties:
+              id: { type: string, format: uuid, readOnly: true }
+              createdAt: { type: string, format: date-time, readOnly: true }
+              updatedAt: { type: string, format: date-time, readOnly: true }
+
+      MyResourceCreate:              # POST body — domain fields, declare required
+        allOf:
+          - $ref: "./schemas/domain/example.yaml#/$defs/MyResource"
+          - type: object
+            required: [status]
+
+      MyResourceUpdate:              # PATCH body — domain fields, at least one required
+        allOf:
+          - $ref: "./schemas/domain/example.yaml#/$defs/MyResource"
+          - type: object
+            minProperties: 1
+
+      MyResourceList:                # GET collection response — pagination envelope
+        allOf:
+          - $ref: "./components/pagination.yaml#/Pagination"
+          - type: object
+            required: [items]
+            properties:
+              items:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MyResource"
+
+# =============================================================================
+# Required Info Fields
+# =============================================================================
+# Every API spec must include these fields in its info: block.

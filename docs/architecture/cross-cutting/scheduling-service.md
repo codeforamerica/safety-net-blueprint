@@ -47,7 +47,7 @@ Event: scheduling.timer.cancelled
 
 The scheduling service emits the caller-specified callback event when the timer expires. It passes `callback.data` through unchanged and adds `timerId` to the payload. No other fields are added or derived. The receiving machine subscribes to the callback event by name, exactly as it subscribes to any other domain event.
 
-The callback payload schema is `TimerCallbackEvent` in `schemas/platform-events.yaml`. The only guaranteed field is `timerId`; any additional fields come from `callback.data` in the original request.
+The callback payload schema is `TimerCallbackEvent` in `schemas/events-schema.yaml`. The only guaranteed field is `timerId`; any additional fields come from `callback.data` in the original request.
 
 ## Declaring timers in state machines
 
@@ -175,5 +175,5 @@ Domain and machine-level procedures with the same id override the platform defin
 - [Behavioral Contract DSL — Timer design](behavioral-contract-dsl.md#timer-design)
 - [ISO 8601 Duration format](https://en.wikipedia.org/wiki/ISO_8601#Durations)
 - [CloudEvents specification](https://cloudevents.io/)
-- `schemas/platform-events.yaml` — `SchedulingTimerRequestedEvent`, `SchedulingTimerCancelledEvent`, `TimerCallbackEvent`
+- `schemas/events-schema.yaml` — `SchedulingTimerRequestedEvent`, `SchedulingTimerCancelledEvent`, `TimerCallbackEvent`
 - `platform-state-machine.yaml` — `requestTimer`, `cancelTimer` shared procedures

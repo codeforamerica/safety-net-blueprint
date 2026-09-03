@@ -1,0 +1,50 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml"
+$defs:
+  Domain:
+    type: string
+    description: >
+      Blueprint domain identifier. Used as the {domain} path parameter on
+      metadata mutation endpoints and as the value type for x-domain annotations
+      on domain OpenAPI specs. Domain packages extend this enum via overlay to
+      add their own domains.
+    enum:
+      - platform
+
+  Frequency:
+    type: string
+    description: >
+      How often an amount is received, incurred, or scheduled. Applies to
+      income, expenses, SLA recurrence, scheduled reviews, and any other
+      time-based cadence. Domain packages can extend this enum via overlay.
+    enum:
+      - daily
+      - weekly
+      - every_two_weeks
+      - twice_monthly
+      - monthly
+      - yearly
+      - variable
+
+  Language:
+    type: string
+    description: Preferred language (BCP 47 language tag).
+    pattern: "^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$"
+
+  RoleType:
+    type: string
+    description: >
+      Authorization roles that determine base permissions and data scoping.
+      Used in state machine actors arrays and JWT role claims.
+
+      - readonly: Read-only access to allowed resources
+      - readwrite: Read and write access to allowed resources
+      - admin: Administrative access including configuration
+      - system: Automated service account for background and inter-service operations
+
+      Domain packages extend this enum via overlay to add program-specific roles.
+    enum:
+      - readonly
+      - readwrite
+      - admin
+      - system

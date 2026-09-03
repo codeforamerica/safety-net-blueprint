@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Safety Net Blueprint — Client Reference: Search Helpers</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; font-size: 14px; line-height: 1.6; }
+    a { color: #5650BE; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12px; background: #F7EDE8; padding: 1px 5px; border-radius: 3px; border: 1px solid #E9CCBE; color: #2a2a2a; }
+    table { border-collapse: collapse; width: 100%; }
+    th { background: #F7EDE8; color: #1a1a1a; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 8px 12px; text-align: left; border-bottom: 2px solid #E9CCBE; }
+    td { padding: 10px 12px; border-bottom: 1px solid #E9CCBE; vertical-align: top; font-size: 13px; word-break: break-word; overflow-wrap: anywhere; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #F7EDE8; }
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    
+  </style>
+</head>
+<body>
+  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Client Reference</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Search Helpers</a></div>
+  
+  <div style="max-width:960px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
+    <h1 style="font-size:1.5rem;font-weight:800;color:#2B1A78;margin-bottom:0.375rem;">Search Helpers</h1>
+    
+    <div style="margin-bottom:2rem;">
+      <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:0.75rem;">Usage</h2>
+      <div style="background:white;border:1px solid #E9CCBE;border-radius:8px;padding:1rem;">
+        <pre style="margin-top:0;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.75rem 1rem;overflow-x:auto;white-space:pre;">import { q, search } from '@codeforamerica/safety-net-colorado';
+
+const query = q(
+search.eq(&quot;status&quot;, &quot;approved&quot;),
+search.gte(&quot;income&quot;, 1000),
+search.in(&quot;programs&quot;, [&quot;snap&quot;, &quot;cash_programs&quot;])
+);
+// =&gt; &quot;status:approved income:&gt;=1000 programs:snap,cash_programs&quot;
+
+const results = await personsClient.listPersons({
+queries: { q: query, limit: 25 }
+});
+/
+
+/**
+Combines multiple search conditions into a single query string.
+
+Multiple conditions are ANDed together (all must match).
+Use comma-separated values within a single condition for OR logic.
+
+## Syntax Reference
+
+| Pattern | Description | Example |
+|---------|-------------|---------|
+| `term` | Full-text exact match | `john` |
+| `*term*` | Full-text contains | `*john*` |
+| `term*` | Full-text starts with | `john*` |
+| `*term` | Full-text ends with | `*smith` |
+| `field:value` | Exact match | `status:approved` |
+| `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+| `field:value*` | Starts with | `name:john*` |
+| `field:*value` | Ends with | `email:*@example.com` |
+| `field:&quot;value&quot;` | Quoted value (for spaces) | `name:&quot;john doe&quot;` |
+| `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
+| `field:&gt;value` | Greater than | `income:&gt;1000` |
+| `field:&gt;=value` | Greater than or equal | `income:&gt;=1000` |
+| `field:&lt;value` | Less than | `income:&lt;5000` |
+| `field:&lt;=value` | Less than or equal | `income:&lt;=5000` |
+| `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
+| `-field:value` | Exclude / negate | `-status:denied` |
+| `field:*` | Field exists (not null) | `email:*` |
+| `-field:*` | Field does not exist | `-deletedAt:*` |</pre><pre style="margin-top:0;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.75rem 1rem;overflow-x:auto;white-space:pre;">// Full-text search
+q(&quot;john&quot;)
+// =&gt; &quot;john&quot;</pre><pre style="margin-top:0;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.75rem 1rem;overflow-x:auto;white-space:pre;">// Exact match on a field
+q(&quot;status:approved&quot;)
+// =&gt; &quot;status:approved&quot;</pre><pre style="margin-top:0;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.75rem 1rem;overflow-x:auto;white-space:pre;">// Multiple conditions (AND)
+q(&quot;status:approved&quot;, &quot;income:&gt;=1000&quot;)
+// =&gt; &quot;status:approved income:&gt;=1000&quot;</pre><pre style="margin-top:0;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.75rem 1rem;overflow-x:auto;white-space:pre;">// Using the search builder
+q(search.eq(&quot;status&quot;, &quot;approved&quot;), search.gte(&quot;income&quot;, 1000))
+// =&gt; &quot;status:approved income:&gt;=1000&quot;</pre>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;">
+      <div>
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Methods</h2>
+        <div style="background:white;border:1px solid #E9CCBE;border-radius:8px;padding:0 1rem;">
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.eq()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Search Query Helpers for Safety Net API Clients</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">import { q, search } from '@codeforamerica/safety-net-colorado';
+
+const query = q(
+search.eq(&quot;status&quot;, &quot;approved&quot;),
+search.gte(&quot;income&quot;, 1000),
+search.in(&quot;programs&quot;, [&quot;snap&quot;, &quot;cash_programs&quot;])
+);
+// =&gt; &quot;status:approved income:&gt;=1000 programs:snap,cash_programs&quot;
+
+const results = await personsClient.listPersons({
+queries: { q: query, limit: 25 }
+});
+/
+
+/**
+Combines multiple search conditions into a single query string.
+
+Multiple conditions are ANDed together (all must match).
+Use comma-separated values within a single condition for OR logic.
+
+## Syntax Reference
+
+| Pattern | Description | Example |
+|---------|-------------|---------|
+| `term` | Full-text exact match | `john` |
+| `*term*` | Full-text contains | `*john*` |
+| `term*` | Full-text starts with | `john*` |
+| `*term` | Full-text ends with | `*smith` |
+| `field:value` | Exact match | `status:approved` |
+| `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+| `field:value*` | Starts with | `name:john*` |
+| `field:*value` | Ends with | `email:*@example.com` |
+| `field:&quot;value&quot;` | Quoted value (for spaces) | `name:&quot;john doe&quot;` |
+| `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
+| `field:&gt;value` | Greater than | `income:&gt;1000` |
+| `field:&gt;=value` | Greater than or equal | `income:&gt;=1000` |
+| `field:&lt;value` | Less than | `income:&lt;5000` |
+| `field:&lt;=value` | Less than or equal | `income:&lt;=5000` |
+| `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
+| `-field:value` | Exclude / negate | `-status:denied` |
+| `field:*` | Field exists (not null) | `email:*` |
+| `-field:*` | Field does not exist | `-deletedAt:*` |
+
+// Full-text search
+q(&quot;john&quot;)
+// =&gt; &quot;john&quot;
+
+// Exact match on a field
+q(&quot;status:approved&quot;)
+// =&gt; &quot;status:approved&quot;
+
+// Multiple conditions (AND)
+q(&quot;status:approved&quot;, &quot;income:&gt;=1000&quot;)
+// =&gt; &quot;status:approved income:&gt;=1000&quot;
+
+// Using the search builder
+q(search.eq(&quot;status&quot;, &quot;approved&quot;), search.gte(&quot;income&quot;, 1000))
+// =&gt; &quot;status:approved income:&gt;=1000&quot;</pre>
+    </div>
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.gt()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Greater than: `field:&gt;value`</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">search.gt(&quot;income&quot;, 1000)
+// =&gt; &quot;income:&gt;1000&quot;</pre>
+    </div>
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.gte()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Greater than or equal: `field:&gt;=value`</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">search.gte(&quot;income&quot;, 1000)
+// =&gt; &quot;income:&gt;=1000&quot;</pre>
+    </div>
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.lt()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Less than: `field:&lt;value`</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">search.lt(&quot;age&quot;, 65)
+// =&gt; &quot;age:&lt;65&quot;</pre>
+    </div>
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.lte()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Less than or equal: `field:&lt;=value`</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">search.lte(&quot;income&quot;, 5000)
+// =&gt; &quot;income:&lt;=5000&quot;</pre>
+    </div>
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.in()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Match any of the values (OR): `field:val1,val2,val3`</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">search.in(&quot;status&quot;, [&quot;approved&quot;, &quot;pending&quot;, &quot;under_review&quot;])
+// =&gt; &quot;status:approved,pending,under_review&quot;</pre>
+    </div>
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.not()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Exclude / negate: `-field:value`</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">search.not(&quot;status&quot;, &quot;denied&quot;)
+// =&gt; &quot;-status:denied&quot;</pre>
+    </div>
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.exists()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Field exists (is not null): `field:*`</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">search.exists(&quot;email&quot;)
+// =&gt; &quot;email:*&quot;</pre>
+    </div>
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.notExists()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Field does not exist (is null): `-field:*`</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">search.notExists(&quot;deletedAt&quot;)
+// =&gt; &quot;-deletedAt:*&quot;</pre>
+    </div>
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.contains()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Contains (case-insensitive): `field:*value*`</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">search.contains(&quot;name&quot;, &quot;john&quot;)
+// =&gt; &quot;name:*john*&quot;</pre>
+    </div>
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.startsWith()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Starts with (case-insensitive): `field:value*`</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">search.startsWith(&quot;name&quot;, &quot;john&quot;)
+// =&gt; &quot;name:john*&quot;</pre>
+    </div>
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.endsWith()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Ends with (case-insensitive): `field:*value`</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">search.endsWith(&quot;email&quot;, &quot;@example.com&quot;)
+// =&gt; &quot;email:*@example.com&quot;</pre>
+    </div>
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.quoted()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Quoted value (for values containing spaces): `field:&quot;value with spaces&quot;`</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">search.quoted(&quot;name&quot;, &quot;john doe&quot;)
+// =&gt; 'name:&quot;john doe&quot;'</pre>
+    </div>
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.text()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Full-text exact match (no field specified)</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">search.text(&quot;john&quot;)
+// =&gt; &quot;john&quot;</pre>
+    </div>
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.textContains()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Full-text contains search (no field specified)</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">search.textContains(&quot;john&quot;)
+// =&gt; &quot;*john*&quot;</pre>
+    </div>
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.textStartsWith()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Full-text starts with search (no field specified)</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">search.textStartsWith(&quot;john&quot;)
+// =&gt; &quot;john*&quot;</pre>
+    </div>
+    <div style="padding:0.875rem 0;border-bottom:1px solid #E9CCBE;">
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">search.textEndsWith()<span style="color:#006152;font-weight:400;">: string</span></code>
+      <p style="font-size:13px;color:#555;margin-top:4px;">Full-text ends with search (no field specified)</p>
+      <pre style="margin-top:6px;font-size:11.5px;background:#F7EDE8;border:1px solid #E9CCBE;border-radius:4px;padding:0.5rem 0.75rem;overflow-x:auto;">search.textEndsWith(&quot;smith&quot;)
+// =&gt; &quot;*smith&quot;</pre>
+    </div></div>
+      </div>
+      <div>
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Query Syntax Reference</h2>
+        <div style="background:white;border:1px solid #E9CCBE;border-radius:8px;overflow:hidden;"><table style="width:100%;border-collapse:collapse;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+    <thead><tr>
+      <th style="padding:5px 10px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Pattern</th>
+      <th style="padding:5px 10px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Description</th>
+      <th style="padding:5px 10px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#888;text-align:left;background:#fafafa;border-bottom:1px solid #eee;">Example</th>
+    </tr></thead>
+    <tbody><tr>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11.5px;"><code style="font-size:11px;background:#f0f0f0;padding:1px 4px;border-radius:2px;">term</code></td>
+    <td style="padding:5px 10px;font-size:12px;color:#555;">Full-text exact match</td>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11px;color:#888;">john</td>
+  </tr><tr>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11.5px;"><code style="font-size:11px;background:#f0f0f0;padding:1px 4px;border-radius:2px;">*term*</code></td>
+    <td style="padding:5px 10px;font-size:12px;color:#555;">Full-text contains</td>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11px;color:#888;">*john*</td>
+  </tr><tr>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11.5px;"><code style="font-size:11px;background:#f0f0f0;padding:1px 4px;border-radius:2px;">term*</code></td>
+    <td style="padding:5px 10px;font-size:12px;color:#555;">Starts with</td>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11px;color:#888;">john*</td>
+  </tr><tr>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11.5px;"><code style="font-size:11px;background:#f0f0f0;padding:1px 4px;border-radius:2px;">*term</code></td>
+    <td style="padding:5px 10px;font-size:12px;color:#555;">Ends with</td>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11px;color:#888;">*smith</td>
+  </tr><tr>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11.5px;"><code style="font-size:11px;background:#f0f0f0;padding:1px 4px;border-radius:2px;">field:value</code></td>
+    <td style="padding:5px 10px;font-size:12px;color:#555;">Exact field match</td>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11px;color:#888;">status:approved</td>
+  </tr><tr>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11.5px;"><code style="font-size:11px;background:#f0f0f0;padding:1px 4px;border-radius:2px;">field:*value*</code></td>
+    <td style="padding:5px 10px;font-size:12px;color:#555;">Contains (case-insensitive)</td>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11px;color:#888;">name:*john*</td>
+  </tr><tr>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11.5px;"><code style="font-size:11px;background:#f0f0f0;padding:1px 4px;border-radius:2px;">field.nested:val</code></td>
+    <td style="padding:5px 10px;font-size:12px;color:#555;">Nested field (dot notation)</td>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11px;color:#888;">address.state:CA</td>
+  </tr><tr>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11.5px;"><code style="font-size:11px;background:#f0f0f0;padding:1px 4px;border-radius:2px;">field:&gt;value</code></td>
+    <td style="padding:5px 10px;font-size:12px;color:#555;">Greater than</td>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11px;color:#888;">income:&gt;1000</td>
+  </tr><tr>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11.5px;"><code style="font-size:11px;background:#f0f0f0;padding:1px 4px;border-radius:2px;">field:&gt;=value</code></td>
+    <td style="padding:5px 10px;font-size:12px;color:#555;">Greater than or equal</td>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11px;color:#888;">income:&gt;=1000</td>
+  </tr><tr>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11.5px;"><code style="font-size:11px;background:#f0f0f0;padding:1px 4px;border-radius:2px;">field:&lt;value</code></td>
+    <td style="padding:5px 10px;font-size:12px;color:#555;">Less than</td>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11px;color:#888;">income:&lt;5000</td>
+  </tr><tr>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11.5px;"><code style="font-size:11px;background:#f0f0f0;padding:1px 4px;border-radius:2px;">field:v1,v2</code></td>
+    <td style="padding:5px 10px;font-size:12px;color:#555;">Match any (OR)</td>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11px;color:#888;">status:approved,pending</td>
+  </tr><tr>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11.5px;"><code style="font-size:11px;background:#f0f0f0;padding:1px 4px;border-radius:2px;">-field:value</code></td>
+    <td style="padding:5px 10px;font-size:12px;color:#555;">Exclude / negate</td>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11px;color:#888;">-status:denied</td>
+  </tr><tr>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11.5px;"><code style="font-size:11px;background:#f0f0f0;padding:1px 4px;border-radius:2px;">field:*</code></td>
+    <td style="padding:5px 10px;font-size:12px;color:#555;">Field exists</td>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11px;color:#888;">email:*</td>
+  </tr><tr>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11.5px;"><code style="font-size:11px;background:#f0f0f0;padding:1px 4px;border-radius:2px;">-field:*</code></td>
+    <td style="padding:5px 10px;font-size:12px;color:#555;">Field does not exist</td>
+    <td style="padding:5px 10px;font-family:monospace;font-size:11px;color:#888;">-deletedAt:*</td>
+  </tr></tbody>
+  </table></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+test-policy-1:
+  citation: "7 CFR § 273.2"
+  description: "SNAP application processing requirement"
+  citationUrl: null
+  programs:
+    - SNAP

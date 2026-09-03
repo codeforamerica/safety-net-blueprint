@@ -1,0 +1,541 @@
+# API Design Conventions — HTTP Conventions
+# Part of the blueprint conventions. See conventions/ for the full set.
+
+version: "1.0"
+
+error_handling:
+  # Standard error response body structure
+  response_body:
+    required_fields:
+      - name: code
+        type: string
+        description: Machine-readable error code (e.g., "VALIDATION_ERROR", "RESOURCE_NOT_FOUND")
+      - name: message
+        type: string
+        description: Human-readable error description
+    optional_fields:
+      - name: details
+        type: array
+        description: Array of specific field-level errors
+        items:
+          field: Path to the field with error
+          code: Field-specific error code
+          message: Field-specific error message
+      - name: retryable
+        type: boolean
+        description: Whether the client should retry the request
+      - name: retryAfter
+        type: integer
+        description: Seconds to wait before retry (for rate limiting)
+
+  # Error code taxonomy
+  error_codes:
+    validation:
+      - MISSING_REQUIRED_FIELD
+      - INVALID_FORMAT
+      - INVALID_VALUE
+      - VALUE_OUT_OF_RANGE
+      - FIELD_TOO_LONG
+    business_rules:
+      - DUPLICATE_RESOURCE
+      - INVALID_STATE_TRANSITION
+      - PREREQUISITE_NOT_MET
+      - RESOURCE_LOCKED
+      - SLA_CONSTRAINT_VIOLATED
+    authorization:
+      - UNAUTHORIZED
+      - FORBIDDEN
+      - INSUFFICIENT_PERMISSIONS
+    system:
+      - SERVICE_UNAVAILABLE
+      - UPSTREAM_TIMEOUT
+      - INTERNAL_ERROR
+
+  # HTTP status code guidance
+  http_status_guidance:
+    400:
+      description: Malformed request (can't parse JSON, missing required query params)
+      retryable: false
+    401:
+      description: Authentication required or invalid credentials
+      retryable: false
+    403:
+      description: Authenticated but not authorized for this resource/action
+      retryable: false
+    404:
+      description: Resource not found
+      retryable: false
+    409:
+      description: Conflict (duplicate resource, concurrent modification)
+      retryable: true
+      note: Client should fetch current state and retry
+    422:
+      description: Valid JSON but fails business validation
+      retryable: false
+    429:
+      description: Rate limited
+      retryable: true
+      note: Use retryAfter header
+    500:
+      description: Unexpected server error
+      retryable: true
+    503:
+      description: Service temporarily unavailable
+      retryable: true
+
+# =============================================================================
+# API Versioning# =============================================================================
+# STATUS: Not yet implemented
+
+versioning:
+  strategy: url-path
+  description: Version in URL path (e.g., /v1/tasks, /v2/tasks)
+
+  current_version: v1
+  supported_versions:
+    - v1
+
+  compatibility_rules:
+    backward_compatible:
+      - Adding new optional request fields
+      - Adding new response fields
+      - Adding new endpoints
+      - Adding new enum values (clients must ignore unknown values)
+      - Adding new optional query parameters
+    breaking_changes:
+      - Removing fields
+      - Changing field types
+      - Renaming fields
+      - Removing enum values
+      - Changing URL paths
+      - Making optional fields required
+
+  deprecation:
+    notice_period_months: 6
+    headers:
+      - name: Deprecation
+        value: "true"
+        description: Indicates endpoint is deprecated
+      - name: Sunset
+        value: "<ISO 8601 date>"
+        description: Date when endpoint will be removed
+      - name: Link
+        value: "<url>; rel=\"successor-version\""
+        description: Link to replacement endpoint/documentation
+
+# =============================================================================
+# Idempotency
+# =============================================================================
+# STATUS: Not yet implemented in mock server
+# RPC APIs: Required for all POST operations (actions may have side effects)
+# REST APIs: Required for POST (create) operations only
+
+idempotency:
+  description: |
+    Ensures that retrying a request (due to network issues, timeouts, etc.)
+    does not cause duplicate side effects. Critical for RPC APIs.
+
+  applies_to:
+    rpc_apis: All POST operations (required)
+    rest_apis: POST operations that create resources
+
+  mechanism:
+    header_name: Idempotency-Key
+    format: Client-generated UUID v4
+    required: true for applicable operations
+    behavior: |
+      1. Client generates unique key and includes in request header
+      2. Server checks if key has been seen within retention window
+      3. If seen: return stored response (do not re-execute)
+      4. If new: execute operation, store response with key
+    retention_hours: 24
+    note: Keys are scoped per client/tenant
+
+  response_headers:
+    - name: Idempotent-Replayed
+      values: ["true", "false"]
+      description: Indicates whether this response is a replay of a previous request
+
+  error_cases:
+    - code: IDEMPOTENCY_KEY_REUSED
+      status: 422
+      description: Same key used with different request body
+    - code: IDEMPOTENCY_KEY_MISSING
+      status: 400
+      description: Required idempotency key not provided
+
+# =============================================================================
+# Batch Operations
+# =============================================================================
+# STATUS: Not yet implemented
+# REST APIs: Common for bulk CRUD (e.g., PATCH /tasks/batch)
+# RPC APIs: Rare; most RPC operations are single-action. If needed,
+#               the process itself handles multiple items (e.g., bulk-reassign).
+
+batch_operations:
+  description: |
+    For operations that need to affect multiple resources in a single request.
+    Useful for bulk updates, imports, and administrative operations.
+    Primarily for REST APIs; RPC APIs typically handle batching internally.
+
+  endpoint_pattern: "/{resources}/batch"
+  method: POST
+
+  request_body:
+    structure:
+      operations:
+        type: array
+        max_items: 100
+        items:
+          action:
+            type: string
+            enum: [create, update, delete]
+          id:
+            type: string
+            description: Required for update/delete, omit for create
+          data:
+            type: object
+            description: Resource payload (for create/update)
+
+  response:
+    structure:
+      total: Total operations requested
+      succeeded: Count of successful operations
+      failed: Count of failed operations
+      results:
+        type: array
+        items:
+          index: Position in request array
+          action: The action attempted
+          status: '"succeeded" | "failed"'
+          id: Resource ID (for successful creates)
+          error: Error details (for failures)
+
+  behavior:
+    atomicity: false
+    description: |
+      Batch operations use partial success model - individual operations
+      may succeed or fail independently. Client must check results array
+      to determine outcome of each operation.
+    ordering: Operations processed sequentially in array order
+    rate_limiting: Batch counts as N requests toward rate limit
+
+  idempotency:
+    description: Batch operations require idempotency key
+    scope: Entire batch (not individual operations)
+
+# =============================================================================
+# Authentication# =============================================================================
+# STATUS: Not yet implemented
+# NOTE: States will use their own identity providers. This section defines the
+#       interface contract, not the specific provider implementation.
+
+correlation_ids:
+  description: |
+    Unique identifier that follows a request through all services and logs.
+    Essential for distributed tracing and debugging.
+
+  header:
+    name: X-Correlation-ID
+    format: UUID v4
+    behavior: |
+      1. If client provides X-Correlation-ID, use it
+      2. If not provided, generate a new UUID
+      3. Include in all downstream service calls
+      4. Include in all log entries
+      5. Return in response header
+
+  response_header:
+    name: X-Correlation-ID
+    description: Echo back the correlation ID used for this request
+
+  logging_integration:
+    description: All log entries must include correlationId field
+    example: |
+      {
+        "timestamp": "2024-01-15T10:30:00Z",
+        "level": "info",
+        "correlationId": "550e8400-e29b-41d4-a716-446655440000",
+        "service": "task-api",
+        "message": "Task created",
+        "taskId": "abc-123"
+      }
+
+  propagation:
+    description: Pass correlation ID to all downstream calls
+    guidance:
+      - Include X-Correlation-ID header in HTTP calls to other services
+      - Include in message queue message headers
+      - Include in async job metadata
+
+# =============================================================================
+# ETags and Optimistic Concurrency# =============================================================================
+# STATUS: Not yet implemented
+
+etags:
+  description: |
+    ETags enable optimistic concurrency control (prevent lost updates) and
+    conditional requests (caching). REST APIs should support ETags for
+    resources that can be updated.
+
+  response_headers:
+    ETag:
+      description: Opaque identifier for the current resource version
+      format: Quoted string (e.g., "abc123" or W/"abc123" for weak)
+      generation: Hash of resource content or version number
+
+  request_headers:
+    If-Match:
+      description: Update only if ETag matches (optimistic locking)
+      use_case: Prevent lost updates when multiple users edit same resource
+      behavior: |
+        1. Client GETs resource, receives ETag
+        2. Client PATCHes with If-Match: "etag-value"
+        3. If ETag matches current: apply update, return new ETag
+        4. If ETag doesn't match: return 412 Precondition Failed
+
+    If-None-Match:
+      description: Return resource only if ETag differs (caching)
+      use_case: Avoid re-downloading unchanged resources
+      behavior: |
+        1. Client GETs resource, caches response with ETag
+        2. Client GETs again with If-None-Match: "etag-value"
+        3. If ETag matches: return 304 Not Modified (no body)
+        4. If ETag differs: return 200 with new resource and ETag
+
+  error_responses:
+    412:
+      code: PRECONDITION_FAILED
+      description: If-Match ETag doesn't match current version
+      message: Resource has been modified by another request
+      guidance: Client should re-fetch and retry or notify user of conflict
+
+    304:
+      description: Not Modified - resource unchanged since ETag
+      body: Empty (client uses cached version)
+
+  implementation_notes:
+    - ETags should be opaque to clients (don't expose version numbers directly)
+    - Use strong ETags for byte-for-byte comparison
+    - Use weak ETags (W/"...") for semantic equivalence
+    - Consider ETag scope: entire resource or specific fields
+
+# =============================================================================
+# Sorting
+# =============================================================================
+
+sorting:
+  description: |
+    Standard query parameter for sorting list endpoint results. List
+    operations declare what's sortable via the `x-sortable` OpenAPI extension;
+    the mock server and any conforming adapter honor the resulting `?sort=`
+    query string with deterministic, paginatable ordering.
+
+    See `docs/architecture/x-extensions.md#x-sortable` for the full extension
+    reference and `components/parameters.yaml#SortParam` for the shared
+    parameter component that every sort-enabled list operation references.
+
+  parameter:
+    component: SortParam
+    name: sort
+    location: query
+    type: string
+    description: |
+      Comma-separated list of fields to sort by. Prefix with `-` for descending.
+      First field is primary sort, subsequent fields are tie-breakers in
+      declaration order. The configured per-endpoint tie-breaker is always
+      appended for stable pagination.
+
+  syntax:
+    ascending: "fieldName"
+    descending: "-fieldName"
+    multiple: "field1,-field2,field3"
+    nested: "name.lastName"
+
+  examples:
+    - sort=createdAt           # Oldest first
+    - sort=-createdAt          # Newest first
+    - sort=status,-priority    # By status (asc), then priority (desc)
+    - sort=-dueDate,createdAt  # By due date (desc), then created (asc)
+    - sort=name.lastName       # Nested field via dot-notation
+
+  extension:
+    name: x-sortable
+    description: |
+      Operation-level extension declaring sort behavior for a list endpoint.
+      Validated by validate-patterns.js. Each list endpoint that allows
+      `?sort=` MUST declare `x-sortable` and reference the SortParam
+      component in its parameters list.
+    fields:
+      fields:
+        required: true
+        type: array<string>
+        description: |
+          Field names a client may include in `?sort=`. Names use dot-notation
+          for nested fields (e.g., name.lastName). Every entry must reference
+          a real property on the resource's response schema.
+      default:
+        required: false
+        type: string
+        description: |
+          Comma-separated sort expression applied when the client omits `?sort=`.
+          Same syntax as the query parameter. Every field referenced here must
+          appear in `fields`. If absent, no client-driven sort is applied when
+          `?sort=` is omitted — only the tie-breaker.
+      tieBreaker:
+        required: false
+        type: string
+        default: id
+        description: |
+          A single field name appended to every effective sort to guarantee
+          deterministic ordering for stable pagination. Defaults to `id`.
+          Explicit `null` disables the tie-breaker (rare — only valid when
+          the resource has no usable identifier; not recommended).
+      maxFields:
+        required: false
+        type: integer
+        description: |
+          Hard cap on the number of fields a client may include in `?sort=`.
+          If absent, the adapter applies an implicit ceiling (5 in the
+          reference implementation). The pattern doc recommends 3 or fewer.
+
+  field_name_lexical_rule:
+    description: |
+      Every field name appearing in `fields`, `default`, or `tieBreaker` MUST
+      match the regular expression below. The pattern validator enforces this
+      at lint time; the runtime parser enforces it again as defense in depth.
+      This is a security boundary — field names are interpolated into ORDER BY
+      and json_extract path strings, which SQLite does not parameterize.
+    regex: "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+
+  null_value_ordering:
+    description: |
+      Records with NULL in a sort field sort deterministically:
+        - ascending: NULL values appear last
+        - descending: NULL values appear first
+      This is implemented via COALESCE on the SQL side and documented here
+      so adapter implementations stay consistent across deployments.
+
+  error_handling:
+    invalid_field:
+      status: 400
+      code: INVALID_SORT_FIELD
+      message: "Unknown sort field: {field}"
+      when: |
+        Client requested a sort field that does not exist on the resource
+        schema, or the endpoint did not declare `x-sortable` at all.
+    unsortable_field:
+      status: 400
+      code: FIELD_NOT_SORTABLE
+      message: "Field '{field}' does not support sorting"
+      when: |
+        Client requested a sort field that exists on the resource schema but
+        is not in the endpoint's `x-sortable.fields` allowlist.
+
+  implementation_notes:
+    - Sort field names interpolate into raw SQL — adapters MUST validate against the lexical regex AND the allowlist before constructing any query
+    - Sort order is an oracle — fields whose ordering would leak information (SSN, dateOfBirth, risk scores, sensitive flags) MUST NOT appear in `x-sortable.fields`
+    - The pattern doc recommends 3 or fewer sort fields; adapters MAY enforce stricter caps via `maxFields` and MUST apply an implicit ceiling when omitted
+    - Failed sort parses SHOULD log the offending field name at info level (not the raw query string, which may carry PII from other params) to support detection of probing
+
+# =============================================================================
+# Long-Running Operations
+# =============================================================================
+# STATUS: Not yet implemented
+
+long_running_operations:
+  description: |
+    Pattern for operations that take too long for a synchronous response.
+    Common in RPC APIs for complex business operations (e.g., batch
+    eligibility determination, bulk document processing).
+
+  threshold:
+    description: Operations expected to take >30 seconds should be async
+    note: Exact threshold depends on client requirements and infrastructure
+
+  pattern:
+    name: Polling with Operation Resource
+    flow: |
+      1. Client POSTs to initiate operation
+      2. Server returns 202 Accepted with operation ID and status URL
+      3. Client polls status URL until complete
+      4. When complete, status includes result or result URL
+
+  initiation:
+    request:
+      method: POST
+      path: "/processes/{domain}/{resource}/{action}"
+      body: Operation parameters
+      headers:
+        Idempotency-Key: Required (operations are idempotent)
+
+    response:
+      status: 202 Accepted
+      headers:
+        Location: URL to poll for status
+      body:
+        operationId: UUID
+        status: '"pending" | "running"'
+        statusUrl: "/operations/{operationId}"
+        estimatedCompletionTime: ISO 8601 datetime (optional)
+
+  status_polling:
+    request:
+      method: GET
+      path: "/operations/{operationId}"
+
+    response_pending:
+      status: 200
+      body:
+        operationId: UUID
+        status: '"pending" | "running"'
+        progress: 0-100 (optional)
+        message: Human-readable status (optional)
+
+    response_completed:
+      status: 200
+      body:
+        operationId: UUID
+        status: "completed"
+        completedAt: ISO 8601 datetime
+        result: Inline result (if small)
+        resultUrl: URL to fetch result (if large)
+
+    response_failed:
+      status: 200
+      body:
+        operationId: UUID
+        status: "failed"
+        error:
+          code: Error code
+          message: Error description
+        failedAt: ISO 8601 datetime
+
+  cancellation:
+    description: Allow clients to cancel long-running operations
+    request:
+      method: DELETE
+      path: "/operations/{operationId}"
+    response:
+      status: 200 (cancelled) or 409 (cannot cancel - already complete)
+
+  polling_guidance:
+    initial_delay: 1 second
+    max_delay: 30 seconds
+    backoff: Exponential with jitter
+    note: Include Retry-After header in status responses
+
+  alternative_patterns:
+    webhooks:
+      description: Server calls client webhook when complete
+      trade_off: More complex but avoids polling overhead
+    server_sent_events:
+      description: Client maintains connection for real-time updates
+      trade_off: More complex, connection management issues
+
+# =============================================================================
+# Config-Managed Resources
+# =============================================================================
+# Resources that exist in both a *-config.yaml file and as runtime API resources
+# (creatable via POST) carry a source field so consumers can distinguish system
+# entries from user-created ones without attempting a destructive operation first.

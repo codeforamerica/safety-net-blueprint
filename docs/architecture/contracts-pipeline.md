@@ -54,7 +54,7 @@ packages/contracts/
 
 ### Stage 2: Overlay resolve
 
-Applies state-specific customizations to the base specs and writes fully-merged output artifacts to the directory specified by `--out` (conventionally `packages/resolved/` in this repository; states pass their own path). The resolver warns when an overlay action targets a path that does not exist in the base spec. See [Resolve Pipeline Architecture](resolve-pipeline.md) for a full description of the overlay merge stages.
+Applies state-specific customizations to the base specs and writes fully-merged output artifacts to the directory specified by `--out` (conventionally `packages/generated/contracts/` in this repository; states pass their own path). The resolver warns when an overlay action targets a path that does not exist in the base spec. See [Resolve Pipeline Architecture](resolve-pipeline.md) for a full description of the overlay merge stages.
 
 ### Stage 3: Validate resolved output
 

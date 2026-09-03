@@ -1,61 +1,55 @@
 # Command Reference
 
-> **Status: Draft**
-
-All available npm scripts in the Safety Net APIs toolkit.
+All available npm scripts in the Safety Net Blueprint toolkit.
 
 ## Quick Reference
 
 | Command | Description |
 |---------|-------------|
-| `npm start` | Start mock server only |
+| `npm start` | Start mock server |
 | `npm run mock:start:all` | Start mock server + Swagger UI |
-| `npm run validate` | Validate base specs |
-| `npm run mock:start` | Start mock server only |
+| `npm run validate` | Validate resolved specs (all layers) |
+| `npm run resolve` | Run the overlay resolve pipeline |
 | `npm run mock:reset` | Reset database to example data |
 | `npm test` | Run unit tests |
 | `npm run test:integration` | Run integration tests (includes Postman/newman) |
+| `npm run preflight` | Run all checks before creating a PR |
 
 ## Validation Commands
 
 ### `npm run validate`
 
-Runs all validation layers against base specs:
-- Syntax validation (OpenAPI 3.x compliance)
-- Spectral linting (naming conventions, HTTP methods)
-- Pattern validation (search, pagination, CRUD)
+Runs all validation layers against the resolved specs in `packages/generated/contracts/`:
+
+- OpenAPI 3.x compliance and example validation
+- Fragment `$ref` reference checks
+- Annotation field path validation
+- State machine cross-artifact consistency
 
 ```bash
 npm run validate
 ```
 
-### `npm run validate:syntax`
+Validation runs against resolved output. Run `npm run resolve` first if `packages/generated/contracts/` is missing or stale.
 
-Validates OpenAPI syntax only:
-- Valid OpenAPI 3.x format
-- All `$ref` references resolve
-- Examples match their schemas
+### `npm run validate:lint`
 
-```bash
-npm run validate:syntax
-```
+Runs Spectral linting against the resolved specs:
 
-### `npm run validate:lint -w @codeforamerica/safety-net-blueprint-contracts`
-
-Runs Spectral linting only (available in the schemas package):
-- Naming conventions
-- HTTP method rules
-- Response codes
+- Naming conventions (paths, operation IDs, schemas)
+- HTTP method rules (POST → 201, DELETE → 204, GET → 404)
+- Response structure
 
 ```bash
-npm run validate:lint -w @codeforamerica/safety-net-blueprint-contracts
+npm run validate:lint
 ```
 
 ### `npm run validate:patterns`
 
-Validates API design patterns only:
-- Search parameters
-- Pagination
+Validates API design patterns:
+
+- Search parameters (`q`, `limit`, `offset`)
+- Pagination response structure (`items`, `total`, `limit`, `offset`, `hasNext`)
 - List response structure
 
 ```bash
@@ -66,19 +60,20 @@ npm run validate:patterns
 
 ### `npm run resolve`
 
-Resolves overlays against base specs, producing resolved specifications. Pass arguments after `--`.
+Runs the overlay pipeline against the base specs, producing resolved output in `packages/generated/contracts/`.
 
-Copy base specs unchanged (no overlay):
 ```bash
-npm run resolve -- --spec=packages/contracts --out=packages/contracts/resolved
+npm run resolve
 ```
 
 Apply a state overlay:
+
 ```bash
-npm run resolve -- --spec=packages/contracts --overlay=packages/contracts/overlays/example --out=packages/contracts/resolved
+npm run resolve -- --spec=packages/safety-net-contracts --overlay=path/to/state/overlay --out=packages/generated/contracts
 ```
 
 See all flags:
+
 ```bash
 npm run resolve -- --help
 ```
@@ -87,36 +82,27 @@ npm run resolve -- --help
 
 ### `npm run api:new`
 
-Generates a new API from the template.
+Scaffolds a new API spec in `packages/safety-net-contracts/src/domains/`.
 
 ```bash
 npm run api:new -- --name "benefits" --resource "Benefit"
 ```
 
-Creates:
-- `openapi/benefits.yaml`
-- `openapi/components/benefit.yaml`
-- `openapi/examples/benefits.yaml`
+### `npm run clients:typescript`
 
-### Building State Packages
-
-Build a state-specific npm package with TypeScript SDK and Zod schemas:
+Generates TypeScript clients from the resolved specs into `packages/generated/clients/`.
 
 ```bash
-node packages/clients/scripts/build-state-package.js --state=<your-state> --version=1.0.0
+npm run clients:typescript
 ```
 
-This generates a complete npm package in `packages/clients/dist-packages/{state}/` containing:
-- Typed SDK functions (`getPerson`, `createPerson`, etc.)
-- TypeScript interfaces
-- Zod schemas for runtime validation
-- Axios-based HTTP client
+### `npm run postman:generate`
 
-The package is built using `@hey-api/openapi-ts` with the following plugins:
-- `@hey-api/typescript` - TypeScript types
-- `@hey-api/sdk` - SDK functions with validation
-- `@hey-api/zod` - Zod schemas
-- `@hey-api/client-axios` - Axios HTTP client
+Generates the Postman collection from the resolved specs into `packages/generated/postman/`.
+
+```bash
+npm run postman:generate
+```
 
 ## Server Commands
 
@@ -125,7 +111,7 @@ The package is built using `@hey-api/openapi-ts` with the following plugins:
 Starts the mock server only.
 
 ```bash
-STATE=<your-state> npm start
+npm start
 ```
 
 Default: http://localhost:1080
@@ -135,7 +121,7 @@ Default: http://localhost:1080
 Starts both the mock server and Swagger UI.
 
 ```bash
-STATE=<your-state> npm run mock:start:all
+npm run mock:start:all
 ```
 
 - Mock server: http://localhost:1080
@@ -146,14 +132,15 @@ STATE=<your-state> npm run mock:start:all
 Starts only the mock server.
 
 ```bash
-STATE=<your-state> npm run mock:start
+npm run mock:start
 ```
 
-Default: http://localhost:1080
-
 **Environment variables:**
-- `MOCK_SERVER_HOST` - Host to bind (default: `localhost`)
-- `MOCK_SERVER_PORT` - Port to use (default: `1080`)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MOCK_SERVER_HOST` | Host to bind | `localhost` |
+| `MOCK_SERVER_PORT` | Port to use | `1080` |
 
 ```bash
 MOCK_SERVER_HOST=0.0.0.0 MOCK_SERVER_PORT=8080 npm run mock:start
@@ -189,19 +176,15 @@ Default: http://localhost:3000
 
 ### `npm test`
 
-Runs unit tests.
+Runs unit tests across all workspaces.
 
 ```bash
 npm test
 ```
 
-### `npm run test:unit`
-
-Alias for `npm test`.
-
 ### `npm run test:integration`
 
-Runs integration tests against the mock server. Automatically starts the server if not running.
+Runs integration tests against the mock server. Automatically resolves specs and starts the server if needed.
 
 ```bash
 npm run test:integration
@@ -214,17 +197,30 @@ Includes:
 
 ### `npm run test:all`
 
-Runs both unit and integration tests.
+Runs unit, integration, and functional tests.
 
 ```bash
 npm run test:all
+```
+
+### `npm run preflight`
+
+Runs all checks in sequence — use before creating a PR:
+
+1. Unit tests
+2. Validate (all layers)
+3. Resolve pipeline
+4. Postman generation
+5. Integration tests (including Postman/Newman)
+
+```bash
+npm run preflight
 ```
 
 ## Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `STATE` | Active state for overlays | (none) |
 | `MOCK_SERVER_HOST` | Mock server bind host | `localhost` |
 | `MOCK_SERVER_PORT` | Mock server port | `1080` |
 | `SKIP_VALIDATION` | Skip validation during generation | `false` |
@@ -234,15 +230,12 @@ npm run test:all
 Common command combinations:
 
 ```bash
-# Full validation
-npm run validate
+# Resolve then validate
+npm run resolve && npm run validate
 
 # Reset and start
 npm run mock:reset && npm start
 
-# Build state package (resolve overlay + generate + compile)
-npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir> && node packages/clients/scripts/build-state-package.js --state=<your-state> --version=1.0.0
-
-# Full test suite
-npm run validate && npm test && npm run test:integration
+# Full pipeline: resolve, generate clients, run all tests
+npm run resolve && npm run clients:typescript && npm run test:all
 ```

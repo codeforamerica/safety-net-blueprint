@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Task Claimed — Event Chain</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; }
+    #container { padding: 16px 0 32px; overflow-x: hidden; }
+    #map-wrapper { background: white; box-shadow: 0 2px 16px rgba(0,0,0,.10); overflow: hidden; width: 1400px; transform-origin: top left; }
+  </style>
+</head>
+<body>
+  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Sequence Diagrams</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Task Claimed</a></div>
+  <div id="container"><div id="map-wrapper"><svg xmlns="http://www.w3.org/2000/svg" width="1400" height="272">
+<rect width="1400" height="272" fill="white"/>
+<line x1="246.7" y1="90.0" x2="246.7" y2="252.0" stroke="#CACACA" stroke-width="1" stroke-dasharray="4 3"/>
+<line x1="700.0" y1="90.0" x2="700.0" y2="252.0" stroke="#CACACA" stroke-width="1" stroke-dasharray="4 3"/>
+<line x1="1153.3" y1="90.0" x2="1153.3" y2="252.0" stroke="#CACACA" stroke-width="1" stroke-dasharray="4 3"/>
+<line x1="246.7" y1="130.1" x2="693.0" y2="130.1" stroke="#1F2937" stroke-width="1.5"/>
+<polygon points="700.0,130.1 693.0,126.1 693.0,134.1" fill="#1F2937"/>
+<text x="473.3" y="125.1" font-size="11" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" text-anchor="middle" font-weight="bold" fill="#2B1A78">POST /tasks/{id}/claim</text>
+<circle cx="700.0" cy="172.0" r="4" fill="#5650BE"/>
+<text x="709.0" y="176.0" font-size="9" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-style="italic" fill="#5650BE">workflow.task.claimed</text>
+<circle cx="1153.3" cy="193.0" r="3.5" fill="white" stroke="#5650BE" stroke-width="1.5"/>
+<text x="1162.3" y="197.0" font-size="9" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-style="italic" fill="#5650BE">workflow.task.claimed</text>
+<path d="M1158.3,222.2 Q1185.3,222.2 1185.3,234.2 Q1185.3,246.2 1158.3,246.2" stroke="#1F2937" stroke-width="1.5" fill="none"/>
+<polygon points="1158.3,246.2 1165.3,242.2 1165.3,250.2" fill="#1F2937"/>
+<text x="1191.3" y="236.2" font-size="10" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" fill="#333">Open application for review;</text>
+<text x="1191.3" y="248.2" font-size="10" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" fill="#333">create interview record</text>
+<rect x="164.2" y="44" width="165.0" height="40.0" rx="4" fill="#2B1A78"/>
+<text x="246.7" y="75.0" font-size="12" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" text-anchor="middle" font-weight="bold" fill="white">Applicant</text>
+<rect x="617.5" y="44" width="165.0" height="40.0" rx="4" fill="#2B1A78"/>
+<text x="700.0" y="75.0" font-size="12" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" text-anchor="middle" font-weight="bold" fill="white">Workflow</text>
+<rect x="1070.8" y="44" width="165.0" height="40.0" rx="4" fill="#2B1A78"/>
+<text x="1153.3" y="75.0" font-size="12" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" text-anchor="middle" font-weight="bold" fill="white">Intake</text>
+<rect x="0" y="0" width="1400" height="40" fill="#F3F3F3"/>
+<line x1="0" y1="40" x2="1400" y2="40" stroke="#E9CCBE" stroke-width="1"/>
+<rect x="20" y="8" width="226" height="24" fill="white" stroke="#E5E7EB" stroke-width="1" rx="3"/>
+<line x1="28.0" y1="20.0" x2="56.0" y2="20.0" stroke="#1F2937" stroke-width="1.5"/>
+<polygon points="56,20 49,16 49,24" fill="#1F2937"/>
+<text x="61.0" y="23.5" font-size="9" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" fill="#555">API call</text>
+<path d="M122,15 Q141,15 141,20 Q141,26 122,26" stroke="#1F2937" stroke-width="1.5" fill="none"/>
+<polygon points="122,26 128,23 128,29" fill="#1F2937"/>
+<text x="145.0" y="23.5" font-size="9" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" fill="#555">Local processing</text>
+<rect x="256" y="8" width="209" height="24" fill="white" stroke="#E5E7EB" stroke-width="1" rx="3"/>
+<circle cx="269" cy="20" r="4" fill="#5650BE"/>
+<text x="279.0" y="23.5" font-size="9" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" fill="#555">Event emitted</text>
+<circle cx="369.5" cy="20" r="3.5" fill="white" stroke="#5650BE" stroke-width="1.5"/>
+<text x="379.5" y="23.5" font-size="9" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" fill="#555">Event received</text>
+<rect x="475" y="8" width="360" height="24" fill="white" stroke="#E5E7EB" stroke-width="1" rx="3"/>
+<rect x="483" y="15" width="28" height="10" fill="rgba(86,80,190,0.05)" stroke="#5650BE" stroke-width="1.5" rx="2"/>
+<text x="497.0" y="23.5" font-size="7" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" text-anchor="middle" font-weight="bold" fill="#5650BE">par</text>
+<text x="516.0" y="23.5" font-size="9" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" fill="#555">par — parallel execution</text>
+<rect x="662" y="15" width="28" height="10" fill="rgba(0,0,0,0.01)" stroke="#999" stroke-width="1" stroke-dasharray="4 3" rx="2"/>
+<text x="676.0" y="23.5" font-size="7" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" text-anchor="middle" font-weight="bold" fill="#999">alt</text>
+<text x="695.0" y="23.5" font-size="9" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" fill="#555">alt — branching by value</text>
+</svg></div></div>
+  <script>
+    var w = document.getElementById('map-wrapper');
+    function fit() {
+      var vw = document.documentElement.clientWidth || window.innerWidth || 1400;
+      var s = Math.min(1, vw / 1400);
+      w.style.transform = 'scale(' + s + ')';
+      w.style.marginBottom = Math.round(w.offsetHeight * (s - 1)) + 'px';
+    }
+    fit(); window.addEventListener('resize', fit);
+  </script>
+</body>
+</html>

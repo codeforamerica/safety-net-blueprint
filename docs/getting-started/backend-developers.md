@@ -4,7 +4,7 @@
 
 This guide is for developers who work with the contract artifacts — OpenAPI specs, state machines, rules, metrics, and field metadata — and build production adapters that satisfy those contracts.
 
-See also: [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) | [Domain Design](../architecture/domain-design.md)
+See also: [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) | [Domain Design](../architecture/domains/domain-design.md)
 
 > **Note:** OpenAPI specs, validation, overlays, the mock server for CRUD operations, the state machine engine (transitions, guards, `set`/`create`/`call:` steps, event subscriptions, timer stubs), and cross-artifact validation work today. Additional behavioral tooling — conversion scripts and metrics — is being built as part of the [steel thread prototypes](../prototypes/workflow-prototype.md). This guide describes both the current and target developer experience.
 
@@ -30,7 +30,7 @@ The toolkit provides base specs, scripts, and a mock server as npm packages. Sta
 ```bash
 mkdir <state-repo> && cd <state-repo>
 npm init -y
-npm install @codeforamerica/safety-net-blueprint-contracts @codeforamerica/safety-net-blueprint-mock-server @codeforamerica/safety-net-blueprint-clients
+npm install @codeforamerica/blueprint-safety-net-contracts @codeforamerica/blueprint-mock-server @codeforamerica/safety-net-blueprint-clients
 ```
 
 See the [Setup Guide](../guides/setup-guide.md) for the full setup process, including overlays, resolved specs, and CI pipeline configuration.
@@ -50,8 +50,8 @@ npm run validate
 
 | Package | Description | CLIs |
 |---------|-------------|------|
-| `@codeforamerica/safety-net-blueprint-contracts` | Base OpenAPI specs, overlay resolver, validation | `safety-net-resolve`, `safety-net-design-reference` |
-| `@codeforamerica/safety-net-blueprint-mock-server` | Mock API server and Swagger UI for development | `safety-net-mock`, `safety-net-swagger` |
+| `@codeforamerica/blueprint-safety-net-contracts` | Base OpenAPI specs, overlay resolver, validation | `blueprint-resolve` |
+| `@codeforamerica/blueprint-mock-server` | Mock API server and Swagger UI for development | `blueprint-mock`, `blueprint-swagger` |
 | `@codeforamerica/safety-net-blueprint-clients` | Postman collection and TypeScript client generation | — |
 
 States install these packages, apply overlays to customize for state-specific needs, and point the CLIs at their resolved specs.
@@ -136,7 +136,7 @@ npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>
 npm run resolve
 ```
 
-If you're working in the base repository rather than a state repository, you can use the example overlay (`packages/contracts/overlays/example/`) to test overlay behavior without setting up a full state configuration.
+If you're working in the base repository rather than a state repository, you can use the safety-net overlays (`packages/safety-net-contracts/src/overlays/`) to test overlay behavior without setting up a full state configuration.
 
 See [Overlay Guide](../guides/overlay-guide.md) for overlay syntax and the [Setup Guide](../guides/setup-guide.md) for the full repository setup.
 
@@ -163,7 +163,7 @@ Commands within this repository:
 | Command | When to Use |
 |---------|-------------|
 | `npm run validate` | After editing specs or generating contracts |
-| `npm run resolve -- --overlay=... --out=packages/resolved` | After editing overlays |
+| `npm run resolve -- --overlay=... --out=packages/generated/contracts` | After editing overlays |
 | `npm run mock:reset` | After editing example data |
 | `npm run mock:start:all` | To test contracts interactively (mock server + Swagger UI) |
 | `npm run api:new` | To scaffold a new API |

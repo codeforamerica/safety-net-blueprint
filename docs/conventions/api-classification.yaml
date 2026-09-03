@@ -1,0 +1,151 @@
+# API Design Conventions — API Classification
+# Part of the blueprint conventions. See conventions/ for the full set.
+
+version: "1.0"
+
+api_classification:
+  description: |
+    Instead of organizing APIs into nested folders (which requires tooling changes),
+    use OpenAPI extensions to classify APIs by domain, type, and status. This enables:
+    - Filtering APIs in documentation
+    - Generating domain-specific views
+    - Tracking implementation status
+    - Future folder reorganization (extensions inform structure)
+
+  extensions:
+    x-domain:
+      description: The business domain this API belongs to
+      type: string
+      location: Info level (under info:) or Operation level
+      required: true for all API specs
+      values:
+        # Core domains (from domain-design.md)
+        - client-management     # Persistent client identity and relationships
+        - intake                # Application submission from client perspective
+        - eligibility           # Program-specific interpretation and determination
+        - case-management       # Ongoing client relationships and staff assignments
+        - workflow              # Tasks, SLAs, verification
+        - scheduling            # Appointments and interviews
+        - document-management   # Files and uploads
+        # Cross-cutting (not domains, but API groupings)
+        - identity-access       # Authentication and authorization (Users API)
+        - communication         # Notices and correspondence
+        - configuration         # Business rules and settings
+        - reporting             # Aggregated data and audit events
+        - search                # Cross-resource search
+      example: |
+        info:
+          title: Applications API
+          x-domain: intake
+
+        # Or at operation level for multi-domain specs:
+        paths:
+          /applications:
+            get:
+              x-domain: intake
+
+    x-status:
+      description: Implementation/lifecycle status of the API or operation
+      type: string
+      location: Info level (entire API) or Operation level (specific endpoints)
+      default: stable (if not specified)
+      values:
+        - planned       # Designed but not implemented
+        - alpha         # Early implementation, breaking changes expected
+        - beta          # Feature complete, stabilizing
+        - stable        # Production ready, follows semver
+        - deprecated    # Still works but being phased out (use OpenAPI deprecated: true)
+      note: |
+        For visibility in Swagger UI, also add a description banner:
+        > **Status: Planned** - Not yet implemented
+
+        This ensures status is visible regardless of tooling support for x-extensions.
+      example: |
+        # API-level status
+        info:
+          title: Workflow API
+          x-status: planned
+          description: |
+            > **Status: Planned** - Not yet implemented
+
+            Task management and workflow orchestration.
+
+        # Operation-level status (for partial implementations)
+        paths:
+          /tasks:
+            get:
+              x-status: stable
+              summary: List tasks
+            post:
+              x-status: beta
+              summary: Create task
+              description: |
+                > **Status: Beta** - API may change
+
+                Creates a new task...
+
+    x-visibility:
+      description: Who can see/use this API
+      type: string
+      location: Info level or Operation level
+      default: internal
+      values:
+        - public        # Available to external consumers (clients, partners)
+        - partner       # Available to authorized integration partners
+        - internal      # Internal use only (staff, system-to-system)
+      example: |
+        info:
+          title: Applications API
+          x-visibility: public  # Clients can submit applications
+
+        paths:
+          /applications/{id}/internal-notes:
+            get:
+              x-visibility: internal  # Staff only
+
+  usage_patterns:
+    filtering_by_domain: |
+      # Find all Intake domain APIs
+      grep -l "x-domain: intake" openapi/*.yaml
+
+    documentation_generation: |
+      # Generate docs grouped by domain
+      for domain in intake workflow case-management; do
+        generate-docs --filter "x-domain: $domain" --output "docs/$domain/"
+      done
+
+    status_reporting: |
+      # List all planned APIs
+      grep -l "x-status: planned" openapi/*.yaml
+
+    validation: |
+      # Spectral rule to require x-domain
+      rules:
+        require-x-domain:
+          description: All APIs must specify x-domain
+          given: "$.info"
+          then:
+            field: "x-domain"
+            function: truthy
+
+  migration_to_folders: |
+    If folder-based organization is later desired, x-domain provides the
+    classification needed:
+
+    Current:
+      openapi/applications.yaml  (x-domain: intake)
+      openapi/persons.yaml       (x-domain: client-management)
+      openapi/users.yaml         (x-domain: identity-access)
+
+    Future (if reorganized):
+      openapi/intake/applications.yaml
+      openapi/client-management/persons.yaml
+      openapi/identity-access/users.yaml
+
+# =============================================================================
+# OpenAPI Extensions (x- Extensions)
+# =============================================================================
+# All x- extensions used in Safety Net Blueprint contract artifacts, listed
+# alphabetically. x- extensions are OpenAPI-standard extension points that
+# carry machine-readable semantics beyond the core OpenAPI specification.
+# See docs/architecture/x-extensions.md for the full reference.

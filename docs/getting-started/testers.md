@@ -62,20 +62,20 @@ npm run postman:generate
 
 # Or generate from resolved specs (with overlay applied)
 npm run resolve -- --spec=<spec-dir> --overlay=<overlay-dir> --out=<out-dir>
-node packages/contracts/scripts/generate-postman.js --spec=packages/resolved
+npm run postman:generate
 ```
 
 The generated collection covers all CRUD endpoints and RPC state machine operations. Import it into Postman or run it headlessly with Newman:
 
 ```bash
-npx newman run packages/contracts/postman-collection.json --env-var baseUrl=http://localhost:1080
+npx newman run packages/generated/postman --env-var baseUrl=http://localhost:1080
 ```
 
 ## Adding Tests
 
-- **New unit test** — create a `*.test.js` file in `packages/mock-server/tests/unit/` or `packages/contracts/tests/unit/`
-- **New integration test** — add to the appropriate section in `packages/mock-server/tests/integration/integration.test.js`
-- **New fixture data** — add records to `packages/mock-server/tests/integration/seed/`; use the established ID namespace for the resource type
+- **New unit test** — create a `*.test.js` file in `packages/blueprint-mock-server/tests/unit/` or `packages/blueprint-cli/tests/`
+- **New integration test** — add to the appropriate section in `packages/blueprint-mock-server/tests/integration/integration.test.js`
+- **New fixture data** — add records to `packages/blueprint-mock-server/tests/integration/seed/`; use the established ID namespace for the resource type
 
 See the [Testing Guide](../guides/testing.md) for detailed instructions on each.
 

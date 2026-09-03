@@ -6,7 +6,7 @@ service-to-service authentication, event actor provenance, and API security decl
 systems compared: JSM/Atlassian, ServiceNow, IBM Cúram, and Salesforce Government Cloud. Regulatory
 standards referenced: IRS Publication 1075 (Federal Tax Information), NIST SP 800-53, FedRAMP.
 
-> Supersedes [ADR: Auth Patterns](../../decisions/auth-patterns.md).
+
 
 ## Overview
 
@@ -302,10 +302,10 @@ States can override the following via overlay:
 
 | Artifact | File |
 |---|---|
-| User Service API | `packages/contracts/users-openapi.yaml` |
+| User Service API | `packages/safety-net-contracts/src/domains/identity-access/users-openapi.yaml` |
 | Identity-access domain schemas | `packages/contracts/schemas/domain/identity-access.yaml` |
 | JWT claim schemas (`BackendAuthContext`, `JwtClaims`, `FrontendAuthContext`, `Role`) | `packages/contracts/schemas/domain/identity-access.yaml` |
-| CloudEvents envelope pattern | `packages/contracts/patterns/api-patterns.yaml` |
+| CloudEvents envelope pattern | `docs/conventions/` |
 
 ## Key design decisions
 
@@ -476,10 +476,9 @@ Status values: **Planned** = on the roadmap with a tracking issue; **Partial** =
 
 ## References
 
-- [User Service API](../../../packages/contracts/users-openapi.yaml)
-- [CloudEvents envelope pattern](../../../packages/contracts/patterns/api-patterns.yaml)
+- [User Service API](../../../packages/safety-net-contracts/src/domains/identity-access/users-openapi.yaml)
+- [CloudEvents envelope pattern](../../conventions/)
 - [Inter-domain communication architecture](inter-domain-communication.md)
-- [Superseded: ADR Auth Patterns](../../decisions/auth-patterns.md)
 - [CloudEvents Auth Context Extension](https://github.com/cloudevents/spec/blob/main/cloudevents/extensions/authcontext.md)
 - [CloudEvents Specification 1.0](https://cloudevents.io/)
 - IRS Publication 1075 — Safeguarding Federal Tax Information

@@ -1,0 +1,48 @@
+{
+  "name": "@codeforamerica/blueprint-cli",
+  "version": "0.1.0",
+  "description": "CLI tools for validating, resolving, and generating blueprint contract artifacts",
+  "type": "module",
+  "files": [
+    "scripts/"
+  ],
+  "bin": {
+    "blueprint-validate": "./scripts/validate.js",
+    "blueprint-add-api-resource": "./scripts/add-api-resource.js",
+    "blueprint-generate-postman-collection": "./scripts/generate-postman-collection.js",
+    "blueprint-generate-rpc-overlay": "./scripts/generate-rpc-overlay.js",
+    "blueprint-generate-ts-clients": "./scripts/generate-ts-clients.js",
+    "blueprint-resolve": "./scripts/resolve.js",
+    "blueprint-scaffold-api": "./scripts/scaffold-api.js"
+  },
+  "scripts": {
+    "prepack": "node ../../scripts/build-package-readme.js",
+    "test": "node --test tests/",
+    "test:unit": "node --test tests/"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeforamerica/safety-net-blueprint",
+    "directory": "packages/blueprint-cli"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@apidevtools/json-schema-ref-parser": "^11.7.2",
+    "@codeforamerica/blueprint-core": "^0.1.0",
+    "ajv": "^8.12.0",
+    "ajv-formats": "^3.0.1",
+    "js-yaml": "^4.1.0",
+    "pluralize": "^8.0.0"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "^0.90.3",
+    "@redocly/cli": "^2.31.3",
+    "typescript": "^5.3.3"
+  }
+}

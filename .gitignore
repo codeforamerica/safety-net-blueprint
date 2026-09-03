@@ -4,21 +4,20 @@ package-lock.json
 *.log
 .idea
 
-# Mock server SQLite databases and uploaded files
-packages/mock-server/data/
-packages/mock-server/uploads/
+# Mock server uploaded files and SQLite DBs (covered by generated/ below)
+packages/blueprint-mock-server/uploads/
 
-# Generated artifacts (state-specific, regenerate as needed)
+# Generated artifacts (regenerate as needed)
 dist/
 dist-packages/
 data/
 generated/
-resolved/
+packages/blueprint-mock-server/tests/functional/resolved/
 
 # Generated READMEs (built from README.content.md + template at prepack time)
 packages/*/README.md
-# packages/explorer is not a published npm package — its README is hand-authored
-!packages/explorer/README.md
+# packages/blueprint-explorer is not a published npm package — its README is hand-authored
+!packages/blueprint-explorer/README.md
 
 # npm pack tarballs
 *.tgz
@@ -28,5 +27,4 @@ cursor/
 
 # Claude Code local settings
 .claude
-CLAUDE.md
 Agents.md

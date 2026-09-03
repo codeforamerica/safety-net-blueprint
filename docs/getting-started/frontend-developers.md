@@ -6,7 +6,7 @@ This guide is for developers building frontend applications that consume Safety 
 
 > **Frontend harness packages** (form engine, safety harness, harness designer) live in a separate repository: [codeforamerica/safety-net-harness](https://github.com/codeforamerica/safety-net-harness). See that repo for form rendering, layout, component mapping, and navigation.
 
-See also: [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) | [Domain Design](../architecture/domain-design.md)
+See also: [Contract-Driven Architecture](../architecture/contract-driven-architecture.md) | [Domain Design](../architecture/domains/domain-design.md)
 
 > **Note:** The REST APIs and mock server for CRUD operations work today. The behavioral contract capabilities described below — RPC APIs, field metadata, event streams — are being built as part of the [steel thread prototypes](../prototypes/workflow-prototype.md). This guide describes the target developer experience.
 

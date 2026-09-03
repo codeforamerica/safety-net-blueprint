@@ -35,7 +35,7 @@ This separation means:
 
 ### Base schemas
 
-All adapter request and response schemas extend the base schemas defined in `packages/contracts/components/adapter.yaml`:
+All adapter request and response schemas extend the base schemas defined in `packages/blueprint-core/base-contracts/components/adapter.yaml`:
 
 - **`AdapterRequest`** — defines the `metadata` field as optional (the blueprint always sets it; `additionalProperties: true` allows states to pass additional context to their backend system)
 - **`AdapterResponse`** — defines `metadata` as required, echoed back unchanged
@@ -75,5 +75,5 @@ For state-defined adapter contracts, the state defines both sides of the contrac
 
 | Artifact | File |
 |---|---|
-| Base schemas | `packages/contracts/components/adapter.yaml` |
+| Base schemas | `packages/blueprint-core/base-contracts/components/adapter.yaml` |
 

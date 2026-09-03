@@ -1,0 +1,19 @@
+# Overlay for blueprint-core/schemas/policies-schema.yaml
+# Extends the base Policy type with safety-net specific fields.
+
+overlay: 1.0.0
+info:
+  title: Safety Net Policies Schema Overlay
+  version: 0.1.0
+
+actions:
+  - target: "$defs.Policy.properties"
+    update:
+      programs:
+        type: array
+        description: >
+          Benefit programs this policy applies to.
+          Omit if the policy applies universally across programs.
+        items:
+          $ref: "../common/schemas/enums.yaml#/$defs/Program"
+        minItems: 1

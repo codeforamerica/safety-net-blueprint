@@ -2,7 +2,7 @@
 
 > **Status:** Appointment API implemented (alpha). Schedule and Slot entities are future work.
 
-See [Domain Design Overview](../domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
+See [Domain Design Overview](domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
 
 ## Overview
 
@@ -12,7 +12,7 @@ Time-based coordination for safety net benefits programs. The scheduling domain 
 
 ### Appointment
 
-A scheduled interaction between a staff member and a person at a given time. [Spec: `scheduling-openapi.yaml`](../../../packages/contracts/scheduling-openapi.yaml)
+A scheduled interaction between a staff member and a person at a given time. [Spec: `scheduling-openapi.yaml`](../../../packages/safety-net-contracts/src/domains/scheduling/scheduling-openapi.yaml)
 
 | Field | Type | Industry Source |
 |-------|------|-----------------|
@@ -25,7 +25,7 @@ A scheduled interaction between a staff member and a person at a given time. [Sp
 | `assignedToId` | uuid (ref User) | FHIR Appointment: `participant` where type = Practitioner; RFC 5545: `ORGANIZER` |
 | `notes` | string | FHIR Appointment: `note` (Annotation[]); RFC 5545: `DESCRIPTION` |
 | `createdAt` | date-time, readOnly | Universal; FHIR Appointment: `created` |
-| `updatedAt` | date-time, readOnly | Universal; required by `api-patterns.yaml` |
+| `updatedAt` | date-time, readOnly | Universal; required by the [API conventions](../../conventions/resources.yaml) |
 
 **Status values:** `scheduled`, `completed`, `canceled`, `no_show`
 
@@ -82,7 +82,7 @@ The scheduling domain is primarily **data-shaped** — most interactions are CRU
 
 | Document | Description |
 |----------|-------------|
-| [Domain Design](../domain-design.md) | Scheduling section in the domain overview |
+| [Domain Design](domain-design.md) | Scheduling section in the domain overview |
 | [Case Management](case-management.md) | Staff assignments — closely related domain |
 | [Workflow](workflow.md) | Task lifecycle — appointments may trigger tasks |
 | [Communication](../cross-cutting/communication.md) | Reminders and notifications belong here |

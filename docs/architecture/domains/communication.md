@@ -2,7 +2,7 @@
 
 > **Status:** Minimal contracts implemented for document request notices. Full notice lifecycle TBD.
 
-See [Domain Design Overview](../domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
+See [Domain Design Overview](domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
 
 ## Overview
 
@@ -76,6 +76,6 @@ Emitted after a notice is sent.
 
 | Document | Description |
 |----------|-------------|
-| [Domain Design](../domain-design.md) | Communication section in the domain overview |
+| [Domain Design](domain-design.md) | Communication section in the domain overview |
 | [Inter-Domain Communication](../inter-domain-communication.md) | Command vs. event pattern decision rule |
 | [Contract-Driven Architecture](../contract-driven-architecture.md) | Contract artifacts and the adapter pattern |

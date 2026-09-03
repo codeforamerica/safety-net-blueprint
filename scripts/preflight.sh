@@ -48,73 +48,64 @@ lsof -ti :1080 | xargs kill -9 2>/dev/null || true
 pass "Mock server stopped (or was not running)"
 
 step "Clearing generated artifacts for a clean-slate run"
-rm -rf packages/resolved
-rm -rf packages/mock-server/tests/integration/generated
-rm -rf packages/mock-server/tests/functional/resolved
-rm -rf packages/mock-server/tests/functional/generated
-pass "Cleared packages/resolved, tests/integration/generated, and functional resolved/generated"
-
-step "Validating base specs"
-if npm run validate 2>&1; then
-  pass "Base specs valid"
-else
-  fail "Base spec validation failed"
-fi
-bail_if_failed
+rm -rf packages/generated
+pass "Cleared generated artifacts"
 
 step "Running unit tests"
-if npm test 2>&1; then
+if npm run test:unit --workspaces --if-present 2>&1; then
   pass "Unit tests passed"
 else
   fail "Unit tests failed"
 fi
 bail_if_failed
 
-step "Resolving example overlay"
+step "Resolving safety-net-contracts"
 if npm run resolve 2>&1; then
-  pass "Overlay resolution succeeded"
+  pass "Contracts resolved"
 else
-  fail "Overlay resolution failed"
-fi
-
-step "Validating sequence diagram config files"
-if node packages/explorer/diagrams/sequence-diagrams/src/validate-config.js 2>&1; then
-  pass "Sequence diagram config valid"
-else
-  fail "Sequence diagram config validation failed"
+  fail "Contract resolution failed"
 fi
 bail_if_failed
 
-step "Validating resolved specs"
-if npm run validate:resolved 2>&1; then
-  pass "Resolved specs valid"
+step "Validating safety-net-contracts"
+if npm run validate 2>&1; then
+  pass "Contracts valid"
 else
-  fail "Resolved spec validation failed"
+  fail "Contract validation failed"
 fi
 
-step "Generating TypeScript clients from resolved specs"
-if npm run clients:typescript -- --spec=packages/resolved --out=packages/clients/generated 2>&1; then
-  git add packages/clients/generated/
-  pass "TypeScript clients generated and staged"
+step "Generating TypeScript clients for resolved safety-net-contracts"
+if npm run clients:typescript -- --spec=packages/generated/contracts --out=packages/generated/clients 2>&1; then
+  pass "TypeScript clients generated"
 else
   fail "TypeScript client generation failed"
 fi
 bail_if_failed
 
-step "Rebuilding explorer outputs"
-if npm run build --workspace=packages/explorer 2>&1; then
-  git add packages/explorer/
+# TODO: TypeScript typecheck on generated clients — disabled until generated client
+# scaffold code (from @hey-api/openapi-ts) passes strict type checking.
+# step "Typechecking generated safety-net-contracts TypeScript clients"
+# if npx tsc --project packages/generated/clients/tsconfig.json 2>&1; then
+#   pass "TypeScript clients typecheck passed"
+# else
+#   fail "TypeScript clients typecheck failed"
+# fi
+# bail_if_failed
+
+step "Rebuilding safety-net-explorer outputs"
+if node packages/blueprint-explorer/build.js --content=packages/safety-net-explorer --resolved=packages/generated/contracts --clients=packages/generated/clients 2>&1; then
+  git add packages/safety-net-explorer/
   pass "Explorer rebuilt and staged"
 else
   fail "Explorer build failed"
 fi
 bail_if_failed
 
-step "Validating seed data"
-if npm run validate:seed 2>&1; then
-  pass "Seed data valid"
+step "Validating safety-net-contracts mock data"
+if npm run validate:mock-data 2>&1; then
+  pass "Mock data valid"
 else
-  fail "Seed data validation failed"
+  fail "Mock data validation failed"
 fi
 
 step "Generating Postman collection"
@@ -124,15 +115,23 @@ else
   fail "Postman collection generation failed"
 fi
 
-step "Running functional tests"
-if node packages/mock-server/tests/run-all-tests.js --functional 2>&1; then
+step "Running blueprint-mock-server functional tests"
+if node packages/blueprint-mock-server/tests/run-tests.js --functional 2>&1; then
   pass "Functional tests passed"
 else
   fail "Functional tests failed"
 fi
 
-step "Running integration tests"
-if npm run test:integration 2>&1; then
+step "Running blueprint-mock-server integration tests"
+if node packages/blueprint-mock-server/tests/run-tests.js --integration --contracts=packages/generated/contracts --raw-contracts=packages/safety-net-contracts/src --stop 2>&1; then
+  pass "Integration tests passed"
+else
+  fail "Integration tests failed"
+fi
+bail_if_failed
+
+step "Running safety-net-contracts integration tests"
+if node packages/safety-net-contracts/tests/run-tests.js --integration --contracts=packages/generated/contracts --seed=packages/safety-net-contracts/tests/integration/seed --clients=packages/generated/clients --stop 2>&1; then
   pass "Integration tests passed"
 else
   fail "Integration tests failed"

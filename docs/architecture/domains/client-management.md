@@ -2,7 +2,7 @@
 
 > **Status:** Placeholder — no contracts implemented yet.
 
-See [Domain Design Overview](../domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
+See [Domain Design Overview](domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
 
 ## Overview
 

@@ -104,7 +104,7 @@ jobs:
 
       - name: Run contract tests
         run: |
-          npx newman run openapi-toolkit/generated/postman-collection.json \
+          npx newman run openapi-toolkit/packages/generated/postman \
             --env-var "baseUrl=http://localhost:8080" \
             --reporters cli,junit \
             --reporter-junit-export results.xml
@@ -134,7 +134,7 @@ If you prefer not to clone the toolkit in CI, generate the collection locally an
 STATE=<your-state> npm run postman:generate
 
 # Copy to your backend repo
-cp generated/postman-collection.json ../your-backend/tests/contract/
+cp packages/generated/postman ../your-backend/tests/contract/
 ```
 
 Then your CI simplifies to:
@@ -174,7 +174,7 @@ Check for spec changes and regenerate only when needed:
     cd safety-net-blueprint
     npm install
     STATE=<your-state> npm run postman:generate
-    cp generated/postman-collection.json ../tests/contract/
+    cp packages/generated/postman ../tests/contract/
     echo "${{ steps.spec-check.outputs.new }}" > ../tests/contract/.spec-hash
 ```
 

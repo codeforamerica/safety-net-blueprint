@@ -209,8 +209,8 @@ npm install
 
 ```bash
 # Resolve overlay
-safety-net-resolve \
-  --spec=./node_modules/@codeforamerica/safety-net-blueprint-contracts \
+blueprint-resolve \
+  --spec=./node_modules/@codeforamerica/blueprint-safety-net-contracts \
   --overlay=./overlays \
   --out=./resolved
 

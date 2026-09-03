@@ -1,8 +1,8 @@
 # Search (Cross-Cutting)
 
-> **Status: Alpha** — Breaking changes expected. See the [OpenAPI spec](../../../packages/contracts/search-openapi.yaml) for the full contract.
+> **Status: Alpha** — Breaking changes expected. See the [OpenAPI spec](../../../packages/safety-net-contracts/src/domains/platform/search-openapi.yaml) for the full contract.
 
-See [Domain Design Overview](../domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
+See [Domain Design Overview](../domains/domain-design.md) for context and [Contract-Driven Architecture](../contract-driven-architecture.md) for the contract approach.
 
 ## Overview
 
@@ -53,5 +53,5 @@ Any search UI needs per-type counts to show "People (12) | Cases (5) | Applicati
 
 | Document | Description |
 |----------|-------------|
-| [Search API Spec](../../../packages/contracts/search-openapi.yaml) | OpenAPI specification |
-| [Domain Design](../domain-design.md) | Search section in the domain overview |
+| [Search API Spec](../../../packages/safety-net-contracts/src/domains/platform/search-openapi.yaml) | OpenAPI specification |
+| [Domain Design](../domains/domain-design.md) | Search section in the domain overview |

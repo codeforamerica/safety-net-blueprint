@@ -27,20 +27,34 @@ Adding a new operation or resource requires only a contract change.
 
 At startup, the server populates its databases from two sources:
 
-- **Seed files** (`packages/mock-server/seed/`) — hand-edited YAML files with example data for local development.
-- **Config files** (`*-config.yaml`) — catalog entries like queues, services, and document types that the server treats as system-managed records.
+- **Seed files** — `*-mock-data.yaml` files discovered recursively under the directory passed to `--seed`. Records are routed to collections by key-prefix matching (e.g. `TaskExample1` → `tasks`). Without `--seed`, all collections start empty.
+- **Config files** (`*-config.yaml`) — catalog entries like queues, services, and document types that the server treats as system-managed records. These are always loaded from the spec directory regardless of `--seed`.
+
+The safety-net-contracts package ships hand-authored `*-mock-data.yaml` files alongside each domain's specs (e.g. `domains/workflow/workflow-mock-data.yaml`). To use them:
+
+```bash
+npm run mock:start -- --seed=packages/safety-net-contracts
+```
+
+To generate a fresh set of faker-based seed files from the current schemas:
+
+```bash
+npm run mock:seed   # writes *-mock-data.yaml files to packages/generated/mock-data/
+```
+
+Then start the server pointing at the generated output:
+
+```bash
+npm run mock:start -- --seed=packages/generated/mock-data
+```
+
+The generated files are gitignored. The hand-authored files in `domains/*/` are committed and represent the canonical dev dataset. `mock:seed` is a bootstrap tool — useful when adding a new domain or when you want a valid starting point after significant schema changes. It overwrites whatever is in `--out`.
 
 **`POST /mock/reset`** clears all runtime data and restores the config-managed catalog entries. It does not reseed from the seed files — you get an empty database plus the catalog. Use it at the start of each integration test suite to start from a clean, known state.
 
 ```bash
 curl -X POST http://localhost:1080/mock/reset
 ```
-
-To fully reseed from example data (for local development):
-```bash
-npm run mock:seed   # regenerate seed files from current schemas
-```
-Then restart the server to load the new seed data.
 
 ### Time tokens in seed files
 
@@ -291,8 +305,10 @@ MOCK_SERVER_HOST=0.0.0.0 MOCK_SERVER_PORT=8080 npm run mock:start
 
 | Command | Description |
 |---------|-------------|
-| `npm run mock:start` | Start server |
-| `npm run mock:seed` | Regenerate seed files from current schemas |
+| `npm run mock:start` | Start server (databases empty without `--seed`) |
+| `npm run mock:start -- --seed=<dir>` | Start server and seed from `*-mock-data.yaml` files under `<dir>` |
+| `npm run mock:start -- --uploads=<dir>` | Store uploaded files under `<dir>` (default: `blueprint-mock-server/uploads`; overridden by `MOCK_UPLOADS_DIR`) |
+| `npm run mock:seed` | Generate faker-based seed files into `packages/generated/mock-data/` |
 
 | Endpoint | Description |
 |---------|-------------|

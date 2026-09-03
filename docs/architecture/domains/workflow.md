@@ -493,7 +493,7 @@ Baseline timer transitions:
 
 **Options:**
 - **(A)** Metric definitions in a proprietary GUI or database
-- **(B) ✓** Metrics as YAML contract artifacts in `workflow-metrics.yaml`; each metric declares `collection`, `aggregate`, and optional JSON Logic `filter`
+- **(B) ✓** Metrics as YAML contract artifacts in `workflow-metrics.yaml`; each metric declares `collection`, `aggregate`, and optional CEL `filter` (see [Decision 1](../cross-cutting/behavioral-contract-dsl.md#decision-1-cel-as-the-expression-language) — CEL replaced JSON Logic across the full behavioral contract surface, metric filters included)
 
 **Customization:** States replace or extend `workflow-metrics.yaml` via overlay.
 

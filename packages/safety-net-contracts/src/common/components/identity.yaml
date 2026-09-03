@@ -1,0 +1,14 @@
+# Identity shared schemas
+#
+# Schemas: ImmigrationInfo, Name, SocialSecurityNumber
+#
+# See also: schemas/common/identity.yaml (canonical JSON Schema definitions)
+
+ImmigrationInfo:
+  $ref: "../schemas/identity.yaml#/$defs/ImmigrationInfo"
+
+Name:
+  $ref: "../schemas/identity.yaml#/$defs/Name"
+
+SocialSecurityNumber:
+  $ref: "../schemas/identity.yaml#/$defs/SocialSecurityNumber"

@@ -8,8 +8,8 @@ This guide walks through setting up a repository that consumes the Safety Net Bl
 
 | Package | Description | CLIs |
 |---|---|---|
-| `@codeforamerica/safety-net-blueprint-contracts` | Base OpenAPI specs, overlay resolver, validation | `safety-net-resolve`, `safety-net-design-reference` |
-| `@codeforamerica/safety-net-blueprint-mock-server` | Mock API server and Swagger UI for development | `safety-net-mock`, `safety-net-swagger` |
+| `@codeforamerica/blueprint-safety-net-contracts` | Base OpenAPI specs, overlay resolver, validation | `blueprint-resolve` |
+| `@codeforamerica/blueprint-mock-server` | Mock API server and Swagger UI for development | `blueprint-mock`, `blueprint-swagger` |
 | `@codeforamerica/safety-net-blueprint-clients` | Postman collection and TypeScript client generation | — |
 
 Install these packages as dependencies and point the CLIs at your resolved specs.
@@ -27,7 +27,7 @@ npm init -y
 ### 2. Install dependencies
 
 ```bash
-npm install @codeforamerica/safety-net-blueprint-contracts @codeforamerica/safety-net-blueprint-mock-server @codeforamerica/safety-net-blueprint-clients
+npm install @codeforamerica/blueprint-safety-net-contracts @codeforamerica/blueprint-mock-server @codeforamerica/safety-net-blueprint-clients
 ```
 
 ### 3. Create directory structure
@@ -52,11 +52,11 @@ resolved/
 ```json
 {
   "scripts": {
-    "resolve": "safety-net-resolve --spec=./node_modules/@codeforamerica/safety-net-blueprint-contracts --overlay=./overlays --out=./resolved",
-    "resolve:prod": "safety-net-resolve --spec=./node_modules/@codeforamerica/safety-net-blueprint-contracts --overlay=./overlays --out=./resolved --env=production --env-file=.env",
-    "validate": "node ./node_modules/@codeforamerica/safety-net-blueprint-contracts/scripts/validate-openapi.js --spec=./resolved --skip-examples",
-    "mock:start": "safety-net-mock --spec=./resolved",
-    "swagger": "safety-net-swagger --spec=./resolved",
+    "resolve": "blueprint-resolve --spec=./node_modules/@codeforamerica/blueprint-safety-net-contracts --overlay=./overlays --out=./resolved",
+    "resolve:prod": "blueprint-resolve --spec=./node_modules/@codeforamerica/blueprint-safety-net-contracts --overlay=./overlays --out=./resolved --env=production --env-file=.env",
+    "validate": "node ./node_modules/@codeforamerica/blueprint-safety-net-contracts/scripts/validate-openapi.js --spec=./resolved --skip-examples",
+    "mock:start": "blueprint-mock --spec=./resolved",
+    "swagger": "blueprint-swagger --spec=./resolved",
     "build": "npm run resolve && npm run validate"
   }
 }
@@ -69,7 +69,7 @@ Use an exact version in `package.json` to control when you pick up base spec cha
 ```json
 {
   "dependencies": {
-    "@codeforamerica/safety-net-blueprint-contracts": "1.2.0"
+    "@codeforamerica/blueprint-safety-net-contracts": "1.2.0"
   }
 }
 ```
@@ -78,7 +78,7 @@ Use an exact version in `package.json` to control when you pick up base spec cha
 
 Overlays modify the base specs without forking them. See the [Overlay Guide](overlay-guide.md) for overlay syntax, action types, target path expressions, file disambiguation, and global config options.
 
-A working example is included in the base repo at [`packages/contracts/overlays/example/`](../../packages/contracts/overlays/example/). Use it as a starting point for your own overlay.
+The safety-net overlays in the base repo (`packages/safety-net-contracts/src/overlays/`) show a working example. Use the `config.yaml` there as a starting point for your own overlay configuration.
 
 ## CI pipeline
 
@@ -146,10 +146,10 @@ The output is a set of static HTML files that can be published as a documentatio
 
 ## Updating base specs
 
-When a new version of `@codeforamerica/safety-net-blueprint-contracts` is released:
+When a new version of `@codeforamerica/blueprint-safety-net-contracts` is released:
 
 1. **Review the changelog** for breaking changes to schemas or file structure
-2. **Update the dependency**: `npm install @codeforamerica/safety-net-blueprint-contracts@<new-version>`
+2. **Update the dependency**: `npm install @codeforamerica/blueprint-safety-net-contracts@<new-version>`
 3. **Run resolve**: `npm run resolve` — overlay actions that target paths that no longer exist will produce warnings
 4. **Fix stale overlay targets**: update JSONPath expressions to match the new schema structure
 5. **Validate**: `npm run validate` — confirm the resolved output is valid
@@ -175,5 +175,5 @@ Some customizations may benefit all adopters. Consider proposing changes to the 
 To contribute:
 
 1. Open an issue describing the proposed change and why it benefits multiple adopters
-2. If approved, submit a PR against the base `@codeforamerica/safety-net-blueprint-contracts` repo
+2. If approved, submit a PR against the base `@codeforamerica/blueprint-safety-net-contracts` repo
 3. Once merged, remove the corresponding overlay action — the change is now in the base

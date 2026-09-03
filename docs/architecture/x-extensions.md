@@ -2,23 +2,32 @@
 
 All `x-` extensions used in Safety Net Blueprint contract artifacts, listed alphabetically.
 
-The machine-readable catalog is in [`packages/contracts/patterns/api-patterns.yaml`](../../packages/contracts/patterns/api-patterns.yaml) under `x_extensions`.
+Extensions fall into two categories:
+
+- **Spec extensions** — appear inside `*-openapi.yaml` files, on schemas, operations, or info nodes
+- **Config extensions** — appear in overlay `config.yaml` files, under the `config:` key, and control pipeline behavior
+
+The machine-readable catalog is in [`docs/conventions/`](../conventions/) under `x_extensions`.
 
 ---
 
 ## Summary
 
-| Extension | File type(s) | Location within file |
-|---|---|---|
-| `x-derived` | `*-openapi.yaml` | Schema property (on computed fields) |
-| `x-domain` | `*-openapi.yaml` | `info` level or operation level |
-| `x-environments` | Any spec node | `paths`, operations, schemas, or any other node |
-| `x-events` | `*-openapi.yaml` | Top-level (peer to `info:`, `paths:`) |
-| `x-enum-source` | `*-openapi.yaml` | Schema property (on string fields with contract-derived enum values) |
-| `x-relationship` | `*-openapi.yaml` | Schema property (on FK fields ending in `Id`) |
-| `x-sortable` | `*-openapi.yaml` | List operation level |
-| `x-status` | `*-openapi.yaml` | `info` level or operation level |
-| `x-visibility` | `*-openapi.yaml` | `info` level or operation level |
+| Extension | Category | File type(s) | Location within file |
+|---|---|---|---|
+| `x-casing` | Config | `overlays/config.yaml` | `config:` section |
+| `x-pagination` | Config | `overlays/config.yaml` | `config:` section |
+| `x-derived` | Spec | `*-openapi.yaml` | Schema property (on computed fields) |
+| `x-domain` | Spec | `*-openapi.yaml` | `info` level or operation level |
+| `x-environments` | Spec | Any spec node | `paths`, operations, schemas, or any other node |
+| `x-events` | Spec | `*-openapi.yaml` | Top-level (peer to `info:`, `paths:`) |
+| `x-enum-source` | Spec | `*-openapi.yaml` | Schema property (on string fields with contract-derived enum values) |
+| `x-relationship` | Spec + Config | `*-openapi.yaml`, `overlays/config.yaml` | Schema property; or `config:` for default style |
+| `x-sortable` | Spec | `*-openapi.yaml` | List operation level |
+| `x-status` | Spec | `*-openapi.yaml` | `info` level or operation level |
+| `x-visibility` | Spec | `*-openapi.yaml` | `info` level or operation level |
+
+---
 
 ---
 
@@ -82,7 +91,7 @@ paths:
 
 Without `--env`, all sections are included as-is regardless of `x-environments` annotations.
 
-See [Resolve Pipeline Architecture](resolve-pipeline.md#5-environment-filtering) for how this is applied during the pipeline.
+See [Resolve Pipeline Architecture](resolve-pipeline.md#7-environment-filtering) for how this is applied during the pipeline.
 
 ---
 
@@ -224,7 +233,7 @@ paths:
 
 **Sort order is an oracle:** fields whose ordering would leak information (SSN, dateOfBirth, internal risk scores, sensitive flags) MUST NOT appear in `x-sortable.fields` even if they're technically sortable. The pattern validator emits a warning when fields tagged `x-pii: true` or matching common sensitive name patterns appear in `x-sortable.fields`.
 
-See `packages/contracts/patterns/api-patterns.yaml#sorting` for the full convention (syntax, error codes, null-value ordering) and `components/parameters.yaml#SortParam` for the shared query parameter component.
+See `conventions/http.yaml` (`sorting`) for the full convention (syntax, error codes, null-value ordering) and `components/parameters.yaml#SortParam` for the shared query parameter component.
 
 ---
 

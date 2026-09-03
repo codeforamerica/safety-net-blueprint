@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Safety Net Blueprint — Data Dictionary — Scheduling</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    details summary::-webkit-details-marker { display: none; }
+
+    /* Full-viewport layout: header pinned, sidebar + content fill remaining height */
+    #page-header { flex-shrink: 0; }
+    .page-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+    #sidebar {
+      width: 240px;
+      min-width: 240px;
+      background: #2B1A78;
+      color: white;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #sidebar-nav { padding: 0.5rem 0; overflow-y: auto; flex: 1; min-height: 0; }
+    #content { flex: 1; min-width: 0; padding: 2rem 2.5rem 4rem; overflow-y: auto; }
+    mark.search-hl { background: #fff176; color: inherit; border-radius: 2px; padding: 0 1px; }
+    #content [id]:target { scroll-margin-top: 1rem; outline: none; box-shadow: none; }
+
+    /* Nav links */
+    a.nav-link {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 4px 0.75rem; font-size: 11px;
+      color: rgba(255,255,255,0.65); text-decoration: none;
+      transition: background 0.1s;
+    }
+    a.nav-link:hover { background: rgba(255,255,255,0.08); color: white; }
+    a.nav-link.nav-active { background: rgba(255,255,255,0.15); color: white; font-weight: 700; }
+    /* Make inline code readable on the dark sidebar */
+    #sidebar a.nav-link code {
+      color: rgba(255,255,255,0.55); background: transparent; border: none; font-size: 10px;
+    }
+    .nav-section-label {
+      font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35); padding: 0.75rem 0.75rem 0.2rem;
+    }
+    .nav-count {
+      font-size: 0.65rem; font-weight: 400;
+      background: rgba(255,255,255,0.15); border-radius: 8px;
+      padding: 0.1rem 0.35rem; margin-left: auto;
+    }
+
+    /* Interactive element hover states — applied centrally so all tools get consistent behavior */
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    
+:root {
+  --blue-dark:   #2B1A78;
+  --blue-mid:    #5650BE;
+  --blue-light:  #C2C0E8;
+  --sand:        #E9CCBE;
+  --sand-light:  #F5F0ED;
+  --lb-light:    #E6EBF9;
+  --green-dark:  #006152;
+  --green-light: #E2F9F6;
+  --yellow-light:#FFF3E0;
+  --red-dark:    #AF121D;
+  --red-light:   #F9C8CB;
+}
+.csv-btn {
+  font-size: 0.78rem; padding: 0.25rem 0.65rem;
+  border: 1px solid rgba(255,255,255,0.3); border-radius: 4px;
+  background: rgba(255,255,255,0.1); color: white; cursor: pointer; white-space: nowrap;
+}
+.csv-btn:hover { background: rgba(255,255,255,0.2); }
+.no-results { padding: 2rem; text-align: center; color: #888; font-style: italic; }
+.hidden { display: none !important; }
+.dict-section { margin-bottom: 2.5rem; scroll-margin-top: 1rem; }
+.section-title {
+  font-size: 1rem; font-weight: 700; color: var(--blue-dark);
+  border-bottom: 2px solid var(--blue-light);
+  padding-bottom: 0.35rem; margin-bottom: 0.75rem;
+}
+.cards-grid { display: flex; flex-direction: column; gap: 0.5rem; }
+.card {
+  background: #fff; border: 1px solid var(--sand);
+  border-left: 3px solid var(--blue-mid); border-radius: 6px; overflow: hidden;
+}
+.card.hidden { display: none; }
+.card-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem; background: var(--lb-light); }
+.field-path { font-size: 0.82rem; font-weight: 600; color: var(--blue-dark); flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.type-badge {
+  flex-shrink: 0; font-size: 0.65rem; font-weight: 600;
+  background: var(--blue-light); color: var(--blue-dark);
+  border-radius: 4px; padding: 0.1rem 0.4rem; text-transform: uppercase; letter-spacing: 0.03em;
+}
+.rel-badge {
+  flex-shrink: 0; font-size: 0.65rem; font-weight: 600;
+  background: var(--green-light); color: var(--green-dark);
+  border-radius: 4px; padding: 0.1rem 0.4rem; letter-spacing: 0.02em;
+}
+.applies-expr { font-size: 0.72rem; background: var(--yellow-light); border-radius: 3px; padding: 0.05rem 0.4rem; color: #5a4000; }
+.card-body { padding: 0.5rem 0.75rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.ann-reason { font-size: 0.78rem; color: #333; line-height: 1.5; margin: 0; }
+.ann-modeling { font-size: 0.75rem; color: #555; line-height: 1.5; margin: 0; display: flex; gap: 0.5rem; align-items: baseline; }
+.ann-modeling .ann-label { flex-shrink: 0; }
+.card-ann { display: flex; flex-direction: column; gap: 0.3rem; }
+.ann-row { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; font-size: 0.75rem; }
+.ann-row--col { align-items: flex-start; }
+.ann-label {
+  display: inline-block; font-size: 0.6rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  border-radius: 3px; padding: 0.1rem 0.35rem; margin-right: 0.1rem;
+  vertical-align: middle; white-space: nowrap; flex-shrink: 0;
+  background: var(--sand-light); color: #6b4c3b; border: 1px solid var(--sand);
+}
+.badge { font-size: 0.65rem; font-weight: 600; border-radius: 3px; padding: 0.1rem 0.35rem; letter-spacing: 0.03em; background: #e8e8e8; color: #444; }
+.val-list code { font-size: 0.72rem; background: #f0f0f0; border-radius: 3px; padding: 0.05rem 0.3rem; color: #444; }
+.policy-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.policy-item { font-size: 0.75rem; }
+.policy-item-head { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.15rem; }
+.policy-id { font-size: 0.72rem; background: #f0f0f0; border-radius: 3px; padding: 0.05rem 0.3rem; color: #444; }
+.policy-citation { font-size: 0.7rem; color: var(--blue-mid); text-decoration: none; }
+.policy-citation:hover { text-decoration: underline; }
+.policy-desc { font-size: 0.75rem; color: #555; line-height: 1.45; margin: 0; }
+
+  </style>
+</head>
+<body>
+  <div id="page-header">
+    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Data Dictionary</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Scheduling</a></div>
+    <div style="background:#2B1A78;color:white;">
+    <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:0.9375rem;font-weight:800;">Scheduling</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.45);font-family:monospace;">7 fields</span>
+      <button class="csv-btn" onclick="exportCsv()" style="margin-left:auto;">Export CSV</button>
+    </div>
+    <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">scheduling</code> · API spec: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/refactor/blueprint-core-package/packages/safety-net-contracts/src/domains/scheduling/scheduling-openapi.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">scheduling-openapi.yaml</code></a></div>
+  </div>
+  </div>
+  <div class="page-layout">
+    <nav id="sidebar">
+      
+      <div style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;">
+        <input id="nav-search" type="search" placeholder="Filter…"
+          style="width:100%;padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.2);border-radius:4px;background:rgba(255,255,255,0.1);color:white;font-size:0.75rem;outline:none;"
+          aria-label="Filter navigation" />
+      </div>
+      <div id="sidebar-nav">
+        <a href="#sec-appointment" class="nav-link">appointment <span class="nav-count">7</span></a>
+      </div>
+    </nav>
+    <main id="content">
+      <section class="dict-section" id="sec-appointment">
+      <h2 class="section-title">appointment</h2>
+      <div class="cards-grid"><div class="card content-item" data-path="appointment.personId"><div class="card-header"><code class="field-path">appointment.personId</code><span class="type-badge">uuid(Person)</span></div></div><div class="card content-item" data-path="appointment.assignedToId"><div class="card-header"><code class="field-path">appointment.assignedToId</code><span class="type-badge">uuid(User)</span></div></div><div class="card content-item" data-path="appointment.startAt"><div class="card-header"><code class="field-path">appointment.startAt</code><span class="type-badge">datetime</span></div></div><div class="card content-item" data-path="appointment.endAt"><div class="card-header"><code class="field-path">appointment.endAt</code><span class="type-badge">datetime</span></div></div><div class="card content-item" data-path="appointment.appointmentType"><div class="card-header"><code class="field-path">appointment.appointmentType</code><span class="type-badge">string</span></div></div><div class="card content-item" data-path="appointment.status"><div class="card-header"><code class="field-path">appointment.status</code><span class="type-badge">enum</span></div><div class="card-body"><div class="ann-row"><span class="ann-label ann-label--values">Values</span><span class="val-list"><code>scheduled</code> <code>completed</code> <code>canceled</code> <code>no_show</code></span></div></div></div><div class="card content-item" data-path="appointment.notes"><div class="card-header"><code class="field-path">appointment.notes</code><span class="type-badge">string</span></div></div></div>
+    </section>
+    </main>
+  </div>
+  <script>
+    // Chevron toggle for <details> — set initial state and keep in sync on toggle
+    document.querySelectorAll('details').forEach(d => {
+      const ch = d.querySelector('.chevron');
+      if (ch) ch.textContent = d.open ? '▼' : '▶';
+      d.addEventListener('toggle', () => {
+        const ch = d.querySelector('.chevron');
+        if (ch) ch.textContent = d.open ? '▼' : '▶';
+      });
+    });
+    // data-expand-id toggles — click any [data-expand-id] element to show/hide the
+    // element with the matching id. Works for any target element type (<div>, <tr>, etc.)
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    // Active nav highlighting — click sets immediately; IntersectionObserver keeps it current on scroll
+    (function () {
+      const links = Array.from(document.querySelectorAll('#sidebar a.nav-link[href^="#"]'));
+      if (!links.length) return;
+      function setActive(id) {
+        links.forEach(a => a.classList.toggle('nav-active', a.getAttribute('href') === '#' + id));
+      }
+      // Highlight immediately on click so there's instant feedback
+      links.forEach(a => a.addEventListener('click', () => setActive(a.getAttribute('href').slice(1))));
+      const sections = links
+        .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+        .filter(Boolean);
+      if (!sections.length) return;
+      const io = new IntersectionObserver(entries => {
+        const hit = entries.find(e => e.isIntersecting);
+        if (hit) setActive(hit.target.id);
+      }, { root: document.getElementById('content'), rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      sections.forEach(s => io.observe(s));
+      setActive(sections[0].id);
+    })();
+    
+    (function () {
+      // Returns only text that is currently visible — skips content inside closed <details>
+      function visibleText(node) {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+        if (node.tagName === 'DETAILS' && !node.open) {
+          const summary = node.querySelector('summary');
+          return summary ? summary.textContent : '';
+        }
+        return [...node.childNodes].map(visibleText).join('');
+      }
+      function clearHighlights() {
+        document.querySelectorAll('#content mark.search-hl').forEach(el => {
+          const parent = el.parentNode;
+          el.replaceWith(document.createTextNode(el.textContent));
+          parent?.normalize();
+        });
+      }
+      // Only highlight text in visible nodes (skip closed <details> bodies)
+      function highlightInElement(root, q) {
+        function walk(node) {
+          if (node.tagName === 'DETAILS' && !node.open) {
+            // Only walk the summary
+            const summary = node.querySelector('summary');
+            if (summary) walk(summary);
+            return;
+          }
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            const lower = text.toLowerCase();
+            if (!lower.includes(q)) return;
+            const frag = document.createDocumentFragment();
+            let last = 0, idx = lower.indexOf(q);
+            while (idx !== -1) {
+              if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+              const mark = document.createElement('mark');
+              mark.className = 'search-hl';
+              mark.textContent = text.slice(idx, idx + q.length);
+              frag.appendChild(mark);
+              last = idx + q.length;
+              idx = lower.indexOf(q, last);
+            }
+            if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+            node.parentNode.replaceChild(frag, node);
+            return;
+          }
+          for (const child of [...node.childNodes]) walk(child);
+        }
+        walk(root);
+      }
+      document.getElementById('nav-search')?.addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        clearHighlights();
+        document.querySelectorAll('#sidebar .nav-link[href^="#"]').forEach(a => {
+          const id = a.getAttribute('href').slice(1);
+          const el = document.getElementById(id);
+          const items = el ? [...el.querySelectorAll('.content-item')] : [];
+          const navMatches = !q || a.textContent.toLowerCase().includes(q);
+          const anyItemMatches = q && items.some(item => visibleText(item).toLowerCase().includes(q));
+          // Section visible if nav label matches, any item matches, or (no items) visible section text matches
+          const sectionMatches = !q || navMatches || anyItemMatches ||
+            (el && !items.length && visibleText(el).toLowerCase().includes(q));
+          a.style.display = sectionMatches ? '' : 'none';
+          if (el) {
+            el.style.display = sectionMatches ? '' : 'none';
+            if (items.length > 0) {
+              items.forEach(item => {
+                // Show all items when nav label matched; otherwise filter by visible text only
+                item.style.display = (!q || navMatches || visibleText(item).toLowerCase().includes(q)) ? '' : 'none';
+              });
+            }
+          }
+        });
+        document.querySelectorAll('#sidebar .nav-section').forEach(sec => {
+          const any = [...sec.querySelectorAll('.nav-link')].some(a => a.style.display !== 'none');
+          sec.style.display = any ? '' : 'none';
+        });
+        if (q) {
+          // Highlight within visible content items; fall back to top-level id'd sections without content items
+          document.querySelectorAll('#content .content-item:not([style*="display: none"])').forEach(el => highlightInElement(el, q));
+          document.querySelectorAll('#content > *[id]:not([style*="display: none"])').forEach(el => {
+            if (!el.querySelector('.content-item')) highlightInElement(el, q);
+          });
+        }
+      });
+    })();
+    
+function exportCsv() {
+  const rows = [['path', 'type', 'programs', 'policies', 'dataClassification']];
+  document.querySelectorAll('.card:not(.hidden)').forEach(card => {
+    const path = card.dataset.path ?? '';
+    const type = card.querySelector('.type-badge')?.textContent ?? '';
+    const getAnnRow = label => [...card.querySelectorAll('.ann-row')]
+      .find(r => r.querySelector('.ann-label')?.textContent.trim().toLowerCase() === label);
+    const programs = [...(getAnnRow('programs')?.querySelectorAll('.badge') ?? [])].map(b => b.textContent).join(';');
+    const policies = [...(getAnnRow('policies')?.querySelectorAll('code') ?? [])].map(b => b.textContent).join(';');
+    const dc = [...(getAnnRow('classification')?.querySelectorAll('.badge') ?? [])].map(b => b.textContent).join(';');
+    rows.push([path, type, programs, policies, dc]);
+  });
+  const csv = rows.map(r => r.map(v => JSON.stringify(v)).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'data-dictionary.csv';
+  a.click();
+}
+
+  </script>
+</body>
+</html>
