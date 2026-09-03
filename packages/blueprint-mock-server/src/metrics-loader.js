@@ -28,7 +28,7 @@ export function discoverMetrics(specsDir) {
     const filePath = join(specsDir, file);
     try {
       const content = readFileSync(filePath, 'utf8');
-      const parsed = yaml.load(content);
+      const parsed = yaml.load(content, { schema: yaml.CORE_SCHEMA });
 
       if (!parsed || !parsed.domain || !parsed.metrics) {
         console.warn(`Skipping ${file}: missing domain or metrics`);

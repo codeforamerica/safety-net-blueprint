@@ -5,6 +5,7 @@
  */
 
 import express from 'express';
+import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
@@ -199,7 +200,8 @@ async function startSwaggerServer() {
     
     // Create Express app
     const app = express();
-    
+    app.use(helmet());
+
     // Serve landing page at root
     app.get('/', (req, res) => {
       res.send(createLandingPage(loadedApis));

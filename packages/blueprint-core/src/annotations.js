@@ -28,7 +28,7 @@ export function loadAnnotations(domain, dirOrFileMap) {
       .filter(f => f.startsWith(`${domain}-annotations`) && f.endsWith('.yaml'))
       .sort();
     for (const file of files) {
-      contents.push(yaml.load(readFileSync(join(dirOrFileMap, file), 'utf8')));
+      contents.push(yaml.load(readFileSync(join(dirOrFileMap, file), 'utf8'), { schema: yaml.CORE_SCHEMA }));
     }
   }
 

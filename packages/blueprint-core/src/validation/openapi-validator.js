@@ -67,7 +67,7 @@ export async function validateSpec(specPath, { skipExamples = false } = {}) {
     let rawSpec;
     try {
       const content = readFileSync(specPath, 'utf8');
-      rawSpec = yaml.load(content);
+      rawSpec = yaml.load(content, { schema: yaml.CORE_SCHEMA });
     } catch (error) {
       errors.push({
         type: 'parse',

@@ -16,6 +16,12 @@ const __dirname = dirname(__filename);
 // Store database connections
 const databases = new Map();
 
+function assertSafeFieldName(name) {
+  if (!/^[a-zA-Z0-9_.]+$/.test(name)) {
+    throw new Error(`Unsafe field name rejected: ${name}`);
+  }
+}
+
 // Per-collection default field values applied on create (populated at startup from response schemas)
 const collectionDefaults = new Map();
 
@@ -100,6 +106,7 @@ export function findAll(resourceName, filters = {}, pagination = {}) {
 
   for (const [key, value] of Object.entries(filters)) {
     if (value === undefined) continue;
+    assertSafeFieldName(key);
     if (value === null) {
       whereClauses.push(`json_extract(data, '$.${key}') IS NULL`);
     } else {
@@ -145,9 +152,10 @@ export function search(resourceName, query, searchFields = [], pagination = {}) 
   }
   
   // Build WHERE clause for search
-  const whereClauses = searchFields.map(field => 
-    `LOWER(json_extract(data, '$.${field}')) LIKE LOWER(?)`
-  );
+  const whereClauses = searchFields.map(field => {
+    assertSafeFieldName(field);
+    return `LOWER(json_extract(data, '$.${field}')) LIKE LOWER(?)`;
+  });
   const whereClause = `WHERE ${whereClauses.join(' OR ')}`;
   
   // Prepare search pattern

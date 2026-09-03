@@ -111,7 +111,7 @@ function validateSchemas(specs, { resolverMap = {} } = {}) {
   for (const localDir of Object.values(resolverMap)) {
     for (const file of findFiles(localDir.replace(/\/$/, ''), ['.yaml', '.yml'])) {
       try {
-        const schema = yaml.load(readFileSync(file, 'utf8'));
+        const schema = yaml.load(readFileSync(file, 'utf8'), { schema: yaml.CORE_SCHEMA });
         if (schema?.$id && !ajv.getSchema(schema.$id)) {
           ajv.addSchema(schema);
         }
@@ -208,7 +208,7 @@ function validateSchemasFromFiles(filePaths, baseDir, options) {
   const specs = [];
   for (const filePath of filePaths) {
     try {
-      const spec = yaml.load(readFileSync(filePath, 'utf8'));
+      const spec = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA });
       if (spec && typeof spec === 'object') {
         const relativePath = filePath.startsWith(baseDir + '/')
           ? filePath.slice(baseDir.length + 1)

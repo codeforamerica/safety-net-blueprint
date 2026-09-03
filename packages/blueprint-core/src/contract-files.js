@@ -90,7 +90,7 @@ export function loadContractFiles(dir) {
       } else if (entry.isFile() && entry.name.endsWith('.yaml')) {
         let content;
         try {
-          content = yaml.load(readFileSync(absPath, 'utf8'));
+          content = yaml.load(readFileSync(absPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
         } catch {
           continue;
         }

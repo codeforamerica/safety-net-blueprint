@@ -109,7 +109,7 @@ function buildResourceIndex(specsDir) {
   for (const filePath of walkForPattern(specsDir, '-openapi.yaml')) {
     let spec;
     try {
-      spec = yaml.load(readFileSync(filePath, 'utf8'));
+      spec = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA });
     } catch {
       continue;
     }
@@ -202,7 +202,7 @@ function discoverRulesFiles(specsDir) {
   const results = [];
   for (const filePath of walkForPattern(specsDir, '-rules.yaml')) {
     try {
-      const rules = yaml.load(readFileSync(filePath, 'utf8'));
+      const rules = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA });
       if (rules) results.push({ filePath, rules });
     } catch (err) {
       results.push({ filePath, parseError: err.message });

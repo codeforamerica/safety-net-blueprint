@@ -231,7 +231,7 @@ function collectYamlFiles(sourceDir, baseDir = sourceDir) {
     } else if (file.name.endsWith('.yaml')) {
       const relativePath = relative(baseDir, sourcePath);
       const content = readFileSync(sourcePath, 'utf8');
-      const spec = yaml.load(content);
+      const spec = yaml.load(content, { schema: yaml.CORE_SCHEMA });
       if (spec?.info?.['x-status'] === 'deprecated') continue;
       yamlFiles.push({ relativePath, sourcePath, spec });
     }
@@ -260,7 +260,7 @@ function discoverOverlayFiles(overlaysDir) {
       } else if (entry.name.endsWith('.yaml')) {
         try {
           const content = readFileSync(fullPath, 'utf8');
-          const parsed = yaml.load(content);
+          const parsed = yaml.load(content, { schema: yaml.CORE_SCHEMA });
           if (parsed && parsed.overlay === '1.0.0') {
             overlayFiles.push(fullPath);
           }
@@ -1045,7 +1045,7 @@ async function main() {
   let yamlFiles;
   if (specIsFile) {
     const content = readFileSync(specPath, 'utf8');
-    const spec = yaml.load(content);
+    const spec = yaml.load(content, { schema: yaml.CORE_SCHEMA });
     yamlFiles = [{ relativePath: basename(specPath), sourcePath: specPath, spec }];
   } else {
     yamlFiles = collectYamlFiles(specPath);
@@ -1108,7 +1108,7 @@ async function main() {
 
       for (const overlayPath of overlayFiles) {
         const overlayContent = readFileSync(overlayPath, 'utf8');
-        const overlay = yaml.load(overlayContent);
+        const overlay = yaml.load(overlayContent, { schema: yaml.CORE_SCHEMA });
 
         console.log(`Overlay: ${overlay.info?.title || relative(overlayDir, overlayPath)}`);
         if (overlay.info?.version) {

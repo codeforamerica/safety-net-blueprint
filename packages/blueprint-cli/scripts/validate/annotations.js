@@ -153,7 +153,7 @@ export function buildStateMachineActionIndex(specsDir) {
 
   for (const filePath of walkForPattern(specsDir, '-state-machine.yaml')) {
     let doc;
-    try { doc = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+    try { doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); } catch { continue; }
 
     for (const machine of doc?.machines || []) {
       if (!machine.object) continue;
@@ -190,7 +190,7 @@ export function buildPolicyIndex(specsDir) {
 
   for (const filePath of walkForPattern(specsDir, '-registry-policies.yaml')) {
     let doc;
-    try { doc = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+    try { doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); } catch { continue; }
 
     for (const policyId of Object.keys(doc?.policies || {})) {
       index.add(policyId);
@@ -301,7 +301,7 @@ export function buildAsyncApiChannelIndex(specsDir) {
 
   for (const filePath of walkForPattern(specsDir, '-asyncapi.yaml')) {
     let doc;
-    try { doc = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+    try { doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); } catch { continue; }
 
     const channels = new Set(Object.keys(doc?.channels || {}));
     byFile.set(basename(filePath), channels);
@@ -407,7 +407,7 @@ export function buildCrossDomainSchemaIndex(specsDir) {
 
   for (const filePath of walkForPattern(specsDir, '-openapi.yaml')) {
     let spec;
-    try { spec = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+    try { spec = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); } catch { continue; }
 
     const domain = spec?.info?.['x-domain'];
     if (!domain) continue;
@@ -483,7 +483,7 @@ async function main() {
   for (const filePath of walkForPattern(specDir, '.yaml')) {
     const file = basename(filePath);
     try {
-      const doc = yaml.load(readFileSync(filePath, 'utf8'));
+      const doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA });
       const schemaBasename = doc?.$schema?.split('/').pop();
       if (schemaBasename === 'annotations-schema.yaml') {
         annotationFiles.push({ file, filePath, doc });
@@ -507,7 +507,7 @@ async function main() {
   for (const { file, filePath, doc: preloaded } of annotationFiles) {
     let doc;
     try {
-      doc = preloaded ?? yaml.load(readFileSync(filePath, 'utf8'));
+      doc = preloaded ?? yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA });
     } catch (err) {
       console.error(`  ✗ ${file}`);
       console.error(`      Parse error: ${err.message}`);
@@ -551,7 +551,7 @@ async function main() {
   for (const file of stateMachineFiles) {
     const filePath = join(specDir, file);
     let doc;
-    try { doc = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+    try { doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); } catch { continue; }
 
     const eventErrors = validateStateMachineEvents(doc, channelIndex);
     if (eventErrors.length === 0) {
@@ -580,7 +580,7 @@ async function main() {
   for (const file of openApiFiles) {
     const filePath = join(specDir, file);
     let spec;
-    try { spec = yaml.load(readFileSync(filePath, 'utf8')); } catch { continue; }
+    try { spec = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); } catch { continue; }
 
     const relErrors = validateRelationshipTargets(spec, schemaIndex);
     if (relErrors.length === 0) {

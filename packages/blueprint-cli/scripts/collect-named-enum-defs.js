@@ -27,7 +27,7 @@ import yaml from 'js-yaml';
 export function collectNamedEnumDefs(specPath, fileMap) {
   let rawSpec;
   try {
-    rawSpec = yaml.load(readFileSync(resolvePath(specPath), 'utf8'));
+    rawSpec = yaml.load(readFileSync(resolvePath(specPath), 'utf8'), { schema: yaml.CORE_SCHEMA });
   } catch {
     return [];
   }

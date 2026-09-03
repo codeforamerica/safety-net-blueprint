@@ -67,7 +67,7 @@ function loadExamples(resourceName) {
   const seedPath = join(specsDir, `${resourceName}.yaml`);
   if (existsSync(seedPath)) {
     const content = readFileSync(seedPath, 'utf8');
-    return yaml.load(content) || {};
+    return yaml.load(content, { schema: yaml.CORE_SCHEMA }) || {};
   }
 
   // Fall back to inline examples from the spec file
@@ -75,7 +75,7 @@ function loadExamples(resourceName) {
   if (!existsSync(specPath)) {
     return {};
   }
-  const spec = yaml.load(readFileSync(specPath, 'utf8'));
+  const spec = yaml.load(readFileSync(specPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
   const componentExamples = spec?.components?.examples || {};
   const flat = {};
   for (const [key, ex] of Object.entries(componentExamples)) {
@@ -97,7 +97,7 @@ function loadStateMachine(apiName) {
   const smPath = join(specsDir, `${apiName}-state-machine.yaml`);
   if (!existsSync(smPath)) return null;
   try {
-    const doc = yaml.load(readFileSync(smPath, 'utf8'));
+    const doc = yaml.load(readFileSync(smPath, 'utf8'), { schema: yaml.CORE_SCHEMA });
     if (!doc) return null;
     if (Array.isArray(doc.machines) && doc.machines.length > 0) {
       const machine = doc.machines[0];

@@ -18,7 +18,7 @@ const __dirname = dirname(__filename);
  */
 function loadYaml(filePath) {
   const content = readFileSync(filePath, 'utf8');
-  return yaml.load(content);
+  return yaml.load(content, { schema: yaml.CORE_SCHEMA });
 }
 
 /**

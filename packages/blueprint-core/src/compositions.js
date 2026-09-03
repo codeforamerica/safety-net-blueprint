@@ -52,7 +52,7 @@ export function discoverCompositions(specsDir) {
     const filePath = join(specsDir, file);
     try {
       const content = readFileSync(filePath, 'utf8');
-      const doc = yaml.load(content);
+      const doc = yaml.load(content, { schema: yaml.CORE_SCHEMA });
       if (!doc || typeof doc !== 'object') continue;
 
       // Use $schema as the type discriminator, not the filename convention

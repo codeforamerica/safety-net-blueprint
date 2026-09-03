@@ -171,7 +171,7 @@ function findYamlForDomain(outDir, domain, schemaKeyword, csvs) {
   for (const filePath of yamlFiles) {
     try {
       const content = readFileSync(filePath, 'utf8');
-      const doc = yaml.load(content);
+      const doc = yaml.load(content, { schema: yaml.CORE_SCHEMA });
       if (
         doc && typeof doc === 'object' &&
         doc.domain === domain &&
@@ -979,7 +979,7 @@ function classifyCsvFile(csvFilename) {
 function validateAgainstSchema(doc, schemaPath) {
   try {
     const schemaContent = readFileSync(schemaPath, 'utf8');
-    const schema = yaml.load(schemaContent);
+    const schema = yaml.load(schemaContent, { schema: yaml.CORE_SCHEMA });
     const ajv = new Ajv2020({ strict: false, allErrors: true });
     const validate = ajv.compile(schema);
     const { $schema, ...data } = doc;
