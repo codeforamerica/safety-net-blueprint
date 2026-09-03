@@ -245,7 +245,7 @@ machines:
             do:
               - call: {POST: intake/applications/verifications, body: {applicationId: $application.id, category: $category, verificationType: document}}
       - id: updateVerificationOnCallResult
-        description: Transition the Verification based on the service call result; on inconclusive, creates a document fallback per ex parte rules (42 CFR § 435.911)
+        description: Transition the Verification based on the service call result; on inconclusive/partial/error, creates a document fallback per ex parte rules (42 CFR § 435.911)
         if: $verification.id != null
         then:
           - match: $this.data.result
@@ -265,6 +265,24 @@ machines:
                       evidence:
                         $push: {type: electronic, source: $this.data.serviceType, result: $this.data.result, serviceCallId: $this.subject, receivedAt: $now}
                     description: Record the electronic verification result as evidence
+                - call: {POST: intake/applications/verifications/$verification.id/mark-inconclusive}
+                - call: {POST: intake/applications/verifications, body: {applicationId: $verification.applicationId, sourceId: $verification.sourceId, sourceType: $verification.sourceType, category: $verification.category, verificationType: document}}
+              partial:
+                - call:
+                    PATCH: intake/applications/verifications/$verification.id
+                    body:
+                      evidence:
+                        $push: {type: electronic, source: $this.data.serviceType, result: $this.data.result, serviceCallId: $this.subject, receivedAt: $now}
+                    description: Record the partial result as evidence; source found a record but values conflict — caseworker must resolve via document fallback
+                - call: {POST: intake/applications/verifications/$verification.id/mark-inconclusive}
+                - call: {POST: intake/applications/verifications, body: {applicationId: $verification.applicationId, sourceId: $verification.sourceId, sourceType: $verification.sourceType, category: $verification.category, verificationType: document}}
+              error:
+                - call:
+                    PATCH: intake/applications/verifications/$verification.id
+                    body:
+                      evidence:
+                        $push: {type: electronic, source: $this.data.serviceType, result: $this.data.result, serviceCallId: $this.subject, receivedAt: $now}
+                    description: Record the error as evidence; no retry mechanism in base contracts — treated as inconclusive pending #407
                 - call: {POST: intake/applications/verifications/$verification.id/mark-inconclusive}
                 - call: {POST: intake/applications/verifications, body: {applicationId: $verification.applicationId, sourceId: $verification.sourceId, sourceType: $verification.sourceType, category: $verification.category, verificationType: document}}
       - id: linkAppointment
@@ -407,7 +425,7 @@ machines:
             - {call: initiateServiceCall, with: {serviceId: $ssaIevsService.id}}
             - {call: initiateServiceCall, with: {serviceId: $irsIevsService.id}}
             - {call: initiateServiceCall, with: {serviceId: $swicaService.id}}
-            - {call: initiateServiceCall, with: {serviceId: $uibService.id}, description: SSA IEVS, IRS IEVS, SWICA, and UIB income checks (7 CFR § 272.8)}
+            - {call: initiateServiceCall, with: {serviceId: $uibService.id}, description: "SSA IEVS, IRS IEVS, SWICA, and UIB income checks (7 CFR § 272.8)"}
           citizenship:
             - {call: initiateServiceCall, with: {serviceId: $fdshSsaService.id}, description: "FDSH SSA citizenship check for Medicaid; electronic check required before paper documents (42 CFR § 435.956(b))"}
           immigration:
