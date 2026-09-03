@@ -12,7 +12,7 @@ See also: [API Architecture](api-architecture.md) | [Design Rationale](design-ra
 
 ### Overview
 
-The Safety Net Benefits API is organized into 8 domains, with 5 cross-cutting concerns:
+The Safety Net Benefits API is organized into 8 domains, with 6 cross-cutting concerns:
 
 | Domain | Design Status | Purpose |
 |--------|---------------|---------|
@@ -27,7 +27,8 @@ The Safety Net Benefits API is organized into 8 domains, with 5 cross-cutting co
 
 **Cross-cutting concerns:**
 - **Communication** - Notices and correspondence can originate from any domain (application received, documents needed, eligibility determined, appointment scheduled, etc.)
-- **Reporting** - Each domain exposes data that reporting systems consume; audit events live where actions happen
+- **Reporting** - Each domain exposes data that reporting systems consume
+- **Audit** - A dedicated cross-cutting domain subscribes to mutation events emitted by every domain and maintains version history, so cross-domain audit queries (e.g., all changes by a caseworker in a given week) are possible from one place. See [Inter-Domain Communication](inter-domain-communication.md#audit-trail-pattern).
 - **Configuration Management** - Business-configurable rules, thresholds, and settings that can be changed without code deployments
 - **Observability** - Health checks, metrics, logging, and tracing for operations staff
 - **Search** - Cross-resource search spanning all domains
@@ -56,7 +57,7 @@ Persistent information about people applying for or receiving benefits.
 
 #### Intake
 
-The application as the client experiences it — what they report. See the [application review prototype](../prototypes/application-review-prototype.md) for the proven subset.
+The application as the client experiences it — what they report.
 
 | Entity | Purpose |
 |--------|---------|
@@ -119,9 +120,7 @@ Work items, tasks, and SLA tracking. **[Details →](domains/workflow.md)**
 | **Queue** | Organizes tasks by team, county, program, or skill |
 | **SLAType** | Configuration for SLA deadlines by program and task type |
 | **TaskType** | Configuration for task categories with default SLA and skills |
-| **VerificationTask** | Task to verify data — either validation (accuracy) or program verification (evidence standards) |
-| **VerificationSource** | External services/APIs for data validation (IRS, ADP, state databases) |
-| **TaskAuditEvent** | Immutable audit trail |
+| **VerificationTask** | Task to verify data — either validation (accuracy) or program verification (evidence standards); references `ExternalServiceCall` records from Data Exchange rather than a Workflow-owned verification source |
 
 **Key decisions:**
 - Workflow is about work items: "What needs to be done? Is it on track?"
@@ -249,7 +248,7 @@ Files and uploads.
 ┌───────────────────────────────┐   ┌─────────────────────────────────┐
 │  WORKFLOW                     │   │  ELIGIBILITY                    │
 │  Task, VerificationTask,      │──▶│  EligibilityRequest,            │
-│  SLAType, TaskAuditEvent      │   │  EligibilityUnit, Determination │
+│  SLAType                      │   │  EligibilityUnit, Determination │
 │  "What work needs to be done" │◀──│  "Program-specific              │
 └───────────────────────────────┘   │   interpretation"               │
                │                    └─────────────────────────────────┘
