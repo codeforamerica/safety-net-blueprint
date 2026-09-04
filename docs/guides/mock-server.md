@@ -147,7 +147,7 @@ curl -X POST http://localhost:1080/mock/stubs/events \
 - `respond.type` — the event type to fire when matched
 - `respond.data` — merged with the trigger event's data; only specify what changes
 
-The response envelope is built by merging: an entity ID derived from the trigger's `subject` (e.g., `serviceCallId`), the trigger event's data, then `respond.data` overrides.
+The response envelope is built by merging: an entity ID derived from the trigger's `subject` (e.g., `serviceCallId`), the trigger event's data, then `respond.data` overrides. The fired event's `causationid` is set to the trigger event's `id`, so a scenario can fetch the response for a specific trigger with `GET /platform/events?causationid=<trigger event id>`.
 
 **Stub IDs** are human-readable: `service_call.created-1`, `service_call.created-2`, etc.
 

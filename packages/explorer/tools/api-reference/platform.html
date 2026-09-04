@@ -174,6 +174,12 @@
       <td style="padding:5px 12px;text-align:center;"></td>
       <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Filter by W3C Trace Context trace ID extracted from the <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">traceparent</code> attribute. All events sharing a trace ID were causally triggered by the same root action.</p></div></td>
     </tr><tr>
+      <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">causationid</td>
+      <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
+      <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>
+      <td style="padding:5px 12px;text-align:center;"></td>
+      <td style="padding:5px 12px;"><div style="font-size:13px;color:#444;line-height:1.65;"><p style="margin:0 0 6px;">Filter by the <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">causationid</code> extension — the ID of the event that directly caused this one. Use it to find the response event(s) produced by a specific trigger (e.g., the <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">call.completed</code> fired for one <code style="font-size:11px;background:#f0f0f0;padding:0 3px;border-radius:2px;font-family:monospace;">service_call.created</code> when several were emitted for the same subject).</p></div></td>
+    </tr><tr>
       <td style="padding:5px 12px;white-space:nowrap;font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">start</td>
       <td style="padding:5px 12px;"><span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span></td>
       <td style="padding:5px 12px;font-size:10px;color:#888;font-family:monospace;">query</td>

@@ -88,6 +88,17 @@ paths:
             causally triggered by the same root action.
           schema:
             type: string
+        - name: causationid
+          in: query
+          description: >
+            Filter by the `causationid` extension — the ID of the event that
+            directly caused this one. Use it to find the response event(s)
+            produced by a specific trigger (e.g., the `call.completed` fired
+            for one `service_call.created` when several were emitted for the
+            same subject).
+          schema:
+            type: string
+            format: uuid
         - name: start
           in: query
           description: Return only events at or after this timestamp (ISO 8601).
