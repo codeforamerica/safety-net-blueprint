@@ -50,7 +50,7 @@ npm run validate
 
 | Package | Description | CLIs |
 |---------|-------------|------|
-| `@codeforamerica/safety-net-blueprint-contracts` | Base OpenAPI specs, overlay resolver, validation | `safety-net-resolve`, `safety-net-design-reference` |
+| `@codeforamerica/safety-net-blueprint-contracts` | Base OpenAPI specs, overlay resolver, validation | `safety-net-resolve` |
 | `@codeforamerica/safety-net-blueprint-mock-server` | Mock API server and Swagger UI for development | `safety-net-mock`, `safety-net-swagger` |
 | `@codeforamerica/safety-net-blueprint-clients` | Postman collection and TypeScript client generation | — |
 

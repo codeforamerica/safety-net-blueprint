@@ -23,16 +23,6 @@ Resolve overlays against base specs to produce state-specific output.
 }
 ```
 
-### `safety-net-design-reference`
-
-Export an HTML design reference from OpenAPI specs.
-
-```json
-"scripts": {
-  "design-reference": "safety-net-design-reference --spec=. --out=./docs"
-}
-```
-
 ## Programmatic API
 
 ```javascript
