@@ -79,8 +79,9 @@ Key fields:
 - `electronicChecks` — records of the electronic data calls made at submission for this Decision (service queried, result received, timestamp); present only for Medicaid Decisions where ex parte evaluation was attempted. Provides the audit trail required by 42 CFR § 435.916 and supports caseworker review of why a Decision was auto-resolved or left pending.
 - `memberSnapshot` — point-in-time copy of this member's application data (demographics, income, expenses, assets, employment, health coverage) assembled by Intake when this record is created. Decision links back to its Determination for household-level data when the adapter needs it. See [Decision 13](#decision-13-application-data-snapshot).
 - `verificationSummary` — verification obligation statuses for this member and program; populated by Intake at record creation and refreshed from current Intake data at each evaluate call. See [Decision 13](#decision-13-application-data-snapshot), [Decision 15](#decision-15-evaluation-runs-and-history).
+- `stillNeeded` — optional, structured description of what's blocking a `pending` Decision from resolving, populated from the rules engine's response and refreshed at each evaluate call. Absence means no information is available from the adapter, not that the Decision is complete — a `pending` Decision with no `stillNeeded` value is exactly as informative as it is today. See [Decision 16](#decision-16-surfacing-what-a-pending-decision-is-still-waiting-on).
 
-See [Decision 2](#decision-2-determination-entity-model), [Decision 4](#decision-4-submission-time-electronic-evaluation-scope), [Decision 12](#decision-12-who-creates-determination-and-decision-records), [Decision 13](#decision-13-application-data-snapshot).
+See [Decision 2](#decision-2-determination-entity-model), [Decision 4](#decision-4-submission-time-electronic-evaluation-scope), [Decision 12](#decision-12-who-creates-determination-and-decision-records), [Decision 13](#decision-13-application-data-snapshot), [Decision 16](#decision-16-surfacing-what-a-pending-decision-is-still-waiting-on).
 
 ## Determination lifecycle
 
@@ -155,6 +156,8 @@ Eligibility also subscribes to `application.withdrawn` from Intake. When an appl
 | 13 | [Application data snapshot](#decision-13-application-data-snapshot) | Determination and Decision carry a point-in-time snapshot of application data populated by Intake at creation, refreshed at each evaluate call |
 | 14 | [Evaluation trigger alignment](#decision-14-evaluation-trigger-alignment) | Each submission-time evaluation fires on the event that guarantees its required data exists |
 | 15 | [Evaluation runs and history](#decision-15-evaluation-runs-and-history) | Evaluate endpoints support trial and official runs; platform entity lifecycle events provide the audit history |
+| 16 | [Surfacing what a pending Decision is still waiting on](#decision-16-surfacing-what-a-pending-decision-is-still-waiting-on) | `Decision` carries an optional `stillNeeded` field, refreshed at each evaluate call, so a caseworker can see what's blocking a `pending` Decision rather than just that it's blocked |
+| 17 | [Pre-screening and live partial evaluation are stateless](#decision-17-pre-screening-and-live-partial-evaluation-are-stateless) | Neither creates a Determination/Decision or any new entity — both are direct adapter calls, consistent with how expedited screening and Medicaid ex parte already work |
 
 ---
 
@@ -431,6 +434,54 @@ Eligibility also subscribes to `application.withdrawn` from Intake. When an appl
 - **(B)** ✓ Add evaluate endpoints for both trial and official runs; audit history comes from entity lifecycle events on Decision and Determination (updated entity state logged via `decision.updated` and `determination.updated`); trace context propagated through snapshot refresh → rules engine → status update links the data state to the outcome in the event log
 
 **Decision:** Option B reuses existing platform infrastructure and avoids a new entity. The snapshot refresh on each evaluate call naturally produces `decision.updated` and `determination.updated` events recording the updated entity state — replaying these events reconstructs the data state at any point in the review cycle. For official runs, the trace ID propagated through the evaluate sequence links the data snapshot to the Decision outcomes in the event log. Trial runs return projected outcomes synchronously and publish the same lifecycle events; they do not update `Decision.status` or fire `decision_completed` events.
+
+---
+
+### Decision 16: Surfacing what a pending Decision is still waiting on
+
+**Status:** Decided: B
+
+**What's being decided:** Whether `Decision` should carry a field describing what's specifically blocking it from resolving, beyond `status: pending` alone.
+
+**Background:** Today, `status: pending` tells a caseworker a Decision hasn't resolved, but not why — it doesn't distinguish "waiting on a data exchange result" from "waiting on caseworker review" from "the rules engine doesn't have enough information yet to say anything at all." This is a gap in the domain as currently designed, independent of any new evaluation mode.
+
+**Considerations:**
+- The same completeness signal needed for pre-screening and live partial evaluation ([Decision 17](#decision-17-pre-screening-and-live-partial-evaluation-are-stateless)) — which specific facts are still unknown — is equally useful once an application is submitted: a caseworker reviewing an in-progress case benefits from seeing what's actually missing, not just that something is.
+- Per the general principle in [Adapter Pattern: Handling backend implementations with varying capability](../cross-cutting/adapters.md#handling-backend-implementations-with-varying-capability), this field must be optional, and its absence must mean "no information available" — never "fully resolved." This matters here specifically: a forward-chaining-backed adapter may only ever produce a coarse answer, or none at all, and that must not be misread as completeness.
+- Unlike a pre-submission pre-screening or live-partial call, this needs to be a *persisted* field — refreshed at each evaluate call, the same way `memberSnapshot` and `verificationSummary` are refreshed today ([Decision 13](#decision-13-application-data-snapshot)) — not recomputed fresh only at read time.
+
+**Options:**
+- **(A)** Leave `status: pending` as the only signal — simplest, but gives a caseworker nothing actionable about a stalled Decision
+- **(B)** ✓ Add an optional `stillNeeded` field to `Decision`, populated from the adapter's response and refreshed at each evaluate call
+
+**Decision:** Add the field (B). The completeness vocabulary this domain needs for pre-screening and live partial evaluation closes a real, pre-existing gap in the standard post-submission review workflow too — it shouldn't be scoped only to the new evaluation modes that motivated it.
+
+**Known gap — still needs a decision, not yet confirmed:**
+- **Trial vs. official runs.** Does a trial/what-if evaluate call ([Decision 15](#decision-15-evaluation-runs-and-history)) overwrite the persisted `stillNeeded` field, or only return a projected value in its response? Proposed direction: apply the same rule Decision 15 already uses for `status` — only official runs update the persisted field; trial runs return `stillNeeded` in their response without persisting it. Not yet confirmed.
+- **Relationship to a future, broader blocking-factor concept.** `stillNeeded` as scoped here only covers facts missing from the rules engine's perspective — it says nothing about other reasons a Decision could stall (pending referral, human review required) that are out of scope for this decision. Proposed direction: add a `source` field now (e.g., `rules_engine`) even though nothing else populates it yet, so a broader model doesn't require a breaking change later. Not yet confirmed.
+- **Clearing on terminal resolution.** Does `stillNeeded` get cleared once `status` reaches a terminal state, or persist as a record of what was needed before resolution? Proposed direction: clear it — a lingering value on a resolved Decision has no meaning, and the entity lifecycle event log already preserves history the same way it does for `status` changes. Not yet confirmed.
+- **Determination-level rollup.** Should there be an aggregate "what's still needed for this whole application" view at the `Determination` level, or is enumerating each Decision's `stillNeeded` sufficient? Proposed direction: no rollup, consistent with `Determination` not duplicating other Decision-level detail today (e.g., `denialReasonCode`). Not yet confirmed.
+
+---
+
+### Decision 17: Pre-screening and live partial evaluation are stateless
+
+**Status:** Decided: B
+
+**What's being decided:** Whether pre-screening (before any application exists) and live partial/progressive evaluation (during active data entry, before submission) require a new entity type, given that `Determination`/`Decision` aren't created until submission ([Decision 12](#decision-12-who-creates-determination-and-decision-records)).
+
+**Considerations:**
+- Pre-screening carries no legal weight — no NOA, no appeal rights attach to its result — so it has none of the audit, appeals, or federal-reporting drivers that justified making Determination and Decision queryable REST resources ([Decision 7](#decision-7-determination-rest-query-surface)).
+- Live partial evaluation during active data entry is a recomputation over whatever draft application data currently exists. The evaluation itself is idempotent given that draft state at any moment — persisting the evaluation's result as its own record would just be a rapidly-stale duplicate of a computation, not a meaningful audit record the way a terminal Decision is.
+- Both modes match the precedent already established for expedited SNAP screening and Medicaid ex parte ([Decision 4](#decision-4-submission-time-electronic-evaluation-scope), [Decision 6](#decision-6-conditions-for-automatic-decision-resolution)): a stateless adapter call, evaluated and returned, with persistence reserved for outcomes that actually carry regulatory weight.
+
+**Options:**
+- **(A)** A new lightweight entity for pre-submission evaluation — gives a persisted record, but adds a new entity type with none of the regulatory drivers that justify Determination/Decision's persistence, and would be stale within seconds for the live-evaluation case
+- **(B)** ✓ Stateless calls, no new entity — consistent with existing precedent; no persisted record of a pre-screening or live-partial result, an acceptable trade-off given neither carries legal weight
+
+**Decision:** Stateless (B). No historical record of what a live partial estimate showed at a given moment is a real trade-off, but a cheap one — nothing regulatory hinges on it, unlike the formal Determination.
+
+**Known gap — still needs a decision, not yet confirmed:** where does the pre-screening endpoint live, and who is allowed to call it? Unlike every other endpoint in this domain, pre-screening is reachable before any authenticated application/session exists, which means it's also the one place with no natural rate limit from entity-creation friction. Proposed direction: don't expose it as a direct, public, unauthenticated Eligibility endpoint — route it through whatever surface already handles public-facing intake (the Intake domain, or a dedicated public screening surface), which calls into Eligibility internally, keeping Eligibility's own API consistently "internal, trusted caller" and leaving rate-limiting/abuse protection to the surface that already needs it regardless of this feature. Not yet confirmed.
 
 ---
 
