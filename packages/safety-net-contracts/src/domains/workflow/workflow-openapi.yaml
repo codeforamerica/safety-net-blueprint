@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
   title: Workflow Service API
-  version: 0.1.0
+  version: 0.5.0
   x-domain: workflow
-  x-status: alpha
+  x-status: beta
   x-visibility: internal
   description: |
     REST API for managing workflow entities such as tasks and queues.

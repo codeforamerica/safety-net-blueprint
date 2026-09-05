@@ -4,6 +4,8 @@ A systems integration blueprint for safety net benefits programs, built on a reu
 
 > **Frontend harness packages** (form engine, safety harness, harness designer) live in a separate repository: [codeforamerica/safety-net-harness](https://github.com/codeforamerica/safety-net-harness).
 
+> **Stability:** All packages are at `0.x` — minor versions may include breaking changes until `1.0.0` is declared. Pin your versions if stability matters.
+
 **New here?** Browse all diagrams and reference tools in the [Explorer hub](https://codeforamerica.github.io/safety-net-blueprint/packages/safety-net-explorer/).
 
 ## About This Repository
@@ -78,6 +80,8 @@ npm run setup:hooks
 ```
 
 This installs a hook that runs before every push. The hook rebuilds explorer outputs and commits them if stale, then runs `npm run preflight` — which validates specs, runs tests, and runs integration tests. Use `git push --no-verify` to skip for work-in-progress pushes.
+
+If your change affects a published package, include a changeset before opening a PR. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidance on writing changeset descriptions and how the release process works.
 
 ## Commands
 

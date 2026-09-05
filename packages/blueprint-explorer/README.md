@@ -1,46 +1,58 @@
-# Explorer
+# @codeforamerica/blueprint-explorer
 
-Visual and reference documentation generated from the blueprint contracts.
+> Static documentation generator for Blueprint framework projects — contract reference, state machine diagrams, event catalog, and data dictionaries
 
-## Tools
+[![npm version](https://img.shields.io/npm/v/@codeforamerica/blueprint-explorer.svg)](https://www.npmjs.com/package/@codeforamerica/blueprint-explorer)
+[![license](https://img.shields.io/npm/l/@codeforamerica/blueprint-explorer.svg)](https://github.com/codeforamerica/safety-net-blueprint/blob/main/LICENSE)
+
+> **Pre-release:** This package is at `0.x`. Until `1.0.0`, minor versions may include breaking changes. Pin your version if stability matters.
+
+## Installation
+
+```bash
+npm install --save-dev @codeforamerica/blueprint-explorer
+```
+
+## What It Does
+
+Generates a set of static HTML reference tools from resolved Blueprint contract artifacts. Point it at your resolved specs and TypeScript clients to produce a browsable documentation hub that can be published as a GitHub Pages site or any static host.
 
 | Tool | Description |
-|---|---|
-| **API Reference** | OpenAPI-derived endpoint docs with parameters, request/response schemas, and state machine links |
-| **Client Reference** | TypeScript SDK reference — types and methods per domain |
-| **State Machine Docs** | State machines with states, transitions, actions, and event subscriptions |
-| **Event Catalog** | Cross-domain event index — every emitted event with its publisher and subscribers |
-| **Data Dictionaries** | Field-level reference derived from the writable schemas |
-| **Sequence Diagrams** | Key workflow sequences across domain boundaries |
-| **Context Map** | Domain relationship diagram |
+|------|-------------|
+| **API Reference** | Endpoint docs derived from resolved OpenAPI specs — parameters, request/response schemas, status codes, and links to related state machine transitions |
+| **Client Reference** | TypeScript SDK reference — types, methods, and usage examples per domain |
+| **State Machine Docs** | Full state machine reference — states, transitions, guard conditions, actor restrictions, and event subscriptions per resource |
+| **Event Catalog** | Cross-domain event index — every emitted event with its publisher, payload schema, and known subscribers |
+| **Data Dictionaries** | Field-level reference derived from writable schemas — field names, types, policy citations, and data classifications |
+| **Sequence Diagrams** | Key workflow sequences showing cross-domain interactions |
+| **Context Map** | Domain relationship diagram showing cross-domain data dependencies |
 
-## Building
+## Usage
 
 ```bash
-# Build everything (auto-resolves contracts if needed)
-node build.js
+# Build all tools
+node build.js \
+  --content=./packages/safety-net-explorer \
+  --resolved=./resolved \
+  --clients=./clients
 
 # Build a single tool
-node build.js --only=api-reference
-node build.js --only=state-machine-docs
-node build.js --only=event-catalog
-node build.js --only=client-reference
-node build.js --only=data-dictionaries
-node build.js --only=sequence-diagrams
-node build.js --only=context-map
+node build.js --only=api-reference --resolved=./resolved --clients=./clients
+node build.js --only=state-machine-docs --resolved=./resolved
+node build.js --only=event-catalog --resolved=./resolved
+node build.js --only=data-dictionaries --resolved=./resolved
 ```
 
-## State customization
+Output is written to the `--content` directory as static HTML files. The API reference, state machine docs, event catalog, and data dictionaries update automatically as contracts change — rebuild after each resolve step.
 
-States running overlays can build the explorer from their own resolved specs:
+## Changelog
 
-```bash
-node build.js \
-  --resolved=/path/to/state/resolved \
-  --clients=/path/to/state/clients
-```
+See [CHANGELOG.md](https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-explorer/CHANGELOG.md) for release history.
 
-- `--resolved` — directory of resolved OpenAPI and state machine files (output of the resolve pipeline with overlays applied). When provided, auto-resolve is skipped.
-- `--clients` — root clients directory containing `generated/` and `utility/` subdirectories.
+## Documentation
 
-The output is a set of static HTML files that can be published as a documentation site.
+See the [Safety Net Blueprint documentation](https://github.com/codeforamerica/safety-net-blueprint) for full guides and reference.
+
+## License
+
+[PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/)

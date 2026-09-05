@@ -1,22 +1,21 @@
 {
   "name": "@codeforamerica/blueprint-cli",
   "version": "0.1.0",
-  "description": "CLI tools for validating, resolving, and generating blueprint contract artifacts",
+  "description": "CLI tooling for the Blueprint framework — validate, resolve, scaffold, and generate artifacts across all contract types",
   "type": "module",
   "files": [
     "scripts/"
   ],
   "bin": {
-    "blueprint-validate": "./scripts/validate.js",
-    "blueprint-add-api-resource": "./scripts/add-api-resource.js",
-    "blueprint-generate-postman-collection": "./scripts/generate-postman-collection.js",
-    "blueprint-generate-rpc-overlay": "./scripts/generate-rpc-overlay.js",
-    "blueprint-generate-ts-clients": "./scripts/generate-ts-clients.js",
-    "blueprint-resolve": "./scripts/resolve.js",
-    "blueprint-scaffold-api": "./scripts/scaffold-api.js"
+    "blueprint-validate": "scripts/validate.js",
+    "blueprint-add-api-resource": "scripts/add-api-resource.js",
+    "blueprint-generate-postman-collection": "scripts/generate-postman-collection.js",
+"blueprint-generate-ts-clients": "scripts/generate-ts-clients.js",
+    "blueprint-resolve": "scripts/resolve.js",
+    "blueprint-scaffold-api": "scripts/scaffold-api.js"
   },
+
   "scripts": {
-    "prepack": "node ../../scripts/build-package-readme.js",
     "test": "node --test tests/",
     "test:unit": "node --test tests/"
   },
@@ -26,7 +25,7 @@
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
-    "url": "https://github.com/codeforamerica/safety-net-blueprint",
+    "url": "git+https://github.com/codeforamerica/safety-net-blueprint.git",
     "directory": "packages/blueprint-cli"
   },
   "publishConfig": {

@@ -1,7 +1,7 @@
 {
   "name": "@codeforamerica/blueprint-explorer",
   "version": "0.1.0",
-  "description": "Context map, service blueprints, and documentation tooling for blueprint contract exploration",
+  "description": "Static documentation generator for Blueprint framework projects — contract reference, state machine diagrams, event catalog, and data dictionaries",
   "type": "module",
   "scripts": {
     "build": "node build.js",
@@ -22,7 +22,7 @@
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
-    "url": "https://github.com/codeforamerica/safety-net-blueprint",
+    "url": "git+https://github.com/codeforamerica/safety-net-blueprint.git",
     "directory": "packages/blueprint-explorer"
   },
   "dependencies": {

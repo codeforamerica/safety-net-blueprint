@@ -12,12 +12,10 @@ dist/
 dist-packages/
 data/
 generated/
-packages/blueprint-mock-server/tests/functional/resolved/
+resolved/
 
-# Generated READMEs (built from README.content.md + template at prepack time)
-packages/*/README.md
-# packages/blueprint-explorer is not a published npm package — its README is hand-authored
-!packages/blueprint-explorer/README.md
+# safety-net-explorer is private and has no README
+
 
 # npm pack tarballs
 *.tgz

@@ -33,14 +33,19 @@
     "validate:mock-data": "node packages/blueprint-mock-server/cli/validate-mock-data.js --spec=packages/generated/contracts",
     "mock:setup": "node packages/blueprint-mock-server/cli/setup.js --spec=packages/safety-net-contracts/src",
     "mock:reset": "node packages/blueprint-mock-server/cli/reset.js --spec=packages/safety-net-contracts/src",
-    "test": "npm test --workspaces --if-present",
+    "test": "node --test tests/*.js && npm test --workspaces --if-present",
     "test:unit": "node packages/blueprint-mock-server/tests/run-tests.js --unit",
     "test:integration": "node packages/blueprint-mock-server/tests/run-tests.js --integration",
     "test:functional": "node packages/blueprint-mock-server/tests/run-tests.js --functional",
     "preflight": "bash scripts/preflight.sh",
-    "setup:hooks": "git config core.hooksPath scripts/hooks && echo 'Git hooks installed. Pre-push hook will run preflight before every push. Use git push --no-verify to skip.'"
+    "setup:hooks": "git config core.hooksPath scripts/hooks && echo 'Git hooks installed. Pre-push hook will run preflight before every push. Use git push --no-verify to skip.'",
+    "changeset": "node scripts/changeset.js",
+    "changeset:version": "changeset version",
+    "version": "changeset version",
+    "release": "changeset publish"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.1",
     "jszip": "^3.10.1",
     "zod": "^4.0.0"
   }

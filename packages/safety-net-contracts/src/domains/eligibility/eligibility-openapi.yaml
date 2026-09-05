@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
   title: Eligibility Service API
-  version: 1.0.0
+  version: 0.5.0
   x-domain: eligibility
-  x-status: stable
+  x-status: beta
   x-visibility: internal
   description: |
     REST API for querying eligibility determinations and decisions. Determinations
