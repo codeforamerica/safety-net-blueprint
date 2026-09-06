@@ -19,6 +19,8 @@ resolved/
 packages/*/README.md
 # packages/explorer is not a published npm package — its README is hand-authored
 !packages/explorer/README.md
+# packages/corticon-dsl-translator-spike is a private, unpublished spike -- its README is hand-authored
+!packages/corticon-dsl-translator-spike/README.md
 
 # npm pack tarballs
 *.tgz

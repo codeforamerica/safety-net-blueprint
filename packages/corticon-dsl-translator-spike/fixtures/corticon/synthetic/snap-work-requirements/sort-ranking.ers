@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<com.corticon.rulesemf.assetmodel:RulesheetAsset xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:com.corticon.rulesemf.asg="http:///com/corticon/rulesemf/asg.ecore" xmlns:com.corticon.rulesemf.assetmodel="http:///com/corticon/rulesemf/assetmodel.ecore" majorVersionNumber="2" buildNumber="8020" updateStamp="_ap0000000000000015" externalChecksum="0:0:0" studioType="Javascript">
+  <languageCode>en_US</languageCode>
+  <ruleset vocabularyUpdateStamp="_ap0000000000000000" vocabulary="vocab.ecore#/">
+    <ruleStatement post="Info" ruleModelElements="#//@ruleset/@rules.0">
+      <text expression="Sets reviewTrack to the activity type of the chronologically first work activity — exercises sortedBy/first collection navigation">
+        <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Sets reviewTrack to the activity type of the chronologically first work activity — exercises sortedBy/first collection navigation" expressiontype="BRSTATEMENT">
+          <referencedTermList/>
+        </parserOutput>
+      </text>
+    </ruleStatement>
+
+    <rule documentingRuleStatements="0"/>
+    <rule>
+      <action>
+        <opaqueExpression expression="ApplicationMember.reviewTrack = activity->sortedBy(activityDate)->first.activityType">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="ApplicationMember.reviewTrack = activity->sortedBy ( activity.activityDate )->first.activityType" datatype="String" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
+            <modifiedTermList>
+              <terms text="reviewTrack" datatype="String" termtype="ATTRIBUTE" fulltext="ApplicationMember.reviewTrack">
+                <parentTerm text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </modifiedTermList>
+            <referencedTermList>
+              <terms text="activityType" datatype="String" termtype="ATTRIBUTE" fulltext="activity.activityType">
+                <parentTerm text="activity" datatype="WorkActivity" termtype="ENTITY" fulltext="activity" variable="#//@ruleset/@logicalVariables.0/@extension.0"/>
+              </terms>
+              <terms text="activity_sortedBy(activityDate)" datatype="Object" termtype="COLLECTION" fulltext="activity->asSequence->sortedBy->first">
+                <parentTerm text="activity" datatype="Sequence" termtype="COLLECTION" fulltext="activity->asSequence->sortedBy">
+                  <parentTerm text="activity" datatype="WorkActivity" termtype="ENTITY" fulltext="activity" variable="#//@ruleset/@logicalVariables.0/@extension.0">
+                    <parentTerm text="ApplicationMember" datatype="ApplicationMember" termtype="ENTITY" fulltext="ApplicationMember" variable="#//@ruleset/@logicalVariables.0"/>
+                  </parentTerm>
+                </parentTerm>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </action>
+    </rule>
+    <logicalVariable explicit="true" entity="vocab.ecore#//ApplicationMember">
+      <alias value="ApplicationMember"/>
+      <extension explicit="true" association="true" entity="vocab.ecore#//WorkActivity" traversedAssocRole="vocab.ecore#//ApplicationMember/workActivities">
+        <alias value="activity"/>
+      </extension>
+    </logicalVariable>
+  </ruleset>
+  <rulesheetViewList xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:DecisionTable">
+    <actionSection rowCount="50" columnWidthFactor="0.5">
+      <actionItemList>
+        <valueSetCell/>
+        <expressionCell external="ApplicationMember.reviewTrack"/>
+      </actionItemList>
+    </actionSection>
+    <scopeSection>
+      <rootNode>
+        <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeEntity" logicalVariable="#//@ruleset/@logicalVariables.0">
+          <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeAssociation" logicalVariable="#//@ruleset/@logicalVariables.0/@extension.0"/>
+        </children>
+      </rootNode>
+    </scopeSection>
+    <filterSection rowCount="50"/>
+    <ruleStatementSection rowCount="50"/>
+    <conditionSection rowCount="50"/>
+    <ruleSection columnCount="20">
+      <ruleColumnList ruleId="0" pRule="#//@ruleset/@rules.0"/>
+      <ruleColumnList ruleId="1" pRule="#//@ruleset/@rules.1"/>
+    </ruleSection>
+  </rulesheetViewList>
+</com.corticon.rulesemf.assetmodel:RulesheetAsset>

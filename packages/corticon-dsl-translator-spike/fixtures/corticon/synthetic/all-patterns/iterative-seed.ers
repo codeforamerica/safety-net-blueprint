@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<com.corticon.rulesemf.assetmodel:RulesheetAsset xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:com.corticon.rulesemf.asg="http:///com/corticon/rulesemf/asg.ecore" xmlns:com.corticon.rulesemf.assetmodel="http:///com/corticon/rulesemf/assetmodel.ecore" majorVersionNumber="2" buildNumber="8020" updateStamp="_ap0000000000000013" externalChecksum="0:0:0" studioType="Javascript">
+  <languageCode>en_US</languageCode>
+  <ruleset vocabularyUpdateStamp="_ap0000000000000000" vocabulary="vocab.ecore#/">
+    <ruleStatement post="Info" ruleModelElements="#//@ruleset/@rules.0">
+      <text expression="Sets initial SNAP benefit to the maximum allotment for the household size">
+        <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Sets initial SNAP benefit to the maximum allotment for the household size" expressiontype="BRSTATEMENT">
+          <referencedTermList/>
+        </parserOutput>
+      </text>
+    </ruleStatement>
+
+    <rule documentingRuleStatements="0"/>
+    <rule>
+      <condition>
+        <opaqueExpression expression="Application.adultCount &gt;= 4">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.adultCount &gt;= 4" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <referencedTermList>
+              <terms text="adultCount" datatype="Integer" termtype="ATTRIBUTE" fulltext="Application.adultCount">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </condition>
+      <action>
+        <opaqueExpression expression="Application.estimatedBenefit = 939">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.estimatedBenefit = 939" datatype="Decimal" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
+            <modifiedTermList>
+              <terms text="estimatedBenefit" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.estimatedBenefit">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </modifiedTermList>
+            <referencedTermList>
+              <terms text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </action>
+    </rule>
+    <rule>
+      <condition>
+        <opaqueExpression expression="Application.adultCount = 3">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.adultCount = 3" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <referencedTermList>
+              <terms text="adultCount" datatype="Integer" termtype="ATTRIBUTE" fulltext="Application.adultCount">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </condition>
+      <action>
+        <opaqueExpression expression="Application.estimatedBenefit = 766">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.estimatedBenefit = 766" datatype="Decimal" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
+            <modifiedTermList>
+              <terms text="estimatedBenefit" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.estimatedBenefit">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </modifiedTermList>
+            <referencedTermList>
+              <terms text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </action>
+    </rule>
+    <rule>
+      <condition>
+        <opaqueExpression expression="Application.adultCount &lt;= 2">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.adultCount &lt;= 2" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <referencedTermList>
+              <terms text="adultCount" datatype="Integer" termtype="ATTRIBUTE" fulltext="Application.adultCount">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </condition>
+      <action>
+        <opaqueExpression expression="Application.estimatedBenefit = 535">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.estimatedBenefit = 535" datatype="Decimal" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
+            <modifiedTermList>
+              <terms text="estimatedBenefit" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.estimatedBenefit">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </modifiedTermList>
+            <referencedTermList>
+              <terms text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
+            </referencedTermList>
+          </parserOutput>
+        </opaqueExpression>
+      </action>
+    </rule>
+    <logicalVariable explicit="true" entity="vocab.ecore#//Application">
+      <alias value="Application"/>
+    </logicalVariable>
+  </ruleset>
+  <rulesheetViewList xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:DecisionTable">
+    <actionSection rowCount="50" columnWidthFactor="0.5">
+      <actionItemList>
+        <valueSetCell/>
+        <expressionCell external="Application.estimatedBenefit">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.estimatedBenefit" datatype="Decimal" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <referencedTermList>
+              <terms text="estimatedBenefit" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.estimatedBenefit">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </expressionCell>
+      </actionItemList>
+    </actionSection>
+    <scopeSection>
+      <rootNode>
+        <children xsi:type="com.corticon.rulesemf.viewrulemodel.rulesheet.decisiontable:ScopeEntity" logicalVariable="#//@ruleset/@logicalVariables.0"/>
+      </rootNode>
+    </scopeSection>
+    <filterSection rowCount="50"/>
+    <ruleStatementSection rowCount="50"/>
+    <conditionSection rowCount="50" columnWidthFactor="0.5">
+      <conditionItemList>
+        <valueSetCell/>
+        <expressionCell external="Application.adultCount">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.adultCount" datatype="Integer" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <referencedTermList>
+              <terms text="adultCount" datatype="Integer" termtype="ATTRIBUTE" fulltext="Application.adultCount">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application" variable="#//@ruleset/@logicalVariables.0"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </expressionCell>
+      </conditionItemList>
+    </conditionSection>
+    <ruleSection columnCount="20">
+      <ruleColumnList ruleId="0" pRule="#//@ruleset/@rules.0"/>
+      <ruleColumnList ruleId="1" pRule="#//@ruleset/@rules.1">
+        <conditionValueSetCellList valueSet="&gt;= 4">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.adultCount &gt;= 4" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <referencedTermList>
+              <terms text="adultCount" datatype="Integer" termtype="ATTRIBUTE" fulltext="Application.adultCount">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </conditionValueSetCellList>
+        <actionValueSetCellList valueSet="939">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.estimatedBenefit = 939" datatype="Decimal" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
+            <modifiedTermList>
+              <terms text="estimatedBenefit" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.estimatedBenefit">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application"/>
+              </terms>
+            </modifiedTermList>
+            <referencedTermList>
+              <terms text="Application" datatype="Application" termtype="ENTITY" fulltext="Application"/>
+            </referencedTermList>
+          </parserOutput>
+        </actionValueSetCellList>
+      </ruleColumnList>
+      <ruleColumnList ruleId="2" pRule="#//@ruleset/@rules.2">
+        <conditionValueSetCellList valueSet="= 3">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.adultCount = 3" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <referencedTermList>
+              <terms text="adultCount" datatype="Integer" termtype="ATTRIBUTE" fulltext="Application.adultCount">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </conditionValueSetCellList>
+        <actionValueSetCellList valueSet="766">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.estimatedBenefit = 766" datatype="Decimal" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
+            <modifiedTermList>
+              <terms text="estimatedBenefit" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.estimatedBenefit">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application"/>
+              </terms>
+            </modifiedTermList>
+            <referencedTermList>
+              <terms text="Application" datatype="Application" termtype="ENTITY" fulltext="Application"/>
+            </referencedTermList>
+          </parserOutput>
+        </actionValueSetCellList>
+      </ruleColumnList>
+      <ruleColumnList ruleId="3" pRule="#//@ruleset/@rules.3">
+        <conditionValueSetCellList valueSet="&lt;= 2">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.adultCount &lt;= 2" datatype="Boolean" expressiontype="EXPRESSION" enumeration="false" cellValue="false">
+            <referencedTermList>
+              <terms text="adultCount" datatype="Integer" termtype="ATTRIBUTE" fulltext="Application.adultCount">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application"/>
+              </terms>
+            </referencedTermList>
+          </parserOutput>
+        </conditionValueSetCellList>
+        <actionValueSetCellList valueSet="535">
+          <parserOutput xsi:type="com.corticon.rulesemf.asg:Expression" text="Application.estimatedBenefit = 535" datatype="Decimal" expressiontype="ASSIGNMENT" enumeration="false" cellValue="false">
+            <modifiedTermList>
+              <terms text="estimatedBenefit" datatype="Decimal" termtype="ATTRIBUTE" fulltext="Application.estimatedBenefit">
+                <parentTerm text="Application" datatype="Application" termtype="ENTITY" fulltext="Application"/>
+              </terms>
+            </modifiedTermList>
+            <referencedTermList>
+              <terms text="Application" datatype="Application" termtype="ENTITY" fulltext="Application"/>
+            </referencedTermList>
+          </parserOutput>
+        </actionValueSetCellList>
+      </ruleColumnList>
+    </ruleSection>
+  </rulesheetViewList>
+</com.corticon.rulesemf.assetmodel:RulesheetAsset>

@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Translation Log",
+  "description": "Record of pattern identification and translation decisions. 'entries' is keyed by pattern name; each value is an array of LogEntry objects for that pattern. 'sinkCandidates' is a map of node path → subgraph metadata.",
+  "type": "object",
+  "required": ["entries", "sinkCandidates"],
+  "additionalProperties": false,
+  "properties": {
+    "entries": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "$ref": "#/definitions/LogEntry" }
+      },
+      "description": "Translation log entries grouped by pattern name."
+    },
+    "sinkCandidates": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/SinkCandidate" },
+      "description": "Sink candidate metadata keyed by node path."
+    }
+  },
+  "definitions": {
+    "LogEntry": {
+      "type": "object",
+      "required": ["pattern", "status", "translated"],
+      "properties": {
+        "edgeId": {
+          "type": "string",
+          "description": "Source-specific identifier tying this entry to an edge in the rule graph and to the originating source artifact. Format is source-specific (e.g. 'file.ers:N' for Corticon). Present on rule-level findings; omitted on node-level findings that span multiple rules."
+        },
+        "node": {
+          "type": "string",
+          "description": "Canonical attribute path this entry applies to (e.g. 'Person.age'). Omitted for sheet-level findings not tied to a specific output node."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Classifier identifying which rule pattern was detected. See translation-patterns.yaml for the full list."
+        },
+        "variant": {
+          "type": "string",
+          "description": "Sub-type of the pattern when applicable."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["confirmed", "inferred", "unsupported", "error"],
+          "description": "Confidence level. confirmed=translation is known correct; inferred=relies on unverified assumptions; unsupported=cannot be translated; error=translation failed."
+        },
+        "translated": {
+          "type": "boolean",
+          "description": "True if this pattern produced a node or expression in the rule graph."
+        },
+        "raw": {
+          "type": "object",
+          "description": "What the source system declared for this node/edge. Include whenever source type or expression is known. 'type' is the source system's own type name (e.g. Corticon: 'Integer', 'Date', 'CC_RSN', entity class name for constructor patterns). 'expression' is the raw source text before compilation.",
+          "properties": {
+            "type": { "type": "string" },
+            "expression": { "description": "Raw source expression(s). String when single, array when multiple rules contributed." }
+          }
+        },
+        "compiled": {
+          "type": "object",
+          "description": "What was produced in the graph. Omit when translated:false. 'type' is the JSON Schema type; 'format'/'enum'/'entityType' follow JSON Schema conventions matching the graph node definition. 'expression' is the compiled CEL expression.",
+          "properties": {
+            "type": { "type": "string", "enum": ["string", "number", "integer", "boolean", "object"] },
+            "format": { "type": "string" },
+            "enum": { "type": "array", "items": { "type": "string" } },
+            "entityType": { "type": "string" },
+            "expression": { "type": "string" }
+          }
+        },
+        "note": {
+          "type": ["string", "null"],
+          "description": "Human-readable explanation or warning when the translation decision is non-obvious."
+        },
+        "excludedEdgeIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "For no-writer pattern: the edge IDs (rulesheet paths) that were excluded (entity-creation, unreachable, etc.), leaving no valid writer for this node."
+        }
+      }
+    },
+    "SinkCandidate": {
+      "type": "object",
+      "properties": {
+        "nodeCount":        { "type": "number" },
+        "depth":            { "type": "number" },
+        "nodes":            { "type": "array", "items": { "type": "string" }, "description": "All node paths in this candidate's subgraph, for search/navigation." },
+        "orderedLayers":    { "type": "array", "items": { "type": "array", "items": { "type": "string" } }, "description": "Nodes grouped by BFS depth layer (index 0 = sink), each layer ordered for minimal edge crossings. Used for subgraph SVG layout." },
+        "edges":            { "type": "array", "items": { "type": "object" }, "description": "Directed {from, to} pairs within this candidate's subgraph. Used for SVG arrow rendering." },
+        "definitionCount":  { "type": "number" },
+        "totalDefinitions": { "type": "number" },
+        "latestPosition":   { "type": "number" },
+        "totalPositions":   { "type": "number" }
+      }
+    }
+  }
+}
