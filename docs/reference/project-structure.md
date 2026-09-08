@@ -144,6 +144,41 @@ Not every domain has every artifact — only the ones relevant to the domain.
 | `blueprint-explorer` | `@codeforamerica/blueprint-explorer` | Explorer build | `blueprint-core` |
 | `safety-net-contracts` | `@codeforamerica/blueprint-safety-net-contracts` | Domain contracts | `blueprint-cli` (devDep) |
 
+## Consuming the packages
+
+All Blueprint packages are published to [npmjs.com](https://www.npmjs.com/search?q=%40codeforamerica%2Fblueprint).
+
+### Which packages to install
+
+| Use case | Install |
+|----------|---------|
+| Resolve and validate contracts | `@codeforamerica/blueprint-cli` |
+| Run the mock server | `@codeforamerica/blueprint-mock-server` |
+| Build the explorer | `@codeforamerica/blueprint-explorer` |
+| Adopt the Safety Net contracts | `@codeforamerica/safety-net-contracts` |
+
+`@codeforamerica/blueprint-core` is an internal dependency of the other packages — you do not need to install it directly.
+
+### Typical install
+
+```bash
+npm install --save-dev @codeforamerica/blueprint-cli
+npm install --save-dev @codeforamerica/blueprint-mock-server
+npm install @codeforamerica/safety-net-contracts
+```
+
+### Consumer workflow
+
+1. Author or adopt contracts (overlay `safety-net-contracts` or author your own)
+2. Resolve overlays: `npx blueprint-resolve --spec ./src --overlay ./overlays/config.yaml --out ./resolved`
+3. Validate: `npx blueprint-validate --resolved ./resolved`
+4. Start mock server: `npx blueprint-mock --spec ./resolved`
+5. Generate TypeScript clients: `npx blueprint-generate-ts-clients --spec ./resolved --out ./clients`
+
+### Forking the contracts
+
+If you want to manage your own contracts independently of the Safety Net contracts, fork `@codeforamerica/safety-net-contracts` into a separate repo and depend on the `blueprint-*` framework packages from npmjs.com. Your fork uses the framework tooling; you own the domain contracts.
+
 ### Framework vs. Domain Separation
 
 `blueprint-core`, `blueprint-cli`, and `blueprint-mock-server` are domain-agnostic. They have no knowledge of safety-net schemas or domain structure. Any contract-driven project can depend on them.
