@@ -152,7 +152,7 @@
         </tr><tr>
           <td><code>data_exchange.call.completed</code></td>
           <td><span style="color:#999;font-size:11px;">unknown</span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Transition the Verification based on the service call result; on inconclusive/partial/error, creates a document fallback per ex parte rules (42 CFR § 435.911)</li></ul></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Transition the Verification based on the service call result; on inconclusive, creates a document fallback per ex parte rules (42 CFR § 435.911)</li></ul></td>
         </tr><tr>
           <td><code>scheduling.appointment.scheduled</code></td>
           <td><span style="color:#999;font-size:11px;">unknown</span></td>
@@ -253,6 +253,11 @@
           <td style="white-space:nowrap;"><span style="font-size:12px;">Case Worker, Supervisor</span></td>
           <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">inconclusive</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #f0b0b5;background:#F9C8CB;color:#AF121D;">cannot_verify</span></span></td>
           <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-intake.verification.cannot_verify" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.verification.cannot_verify</a> — signals all available verification methods are exhausted</li></ul></td>
+        </tr><tr id="action-mark-accept">
+          <td><strong style="color:#2B1A78;">mark-accept</strong> <a href="../api-reference/intake.html#op-post-applications-verifications-verificationId-mark-accept" title="View API endpoint" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;">API →</a><br><span style="font-size:12px;color:#666;">Caseworker accepts an electronic result as sufficient to satisfy the obligation, with a required justification</span></td>
+          <td style="white-space:nowrap;"><span style="font-size:12px;">Case Worker, Supervisor</span></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">inconclusive</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #b2e8e2;background:#E2F9F6;color:#006152;">satisfied</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-intake.verification.accepted" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.verification.accepted</a> — caseworker has reviewed and accepted the electronic evidence as sufficient</li></ul></td>
         </tr></tbody>
           </table>
         </div>

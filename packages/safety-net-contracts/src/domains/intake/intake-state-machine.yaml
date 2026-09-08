@@ -407,6 +407,19 @@ machines:
         transition: {from: [pending, inconclusive], to: cannot_verify}
         steps:
           - emit: {type: intake.verification.cannot_verify, description: Emit intake.verification.cannot_verify — signals all available verification methods are exhausted}
+      - id: mark-accept
+        description: POST /applications/verifications/{verificationId}/mark-accept — Caseworker accepts an electronic result as sufficient to satisfy the obligation, with a required justification
+        schema:
+          request:
+            $ref: '#/$defs/MarkAcceptVerificationRequest'
+        guards:
+          - actors: [case_worker, supervisor]
+            conditions: [{any: [callerIsCaseworker, callerIsSupervisor]}]
+        transition: {from: [pending, inconclusive], to: satisfied}
+        steps:
+          - set: {field: reviewedBy, value: $actor.id, description: Record the caseworker who accepted the electronic result}
+          - set: {field: reviewedAt, value: $now, description: Record when the caseworker accepted the electronic result}
+          - emit: {type: intake.verification.accepted, data: {reason: $request.reason}, description: Emit intake.verification.accepted — caseworker has reviewed and accepted the electronic evidence as sufficient}
     events:
       - type: intake.verification.created
         description: Initiate the appropriate service calls for a newly created electronic verification
@@ -441,6 +454,15 @@ guards:
     condition: "\"applicant\" in caller.roles"
 
 $defs:
+  MarkAcceptVerificationRequest:
+    type: object
+    required:
+      - reason
+    properties:
+      reason:
+        type: string
+        description: Why the caseworker is accepting the electronic result as sufficient to satisfy the obligation
+
   MarkCannotVerifyRequest:
     type: object
     required:

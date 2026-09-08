@@ -23,6 +23,7 @@ Auto-generated from state machine `emit` and subscription declarations.
 | `intake.determination.approval_needed` | [Intake/Application](intake.md#application) | [Workflow/Task](workflow.md) |
 | `intake.determination.rejected` | [Intake/Application](intake.md#application) | [Workflow/Task](workflow.md) |
 | `intake.member_income.created` | *(unknown)* | [Intake/Application](intake.md#application) |
+| `intake.verification.accepted` | [Intake/Verification](intake.md#verification) | *(none)* |
 | `intake.verification.cannot_verify` | [Intake/Verification](intake.md#verification) | *(none)* |
 | `intake.verification.created` | *(unknown)* | [Intake/Verification](intake.md#verification) |
 | `intake.verification.inconclusive` | [Intake/Verification](intake.md#verification) | *(none)* |

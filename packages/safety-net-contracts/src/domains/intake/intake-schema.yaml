@@ -1320,6 +1320,20 @@ $defs:
         enum:
           - document
           - electronic
+      reviewedAt:
+        type:
+          - string
+          - "null"
+        format: date-time
+        readOnly: true
+        description: When a caseworker accepted this verification obligation.
+      reviewedBy:
+        type:
+          - string
+          - "null"
+        format: uuid
+        readOnly: true
+        description: ID of the caseworker who accepted this verification obligation.
 
   VerificationDocumentEvidence:
     title: VerificationDocumentEvidence
@@ -1397,6 +1411,14 @@ $defs:
         type: string
         format: date-time
         description: When the result was received.
+      reviewedAt:
+        type: string
+        format: date-time
+        description: When a caseworker reviewed and accepted the electronic result.
+      reviewedBy:
+        type: string
+        format: uuid
+        description: ID of the caseworker who accepted the electronic result.
 
   VerificationEvidenceItem:
     title: VerificationEvidenceItem
