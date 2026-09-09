@@ -9,8 +9,9 @@
   "bin": {
     "blueprint-validate": "scripts/validate.js",
     "blueprint-add-api-resource": "scripts/add-api-resource.js",
+    "blueprint-export-schemas": "scripts/export-schemas.js",
     "blueprint-generate-postman-collection": "scripts/generate-postman-collection.js",
-"blueprint-generate-ts-clients": "scripts/generate-ts-clients.js",
+    "blueprint-generate-ts-clients": "scripts/generate-ts-clients.js",
     "blueprint-resolve": "scripts/resolve.js",
     "blueprint-scaffold-api": "scripts/scaffold-api.js"
   },

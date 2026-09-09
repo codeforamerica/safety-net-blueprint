@@ -100,6 +100,26 @@ Generates a Postman collection from resolved specs for use in API testing and co
 npx blueprint-generate-postman-collection --spec ./resolved --out ./postman
 ```
 
+### `blueprint-export-schemas`
+
+Exports component schemas from resolved OpenAPI specs as standalone JSON Schema files. Useful when downstream tooling — form renderers, validators, non-TypeScript clients — needs JSON Schema but not the full OpenAPI spec.
+
+```bash
+npx blueprint-export-schemas --spec ./resolved --out ./schemas
+```
+
+Output is organized by domain:
+
+```
+schemas/
+  intake/
+    Application.json
+    HouseholdMember.json
+    ...
+```
+
+The domain directory name is taken from `info.x-domain` in each spec, falling back to the filename slug (e.g. `intake` from `intake-openapi.yaml`).
+
 ## Changelog
 
 See [CHANGELOG.md](https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-cli/CHANGELOG.md) for release history.

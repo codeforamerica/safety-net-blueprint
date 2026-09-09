@@ -14,7 +14,7 @@ The steps below cover the Safety Net Contracts path. See [Using the framework wi
 | Package | Description | CLIs |
 |---|---|---|
 | `@codeforamerica/blueprint-safety-net-contracts` | Base OpenAPI specs, state machines, overlays, and annotations | — |
-| `@codeforamerica/blueprint-cli` | Overlay resolution, validation, and artifact generation | `blueprint-resolve`, `blueprint-validate`, `blueprint-generate-ts-clients`, `blueprint-generate-postman-collection` |
+| `@codeforamerica/blueprint-cli` | Overlay resolution, validation, and artifact generation | `blueprint-resolve`, `blueprint-validate`, `blueprint-generate-ts-clients`, `blueprint-generate-postman-collection`, `blueprint-export-schemas` |
 | `@codeforamerica/blueprint-mock-server` | Mock API server and Swagger UI for development | `blueprint-mock`, `blueprint-swagger` |
 
 Install these packages as dependencies and point the CLIs at your resolved specs.
