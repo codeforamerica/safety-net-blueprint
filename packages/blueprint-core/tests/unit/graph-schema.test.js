@@ -40,9 +40,10 @@ const base = {
   domain: 'intake',
   ruleset: 'workRequirements',
   outputs: ['eligible'],
-  nodes: {
-    '$.person.age': { type: 'integer', description: 'Applicant age in years' },
-    '$.person.income': { type: 'number', description: 'Monthly gross income' },
+  inputs: {
+    '$.person': { type: 'object', description: 'Applicant data' },
+  },
+  facts: {
     ageVerified: { expression: 'person.age >= 18', type: 'boolean' },
     eligible: { expression: 'ageVerified && person.income < 150', type: 'boolean' },
   },
@@ -81,8 +82,14 @@ test('graph-schema structural requirements', async (t) => {
     assert.ok(!valid);
   });
 
-  await t.test('requires nodes', () => {
-    const { nodes, ...rest } = base;
+  await t.test('requires inputs', () => {
+    const { inputs, ...rest } = base;
+    const { valid } = validate(rest);
+    assert.ok(!valid);
+  });
+
+  await t.test('requires facts', () => {
+    const { facts, ...rest } = base;
     const { valid } = validate(rest);
     assert.ok(!valid);
   });
@@ -93,10 +100,10 @@ test('graph-schema structural requirements', async (t) => {
     assert.ok(!valid);
   });
 
-  await t.test('outputs is optional', () => {
+  await t.test('requires outputs', () => {
     const { outputs, ...rest } = base;
-    const { valid, errors } = validate(rest);
-    assert.ok(valid, errorPaths(errors).join('\n'));
+    const { valid } = validate(rest);
+    assert.ok(!valid);
   });
 
   await t.test('rejects unknown top-level properties', () => {
@@ -104,8 +111,13 @@ test('graph-schema structural requirements', async (t) => {
     assert.ok(!valid);
   });
 
-  await t.test('requires at least one node', () => {
-    const { valid } = validate({ ...base, nodes: {} });
+  await t.test('requires at least one input', () => {
+    const { valid } = validate({ ...base, inputs: {} });
+    assert.ok(!valid);
+  });
+
+  await t.test('requires at least one fact', () => {
+    const { valid } = validate({ ...base, facts: {} });
     assert.ok(!valid);
   });
 
@@ -120,74 +132,80 @@ test('graph-schema nodes', async (t) => {
   await t.test('accepts input node with $.prefix', () => {
     const { valid, errors } = validate({
       ...base,
-      nodes: {
-        '$.person.age': { type: 'integer' },
-        eligible: { expression: 'person.age >= 18', type: 'boolean' },
-      },
+      inputs: { '$.person': { type: 'object' } },
+      facts: { eligible: { expression: 'person.age >= 18', type: 'boolean' } },
       dependencies: { eligible: ['$.person.age'] },
     });
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('accepts input node with default value', () => {
+  await t.test('rejects input node key with dot-path after identifier', () => {
+    const { valid } = validate({
+      ...base,
+      inputs: { '$.person.age': { type: 'integer' } },
+    });
+    assert.ok(!valid);
+  });
+
+  await t.test('accepts scalar input node with default value', () => {
     const { valid, errors } = validate({
       ...base,
-      nodes: {
-        ...base.nodes,
-        '$.policy.incomeThreshold': { type: 'number', default: 150 },
+      inputs: {
+        ...base.inputs,
+        '$.incomeThreshold': { type: 'number', default: 150 },
       },
     });
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('accepts derived node with expression', () => {
+  await t.test('accepts fact node with expression', () => {
     const { valid, errors } = validate(base);
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('accepts node with enum values', () => {
+  await t.test('accepts scalar input node with enum values', () => {
     const { valid, errors } = validate({
       ...base,
-      nodes: {
-        ...base.nodes,
-        '$.person.status': {
+      inputs: {
+        ...base.inputs,
+        '$.programCode': {
           type: 'string',
-          enum: ['active', 'inactive'],
-          enumDescriptions: ['Active case', 'Inactive case'],
+          enum: ['snap', 'tanf', 'medicaid'],
+          enumDescriptions: ['SNAP', 'TANF', 'Medicaid'],
         },
       },
     });
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('accepts node with format', () => {
+  await t.test('accepts scalar input node with format', () => {
     const { valid, errors } = validate({
       ...base,
-      nodes: {
-        ...base.nodes,
-        '$.person.birthDate': { type: 'string', format: 'date' },
+      inputs: {
+        ...base.inputs,
+        '$.certificationDate': { type: 'string', format: 'date' },
       },
     });
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('rejects node with empty expression', () => {
+  await t.test('rejects fact node with empty expression', () => {
     const { valid } = validate({
       ...base,
-      nodes: {
-        ...base.nodes,
-        badNode: { expression: '' },
+      facts: {
+        ...base.facts,
+        badFact: { expression: '' },
       },
     });
     assert.ok(!valid);
   });
 
-  await t.test('rejects unknown node properties', () => {
+  await t.test('rejects unknown fact node properties', () => {
     const { valid } = validate({
       ...base,
-      nodes: {
-        ...base.nodes,
-        badNode: { expression: '1 == 1', unknownProp: true },
+      facts: {
+        ...base.facts,
+        badFact: { expression: '1 == 1', unknownProp: true },
       },
     });
     assert.ok(!valid);
@@ -260,27 +278,6 @@ test('graph-schema outputs', async (t) => {
 });
 
 // ---------------------------------------------------------------------------
-// Functions
-// ---------------------------------------------------------------------------
-
-test('graph-schema functions', async (t) => {
-
-  await t.test('accepts optional functions list', () => {
-    const { valid, errors } = validate({
-      ...base,
-      functions: ['yearsBetween', 'round'],
-    });
-    assert.ok(valid, errorPaths(errors).join('\n'));
-  });
-
-  await t.test('functions must be unique', () => {
-    const { valid } = validate({ ...base, functions: ['round', 'round'] });
-    assert.ok(!valid);
-  });
-
-});
-
-// ---------------------------------------------------------------------------
 // Real-world fixture: expedited SNAP graph
 // ---------------------------------------------------------------------------
 
@@ -291,14 +288,11 @@ test('graph-schema expedited SNAP fixture', async (t) => {
     domain: 'eligibility',
     ruleset: 'expeditedSnap',
     outputs: ['eligible'],
-    nodes: {
-      '$.household.size': { type: 'integer', description: 'Number of people in the household' },
-      '$.household.monthlyGrossIncome': { type: 'number', description: 'Total monthly gross income' },
-      '$.household.liquidResources': { type: 'number', description: 'Value of countable liquid resources' },
-      '$.household.monthlyHousingCosts': { type: 'number', description: 'Total monthly housing costs' },
-      '$.household.isDestituteMigrant': { type: 'boolean', description: 'True if household includes a destitute migrant' },
-      '$.policy.resourceLimit': { type: 'number', default: 100, description: 'Federal liquid resource ceiling: $100' },
-      '$.policy.grossIncomeLimit': { type: 'number', default: 150, description: 'Federal monthly gross income ceiling: $150' },
+    inputs: {
+      '$.household': { type: 'object', description: 'Household size, income, resources, and housing costs' },
+      '$.policy': { type: 'object', description: 'Federal policy parameters with default values' },
+    },
+    facts: {
       passesLowIncomeTest: {
         expression: 'monthlyGrossIncome < grossIncomeLimit && liquidResources <= resourceLimit',
         type: 'boolean',

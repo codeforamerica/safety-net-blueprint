@@ -61,6 +61,13 @@ properties:
       Keys are the event type identifier (e.g., intake.application.submitted).
     $ref: "#/$defs/EventAnnotationMap"
 
+  facts:
+    description: >
+      Annotations for ruleset facts, keyed by fact path.
+      Fact paths are camelCase identifiers matching the path field in a rules contract
+      (e.g., incomeInconsistency, abawdMembers).
+    $ref: "#/$defs/FactAnnotationMap"
+
 $defs:
   SchemaAnnotationMap:
     type: object
@@ -95,6 +102,18 @@ $defs:
     minProperties: 1
     propertyNames:
       pattern: "^[a-z][a-zA-Z0-9_]*(\\.[a-z][a-zA-Z0-9_]*){1,}$"
+    additionalProperties:
+      $ref: "#/$defs/Annotation"
+
+  FactAnnotationMap:
+    type: object
+    description: >
+      Map of fact paths to annotation objects.
+      Keys are camelCase identifiers matching the path field in a rules contract
+      (e.g., incomeInconsistency, abawdMembers).
+    minProperties: 1
+    propertyNames:
+      pattern: "^[a-z][a-zA-Z0-9]*$"
     additionalProperties:
       $ref: "#/$defs/Annotation"
 

@@ -99,6 +99,7 @@ $defs:
       compute outputs from inputs via CEL expressions.
     required:
       - inputs
+      - outputs
       - facts
     additionalProperties: false
     properties:

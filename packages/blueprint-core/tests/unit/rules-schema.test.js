@@ -53,6 +53,7 @@ const minimalRuleset = {
       },
     },
   },
+  outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
   facts: [
     { path: 'eligible', expression: 'person.age >= 18' },
   ],
@@ -121,6 +122,12 @@ test('rules-schema ruleset structure', async (t) => {
 
   await t.test('requires at least one fact', () => {
     const { valid } = validate(doc({ test: { inputs: { x: { type: 'number' } }, facts: [] } }));
+    assert.ok(!valid);
+  });
+
+  await t.test('requires outputs', () => {
+    const { outputs, ...withoutOutputs } = minimalRuleset;
+    const { valid } = validate(doc({ test: withoutOutputs }));
     assert.ok(!valid);
   });
 
@@ -200,6 +207,7 @@ test('rules-schema facts', async (t) => {
             properties: { age: { type: 'integer' }, income: { type: 'number' } },
           },
         },
+        outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
         facts: [
           { path: 'ageVerified', expression: 'person.age >= 18' },
           { path: 'incomeVerified', expression: 'person.income < 150' },
@@ -232,6 +240,7 @@ test('rules-schema inputs', async (t) => {
     const { valid, errors } = validate(doc({
       test: {
         inputs: { person: { $ref: 'https://blueprint.codeforamerica.org/schemas/Person.yaml' } },
+        outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
         facts: [{ path: 'eligible', expression: 'person.age >= 18' }],
       },
     }));
@@ -247,6 +256,7 @@ test('rules-schema inputs', async (t) => {
             properties: { incomeThreshold: { type: 'number', default: 150 } },
           },
         },
+        outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
         facts: [{ path: 'eligible', expression: 'policy.incomeThreshold > 0' }],
       },
     }));
@@ -306,10 +316,12 @@ test('rules-schema multiple rulesets', async (t) => {
     const { valid, errors } = validate(doc({
       ageCheck: {
         inputs: { person: { type: 'object', properties: { age: { type: 'integer' } } } },
+        outputs: { type: 'object', properties: { ageVerified: { type: 'boolean' } } },
         facts: [{ path: 'ageVerified', expression: 'person.age >= 18' }],
       },
       incomeCheck: {
         inputs: { person: { type: 'object', properties: { income: { type: 'number' } } } },
+        outputs: { type: 'object', properties: { incomeVerified: { type: 'boolean' } } },
         facts: [{ path: 'incomeVerified', expression: 'person.income < 150' }],
       },
     }));
