@@ -12,9 +12,18 @@
 #   outputs:
 #     - eligible
 #   inputs:
-#     $.person:
+#     $.person.age:
+#       type: integer
+#       description: Applicant age in years
+#     $.person.income:
+#       type: number
+#       description: Monthly gross income
+#     $.household.members[]:
 #       type: object
-#       description: Applicant data
+#       description: Array of household members
+#     $.household.members[].age:
+#       type: integer
+#       description: Age of each household member
 #   facts:
 #     ageVerified:
 #       expression: "person.age >= 18"
@@ -29,8 +38,12 @@
 #       - ageVerified
 #       - $.person.income
 #
-# Note: dependency items reference the input binding ($.person) or specific
-# fields within it ($.person.age) for fine-grained missing-input tracking.
+# Input keys use JSONPath-style field paths: '$.' followed by dot-separated
+# segments, with '[]' suffix on array segments. The compiler expands object-typed
+# inputs from *-rules.yaml into their referenced field paths. This makes the
+# graph self-contained for evaluation, FactGraph translation, and missing-input
+# tracking. The evaluator binds the top-level object name (e.g., 'person') as
+# a whole object in the CEL context; leaf paths describe structure for type info.
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/schemas/graph-schema.yaml"
@@ -93,15 +106,18 @@ properties:
   inputs:
     type: object
     description: >
-      Map of CEL binding names to input node definitions. Keys are '$.'
-      followed by a single camelCase identifier — the exact variable name
-      bound in the CEL evaluation context (e.g. '$.household', '$.person').
-      Input nodes are values supplied by the caller; they have no expression.
+      Map of JSONPath-style field paths to input node definitions. Keys are
+      '$.' followed by dot-separated camelCase segments. Array segments are
+      suffixed with '[]' (e.g. '$.household.members[]', '$.household.members[].age').
+      The compiler expands object-typed inputs from *-rules.yaml into the
+      individual field paths referenced in CEL expressions. The evaluator
+      binds the top-level segment (e.g. 'household') as a whole object in
+      the CEL context; leaf paths exist for type info and missing-input tracking.
     minProperties: 1
     additionalProperties:
       $ref: "#/$defs/Node"
     propertyNames:
-      pattern: "^\\$\\.[a-zA-Z][a-zA-Z0-9]*$"
+      pattern: "^\\$\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?(\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?)*$"
 
   facts:
     type: object

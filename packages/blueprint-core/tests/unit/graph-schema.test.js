@@ -41,7 +41,8 @@ const base = {
   ruleset: 'workRequirements',
   outputs: ['eligible'],
   inputs: {
-    '$.person': { type: 'object', description: 'Applicant data' },
+    '$.person.age': { type: 'integer', description: 'Applicant age in years' },
+    '$.person.income': { type: 'number', description: 'Monthly gross income' },
   },
   facts: {
     ageVerified: { expression: 'person.age >= 18', type: 'boolean' },
@@ -129,22 +130,26 @@ test('graph-schema structural requirements', async (t) => {
 
 test('graph-schema nodes', async (t) => {
 
-  await t.test('accepts input node with $.prefix', () => {
+  await t.test('accepts field-path input key ($.person.age)', () => {
     const { valid, errors } = validate({
       ...base,
-      inputs: { '$.person': { type: 'object' } },
+      inputs: { '$.person.age': { type: 'integer', description: 'Applicant age' } },
       facts: { eligible: { expression: 'person.age >= 18', type: 'boolean' } },
       dependencies: { eligible: ['$.person.age'] },
     });
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('rejects input node key with dot-path after identifier', () => {
-    const { valid } = validate({
+  await t.test('accepts array segment input key ($.household.members[])', () => {
+    const { valid, errors } = validate({
       ...base,
-      inputs: { '$.person.age': { type: 'integer' } },
+      inputs: {
+        ...base.inputs,
+        '$.household.members[]': { type: 'object', description: 'Array of household members' },
+        '$.household.members[].age': { type: 'integer', description: 'Age of each member' },
+      },
     });
-    assert.ok(!valid);
+    assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
   await t.test('accepts scalar input node with default value', () => {
@@ -152,7 +157,7 @@ test('graph-schema nodes', async (t) => {
       ...base,
       inputs: {
         ...base.inputs,
-        '$.incomeThreshold': { type: 'number', default: 150 },
+        '$.policy.incomeThreshold': { type: 'number', default: 150 },
       },
     });
     assert.ok(valid, errorPaths(errors).join('\n'));
@@ -168,7 +173,7 @@ test('graph-schema nodes', async (t) => {
       ...base,
       inputs: {
         ...base.inputs,
-        '$.programCode': {
+        '$.policy.programCode': {
           type: 'string',
           enum: ['snap', 'tanf', 'medicaid'],
           enumDescriptions: ['SNAP', 'TANF', 'Medicaid'],
@@ -183,7 +188,7 @@ test('graph-schema nodes', async (t) => {
       ...base,
       inputs: {
         ...base.inputs,
-        '$.certificationDate': { type: 'string', format: 'date' },
+        '$.policy.certificationDate': { type: 'string', format: 'date' },
       },
     });
     assert.ok(valid, errorPaths(errors).join('\n'));
@@ -289,8 +294,12 @@ test('graph-schema expedited SNAP fixture', async (t) => {
     ruleset: 'expeditedSnap',
     outputs: ['eligible'],
     inputs: {
-      '$.household': { type: 'object', description: 'Household size, income, resources, and housing costs' },
-      '$.policy': { type: 'object', description: 'Federal policy parameters with default values' },
+      '$.household.monthlyGrossIncome': { type: 'number', description: 'Total monthly gross income' },
+      '$.household.liquidResources': { type: 'number', description: 'Value of countable liquid resources' },
+      '$.household.monthlyHousingCosts': { type: 'number', description: 'Total monthly housing costs' },
+      '$.household.isDestituteMigrant': { type: 'boolean', description: 'True if household includes a destitute migrant' },
+      '$.policy.resourceLimit': { type: 'number', default: 100, description: 'Federal liquid resource ceiling: $100' },
+      '$.policy.grossIncomeLimit': { type: 'number', default: 150, description: 'Federal monthly gross income ceiling: $150' },
     },
     facts: {
       passesLowIncomeTest: {
