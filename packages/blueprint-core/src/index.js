@@ -16,3 +16,4 @@ export { loadPolicies } from './policies.js';
 export { resolveExternalDefRef } from './relationships.js';
 export { buildEventIndex, collectEmitSteps, getSteps, getMatchBranches, getForEachBody } from './state-machines.js';
 export { loadContractFiles, loadExternalRefs, detectType } from './contract-files.js';
+export { expandInputs, extractDeps, compileRuleset, generateRulesEndpointOverlay, generateRulesResults } from './rules.js';
