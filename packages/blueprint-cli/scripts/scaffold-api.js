@@ -16,6 +16,7 @@ import { writeFile } from 'fs/promises';
 import { existsSync, mkdirSync, realpathSync } from 'fs';
 import { join, relative, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import pluralizeWord from 'pluralize';
 
 // NOTE: Do NOT add a --bundle flag to this generator. Source specs must use
 // $ref so that overlays propagate changes to Create/Update/List schemas.
@@ -134,14 +135,9 @@ function toPascalCase(str) {
 }
 
 function pluralize(str) {
-  // Simple pluralization - works for most cases
-  if (str.endsWith('y')) {
-    return str.slice(0, -1) + 'ies';
-  }
-  if (str.endsWith('s') || str.endsWith('x') || str.endsWith('ch') || str.endsWith('sh')) {
-    return str + 'es';
-  }
-  return str + 's';
+  // English rules plus irregulars (Child -> Children, Person -> People) via the
+  // `pluralize` package. Case is preserved (CaseWorker -> CaseWorkers).
+  return pluralizeWord(str);
 }
 
 // =============================================================================
@@ -325,25 +321,19 @@ components:
         format: uuid
       example: 4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2
   schemas:
-    ${resource}:
+    # Writable base: client-writable fields only. ${resource}, ${resource}Create, and
+    # ${resource}Update all extend it via allOf so write payloads never inherit
+    # server-managed fields or resolve-time transformations (e.g. x-relationship expand)
+    # declared on the full read schema.
+    ${resource}Writable:
       type: object
-      additionalProperties: false
-      required:
-        - id
-        - name
-        - createdAt
-        - updatedAt
+      description: Client-writable fields of a ${resourceLower}.
       properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-          description: Unique identifier (server-generated).
         name:
           type: string
           minLength: 1
           maxLength: 200
-          description: Name of the ${resource.toLowerCase()}.
+          description: Name of the ${resourceLower}.
         description:
           type: string
           maxLength: 1000
@@ -355,30 +345,49 @@ components:
             - inactive
             - pending
           description: Current status.
-        createdAt:
-          type: string
-          format: date-time
-          readOnly: true
-          description: Timestamp when the ${resource.toLowerCase()} was created.
-        updatedAt:
-          type: string
-          format: date-time
-          readOnly: true
-          description: Timestamp when the ${resource.toLowerCase()} was last updated.
+    ${resource}:
+      description: A ${resourceLower} record, including server-managed fields.
+      unevaluatedProperties: false
+      required:
+        - id
+        - name
+        - createdAt
+        - updatedAt
+      allOf:
+      - "$ref": "#/components/schemas/${resource}Writable"
+      - type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+            readOnly: true
+            description: Unique identifier (server-generated).
+          createdAt:
+            type: string
+            format: date-time
+            readOnly: true
+            description: Timestamp when the ${resourceLower} was created.
+          updatedAt:
+            type: string
+            format: date-time
+            readOnly: true
+            description: Timestamp when the ${resourceLower} was last updated.
     ${resource}Create:
       allOf:
-      - "$ref": "#/components/schemas/${resource}"
+      - "$ref": "#/components/schemas/${resource}Writable"
       - type: object
         description: |
-          Payload to create a new ${resource.toLowerCase()} record.
+          Payload to create a new ${resourceLower} record.
 
           Note: id, createdAt, and updatedAt are server-generated (readOnly) and will be returned in the response.
+        required:
+          - name
     ${resource}Update:
       allOf:
-      - "$ref": "#/components/schemas/${resource}"
+      - "$ref": "#/components/schemas/${resource}Writable"
       - type: object
         description: |
-          Payload to update one or more mutable fields of an existing ${resource.toLowerCase()}. Partial updates are supported.
+          Payload to update one or more mutable fields of an existing ${resourceLower}. Partial updates are supported.
 
           Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
         minProperties: 1
