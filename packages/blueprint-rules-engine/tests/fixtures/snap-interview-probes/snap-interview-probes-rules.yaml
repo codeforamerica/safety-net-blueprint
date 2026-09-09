@@ -1,0 +1,87 @@
+$schema: "https://blueprint.codeforamerica.org/schemas/rules-schema.yaml"
+domain: intake
+rulesets:
+  snapInterviewProbes:
+    inputs:
+      household:
+        type: object
+        properties:
+          monthlyIncome:
+            type: number
+            description: Total reported monthly income for the household
+          monthlyExpenses:
+            type: number
+            description: Total reported monthly expenses for the household
+          members:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                age:
+                  type: integer
+                employed:
+                  type: boolean
+                  description: Whether the member has reported employment
+                citizenshipStatus:
+                  type: string
+                  enum: [citizen, lpr, non-citizen]
+                hasSponsor:
+                  type: boolean
+                  description: Whether the member has a sponsor who signed an affidavit of support
+                enrolledHalfTime:
+                  type: boolean
+                  description: Whether the member is enrolled at least half-time in higher education
+                hasDisqualifyingFelony:
+                  type: boolean
+                  description: Whether the member has a disqualifying felony conviction
+                felonyComplianceConfirmed:
+                  type: boolean
+                  description: Whether sentence compliance has been confirmed during this interview
+                workExempt:
+                  type: boolean
+                  description: Whether the member is exempt from general work requirements
+
+    outputs:
+      type: object
+      properties:
+        incomeInconsistency:
+          type: boolean
+        abawdMembers:
+          type: array
+        workRequirementMembers:
+          type: array
+        nonCitizenMembers:
+          type: array
+        studentMembers:
+          type: array
+        felonMembers:
+          type: array
+
+    facts:
+      - path: incomeInconsistency
+        description: Household income is less than reported expenses — probe for unreported income sources
+        expression: "household.monthlyIncome < household.monthlyExpenses"
+
+      - path: abawdMembers
+        description: Members aged 18–54 with no reported employment and no ABAWD exemption
+        expression: "household.members.filter(m, m.age >= 18 && m.age <= 54 && !m.employed && !m.workExempt)"
+
+      - path: workRequirementMembers
+        description: Members aged 16–59 who may be subject to general work requirements — screen for exemptions
+        expression: "household.members.filter(m, m.age >= 16 && m.age <= 59 && !m.employed && !m.workExempt)"
+
+      - path: nonCitizenMembers
+        description: Non-citizen members requiring immigration status and sponsor deeming screening
+        expression: "household.members.filter(m, m.citizenshipStatus != 'citizen')"
+
+      - path: studentMembers
+        description: Members enrolled at least half-time in higher education — screen for student eligibility exemptions
+        expression: "household.members.filter(m, m.enrolledHalfTime)"
+
+      - path: felonMembers
+        description: Members with an unconfirmed disqualifying felony — sentence compliance attestation required
+        expression: "household.members.filter(m, m.hasDisqualifyingFelony && !m.felonyComplianceConfirmed)"
