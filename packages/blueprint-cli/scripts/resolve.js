@@ -36,7 +36,6 @@ import { bundleSpec } from '@codeforamerica/blueprint-core/bundle';
 import { baseContractsDir, resolverMap } from '@codeforamerica/blueprint-core';
 import { extractItemEndpointFromSpec, generateOverlay } from './generate-rpc-overlay.js';
 import { generateCompositionOverlays } from '@codeforamerica/blueprint-core/compositions';
-import { generateRulesResults } from '@codeforamerica/blueprint-core';
 import { validateSchemas } from './validate/json-schema-core.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -456,10 +455,6 @@ function isMetrics(spec) {
 
 function isRules(spec) {
   return typeof spec?.['$schema'] === 'string' && spec['$schema'].endsWith('rules-schema.yaml');
-}
-
-function isGraph(spec) {
-  return typeof spec?.['$schema'] === 'string' && spec['$schema'].endsWith('graph-schema.yaml');
 }
 
 function isOpenApi(spec) {
@@ -1030,9 +1025,8 @@ async function main() {
   // Quick check (no YAML parsing) whether generators will produce anything
   const hasStateMachines = !specIsFile && readdirSync(specPath, { recursive: true }).filter(f => typeof f === 'string').some(f => f.endsWith('-state-machine.yaml'));
   const hasCompositions = !specIsFile && readdirSync(specPath, { recursive: true }).filter(f => typeof f === 'string').some(f => f.endsWith('-compositions.yaml'));
-  const hasRules = !specIsFile && readdirSync(specPath, { recursive: true }).filter(f => typeof f === 'string').some(f => f.endsWith('-rules.yaml'));
 
-  if (!options.overlay && !options.env && !options.envFile && !options.bundle && !options.reconcileExamples && !options.resolve && !hasStateMachines && !hasCompositions && !hasRules) {
+  if (!options.overlay && !options.env && !options.envFile && !options.bundle && !options.reconcileExamples && !options.resolve && !hasStateMachines && !hasCompositions) {
     // No processing needed - copy base specs as-is
     console.log('No flags specified, copying base specs unchanged');
     if (specIsFile) {
@@ -1140,7 +1134,7 @@ async function main() {
   // Generate RPC and composition endpoints after explicit overlays.
   // Both generators read from post-overlay specs so state customizations to
   // *-state-machine.yaml and *-compositions.yaml files are reflected in the output.
-  if (!specIsFile && (hasStateMachines || hasCompositions || hasRules)) {
+  if (!specIsFile && (hasStateMachines || hasCompositions)) {
     const inputFiles = currentResults
       ? [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }))
       : yamlFiles;
@@ -1199,37 +1193,6 @@ async function main() {
 
         const compositionCount = Object.keys(rawOverlay.actions.find(a => a.target === '$.paths')?.update || {}).length;
         console.log(`  \u2713 Generated: ${domain} composition endpoints (${compositionCount} endpoint(s))`);
-      }
-    }
-
-    // Rules compilation: compile *-rules.yaml to *-graph.yaml and generate endpoint overlays
-    const rulesFiles = inputFiles
-      .filter(f => isRules(f.spec) && f.spec?.rulesets)
-      .map(f => ({ relativePath: f.relativePath, doc: f.spec }));
-
-    if (rulesFiles.length > 0) {
-      const { graphs, overlays } = generateRulesResults(rulesFiles);
-
-      for (const [relativePath, graph] of graphs) {
-        if (!currentResults) {
-          currentResults = new Map(yamlFiles.map(f => [f.relativePath, JSON.parse(JSON.stringify(f.spec))]));
-        }
-        currentResults.set(relativePath, graph);
-        console.log(`  \u2713 Compiled: ${relativePath}`);
-      }
-
-      for (const { overlay, domain } of overlays) {
-        const currentInputFiles = [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }));
-        const actionFileMap = analyzeTargetLocations(overlay, currentInputFiles);
-        const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
-        allWarnings = allWarnings.concat(warnings);
-
-        const { results: rulesResults, warnings: rulesWarnings } = applyOverlayWithTargets(currentInputFiles, overlay, actionTargets, specPath);
-        allWarnings = allWarnings.concat(rulesWarnings);
-        currentResults = rulesResults;
-
-        const endpointCount = Object.keys(overlay.actions.find(a => a.target === '$.paths')?.update || {}).length;
-        console.log(`  \u2713 Generated: ${domain} rules endpoints (${endpointCount} endpoint(s))`);
       }
     }
   }
@@ -1415,7 +1378,7 @@ async function main() {
     // *-compositions.yaml and *-state-machine.yaml are not $ref targets;
     // they are standalone files that drive route registration.
     for (const [relativePath, spec] of currentResults) {
-      if (!isOpenApi(spec) && !isCompositions(spec) && !isStateMachine(spec) && !isRules(spec) && !isGraph(spec)) {
+      if (!isOpenApi(spec) && !isCompositions(spec) && !isStateMachine(spec)) {
         const filePath = join(outDir, relativePath);
         if (existsSync(filePath)) {
           rmSync(filePath, { recursive: true });
