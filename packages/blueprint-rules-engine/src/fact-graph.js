@@ -708,3 +708,47 @@ export function evaluateWithFactGraph(rulesDoc, inputs, rulesetName) {
 
   return { complete, placeholder, missing, errors };
 }
+
+/**
+ * Evaluate a compiled graph using the FactGraph engine.
+ *
+ * Accepts a pre-compiled graph (output of compileRuleset() or a parsed
+ * *-graph.yaml document) and skips the compilation step.
+ *
+ * @param {Object} graph   - compiled graph ({ facts, dependencies, outputs, inputs, ... })
+ * @param {Object} inputs  - named input objects, e.g. { household: { ... } }
+ * @returns {{ complete: Object, placeholder: Object, missing: Object, errors: Object }}
+ */
+export function evaluateGraphWithFactGraph(graph, inputs) {
+  const xml = buildFactDictionaryXml(graph);
+
+  const dict = FactDictionaryFactory.importFromXml(xml);
+  const fgGraph = GraphFactory.apply(dict);
+
+  const uuidToItem = seedGraph(fgGraph, graph.inputs, inputs);
+  fgGraph.save();
+
+  const complete = {};
+  const placeholder = {};
+  const missing = {};
+  const errors = {};
+
+  for (const factName of graph.outputs) {
+    const fgFactPath = `/${factName}`;
+    try {
+      const result = fgGraph.get(fgFactPath);
+      const extracted = extractResult(result, uuidToItem);
+      if (extracted.state === 'incomplete') {
+        missing[factName] = [];
+      } else if (extracted.state === 'complete') {
+        complete[factName] = extracted.value;
+      } else {
+        placeholder[factName] = extracted.value;
+      }
+    } catch (err) {
+      errors[factName] = err.message ?? String(err);
+    }
+  }
+
+  return { complete, placeholder, missing, errors };
+}

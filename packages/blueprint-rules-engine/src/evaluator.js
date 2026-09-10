@@ -205,3 +205,76 @@ export function evaluate(rulesDoc, inputs, rulesetName) {
     errors:      Object.fromEntries(Object.entries(errors).filter(([k]) => outputSet.has(k))),
   };
 }
+
+/**
+ * Evaluate a compiled graph directly against a (possibly partial) set of inputs.
+ *
+ * Accepts the output of compileRuleset() or a parsed *-graph.yaml document.
+ * Unlike evaluate(), this function takes a pre-compiled graph and skips the
+ * compilation step. No namespace-level schema defaults are applied — all
+ * inputs must be explicit.
+ *
+ * @param {Object} graph   - compiled graph ({ facts, dependencies, outputs, inputs, ... })
+ * @param {Object} inputs  - named input objects, e.g. { household: { ... } }
+ * @returns {{ complete: Object, placeholder: Object, missing: Object, errors: Object }}
+ */
+export function evaluateGraph(graph, inputs) {
+  const factNames = Object.keys(graph.facts);
+  const ordered = topoSort(factNames, graph.dependencies);
+
+  const scope = { ...inputs };
+
+  const complete = {};
+  const placeholder = {};
+  const missing = {};
+  const errors = {};
+  const resolved = {};
+
+  for (const factName of ordered) {
+    const deps = graph.dependencies[factName] ?? [];
+    const missingPaths = new Set();
+
+    for (const dep of deps) {
+      if (dep.startsWith('$.')) {
+        const val = resolveInputPath(dep, inputs);
+        if (val === undefined) {
+          missingPaths.add(dep);
+        }
+      } else {
+        if (resolved[dep] === undefined && !errors[dep]) {
+          if (missing[dep]) {
+            for (const p of missing[dep]) missingPaths.add(p);
+          } else {
+            missingPaths.add(dep);
+          }
+        }
+      }
+    }
+
+    if (missingPaths.size > 0) {
+      missing[factName] = [...missingPaths];
+      continue;
+    }
+
+    const factDecl = graph.facts[factName];
+    const expr = factDecl?.expression;
+    if (!expr) continue;
+
+    const result = evaluateCEL(expr, scope);
+    if (result === undefined) {
+      errors[factName] = `Expression failed to evaluate: ${expr}`;
+    } else {
+      resolved[factName] = result;
+      scope[factName] = result;
+      complete[factName] = result;
+    }
+  }
+
+  const outputSet = new Set(graph.outputs);
+  return {
+    complete:    Object.fromEntries(Object.entries(complete).filter(([k]) => outputSet.has(k))),
+    placeholder: Object.fromEntries(Object.entries(placeholder).filter(([k]) => outputSet.has(k))),
+    missing:     Object.fromEntries(Object.entries(missing).filter(([k]) => outputSet.has(k))),
+    errors:      Object.fromEntries(Object.entries(errors).filter(([k]) => outputSet.has(k))),
+  };
+}

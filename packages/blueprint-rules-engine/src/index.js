@@ -1,1 +1,1 @@
-export { evaluate } from './evaluator.js';
+export { evaluate, evaluateGraph } from './evaluator.js';

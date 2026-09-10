@@ -8,6 +8,7 @@
   ],
   "bin": {
     "blueprint-validate": "./scripts/validate.js",
+    "blueprint-evaluate": "./scripts/evaluate.js",
     "blueprint-add-api-resource": "./scripts/add-api-resource.js",
     "blueprint-generate-postman-collection": "./scripts/generate-postman-collection.js",
     "blueprint-generate-rpc-overlay": "./scripts/generate-rpc-overlay.js",
@@ -35,6 +36,7 @@
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
     "@codeforamerica/blueprint-core": "^0.1.0",
+    "@codeforamerica/blueprint-rules-engine": "^0.1.0",
     "ajv": "^8.12.0",
     "ajv-formats": "^3.0.1",
     "js-yaml": "^4.1.0",

@@ -1,0 +1,4 @@
+{
+  "person": { "age": 25 },
+  "policy": { "minAge": 18 }
+}
