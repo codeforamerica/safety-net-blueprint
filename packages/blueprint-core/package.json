@@ -24,7 +24,8 @@
     "./relationships": "./src/relationships.js",
     "./compositions": "./src/compositions.js",
     "./state-machine-validator": "./src/validation/state-machine-validator.js",
-    "./rules-validator": "./src/rules-validator.js"
+    "./rules-validator": "./src/rules-validator.js",
+    "./contract-validator": "./src/contract-validator.js"
   },
   "scripts": {
     "prepack": "node ../../scripts/build-package-readme.js",

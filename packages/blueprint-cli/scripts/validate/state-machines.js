@@ -34,6 +34,7 @@ import {
   buildSchemaIndex,
   buildEndpointIndex,
 } from '@codeforamerica/blueprint-core/state-machine-validator';
+import { detectType } from '@codeforamerica/blueprint-core';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -95,9 +96,7 @@ function discoverStateMachines(specDir) {
     try {
       const doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA });
       if (!doc || typeof doc !== 'object') continue;
-      // Use $schema as the type discriminator, not the filename convention
-      const schemaBasename = doc.$schema?.split('/').pop();
-      if (schemaBasename !== 'state-machine-schema.yaml') continue;
+      if (detectType(file, doc) !== 'state-machine') continue;
       if (doc.machines) results.push({ filePath, file, doc });
     } catch (err) {
       results.push({ filePath, file, parseError: err.message });

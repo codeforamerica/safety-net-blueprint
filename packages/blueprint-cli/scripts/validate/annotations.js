@@ -20,6 +20,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import yaml from 'js-yaml';
 import { resolveRef, collectTopLevelProperties, getPropertyAtPath, resolveSchemaRefs } from '@codeforamerica/blueprint-core/state-machine-validator';
+import { detectType } from '@codeforamerica/blueprint-core';
 
 function walkForPattern(dir, suffix) {
   const results = [];
@@ -484,8 +485,7 @@ async function main() {
     const file = basename(filePath);
     try {
       const doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA });
-      const schemaBasename = doc?.$schema?.split('/').pop();
-      if (schemaBasename === 'annotations-schema.yaml') {
+      if (detectType(file, doc) === 'annotations') {
         annotationFiles.push({ file, filePath, doc });
       }
     } catch {

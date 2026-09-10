@@ -20,6 +20,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import yaml from 'js-yaml';
 import { validateRulesDoc } from '@codeforamerica/blueprint-core/rules-validator';
+import { detectType } from '@codeforamerica/blueprint-core';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -57,8 +58,7 @@ function discoverRulesFiles(specDir) {
     try {
       const doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA });
       if (!doc || typeof doc !== 'object') continue;
-      // Use $schema as the type discriminator
-      if (!doc.$schema?.includes('rules-schema.yaml')) continue;
+      if (detectType(filePath.split('/').pop(), doc) !== 'rules') continue;
       if (doc.rulesets) results.push({ filePath, file: filePath.split('/').pop(), doc });
     } catch (err) {
       results.push({ filePath, file: filePath.split('/').pop(), parseError: err.message });
