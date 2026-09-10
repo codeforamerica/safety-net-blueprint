@@ -1,0 +1,79 @@
+$schema: "https://blueprint.codeforamerica.org/schemas/graph-schema.yaml"
+domain: intake
+ruleset: snapInterviewProbes
+outputs:
+  - incomeInconsistency
+  - abawdMembers
+  - workRequirementMembers
+  - nonCitizenMembers
+  - studentMembers
+  - felonMembers
+inputs:
+  $.household.monthlyIncome:
+    type: number
+    description: Total reported monthly income for the household
+  $.household.monthlyExpenses:
+    type: number
+    description: Total reported monthly expenses for the household
+  $.household.members[]:
+    type: array
+  $.household.members[].id:
+    type: string
+  $.household.members[].name:
+    type: string
+  $.household.members[].age:
+    type: integer
+  $.household.members[].employed:
+    type: boolean
+    description: Whether the member has reported employment
+  $.household.members[].citizenshipStatus:
+    type: string
+    enum: [citizen, lpr, non-citizen]
+  $.household.members[].hasSponsor:
+    type: boolean
+    description: Whether the member has a sponsor who signed an affidavit of support
+  $.household.members[].enrolledHalfTime:
+    type: boolean
+    description: Whether the member is enrolled at least half-time in higher education
+  $.household.members[].hasDisqualifyingFelony:
+    type: boolean
+    description: Whether the member has a disqualifying felony conviction
+  $.household.members[].felonyComplianceConfirmed:
+    type: boolean
+    description: Whether sentence compliance has been confirmed during this interview
+  $.household.members[].workExempt:
+    type: boolean
+    description: Whether the member is exempt from general work requirements
+facts:
+  incomeInconsistency:
+    expression: "household.monthlyIncome < household.monthlyExpenses"
+    description: "Household income is less than reported expenses — probe for unreported income sources"
+  abawdMembers:
+    expression: "household.members.filter(m, m.age >= 18 && m.age <= 54 && !m.employed && !m.workExempt)"
+    description: "Members aged 18–54 with no reported employment and no ABAWD exemption"
+  workRequirementMembers:
+    expression: "household.members.filter(m, m.age >= 16 && m.age <= 59 && !m.employed && !m.workExempt)"
+    description: "Members aged 16–59 who may be subject to general work requirements — screen for exemptions"
+  nonCitizenMembers:
+    expression: "household.members.filter(m, m.citizenshipStatus != 'citizen')"
+    description: "Non-citizen members requiring immigration status and sponsor deeming screening"
+  studentMembers:
+    expression: "household.members.filter(m, m.enrolledHalfTime)"
+    description: "Members enrolled at least half-time in higher education — screen for student eligibility exemptions"
+  felonMembers:
+    expression: "household.members.filter(m, m.hasDisqualifyingFelony && !m.felonyComplianceConfirmed)"
+    description: "Members with an unconfirmed disqualifying felony — sentence compliance attestation required"
+dependencies:
+  incomeInconsistency:
+    - $.household.monthlyIncome
+    - $.household.monthlyExpenses
+  abawdMembers:
+    - $.household.members[]
+  workRequirementMembers:
+    - $.household.members[]
+  nonCitizenMembers:
+    - $.household.members[]
+  studentMembers:
+    - $.household.members[]
+  felonMembers:
+    - $.household.members[]

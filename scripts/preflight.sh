@@ -51,6 +51,10 @@ step "Clearing generated artifacts for a clean-slate run"
 rm -rf packages/generated
 pass "Cleared generated artifacts"
 
+step "Checking vendored dependencies"
+node packages/blueprint-rules-engine/scripts/check-vendor.js
+pass "Vendor check complete"
+
 step "Running unit tests"
 if npm run test:unit --workspaces --if-present 2>&1; then
   pass "Unit tests passed"

@@ -2,7 +2,6 @@
  * Evaluator tests for the Blueprint rules engine.
  *
  * These tests define the contract the evaluator must satisfy.
- * They will fail until the evaluator is implemented (Phase 8 of issue #425).
  *
  * Fixtures: tests/fixtures/snap-interview-probes/
  *   - snap-interview-probes-rules.yaml — ruleset definition
@@ -27,7 +26,11 @@ function loadRuleset() {
   return yaml.load(raw);
 }
 
-function loadScenario(filename) {
+function loadInputs(filename) {
+  return JSON.parse(readFileSync(join(fixturesDir, 'scenarios', filename), 'utf8')).inputs;
+}
+
+function loadOutputs(filename) {
   return JSON.parse(readFileSync(join(fixturesDir, 'scenarios', filename), 'utf8'));
 }
 
@@ -36,25 +39,31 @@ describe('evaluator — snap interview probes', () => {
   const ruleset = loadRuleset();
 
   it('scenario 01: no probes fire when household is straightforward', () => {
-    const { inputs, expected } = loadScenario('01-no-probes.json');
+    const inputs = loadInputs('01-no-probes-inputs.json');
+    const expected = loadOutputs('01-no-probes-outputs.json');
     const result = evaluate(ruleset, inputs);
-    assert.deepStrictEqual(result.resolved, expected.resolved);
+    assert.deepStrictEqual(result.complete, expected.complete);
+    assert.deepStrictEqual(result.placeholder, expected.placeholder);
     assert.deepStrictEqual(result.missing, expected.missing);
     assert.deepStrictEqual(result.errors, expected.errors);
   });
 
   it('scenario 02: income inconsistency, ABAWD, and non-citizen probes fire with correct members', () => {
-    const { inputs, expected } = loadScenario('02-multiple-probes.json');
+    const inputs = loadInputs('02-multiple-probes-inputs.json');
+    const expected = loadOutputs('02-multiple-probes-outputs.json');
     const result = evaluate(ruleset, inputs);
-    assert.deepStrictEqual(result.resolved, expected.resolved);
+    assert.deepStrictEqual(result.complete, expected.complete);
+    assert.deepStrictEqual(result.placeholder, expected.placeholder);
     assert.deepStrictEqual(result.missing, expected.missing);
     assert.deepStrictEqual(result.errors, expected.errors);
   });
 
   it('scenario 03: array probes resolve when monthlyExpenses is missing; incomeInconsistency is unresolvable', () => {
-    const { inputs, expected } = loadScenario('03-partial-inputs.json');
+    const inputs = loadInputs('03-partial-inputs-inputs.json');
+    const expected = loadOutputs('03-partial-inputs-outputs.json');
     const result = evaluate(ruleset, inputs);
-    assert.deepStrictEqual(result.resolved, expected.resolved);
+    assert.deepStrictEqual(result.complete, expected.complete);
+    assert.deepStrictEqual(result.placeholder, expected.placeholder);
     assert.deepStrictEqual(result.missing, expected.missing);
     assert.deepStrictEqual(result.errors, expected.errors);
   });

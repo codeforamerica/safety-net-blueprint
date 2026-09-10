@@ -29,17 +29,5 @@
         }
       ]
     }
-  },
-  "expected": {
-    "resolved": {
-      "incomeInconsistency": false,
-      "abawdMembers": [],
-      "workRequirementMembers": [],
-      "nonCitizenMembers": [],
-      "studentMembers": [],
-      "felonMembers": []
-    },
-    "missing": {},
-    "errors": {}
   }
 }

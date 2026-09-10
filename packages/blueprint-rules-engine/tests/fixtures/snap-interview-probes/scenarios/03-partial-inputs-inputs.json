@@ -1,0 +1,33 @@
+{
+  "description": "Partial inputs — monthlyExpenses missing; per-member probes still resolve, income inconsistency check cannot",
+  "inputs": {
+    "household": {
+      "monthlyIncome": 800,
+      "members": [
+        {
+          "id": "m1",
+          "name": "Maria",
+          "age": 22,
+          "employed": false,
+          "citizenshipStatus": "citizen",
+          "enrolledHalfTime": false,
+          "hasDisqualifyingFelony": false,
+          "felonyComplianceConfirmed": false,
+          "workExempt": false
+        },
+        {
+          "id": "m2",
+          "name": "Carlos",
+          "age": 45,
+          "employed": true,
+          "citizenshipStatus": "lpr",
+          "hasSponsor": true,
+          "enrolledHalfTime": false,
+          "hasDisqualifyingFelony": false,
+          "felonyComplianceConfirmed": false,
+          "workExempt": false
+        }
+      ]
+    }
+  }
+}

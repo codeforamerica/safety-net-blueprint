@@ -1,0 +1,13 @@
+{
+  "complete": {
+    "incomeInconsistency": false,
+    "abawdMembers": [],
+    "workRequirementMembers": [],
+    "nonCitizenMembers": [],
+    "studentMembers": [],
+    "felonMembers": []
+  },
+  "placeholder": {},
+  "missing": {},
+  "errors": {}
+}

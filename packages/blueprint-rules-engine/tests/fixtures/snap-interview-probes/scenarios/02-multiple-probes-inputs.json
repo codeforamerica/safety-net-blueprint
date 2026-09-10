@@ -1,0 +1,34 @@
+{
+  "description": "Household with multiple probes — income inconsistency, ABAWD member, non-citizen member with sponsor",
+  "inputs": {
+    "household": {
+      "monthlyIncome": 800,
+      "monthlyExpenses": 1200,
+      "members": [
+        {
+          "id": "m1",
+          "name": "Maria",
+          "age": 22,
+          "employed": false,
+          "citizenshipStatus": "citizen",
+          "enrolledHalfTime": false,
+          "hasDisqualifyingFelony": false,
+          "felonyComplianceConfirmed": false,
+          "workExempt": false
+        },
+        {
+          "id": "m2",
+          "name": "Carlos",
+          "age": 45,
+          "employed": true,
+          "citizenshipStatus": "lpr",
+          "hasSponsor": true,
+          "enrolledHalfTime": false,
+          "hasDisqualifyingFelony": false,
+          "felonyComplianceConfirmed": false,
+          "workExempt": false
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,172 @@
+<FactDictionaryModule>
+  <Fact path="/household_monthlyIncome">
+    <Writable>
+      <Int/>
+    </Writable>
+  </Fact>
+  <Fact path="/household_monthlyExpenses">
+    <Writable>
+      <Int/>
+    </Writable>
+  </Fact>
+  <Fact path="/household_members">
+    <Writable>
+      <Collection/>
+    </Writable>
+  </Fact>
+  <Fact path="/household_members/*/id">
+    <Writable>
+      <String/>
+    </Writable>
+  </Fact>
+  <Fact path="/household_members/*/name">
+    <Writable>
+      <String/>
+    </Writable>
+  </Fact>
+  <Fact path="/household_members/*/age">
+    <Writable>
+      <Int/>
+    </Writable>
+  </Fact>
+  <Fact path="/household_members/*/employed">
+    <Writable>
+      <Boolean/>
+    </Writable>
+  </Fact>
+  <Fact path="/household_members/*/citizenshipStatus">
+    <Writable>
+      <String/>
+    </Writable>
+  </Fact>
+  <Fact path="/household_members/*/hasSponsor">
+    <Writable>
+      <Boolean/>
+    </Writable>
+  </Fact>
+  <Fact path="/household_members/*/enrolledHalfTime">
+    <Writable>
+      <Boolean/>
+    </Writable>
+  </Fact>
+  <Fact path="/household_members/*/hasDisqualifyingFelony">
+    <Writable>
+      <Boolean/>
+    </Writable>
+  </Fact>
+  <Fact path="/household_members/*/felonyComplianceConfirmed">
+    <Writable>
+      <Boolean/>
+    </Writable>
+  </Fact>
+  <Fact path="/household_members/*/workExempt">
+    <Writable>
+      <Boolean/>
+    </Writable>
+  </Fact>
+  <Fact path="/incomeInconsistency">
+    <Derived>
+      <LessThan>
+        <Left>
+          <Dependency path="/household_monthlyIncome"/>
+        </Left>
+        <Right>
+          <Dependency path="/household_monthlyExpenses"/>
+        </Right>
+      </LessThan>
+    </Derived>
+  </Fact>
+  <Fact path="/abawdMembers">
+    <Derived>
+      <Filter path="/household_members">
+        <All>
+          <GreaterThanOrEqual>
+            <Left>
+              <Dependency path="age"/>
+            </Left>
+            <Right>
+              <Int>18</Int>
+            </Right>
+          </GreaterThanOrEqual>
+          <LessThanOrEqual>
+            <Left>
+              <Dependency path="age"/>
+            </Left>
+            <Right>
+              <Int>54</Int>
+            </Right>
+          </LessThanOrEqual>
+          <Not>
+            <Dependency path="employed"/>
+          </Not>
+          <Not>
+            <Dependency path="workExempt"/>
+          </Not>
+        </All>
+      </Filter>
+    </Derived>
+  </Fact>
+  <Fact path="/workRequirementMembers">
+    <Derived>
+      <Filter path="/household_members">
+        <All>
+          <GreaterThanOrEqual>
+            <Left>
+              <Dependency path="age"/>
+            </Left>
+            <Right>
+              <Int>16</Int>
+            </Right>
+          </GreaterThanOrEqual>
+          <LessThanOrEqual>
+            <Left>
+              <Dependency path="age"/>
+            </Left>
+            <Right>
+              <Int>59</Int>
+            </Right>
+          </LessThanOrEqual>
+          <Not>
+            <Dependency path="employed"/>
+          </Not>
+          <Not>
+            <Dependency path="workExempt"/>
+          </Not>
+        </All>
+      </Filter>
+    </Derived>
+  </Fact>
+  <Fact path="/nonCitizenMembers">
+    <Derived>
+      <Filter path="/household_members">
+        <NotEqual>
+          <Left>
+            <Dependency path="citizenshipStatus"/>
+          </Left>
+          <Right>
+            <String>citizen</String>
+          </Right>
+        </NotEqual>
+      </Filter>
+    </Derived>
+  </Fact>
+  <Fact path="/studentMembers">
+    <Derived>
+      <Filter path="/household_members">
+        <Dependency path="enrolledHalfTime"/>
+      </Filter>
+    </Derived>
+  </Fact>
+  <Fact path="/felonMembers">
+    <Derived>
+      <Filter path="/household_members">
+        <All>
+          <Dependency path="hasDisqualifyingFelony"/>
+          <Not>
+            <Dependency path="felonyComplianceConfirmed"/>
+          </Not>
+        </All>
+      </Filter>
+    </Derived>
+  </Fact>
+</FactDictionaryModule>

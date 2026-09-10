@@ -4,7 +4,8 @@
   "description": "Browser-compatible rules evaluator for Blueprint dependency graph rulesets",
   "type": "module",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./fact-graph": "./src/fact-graph.js"
   },
   "scripts": {
     "test": "node --test tests/"
