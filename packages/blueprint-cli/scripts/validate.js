@@ -62,6 +62,7 @@ async function main() {
       script: join(validateDir, 'state-machines.js'),
       args: [`--spec=${resolvedDir}`, `--resolved=${resolvedDir}`],
     },
+    { label: 'Rules', script: join(validateDir, 'rules.js'), args: [`--spec=${resolvedDir}`] },
   ];
 
   let failed = false;

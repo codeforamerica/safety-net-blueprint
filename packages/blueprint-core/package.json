@@ -23,7 +23,8 @@
     "./example-validator": "./src/validation/example-validator.js",
     "./relationships": "./src/relationships.js",
     "./compositions": "./src/compositions.js",
-    "./state-machine-validator": "./src/validation/state-machine-validator.js"
+    "./state-machine-validator": "./src/validation/state-machine-validator.js",
+    "./rules-validator": "./src/rules-validator.js"
   },
   "scripts": {
     "prepack": "node ../../scripts/build-package-readme.js",
