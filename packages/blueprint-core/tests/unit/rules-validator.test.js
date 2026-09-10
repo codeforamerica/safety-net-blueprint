@@ -163,7 +163,7 @@ test('validateRuleset', async (t) => {
         },
       },
     },
-    outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
+    outputs: { eligible: { type: 'boolean' } },
     facts: [
       {
         path: 'passesIncomeTest',
@@ -186,7 +186,7 @@ test('validateRuleset', async (t) => {
   await t.test('reports a cycle', () => {
     const ruleset = {
       inputs: {},
-      outputs: { type: 'object', properties: { a: { type: 'boolean' } } },
+      outputs: { a: { type: 'boolean' } },
       facts: [
         { path: 'a', expression: 'b', type: { type: 'boolean' } },
         { path: 'b', expression: 'a', type: { type: 'boolean' } },
@@ -201,7 +201,7 @@ test('validateRuleset', async (t) => {
       inputs: {
         household: { type: 'object', properties: { income: { type: 'number' } } },
       },
-      outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
+      outputs: { eligible: { type: 'boolean' } },
       facts: [
         { path: 'eligible', expression: 'household.income < 150', type: { type: 'boolean' } },
         { path: 'orphan', expression: 'true', type: { type: 'boolean' } },
@@ -214,7 +214,7 @@ test('validateRuleset', async (t) => {
   await t.test('reports an invalid CEL expression', () => {
     const ruleset = {
       inputs: {},
-      outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
+      outputs: { eligible: { type: 'boolean' } },
       facts: [
         { path: 'eligible', expression: 'household.income <', type: { type: 'boolean' } },
       ],
@@ -226,7 +226,7 @@ test('validateRuleset', async (t) => {
   await t.test('reports a forward reference', () => {
     const ruleset = {
       inputs: {},
-      outputs: { type: 'object', properties: { b: { type: 'boolean' } } },
+      outputs: { b: { type: 'boolean' } },
       facts: [
         // a references b, but b is declared after a
         { path: 'a', expression: 'b', type: { type: 'boolean' } },
@@ -240,7 +240,7 @@ test('validateRuleset', async (t) => {
   await t.test('does not flag a valid backward reference', () => {
     const ruleset = {
       inputs: {},
-      outputs: { type: 'object', properties: { b: { type: 'boolean' } } },
+      outputs: { b: { type: 'boolean' } },
       facts: [
         { path: 'a', expression: 'true', type: { type: 'boolean' } },
         { path: 'b', expression: 'a', type: { type: 'boolean' } }, // a is declared before b — valid
@@ -255,7 +255,7 @@ test('validateRuleset', async (t) => {
       inputs: {
         person: { $ref: 'https://blueprint.codeforamerica.org/schemas/nonexistent.yaml' },
       },
-      outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
+      outputs: { eligible: { type: 'boolean' } },
       facts: [
         { path: 'eligible', expression: 'true', type: { type: 'boolean' } },
       ],
@@ -278,7 +278,7 @@ test('validateRulesDoc', async (t) => {
           inputs: {
             household: { type: 'object', properties: { income: { type: 'number' } } },
           },
-          outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
+          outputs: { eligible: { type: 'boolean' } },
           facts: [
             { path: 'eligible', expression: 'household.income < 150', type: { type: 'boolean' } },
           ],
@@ -294,12 +294,12 @@ test('validateRulesDoc', async (t) => {
       rulesets: {
         rulesetA: {
           inputs: {},
-          outputs: { type: 'object', properties: { a: { type: 'boolean' } } },
+          outputs: { a: { type: 'boolean' } },
           facts: [{ path: 'a', expression: 'true', type: { type: 'boolean' } }],
         },
         rulesetB: {
           inputs: {},
-          outputs: { type: 'object', properties: { b: { type: 'boolean' } } },
+          outputs: { b: { type: 'boolean' } },
           facts: [
             { path: 'b', expression: 'household.income <', type: { type: 'boolean' } }, // invalid CEL
           ],

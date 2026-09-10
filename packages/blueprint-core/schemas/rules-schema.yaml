@@ -21,10 +21,15 @@
 #               type: number
 #               default: 150
 #       outputs:
-#         $ref: 'https://blueprint.codeforamerica.org/schemas/WorkRequirementsResult.yaml'
+#         eligible:
+#           type: boolean
+#         reason:
+#           type: string
 #       facts:
 #         - path: eligible
 #           expression: "person.age >= 18 && person.income < policy.incomeThreshold"
+#         - path: reason
+#           expression: "'Work requirement met'"
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/schemas/rules-schema.yaml"
@@ -74,9 +79,7 @@ $defs:
     #           age: { type: integer }
     #           income: { type: number }
     #     outputs:
-    #       type: object
-    #       properties:
-    #         eligible: { type: boolean }
+    #       eligible: { type: boolean }
     #     facts:
     #       - path: eligible
     #         expression: "person.age >= 18"
@@ -89,7 +92,10 @@ $defs:
     #       person:
     #         $ref: 'https://blueprint.codeforamerica.org/schemas/Person.yaml'
     #     outputs:
-    #       $ref: 'https://blueprint.codeforamerica.org/schemas/WorkRequirementsResult.yaml'
+    #       eligible:
+    #         type: boolean
+    #       reason:
+    #         type: string
     #     facts:
     #       - path: eligible
     #         expression: "person.age >= 18 && person.income < 150"
@@ -108,7 +114,7 @@ $defs:
       inputs:
         $ref: "#/$defs/SchemaMap"
       outputs:
-        $ref: "#/$defs/SchemaOrRef"
+        $ref: "#/$defs/SchemaMap"
       facts:
         type: array
         description: >

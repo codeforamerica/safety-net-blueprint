@@ -31,16 +31,14 @@ rulesets:
             default: 54
 
     outputs:
-      type: object
-      properties:
-        adultsFilter:
-          type: array
-        allEmployed:
-          type: boolean
-        anyNonCitizen:
-          type: boolean
-        hasMemberName:
-          type: boolean
+      adultsFilter:
+        type: array
+      allEmployed:
+        type: boolean
+      anyNonCitizen:
+        type: boolean
+      hasMemberName:
+        type: boolean
 
     facts:
       - path: adultsFilter

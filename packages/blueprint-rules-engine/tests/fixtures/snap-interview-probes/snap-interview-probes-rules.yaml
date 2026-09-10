@@ -46,20 +46,18 @@ rulesets:
                   description: Whether the member is exempt from general work requirements
 
     outputs:
-      type: object
-      properties:
-        incomeInconsistency:
-          type: boolean
-        abawdMembers:
-          type: array
-        workRequirementMembers:
-          type: array
-        nonCitizenMembers:
-          type: array
-        studentMembers:
-          type: array
-        felonMembers:
-          type: array
+      incomeInconsistency:
+        type: boolean
+      abawdMembers:
+        type: array
+      workRequirementMembers:
+        type: array
+      nonCitizenMembers:
+        type: array
+      studentMembers:
+        type: array
+      felonMembers:
+        type: array
 
     facts:
       - path: incomeInconsistency

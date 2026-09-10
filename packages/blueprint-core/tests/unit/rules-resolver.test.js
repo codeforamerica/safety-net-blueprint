@@ -214,10 +214,7 @@ test('compileRuleset — scalar inputs (expedited SNAP)', async (t) => {
         },
       },
     },
-    outputs: {
-      type: 'object',
-      properties: { eligible: { type: 'boolean' } },
-    },
+    outputs: { eligible: { type: 'boolean' } },
     facts: [
       {
         path: 'passesLowIncomeTest',
@@ -311,11 +308,8 @@ test('compileRuleset — array inputs (SNAP interview probes)', async (t) => {
       },
     },
     outputs: {
-      type: 'object',
-      properties: {
-        incomeInconsistency: { type: 'boolean' },
-        abawdMembers: { type: 'array' },
-      },
+      incomeInconsistency: { type: 'boolean' },
+      abawdMembers: { type: 'array' },
     },
     facts: [
       {
@@ -382,10 +376,7 @@ test('generateRulesEndpointOverlay', async (t) => {
             properties: { monthlyGrossIncome: { type: 'number' } },
           },
         },
-        outputs: {
-          type: 'object',
-          properties: { eligible: { type: 'boolean' } },
-        },
+        outputs: { eligible: { type: 'boolean' } },
         facts: [],
       },
     },
@@ -455,7 +446,7 @@ test('generateRulesResults', async (t) => {
                 properties: { monthlyGrossIncome: { type: 'number' } },
               },
             },
-            outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
+            outputs: { eligible: { type: 'boolean' } },
             facts: [
               { path: 'eligible', expression: 'household.monthlyGrossIncome < 150', type: { type: 'boolean' } },
             ],

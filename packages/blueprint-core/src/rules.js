@@ -197,8 +197,8 @@ export function compileRuleset(domain, rulesetName, ruleset) {
   }
 
   // Determine outputs: prefer declared outputs keys, fall back to last fact
-  const outputs = ruleset.outputs?.properties
-    ? Object.keys(ruleset.outputs.properties)
+  const outputs = ruleset.outputs && Object.keys(ruleset.outputs).length > 0
+    ? Object.keys(ruleset.outputs)
     : factPaths.slice(-1);
 
   return {
@@ -244,7 +244,7 @@ export function generateRulesEndpointOverlay(domain, rulesDoc) {
 
     // Response: evaluation contract { resolved, missing, errors }
     const resolvedProperties = {};
-    for (const [propName, propSchema] of Object.entries(ruleset.outputs?.properties || {})) {
+    for (const [propName, propSchema] of Object.entries(ruleset.outputs || {})) {
       resolvedProperties[propName] = propSchema;
     }
 

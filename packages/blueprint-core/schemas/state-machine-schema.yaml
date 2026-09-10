@@ -437,6 +437,20 @@ $defs:
   #       with:
   #         param: value
   #
+  # CALL with bind: (string form) — bind the whole HTTP response to a variable:
+  #     - call:
+  #         POST: intake/assessments
+  #         body:
+  #           applicationId: $object.id
+  #       bind: $assessment
+  #
+  # CALL with bind: (map form) — bind selected response fields to named variables:
+  #     - call:
+  #         POST: intake/assessments
+  #       bind:
+  #         eligible: $eligible
+  #         reason: $reason
+  #
   # CALL (object form) — POST/PATCH/GET/DELETE to an API path:
   #   POST to a collection path — creates a new resource:
   #     - call:
@@ -472,6 +486,31 @@ $defs:
   #         appointments: {$push: $this.subject}
   #
   #   Path slots and body values use the same $alias.field expression syntax.
+  #
+  # EVALUATE
+  #   Evaluate a ruleset (same domain) against mapped inputs; bind the result
+  #   to a variable for use in subsequent steps.
+  #   Input keys match the ruleset's SchemaMap keys; values are value expressions.
+  #   The bound variable has resolved, missing, and errors keys.
+  #
+  #   String bind form — bind the whole result to one variable:
+  #     - evaluate: workRequirements
+  #       inputs:
+  #         person: $object.applicant
+  #         policy: $policyConfig
+  #       bind: $evaluation
+  #     - if: "$evaluation.resolved.eligible == true"
+  #       then:
+  #         - emit:
+  #             type: intake.application.eligible
+  #
+  #   Map bind form — bind selected outputs to named variables:
+  #     - evaluate: snapInterviewProbes
+  #       inputs:
+  #         household: $members
+  #       bind:
+  #         incomeInconsistency: $incomeInconsistency
+  #         abawdMembers: $abawdMembers
   #
   # IF
   #   Conditional branch — evaluates a CEL expression; runs then: on true, else: on false.
@@ -517,12 +556,13 @@ $defs:
   # ---------------------------------------------------------------------------
   StepItem:
     description: >
-      A single step in a then: list. One of: SetStep, EmitStep, CallStep, IfStep, MatchStep, ForEachStep.
+      A single step in a then: list. One of: SetStep, EmitStep, CallStep, EvaluateStep, IfStep, MatchStep, ForEachStep.
       All step types accept an optional description:.
     oneOf:
       - $ref: "#/$defs/SetStep"
       - $ref: "#/$defs/EmitStep"
       - $ref: "#/$defs/CallStep"
+      - $ref: "#/$defs/EvaluateStep"
       - $ref: "#/$defs/IfStep"
       - $ref: "#/$defs/MatchStep"
       - $ref: "#/$defs/ForEachStep"
@@ -574,6 +614,53 @@ $defs:
         type: object
         additionalProperties: true
         description: Arguments passed to a named procedure (string call form only).
+      bind:
+        description: >
+          Bind the HTTP response for use in subsequent steps.
+          String form binds the whole response to one variable.
+          Map form binds selected response fields to named variables.
+        oneOf:
+          - type: string
+            description: Variable name to bind the entire HTTP response to.
+          - type: object
+            description: Map of variable names to response field paths.
+            additionalProperties:
+              type: string
+      description: {type: string}
+
+  EvaluateStep:
+    type: object
+    description: >
+      Evaluate a ruleset (same domain) against mapped inputs; bind the result
+      to a variable for use in subsequent steps.
+      The bound variable has resolved, missing, and errors keys.
+    required: [evaluate]
+    additionalProperties: false
+    properties:
+      evaluate:
+        type: string
+        description: >
+          Ruleset name to evaluate. Must match a ruleset key in the domain's
+          *-rules.yaml. The domain is implied — same as the state machine.
+      inputs:
+        type: object
+        description: >
+          Map of input names to value expressions. Keys must match the
+          ruleset's input SchemaMap keys; values are state machine value
+          expressions ($object.field, $alias.field, $request.field, etc.).
+        additionalProperties: true
+      bind:
+        description: >
+          Bind the evaluation result for use in subsequent steps.
+          String form binds the whole result to one variable (has resolved, missing, errors keys).
+          Map form binds selected output fields to named variables.
+        oneOf:
+          - type: string
+            description: Variable name to bind the entire evaluation result to.
+          - type: object
+            description: Map of variable names to evaluation output fields.
+            additionalProperties:
+              type: string
       description: {type: string}
 
   IfStep:

@@ -53,7 +53,7 @@ const minimalRuleset = {
       },
     },
   },
-  outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
+  outputs: { eligible: { type: 'boolean' } },
   facts: [
     { path: 'eligible', expression: 'person.age >= 18' },
   ],
@@ -131,21 +131,21 @@ test('rules-schema ruleset structure', async (t) => {
     assert.ok(!valid);
   });
 
-  await t.test('accepts outputs as inline schema', () => {
+  await t.test('accepts outputs as named SchemaMap', () => {
     const { valid, errors } = validate(doc({
       test: {
         ...minimalRuleset,
-        outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
+        outputs: { eligible: { type: 'boolean' }, reason: { type: 'string' } },
       },
     }));
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
-  await t.test('accepts outputs as $ref', () => {
+  await t.test('accepts outputs with per-property $ref', () => {
     const { valid, errors } = validate(doc({
       test: {
         ...minimalRuleset,
-        outputs: { $ref: 'https://blueprint.codeforamerica.org/schemas/Result.yaml' },
+        outputs: { eligible: { $ref: 'https://blueprint.codeforamerica.org/schemas/EligibilityResult.yaml' } },
       },
     }));
     assert.ok(valid, errorPaths(errors).join('\n'));
@@ -207,7 +207,7 @@ test('rules-schema facts', async (t) => {
             properties: { age: { type: 'integer' }, income: { type: 'number' } },
           },
         },
-        outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
+        outputs: { eligible: { type: 'boolean' } },
         facts: [
           { path: 'ageVerified', expression: 'person.age >= 18' },
           { path: 'incomeVerified', expression: 'person.income < 150' },
@@ -240,7 +240,7 @@ test('rules-schema inputs', async (t) => {
     const { valid, errors } = validate(doc({
       test: {
         inputs: { person: { $ref: 'https://blueprint.codeforamerica.org/schemas/Person.yaml' } },
-        outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
+        outputs: { eligible: { type: 'boolean' } },
         facts: [{ path: 'eligible', expression: 'person.age >= 18' }],
       },
     }));
@@ -256,7 +256,7 @@ test('rules-schema inputs', async (t) => {
             properties: { incomeThreshold: { type: 'number', default: 150 } },
           },
         },
-        outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
+        outputs: { eligible: { type: 'boolean' } },
         facts: [{ path: 'eligible', expression: 'policy.incomeThreshold > 0' }],
       },
     }));
@@ -316,12 +316,12 @@ test('rules-schema multiple rulesets', async (t) => {
     const { valid, errors } = validate(doc({
       ageCheck: {
         inputs: { person: { type: 'object', properties: { age: { type: 'integer' } } } },
-        outputs: { type: 'object', properties: { ageVerified: { type: 'boolean' } } },
+        outputs: { ageVerified: { type: 'boolean' } },
         facts: [{ path: 'ageVerified', expression: 'person.age >= 18' }],
       },
       incomeCheck: {
         inputs: { person: { type: 'object', properties: { income: { type: 'number' } } } },
-        outputs: { type: 'object', properties: { incomeVerified: { type: 'boolean' } } },
+        outputs: { incomeVerified: { type: 'boolean' } },
         facts: [{ path: 'incomeVerified', expression: 'person.income < 150' }],
       },
     }));

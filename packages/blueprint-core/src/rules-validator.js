@@ -246,7 +246,7 @@ export function validateRuleset(domain, rulesetName, ruleset) {
   // 4. $ref resolution
   const schemasToCheck = [
     ...Object.values(ruleset.inputs || {}),
-    ruleset.outputs,
+    ...Object.values(ruleset.outputs || {}),
   ].filter(Boolean);
 
   for (const schema of schemasToCheck) {
