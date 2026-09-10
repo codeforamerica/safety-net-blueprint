@@ -37,7 +37,7 @@ import { join, dirname, basename, resolve as resolvePath } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { bundleSpec } from '@codeforamerica/blueprint-core/bundle';
-import { loadContractFiles } from '@codeforamerica/blueprint-core';
+import { loadContractFiles, schemasDir } from '@codeforamerica/blueprint-core';
 import { collectNamedEnumDefs } from './collect-named-enum-defs.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -253,12 +253,20 @@ async function generateAnnotationsAndPolicies(specsDir, outputDir, annotationDom
     domainMap.get(domain).push({ file: f, data });
   }
 
+  // Derive annotation section names from the schema $defs: entries named
+  // {Section}AnnotationMap define the valid sections. Strip the suffix and
+  // lowercase the first letter to get the section key (e.g. OperationsAnnotationMap → operations).
+  const annotationsSchema = yaml.load(readFileSync(join(schemasDir, 'annotations-schema.yaml'), 'utf8'));
+  const annotationSections = Object.keys(annotationsSchema.$defs || {})
+    .filter(k => k.endsWith('AnnotationMap') && k !== 'Annotation')
+    .map(k => { const s = k.replace(/AnnotationMap$/, ''); return s[0].toLowerCase() + s.slice(1); });
+
   for (const [domain, entries] of domainMap) {
-    const merged = { schema: {}, operations: {}, events: {} };
+    const merged = Object.fromEntries(annotationSections.map(s => [s, {}]));
     for (const { data } of entries) {
-      Object.assign(merged.schema, data.schema || {});
-      Object.assign(merged.operations, data.operations || {});
-      Object.assign(merged.events, data.events || {});
+      for (const section of annotationSections) {
+        Object.assign(merged[section], data[section] || {});
+      }
     }
 
     // Write per-domain annotations.ts — `Annotations` is part of the domain namespace.

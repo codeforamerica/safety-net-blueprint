@@ -1,7 +1,10 @@
 # JSON Schema for domain annotation YAML files.
 # Validates structural correctness. The leaf level (individual annotation objects)
-# is intentionally open — states add custom annotation keys via overlay without
-# schema changes.
+# is intentionally open — states add custom annotation types via additionalProperties.
+#
+# Section definitions follow the naming convention {SectionName}AnnotationMap in $defs,
+# where {SectionName} matches the pluralized section key (e.g., OperationsAnnotationMap → operations).
+# This allows tooling to derive the list of valid sections from $defs without hardcoding them.
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/schemas/annotations-schema.yaml"
@@ -9,7 +12,7 @@ title: Domain Annotations
 description: >
   Schema for domain annotation files ({domain}-annotations.yaml).
   Annotation files attach machine-readable metadata to specific elements in
-  contract artifacts. Three sections correspond to the three artifact types:
+  contract artifacts. Sections correspond to contract artifact types:
 
     schema     — data model fields, keyed by JSON path notation
                  (e.g., application.members[].personalInformation.ssn)
@@ -17,6 +20,8 @@ description: >
                  (e.g., application.submit, verification.satisfy)
     events     — AsyncAPI event channels, keyed by event type
                  (e.g., intake.application.submitted)
+    facts      — Ruleset facts, keyed by {ruleset}.{factName}
+                 (e.g., snapInterviewProbes.incomeInconsistency)
 
   Annotations reference policies by ID from the policy registry. They never
   embed citation text directly.
@@ -53,20 +58,20 @@ properties:
       they represent the same behavioral event. Keys are qualified by the state
       machine object name using dot notation (e.g., application.submit,
       verification.satisfy).
-    $ref: "#/$defs/OperationAnnotationMap"
+    $ref: "#/$defs/OperationsAnnotationMap"
 
   events:
     description: >
       Annotations for AsyncAPI event channels.
       Keys are the event type identifier (e.g., intake.application.submitted).
-    $ref: "#/$defs/EventAnnotationMap"
+    $ref: "#/$defs/EventsAnnotationMap"
 
   facts:
     description: >
-      Annotations for ruleset facts, keyed by fact path.
-      Fact paths are camelCase identifiers matching the path field in a rules contract
-      (e.g., incomeInconsistency, abawdMembers).
-    $ref: "#/$defs/FactAnnotationMap"
+      Annotations for ruleset facts, keyed by {ruleset}.{factName}.
+      The ruleset name matches the ruleset field in the compiled graph file.
+      (e.g., snapInterviewProbes.incomeInconsistency)
+    $ref: "#/$defs/FactsAnnotationMap"
 
 $defs:
   SchemaAnnotationMap:
@@ -81,7 +86,7 @@ $defs:
     additionalProperties:
       $ref: "#/$defs/Annotation"
 
-  OperationAnnotationMap:
+  OperationsAnnotationMap:
     type: object
     description: >
       Map of qualified action IDs to annotation objects.
@@ -93,7 +98,7 @@ $defs:
     additionalProperties:
       $ref: "#/$defs/Annotation"
 
-  EventAnnotationMap:
+  EventsAnnotationMap:
     type: object
     description: >
       Map of AsyncAPI channel addresses to annotation objects.
@@ -105,24 +110,25 @@ $defs:
     additionalProperties:
       $ref: "#/$defs/Annotation"
 
-  FactAnnotationMap:
+  FactsAnnotationMap:
     type: object
     description: >
-      Map of fact paths to annotation objects.
-      Keys are camelCase identifiers matching the path field in a rules contract
-      (e.g., incomeInconsistency, abawdMembers).
+      Map of ruleset fact keys to annotation objects.
+      Keys are dot-separated: {ruleset}.{factName}, where ruleset matches
+      the ruleset field in the compiled graph file.
+      (e.g., snapInterviewProbes.incomeInconsistency)
     minProperties: 1
     propertyNames:
-      pattern: "^[a-z][a-zA-Z0-9]*$"
+      pattern: "^[a-z][a-zA-Z0-9]*\\.[a-z][a-zA-Z0-9]*$"
     additionalProperties:
       $ref: "#/$defs/Annotation"
 
   Annotation:
     type: object
     description: >
-      Metadata for a specific contract element. Standard properties are defined
-      here; additional properties are allowed so states can add domain-specific
-      annotation types via overlay without schema changes.
+      Metadata for a specific contract element. The baseline defines policies
+      and dataClassification; all other properties are open so adopters can
+      attach domain-specific annotation types without schema changes.
     additionalProperties: true
     properties:
       policies:
@@ -142,17 +148,3 @@ $defs:
           type: string
           enum: [pii, fti, phi, phi-behavioral, cjis]
         minItems: 1
-      programs:
-        description: >
-          Programs this element is relevant to. Shorthand array form (e.g., [snap])
-          defaults all entries to "required" strength. Map form allows per-program
-          strength: required, preferred, or optional.
-        oneOf:
-          - type: array
-            items:
-              type: string
-            minItems: 1
-          - type: object
-            additionalProperties:
-              type: string
-              enum: [required, preferred, optional]

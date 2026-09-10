@@ -203,17 +203,22 @@ export function buildPolicyIndex(specsDir) {
 
 /**
  * Validate all policy citations in an annotation document against the policy index.
- * Checks schema, operations, and events sections.
+ * Checks all annotation sections generically — any section key with a policies: array
+ * is validated, regardless of which section it is in.
  *
  * Returns an array of error message strings (empty if all citations are valid).
  */
+const ANNOTATION_METADATA_FIELDS = new Set(['$schema', 'version', 'domain']);
+
 export function validateAnnotationPolicyCitations(annotationDoc, policyIndex) {
   if (policyIndex.size === 0) return []; // no policies loaded — skip
 
   const errors = [];
 
-  function checkSection(sectionName, section) {
-    for (const [key, entry] of Object.entries(section || {})) {
+  for (const [sectionName, section] of Object.entries(annotationDoc || {})) {
+    if (ANNOTATION_METADATA_FIELDS.has(sectionName)) continue;
+    if (typeof section !== 'object' || Array.isArray(section)) continue;
+    for (const [key, entry] of Object.entries(section)) {
       for (const policyId of entry?.policies || []) {
         if (!policyIndex.has(policyId)) {
           errors.push(`Policy "${policyId}" cited at ${sectionName}["${key}"] not found in policy registry`);
@@ -221,10 +226,6 @@ export function validateAnnotationPolicyCitations(annotationDoc, policyIndex) {
       }
     }
   }
-
-  checkSection('schema', annotationDoc?.schema);
-  checkSection('operations', annotationDoc?.operations);
-  checkSection('events', annotationDoc?.events);
 
   return errors;
 }
@@ -464,6 +465,63 @@ export function validateRelationshipTargets(spec, schemaIndex) {
   return errors;
 }
 
+/**
+ * Validate a single annotation event key against the AsyncAPI channel index.
+ * Key format: the event type identifier (e.g. "intake.application.submitted").
+ * Returns null on success, or an error message string on failure.
+ */
+export function validateAnnotationEvent(eventKey, allChannels) {
+  if (allChannels.size === 0) return null; // no AsyncAPI specs loaded — skip
+  if (!allChannels.has(eventKey)) {
+    return `Event "${eventKey}" not found in any AsyncAPI spec`;
+  }
+  return null;
+}
+
+/**
+ * Build an index of known fact names from all compiled graph files.
+ * Uses detectType to discover graph files by $schema rather than filename.
+ * Returns: Map<rulesetName, Set<factName>>
+ */
+export function buildGraphIndex(specsDir) {
+  const index = new Map();
+
+  for (const filePath of walkForPattern(specsDir, '.yaml')) {
+    const file = basename(filePath);
+    let doc;
+    try { doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); } catch { continue; }
+    if (detectType(file, doc) !== 'graph') continue;
+
+    const ruleset = doc.ruleset;
+    if (!ruleset) continue;
+
+    index.set(ruleset, new Set(Object.keys(doc.facts || {})));
+  }
+
+  return index;
+}
+
+/**
+ * Validate a single annotation fact key against the graph index.
+ * Key format: "{ruleset}.{factName}" (e.g. "snapInterviewProbes.incomeInconsistency").
+ * Returns null on success, or an error message string on failure.
+ */
+export function validateFactKey(key, graphIndex) {
+  if (graphIndex.size === 0) return null; // no graphs loaded — skip
+
+  const dot = key.indexOf('.');
+  if (dot === -1) return `Fact key "${key}" must be in {ruleset}.{factName} format`;
+
+  const ruleset = key.slice(0, dot);
+  const factName = key.slice(dot + 1);
+
+  const facts = graphIndex.get(ruleset);
+  if (!facts) return `Ruleset "${ruleset}" not found in any compiled graph`;
+  if (!facts.has(factName)) return `Fact "${factName}" not found in ruleset "${ruleset}"`;
+
+  return null;
+}
+
 async function main() {
   const options = parseArgs();
 
@@ -501,6 +559,18 @@ async function main() {
   console.log(`  Found ${annotationFiles.length} annotation file(s)\n`);
 
   const resourceSchemaMap = buildResourceSchemaMap(specDir);
+  const actionIndex = buildStateMachineActionIndex(specDir);
+  const channelIndex = buildAsyncApiChannelIndex(specDir);
+  const graphIndex = buildGraphIndex(specDir);
+
+  // Section validator dispatch — each entry validates one annotation key.
+  // Adding a new section type: add a buildXIndex() call above and one entry here.
+  const sectionValidators = {
+    schema:     key => validateAnnotationPath(key, resourceSchemaMap),
+    operations: key => validateAnnotationOperation(key, actionIndex),
+    events:     key => validateAnnotationEvent(key, channelIndex.all),
+    facts:      key => validateFactKey(key, graphIndex),
+  };
 
   let totalErrors = 0;
 
@@ -515,21 +585,30 @@ async function main() {
       continue;
     }
 
-    const schemaKeys = Object.keys(doc?.schema || {});
     const fileErrors = [];
+    let totalKeys = 0;
 
-    for (const pathKey of schemaKeys) {
-      const err = validateAnnotationPath(pathKey, resourceSchemaMap);
-      if (err) fileErrors.push({ pathKey, message: err });
+    for (const [sectionName, sectionData] of Object.entries(doc || {})) {
+      if (ANNOTATION_METADATA_FIELDS.has(sectionName)) continue;
+      if (typeof sectionData !== 'object' || Array.isArray(sectionData)) continue;
+
+      const validateKey = sectionValidators[sectionName];
+      if (!validateKey) continue; // unknown section — caught by schema validation
+
+      for (const key of Object.keys(sectionData)) {
+        totalKeys++;
+        const err = validateKey(key);
+        if (err) fileErrors.push({ section: sectionName, key, message: err });
+      }
     }
 
     if (fileErrors.length === 0) {
-      console.log(`  ✓ ${file} (${schemaKeys.length} paths)`);
+      console.log(`  ✓ ${file} (${totalKeys} keys)`);
     } else {
       console.error(`  ✗ ${file}`);
-      for (const { pathKey, message } of fileErrors) {
+      for (const { section, key, message } of fileErrors) {
         console.error(`      ${message}`);
-        console.error(`        at: schema["${pathKey}"]`);
+        console.error(`        at: ${section}["${key}"]`);
       }
       totalErrors += fileErrors.length;
     }
@@ -544,7 +623,6 @@ async function main() {
   console.log('='.repeat(70));
   console.log(`  Directory: ${specDir}\n`);
 
-  const channelIndex = buildAsyncApiChannelIndex(specDir);
   const files = walkForPattern(specDir, '.yaml').map(f => relative(specDir, f));
   const stateMachineFiles = files.filter(f => f.endsWith('-state-machine.yaml'));
 
