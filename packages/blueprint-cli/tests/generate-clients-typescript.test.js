@@ -284,8 +284,21 @@ properties:
       return readFileSync(join(outputDir, domain, 'annotations.ts'), 'utf8');
     }
 
+    async function generate(files) {
+      const { specsDir, outputDir } = makeDir(files);
+      const domains = [];
+      await generateAnnotationsAndPolicies(specsDir, outputDir, domains);
+      const result = {};
+      for (const domain of domains) {
+        const content = readFileSync(join(outputDir, domain, 'annotations.ts'), 'utf8');
+        const match = content.match(/export const Annotations = ([\s\S]+?) as const;/);
+        if (match) result[domain] = JSON.parse(match[1]);
+      }
+      return result;
+    }
+
     it('uses domain property from file as domain name', async () => {
-      const { specsDir, outputDir } = makeDir({
+      const exports = await generate({
         'intake-annotations.yaml': `
 domain: intake
 schema:
@@ -295,14 +308,11 @@ operations: {}
 events: {}
 `,
       });
-      const domains = [];
-      await generateAnnotationsAndPolicies(specsDir, outputDir, domains);
-      assert.ok(domains.includes('intake'));
-      assert.ok(readAnnotations(outputDir, 'intake').includes('export const Annotations'));
+      assert.ok(exports.intake, 'intake domain should be exported');
     });
 
     it('uses domain property over filename when they differ', async () => {
-      const { specsDir, outputDir } = makeDir({
+      const exports = await generate({
         'foo-annotations.yaml': `
 domain: intake
 schema:
@@ -312,14 +322,12 @@ operations: {}
 events: {}
 `,
       });
-      const domains = [];
-      await generateAnnotationsAndPolicies(specsDir, outputDir, domains);
-      assert.ok(domains.includes('intake'), 'should use domain from file, not filename');
-      assert.ok(!domains.includes('foo'), 'should not use filename-derived name');
+      assert.ok(exports.intake, 'should use domain from file, not filename');
+      assert.ok(!exports.foo, 'should not use filename-derived name');
     });
 
     it('falls back to filename when domain property is absent', async () => {
-      const { specsDir, outputDir } = makeDir({
+      const exports = await generate({
         'workflow-annotations.yaml': `
 schema:
   task.assignedAt:
@@ -328,13 +336,11 @@ operations: {}
 events: {}
 `,
       });
-      const domains = [];
-      await generateAnnotationsAndPolicies(specsDir, outputDir, domains);
-      assert.ok(domains.includes('workflow'));
+      assert.ok(exports.workflow, 'workflow domain should be exported');
     });
 
     it('generates exports for multiple domains', async () => {
-      const { specsDir, outputDir } = makeDir({
+      const exports = await generate({
         'intake-annotations.yaml': `
 domain: intake
 schema:
@@ -352,16 +358,12 @@ operations:
 events: {}
 `,
       });
-      const domains = [];
-      await generateAnnotationsAndPolicies(specsDir, outputDir, domains);
-      assert.ok(domains.includes('intake'));
-      assert.ok(domains.includes('workflow'));
-      assert.ok(readAnnotations(outputDir, 'intake').includes('export const Annotations'));
-      assert.ok(readAnnotations(outputDir, 'workflow').includes('export const Annotations'));
+      assert.ok(exports.intake, 'intake domain should be exported');
+      assert.ok(exports.workflow, 'workflow domain should be exported');
     });
 
     it('merges multiple files with the same domain', async () => {
-      const { specsDir, outputDir } = makeDir({
+      const exports = await generate({
         'intake-annotations.yaml': `
 domain: intake
 schema:
@@ -379,22 +381,16 @@ operations: {}
 events: {}
 `,
       });
-      const domains = [];
-      await generateAnnotationsAndPolicies(specsDir, outputDir, domains);
-      assert.deepStrictEqual(domains, ['intake']);
-      const content = readAnnotations(outputDir, 'intake');
-      assert.ok(content.includes('application.submittedAt'));
-      assert.ok(content.includes('application.members.ssn'));
+      assert.ok(exports.intake.schema['application.submittedAt'], 'base schema field should be present');
+      assert.ok(exports.intake.schema['application.members.ssn'], 'extra schema field should be present');
+      assert.deepStrictEqual(exports.intake.schema['application.members.ssn'].dataClassification, ['pii', 'fti']);
     });
 
     it('generates no annotation files when no annotation files are present', async () => {
-      const { specsDir, outputDir } = makeDir({
+      const exports = await generate({
         'intake-openapi.yaml': 'openapi: 3.1.0\ninfo:\n  title: Test\n  version: 1.0.0\n',
       });
-      const domains = [];
-      await generateAnnotationsAndPolicies(specsDir, outputDir, domains);
-      assert.deepStrictEqual(domains, []);
-      assert.throws(() => readAnnotations(outputDir, 'intake'), 'annotations.ts should not be written');
+      assert.deepStrictEqual(exports, {});
     });
 
     it('patches domain index.ts with Annotations re-export when index exists', async () => {
@@ -437,6 +433,253 @@ events: {}
       assert.ok(domains.includes('intake'));
       // annotations.ts written, no error thrown
       assert.ok(readAnnotations(outputDir, 'intake').includes('export const Annotations'));
+    });
+
+    it('includes facts section in generated Annotations export', async () => {
+      const exports = await generate({
+        'intake-annotations.yaml': `
+domain: intake
+facts:
+  snapInterviewProbes.incomeInconsistency:
+    policies: [snap-income-reporting]
+    dataClassification: [pii]
+  snapInterviewProbes.abawdMembers:
+    policies: [snap-work-requirement]
+`,
+      });
+      assert.ok(exports.intake.facts['snapInterviewProbes.incomeInconsistency'], 'fact should be present');
+      assert.ok(exports.intake.facts['snapInterviewProbes.abawdMembers'], 'second fact should be present');
+    });
+
+    it('merges facts from multiple files for the same domain', async () => {
+      const exports = await generate({
+        'intake-annotations.yaml': `
+domain: intake
+facts:
+  snapInterviewProbes.incomeInconsistency:
+    policies: [snap-income-reporting]
+`,
+        'intake-annotations-state.yaml': `
+domain: intake
+facts:
+  snapInterviewProbes.abawdMembers:
+    policies: [snap-work-requirement]
+`,
+      });
+      assert.ok(exports.intake.facts['snapInterviewProbes.incomeInconsistency']);
+      assert.ok(exports.intake.facts['snapInterviewProbes.abawdMembers']);
+    });
+
+    describe('annotation content — domain isolation', () => {
+      it('intake schema keys do not appear in workflow Annotations', async () => {
+        const exports = await generate({
+          'intake-annotations.yaml': `
+domain: intake
+schema:
+  application.submittedAt:
+    policies: [snap-processing-clock]
+operations: {}
+events: {}
+`,
+          'workflow-annotations.yaml': `
+domain: workflow
+schema: {}
+operations:
+  task.claim:
+    policies: [workflow-assignment-policy]
+events: {}
+`,
+        });
+
+        assert.ok(!exports.workflow.schema['application.submittedAt'],
+          'intake schema key should not appear in workflow Annotations');
+        assert.ok(!exports.intake.operations['task.claim'],
+          'workflow operation key should not appear in intake Annotations');
+      });
+    });
+
+    describe('annotation content — entry shape', () => {
+      it('schema field is accessible by path with policies array', async () => {
+        const exports = await generate({
+          'intake-annotations.yaml': `
+domain: intake
+schema:
+  application.submittedAt:
+    policies: [snap-processing-clock, medicaid-processing-clock]
+operations: {}
+events: {}
+`,
+        });
+
+        const field = exports.intake.schema['application.submittedAt'];
+        assert.ok(Array.isArray(field.policies));
+        assert.equal(field.policies.length, 2);
+        assert.ok(field.policies.includes('snap-processing-clock'));
+      });
+
+      it('dataClassification is an accessible array on sensitive fields', async () => {
+        const exports = await generate({
+          'intake-annotations.yaml': `
+domain: intake
+schema:
+  application.members[].personalInformation.ssn:
+    dataClassification: [pii]
+    policies: [snap-ssn-requirement]
+operations: {}
+events: {}
+`,
+        });
+
+        const field = exports.intake.schema['application.members[].personalInformation.ssn'];
+        assert.ok(Array.isArray(field.dataClassification));
+        assert.ok(field.dataClassification.includes('pii'));
+      });
+
+      it('events section is accessible with policies', async () => {
+        const exports = await generate({
+          'intake-annotations.yaml': `
+domain: intake
+schema: {}
+operations: {}
+events:
+  intake.application.submitted:
+    policies: [snap-processing-clock]
+`,
+        });
+
+        const event = exports.intake.events['intake.application.submitted'];
+        assert.ok(event, 'event annotation should be present');
+        assert.ok(Array.isArray(event.policies));
+        assert.ok(event.policies.includes('snap-processing-clock'));
+      });
+
+      it('facts are accessible by {ruleset}.{factName} key with dataClassification', async () => {
+        const exports = await generate({
+          'intake-annotations.yaml': `
+domain: intake
+facts:
+  snapInterviewProbes.incomeInconsistency:
+    policies: [snap-income-reporting]
+    dataClassification: [pii]
+`,
+        });
+
+        const fact = exports.intake.facts['snapInterviewProbes.incomeInconsistency'];
+        assert.ok(fact, 'fact annotation should be present');
+        assert.ok(fact.policies.includes('snap-income-reporting'));
+        assert.ok(fact.dataClassification.includes('pii'));
+      });
+    });
+
+    describe('annotation content — consumer access patterns', () => {
+      const FIXTURE = {
+        'intake-annotations.yaml': `
+domain: intake
+schema:
+  application.submittedAt:
+    policies: [snap-processing-clock, medicaid-processing-clock]
+    programs: [snap, medicaid]
+  application.registerToVote:
+    policies: [nvra-voter-registration-offer]
+    programs: [snap, medicaid, tanf, chip]
+  application.members[].personalInformation.ssn:
+    dataClassification: [pii]
+    policies: [snap-ssn-requirement]
+    programs: [snap, medicaid]
+  application.members[].personalInformation.dateOfBirth:
+    dataClassification: [pii]
+    policies: [chip-age-eligibility]
+    programs: [snap, medicaid, chip]
+  application.incomes[]:
+    dataClassification: [pii, fti]
+    policies: [snap-income-verification]
+    programs: [snap, medicaid]
+operations:
+  application.submit:
+    policies: [snap-processing-clock, snap-right-to-apply]
+    programs: [snap, medicaid]
+  application.approve-determination:
+    policies: [snap-supervisor-review]
+    programs: [snap]
+events:
+  intake.application.submitted:
+    policies: [snap-processing-clock]
+    programs: [snap, medicaid]
+  intake.application.closed:
+    policies: [snap-notice-of-eligibility]
+    programs: [snap]
+`,
+      };
+
+      it('filter schema fields by program', async () => {
+        const { intake } = await generate(FIXTURE);
+        const snapFields = Object.entries(intake.schema)
+          .filter(([, v]) => v.programs?.includes('snap'))
+          .map(([k]) => k);
+        assert.ok(snapFields.includes('application.submittedAt'));
+        assert.ok(snapFields.includes('application.registerToVote'));
+        assert.ok(!snapFields.includes('application.nonexistent'));
+      });
+
+      it('find all PII fields', async () => {
+        const { intake } = await generate(FIXTURE);
+        const piiFields = Object.entries(intake.schema)
+          .filter(([, v]) => v.dataClassification?.includes('pii'))
+          .map(([k]) => k);
+        assert.ok(piiFields.includes('application.members[].personalInformation.ssn'));
+        assert.ok(piiFields.includes('application.members[].personalInformation.dateOfBirth'));
+        assert.ok(piiFields.includes('application.incomes[]'));
+        assert.ok(!piiFields.includes('application.submittedAt'));
+      });
+
+      it('find fields carrying FTI data classification', async () => {
+        const { intake } = await generate(FIXTURE);
+        const ftiFields = Object.entries(intake.schema)
+          .filter(([, v]) => v.dataClassification?.includes('fti'))
+          .map(([k]) => k);
+        assert.ok(ftiFields.includes('application.incomes[]'));
+        assert.ok(!ftiFields.includes('application.members[].personalInformation.ssn'));
+      });
+
+      it('look up which policies govern an operation', async () => {
+        const { intake } = await generate(FIXTURE);
+        const submitPolicies = intake.operations['application.submit']?.policies ?? [];
+        assert.ok(submitPolicies.includes('snap-processing-clock'));
+        assert.ok(submitPolicies.includes('snap-right-to-apply'));
+      });
+
+      it('check whether an operation requires supervisor review', async () => {
+        const { intake } = await generate(FIXTURE);
+        const requiresSupervisorReview = (key) =>
+          intake.operations[key]?.policies?.includes('snap-supervisor-review') ?? false;
+        assert.equal(requiresSupervisorReview('application.approve-determination'), true);
+        assert.equal(requiresSupervisorReview('application.submit'), false);
+      });
+
+      it('find all schema fields that cite a specific policy', async () => {
+        const { intake } = await generate(FIXTURE);
+        const fieldsWithPolicy = (policyId) =>
+          Object.entries(intake.schema)
+            .filter(([, v]) => v.policies?.includes(policyId))
+            .map(([k]) => k);
+        const clockFields = fieldsWithPolicy('snap-processing-clock');
+        assert.ok(clockFields.includes('application.submittedAt'));
+        assert.ok(!clockFields.includes('application.registerToVote'));
+      });
+
+      it('look up which policies are triggered by an event', async () => {
+        const { intake } = await generate(FIXTURE);
+        const eventPolicies = intake.events['intake.application.submitted']?.policies ?? [];
+        assert.ok(eventPolicies.includes('snap-processing-clock'));
+      });
+
+      it('check whether a field is PII before logging or storing it', async () => {
+        const { intake } = await generate(FIXTURE);
+        const isPii = (fieldPath) =>
+          intake.schema[fieldPath]?.dataClassification?.includes('pii') ?? false;
+        assert.equal(isPii('application.members[].personalInformation.ssn'), true);
+        assert.equal(isPii('application.submittedAt'), false);
+      });
     });
   });
 

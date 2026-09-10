@@ -14,13 +14,15 @@ const __dirname = dirname(__filename);
 const fixturesDir = join(__dirname, 'fixtures');
 
 test('loadAnnotations with fixture data', async (t) => {
-  await t.test('loads schema, operations, and events from fixture annotations', () => {
+  await t.test('loads schema, operations, events, and facts from fixture annotations', () => {
     const result = loadAnnotations('widgets', join(fixturesDir, 'widgets'));
     assert.ok(Object.keys(result.schema).length > 0, 'schema should have entries');
     assert.ok(Object.keys(result.operations).length > 0, 'operations should have entries');
     assert.ok(Object.keys(result.events).length > 0, 'events should have entries');
+    assert.ok(Object.keys(result.facts).length > 0, 'facts should have entries');
     assert.ok(result.schema['widgets.name'], 'should include widgets.name annotation');
     assert.ok(result.schema['widgets.name'].reason, 'annotation should have reason field');
+    assert.ok(result.facts['widgetEligibility.eligible'], 'should include fact annotation');
   });
 });
 

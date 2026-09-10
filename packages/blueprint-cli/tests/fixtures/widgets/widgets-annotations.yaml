@@ -10,3 +10,8 @@ operations:
 events:
   widgets.widget.created:
     programs: []
+facts:
+  widgetEligibility.eligible:
+    policies: []
+  widgetEligibility.reason:
+    policies: []
