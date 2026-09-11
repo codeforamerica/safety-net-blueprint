@@ -17,17 +17,15 @@
     "build": "node ../blueprint-explorer/build.js --content=. --resolved=../generated/contracts --clients=../generated/clients"
   },
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.11.0"
   },
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
-    "url": "https://github.com/codeforamerica/safety-net-blueprint",
+    "url": "git+https://github.com/codeforamerica/safety-net-blueprint.git",
     "directory": "packages/safety-net-explorer"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "private": true,
   "devDependencies": {
     "@codeforamerica/blueprint-explorer": "^0.1.0"
   }

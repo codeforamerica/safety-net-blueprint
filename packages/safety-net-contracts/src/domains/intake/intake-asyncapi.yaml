@@ -1,7 +1,8 @@
 asyncapi: 3.0.0
 info:
   title: Intake Domain Events
-  version: 1.0.0
+  version: 0.11.0
+  x-status: beta
   description: |
     Event catalog for the Intake domain. All events are CloudEvents 1.0 envelopes
     extending the base Event schema. The type field in each event schema carries a

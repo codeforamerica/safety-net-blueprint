@@ -1,7 +1,8 @@
 asyncapi: 3.0.0
 info:
   title: Workflow Domain Events
-  version: 1.0.0
+  version: 0.5.0
+  x-status: beta
   x-domain: workflow
   description: |
     Event catalog for the Workflow domain. All events are CloudEvents 1.0

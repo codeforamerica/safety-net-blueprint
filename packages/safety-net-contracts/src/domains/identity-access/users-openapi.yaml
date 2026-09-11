@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
   title: User Service API
-  version: 0.1.0
+  version: 0.5.0
   x-domain: identity-access
-  x-status: stable
+  x-status: beta
   x-visibility: internal
   description: |
     Manages user accounts, roles, and permissions for safety net program APIs.

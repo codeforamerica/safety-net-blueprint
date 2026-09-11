@@ -265,6 +265,7 @@ function dispatchStubResponse(stub, envelope) {
       type: callbackEvent,
       source: '/scheduler',
       subject: envelope.subject,
+      causationid: envelope.id,
       data: firedData,
     });
     console.log(`[stub] matched ${stub.id} → fired ${callbackEvent} (timer callback)`);
@@ -297,6 +298,7 @@ function dispatchStubResponse(stub, envelope) {
     type: fullType,
     source: source || '/system',
     subject: subject !== undefined ? subject : envelope.subject,
+    causationid: envelope.id,
     data: Object.keys(resolvedData).length > 0 ? resolvedData : null,
   });
   console.log(`[stub] matched ${stub.id} → fired ${fullType}`);

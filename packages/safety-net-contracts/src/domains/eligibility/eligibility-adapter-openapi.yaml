@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
   title: Eligibility Adapter API
-  version: 1.0.0
+  version: 0.5.0
   x-domain: eligibility
-  x-status: stable
+  x-status: beta
   x-visibility: external
   description: |
     Contracted interface for the state-provided eligibility evaluation adapter.
