@@ -132,7 +132,7 @@ If your change affects a published package, include a changeset before opening a
 
 ## Requirements
 
-Node.js >= 20.19.0
+Node.js >= 22.11.0
 
 ## License
 

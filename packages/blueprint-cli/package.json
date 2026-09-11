@@ -17,11 +17,11 @@
   },
 
   "scripts": {
-    "test": "node --test tests/",
-    "test:unit": "node --test tests/"
+    "test": "node --test tests/*.test.js",
+    "test:unit": "node --test tests/*.test.js"
   },
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.11.0"
   },
   "license": "SEE LICENSE IN LICENSE",
   "repository": {

@@ -13,7 +13,7 @@ See also: [Testing Guide](../guides/testing.md) | [Mock Server Guide](../guides/
 
 ## Prerequisites
 
-- Node.js >= 20.19.0
+- Node.js >= 22.11.0
 - npm
 
 ## Initial Setup

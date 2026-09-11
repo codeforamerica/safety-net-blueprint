@@ -18,7 +18,7 @@ The framework is domain-agnostic. It doesn't know or care what your domain is â€
 
 ## Prerequisites
 
-- Node.js >= 20.19.0
+- Node.js >= 22.11.0
 - Git
 - Familiarity with OpenAPI
 
