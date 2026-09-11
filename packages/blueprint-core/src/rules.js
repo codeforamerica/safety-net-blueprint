@@ -19,6 +19,27 @@
  * a stub request/response schema to the domain's OpenAPI spec.
  */
 
+import { loadContractFiles } from './contract-files.js';
+
+// ── Discovery ─────────────────────────────────────────────────────────────────
+
+/**
+ * Discover rules YAML files in a directory.
+ *
+ * @param {string} specsDir - Path to the specs directory
+ * @returns {Array<{ filePath: string, domain: string, doc: Object }>}
+ */
+export function discoverRules(specsDir) {
+  const fileMap = loadContractFiles(specsDir);
+  const results = [];
+  for (const [filePath, { content: doc, type, domain }] of fileMap) {
+    if (type !== 'rules') continue;
+    if (!doc.rulesets) continue;
+    results.push({ filePath, domain: domain || doc.domain, doc });
+  }
+  return results;
+}
+
 // ── Input expansion ──────────────────────────────────────────────────────────
 
 /**

@@ -1,0 +1,23 @@
+$schema: "https://blueprint.codeforamerica.org/schemas/rules-schema.yaml"
+domain: test
+rulesets:
+  snapEligibility:
+    endpoint:
+      path: /assess-snap-eligibility
+    inputs:
+      household:
+        type: object
+        properties:
+          monthlyIncome:
+            type: number
+            description: Total reported monthly income
+          size:
+            type: integer
+            description: Number of people in household
+    outputs:
+      meetsIncomeTest:
+        type: boolean
+    facts:
+      - path: meetsIncomeTest
+        description: Household income is below the threshold for the given size
+        expression: "household.monthlyIncome < household.size * 500"

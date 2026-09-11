@@ -6,13 +6,36 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdirSync, writeFileSync, rmSync } from 'fs';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import yaml from 'js-yaml';
 import {
   expandInputs,
   extractDeps,
   compileRuleset,
   generateRulesEndpointOverlay,
   generateRulesResults,
+  discoverRules,
 } from '../../src/rules.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+function createTempDir() {
+  const dir = join(__dirname, `tmp-rules-${Date.now()}`);
+  mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+function removeTempDir(dir) {
+  try { rmSync(dir, { recursive: true, force: true }); } catch { /* ignore */ }
+}
+
+function writeYaml(dir, filename, obj) {
+  writeFileSync(join(dir, filename), yaml.dump(obj), 'utf8');
+}
 
 // ── expandInputs ─────────────────────────────────────────────────────────────
 
@@ -473,6 +496,95 @@ test('generateRulesResults', async (t) => {
     ]);
     assert.equal(graphs.size, 0);
     assert.equal(overlays.length, 0);
+  });
+
+});
+
+// ── discoverRules ─────────────────────────────────────────────────────────────
+
+const minimalRulesDoc = {
+  $schema: 'https://blueprint.codeforamerica.org/schemas/rules-schema.yaml',
+  domain: 'eligibility',
+  rulesets: {
+    snapEligibility: {
+      inputs: { household: { type: 'object', properties: { size: { type: 'integer' } } } },
+      outputs: { eligible: { type: 'boolean' } },
+      facts: [{ path: 'eligible', expression: 'household.size > 0' }],
+    },
+  },
+};
+
+test('discoverRules', async (t) => {
+
+  await t.test('returns empty array for missing directory', () => {
+    const result = discoverRules('/nonexistent/path');
+    assert.deepEqual(result, []);
+  });
+
+  await t.test('returns empty array when no rules files present', () => {
+    const dir = createTempDir();
+    try {
+      writeYaml(dir, 'intake-openapi.yaml', { openapi: '3.1.0', info: { title: 'Test', version: '1.0' }, paths: {} });
+      const result = discoverRules(dir);
+      assert.deepEqual(result, []);
+    } finally {
+      removeTempDir(dir);
+    }
+  });
+
+  await t.test('discovers a single rules file', () => {
+    const dir = createTempDir();
+    try {
+      writeYaml(dir, 'eligibility-rules.yaml', minimalRulesDoc);
+      const result = discoverRules(dir);
+      assert.equal(result.length, 1);
+      assert.equal(result[0].domain, 'eligibility');
+      assert.ok(result[0].filePath.endsWith('eligibility-rules.yaml'));
+      assert.ok(result[0].doc.rulesets.snapEligibility);
+    } finally {
+      removeTempDir(dir);
+    }
+  });
+
+  await t.test('discovers multiple rules files', () => {
+    const dir = createTempDir();
+    try {
+      writeYaml(dir, 'eligibility-rules.yaml', minimalRulesDoc);
+      writeYaml(dir, 'intake-rules.yaml', { ...minimalRulesDoc, domain: 'intake' });
+      const result = discoverRules(dir);
+      assert.equal(result.length, 2);
+      const domains = result.map(r => r.domain).sort();
+      assert.deepEqual(domains, ['eligibility', 'intake']);
+    } finally {
+      removeTempDir(dir);
+    }
+  });
+
+  await t.test('skips files without rulesets key', () => {
+    const dir = createTempDir();
+    try {
+      writeYaml(dir, 'eligibility-rules.yaml', {
+        $schema: 'https://blueprint.codeforamerica.org/schemas/rules-schema.yaml',
+        domain: 'eligibility',
+      });
+      const result = discoverRules(dir);
+      assert.deepEqual(result, []);
+    } finally {
+      removeTempDir(dir);
+    }
+  });
+
+  await t.test('skips non-rules YAML files', () => {
+    const dir = createTempDir();
+    try {
+      writeYaml(dir, 'intake-openapi.yaml', { openapi: '3.1.0' });
+      writeYaml(dir, 'eligibility-rules.yaml', minimalRulesDoc);
+      const result = discoverRules(dir);
+      assert.equal(result.length, 1);
+      assert.equal(result[0].domain, 'eligibility');
+    } finally {
+      removeTempDir(dir);
+    }
   });
 
 });
