@@ -1,7 +1,7 @@
 {
   "name": "@codeforamerica/blueprint-mock-server",
   "version": "0.1.0",
-  "description": "Mock API server for blueprint contract development and testing",
+  "description": "Mock API server for contract-first development — auto-generates CRUD, RPC, and event endpoints from Blueprint contracts",
   "type": "module",
   "files": [
     "src/",
@@ -13,11 +13,10 @@
     "./test-utils": "./test-utils.js"
   },
   "bin": {
-    "blueprint-mock": "./cli/server.js",
-    "blueprint-swagger": "./cli/swagger/server.js"
+    "blueprint-mock": "cli/server.js",
+    "blueprint-swagger": "cli/swagger/server.js"
   },
   "scripts": {
-    "prepack": "node ../../scripts/build-package-readme.js",
     "start": "node cli/server.js --spec=../safety-net-contracts",
     "start:all": "node cli/start-all.js --spec=../safety-net-contracts",
     "swagger": "node cli/swagger/server.js --spec=../safety-net-contracts",
@@ -36,7 +35,7 @@
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
-    "url": "https://github.com/codeforamerica/safety-net-blueprint",
+    "url": "git+https://github.com/codeforamerica/safety-net-blueprint.git",
     "directory": "packages/blueprint-mock-server"
   },
   "publishConfig": {

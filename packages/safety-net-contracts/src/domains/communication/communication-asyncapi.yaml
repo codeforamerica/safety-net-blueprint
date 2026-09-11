@@ -1,7 +1,8 @@
 asyncapi: 3.0.0
 info:
   title: Communication Domain Events
-  version: 1.0.0
+  version: 0.1.0
+  x-status: alpha
   description: |
     Event catalog for the Communication domain. All events are CloudEvents 1.0
     envelopes extending the base Event schema.

@@ -161,7 +161,7 @@ function generateApiSpec(name, resource, componentsPrefix = './components', doma
   return `openapi: 3.1.0
 info:
   title: ${resource} API
-  version: 1.0.0
+  version: 0.1.0
   x-domain: ${xDomain}
   x-status: alpha
   x-visibility: internal

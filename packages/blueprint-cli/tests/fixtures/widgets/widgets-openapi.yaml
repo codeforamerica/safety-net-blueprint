@@ -1,0 +1,29 @@
+openapi: 3.1.0
+info:
+  title: Widgets API
+  version: 1.0.0
+  x-domain: widgets
+paths: {}
+components:
+  schemas:
+    Widget:
+      type: object
+      x-internal: true
+      example:
+        id: w1
+        name: Sprocket
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          example: Sprocket
+    WidgetList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Widget'
+        total:
+          type: integer

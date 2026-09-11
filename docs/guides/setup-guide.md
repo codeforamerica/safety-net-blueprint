@@ -2,15 +2,20 @@
 
 > **Status: Draft**
 
-This guide walks through setting up a repository that consumes the Safety Net Blueprint packages.
+This guide covers two adoption paths:
+
+- **Safety Net Contracts** — install the safety net contracts package as your base and customize with overlays. This is the most common path for states and counties adopting the safety net blueprint.
+- **Framework only** — bring your own OpenAPI specs and use `blueprint-cli` and `blueprint-mock-server` directly. This is the path for teams building contract-driven systems in other domains (healthcare, housing, child welfare) who want the tooling without the safety net baseline.
+
+The steps below cover the Safety Net Contracts path. See [Using the framework with your own contracts](#using-the-framework-with-your-own-contracts) for the framework-only path.
 
 ## What each package provides
 
 | Package | Description | CLIs |
 |---|---|---|
-| `@codeforamerica/blueprint-safety-net-contracts` | Base OpenAPI specs, overlay resolver, validation | `blueprint-resolve` |
+| `@codeforamerica/blueprint-safety-net-contracts` | Base OpenAPI specs, state machines, overlays, and annotations | — |
+| `@codeforamerica/blueprint-cli` | Overlay resolution, validation, and artifact generation | `blueprint-resolve`, `blueprint-validate`, `blueprint-generate-ts-clients`, `blueprint-generate-postman-collection`, `blueprint-export-schemas` |
 | `@codeforamerica/blueprint-mock-server` | Mock API server and Swagger UI for development | `blueprint-mock`, `blueprint-swagger` |
-| `@codeforamerica/safety-net-blueprint-clients` | Postman collection and TypeScript client generation | — |
 
 Install these packages as dependencies and point the CLIs at your resolved specs.
 
@@ -27,7 +32,7 @@ npm init -y
 ### 2. Install dependencies
 
 ```bash
-npm install @codeforamerica/blueprint-safety-net-contracts @codeforamerica/blueprint-mock-server @codeforamerica/safety-net-blueprint-clients
+npm install @codeforamerica/blueprint-safety-net-contracts @codeforamerica/blueprint-cli @codeforamerica/blueprint-mock-server
 ```
 
 ### 3. Create directory structure
@@ -54,7 +59,7 @@ resolved/
   "scripts": {
     "resolve": "blueprint-resolve --spec=./node_modules/@codeforamerica/blueprint-safety-net-contracts --overlay=./overlays --out=./resolved",
     "resolve:prod": "blueprint-resolve --spec=./node_modules/@codeforamerica/blueprint-safety-net-contracts --overlay=./overlays --out=./resolved --env=production --env-file=.env",
-    "validate": "node ./node_modules/@codeforamerica/blueprint-safety-net-contracts/scripts/validate-openapi.js --spec=./resolved --skip-examples",
+    "validate": "blueprint-validate --spec=./resolved --skip-examples",
     "mock:start": "blueprint-mock --spec=./resolved",
     "swagger": "blueprint-swagger --spec=./resolved",
     "build": "npm run resolve && npm run validate"
@@ -73,6 +78,12 @@ Use an exact version in `package.json` to control when you pick up base spec cha
   }
 }
 ```
+
+## Using the framework with your own contracts
+
+`blueprint-cli` and `blueprint-mock-server` are domain-agnostic — they have no knowledge of safety net schemas or domain structure. If you're building a contract-driven system in a different domain (healthcare, housing, child welfare), you can use the framework packages directly without the safety net contracts as a base.
+
+See [Building a New Domain](../getting-started/new-domain-builders.md) for a full walkthrough: scaffolding a spec, validating it, running the mock server, and generating clients.
 
 ## Overlay authoring
 

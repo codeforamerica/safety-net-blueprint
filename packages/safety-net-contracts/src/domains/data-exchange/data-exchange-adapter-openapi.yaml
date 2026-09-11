@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
   title: Data Exchange Adapter API
-  version: 0.1.0
+  version: 0.5.0
   x-domain: data-exchange
-  x-status: alpha
+  x-status: beta
   x-visibility: external
   description: |
     Contracted interface for data exchange adapters — state-implemented components

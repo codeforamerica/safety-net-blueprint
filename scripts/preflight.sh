@@ -137,6 +137,13 @@ else
   fail "Integration tests failed"
 fi
 
+step "Checking package contents"
+if node tests/check-package-contents.js 2>&1; then
+  pass "Package contents verified"
+else
+  fail "Package contents check failed"
+fi
+
 # Summary
 printf "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
 if [ "$failed" -eq 0 ]; then

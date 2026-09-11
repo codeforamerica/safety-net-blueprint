@@ -22,12 +22,10 @@
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
-    "url": "https://github.com/codeforamerica/safety-net-blueprint",
+    "url": "git+https://github.com/codeforamerica/safety-net-blueprint.git",
     "directory": "packages/safety-net-explorer"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "private": true,
   "devDependencies": {
     "@codeforamerica/blueprint-explorer": "^0.1.0"
   }

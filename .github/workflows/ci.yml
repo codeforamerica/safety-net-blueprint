@@ -10,6 +10,7 @@ permissions:
 jobs:
   validate-and-test:
     runs-on: ubuntu-latest
+    if: "!startsWith(github.head_ref, 'changeset-release/')"
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
