@@ -9,7 +9,7 @@ Common issues and solutions.
 ### Node Version Error
 
 ```
-error engine: Wanted: node >=20.0.0
+error engine: Wanted: node >=22.11.0
 ```
 
 **Solution:** Update Node.js to version 20 or higher.

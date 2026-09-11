@@ -19,7 +19,7 @@ See also: [Contract-Driven Architecture](../architecture/contract-driven-archite
 
 ## Prerequisites
 
-- Node.js >= 20.19.0
+- Node.js >= 22.11.0
 - Git
 - Familiarity with OpenAPI/Swagger
 

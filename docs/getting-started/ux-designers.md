@@ -19,7 +19,7 @@ The data model is defined in OpenAPI schema files and can be exported as an inte
 
 ### Prerequisites
 
-1. Make sure you have Node.js installed (v20.19.0 or later)
+1. Make sure you have Node.js installed (v22.11.0 or later)
 2. From the repository root, install dependencies:
    ```bash
    npm install
