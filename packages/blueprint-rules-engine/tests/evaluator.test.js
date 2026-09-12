@@ -14,7 +14,7 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { evaluate } from '../src/index.js';
+import { toGraph } from '../src/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturesDir = join(__dirname, 'fixtures/snap-interview-probes');
@@ -32,45 +32,45 @@ const PROBE_OUTPUTS = ['incomeInconsistencyProbe', 'generalWorkRequirementProbe'
 describe('evaluator — snap interview probes', () => {
 
   it('scenario 01: no probes fire when household is straightforward', () => {
-    const result = evaluate(ruleset, scenarios[0].inputs);
-    assert.deepStrictEqual(result.errors,      {});
-    assert.deepStrictEqual(result.missing,     {});
-    assert.deepStrictEqual(result.placeholder, {});
+    const result = toGraph(ruleset).evaluate(scenarios[0].inputs).filter('output');
+    assert.deepStrictEqual(result.collect('error'),       {});
+    assert.deepStrictEqual(result.collect('missing'),     {});
+    assert.deepStrictEqual(result.collect('placeholder'), {});
     for (const fact of PROBE_OUTPUTS) {
-      assert.strictEqual(result.complete[fact], false, `${fact} should be false`);
+      assert.strictEqual(result.get(fact).value, false, `${fact} should be false`);
     }
   });
 
   it('scenario 02: income, ABAWD, non-citizen, and changed circumstances probes fire', () => {
-    const result = evaluate(ruleset, scenarios[1].inputs);
-    assert.deepStrictEqual(result.errors,      {});
-    assert.deepStrictEqual(result.missing,     {});
-    assert.deepStrictEqual(result.placeholder, {});
-    assert.strictEqual(result.complete.incomeInconsistencyProbe,   true);
-    assert.strictEqual(result.complete.generalWorkRequirementProbe, true);
-    assert.strictEqual(result.complete.abawdProbe,                 true);
-    assert.strictEqual(result.complete.immigrationStatusProbe,     true);
-    assert.strictEqual(result.complete.changeVerificationProbe,    true);
-    assert.strictEqual(result.complete.studentEligibilityProbe,    false);
-    assert.strictEqual(result.complete.felonComplianceProbe,       false);
+    const result = toGraph(ruleset).evaluate(scenarios[1].inputs).filter('output');
+    assert.deepStrictEqual(result.collect('error'),       {});
+    assert.deepStrictEqual(result.collect('missing'),     {});
+    assert.deepStrictEqual(result.collect('placeholder'), {});
+    assert.strictEqual(result.get('incomeInconsistencyProbe').value,   true);
+    assert.strictEqual(result.get('generalWorkRequirementProbe').value, true);
+    assert.strictEqual(result.get('abawdProbe').value,                 true);
+    assert.strictEqual(result.get('immigrationStatusProbe').value,     true);
+    assert.strictEqual(result.get('changeVerificationProbe').value,    true);
+    assert.strictEqual(result.get('studentEligibilityProbe').value,    false);
+    assert.strictEqual(result.get('felonComplianceProbe').value,       false);
   });
 
   it('scenario 03: application binding omitted — changeVerificationProbe is missing', () => {
-    const result = evaluate(ruleset, scenarios[2].inputs);
-    assert.deepStrictEqual(result.errors,      {});
-    assert.deepStrictEqual(result.placeholder, {});
-    assert.ok('changeVerificationProbe' in result.missing, 'changeVerificationProbe should be missing');
-    assert.ok('incomeInconsistencyProbe' in result.complete, 'incomeInconsistencyProbe should still be complete');
+    const result = toGraph(ruleset).evaluate(scenarios[2].inputs).filter('output');
+    assert.deepStrictEqual(result.collect('error'),       {});
+    assert.deepStrictEqual(result.collect('placeholder'), {});
+    assert.ok('changeVerificationProbe' in result.collect('missing'), 'changeVerificationProbe should be missing');
+    assert.ok(result.get('incomeInconsistencyProbe').state === 'complete', 'incomeInconsistencyProbe should still be complete');
   });
 
   it('scenario 04: type error on monthlyIncome — incomeInconsistencyProbe errors, member-based probes resolve', () => {
-    const result = evaluate(ruleset, scenarios[3].inputs);
-    assert.deepStrictEqual(result.missing,     {});
-    assert.deepStrictEqual(result.placeholder, {});
+    const result = toGraph(ruleset).evaluate(scenarios[3].inputs).filter('output');
+    assert.deepStrictEqual(result.collect('missing'),     {});
+    assert.deepStrictEqual(result.collect('placeholder'), {});
     // incomeGapExists (intermediate) errors internally; its output probe surfaces as error
-    assert.ok('incomeInconsistencyProbe' in result.errors,  'incomeInconsistencyProbe should error');
-    assert.ok('abawdProbe' in result.complete,              'abawdProbe should still be complete');
-    assert.ok('changeVerificationProbe' in result.complete, 'changeVerificationProbe should still be complete');
+    assert.ok('incomeInconsistencyProbe' in result.collect('error'),  'incomeInconsistencyProbe should error');
+    assert.strictEqual(result.get('abawdProbe').state,              'complete', 'abawdProbe should still be complete');
+    assert.strictEqual(result.get('changeVerificationProbe').state, 'complete', 'changeVerificationProbe should still be complete');
   });
 
   it('scenario 05: null collection — CEL resolves exists() to false; all probes complete', () => {
@@ -78,27 +78,27 @@ describe('evaluator — snap interview probes', () => {
     // it returns Placeholder for exists() over an unseeded collection. CEL patches null → []
     // and evaluates exists() as false. Placeholder propagation from intermediate facts through
     // to output probes is a known gap in the CEL evaluator.
-    const result = evaluate(ruleset, scenarios[4].inputs);
-    assert.deepStrictEqual(result.errors,      {});
-    assert.deepStrictEqual(result.missing,     {});
-    assert.deepStrictEqual(result.placeholder, {});
+    const result = toGraph(ruleset).evaluate(scenarios[4].inputs).filter('output');
+    assert.deepStrictEqual(result.collect('error'),       {});
+    assert.deepStrictEqual(result.collect('missing'),     {});
+    assert.deepStrictEqual(result.collect('placeholder'), {});
     for (const fact of PROBE_OUTPUTS) {
-      assert.ok(fact in result.complete, `${fact} should be complete`);
+      assert.strictEqual(result.get(fact).state, 'complete', `${fact} should be complete`);
     }
-    assert.strictEqual(result.complete.changeVerificationProbe, false);
+    assert.strictEqual(result.get('changeVerificationProbe').value, false);
   });
 
   it('scenario 06: sub-field type error on age — member-based probe outputs error, income and change probes resolve', () => {
-    const result = evaluate(ruleset, scenarios[5].inputs);
-    assert.deepStrictEqual(result.missing,     {});
-    assert.deepStrictEqual(result.placeholder, {});
+    const result = toGraph(ruleset).evaluate(scenarios[5].inputs).filter('output');
+    assert.deepStrictEqual(result.collect('missing'),     {});
+    assert.deepStrictEqual(result.collect('placeholder'), {});
     // Member-based intermediate facts error; their dependent probe outputs also error
     const memberProbes = ['generalWorkRequirementProbe', 'abawdProbe', 'studentEligibilityProbe', 'immigrationStatusProbe', 'felonComplianceProbe'];
     for (const fact of memberProbes) {
-      assert.ok(fact in result.errors, `${fact} should be in errors`);
+      assert.strictEqual(result.get(fact).state, 'error', `${fact} should be in errors`);
     }
-    assert.ok('incomeInconsistencyProbe' in result.complete,  'incomeInconsistencyProbe should still be complete');
-    assert.ok('changeVerificationProbe' in result.complete,   'changeVerificationProbe should still be complete');
+    assert.strictEqual(result.get('incomeInconsistencyProbe').state,  'complete', 'incomeInconsistencyProbe should still be complete');
+    assert.strictEqual(result.get('changeVerificationProbe').state,   'complete', 'changeVerificationProbe should still be complete');
   });
 
 });

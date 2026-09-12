@@ -4,11 +4,18 @@
  * Walks a compiled graph in topological order (Kahn's algorithm) and evaluates
  * each fact's CEL expression against a (possibly partial) set of inputs.
  *
- * Returns facts in three states, mirroring FactGraph's Complete/Placeholder/Incomplete:
+ * Facts are returned as typed nodes, each carrying:
+ *   type        — 'intermediate' or 'output'
+ *   state       — 'complete' | 'placeholder' | 'missing' | 'error'
+ *   value       — resolved value (null when state is missing or error)
+ *   message     — error description (state: 'error' only)
+ *   missing     — list of unresolved input paths (state: 'missing' only)
+ *
+ * States mirror FactGraph's Complete/Placeholder/Incomplete:
  *   complete    — fact resolved; all inputs explicitly provided
  *   placeholder — fact resolved; at least one input used a schema default
  *   missing     — fact could not compute; missing required input paths (tracked)
- *   errors      — fact threw during evaluation
+ *   error       — fact threw during evaluation
  *
  * Input scope: top-level named inputs (household, policy) are placed directly in
  * scope so expressions like "household.monthlyIncome < policy.limit" resolve via
@@ -196,68 +203,125 @@ function buildDefaultScope(inputSchema) {
   return Object.keys(obj).length > 0 ? obj : undefined;
 }
 
-// ── Evaluator ─────────────────────────────────────────────────────────────────
+// ── EvalResult ────────────────────────────────────────────────────────────────
 
 /**
- * Evaluate a ruleset against a (possibly partial) set of inputs.
+ * Result of evaluating a graph. A map of fact names to typed nodes.
  *
- * @param {Object} rulesDoc      - parsed *-rules.yaml document
- * @param {Object} inputs        - named input objects, e.g. { household: { ... } }
- * @param {string} [rulesetName] - which ruleset to evaluate; defaults to the first
- * @returns {{ complete: Object, placeholder: Object, missing: Object, errors: Object }}
- *   complete:    { factName: value } — facts resolved with all explicit inputs
- *   placeholder: { factName: value } — facts resolved using schema defaults for some inputs
- *   missing:     { factName: [paths] } — facts blocked by missing required inputs
- *   errors:      { factName: message } — facts that threw during evaluation
+ * Each node: { type, state, value, message?, missing? }
+ *   type    — 'intermediate' | 'output'
+ *   state   — 'complete' | 'placeholder' | 'missing' | 'error'
+ *   value   — resolved value, or null for missing/error
+ *   message — error description (state: 'error' only)
+ *   missing — list of unresolved input paths (state: 'missing' only)
  */
-export function evaluate(rulesDoc, inputs, rulesetName) {
-  const rulesets = rulesDoc?.rulesets ?? {};
-  const name = rulesetName ?? Object.keys(rulesets)[0];
-  const ruleset = rulesets[name];
-
-  if (!ruleset) {
-    throw new Error(`Ruleset "${name}" not found`);
+export class EvalResult {
+  constructor(nodes) {
+    this._nodes = nodes;
   }
 
-  const domain = rulesDoc.domain ?? 'unknown';
-  const graph = compileRuleset(domain, name, ruleset);
+  /** Return the node for a specific fact name, or undefined if not found. */
+  get(name) {
+    return this._nodes[name];
+  }
 
+  /**
+   * Return a new EvalResult containing only matching facts.
+   * @param {string|string[]} typeOrNames — a type string ('output', 'intermediate')
+   *   or an array of fact names to include.
+   */
+  filter(typeOrNames) {
+    if (Array.isArray(typeOrNames)) {
+      const names = new Set(typeOrNames);
+      return new EvalResult(
+        Object.fromEntries(Object.entries(this._nodes).filter(([k]) => names.has(k)))
+      );
+    }
+    return new EvalResult(
+      Object.fromEntries(Object.entries(this._nodes).filter(([, n]) => n.type === typeOrNames))
+    );
+  }
+
+  /**
+   * Collect facts in a given state into a plain object.
+   *   'complete'/'placeholder' → { factName: value }
+   *   'error'                  → { factName: message }
+   *   'missing'                → { factName: [paths] }
+   */
+  collect(state) {
+    return Object.fromEntries(
+      Object.entries(this._nodes)
+        .filter(([, n]) => n.state === state)
+        .map(([k, n]) => {
+          if (state === 'error')   return [k, n.message];
+          if (state === 'missing') return [k, n.missing];
+          return [k, n.value];
+        })
+    );
+  }
+
+  /** Plain object representation (for JSON serialization). */
+  toJSON() {
+    return this._nodes;
+  }
+}
+
+// ── Graph ──────────────────────────────────────────────────────────────────────
+
+/**
+ * A compiled graph ready for evaluation.
+ * Returned by toGraph(). Call .evaluate(inputs) to produce an EvalResult.
+ */
+export class Graph {
+  constructor(compiled, rulesetInputs) {
+    this._compiled = compiled;
+    this._rulesetInputs = rulesetInputs ?? null;
+  }
+
+  /**
+   * Evaluate the graph against a (possibly partial) set of inputs.
+   * @param {Object} inputs - named input objects, e.g. { household: { ... } }
+   * @returns {EvalResult}
+   */
+  evaluate(inputs) {
+    return evaluateCompiled(this._compiled, inputs, this._rulesetInputs);
+  }
+}
+
+// ── Core evaluator ─────────────────────────────────────────────────────────────
+
+function evaluateCompiled(graph, inputs, rulesetInputs) {
+  const outputSet = new Set(graph.outputs);
   const factNames = Object.keys(graph.facts);
   const ordered = topoSort(factNames, graph.dependencies);
 
-  // Build scope from inputs, falling back to schema defaults where an entire
-  // input namespace is absent. Track which namespaces used defaults.
   const scope = {};
   const defaultedNamespaces = new Set();
 
-  for (const [inputName, inputSchema] of Object.entries(ruleset.inputs ?? {})) {
-    if (inputs[inputName] !== undefined) {
-      scope[inputName] = inputs[inputName];
-    } else {
-      const defaults = buildDefaultScope(inputSchema);
-      if (defaults !== undefined) {
-        scope[inputName] = defaults;
-        defaultedNamespaces.add(inputName);
+  if (rulesetInputs) {
+    // Apply schema defaults for any namespace absent from inputs
+    for (const [inputName, inputSchema] of Object.entries(rulesetInputs)) {
+      if (inputs[inputName] !== undefined) {
+        scope[inputName] = inputs[inputName];
+      } else {
+        const defaults = buildDefaultScope(inputSchema);
+        if (defaults !== undefined) {
+          scope[inputName] = defaults;
+          defaultedNamespaces.add(inputName);
+        }
+        // else: scope[inputName] remains undefined (fact will be blocked)
       }
-      // else: scope[inputName] remains undefined (inputs missing — fact will be blocked)
     }
+  } else {
+    Object.assign(scope, inputs);
   }
 
-  // Patch null collections to [] in scope, matching FactGraph's behavior of evaluating
-  // filters over unset collections as Placeholder([]).
   const nullCollectionPaths = buildNullCollectionPaths(graph.inputs, inputs);
   patchNullCollections(scope, inputs, nullCollectionPaths);
 
-  const complete = {};
-  const placeholder = {};
-  const missing = {};
-  const errors = {};
-
-  // Track which facts were resolved (for fact-to-fact dependency propagation)
-  const resolved = {};
-
-  // Pre-compute type errors for all declared input paths
   const inputTypeErrors = buildInputTypeErrors(graph.inputs, inputs);
+  const resolved = {};
+  const nodes = {};
 
   for (const factName of ordered) {
     const deps = graph.dependencies[factName] ?? [];
@@ -282,11 +346,11 @@ export function evaluate(rulesDoc, inputs, rulesetName) {
         }
       } else {
         // Fact dependency — propagate errors or missing upward
-        if (errors[dep]) {
+        if (nodes[dep]?.state === 'error') {
           erroredDeps.add(dep);
         } else if (resolved[dep] === undefined) {
-          if (missing[dep]) {
-            for (const p of missing[dep]) missingPaths.add(p);
+          if (nodes[dep]?.state === 'missing') {
+            for (const p of nodes[dep].missing) missingPaths.add(p);
           } else {
             missingPaths.add(dep);
           }
@@ -294,16 +358,18 @@ export function evaluate(rulesDoc, inputs, rulesetName) {
       }
     }
 
+    const type = outputSet.has(factName) ? 'output' : 'intermediate';
+
     if (erroredDeps.size > 0) {
       const details = [...erroredDeps].map(d =>
-        inputTypeErrors.has(d) ? `'${d}' — ${inputTypeErrors.get(d)}` : `'${d}' — ${errors[d]}`
+        inputTypeErrors.has(d) ? `'${d}' — ${inputTypeErrors.get(d)}` : `'${d}' — ${nodes[d]?.message}`
       ).join('; ');
-      errors[factName] = `Dependency error: ${details}`;
+      nodes[factName] = { type, state: 'error', value: null, message: `Dependency error: ${details}` };
       continue;
     }
 
     if (missingPaths.size > 0) {
-      missing[factName] = [...missingPaths];
+      nodes[factName] = { type, state: 'missing', value: null, missing: [...missingPaths] };
       continue;
     }
 
@@ -313,134 +379,49 @@ export function evaluate(rulesDoc, inputs, rulesetName) {
 
     const result = evaluateCEL(expr, scope);
     if (result === undefined) {
-      errors[factName] = `Expression failed to evaluate: ${expr}`;
+      nodes[factName] = { type, state: 'error', value: null, message: `Expression failed to evaluate: ${expr}` };
     } else {
       resolved[factName] = result;
       scope[factName] = result;
 
-      // Placeholder if any dep used a schema default or was a null-patched collection
       const usedDefault = defaultedDeps.size > 0 || deps.some(dep => {
         if (!dep.startsWith('$.')) return false;
         const topLevel = dep.slice(2).split('.')[0];
         return defaultedNamespaces.has(topLevel);
       });
 
-      if (usedDefault) {
-        placeholder[factName] = result;
-      } else {
-        complete[factName] = result;
-      }
+      nodes[factName] = { type, state: usedDefault ? 'placeholder' : 'complete', value: result };
     }
   }
 
-  // Filter to declared outputs only
-  const outputSet = new Set(graph.outputs);
-  return {
-    complete:    Object.fromEntries(Object.entries(complete).filter(([k]) => outputSet.has(k))),
-    placeholder: Object.fromEntries(Object.entries(placeholder).filter(([k]) => outputSet.has(k))),
-    missing:     Object.fromEntries(Object.entries(missing).filter(([k]) => outputSet.has(k))),
-    errors:      Object.fromEntries(Object.entries(errors).filter(([k]) => outputSet.has(k))),
-  };
+  return new EvalResult(nodes);
 }
 
+// ── toGraph ───────────────────────────────────────────────────────────────────
+
 /**
- * Evaluate a compiled graph directly against a (possibly partial) set of inputs.
+ * Compile a rules document (or wrap an already-compiled graph) into a Graph
+ * ready for evaluation.
  *
- * Accepts the output of compileRuleset() or a parsed *-graph.yaml document.
- * Unlike evaluate(), this function takes a pre-compiled graph and skips the
- * compilation step. No namespace-level schema defaults are applied — all
- * inputs must be explicit.
+ * Accepts either:
+ *   - A parsed *-rules.yaml document (compiles to graph, preserves schema defaults)
+ *   - An already-compiled graph object (wraps directly, no defaults applied)
  *
- * @param {Object} graph   - compiled graph ({ facts, dependencies, outputs, inputs, ... })
- * @param {Object} inputs  - named input objects, e.g. { household: { ... } }
- * @returns {{ complete: Object, placeholder: Object, missing: Object, errors: Object }}
+ * @param {Object} rulesDocOrGraph - rules doc or compiled graph
+ * @param {string} [rulesetName]   - which ruleset to use (defaults to first)
+ * @returns {Graph}
  */
-export function evaluateGraph(graph, inputs) {
-  const factNames = Object.keys(graph.facts);
-  const ordered = topoSort(factNames, graph.dependencies);
-
-  const scope = { ...inputs };
-
-  const complete = {};
-  const placeholder = {};
-  const missing = {};
-  const errors = {};
-  const resolved = {};
-
-  // Pre-compute type errors for all declared input paths (including sub-fields)
-  const inputTypeErrors = buildInputTypeErrors(graph.inputs, inputs);
-
-  // Patch null collections to [] in scope, matching FactGraph's placeholder behavior
-  const nullCollectionPaths = buildNullCollectionPaths(graph.inputs, inputs);
-  patchNullCollections(scope, inputs, nullCollectionPaths);
-
-  for (const factName of ordered) {
-    const deps = graph.dependencies[factName] ?? [];
-    const missingPaths = new Set();
-    const erroredDeps = new Set();
-
-    for (const dep of deps) {
-      if (dep.startsWith('$.')) {
-        if (inputTypeErrors.has(dep)) {
-          erroredDeps.add(dep);
-        } else if (nullCollectionPaths.has(dep)) {
-          // null collection → evaluates with [] in scope → will be placeholder after eval
-        } else if (resolveInputPath(dep, inputs) == null) {
-          missingPaths.add(dep);
-        }
-      } else {
-        // Fact dependency — propagate errors or missing upward
-        if (errors[dep]) {
-          erroredDeps.add(dep);
-        } else if (resolved[dep] === undefined) {
-          if (missing[dep]) {
-            for (const p of missing[dep]) missingPaths.add(p);
-          } else {
-            missingPaths.add(dep);
-          }
-        }
-      }
-    }
-
-    if (erroredDeps.size > 0) {
-      const details = [...erroredDeps].map(d =>
-        inputTypeErrors.has(d) ? `'${d}' — ${inputTypeErrors.get(d)}` : `'${d}' — ${errors[d]}`
-      ).join('; ');
-      errors[factName] = `Dependency error: ${details}`;
-      continue;
-    }
-
-    if (missingPaths.size > 0) {
-      missing[factName] = [...missingPaths];
-      continue;
-    }
-
-    const factDecl = graph.facts[factName];
-    const expr = factDecl?.expression;
-    if (!expr) continue;
-
-    const result = evaluateCEL(expr, scope);
-    if (result === undefined) {
-      errors[factName] = `Expression failed to evaluate: ${expr}`;
-    } else {
-      resolved[factName] = result;
-      scope[factName] = result;
-
-      // Placeholder if any dep was a null-patched collection
-      const usedNullCollection = deps.some(dep => nullCollectionPaths.has(dep));
-      if (usedNullCollection) {
-        placeholder[factName] = result;
-      } else {
-        complete[factName] = result;
-      }
-    }
+export function toGraph(rulesDocOrGraph, rulesetName) {
+  // Already compiled: has facts + outputs but no rulesets key
+  if (rulesDocOrGraph.facts && rulesDocOrGraph.outputs) {
+    return new Graph(rulesDocOrGraph);
   }
-
-  const outputSet = new Set(graph.outputs);
-  return {
-    complete:    Object.fromEntries(Object.entries(complete).filter(([k]) => outputSet.has(k))),
-    placeholder: Object.fromEntries(Object.entries(placeholder).filter(([k]) => outputSet.has(k))),
-    missing:     Object.fromEntries(Object.entries(missing).filter(([k]) => outputSet.has(k))),
-    errors:      Object.fromEntries(Object.entries(errors).filter(([k]) => outputSet.has(k))),
-  };
+  // Rules doc — compile first
+  const rulesets = rulesDocOrGraph.rulesets ?? {};
+  const name = rulesetName ?? Object.keys(rulesets)[0];
+  const ruleset = rulesets[name];
+  if (!ruleset) throw new Error(`Ruleset "${name}" not found`);
+  const domain = rulesDocOrGraph.domain ?? 'unknown';
+  const compiled = compileRuleset(domain, name, ruleset);
+  return new Graph(compiled, ruleset.inputs);
 }

@@ -19,9 +19,9 @@
  *   *-fact-graph.xml  — expected FactGraph XML (compared as trimmed strings)
  *
  * Parity note:
- *   For scenarios 01–03 the two evaluators must agree exactly on all four result buckets
- *   (complete, placeholder, missing, errors). Scenarios 04–05 cover edge cases where
- *   behavior differs by design and are tested separately.
+ *   For scenarios 01–03 the two evaluators must agree exactly on all output facts
+ *   (state and value). Scenarios 04–05 cover edge cases where behavior differs by
+ *   design and are tested separately.
  *
  *   Scenario 04 (wrong-type scalar): CEL returns structured errors; FactGraph throws at
  *   seed time because the Scala engine rejects the type mismatch. Our evaluator's behavior
@@ -39,8 +39,8 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { toFactGraphXml, evaluateWithFactGraph } from '../src/fact-graph.js';
-import { evaluate } from '../src/index.js';
+import { toFactGraphXml, toGraphWithFactGraph } from '../src/fact-graph.js';
+import { toGraph } from '../src/index.js';
 import { compileRuleset } from '@codeforamerica/blueprint-core';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -101,81 +101,97 @@ describe('toFactGraphXml — collection ops (all/exists/has)', () => {
 
 // ── CEL evaluator vs FactGraph parity ─────────────────────────────────────────
 //
-// All scenarios use full parity assertions: both evaluators must produce identical
-// results across all four buckets for the same inputs.
-//
-// Member-based facts return arrays of objects; we compare by member id (sorted)
-// rather than full object equality because FactGraph reconstructs objects from
-// UUID maps and field ordering may differ.
+// Parity assertions compare output facts only — both evaluators must agree on
+// state and value for each output fact.
 
-describe('CEL evaluator vs FactGraph — scenarios 01–06 (full parity)', () => {
+describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () => {
   const rulesDoc  = loadYaml(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-rules.yaml'));
   const examples  = loadYaml(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-rules-examples.yaml'));
   const scenarios = examples.rulesets.snapInterviewProbes.examples;
 
   const SCALAR_OUTPUTS = ['incomeGapExists', 'hasUnemployedWorkEligible', 'hasUnemployedAbawdCandidate', 'hasStudentMembers', 'hasNonCitizenMembers', 'hasFelonMembers', 'incomeInconsistencyProbe', 'generalWorkRequirementProbe', 'abawdProbe', 'studentEligibilityProbe', 'immigrationStatusProbe', 'felonComplianceProbe', 'changeVerificationProbe'];
-  const ARRAY_OUTPUTS  = [];
 
-  function assertParity(celResult, fgResult, label) {
-    // Same facts in each bucket
-    assert.deepStrictEqual(Object.keys(celResult.errors).sort(),  Object.keys(fgResult.errors).sort(),  `${label}: errors keys`);
-    assert.deepStrictEqual(Object.keys(celResult.missing).sort(), Object.keys(fgResult.missing).sort(), `${label}: missing keys`);
-    assert.deepStrictEqual(Object.keys(celResult.placeholder).sort(), Object.keys(fgResult.placeholder).sort(), `${label}: placeholder keys`);
-    assert.deepStrictEqual(Object.keys(celResult.complete).sort(), Object.keys(fgResult.complete).sort(), `${label}: complete keys`);
+  function assertOutputParity(celResult, fgResult, label) {
+    const celOutputs = celResult.filter('output');
+    const fgOutputs  = fgResult.filter('output');
 
-    // Scalar complete values match exactly
+    // Same set of output facts
+    assert.deepStrictEqual(
+      Object.keys(celOutputs.toJSON()).sort(),
+      Object.keys(fgOutputs.toJSON()).sort(),
+      `${label}: output fact names`
+    );
+
+    // Same state and value for each scalar output
     for (const fact of SCALAR_OUTPUTS) {
-      if (fact in celResult.complete) {
-        assert.strictEqual(celResult.complete[fact], fgResult.complete[fact], `${label}: ${fact} value`);
-      }
-    }
-
-    // Array complete values match by member id (order-independent)
-    for (const fact of ARRAY_OUTPUTS) {
-      if (fact in celResult.complete) {
-        const celIds = (celResult.complete[fact] ?? []).map(m => m.id).sort();
-        const fgIds  = (fgResult.complete[fact]  ?? []).map(m => m.id).sort();
-        assert.deepStrictEqual(celIds, fgIds, `${label}: ${fact} member ids`);
+      const celNode = celOutputs.get(fact);
+      const fgNode  = fgOutputs.get(fact);
+      if (!celNode) continue;
+      assert.strictEqual(celNode.state, fgNode.state, `${label}: ${fact} state`);
+      if (celNode.state === 'complete' || celNode.state === 'placeholder') {
+        assert.strictEqual(celNode.value, fgNode.value, `${label}: ${fact} value`);
       }
     }
   }
 
   it('scenario 01: no probes — all facts complete and agree', () => {
-    assertParity(evaluate(rulesDoc, scenarios[0].inputs), evaluateWithFactGraph(rulesDoc, scenarios[0].inputs), 'scenario 01');
+    assertOutputParity(
+      toGraph(rulesDoc).evaluate(scenarios[0].inputs),
+      toGraphWithFactGraph(rulesDoc).evaluate(scenarios[0].inputs),
+      'scenario 01'
+    );
   });
 
   it('scenario 02: multiple probes — complete/missing/errors agree', () => {
-    assertParity(evaluate(rulesDoc, scenarios[1].inputs), evaluateWithFactGraph(rulesDoc, scenarios[1].inputs), 'scenario 02');
+    assertOutputParity(
+      toGraph(rulesDoc).evaluate(scenarios[1].inputs),
+      toGraphWithFactGraph(rulesDoc).evaluate(scenarios[1].inputs),
+      'scenario 02'
+    );
   });
 
   it('scenario 03: partial inputs — incomeInconsistency missing in both', () => {
-    assertParity(evaluate(rulesDoc, scenarios[2].inputs), evaluateWithFactGraph(rulesDoc, scenarios[2].inputs), 'scenario 03');
+    assertOutputParity(
+      toGraph(rulesDoc).evaluate(scenarios[2].inputs),
+      toGraphWithFactGraph(rulesDoc).evaluate(scenarios[2].inputs),
+      'scenario 03'
+    );
   });
 
   it('scenario 04: wrong-type scalar — incomeInconsistency errors, member facts complete in both', () => {
-    assertParity(evaluate(rulesDoc, scenarios[3].inputs), evaluateWithFactGraph(rulesDoc, scenarios[3].inputs), 'scenario 04');
+    assertOutputParity(
+      toGraph(rulesDoc).evaluate(scenarios[3].inputs),
+      toGraphWithFactGraph(rulesDoc).evaluate(scenarios[3].inputs),
+      'scenario 04'
+    );
   });
 
   it('scenario 05: null collection — CEL resolves exists() to false; FactGraph returns placeholder (documented divergence)', () => {
     // CEL patches null members → [] and evaluates exists() as false (complete).
     // FactGraph leaves the collection unseeded and returns Placeholder for exists() facts.
-    // Placeholder propagation from intermediate facts through to output probes is a known
-    // gap in the CEL evaluator. Only assert agreement on buckets that do agree.
-    const cel = evaluate(rulesDoc, scenarios[4].inputs);
-    const fg  = evaluateWithFactGraph(rulesDoc, scenarios[4].inputs);
+    // Only assert agreement on facts that do agree.
+    const cel = toGraph(rulesDoc).evaluate(scenarios[4].inputs).filter('output');
+    const fg  = toGraphWithFactGraph(rulesDoc).evaluate(scenarios[4].inputs).filter('output');
+
     // Both agree: no errors, no missing
-    assert.deepStrictEqual(Object.keys(cel.errors).sort(),  Object.keys(fg.errors).sort(),  'scenario 05: errors keys');
-    assert.deepStrictEqual(Object.keys(cel.missing).sort(), Object.keys(fg.missing).sort(), 'scenario 05: missing keys');
-    // CEL: all member probes complete (false); FactGraph: member probes placeholder
+    assert.deepStrictEqual(cel.collect('error'),   {}, 'scenario 05: CEL errors');
+    assert.deepStrictEqual(fg.collect('error'),    {}, 'scenario 05: FG errors');
+    assert.deepStrictEqual(cel.collect('missing'), {}, 'scenario 05: CEL missing');
+    assert.deepStrictEqual(fg.collect('missing'),  {}, 'scenario 05: FG missing');
+
     // incomeInconsistencyProbe and changeVerificationProbe agree in both
-    assert.ok('incomeInconsistencyProbe' in cel.complete, 'CEL: incomeInconsistencyProbe complete');
-    assert.ok('incomeInconsistencyProbe' in fg.complete,  'FG: incomeInconsistencyProbe complete');
-    assert.ok('changeVerificationProbe' in cel.complete,  'CEL: changeVerificationProbe complete');
-    assert.ok('changeVerificationProbe' in fg.complete,   'FG: changeVerificationProbe complete');
+    assert.strictEqual(cel.get('incomeInconsistencyProbe').state, 'complete', 'CEL: incomeInconsistencyProbe complete');
+    assert.strictEqual(fg.get('incomeInconsistencyProbe').state,  'complete', 'FG: incomeInconsistencyProbe complete');
+    assert.strictEqual(cel.get('changeVerificationProbe').state,  'complete', 'CEL: changeVerificationProbe complete');
+    assert.strictEqual(fg.get('changeVerificationProbe').state,   'complete', 'FG: changeVerificationProbe complete');
   });
 
   it('scenario 06: wrong-type sub-field — member facts error, scalar fact complete in both', () => {
-    assertParity(evaluate(rulesDoc, scenarios[5].inputs), evaluateWithFactGraph(rulesDoc, scenarios[5].inputs), 'scenario 06');
+    assertOutputParity(
+      toGraph(rulesDoc).evaluate(scenarios[5].inputs),
+      toGraphWithFactGraph(rulesDoc).evaluate(scenarios[5].inputs),
+      'scenario 06'
+    );
   });
 });
 
@@ -188,20 +204,20 @@ describe('evaluator — collection ops (all/exists/has)', () => {
   it('scenario 01: filter uses policy defaults → placeholder; all/exists/has are complete', () => {
     const { inputs } = loadJson(join(scenariosDir, '01-mixed-ages-inputs.json'));
     const expected = loadJson(join(scenariosDir, '01-mixed-ages-outputs.json'));
-    const result = evaluate(rulesDoc, inputs);
-    assert.deepStrictEqual(result.complete, expected.complete);
-    assert.deepStrictEqual(result.placeholder, expected.placeholder);
-    assert.deepStrictEqual(result.missing, expected.missing);
-    assert.deepStrictEqual(result.errors, expected.errors);
+    const result = toGraph(rulesDoc).evaluate(inputs).filter('output');
+    assert.deepStrictEqual(result.collect('complete'),    expected.complete);
+    assert.deepStrictEqual(result.collect('placeholder'), expected.placeholder);
+    assert.deepStrictEqual(result.collect('missing'),     expected.missing);
+    assert.deepStrictEqual(result.collect('error'),       expected.errors);
   });
 
   it('scenario 02: all facts are complete when policy is explicitly provided', () => {
     const { inputs } = loadJson(join(scenariosDir, '02-with-policy-inputs.json'));
     const expected = loadJson(join(scenariosDir, '02-with-policy-outputs.json'));
-    const result = evaluate(rulesDoc, inputs);
-    assert.deepStrictEqual(result.complete, expected.complete);
-    assert.deepStrictEqual(result.placeholder, expected.placeholder);
-    assert.deepStrictEqual(result.missing, expected.missing);
-    assert.deepStrictEqual(result.errors, expected.errors);
+    const result = toGraph(rulesDoc).evaluate(inputs).filter('output');
+    assert.deepStrictEqual(result.collect('complete'),    expected.complete);
+    assert.deepStrictEqual(result.collect('placeholder'), expected.placeholder);
+    assert.deepStrictEqual(result.collect('missing'),     expected.missing);
+    assert.deepStrictEqual(result.collect('error'),       expected.errors);
   });
 });

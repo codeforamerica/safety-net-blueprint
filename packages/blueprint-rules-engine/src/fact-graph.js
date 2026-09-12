@@ -19,7 +19,7 @@
  */
 
 import { compileRuleset } from '@codeforamerica/blueprint-core';
-import { matchesType } from './evaluator.js';
+import { matchesType, EvalResult, Graph } from './evaluator.js';
 import {
   FactDictionaryFactory,
   GraphFactory,
@@ -709,34 +709,16 @@ function extractResult(result, uuidToItem) {
   return { value: rawValue, state };
 }
 
-// ── Public: evaluateWithFactGraph ─────────────────────────────────────────────
+// ── FactGraph graph wrapper ───────────────────────────────────────────────────
 
 /**
- * Evaluate a ruleset using the FactGraph engine.
- *
- * Returns the same { complete, placeholder, missing, errors } shape as evaluate().
- * Collection facts (filter expressions) return arrays of the original input
- * objects, matching the CEL evaluator's output.
- *
- * Note: This function imports the vendor/fg.js FactGraph engine and is
- * Node-only. For browser use, import { evaluate } from './index.js' instead.
- *
- * @param {Object} rulesDoc      - parsed *-rules.yaml document
- * @param {Object} inputs        - named input objects, e.g. { household: {...} }
- * @param {string} [rulesetName] - which ruleset to evaluate; defaults to first
- * @returns {{ complete: Object, placeholder: Object, missing: Object, errors: Object }}
+ * Evaluate a compiled graph using the FactGraph engine, returning an EvalResult
+ * with typed nodes for all facts (intermediates + outputs).
  */
-export function evaluateWithFactGraph(rulesDoc, inputs, rulesetName) {
-  const rulesets = rulesDoc?.rulesets ?? {};
-  const name = rulesetName ?? Object.keys(rulesets)[0];
-  const ruleset = rulesets[name];
-  if (!ruleset) throw new Error(`Ruleset "${name}" not found`);
-
-  const domain = rulesDoc.domain ?? 'unknown';
-  const graph = compileRuleset(domain, name, ruleset);
+function evaluateCompiledWithFactGraph(graph, inputs) {
+  const outputSet = new Set(graph.outputs);
   const xml = buildFactDictionaryXml(graph);
 
-  // Import XML and create the FactGraph
   const dict = FactDictionaryFactory.importFromXml(xml);
   const fgGraph = GraphFactory.apply(dict);
 
@@ -748,95 +730,72 @@ export function evaluateWithFactGraph(rulesDoc, inputs, rulesetName) {
   // but reads from 'store' on get(). save() syncs live → store so derived facts resolve.
   fgGraph.save();
 
-  const complete = {};
-  const placeholder = {};
-  const missing = {};
-  const errors = {};
+  const nodes = {};
 
-  for (const factName of graph.outputs) {
+  for (const factName of Object.keys(graph.facts)) {
+    const type = outputSet.has(factName) ? 'output' : 'intermediate';
     const fgFactPath = `/${factName}`;
     try {
       const result = fgGraph.get(fgFactPath);
       const extracted = extractResult(result, uuidToItem);
       if (extracted.state === 'incomplete') {
-        missing[factName] = [];
-      } else if (extracted.state === 'complete') {
-        complete[factName] = extracted.value;
+        nodes[factName] = { type, state: 'missing', value: null, missing: [] };
       } else {
-        placeholder[factName] = extracted.value;
+        nodes[factName] = { type, state: extracted.state, value: extracted.value };
       }
     } catch (err) {
-      errors[factName] = err.message ?? String(err);
+      nodes[factName] = { type, state: 'error', value: null, message: err.message ?? String(err) };
     }
   }
 
-  // Override results for facts affected by type-error inputs: move them to errors
-  // regardless of what FactGraph returned (it saw missing inputs, not type errors).
+  // Override results for facts affected by type-error inputs
   if (failedPaths.size > 0) {
     const affected = findAffectedFacts(failedPaths, graph);
     for (const [factName, msg] of Object.entries(affected)) {
-      if (!graph.outputs.includes(factName)) continue;
-      delete complete[factName];
-      delete placeholder[factName];
-      delete missing[factName];
-      errors[factName] = msg;
+      const type = outputSet.has(factName) ? 'output' : 'intermediate';
+      nodes[factName] = { type, state: 'error', value: null, message: msg };
     }
   }
 
-  return { complete, placeholder, missing, errors };
+  return new EvalResult(nodes);
 }
 
 /**
- * Evaluate a compiled graph using the FactGraph engine.
- *
- * Accepts a pre-compiled graph (output of compileRuleset() or a parsed
- * *-graph.yaml document) and skips the compilation step.
- *
- * @param {Object} graph   - compiled graph ({ facts, dependencies, outputs, inputs, ... })
- * @param {Object} inputs  - named input objects, e.g. { household: { ... } }
- * @returns {{ complete: Object, placeholder: Object, missing: Object, errors: Object }}
+ * A Graph wrapper backed by the FactGraph engine.
+ * Returned by toGraphWithFactGraph(). Call .evaluate(inputs) to produce an EvalResult.
  */
-export function evaluateGraphWithFactGraph(graph, inputs) {
-  const xml = buildFactDictionaryXml(graph);
-
-  const dict = FactDictionaryFactory.importFromXml(xml);
-  const fgGraph = GraphFactory.apply(dict);
-
-  const { uuidToItem, failedPaths } = seedGraph(fgGraph, graph.inputs, inputs);
-  fgGraph.save();
-
-  const complete = {};
-  const placeholder = {};
-  const missing = {};
-  const errors = {};
-
-  for (const factName of graph.outputs) {
-    const fgFactPath = `/${factName}`;
-    try {
-      const result = fgGraph.get(fgFactPath);
-      const extracted = extractResult(result, uuidToItem);
-      if (extracted.state === 'incomplete') {
-        missing[factName] = [];
-      } else if (extracted.state === 'complete') {
-        complete[factName] = extracted.value;
-      } else {
-        placeholder[factName] = extracted.value;
-      }
-    } catch (err) {
-      errors[factName] = err.message ?? String(err);
-    }
+class FactGraphGraph extends Graph {
+  constructor(compiled) {
+    super(compiled);
   }
 
-  if (failedPaths.size > 0) {
-    const affected = findAffectedFacts(failedPaths, graph);
-    for (const [factName, msg] of Object.entries(affected)) {
-      if (!graph.outputs.includes(factName)) continue;
-      delete complete[factName];
-      delete placeholder[factName];
-      delete missing[factName];
-      errors[factName] = msg;
-    }
+  evaluate(inputs) {
+    return evaluateCompiledWithFactGraph(this._compiled, inputs);
   }
+}
 
-  return { complete, placeholder, missing, errors };
+/**
+ * Compile a rules document (or wrap an already-compiled graph) into a Graph
+ * that evaluates using the FactGraph engine.
+ *
+ * Node-only — the FactGraph engine is not browser-compatible.
+ * For browser use, import { toGraph } from './evaluator.js' instead.
+ *
+ * @param {Object} rulesDocOrGraph - rules doc or compiled graph
+ * @param {string} [rulesetName]   - which ruleset to use (defaults to first)
+ * @returns {Graph}
+ */
+export function toGraphWithFactGraph(rulesDocOrGraph, rulesetName) {
+  // Already compiled
+  if (rulesDocOrGraph.facts && rulesDocOrGraph.outputs) {
+    return new FactGraphGraph(rulesDocOrGraph);
+  }
+  // Rules doc — compile first
+  const rulesets = rulesDocOrGraph.rulesets ?? {};
+  const name = rulesetName ?? Object.keys(rulesets)[0];
+  const ruleset = rulesets[name];
+  if (!ruleset) throw new Error(`Ruleset "${name}" not found`);
+  const domain = rulesDocOrGraph.domain ?? 'unknown';
+  const compiled = compileRuleset(domain, name, ruleset);
+  return new FactGraphGraph(compiled);
 }

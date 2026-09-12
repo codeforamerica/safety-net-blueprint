@@ -8,10 +8,10 @@
  * visualize-graph-html.js, with a thin adapter that converts the *-graph.yaml
  * structure into the data format those functions expect.
  *
- * The page uses a Graph / Evaluate tab layout. Clicking a node shows a detail
- * panel inline below the graph. Browser-side evaluation uses
- * window.RulesEngine.evaluateGraph exposed by the rules-engine.js IIFE —
- * no mock server required.
+ * Each ruleset page has a browse/experiment panel below the graph. Browse mode
+ * shows example inputs (read-only, navigable); "Try it" unlocks the textarea for
+ * live experimentation. Browser-side evaluation uses window.RulesEngine.toGraph
+ * exposed by the rules-engine.js IIFE — no mock server required.
  */
 
 import { writeFileSync } from 'fs';
@@ -165,7 +165,11 @@ function renderDetailStrip() {
 </div>`;
 }
 
-// ── Two-column panel: Try it (left) + Evaluate & Results (right) ──────────────
+// ── Two-column panel: Inputs (left) + Outputs (right) ─────────────────────────
+// Browse mode (default): textarea is read-only, example nav is visible.
+// Experiment mode: "Try it" unlocks textarea (pre-seeded with current example),
+//   hides nav, and changes the button to "Reset".
+// "Reset" restores the current example, re-locks the textarea, and re-enables nav.
 
 function renderBottomPanel(graph, examples) {
   const template = buildInputTemplate(graph.inputs);
@@ -174,33 +178,41 @@ function renderBottomPanel(graph, examples) {
     ? JSON.stringify(examples[0].inputs, null, 2)
     : JSON.stringify(template, null, 2);
   const textareaRows = Math.min(Math.max(initialJson.split('\n').length + 1, 6), 20);
-
   const examplesNav = hasExamples ? `
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-    <button onclick="loadExample(-1)" style="padding:2px 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:13px;line-height:1;">‹</button>
-    <span id="example-label" style="font-size:11px;color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(examples[0].description)}">${esc(examples[0].description)}</span>
-    <button onclick="loadExample(1)" style="padding:2px 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:13px;line-height:1;">›</button>
+  <div id="example-nav" style="display:flex;align-items:flex-start;gap:6px;margin-bottom:8px;">
+    <button onclick="loadExample(-1)" style="flex-shrink:0;padding:2px 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:13px;line-height:1;margin-top:1px;">‹</button>
+    <span id="example-label" style="font-size:11px;color:#374151;flex:1;">${esc(examples[0].description)}</span>
+    <button onclick="loadExample(1)" style="flex-shrink:0;padding:2px 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:13px;line-height:1;margin-top:1px;">›</button>
   </div>` : '';
+
+  const tryItBtn = hasExamples
+    ? `<button id="experiment-btn" onclick="toggleExperimentMode()" style="padding:3px 10px;background:none;color:#2B1A78;border:1px solid #2B1A78;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">Try it</button>`
+    : '';
+
+  const textareaStyle = `width:100%;font-family:${MONOSPACE};font-size:11px;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px;resize:vertical;box-sizing:border-box;`;
+  const lockedStyle  = `${textareaStyle}background:#f9fafb;color:#374151;`;
+  const initialStyle = hasExamples ? lockedStyle : `${textareaStyle}background:#fff;`;
 
   return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #e5e7eb;border-radius:6px;margin-top:8px;background:#fafafa;">
 
   <div style="padding:16px;border-right:1px solid #e5e7eb;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-      <div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;">Try it</div>
-      <button onclick="runEval()" style="padding:3px 10px;background:#2B1A78;color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">Evaluate</button>
+      <div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;">Inputs</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button id="evaluate-btn" onclick="runEval()" style="display:none;padding:3px 10px;background:#2B1A78;color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">Evaluate</button>
+        ${tryItBtn}
+      </div>
     </div>
     ${examplesNav}
     <textarea id="eval-inputs" rows="${textareaRows}"
-      style="width:100%;font-family:${MONOSPACE};font-size:11px;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px;resize:vertical;background:#fff;box-sizing:border-box;"
-      oninput="scheduleEval()">${esc(initialJson)}</textarea>
+      style="${initialStyle}"
+      ${hasExamples ? 'readonly' : ''}>${esc(initialJson)}</textarea>
   </div>
 
   <div style="padding:16px;">
-    <div style="margin-bottom:8px;">
-      <div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;">Results</div>
-    </div>
+    <div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:8px;">Outputs</div>
     <div id="eval-errors" style="margin-bottom:6px;font-size:10px;color:#991b1b;font-family:${MONOSPACE};display:none;white-space:pre-wrap;"></div>
-    <pre id="eval-results-body" style="font-family:${MONOSPACE};font-size:10.5px;background:#f3f4f6;padding:8px 10px;border-radius:4px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;color:#9ca3af;margin:0;">Evaluate to see results.</pre>
+    <div id="eval-results-body" style="font-family:${MONOSPACE};font-size:10.5px;color:#9ca3af;">Evaluating…</div>
   </div>
 
 </div>`;
@@ -276,14 +288,57 @@ const POLICIES = ${policiesJson};
 const EXAMPLES = ${examplesJson};
 const RULESET_INPUTS = ${rulesetInputsJson};
 let exampleIndex = 0;
+let isExperimentMode = !EXAMPLES.length; // start unlocked when no examples
 
 function loadExample(delta) {
-  if (!EXAMPLES.length) return;
+  if (!EXAMPLES.length || isExperimentMode) return;
   exampleIndex = (exampleIndex + delta + EXAMPLES.length) % EXAMPLES.length;
   const ex = EXAMPLES[exampleIndex];
   document.getElementById('eval-inputs').value = JSON.stringify(ex.inputs, null, 2);
   const label = document.getElementById('example-label');
   if (label) { label.textContent = ex.description; label.title = ex.description; }
+  runEval();
+}
+
+function toggleExperimentMode() {
+  if (isExperimentMode) { resetToExample(); } else { enterExperimentMode(); }
+}
+
+function experimentEls() {
+  return {
+    textarea:    document.getElementById('eval-inputs'),
+    nav:         document.getElementById('example-nav'),
+    btn:         document.getElementById('experiment-btn'),
+    evaluateBtn: document.getElementById('evaluate-btn'),
+  };
+}
+
+function enterExperimentMode() {
+  isExperimentMode = true;
+  const { textarea, nav, btn, evaluateBtn } = experimentEls();
+  textarea.removeAttribute('readonly');
+  textarea.style.background    = '#fff';
+  textarea.style.borderColor   = '#2B1A78';
+  if (nav)         nav.style.display         = 'none';
+  if (btn)         btn.textContent            = 'Reset';
+  if (evaluateBtn) evaluateBtn.style.display  = '';
+}
+
+function resetToExample() {
+  isExperimentMode = false;
+  const { textarea, nav, btn, evaluateBtn } = experimentEls();
+  if (EXAMPLES.length) {
+    const ex = EXAMPLES[exampleIndex];
+    textarea.value = JSON.stringify(ex.inputs, null, 2);
+    const label = document.getElementById('example-label');
+    if (label) { label.textContent = ex.description; label.title = ex.description; }
+  }
+  textarea.setAttribute('readonly', '');
+  textarea.style.background  = '#f9fafb';
+  textarea.style.borderColor = '#d1d5db';
+  if (nav)         nav.style.display        = '';
+  if (btn)         btn.textContent          = 'Try it';
+  if (evaluateBtn) evaluateBtn.style.display = 'none';
   runEval();
 }
 
@@ -315,11 +370,28 @@ document.addEventListener('click', function (e) {
 
   svg.querySelectorAll('.sg-selected-ring').forEach(r => r.remove());
   svg._activeNode = node;
-  const connected = new Set([node]);
-  allEdges.forEach(l => {
-    if (l.dataset.from === node) connected.add(l.dataset.to);
-    if (l.dataset.to === node) connected.add(l.dataset.from);
-  });
+
+  // Build transitive connected set via two separate passes:
+  // upstream (toward inputs) and downstream (toward outputs).
+  // Mixing directions in one BFS causes household's descendants to fan out incorrectly.
+  const upstream = new Set([node]);
+  const upQueue = [node];
+  while (upQueue.length) {
+    const cur = upQueue.shift();
+    allEdges.forEach(l => {
+      if (l.dataset.to === cur && !upstream.has(l.dataset.from)) { upstream.add(l.dataset.from); upQueue.push(l.dataset.from); }
+    });
+  }
+  const downstream = new Set([node]);
+  const downQueue = [node];
+  while (downQueue.length) {
+    const cur = downQueue.shift();
+    allEdges.forEach(l => {
+      if (l.dataset.from === cur && !downstream.has(l.dataset.to)) { downstream.add(l.dataset.to); downQueue.push(l.dataset.to); }
+    });
+  }
+  const connected = new Set([...upstream, ...downstream]);
+
   allNodes.forEach(n => {
     const isActive = n.dataset.node === node;
     n.style.opacity = connected.has(n.dataset.node) ? '1' : '0.15';
@@ -342,7 +414,7 @@ document.addEventListener('click', function (e) {
     }
   });
   allEdges.forEach(l => {
-    const hit = l.dataset.from === node || l.dataset.to === node;
+    const hit = connected.has(l.dataset.from) && connected.has(l.dataset.to);
     l.style.opacity = hit ? '1' : '0.1';
     l.setAttribute('stroke', hit ? '#2B1A78' : '#6b7280');
     l.setAttribute('stroke-width', hit ? '2.5' : '1.5');
@@ -358,7 +430,7 @@ function closeDetail() {
 // ── Detail strip ──────────────────────────────────────────────────────────────
 // Full-width strip between graph and columns. Shows on node click, hides on
 // close button or clicking empty graph area.
-let lastResult = null;
+let lastNodes = null; // plain { factName: { type, state, value, ... } } map
 let activeNode = null;
 
 function showDetail(nodeName) {
@@ -370,21 +442,24 @@ function showDetail(nodeName) {
   const annot = ANNOTATIONS[nodeName];
   const isInput = !fact;
   const isOutput = outputSet.has(nodeName);
+  const isIntermediate = !isInput && !isOutput;
   const role = isInput ? 'Input' : isOutput ? 'Output' : 'Intermediate fact';
   const roleColor = isInput ? '#00AD93' : isOutput ? '#2B1A78' : '#E65100';
 
   let html = '<div style="font-size:13px;font-weight:700;color:#111827;margin-bottom:3px;font-family:ui-monospace,monospace">' + escHtml(nodeName) + '</div>';
   html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:' + roleColor + ';margin-bottom:10px;">' + role + '</div>';
 
-  // Computed value (if we have a result)
-  if (!isInput && lastResult) {
-    const allFacts = Object.assign({}, lastResult.complete, lastResult.placeholder);
-    const val = allFacts[nodeName];
-    if (val !== undefined) {
-      html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">Current value</div>';
-      html += '<code style="display:block;font-size:11px;padding:6px 8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:3px;word-break:break-all;margin-bottom:10px;font-family:ui-monospace,monospace;color:#166534;">' + escHtml(JSON.stringify(val)) + '</code>';
-    } else {
-      html += '<div style="font-size:10px;color:#9ca3af;margin-bottom:10px;font-style:italic;">Could not evaluate — check inputs.</div>';
+  // Current value — only for intermediate facts (outputs shown in panel, inputs have no computed value)
+  if (isIntermediate && lastNodes) {
+    const node = lastNodes[nodeName];
+    if (node && (node.state === 'complete' || node.state === 'placeholder')) {
+      const stateLabel = node.state === 'placeholder' ? ' <span style="font-size:9px;font-weight:600;color:#92400e;background:#fef3c7;padding:1px 4px;border-radius:2px;margin-left:4px;">placeholder</span>' : '';
+      html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">Current value' + stateLabel + '</div>';
+      html += '<code style="display:block;font-size:11px;padding:6px 8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:3px;word-break:break-all;margin-bottom:10px;font-family:ui-monospace,monospace;color:#166534;">' + escHtml(JSON.stringify(node.value)) + '</code>';
+    } else if (node?.state === 'error') {
+      html += '<div style="font-size:10px;color:#991b1b;margin-bottom:10px;font-style:italic;">Error: ' + escHtml(node.message) + '</div>';
+    } else if (node?.state === 'missing') {
+      html += '<div style="font-size:10px;color:#9ca3af;margin-bottom:10px;font-style:italic;">Missing inputs: ' + escHtml((node.missing ?? []).join(', ')) + '</div>';
     }
   }
 
@@ -432,18 +507,8 @@ function showDetail(nodeName) {
   strip.style.display = '';
 }
 
-// ── Auto-evaluate with debounce ────────────────────────────────────────────────
-// The textarea holds a single JSON object whose top-level keys are the binding
-// names (e.g. { household: {...}, program: {...} }). evaluateGraph receives this
-// directly. After evaluation, refreshes the left panel if a node is selected.
-let evalTimer;
-function scheduleEval() {
-  clearTimeout(evalTimer);
-  evalTimer = setTimeout(runEval, 350);
-}
-
 // Apply ruleset input schema defaults for any namespace absent from userInputs.
-// Returns { scope, defaultedNamespaces } mirroring evaluate()'s behavior.
+// Returns { scope, defaultedNamespaces } mirroring toGraph(rulesDoc).evaluate() behavior.
 function applyDefaults(userInputs) {
   const scope = Object.assign({}, userInputs);
   const defaultedNamespaces = new Set();
@@ -462,10 +527,10 @@ function applyDefaults(userInputs) {
   return { scope, defaultedNamespaces };
 }
 
-// Walk the dependency graph to find which output facts transitively depend on
-// any of the defaulted namespaces, then move them from complete → placeholder.
-function reclassifyPlaceholders(result, defaultedNamespaces) {
-  if (!defaultedNamespaces.size) return result;
+// Walk the dependency graph to find facts that transitively depend on any
+// defaulted namespace and promote them from complete → placeholder.
+function reclassifyPlaceholders(nodes, defaultedNamespaces) {
+  if (!defaultedNamespaces.size) return nodes;
   const deps = GRAPH.dependencies;
 
   function touchesDefault(factName, visited = new Set()) {
@@ -473,8 +538,7 @@ function reclassifyPlaceholders(result, defaultedNamespaces) {
     visited.add(factName);
     for (const dep of (deps[factName] ?? [])) {
       if (dep.startsWith('$.')) {
-        const ns = dep.slice(2).split('.')[0];
-        if (defaultedNamespaces.has(ns)) return true;
+        if (defaultedNamespaces.has(dep.slice(2).split('.')[0])) return true;
       } else if (touchesDefault(dep, visited)) {
         return true;
       }
@@ -482,36 +546,73 @@ function reclassifyPlaceholders(result, defaultedNamespaces) {
     return false;
   }
 
-  const complete = Object.assign({}, result.complete);
-  const placeholder = Object.assign({}, result.placeholder);
-  for (const name of Object.keys(complete)) {
-    if (touchesDefault(name)) {
-      placeholder[name] = complete[name];
-      delete complete[name];
+  const result = Object.assign({}, nodes);
+  for (const name of Object.keys(result)) {
+    if (result[name].state === 'complete' && touchesDefault(name)) {
+      result[name] = Object.assign({}, result[name], { state: 'placeholder' });
     }
   }
-  return { ...result, complete, placeholder };
+  return result;
+}
+
+// Render output facts into the results panel.
+// prevNodes (optional): previous eval result — rows whose value changed get a flash highlight.
+function renderOutputs(nodes, prevNodes) {
+  const el = document.getElementById('eval-results-body');
+  if (!nodes) { el.textContent = 'Evaluating\u2026'; el.style.color = '#9ca3af'; return; }
+  const outputEntries = GRAPH.outputs.map(name => [name, nodes[name]]).filter(([, node]) => node);
+  if (!outputEntries.length) { el.textContent = 'No outputs.'; el.style.color = '#9ca3af'; return; }
+  const rows = outputEntries.map(([name, node]) => {
+    const stateColor = node.state === 'complete' ? '#111827' : node.state === 'placeholder' ? '#92400e' : node.state === 'error' ? '#991b1b' : '#9ca3af';
+    const indicator  = node.state === 'complete' ? '\u25cf' : node.state === 'placeholder' ? '\u25d0' : node.state === 'error' ? '\u2715' : '\u25cb';
+    const valueStr   = node.state === 'error' ? node.message : node.state === 'missing' ? 'missing' : JSON.stringify(node.value);
+    return '<div data-name="' + escHtml(name) + '" style="padding:4px 0;border-bottom:1px solid #f3f4f6;">'
+      + '<div style="color:#374151;margin-bottom:1px;">' + escHtml(name) + '</div>'
+      + '<div style="color:' + stateColor + ';word-break:break-word;">' + indicator + ' ' + escHtml(valueStr) + '</div>'
+      + '</div>';
+  });
+  el.innerHTML = rows.join('');
+  el.style.color = '#111827';
+
+  // Flash rows whose value changed since the previous eval
+  if (prevNodes) {
+    for (const [name, node] of outputEntries) {
+      const prev = prevNodes[name];
+      if (!prev || prev.state !== node.state || JSON.stringify(prev.value) !== JSON.stringify(node.value)) {
+        const row = el.querySelector('[data-name="' + name + '"]');
+        if (row) flashHighlight(row);
+      }
+    }
+  }
+}
+
+function flashHighlight(el) {
+  el.style.transition = 'none';
+  el.style.background = '#fef9c3';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    el.style.transition = 'background 1.5s ease-out';
+    el.style.background = '';
+  }));
 }
 
 function runEval() {
   if (!window.RulesEngine) return;
   const errEl = document.getElementById('eval-errors');
-  const raw = (document.getElementById('eval-inputs')?.value ?? '').trim();
-  if (!raw) return;
+  const inputVal = (document.getElementById('eval-inputs')?.value ?? '').trim();
+  if (!inputVal) return;
   let userInputs;
-  try { userInputs = JSON.parse(raw); } catch (e) {
+  try { userInputs = JSON.parse(inputVal); } catch (e) {
     errEl.textContent = 'Invalid JSON: ' + e.message;
     errEl.style.display = 'block';
     return;
   }
   try {
     const { scope, defaultedNamespaces } = applyDefaults(userInputs);
-    const raw = window.RulesEngine.evaluateGraph(GRAPH, scope);
-    lastResult = reclassifyPlaceholders(raw, defaultedNamespaces);
+    const result = window.RulesEngine.toGraph(GRAPH).evaluate(scope);
+    const prevNodes = lastNodes;
+    lastNodes = reclassifyPlaceholders(result.toJSON(), defaultedNamespaces);
     errEl.style.display = 'none';
-    const pre = document.getElementById('eval-results-body');
-    pre.style.color = '#111827';
-    pre.textContent = JSON.stringify(lastResult, null, 2);
+    renderOutputs(lastNodes, prevNodes);
     if (activeNode) showDetail(activeNode);
   } catch (e) {
     errEl.textContent = e.message;
@@ -523,7 +624,7 @@ function escHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-if (EXAMPLES.length) { loadExample(0); } else { runEval(); }
+runEval();
 </script>`;
 
   return shell(rulesetName, body, hubHref);
