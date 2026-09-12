@@ -19,6 +19,7 @@
  */
 
 import { compileRuleset } from '@codeforamerica/blueprint-core';
+import { matchesType } from './evaluator.js';
 import {
   FactDictionaryFactory,
   GraphFactory,
@@ -520,15 +521,53 @@ export function toFactGraphXml(rulesDoc, rulesetName) {
 // ── Graph seeding ─────────────────────────────────────────────────────────────
 
 /**
+ * Transitively find all facts (by name) that depend on any of the given
+ * failed input paths, using the graph's dependency map.
+ *
+ * Returns an object mapping each affected fact name to an error message.
+ */
+function findAffectedFacts(failedPaths, graph) {
+  const affected = {}; // factName → error message
+
+  for (const [factName, deps] of Object.entries(graph.dependencies ?? {})) {
+    const badDep = deps.find(d => failedPaths.has(d));
+    if (badDep) {
+      const actual = Array.isArray(failedPaths.get(badDep)) ? 'array' : typeof failedPaths.get(badDep);
+      affected[factName] = `Dependency error: '${badDep}' — ${failedPaths.get(badDep)}`;
+    }
+  }
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [factName, deps] of Object.entries(graph.dependencies ?? {})) {
+      if (factName in affected) continue;
+      const badDep = deps.find(d => d in affected);
+      if (badDep) {
+        affected[factName] = `Dependency error: '${badDep}' — ${affected[badDep]}`;
+        changed = true;
+      }
+    }
+  }
+
+  return affected;
+}
+
+/**
  * Seed a FactGraph from named input objects.
  *
  * Handles both scalar inputs (set directly) and array inputs (creates
  * CollectionItems with UUIDs, then sets each item's properties).
  *
- * @returns {Map<string, object>} uuid → original array item, for result mapping
+ * Scalar inputs are type-checked before seeding. Wrong-type values are skipped
+ * and recorded in failedPaths so callers can put dependent facts into errors
+ * rather than letting the Scala engine throw.
+ *
+ * @returns {{ uuidToItem: Map, failedPaths: Map }} uuid→item map and path→errorMsg map
  */
 function seedGraph(fgGraph, graphInputs, inputs) {
   const uuidToItem = new Map();
+  const failedPaths = new Map(); // jsonPath → error message
 
   for (const [jsonPath, spec] of Object.entries(graphInputs)) {
     // Skip sub-fields — handled when seeding the parent array
@@ -553,6 +592,25 @@ function seedGraph(fgGraph, graphInputs, inputs) {
       const subFields = Object.keys(graphInputs)
         .filter(p => p.startsWith(arrayPrefix))
         .map(p => p.slice(arrayPrefix.length));    // ['age', 'employed', ...]
+
+      // Pre-validate sub-field types before seeding — set__T__O__V throws on type mismatches.
+      // If any item has a wrong-type sub-field, flag the collection path and skip seeding.
+      let subFieldError = false;
+      for (const fieldName of subFields) {
+        if (subFieldError) break;
+        const subSpec = graphInputs[`${arrayPrefix}${fieldName}`];
+        if (!subSpec) continue;
+        for (const item of arr) {
+          const val = item[fieldName];
+          if (val != null && !matchesType(val, subSpec.type)) {
+            const actual = Array.isArray(val) ? 'array' : typeof val;
+            failedPaths.set(jsonPath, `expected ${subSpec.type} for .${fieldName}, got ${actual}`);
+            subFieldError = true;
+            break;
+          }
+        }
+      }
+      if (subFieldError) continue;
 
       // Generate UUIDs for all items and build the uuid→item map
       const uuids = arr.map(() => crypto.randomUUID());
@@ -595,11 +653,16 @@ function seedGraph(fgGraph, graphInputs, inputs) {
         val = val[f];
       }
       if (val == null) continue;
+      if (!matchesType(val, spec.type)) {
+        const actual = typeof val;
+        failedPaths.set(jsonPath, `expected ${spec.type}, got ${actual}`);
+        continue;
+      }
       fgGraph.set(toFgPath(jsonPath), val);
     }
   }
 
-  return uuidToItem;
+  return { uuidToItem, failedPaths };
 }
 
 // ── Result extraction ─────────────────────────────────────────────────────────
@@ -677,8 +740,9 @@ export function evaluateWithFactGraph(rulesDoc, inputs, rulesetName) {
   const dict = FactDictionaryFactory.importFromXml(xml);
   const fgGraph = GraphFactory.apply(dict);
 
-  // Seed inputs and build UUID → original item map for collection results
-  const uuidToItem = seedGraph(fgGraph, graph.inputs, inputs);
+  // Seed inputs and build UUID → original item map for collection results.
+  // failedPaths records scalar inputs that had wrong types and were skipped.
+  const { uuidToItem, failedPaths } = seedGraph(fgGraph, graph.inputs, inputs);
 
   // Commit seeded values: the FactGraph persister writes to a 'live' store on set(),
   // but reads from 'store' on get(). save() syncs live → store so derived facts resolve.
@@ -706,6 +770,19 @@ export function evaluateWithFactGraph(rulesDoc, inputs, rulesetName) {
     }
   }
 
+  // Override results for facts affected by type-error inputs: move them to errors
+  // regardless of what FactGraph returned (it saw missing inputs, not type errors).
+  if (failedPaths.size > 0) {
+    const affected = findAffectedFacts(failedPaths, graph);
+    for (const [factName, msg] of Object.entries(affected)) {
+      if (!graph.outputs.includes(factName)) continue;
+      delete complete[factName];
+      delete placeholder[factName];
+      delete missing[factName];
+      errors[factName] = msg;
+    }
+  }
+
   return { complete, placeholder, missing, errors };
 }
 
@@ -725,7 +802,7 @@ export function evaluateGraphWithFactGraph(graph, inputs) {
   const dict = FactDictionaryFactory.importFromXml(xml);
   const fgGraph = GraphFactory.apply(dict);
 
-  const uuidToItem = seedGraph(fgGraph, graph.inputs, inputs);
+  const { uuidToItem, failedPaths } = seedGraph(fgGraph, graph.inputs, inputs);
   fgGraph.save();
 
   const complete = {};
@@ -747,6 +824,17 @@ export function evaluateGraphWithFactGraph(graph, inputs) {
       }
     } catch (err) {
       errors[factName] = err.message ?? String(err);
+    }
+  }
+
+  if (failedPaths.size > 0) {
+    const affected = findAffectedFacts(failedPaths, graph);
+    for (const [factName, msg] of Object.entries(affected)) {
+      if (!graph.outputs.includes(factName)) continue;
+      delete complete[factName];
+      delete placeholder[factName];
+      delete missing[factName];
+      errors[factName] = msg;
     }
   }
 

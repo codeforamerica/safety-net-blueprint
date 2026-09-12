@@ -11,10 +11,12 @@
     "build:data-dictionaries": "node build.js --only=data-dictionaries",
     "build:event-catalog": "node build.js --only=event-catalog",
     "build:sequence-diagrams": "node build.js --only=sequence-diagrams",
+    "build:rules-docs": "node build.js --only=rules-docs",
     "build:state-machine-docs": "node build.js --only=state-machine-docs",
     "build:field-inventory": "node src/data-dictionaries/generate-field-inventory.mjs",
-    "test": "node --test tests/*.test.js tests/**/*.test.js",
-    "test:unit": "node --test tests/*.test.js tests/**/*.test.js"
+    "test": "node --test tests/context-map/*.test.js tests/data-dictionaries/*.test.js tests/lib/*.test.js tests/rules-docs/*.test.js",
+    "test:unit": "node --test tests/context-map/*.test.js tests/data-dictionaries/*.test.js tests/lib/*.test.js tests/rules-docs/*.test.js",
+    "test:goldens-regenerate": "node src/rules-docs/build.js --content=tests/rules-docs/fixtures/content --resolved=tests/rules-docs/fixtures/contracts"
   },
   "engines": {
     "node": ">=22.11.0"
@@ -28,6 +30,7 @@
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
     "@codeforamerica/blueprint-core": "^0.1.0",
+    "@codeforamerica/blueprint-rules-engine": "^0.1.0",
     "ajv": "^8.17.1",
     "js-yaml": "^4.1.0"
   }

@@ -80,6 +80,7 @@ const apiPages     = scanPages(join(contentDir, 'api-reference'));
 const dictPages    = scanPages(join(contentDir, 'data-dictionaries'));
 const clientPages  = scanPages(join(contentDir, 'client-reference'));
 const smPages      = scanPages(join(contentDir, 'state-machine-docs'));
+const rulesPages   = scanPages(join(contentDir, 'rules-docs'));
 const contextPages = scanPages(join(contentDir, 'context-map'), contextMapLabel)
   .filter(p => p.slug.startsWith('domain_'));
 const seqPages     = scanPages(join(contentDir, 'sequence-diagrams'));
@@ -532,6 +533,30 @@ const html = `<!DOCTYPE html>
             <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Generated reference for the state machines defined in the blueprint contracts — states, transitions, actions, and event subscriptions.</p>${outputTags(smPages, `state-machine-docs`, 'dot-blue')}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-accent accent-blue"></div>
+        <div class="card-body">
+          <div class="card-icon icon-blue">
+            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="4"  cy="4"  r="2.5" fill="#2B1A78"/>
+              <circle cx="16" cy="4"  r="2.5" fill="#5650BE"/>
+              <circle cx="4"  cy="16" r="2.5" fill="#5650BE"/>
+              <circle cx="16" cy="16" r="2.5" fill="#5650BE"/>
+              <circle cx="10" cy="10" r="2.5" fill="#2B1A78"/>
+              <line x1="6" y1="5"  x2="8.5"  y2="8.5"  stroke="#5650BE" stroke-width="1.5"/>
+              <line x1="14" y1="5"  x2="11.5" y2="8.5"  stroke="#5650BE" stroke-width="1.5"/>
+              <line x1="6"  y1="15" x2="8.5"  y2="11.5" stroke="#5650BE" stroke-width="1.5"/>
+              <line x1="14" y1="15" x2="11.5" y2="11.5" stroke="#5650BE" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="card-header-row">
+            <h4><a href="rules-docs/index.html" class="card-link">Rules Docs</a></h4>
+            <span class="status-badge badge-progress">In progress</span>
+          </div>
+          <p>Dependency graph visualizer for blueprint rulesets — inputs, intermediate facts, outputs, policy citations, and browser-side evaluation.</p>${outputTags(rulesPages, `rules-docs`, 'dot-blue')}
         </div>
       </div>
 

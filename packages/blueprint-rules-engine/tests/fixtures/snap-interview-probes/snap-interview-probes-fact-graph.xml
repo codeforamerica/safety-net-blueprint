@@ -14,57 +14,37 @@
       <Collection/>
     </Writable>
   </Fact>
-  <Fact path="/household_members/*/id">
-    <Writable>
-      <String/>
-    </Writable>
-  </Fact>
-  <Fact path="/household_members/*/name">
-    <Writable>
-      <String/>
-    </Writable>
-  </Fact>
   <Fact path="/household_members/*/age">
     <Writable>
       <Int/>
     </Writable>
   </Fact>
-  <Fact path="/household_members/*/employed">
+  <Fact path="/household_members/*/isEmployed">
     <Writable>
       <Boolean/>
     </Writable>
   </Fact>
-  <Fact path="/household_members/*/citizenshipStatus">
-    <Writable>
-      <String/>
-    </Writable>
-  </Fact>
-  <Fact path="/household_members/*/hasSponsor">
+  <Fact path="/household_members/*/isStudent">
     <Writable>
       <Boolean/>
     </Writable>
   </Fact>
-  <Fact path="/household_members/*/enrolledHalfTime">
+  <Fact path="/household_members/*/isNonCitizen">
     <Writable>
       <Boolean/>
     </Writable>
   </Fact>
-  <Fact path="/household_members/*/hasDisqualifyingFelony">
+  <Fact path="/household_members/*/isFelon">
     <Writable>
       <Boolean/>
     </Writable>
   </Fact>
-  <Fact path="/household_members/*/felonyComplianceConfirmed">
+  <Fact path="/application_hasChangedCircumstances">
     <Writable>
       <Boolean/>
     </Writable>
   </Fact>
-  <Fact path="/household_members/*/workExempt">
-    <Writable>
-      <Boolean/>
-    </Writable>
-  </Fact>
-  <Fact path="/incomeInconsistency">
+  <Fact path="/incomeGapExists">
     <Derived>
       <LessThan>
         <Left>
@@ -76,97 +56,159 @@
       </LessThan>
     </Derived>
   </Fact>
-  <Fact path="/abawdMembers">
+  <Fact path="/hasUnemployedWorkEligible">
     <Derived>
-      <Filter path="/household_members">
-        <All>
-          <GreaterThanOrEqual>
-            <Left>
-              <Dependency path="age"/>
-            </Left>
-            <Right>
-              <Int>18</Int>
-            </Right>
-          </GreaterThanOrEqual>
-          <LessThanOrEqual>
-            <Left>
-              <Dependency path="age"/>
-            </Left>
-            <Right>
-              <Int>54</Int>
-            </Right>
-          </LessThanOrEqual>
-          <Not>
-            <Dependency path="employed"/>
-          </Not>
-          <Not>
-            <Dependency path="workExempt"/>
-          </Not>
-        </All>
-      </Filter>
+      <GreaterThan>
+        <Left>
+          <CollectionSize>
+            <Filter path="/household_members">
+              <All>
+                <GreaterThanOrEqual>
+                  <Left>
+                    <Dependency path="age"/>
+                  </Left>
+                  <Right>
+                    <Int>16</Int>
+                  </Right>
+                </GreaterThanOrEqual>
+                <LessThanOrEqual>
+                  <Left>
+                    <Dependency path="age"/>
+                  </Left>
+                  <Right>
+                    <Int>59</Int>
+                  </Right>
+                </LessThanOrEqual>
+                <Not>
+                  <Dependency path="isEmployed"/>
+                </Not>
+              </All>
+            </Filter>
+          </CollectionSize>
+        </Left>
+        <Right>
+          <Int>0</Int>
+        </Right>
+      </GreaterThan>
     </Derived>
   </Fact>
-  <Fact path="/workRequirementMembers">
+  <Fact path="/hasUnemployedAbawdCandidate">
     <Derived>
-      <Filter path="/household_members">
-        <All>
-          <GreaterThanOrEqual>
-            <Left>
-              <Dependency path="age"/>
-            </Left>
-            <Right>
-              <Int>16</Int>
-            </Right>
-          </GreaterThanOrEqual>
-          <LessThanOrEqual>
-            <Left>
-              <Dependency path="age"/>
-            </Left>
-            <Right>
-              <Int>59</Int>
-            </Right>
-          </LessThanOrEqual>
-          <Not>
-            <Dependency path="employed"/>
-          </Not>
-          <Not>
-            <Dependency path="workExempt"/>
-          </Not>
-        </All>
-      </Filter>
+      <GreaterThan>
+        <Left>
+          <CollectionSize>
+            <Filter path="/household_members">
+              <All>
+                <GreaterThanOrEqual>
+                  <Left>
+                    <Dependency path="age"/>
+                  </Left>
+                  <Right>
+                    <Int>18</Int>
+                  </Right>
+                </GreaterThanOrEqual>
+                <LessThanOrEqual>
+                  <Left>
+                    <Dependency path="age"/>
+                  </Left>
+                  <Right>
+                    <Int>54</Int>
+                  </Right>
+                </LessThanOrEqual>
+                <Not>
+                  <Dependency path="isEmployed"/>
+                </Not>
+              </All>
+            </Filter>
+          </CollectionSize>
+        </Left>
+        <Right>
+          <Int>0</Int>
+        </Right>
+      </GreaterThan>
     </Derived>
   </Fact>
-  <Fact path="/nonCitizenMembers">
+  <Fact path="/hasStudentMembers">
     <Derived>
-      <Filter path="/household_members">
-        <NotEqual>
-          <Left>
-            <Dependency path="citizenshipStatus"/>
-          </Left>
-          <Right>
-            <String>citizen</String>
-          </Right>
-        </NotEqual>
-      </Filter>
+      <GreaterThan>
+        <Left>
+          <CollectionSize>
+            <Filter path="/household_members">
+              <Dependency path="isStudent"/>
+            </Filter>
+          </CollectionSize>
+        </Left>
+        <Right>
+          <Int>0</Int>
+        </Right>
+      </GreaterThan>
     </Derived>
   </Fact>
-  <Fact path="/studentMembers">
+  <Fact path="/hasNonCitizenMembers">
     <Derived>
-      <Filter path="/household_members">
-        <Dependency path="enrolledHalfTime"/>
-      </Filter>
+      <GreaterThan>
+        <Left>
+          <CollectionSize>
+            <Filter path="/household_members">
+              <Dependency path="isNonCitizen"/>
+            </Filter>
+          </CollectionSize>
+        </Left>
+        <Right>
+          <Int>0</Int>
+        </Right>
+      </GreaterThan>
     </Derived>
   </Fact>
-  <Fact path="/felonMembers">
+  <Fact path="/hasFelonMembers">
     <Derived>
-      <Filter path="/household_members">
-        <All>
-          <Dependency path="hasDisqualifyingFelony"/>
-          <Not>
-            <Dependency path="felonyComplianceConfirmed"/>
-          </Not>
-        </All>
-      </Filter>
+      <GreaterThan>
+        <Left>
+          <CollectionSize>
+            <Filter path="/household_members">
+              <Dependency path="isFelon"/>
+            </Filter>
+          </CollectionSize>
+        </Left>
+        <Right>
+          <Int>0</Int>
+        </Right>
+      </GreaterThan>
+    </Derived>
+  </Fact>
+  <Fact path="/incomeInconsistencyProbe">
+    <Derived>
+      <Dependency path="/incomeGapExists"/>
+    </Derived>
+  </Fact>
+  <Fact path="/generalWorkRequirementProbe">
+    <Derived>
+      <Dependency path="/hasUnemployedWorkEligible"/>
+    </Derived>
+  </Fact>
+  <Fact path="/abawdProbe">
+    <Derived>
+      <Dependency path="/hasUnemployedAbawdCandidate"/>
+    </Derived>
+  </Fact>
+  <Fact path="/studentEligibilityProbe">
+    <Derived>
+      <Dependency path="/hasStudentMembers"/>
+    </Derived>
+  </Fact>
+  <Fact path="/immigrationStatusProbe">
+    <Derived>
+      <Dependency path="/hasNonCitizenMembers"/>
+    </Derived>
+  </Fact>
+  <Fact path="/felonComplianceProbe">
+    <Derived>
+      <Dependency path="/hasFelonMembers"/>
+    </Derived>
+  </Fact>
+  <Fact path="/changeVerificationProbe">
+    <Derived>
+      <Dependency path="/application_hasChangedCircumstances"/>
     </Derived>
   </Fact>
 </FactDictionaryModule>

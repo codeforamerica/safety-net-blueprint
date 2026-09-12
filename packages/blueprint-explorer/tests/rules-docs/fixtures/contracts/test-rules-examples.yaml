@@ -1,0 +1,45 @@
+$schema: "https://blueprint.codeforamerica.org/schemas/rules-examples-schema.yaml"
+domain: test
+
+rulesets:
+  main:
+    examples:
+      - description: "Eligible — applicant meets age and income requirements"
+        inputs:
+          applicant:
+            age: 25
+            income: 1500
+          policy:
+            minAge: 18
+            incomeLimit: 2000
+        outputs:
+          meetsAge: true
+          meetsIncome: true
+          eligible: true
+
+      - description: "Ineligible — applicant income exceeds limit"
+        inputs:
+          applicant:
+            age: 30
+            income: 2500
+          policy:
+            minAge: 18
+            incomeLimit: 2000
+        outputs:
+          meetsAge: true
+          meetsIncome: false
+          eligible: false
+
+      - description: "Placeholder — no policy provided, defaults apply"
+        inputs:
+          applicant:
+            age: 25
+            income: 1500
+        # policy omitted — schema defaults (minAge: 18, incomeLimit: 2000) used
+
+      - description: "Missing — no applicant provided"
+        inputs:
+          policy:
+            minAge: 18
+            incomeLimit: 2000
+        # applicant omitted — all facts go missing

@@ -83,6 +83,24 @@ Returns `{ complete, placeholder, missing, errors }`.
 
 Returns `{ complete, placeholder, missing, errors }`. No schema defaults are applied — all inputs must be explicit.
 
+## Browser bundle
+
+A pre-built IIFE bundle is published at `dist/browser.js` and exposed via the `./browser` package export. It provides `window.RulesEngine = { evaluateGraph }` for use in browser environments without a bundler.
+
+```html
+<script src="node_modules/@codeforamerica/blueprint-rules-engine/dist/browser.js"></script>
+<script>
+  const result = window.RulesEngine.evaluateGraph(graph, {
+    household: { monthlyIncome: 1800, monthlyExpenses: 2100, members: [] }
+  });
+  console.log(result.complete);
+</script>
+```
+
+The bundle includes only `evaluateGraph` — the function that takes a **pre-compiled** `*-graph.yaml` document. The `evaluate()` function (which compiles a `*-rules.yaml` at call time) is excluded because compilation is a build-time step. Callers receive compiled graphs from the resolve pipeline and evaluate them directly in the browser.
+
+The bundle is regenerated from source by `npm run build:browser` in this package. Run this after changing `src/cel.js` or `src/evaluator.js`, then commit `dist/browser.js`. The preflight check enforces that the committed bundle matches the current source.
+
 ## Related packages
 
 - [`@codeforamerica/blueprint-core`](https://www.npmjs.com/package/@codeforamerica/blueprint-core) — compiles rulesets and resolves contracts

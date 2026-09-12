@@ -109,6 +109,12 @@ if (doBuild('state-machine-docs')) {
   execFileSync(node, [resolve(__dirname, 'src', 'state-machine-docs', 'build.js'), ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
 }
 
+// ── Rules docs ────────────────────────────────────────────────────────────────
+
+if (doBuild('rules-docs')) {
+  execFileSync(node, [resolve(__dirname, 'src', 'rules-docs', 'build.js'), ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
+}
+
 if (doBuild('event-catalog')) {
   execFileSync(node, [resolve(__dirname, 'src', 'event-catalog.js'), ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
 }

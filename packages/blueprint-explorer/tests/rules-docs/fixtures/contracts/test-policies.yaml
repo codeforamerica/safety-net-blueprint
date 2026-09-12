@@ -1,0 +1,11 @@
+test-age-requirement:
+  citation: "Test § 1.1"
+  description: "Minimum age requirement for test program eligibility"
+  programs:
+    - TEST
+
+test-income-limit:
+  citation: "Test § 1.2"
+  description: "Maximum income limit for test program eligibility"
+  programs:
+    - TEST

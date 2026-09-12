@@ -4,15 +4,19 @@
   "description": "Browser-compatible rules evaluator for Blueprint dependency graph rulesets",
   "type": "module",
   "files": [
-    "src/"
+    "src/",
+    "dist/"
   ],
   "exports": {
     ".": "./src/index.js",
-    "./fact-graph": "./src/fact-graph.js"
+    "./fact-graph": "./src/fact-graph.js",
+    "./browser": "./dist/browser.js"
   },
   "scripts": {
-    "test": "node --test src/*.test.js",
-    "test:unit": "node --test src/*.test.js"
+    "build:browser": "node scripts/build-browser.js",
+    "prepare": "node scripts/build-browser.js",
+    "test": "node --test tests/*.test.js",
+    "test:unit": "node --test tests/*.test.js"
   },
   "engines": {
     "node": ">=22.11.0"

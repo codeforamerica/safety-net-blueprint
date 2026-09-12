@@ -20,6 +20,118 @@
 import { compileRuleset } from '@codeforamerica/blueprint-core';
 import { evaluateCEL } from './cel.js';
 
+// ── Type checking ─────────────────────────────────────────────────────────────
+
+/**
+ * Check whether a runtime value matches its declared schema type.
+ * null is treated as a type error (explicitly provided as wrong type),
+ * undefined is absence (handled separately as missing).
+ */
+export function matchesType(val, declaredType) {
+  const actual = Array.isArray(val) ? 'array' : val === null ? 'null' : typeof val;
+  switch (declaredType) {
+    case 'integer':
+    case 'number':  return actual === 'number';
+    case 'boolean': return actual === 'boolean';
+    case 'string':  return actual === 'string';
+    case 'array':   return actual === 'array';
+    case 'object':  return actual === 'object';
+    default:        return true;
+  }
+}
+
+/**
+ * Find declared array-typed input paths whose runtime value is null.
+ * FactGraph's seedGraph skips null collections (treating them as absent),
+ * and the Scala engine evaluates filters over an unset collection as Placeholder([]).
+ * We replicate this: null collection → patch scope with [] → result is placeholder.
+ */
+function buildNullCollectionPaths(graphInputs, inputs) {
+  const nullPaths = new Set();
+  for (const [path, spec] of Object.entries(graphInputs ?? {})) {
+    if (spec.type !== 'array') continue;
+    const val = resolveInputPath(path, inputs);
+    if (val === null) nullPaths.add(path);
+  }
+  return nullPaths;
+}
+
+/**
+ * Patch a scope object so that null array values become [].
+ * Clones affected namespace objects to avoid mutating the caller's inputs.
+ */
+function patchNullCollections(scope, inputs, nullCollectionPaths) {
+  for (const path of nullCollectionPaths) {
+    // '$.household.members[]' → 'household.members' → ['household', 'members']
+    const clean = path.slice(2).replace(/\[\]$/, '');
+    const parts = clean.split('.');
+    const namespace = parts[0];
+    // Shallow-clone the namespace so we don't mutate the user's object
+    if (scope[namespace] === inputs[namespace]) {
+      scope[namespace] = { ...inputs[namespace] };
+    }
+    let obj = scope[namespace];
+    for (let i = 1; i < parts.length - 1; i++) {
+      if (obj[parts[i]] != null) obj[parts[i]] = { ...obj[parts[i]] };
+      obj = obj[parts[i]];
+    }
+    obj[parts[parts.length - 1]] = [];
+  }
+}
+
+/**
+ * Build a map of type errors for all declared input paths.
+ * Only flags values that are present but have the wrong type.
+ *
+ * For scalar paths ($.household.monthlyIncome), the path itself is the map key.
+ * For sub-field paths ($.household.members[].age), the *parent collection path*
+ * ($.household.members[]) is the key — this aligns with the dependency graph,
+ * where facts declare a dep on the collection, not individual sub-fields.
+ * If any item in the collection has a wrong-type field, the whole collection
+ * is flagged so all dependent facts are moved to errors.
+ */
+function buildInputTypeErrors(graphInputs, inputs) {
+  const typeErrors = new Map();
+  for (const [path, spec] of Object.entries(graphInputs ?? {})) {
+    const inner = path.slice(2); // strip '$.'
+    const subFieldIdx = inner.indexOf('[].');
+    if (subFieldIdx !== -1) {
+      // Sub-field path: e.g. $.household.members[].age
+      const collRef = inner.slice(0, subFieldIdx);          // household.members
+      const fieldName = inner.slice(subFieldIdx + 3);       // age
+      const collPath = `$.${collRef}[]`;                    // $.household.members[]
+      if (typeErrors.has(collPath)) continue;               // already flagged
+      // Resolve the parent array
+      const collParts = collRef.split('.');
+      let arr = inputs;
+      for (const p of collParts) {
+        if (arr == null) break;
+        arr = arr[p];
+      }
+      if (!Array.isArray(arr)) continue;
+      // Check each item's field — null treated as absent, not a type error
+      for (const item of arr) {
+        const val = item[fieldName];
+        if (val != null && !matchesType(val, spec.type)) {
+          const actual = Array.isArray(val) ? 'array' : typeof val;
+          typeErrors.set(collPath, `expected ${spec.type} for .${fieldName}, got ${actual}`);
+          break;
+        }
+      }
+    } else {
+      // Scalar or top-level array path
+      const val = resolveInputPath(path, inputs);
+      // null is treated as absent (missing), not a type error — matches FactGraph's seedGraph
+      // behavior of skipping null/undefined inputs rather than rejecting them.
+      if (val != null && !matchesType(val, spec.type)) {
+        const actual = Array.isArray(val) ? 'array' : typeof val;
+        typeErrors.set(path, `expected ${spec.type}, got ${actual}`);
+      }
+    }
+  }
+  return typeErrors;
+}
+
 // ── Topological sort (Kahn's algorithm) ──────────────────────────────────────
 
 function topoSort(factNames, dependencies) {
@@ -131,6 +243,11 @@ export function evaluate(rulesDoc, inputs, rulesetName) {
     }
   }
 
+  // Patch null collections to [] in scope, matching FactGraph's behavior of evaluating
+  // filters over unset collections as Placeholder([]).
+  const nullCollectionPaths = buildNullCollectionPaths(graph.inputs, inputs);
+  patchNullCollections(scope, inputs, nullCollectionPaths);
+
   const complete = {};
   const placeholder = {};
   const missing = {};
@@ -139,23 +256,35 @@ export function evaluate(rulesDoc, inputs, rulesetName) {
   // Track which facts were resolved (for fact-to-fact dependency propagation)
   const resolved = {};
 
+  // Pre-compute type errors for all declared input paths
+  const inputTypeErrors = buildInputTypeErrors(graph.inputs, inputs);
+
   for (const factName of ordered) {
     const deps = graph.dependencies[factName] ?? [];
     const missingPaths = new Set();
+    const erroredDeps = new Set();
+    const defaultedDeps = new Set();
 
     for (const dep of deps) {
       if (dep.startsWith('$.')) {
-        const val = resolveInputPath(dep, inputs);
-        if (val === undefined) {
-          // Also check if it can be satisfied by a defaulted namespace
-          const topLevel = dep.slice(2).split('.')[0];
-          if (!defaultedNamespaces.has(topLevel)) {
-            missingPaths.add(dep);
+        if (inputTypeErrors.has(dep)) {
+          erroredDeps.add(dep);
+        } else if (nullCollectionPaths.has(dep)) {
+          defaultedDeps.add(dep);
+        } else {
+          const val = resolveInputPath(dep, inputs);
+          if (val == null) {
+            const topLevel = dep.slice(2).split('.')[0];
+            if (!defaultedNamespaces.has(topLevel)) {
+              missingPaths.add(dep);
+            }
           }
         }
       } else {
-        // Fact dependency — propagate missing/errors upward
-        if (resolved[dep] === undefined && !errors[dep]) {
+        // Fact dependency — propagate errors or missing upward
+        if (errors[dep]) {
+          erroredDeps.add(dep);
+        } else if (resolved[dep] === undefined) {
           if (missing[dep]) {
             for (const p of missing[dep]) missingPaths.add(p);
           } else {
@@ -163,6 +292,14 @@ export function evaluate(rulesDoc, inputs, rulesetName) {
           }
         }
       }
+    }
+
+    if (erroredDeps.size > 0) {
+      const details = [...erroredDeps].map(d =>
+        inputTypeErrors.has(d) ? `'${d}' — ${inputTypeErrors.get(d)}` : `'${d}' — ${errors[d]}`
+      ).join('; ');
+      errors[factName] = `Dependency error: ${details}`;
+      continue;
     }
 
     if (missingPaths.size > 0) {
@@ -181,8 +318,8 @@ export function evaluate(rulesDoc, inputs, rulesetName) {
       resolved[factName] = result;
       scope[factName] = result;
 
-      // Determine if any input dep used a schema default → placeholder
-      const usedDefault = deps.some(dep => {
+      // Placeholder if any dep used a schema default or was a null-patched collection
+      const usedDefault = defaultedDeps.size > 0 || deps.some(dep => {
         if (!dep.startsWith('$.')) return false;
         const topLevel = dep.slice(2).split('.')[0];
         return defaultedNamespaces.has(topLevel);
@@ -230,18 +367,32 @@ export function evaluateGraph(graph, inputs) {
   const errors = {};
   const resolved = {};
 
+  // Pre-compute type errors for all declared input paths (including sub-fields)
+  const inputTypeErrors = buildInputTypeErrors(graph.inputs, inputs);
+
+  // Patch null collections to [] in scope, matching FactGraph's placeholder behavior
+  const nullCollectionPaths = buildNullCollectionPaths(graph.inputs, inputs);
+  patchNullCollections(scope, inputs, nullCollectionPaths);
+
   for (const factName of ordered) {
     const deps = graph.dependencies[factName] ?? [];
     const missingPaths = new Set();
+    const erroredDeps = new Set();
 
     for (const dep of deps) {
       if (dep.startsWith('$.')) {
-        const val = resolveInputPath(dep, inputs);
-        if (val === undefined) {
+        if (inputTypeErrors.has(dep)) {
+          erroredDeps.add(dep);
+        } else if (nullCollectionPaths.has(dep)) {
+          // null collection → evaluates with [] in scope → will be placeholder after eval
+        } else if (resolveInputPath(dep, inputs) == null) {
           missingPaths.add(dep);
         }
       } else {
-        if (resolved[dep] === undefined && !errors[dep]) {
+        // Fact dependency — propagate errors or missing upward
+        if (errors[dep]) {
+          erroredDeps.add(dep);
+        } else if (resolved[dep] === undefined) {
           if (missing[dep]) {
             for (const p of missing[dep]) missingPaths.add(p);
           } else {
@@ -249,6 +400,14 @@ export function evaluateGraph(graph, inputs) {
           }
         }
       }
+    }
+
+    if (erroredDeps.size > 0) {
+      const details = [...erroredDeps].map(d =>
+        inputTypeErrors.has(d) ? `'${d}' — ${inputTypeErrors.get(d)}` : `'${d}' — ${errors[d]}`
+      ).join('; ');
+      errors[factName] = `Dependency error: ${details}`;
+      continue;
     }
 
     if (missingPaths.size > 0) {
@@ -266,7 +425,14 @@ export function evaluateGraph(graph, inputs) {
     } else {
       resolved[factName] = result;
       scope[factName] = result;
-      complete[factName] = result;
+
+      // Placeholder if any dep was a null-patched collection
+      const usedNullCollection = deps.some(dep => nullCollectionPaths.has(dep));
+      if (usedNullCollection) {
+        placeholder[factName] = result;
+      } else {
+        complete[factName] = result;
+      }
     }
   }
 

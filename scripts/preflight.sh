@@ -96,6 +96,15 @@ bail_if_failed
 # fi
 # bail_if_failed
 
+step "Rebuilding rules-engine browser bundle"
+if node packages/blueprint-rules-engine/scripts/build-browser.js 2>&1; then
+  git add packages/blueprint-rules-engine/dist/browser.js
+  pass "Browser bundle rebuilt and staged"
+else
+  fail "Browser bundle build failed"
+fi
+bail_if_failed
+
 step "Rebuilding safety-net-explorer outputs"
 if node packages/blueprint-explorer/build.js --content=packages/safety-net-explorer --resolved=packages/generated/contracts --clients=packages/generated/clients 2>&1; then
   git add packages/safety-net-explorer/
