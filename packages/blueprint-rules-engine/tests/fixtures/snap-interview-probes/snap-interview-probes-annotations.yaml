@@ -1,0 +1,131 @@
+domain: eligibility
+
+facts:
+  snapInterviewProbes.incomeGapExists:
+    reason: >
+      Flags a potential inconsistency when reported income does not cover reported
+      expenses. Required by FNS-1104 as a probe trigger — workers must probe for
+      undisclosed income sources or assistance.
+    policies:
+      - snap-interview-toolkit
+
+  snapInterviewProbes.hasUnemployedWorkEligible:
+    reason: >
+      Identifies household members aged 16–59 who are not employed and have not
+      yet been screened for general work requirement exemptions.
+    policies:
+      - snap-general-work-requirements
+
+  snapInterviewProbes.hasUnemployedAbawdCandidate:
+    reason: >
+      Identifies household members aged 18–54 who are not employed and may be
+      subject to ABAWD time limits unless an exception applies.
+    policies:
+      - snap-abawd
+
+  snapInterviewProbes.hasStudentMembers:
+    reason: >
+      Identifies household members enrolled at least half-time in higher education
+      who are subject to student eligibility restrictions.
+    policies:
+      - snap-student-eligibility
+
+  snapInterviewProbes.hasNonCitizenMembers:
+    reason: >
+      Identifies non-citizen household members who must be screened for qualified
+      alien status and sponsor deeming rules.
+    policies:
+      - snap-noncitizen-eligibility
+
+  snapInterviewProbes.hasFelonMembers:
+    reason: >
+      Identifies household members with felony convictions who must attest to
+      compliance with the terms of their sentences.
+    policies:
+      - snap-felon-compliance
+
+  snapInterviewProbes.incomeInconsistencyProbe:
+    reason: >
+      Probe for undisclosed income sources or assistance when monthly income is
+      less than monthly expenses.
+    policies:
+      - snap-interview-toolkit
+    interviewQuestions:
+      - "Your application shows monthly income of [income] and monthly expenses of [expenses]. Can you tell me about any other income sources or assistance your household receives?"
+      - "Does anyone in the household receive help with expenses from family, friends, or community organizations?"
+
+  snapInterviewProbes.generalWorkRequirementProbe:
+    reason: >
+      Screen non-employed household members aged 16–59 for general work requirement
+      exemptions before determining work registration obligations.
+    policies:
+      - snap-general-work-requirements
+    interviewQuestions:
+      - "Is [member] currently able to work — are there any physical or mental health conditions that limit their ability to work?"
+      - "Is [member] currently caring for a child under 6 or an incapacitated person in the household?"
+      - "Is [member] currently enrolled in school, job training, or a work program through another benefit program?"
+      - "Is [member] currently working at least 30 hours per week or earning the federal minimum wage equivalent?"
+
+  snapInterviewProbes.abawdProbe:
+    reason: >
+      Screen non-employed household members aged 18–54 for ABAWD exceptions before
+      applying the 3-month time limit in the 36-month lookback period.
+    policies:
+      - snap-abawd
+    interviewQuestions:
+      - "Is [member] currently pregnant?"
+      - "Is [member] physically or mentally unfit for work?"
+      - "Does [member] share the household with anyone under 18, even if not their dependent?"
+      - "Is [member] currently experiencing homelessness?"
+      - "Has [member] aged out of foster care at age 18 or older?"
+      - "Is [member] a veteran of the U.S. Armed Forces?"
+
+  snapInterviewProbes.studentEligibilityProbe:
+    reason: >
+      Screen higher-education students for SNAP eligibility exceptions — most
+      students enrolled at least half-time are ineligible unless they meet one of
+      the statutory exceptions.
+    policies:
+      - snap-student-eligibility
+    interviewQuestions:
+      - "Is [member] currently working at least 20 hours per week?"
+      - "Is [member] participating in a state or federally-funded work-study program?"
+      - "Is [member] enrolled in a school-sponsored job training or vocational program?"
+      - "Is [member] caring for a dependent child under 6, or a child aged 6–11 when adequate childcare is unavailable?"
+      - "Is [member] receiving TANF assistance?"
+      - "Is [member] a single parent enrolled full-time with a dependent child under 12?"
+
+  snapInterviewProbes.immigrationStatusProbe:
+    reason: >
+      Determine qualified alien status and apply sponsor income and resource
+      deeming rules for non-citizen household members.
+    policies:
+      - snap-noncitizen-eligibility
+    interviewQuestions:
+      - "What is [member]'s current immigration status?"
+      - "When did [member] enter the United States?"
+      - "Does [member] have a sponsor who signed an I-864 Affidavit of Support on or after December 19, 1997?"
+      - "If yes — what is the sponsor's current income and resources?"
+
+  snapInterviewProbes.felonComplianceProbe:
+    reason: >
+      Verify that household members with felony convictions are in compliance with
+      all terms of their sentences, including probation and parole.
+    policies:
+      - snap-felon-compliance
+    interviewQuestions:
+      - "Is [member] currently complying with all terms of their sentence, including any probation or parole requirements?"
+      - "Has [member] had any violations or outstanding warrants since the last certification?"
+
+  snapInterviewProbes.changeVerificationProbe:
+    reason: >
+      Identify and document all changes in household circumstances that occurred
+      between the application date and the interview date, and determine what
+      verification is required.
+    policies:
+      - snap-interview-toolkit
+    interviewQuestions:
+      - "Since you submitted your application, have there been any changes to who lives in your household?"
+      - "Have there been any changes to income — new jobs, job losses, raises, or changes to other income sources?"
+      - "Have there been any changes to your household's expenses — rent, utilities, childcare, or medical costs?"
+      - "Have there been any other changes in your household's situation we should know about?"

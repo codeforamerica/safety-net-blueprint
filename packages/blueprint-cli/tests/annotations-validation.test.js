@@ -16,6 +16,8 @@ import {
   validateAnnotationOperation,
   buildPolicyIndex,
   validateAnnotationPolicyCitations,
+  validateAnnotationEvent,
+  validateFactKey,
 } from '../scripts/validate/annotations.js';
 
 // ---------------------------------------------------------------------------
@@ -295,6 +297,132 @@ describe('scenario: policy deleted from registry', () => {
       schema: { 'application.submittedAt': { policies: ['medicaid-processing-clock'] } },
     };
     assert.deepEqual(validateAnnotationPolicyCitations(doc, policyIndex), []);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateAnnotationPolicyCitations — generic section iteration
+// ---------------------------------------------------------------------------
+
+describe('validateAnnotationPolicyCitations — facts section', () => {
+  const policyIndex = new Set(['snap-work-requirement']);
+
+  test('catches unknown policy citation in facts section', () => {
+    const doc = {
+      facts: { 'snapInterviewProbes.abawdMembers': { policies: ['unknown-policy'] } },
+    };
+    const errors = validateAnnotationPolicyCitations(doc, policyIndex);
+    assert.ok(errors.some(e => e.includes('"unknown-policy"')));
+    assert.ok(errors.some(e => e.includes('facts')));
+  });
+
+  test('passes when facts policy citation exists in registry', () => {
+    const doc = {
+      facts: { 'snapInterviewProbes.abawdMembers': { policies: ['snap-work-requirement'] } },
+    };
+    assert.deepEqual(validateAnnotationPolicyCitations(doc, policyIndex), []);
+  });
+
+  test('skips metadata fields ($schema, version, domain)', () => {
+    const doc = {
+      $schema: './schemas/annotations-schema.yaml',
+      version: '1.0',
+      domain: 'intake',
+      facts: { 'snapInterviewProbes.eligible': { policies: ['snap-work-requirement'] } },
+    };
+    assert.deepEqual(validateAnnotationPolicyCitations(doc, policyIndex), []);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateAnnotationEvent
+// ---------------------------------------------------------------------------
+
+describe('validateAnnotationEvent', () => {
+  const channels = new Set([
+    'intake.application.submitted',
+    'intake.application.closed',
+  ]);
+
+  test('passes for a known event channel', () => {
+    assert.equal(validateAnnotationEvent('intake.application.submitted', channels), null);
+  });
+
+  test('errors for an unknown event channel', () => {
+    const result = validateAnnotationEvent('intake.application.nonexistent', channels);
+    assert.ok(result?.includes('not found'));
+  });
+
+  test('returns null when channel index is empty (no AsyncAPI specs loaded)', () => {
+    assert.equal(validateAnnotationEvent('intake.application.submitted', new Set()), null);
+  });
+});
+
+describe('scenario: event renamed — overlay renames submitted → filed', () => {
+  const channels = new Set(['intake.application.filed', 'intake.application.closed']);
+
+  test('catches stale intake.application.submitted after rename', () => {
+    const result = validateAnnotationEvent('intake.application.submitted', channels);
+    assert.ok(result?.includes('not found'));
+  });
+
+  test('passes with intake.application.filed after rename', () => {
+    assert.equal(validateAnnotationEvent('intake.application.filed', channels), null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateFactKey
+// ---------------------------------------------------------------------------
+
+describe('validateFactKey', () => {
+  const graphIndex = new Map([
+    ['snapInterviewProbes', new Set(['incomeInconsistency', 'abawdMembers', 'eligible'])],
+    ['workRequirements', new Set(['exempt', 'hoursRequired'])],
+  ]);
+
+  test('passes for a known ruleset and fact', () => {
+    assert.equal(validateFactKey('snapInterviewProbes.incomeInconsistency', graphIndex), null);
+  });
+
+  test('passes for a fact in a different ruleset', () => {
+    assert.equal(validateFactKey('workRequirements.exempt', graphIndex), null);
+  });
+
+  test('errors when the key has no dot separator', () => {
+    const result = validateFactKey('incomeInconsistency', graphIndex);
+    assert.ok(result?.includes('{ruleset}.{factName}'));
+  });
+
+  test('errors when the ruleset is not found', () => {
+    const result = validateFactKey('unknownRuleset.eligible', graphIndex);
+    assert.ok(result?.includes('not found'));
+    assert.ok(result?.includes('unknownRuleset'));
+  });
+
+  test('errors when the fact is not in the ruleset', () => {
+    const result = validateFactKey('snapInterviewProbes.nonExistentFact', graphIndex);
+    assert.ok(result?.includes('nonExistentFact'));
+    assert.ok(result?.includes('snapInterviewProbes'));
+  });
+
+  test('returns null when graph index is empty (no graphs loaded)', () => {
+    assert.equal(validateFactKey('snapInterviewProbes.eligible', new Map()), null);
+  });
+});
+
+describe('scenario: fact renamed — overlay renames eligible → qualifies', () => {
+  const graphIndex = new Map([
+    ['snapInterviewProbes', new Set(['incomeInconsistency', 'qualifies'])],
+  ]);
+
+  test('catches stale snapInterviewProbes.eligible after rename', () => {
+    const result = validateFactKey('snapInterviewProbes.eligible', graphIndex);
+    assert.ok(result?.includes('eligible'));
+  });
+
+  test('passes with snapInterviewProbes.qualifies after rename', () => {
+    assert.equal(validateFactKey('snapInterviewProbes.qualifies', graphIndex), null);
   });
 });
 

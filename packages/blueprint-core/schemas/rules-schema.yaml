@@ -1,0 +1,206 @@
+# JSON Schema for domain rules YAML files ({domain}-rules.yaml).
+# Validates structural correctness. Cross-artifact semantic checks
+# (e.g., $ref resolution, cycle detection, CEL expression validity)
+# are performed by the validate pipeline.
+#
+# Example usage:
+#
+#   $schema: "https://blueprint.codeforamerica.org/schemas/rules-schema.yaml"
+#   domain: intake
+#   rulesets:
+#     workRequirements:
+#       endpoint:
+#         path: /assess-work-requirements
+#       inputs:
+#         person:
+#           $ref: 'https://blueprint.codeforamerica.org/schemas/Person.yaml'
+#         policy:
+#           type: object
+#           properties:
+#             incomeThreshold:
+#               type: number
+#               default: 150
+#       outputs:
+#         eligible:
+#           type: boolean
+#         reason:
+#           type: string
+#       facts:
+#         - path: eligible
+#           expression: "person.age >= 18 && person.income < policy.incomeThreshold"
+#         - path: reason
+#           expression: "'Work requirement met'"
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/schemas/rules-schema.yaml"
+title: Domain Rules
+description: >
+  Schema for domain rules files ({domain}-rules.yaml).
+  A rules file contains one or more named rulesets. Each ruleset is a dependency
+  graph of named facts. Facts are either inputs (values the caller supplies) or
+  derived facts (values computed from other facts via a CEL expression). The
+  evaluator walks the graph in topological order, resolving each derived fact
+  from its dependencies, and supports partial evaluation against incomplete data.
+
+type: object
+required:
+  - $schema
+  - domain
+  - rulesets
+additionalProperties: false
+
+properties:
+  $schema:
+    type: string
+    description: Must reference the rules contract schema URI.
+
+  domain:
+    type: string
+    description: Domain namespace (e.g., intake, eligibility).
+
+  rulesets:
+    type: object
+    description: >
+      Named ruleset declarations. Each key is the ruleset name (camelCase);
+      the value declares the inputs, outputs, and facts for that ruleset.
+    minProperties: 1
+    additionalProperties:
+      $ref: "#/$defs/Ruleset"
+
+$defs:
+
+  Ruleset:
+    # Example — minimal ruleset:
+    #   eligible:
+    #     inputs:
+    #       person:
+    #         type: object
+    #         properties:
+    #           age: { type: integer }
+    #           income: { type: number }
+    #     outputs:
+    #       eligible: { type: boolean }
+    #     facts:
+    #       - path: eligible
+    #         expression: "person.age >= 18"
+    #
+    # Example — with shared schema refs and a standalone endpoint:
+    #   workRequirements:
+    #     endpoint:
+    #       path: /assess-work-requirements
+    #     inputs:
+    #       person:
+    #         $ref: 'https://blueprint.codeforamerica.org/schemas/Person.yaml'
+    #     outputs:
+    #       eligible:
+    #         type: boolean
+    #       reason:
+    #         type: string
+    #     facts:
+    #       - path: eligible
+    #         expression: "person.age >= 18 && person.income < 150"
+    type: object
+    description: >
+      A named ruleset. Declares its inputs, outputs, and the facts that
+      compute outputs from inputs via CEL expressions.
+    required:
+      - inputs
+      - outputs
+      - facts
+    additionalProperties: false
+    properties:
+      endpoint:
+        $ref: "#/$defs/Endpoint"
+      inputs:
+        $ref: "#/$defs/SchemaMap"
+      outputs:
+        $ref: "#/$defs/SchemaMap"
+      facts:
+        type: array
+        description: >
+          Ordered list of fact declarations. Each fact is either an input alias
+          or a derived fact with a CEL expression. The evaluator resolves facts
+          in topological order — declaration order does not need to match
+          dependency order.
+        minItems: 1
+        items:
+          $ref: "#/$defs/Fact"
+
+  Fact:
+    # Example — derived fact:
+    #   - path: eligible
+    #     expression: "person.age >= 18 && person.income < policy.incomeThreshold"
+    #     description: "Whether the applicant meets basic eligibility criteria"
+    #
+    # Example — intermediate derived fact:
+    #   - path: ageVerified
+    #     expression: "person.age >= 18"
+    type: object
+    description: >
+      A single fact in the dependency graph. Derived facts declare a CEL expression
+      that computes the fact's value from other facts or inputs.
+    required:
+      - path
+      - expression
+    additionalProperties: false
+    properties:
+      path:
+        type: string
+        description: >
+          The fact's name within the ruleset graph. Used to reference this fact
+          in other expressions. camelCase by convention.
+        pattern: "^[a-zA-Z][a-zA-Z0-9.]*$"
+      expression:
+        type: string
+        description: >
+          CEL expression that computes this fact's value. May reference input
+          paths and other derived facts by their path names.
+        minLength: 1
+      description:
+        type: string
+        description: Human-readable description of what this fact computes.
+      type:
+        $ref: "#/$defs/SchemaOrRef"
+        description: >
+          Optional type declaration for the computed value. Used for documentation
+          and cross-artifact field validation. Inferred from the expression if omitted.
+
+  Endpoint:
+    # Example:
+    #   endpoint:
+    #     path: /assess-work-requirements
+    type: object
+    description: >
+      Declares a standalone POST endpoint for this ruleset. The resolver generates
+      the full path from the file-level domain field and derives the request/response
+      schema from the ruleset's inputs and outputs. Same endpoint block syntax as
+      compositions.
+    required:
+      - path
+    additionalProperties: false
+    properties:
+      path:
+        type: string
+        description: >
+          Action-specific path segment. The resolver prefixes this with the domain
+          base path (e.g., /intake) to form the full endpoint path.
+        pattern: "^/"
+
+  SchemaMap:
+    type: object
+    description: >
+      A map of named input declarations. Each key is the input name as it appears
+      in fact expressions; the value is a JSON Schema definition or $ref.
+    minProperties: 1
+    additionalProperties:
+      $ref: "#/$defs/SchemaOrRef"
+
+  SchemaOrRef:
+    description: >
+      A JSON Schema definition (inline) or a $ref to a shared schema.
+      Cross-package references use canonical URIs
+      (https://blueprint.codeforamerica.org/schemas/...).
+      Any object is structurally valid here — $ref resolution and schema
+      correctness are checked by the validate pipeline.
+    type: object
+

@@ -12,6 +12,7 @@ import { discoverSlaTypes } from './sla-loader.js';
 import { discoverMetrics } from './metrics-loader.js';
 import { discoverConfigs } from './config-loader.js';
 import { discoverCompositions } from '@codeforamerica/blueprint-core/compositions';
+import { discoverRules } from '@codeforamerica/blueprint-core/rules';
 import { insertResource } from './database-manager.js';
 import { registerConfigManaged } from './config-registry.js';
 import { loadPolicies } from '@codeforamerica/blueprint-core/policies';
@@ -99,6 +100,13 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     compositions.forEach(c => console.log(`  - ${c.domain} (${Object.keys(c.doc.compositions || {}).length} composition(s))`));
   }
 
+  // Discover rules files
+  const rulesFiles = discoverRules(specsDir);
+  if (verbose && rulesFiles.length > 0) {
+    console.log(`\n✓ Discovered ${rulesFiles.length} rules file(s):`);
+    rulesFiles.forEach(r => console.log(`  - ${r.domain} (${Object.keys(r.doc.rulesets || {}).length} ruleset(s))`));
+  }
+
   // Discover metric definition contracts
   const metrics = discoverMetrics(specsDir);
   if (verbose && metrics.length > 0) {
@@ -163,7 +171,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     }
   }
 
-  return { apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, policies, summary };
+  return { apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, policies, summary };
 }
 
 /**

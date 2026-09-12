@@ -1,0 +1,197 @@
+# JSON Schema for compiled rule graph files ({domain}-graph.yaml).
+# This is the universal intermediate format produced by the resolve pipeline
+# from *-rules.yaml source files. It is consumed by the evaluator, the mock
+# server, the explorer visualizer, and any downstream translators (e.g., to
+# Fact Graph XML, DMN, or other rules formats).
+#
+# Example:
+#
+#   $schema: "https://blueprint.codeforamerica.org/schemas/graph-schema.yaml"
+#   domain: intake
+#   ruleset: workRequirements
+#   outputs:
+#     - eligible
+#   inputs:
+#     $.person.age:
+#       type: integer
+#       description: Applicant age in years
+#     $.person.income:
+#       type: number
+#       description: Monthly gross income
+#     $.household.members[]:
+#       type: object
+#       description: Array of household members
+#     $.household.members[].age:
+#       type: integer
+#       description: Age of each household member
+#   facts:
+#     ageVerified:
+#       expression: "person.age >= 18"
+#       type: boolean
+#     eligible:
+#       expression: "ageVerified && person.income < 150"
+#       type: boolean
+#   dependencies:
+#     ageVerified:
+#       - $.person.age
+#     eligible:
+#       - ageVerified
+#       - $.person.income
+#
+# Input keys use JSONPath-style field paths: '$.' followed by dot-separated
+# segments, with '[]' suffix on array segments. The compiler expands object-typed
+# inputs from *-rules.yaml into their referenced field paths. This makes the
+# graph self-contained for evaluation, FactGraph translation, and missing-input
+# tracking. The evaluator binds the top-level object name (e.g., 'person') as
+# a whole object in the CEL context; leaf paths describe structure for type info.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/schemas/graph-schema.yaml"
+title: Rule Graph
+description: >
+  Universal intermediate representation of a compiled rule graph.
+  Produced by the resolve pipeline from *-rules.yaml source files.
+  Consumed by the evaluator, mock server, explorer, and downstream
+  translators.
+
+  Two maps of nodes:
+  - inputs: Input nodes keyed by '$.' followed by a single camelCase
+    identifier (e.g. '$.person', '$.household'). Each key is the CEL
+    binding name — the variable name CEL sees. Values the caller supplies;
+    no expression. Type is the primitive type or 'object' for structured
+    inputs.
+  - facts: Derived nodes keyed by camelCase identifier (e.g. 'eligible').
+    Computed from inputs or other facts via a CEL expression.
+
+  The 'outputs' list declares which facts are returned to the caller.
+  All other facts are internal to the graph.
+
+  The 'dependencies' map keys are fact names (the 'to' side);
+  the list items are the node paths they depend on (the 'from' side).
+
+type: object
+required:
+  - $schema
+  - domain
+  - ruleset
+  - outputs
+  - inputs
+  - facts
+  - dependencies
+additionalProperties: false
+
+properties:
+  $schema:
+    type: string
+    description: Must reference the graph schema URI.
+
+  domain:
+    type: string
+    description: Domain namespace this graph belongs to (e.g., intake, eligibility).
+
+  ruleset:
+    type: string
+    description: Name of the ruleset this graph was compiled from.
+
+  outputs:
+    type: array
+    description: >
+      Fact names returned to the caller. Facts not listed here are
+      internal to the graph and not included in the evaluation response.
+    items:
+      type: string
+    minItems: 1
+    uniqueItems: true
+
+  inputs:
+    type: object
+    description: >
+      Map of JSONPath-style field paths to input node definitions. Keys are
+      '$.' followed by dot-separated camelCase segments. Array segments are
+      suffixed with '[]' (e.g. '$.household.members[]', '$.household.members[].age').
+      The compiler expands object-typed inputs from *-rules.yaml into the
+      individual field paths referenced in CEL expressions. The evaluator
+      binds the top-level segment (e.g. 'household') as a whole object in
+      the CEL context; leaf paths exist for type info and missing-input tracking.
+    minProperties: 1
+    additionalProperties:
+      $ref: "#/$defs/Node"
+    propertyNames:
+      pattern: "^\\$\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?(\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?)*$"
+
+  facts:
+    type: object
+    description: >
+      Map of camelCase identifiers to derived node definitions. Facts are
+      computed from inputs or other facts via CEL expressions. Keys are
+      camelCase identifiers (e.g. 'eligible', 'incomeInconsistency').
+    minProperties: 1
+    additionalProperties:
+      $ref: "#/$defs/Node"
+    propertyNames:
+      pattern: "^[a-zA-Z][a-zA-Z0-9]*$"
+
+  dependencies:
+    type: object
+    description: >
+      Dependency map for derived facts. Each key is a fact name (the 'to'
+      side); the list items are what it depends on (the 'from' side).
+      Items may reference an input binding (e.g. '$.household'), a specific
+      field within an input (e.g. '$.household.monthlyIncome') for
+      fine-grained missing-input tracking, or another fact (plain camelCase
+      name). Input bindings never appear as keys.
+    additionalProperties:
+      type: array
+      items:
+        type: string
+        pattern: "^(\\$\\.[a-zA-Z][a-zA-Z0-9]*(\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?)*|[a-zA-Z][a-zA-Z0-9]*)$"
+      minItems: 1
+
+$defs:
+
+  Node:
+    type: object
+    description: >
+      A single node in the dependency graph. Input nodes ($.prefix) have
+      no expression. Derived nodes have an expression and appear as keys
+      in the dependencies map.
+    additionalProperties: false
+    properties:
+      expression:
+        type: string
+        description: >
+          CEL expression that computes this node's value. Present on
+          derived nodes; absent on input nodes.
+        minLength: 1
+      description:
+        type: string
+        description: >
+          Human-readable description of what this node represents.
+      type:
+        type: string
+        enum: [string, number, integer, boolean, object, array]
+        description: >
+          JSON Schema primitive type for this node's value. Used for
+          documentation, type checking, and translator output mapping.
+      format:
+        type: string
+        description: >
+          JSON Schema format hint (e.g. 'date', 'date-time'). Used with
+          type: string for date/time values.
+      enum:
+        type: array
+        description: Enumeration of allowed string values for this node.
+        items:
+          type: string
+        minItems: 1
+      enumDescriptions:
+        type: array
+        description: >
+          Human-readable labels for each enum value, parallel to the enum
+          array.
+        items:
+          type: string
+      default:
+        description: >
+          Default value for input nodes. Used for policy parameters that
+          have a well-known value but can be overridden.

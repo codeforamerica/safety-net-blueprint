@@ -296,6 +296,100 @@ test('state-machine-schema action types', async (t) => {
     assert.ok(valid, errorPaths(errors).join('\n'));
   });
 
+  await t.test('call step with bind: (string — whole response)', () => {
+    const doc = withActions([{
+      id: 'assess',
+      steps: [{
+        call: { POST: 'intake/assessments', body: { applicationId: '$object.id' } },
+        bind: '$assessment',
+      }],
+    }]);
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('call step with bind: (map — selected fields)', () => {
+    const doc = withActions([{
+      id: 'assess',
+      steps: [{
+        call: { POST: 'intake/assessments', body: { applicationId: '$object.id' } },
+        bind: { eligible: '$eligible', reason: '$reason' },
+      }],
+    }]);
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('evaluate step — string bind (whole result)', () => {
+    const doc = withActions([{
+      id: 'check-eligibility',
+      steps: [{
+        evaluate: 'workRequirements',
+        inputs: {
+          person: '$object.applicant',
+          policy: '$policyConfig',
+        },
+        bind: '$evaluation',
+      }],
+    }]);
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('evaluate step — map bind (selected outputs)', () => {
+    const doc = withActions([{
+      id: 'check-probes',
+      steps: [{
+        evaluate: 'snapInterviewProbes',
+        inputs: { household: '$members' },
+        bind: {
+          incomeInconsistency: '$incomeInconsistency',
+          abawdMembers: '$abawdMembers',
+        },
+      }],
+    }]);
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('evaluate step — inputs optional (no inputs)', () => {
+    const doc = withActions([{
+      id: 'check',
+      steps: [{ evaluate: 'workRequirements', bind: '$result' }],
+    }]);
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('evaluate step — requires evaluate key', () => {
+    const doc = withActions([{
+      id: 'check',
+      // Missing evaluate: — no step type key matches
+      steps: [{ inputs: { person: '$object.applicant' }, bind: '$result' }],
+    }]);
+    const { valid } = validate(doc);
+    assert.equal(valid, false);
+  });
+
+  await t.test('evaluate step followed by if using bound result', () => {
+    const doc = withActions([{
+      id: 'check-and-act',
+      steps: [
+        {
+          evaluate: 'workRequirements',
+          inputs: { person: '$object.applicant' },
+          bind: '$evaluation',
+        },
+        {
+          if: '$evaluation.resolved.eligible == true',
+          then: [{ emit: { type: 'domain.test.eligible', description: 'Eligible' } }],
+        },
+      ],
+    }]);
+    const { valid, errors } = validate(doc);
+    assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
 });
 
 // ---------------------------------------------------------------------------

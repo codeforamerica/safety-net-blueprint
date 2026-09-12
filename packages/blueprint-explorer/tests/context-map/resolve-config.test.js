@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { resolveConfig } from '../src/context-map/resolve-config.js';
+import { resolveConfig } from '../../src/context-map/resolve-config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturesContent = join(__dirname, 'fixtures', 'content');

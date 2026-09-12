@@ -1,0 +1,27 @@
+{
+  "description": "Mixed ages and citizenship — policy not provided (uses schema defaults minAge=18, maxAge=54)",
+  "inputs": {
+    "household": {
+      "members": [
+        {
+          "name": "Alice",
+          "age": 22,
+          "employed": true,
+          "citizenshipStatus": "citizen"
+        },
+        {
+          "name": "Bob",
+          "age": 60,
+          "employed": false,
+          "citizenshipStatus": "lpr"
+        },
+        {
+          "name": "Carol",
+          "age": 30,
+          "employed": false,
+          "citizenshipStatus": "citizen"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,11 @@
+domain: test
+
+facts:
+  main.meetsAge:
+    description: Compares applicant age against the policy minimum.
+    policy: test-age-requirement
+  main.meetsIncome:
+    description: Compares applicant monthly income against the policy limit.
+    policy: test-income-limit
+  main.eligible:
+    description: Conjunction of all individual requirement checks.

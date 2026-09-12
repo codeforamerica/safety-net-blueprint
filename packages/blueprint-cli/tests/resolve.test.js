@@ -7,7 +7,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { writeFileSync, readFileSync, mkdirSync, rmSync } from 'fs';
+import { writeFileSync, readFileSync, mkdirSync, rmSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
@@ -37,6 +37,7 @@ import {
 
 // Use checkPathExists from the overlay module (same as the script does)
 import { checkPathExists } from '@codeforamerica/blueprint-core/overlay';
+import { generateRulesResults } from '@codeforamerica/blueprint-core';
 
 function createTmpDir() {
   const dir = join(tmpdir(), `resolve-overlay-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -1678,6 +1679,215 @@ test('x-enum-source injection', async (t) => {
   // ===========================================================================
   // Canonical URI end-to-end (resolve pipeline)
   // ===========================================================================
+
+  // ===========================================================================
+  // Rules compilation pipeline
+  // ===========================================================================
+
+  await t.test('generateRulesResults — compiles scalar inputs to JSONPath field paths', () => {
+    const rulesFiles = [{
+      relativePath: 'eligibility-rules.yaml',
+      doc: {
+        $schema: 'https://blueprint.codeforamerica.org/schemas/rules-schema.yaml',
+        domain: 'eligibility',
+        rulesets: {
+          expeditedSnap: {
+            inputs: {
+              household: {
+                type: 'object',
+                properties: {
+                  monthlyGrossIncome: { type: 'number', description: 'Monthly gross income' },
+                  liquidResources: { type: 'number', description: 'Liquid resources' },
+                },
+              },
+              policy: {
+                type: 'object',
+                properties: {
+                  resourceLimit: { type: 'number', default: 100 },
+                  grossIncomeLimit: { type: 'number', default: 150 },
+                },
+              },
+            },
+            outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
+            facts: [
+              {
+                path: 'passesLowIncomeTest',
+                expression: 'household.monthlyGrossIncome < policy.grossIncomeLimit && household.liquidResources <= policy.resourceLimit',
+                type: { type: 'boolean' },
+              },
+              {
+                path: 'eligible',
+                expression: 'passesLowIncomeTest',
+                type: { type: 'boolean' },
+              },
+            ],
+          },
+        },
+      },
+    }];
+
+    const { graphs } = generateRulesResults(rulesFiles);
+    const graph = graphs.get('eligibility-expeditedSnap-graph.yaml');
+
+    assert.ok(graph, 'graph file produced');
+
+    // Object containers are not emitted — only leaf fields
+    assert.strictEqual(graph.inputs['$.household'], undefined);
+    assert.strictEqual(graph.inputs['$.policy'], undefined);
+
+    // Scalar fields are expanded to JSONPath
+    assert.ok(graph.inputs['$.household.monthlyGrossIncome']);
+    assert.strictEqual(graph.inputs['$.household.monthlyGrossIncome'].type, 'number');
+    assert.ok(graph.inputs['$.household.liquidResources']);
+    assert.ok(graph.inputs['$.policy.resourceLimit']);
+    assert.strictEqual(graph.inputs['$.policy.resourceLimit'].default, 100);
+    assert.ok(graph.inputs['$.policy.grossIncomeLimit']);
+    assert.strictEqual(graph.inputs['$.policy.grossIncomeLimit'].default, 150);
+
+    // Dependencies reference the expanded JSONPath keys
+    assert.ok(graph.dependencies.passesLowIncomeTest.includes('$.household.monthlyGrossIncome'));
+    assert.ok(graph.dependencies.passesLowIncomeTest.includes('$.policy.grossIncomeLimit'));
+    assert.ok(graph.dependencies.passesLowIncomeTest.includes('$.household.liquidResources'));
+    assert.ok(graph.dependencies.passesLowIncomeTest.includes('$.policy.resourceLimit'));
+
+    // Fact-to-fact dependency
+    assert.ok(graph.dependencies.eligible.includes('passesLowIncomeTest'));
+    assert.ok(!graph.dependencies.eligible.some(d => d.startsWith('$.')));
+  });
+
+  await t.test('generateRulesResults — compiles array inputs to JSONPath with [] notation', () => {
+    const rulesFiles = [{
+      relativePath: 'intake-rules.yaml',
+      doc: {
+        $schema: 'https://blueprint.codeforamerica.org/schemas/rules-schema.yaml',
+        domain: 'intake',
+        rulesets: {
+          snapProbes: {
+            inputs: {
+              household: {
+                type: 'object',
+                properties: {
+                  monthlyIncome: { type: 'number' },
+                  monthlyExpenses: { type: 'number' },
+                  members: {
+                    type: 'array',
+                    description: 'Household members',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        age: { type: 'integer' },
+                        employed: { type: 'boolean' },
+                        workExempt: { type: 'boolean' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            outputs: {
+              type: 'object',
+              properties: {
+                incomeInconsistency: { type: 'boolean' },
+                abawdMembers: { type: 'array' },
+              },
+            },
+            facts: [
+              {
+                path: 'incomeInconsistency',
+                expression: 'household.monthlyIncome < household.monthlyExpenses',
+                type: { type: 'boolean' },
+              },
+              {
+                path: 'abawdMembers',
+                expression: 'household.members.filter(m, m.age >= 18 && m.age <= 54 && !m.employed && !m.workExempt)',
+                type: { type: 'array' },
+              },
+            ],
+          },
+        },
+      },
+    }];
+
+    const { graphs } = generateRulesResults(rulesFiles);
+    const graph = graphs.get('intake-snapProbes-graph.yaml');
+
+    assert.ok(graph, 'graph file produced');
+
+    // Array field emitted with type: array
+    assert.ok(graph.inputs['$.household.members[]']);
+    assert.strictEqual(graph.inputs['$.household.members[]'].type, 'array');
+
+    // Array sub-fields emitted with their own types
+    assert.strictEqual(graph.inputs['$.household.members[].age']?.type, 'integer');
+    assert.strictEqual(graph.inputs['$.household.members[].employed']?.type, 'boolean');
+    assert.strictEqual(graph.inputs['$.household.members[].workExempt']?.type, 'boolean');
+
+    // Object container not emitted
+    assert.strictEqual(graph.inputs['$.household'], undefined);
+
+    // incomeInconsistency depends on scalar fields, not members
+    assert.ok(graph.dependencies.incomeInconsistency.includes('$.household.monthlyIncome'));
+    assert.ok(graph.dependencies.incomeInconsistency.includes('$.household.monthlyExpenses'));
+    assert.ok(!graph.dependencies.incomeInconsistency.some(d => d.includes('members')));
+
+    // abawdMembers depends on the array path only — sub-fields are not direct deps
+    assert.deepStrictEqual(graph.dependencies.abawdMembers, ['$.household.members[]']);
+  });
+
+  await t.test('generateRulesResults — endpoint overlay adds POST path to OpenAPI spec', () => {
+    const rulesFiles = [{
+      relativePath: 'eligibility-rules.yaml',
+      doc: {
+        $schema: 'https://blueprint.codeforamerica.org/schemas/rules-schema.yaml',
+        domain: 'eligibility',
+        rulesets: {
+          expeditedSnap: {
+            endpoint: { path: '/assess-expedited-snap' },
+            inputs: {
+              household: {
+                type: 'object',
+                properties: { monthlyGrossIncome: { type: 'number' } },
+              },
+            },
+            outputs: { type: 'object', properties: { eligible: { type: 'boolean' } } },
+            facts: [
+              { path: 'eligible', expression: 'household.monthlyGrossIncome < 150', type: { type: 'boolean' } },
+            ],
+          },
+        },
+      },
+    }];
+
+    const openApiSpec = {
+      openapi: '3.1.0',
+      info: { title: 'Eligibility API', version: '1.0.0' },
+      paths: {},
+      components: { schemas: {} },
+    };
+
+    const yamlFiles = [
+      { relativePath: 'eligibility-openapi.yaml', spec: openApiSpec },
+      { relativePath: 'eligibility-rules.yaml', spec: rulesFiles[0].doc },
+    ];
+
+    const { overlays } = generateRulesResults(rulesFiles);
+    assert.strictEqual(overlays.length, 1);
+
+    const { overlay } = overlays[0];
+    const actionFileMap = analyzeTargetLocations(overlay, yamlFiles);
+    const { actionTargets } = resolveActionTargets(actionFileMap);
+    const { results } = applyOverlayWithTargets(yamlFiles, overlay, actionTargets, '/tmp');
+
+    const resolved = results.get('eligibility-openapi.yaml');
+    assert.ok(resolved.paths['/eligibility/assess-expedited-snap'], 'endpoint path added with domain prefix');
+    assert.ok(resolved.paths['/eligibility/assess-expedited-snap'].post, 'POST operation added');
+    assert.strictEqual(resolved.paths['/eligibility/assess-expedited-snap'].post.operationId, 'assessExpeditedSnap');
+    assert.ok(resolved.components.schemas['ExpeditedSnapRequest'], 'request schema added');
+    assert.ok(resolved.components.schemas['ExpeditedSnapResponse'], 'response schema added');
+    const responseSchema = resolved.components.schemas['ExpeditedSnapResponse'];
+    assert.ok(responseSchema.allOf, 'response schema uses allOf');
+    assert.strictEqual(responseSchema.allOf[0].$ref, 'https://blueprint.codeforamerica.org/base/schemas/rules-evaluation.yaml#/EvaluationResult');
+  });
 
   await t.test('resolve rewrites canonical blueprint URIs and copies base contracts to output', async () => {
     const { spawnSync } = await import('child_process');
