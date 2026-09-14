@@ -497,6 +497,7 @@ application.deductions[].annualAmount: { type: number }
 application.verifications[]: { type: list(Verification) }
 application.verifications[].applicationId: { type: uuid, relationship: Application }
 application.verifications[].sourceId: { type: uuid, relationship: Polymorphic }
+application.verifications[].reviewedBy: { type: uuid }
 application.verifications[].id: { type: uuid }
 application.verifications[].status: { type: enum, values: [pending, inconclusive, satisfied, waived, cannot_verify] }
 application.verifications[].evidence[]: { type: string }
@@ -509,6 +510,7 @@ application.verifications[].documentRequests[].channel: { type: enum, values: [e
 application.verifications[].sourceType: { type: enum, values: [member, income] }
 application.verifications[].category: { type: enum, values: [citizenship, identity, immigration, income, residency] }
 application.verifications[].verificationType: { type: enum, values: [document, electronic] }
+application.verifications[].reviewedAt: { type: datetime }
 
 # ── interview ───────────────────────────────────────────────────────────────────
 
