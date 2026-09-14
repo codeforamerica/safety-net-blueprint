@@ -1,0 +1,58 @@
+$schema: "https://blueprint.codeforamerica.org/schemas/rules-schema.yaml"
+domain: eligibility
+rulesets:
+  collectionOps:
+    inputs:
+      household:
+        type: object
+        properties:
+          members:
+            type: array
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                age:
+                  type: integer
+                employed:
+                  type: boolean
+                citizenshipStatus:
+                  type: string
+                  enum: [citizen, lpr, non-citizen]
+      policy:
+        type: object
+        properties:
+          minAge:
+            type: integer
+            default: 18
+          maxAge:
+            type: integer
+            default: 54
+
+    outputs:
+      adultsFilter:
+        type: array
+      allEmployed:
+        type: boolean
+      anyNonCitizen:
+        type: boolean
+      hasMemberName:
+        type: boolean
+
+    facts:
+      - path: adultsFilter
+        description: Members aged minAge–maxAge (uses policy defaults for bounds)
+        expression: "household.members.filter(m, m.age >= policy.minAge && m.age <= policy.maxAge)"
+
+      - path: allEmployed
+        description: True only if every member is employed (uses all() → CollectionSize comparison)
+        expression: "household.members.all(m, m.employed)"
+
+      - path: anyNonCitizen
+        description: True if any member is a non-citizen (uses exists() → count > 0)
+        expression: "household.members.exists(m, m.citizenshipStatus != 'citizen')"
+
+      - path: hasMemberName
+        description: True if any member has a name field (uses has())
+        expression: "household.members.exists(m, has(m.name))"

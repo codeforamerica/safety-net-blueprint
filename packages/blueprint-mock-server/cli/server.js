@@ -13,7 +13,7 @@ import { resolve } from 'path';
 import { resolveUploadsDir } from '../src/handlers/document-upload-handler.js';
 import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
-import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes } from '../src/route-generator.js';
+import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes, registerRulesRoutes } from '../src/route-generator.js';
 import { registerEventSubscriptions } from '../src/event-subscription.js';
 import { closeAll, clearAllDatabases, insertResource, findById } from '../src/database-manager.js';
 import { seedAllDatabases } from '../src/seeder.js';
@@ -120,6 +120,7 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
     let allMetrics = [];
     let allConfigs = [];
     let allCompositions = [];
+    let allRulesFiles = [];
     let allPolicies = {};
     for (const specsDir of specDirs) {
       const result = await performSetup({ specsDir, seedDir, verbose: true });
@@ -129,6 +130,7 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
       allMetrics = allMetrics.concat(result.metrics);
       allConfigs = allConfigs.concat(result.configs || []);
       allCompositions = allCompositions.concat(result.compositions || []);
+      allRulesFiles = allRulesFiles.concat(result.rulesFiles || []);
       Object.assign(allPolicies, result.policies || {});
     }
 
@@ -292,6 +294,12 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
     if (allCompositions.length > 0) {
       console.log('\nRegistering composition routes...');
       registerCompositionRoutes(app, allCompositions, apiSpecs);
+    }
+
+    // Register rules evaluation routes
+    if (allRulesFiles.length > 0) {
+      console.log('\nRegistering rules evaluation routes...');
+      registerRulesRoutes(app, allRulesFiles, apiSpecs);
     }
 
     const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics, resolvedUploadsDir);

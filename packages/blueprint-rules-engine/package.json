@@ -1,0 +1,33 @@
+{
+  "name": "@codeforamerica/blueprint-rules-engine",
+  "version": "0.1.0",
+  "description": "Browser-compatible rules evaluator for Blueprint dependency graph rulesets",
+  "type": "module",
+  "files": [
+    "src/",
+    "dist/"
+  ],
+  "exports": {
+    ".": "./src/index.js",
+    "./fact-graph": "./src/fact-graph.js",
+    "./browser": "./dist/browser.js"
+  },
+  "scripts": {
+    "build:browser": "node scripts/build-browser.js",
+    "prepare": "node scripts/build-browser.js",
+    "test": "node --test tests/*.test.js",
+    "test:unit": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.11.0"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codeforamerica/safety-net-blueprint.git",
+    "directory": "packages/blueprint-rules-engine"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

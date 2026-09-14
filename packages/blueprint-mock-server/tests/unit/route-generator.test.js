@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { registerRoutes, registerAllRoutes } from '../../src/route-generator.js';
+import { registerRoutes, registerAllRoutes, registerRulesRoutes } from '../../src/route-generator.js';
 
 // Mock Express app to capture registered routes
 function createMockApp() {
@@ -584,6 +584,128 @@ test('Route Generator Tests', async (t) => {
     assert.strictEqual(statusCode, 404, 'Should return 404 for missing resource (not 500 from wrong collection)');
 
     console.log('  ✓ Handler uses "applications" collection (not "intake")');
+  });
+
+});
+
+// =============================================================================
+// registerRulesRoutes
+// =============================================================================
+
+const minimalRulesDoc = {
+  $schema: 'https://blueprint.codeforamerica.org/schemas/rules-schema.yaml',
+  domain: 'eligibility',
+  rulesets: {
+    snapEligibility: {
+      endpoint: { path: '/assess-snap-eligibility' },
+      inputs: {
+        household: {
+          type: 'object',
+          properties: { monthlyIncome: { type: 'number' } },
+        },
+      },
+      outputs: { eligible: { type: 'boolean' } },
+      facts: [{ path: 'eligible', expression: 'household.monthlyIncome < 1500' }],
+    },
+    noEndpointRuleset: {
+      inputs: { x: { type: 'object', properties: { v: { type: 'number' } } } },
+      outputs: { result: { type: 'boolean' } },
+      facts: [{ path: 'result', expression: 'x.v > 0' }],
+    },
+  },
+};
+
+test('registerRulesRoutes', async (t) => {
+
+  await t.test('registers no routes when rulesFiles is empty', () => {
+    const app = createMockApp();
+    const result = registerRulesRoutes(app, []);
+    assert.strictEqual(app.getRoutes().length, 0);
+    assert.strictEqual(result.length, 0);
+  });
+
+  await t.test('skips rulesets without an endpoint declaration', () => {
+    const app = createMockApp();
+    registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }]);
+    // Only snapEligibility has endpoint; noEndpointRuleset is skipped
+    assert.strictEqual(app.getRoutes().length, 1);
+  });
+
+  await t.test('falls back to /domain prefix when no apiSpec found', () => {
+    const app = createMockApp();
+    registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }]);
+    const routes = app.getRoutes();
+    assert.strictEqual(routes.length, 1);
+    assert.strictEqual(routes[0].method, 'POST');
+    assert.strictEqual(routes[0].path, '/eligibility/assess-snap-eligibility');
+  });
+
+  await t.test('uses serverBasePath from apiSpec when available', () => {
+    const app = createMockApp();
+    const apiSpecs = [{ name: 'eligibility', serverBasePath: '/eligibility' }];
+    registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }], apiSpecs);
+    const routes = app.getRoutes();
+    assert.strictEqual(routes[0].path, '/eligibility/assess-snap-eligibility');
+  });
+
+  await t.test('handler returns evaluate result as JSON for complete inputs', async () => {
+    const app = createMockApp();
+    registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }]);
+    const handler = app.getRoutes()[0].handler;
+
+    let responseBody;
+    let statusCode = 200;
+    const req = { body: { household: { monthlyIncome: 800 } } };
+    const res = {
+      json: (body) => { responseBody = body; },
+      status: (code) => { statusCode = code; return { json: (b) => { responseBody = b; } }; },
+    };
+
+    await handler(req, res);
+    assert.ok(responseBody.complete, 'result must have complete');
+    assert.strictEqual(responseBody.complete.eligible, true);
+    assert.strictEqual(statusCode, 200);
+  });
+
+  await t.test('handler puts broken expressions in errors (not a 500)', async () => {
+    const app = createMockApp();
+    // The evaluator catches CEL errors internally — they appear in result.errors, not as thrown exceptions
+    const brokenDoc = {
+      $schema: 'https://blueprint.codeforamerica.org/schemas/rules-schema.yaml',
+      domain: 'eligibility',
+      rulesets: {
+        broken: {
+          endpoint: { path: '/broken' },
+          inputs: { x: { type: 'object', properties: { v: { type: 'number' } } } },
+          outputs: { result: { type: 'boolean' } },
+          facts: [{ path: 'result', expression: 'this is not valid cel !!!' }],
+        },
+      },
+    };
+    registerRulesRoutes(app, [{ domain: 'eligibility', doc: brokenDoc }]);
+    const handler = app.getRoutes()[0].handler;
+
+    let statusCode = 200;
+    let responseBody;
+    const req = { body: { x: { v: 1 } } };
+    const res = {
+      json: (body) => { responseBody = body; },
+      status: (code) => { statusCode = code; return { json: (b) => { responseBody = b; } }; },
+    };
+
+    await handler(req, res);
+    assert.strictEqual(statusCode, 200);
+    assert.ok(responseBody.errors, 'broken expression must appear in errors');
+    assert.ok('result' in responseBody.errors);
+  });
+
+  await t.test('returns registered endpoint descriptors', () => {
+    const app = createMockApp();
+    const result = registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }]);
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(result[0].method, 'POST');
+    assert.ok(result[0].path.includes('assess-snap-eligibility'));
+    assert.ok(result[0].description.includes('snapEligibility'));
   });
 
 });

@@ -18,7 +18,7 @@ test('loadAnnotations', async (t) => {
     const dir = createTmpDir();
     try {
       const result = loadAnnotations('nonexistent', dir);
-      assert.deepStrictEqual(result, { schema: {}, operations: {}, events: {} });
+      assert.deepStrictEqual(result, { schema: {}, operations: {}, events: {}, facts: {} });
     } finally {
       rmSync(dir, { recursive: true });
     }
@@ -82,6 +82,42 @@ test('loadAnnotations', async (t) => {
     }
   });
 
+  await t.test('loads facts section', () => {
+    const dir = createTmpDir();
+    try {
+      writeFileSync(join(dir, 'intake-annotations.yaml'), yaml.dump({
+        domain: 'intake',
+        facts: {
+          incomeInconsistency: { guidance: 'Ask about unreported income sources.' },
+          abawdMembers: { guidance: 'Confirm ABAWD exemption or refer to SNAP E&T.', policies: ['snap-abawd'] },
+        },
+      }));
+      const result = loadAnnotations('intake', dir);
+      assert.deepStrictEqual(result.facts['incomeInconsistency'], { guidance: 'Ask about unreported income sources.' });
+      assert.deepStrictEqual(result.facts['abawdMembers'].policies, ['snap-abawd']);
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
+  await t.test('deep-merges facts across files', () => {
+    const dir = createTmpDir();
+    try {
+      writeFileSync(join(dir, 'intake-annotations.yaml'), yaml.dump({
+        facts: { incomeInconsistency: { policies: ['snap-income'] } },
+      }));
+      writeFileSync(join(dir, 'intake-annotations-guidance.yaml'), yaml.dump({
+        facts: { incomeInconsistency: { guidance: 'Ask about unreported income.' } },
+      }));
+      const result = loadAnnotations('intake', dir);
+      const entry = result.facts['incomeInconsistency'];
+      assert.deepStrictEqual(entry.policies, ['snap-income']);
+      assert.strictEqual(entry.guidance, 'Ask about unreported income.');
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
   await t.test('accepts a fileMap and matches on content.domain field', () => {
     const fileMap = new Map();
     fileMap.set('/fake/intake-annotations.yaml', {
@@ -121,7 +157,7 @@ test('loadAnnotations', async (t) => {
       domain: 'workflow',
     });
     const result = loadAnnotations('intake', fileMap);
-    assert.deepStrictEqual(result, { schema: {}, operations: {}, events: {} });
+    assert.deepStrictEqual(result, { schema: {}, operations: {}, events: {}, facts: {} });
   });
 });
 

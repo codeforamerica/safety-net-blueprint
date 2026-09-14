@@ -3,26 +3,52 @@ import { join, relative, resolve, dirname, basename } from 'path';
 import yaml from 'js-yaml';
 
 /**
- * Detect the contract file type from a filename.
- * First-match wins against the suffix list.
- * Returns 'unknown' if the filename does not match any known contract convention.
+ * Detect the contract file type from parsed document content and/or filename.
+ *
+ * Detection order:
+ *   1. doc.$schema URI — canonical for all blueprint contract types
+ *   2. doc.openapi / doc.asyncapi version fields — OpenAPI/AsyncAPI have no $schema
+ *   3. Filename suffix — fallback for files without a type marker in content
+ *
+ * @param {string} filename
+ * @param {object} [doc] - parsed YAML content (optional)
+ * @returns {string}
  */
-export function detectType(filename) {
-  if (filename.endsWith('-openapi.yaml'))         return 'openapi';
-  if (filename.endsWith('-asyncapi.yaml'))        return 'asyncapi';
-  if (filename.endsWith('-state-machine.yaml'))   return 'state-machine';
-  if (filename.endsWith('-schema.yaml'))          return 'schema';
-  if (filename.endsWith('-mock-data.yaml'))       return 'mock-data';
-  if (filename.endsWith('-metrics.yaml'))         return 'metrics';
-  if (filename.endsWith('-compositions.yaml'))    return 'compositions';
+export function detectType(filename, doc) {
+  if (doc && typeof doc === 'object') {
+    const schema = doc.$schema;
+    if (schema) {
+      const base = schema.split('/').pop();
+      if (base === 'rules-schema.yaml')        return 'rules';
+      if (base === 'graph-schema.yaml')        return 'graph';
+      if (base === 'state-machine-schema.yaml') return 'state-machine';
+      if (base === 'annotations-schema.yaml')  return 'annotations';
+      if (base === 'sla-types-schema.yaml')    return 'sla-types';
+      if (base === 'metrics-schema.yaml')      return 'metrics';
+      if (base === 'compositions-schema.yaml') return 'compositions';
+    }
+    if (doc.openapi)   return 'openapi';
+    if (doc.asyncapi)  return 'asyncapi';
+  }
+
+  // Filename fallback
+  if (filename.endsWith('-openapi.yaml'))          return 'openapi';
+  if (filename.endsWith('-asyncapi.yaml'))         return 'asyncapi';
+  if (filename.endsWith('-state-machine.yaml'))    return 'state-machine';
+  if (filename.endsWith('-rules.yaml'))            return 'rules';
+  if (filename.endsWith('-graph.yaml'))            return 'graph';
+  if (filename.endsWith('-schema.yaml'))           return 'schema';
+  if (filename.endsWith('-mock-data.yaml'))        return 'mock-data';
+  if (filename.endsWith('-metrics.yaml'))          return 'metrics';
+  if (filename.endsWith('-compositions.yaml'))     return 'compositions';
   if (filename.endsWith('-annotations-docs.yaml')) return 'annotations';
-  if (filename.endsWith('-annotations.yaml'))     return 'annotations';
-  if (filename.endsWith('-sla-types.yaml'))       return 'sla-types';
-  if (filename.endsWith('-config.yaml'))          return 'config';
-  if (filename.endsWith('-overlay.yaml'))         return 'overlay';
-  if (filename === 'parameters.yaml')             return 'parameters';
-  if (filename === 'responses.yaml')              return 'responses';
-  if (filename === 'pagination.yaml')             return 'pagination';
+  if (filename.endsWith('-annotations.yaml'))      return 'annotations';
+  if (filename.endsWith('-sla-types.yaml'))        return 'sla-types';
+  if (filename.endsWith('-config.yaml'))           return 'config';
+  if (filename.endsWith('-overlay.yaml'))          return 'overlay';
+  if (filename === 'parameters.yaml')              return 'parameters';
+  if (filename === 'responses.yaml')               return 'responses';
+  if (filename === 'pagination.yaml')              return 'pagination';
   return 'unknown';
 }
 
@@ -94,7 +120,7 @@ export function loadContractFiles(dir) {
         } catch {
           continue;
         }
-        const type = detectType(entry.name);
+        const type = detectType(entry.name, content);
         // Normalize to forward slashes
         const relativePath = relative(dir, absPath).replace(/\\/g, '/');
         map.set(absPath, { content, type, relativePath, domain: null });

@@ -17,6 +17,7 @@ import { createDocumentUploadHandler, createDocumentVersionUploadHandler } from 
 import { createDocumentContentHandler } from './handlers/document-content-handler.js';
 import { findSlaTypes } from './sla-loader.js';
 import { generateStateSchemas } from '@codeforamerica/blueprint-core/compositions';
+import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, registerParentLink } from './composition-assembler.js';
 import { findAll, findById, insertResource, update, registerCollectionDefaults } from './database-manager.js';
 import { emitEvent } from './emit-event.js';
@@ -950,6 +951,51 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, slaType
       });
 
       console.log(`    POST   ${expressPath} - ${entry.id}: ${entry.from} → ${entry.to ?? '(in-place)'}`);
+    }
+  }
+
+  return registeredEndpoints;
+}
+
+/**
+ * Register rules evaluation routes from discovered *-rules.yaml files.
+ *
+ * Only rulesets that declare an `endpoint:` block get an HTTP route. The full
+ * path is constructed the same way as composition routes: serverBasePath from
+ * the domain's API spec is prepended to endpoint.path.
+ *
+ * @param {import('express').Express} app
+ * @param {Array<{ domain: string, doc: Object, filePath: string }>} rulesFiles
+ * @param {Array<Object>} apiSpecs
+ * @returns {Array<{ method: string, path: string, description: string }>}
+ */
+export function registerRulesRoutes(app, rulesFiles = [], apiSpecs = []) {
+  const registeredEndpoints = [];
+
+  for (const { domain, doc } of rulesFiles) {
+    const apiSpec = apiSpecs.find(s => s.name === domain);
+    const basePath = apiSpec?.serverBasePath ?? `/${domain}`;
+
+    for (const [rulesetName, ruleset] of Object.entries(doc.rulesets || {})) {
+      const endpointPath = ruleset.endpoint?.path;
+      if (!endpointPath) continue;
+
+      const fullPath = basePath && !endpointPath.startsWith(basePath)
+        ? `${basePath}${endpointPath}`
+        : endpointPath;
+
+      app.post(fullPath, (req, res) => {
+        try {
+          const result = evaluate(doc, req.body ?? {}, rulesetName);
+          res.json(result);
+        } catch (err) {
+          console.error(`Rules evaluation error (${rulesetName}):`, err);
+          internalError(res, err);
+        }
+      });
+
+      registeredEndpoints.push({ method: 'POST', path: fullPath, description: `Evaluate ${rulesetName}` });
+      console.log(`  POST   ${fullPath} - Evaluate ${rulesetName} (rules)`);
     }
   }
 

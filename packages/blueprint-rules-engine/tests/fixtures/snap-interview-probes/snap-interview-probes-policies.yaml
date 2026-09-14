@@ -1,0 +1,35 @@
+snap-general-work-requirements:
+  citation: "7 CFR § 273.7"
+  description: "General work requirements for SNAP — exemptions for age, physical/mental fitness, caregiving, education, and other program compliance"
+  programs:
+    - SNAP
+
+snap-abawd:
+  citation: "7 CFR § 273.24"
+  description: "Able-bodied adults without dependents (ABAWD) work requirement — exceptions for pregnancy, disability, homelessness, veteran status, and foster care aging-out"
+  programs:
+    - SNAP
+
+snap-student-eligibility:
+  citation: "7 CFR § 273.5"
+  description: "SNAP eligibility rules for students enrolled at least half-time in higher education"
+  programs:
+    - SNAP
+
+snap-noncitizen-eligibility:
+  citation: "7 CFR § 273.4"
+  description: "SNAP eligibility for non-citizens — qualified alien categories, sponsor income and resource deeming, I-864 affidavit rules"
+  programs:
+    - SNAP
+
+snap-felon-compliance:
+  citation: "7 CFR § 273.11(n)"
+  description: "SNAP eligibility for individuals with felony convictions — compliance with sentence terms required"
+  programs:
+    - SNAP
+
+snap-interview-toolkit:
+  citation: "FNS-1104 (March 2023, revised June 2025)"
+  description: "FNS SNAP Interview Toolkit — six essential interview functions, probe triggers for inconsistency flags, and interview conclusion requirements"
+  programs:
+    - SNAP

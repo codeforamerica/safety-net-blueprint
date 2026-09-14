@@ -1,0 +1,25 @@
+$schema: "https://blueprint.codeforamerica.org/schemas/graph-schema.yaml"
+domain: test
+ruleset: simple
+outputs:
+  - eligible
+  - reason
+inputs:
+  $.person.age:
+    type: integer
+  $.policy.minAge:
+    type: integer
+    default: 18
+facts:
+  eligible:
+    expression: "person.age >= policy.minAge"
+    description: "Whether the person meets the minimum age requirement"
+  reason:
+    expression: "eligible ? 'meets age requirement' : 'below minimum age'"
+    description: "Human-readable result"
+dependencies:
+  eligible:
+    - $.person.age
+    - $.policy.minAge
+  reason:
+    - eligible

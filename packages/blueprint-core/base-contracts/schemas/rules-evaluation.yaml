@@ -1,0 +1,62 @@
+$id: "https://blueprint.codeforamerica.org/base/schemas/rules-evaluation.yaml"
+
+# Base schemas for rules evaluation results.
+# Returned by ruleset endpoints that assess eligibility, probes, or other rule-driven decisions.
+# States extend item schemas via overlay to add domain-specific fields or tighten types.
+
+EvaluationResolvedItem:
+  type: object
+  required: [name]
+  additionalProperties: true
+  properties:
+    name:
+      type: string
+      description: The fact that was successfully computed.
+    value:
+      description: The computed value. Type varies by ruleset.
+
+EvaluationMissingItem:
+  type: object
+  required: [name, needs]
+  additionalProperties: true
+  properties:
+    name:
+      type: string
+      description: The fact that could not be computed.
+    needs:
+      type: array
+      description: Input paths required to compute this fact.
+      items:
+        type: string
+
+EvaluationErrorItem:
+  type: object
+  required: [name, message]
+  additionalProperties: true
+  properties:
+    name:
+      type: string
+      description: The fact that failed to evaluate.
+    message:
+      type: string
+      description: The reason evaluation failed.
+
+EvaluationResult:
+  type: object
+  required: [resolved, missing, errors]
+  properties:
+    resolved:
+      type: array
+      description: Facts that were successfully computed.
+      items:
+        $ref: '#/EvaluationResolvedItem'
+    missing:
+      type: array
+      description: Facts that could not be computed due to missing inputs.
+      items:
+        $ref: '#/EvaluationMissingItem'
+    errors:
+      type: array
+      description: Facts that failed to evaluate.
+      items:
+        $ref: '#/EvaluationErrorItem'

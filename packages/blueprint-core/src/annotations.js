@@ -11,10 +11,10 @@ import yaml from 'js-yaml';
  *
  * @param {string} domain - Domain name (e.g. 'intake')
  * @param {string|Map} dirOrFileMap - Directory path or fileMap from loadContractFiles
- * @returns {{ schema: Record<string, object>, operations: Record<string, object>, events: Record<string, object> }}
+ * @returns {{ schema: Record<string, object>, operations: Record<string, object>, events: Record<string, object>, facts: Record<string, object> }}
  */
 export function loadAnnotations(domain, dirOrFileMap) {
-  const merged = { schema: {}, operations: {}, events: {} };
+  const merged = { schema: {}, operations: {}, events: {}, facts: {} };
 
   let contents = [];
   if (dirOrFileMap instanceof Map) {
@@ -41,6 +41,8 @@ export function loadAnnotations(domain, dirOrFileMap) {
       merged.operations[key] = { ...(merged.operations[key] ?? {}), ...val };
     for (const [key, val] of Object.entries(data.events || {}))
       merged.events[key] = { ...(merged.events[key] ?? {}), ...val };
+    for (const [key, val] of Object.entries(data.facts || {}))
+      merged.facts[key] = { ...(merged.facts[key] ?? {}), ...val };
   }
   return merged;
 }

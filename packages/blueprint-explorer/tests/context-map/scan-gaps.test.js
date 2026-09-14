@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { scanGaps } from '../src/context-map/scan-gaps.js';
+import { scanGaps } from '../../src/context-map/scan-gaps.js';
 
 // Capture console.log output for assertions
 function captureLog(fn) {

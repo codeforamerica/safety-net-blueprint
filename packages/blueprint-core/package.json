@@ -23,7 +23,10 @@
     "./example-validator": "./src/validation/example-validator.js",
     "./relationships": "./src/relationships.js",
     "./compositions": "./src/compositions.js",
-    "./state-machine-validator": "./src/validation/state-machine-validator.js"
+    "./state-machine-validator": "./src/validation/state-machine-validator.js",
+    "./rules": "./src/rules.js",
+    "./rules-validator": "./src/rules-validator.js",
+    "./contract-validator": "./src/contract-validator.js"
   },
   "scripts": {
     "test": "node --test tests/unit/*.test.js",

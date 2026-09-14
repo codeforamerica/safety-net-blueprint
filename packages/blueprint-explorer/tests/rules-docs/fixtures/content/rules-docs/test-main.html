@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>main — Rules Docs</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; font-size: 14px; line-height: 1.6; }
+    a { color: #5650BE; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12px; background: #F7EDE8; padding: 1px 5px; border-radius: 3px; border: 1px solid #E9CCBE; color: #2a2a2a; }
+    table { border-collapse: collapse; width: 100%; }
+    th { background: #F7EDE8; color: #1a1a1a; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 8px 12px; text-align: left; border-bottom: 2px solid #E9CCBE; }
+    td { padding: 10px 12px; border-bottom: 1px solid #E9CCBE; vertical-align: top; font-size: 13px; word-break: break-word; overflow-wrap: anywhere; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #F7EDE8; }
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    
+  </style>
+</head>
+<body>
+  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Rules Docs</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">main</a></div>
+  <script src="rules-engine.js"></script>
+<div style="max-width:1100px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
+<div style="margin-bottom:1.5rem">
+  <h1 style="font-size:1.25rem;font-weight:800;color:#111827;display:inline">main</h1><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px;background:#E6EBF9;color:#2B1A78;border:1px solid #C2C0E8;margin-left:8px;">test</span>
+  <div style="font-size:12px;color:#6b7280;margin-top:4px;">3 facts &middot; 3 outputs &middot; 4 inputs</div>
+</div>
+
+<div style="display:flex;gap:16px;margin-bottom:12px;align-items:center;">
+  <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#374151;">
+      <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#E2F9F6;border:1.5px solid #00AD93;"></span>Input
+    </span><span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#374151;">
+      <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#FFF8E1;border:1.5px solid #E65100;"></span>Intermediate fact
+    </span><span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#374151;">
+      <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:rgba(43,26,120,0.08);border:1.5px solid #2B1A78;"></span>Output
+    </span>
+  <span style="font-size:11px;color:#9ca3af;margin-left:8px;">Click a node to see its expression and annotations</span>
+</div>
+<div style="border:1px solid #e5e7eb;border-radius:6px;background:#fff;padding:16px;">
+  <svg width="100%" height="auto" style="display:block;" viewBox="0 0 500 292" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow-main" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#6b7280"/>
+    </marker>
+  </defs>
+  <line class="sg-edge" data-from="applicant" data-to="meetsAge" x1="170" y1="64" x2="90" y2="228" stroke="#6b7280" stroke-width="1.5"/>
+<line class="sg-edge" data-from="policy" data-to="meetsAge" x1="330" y1="64" x2="90" y2="228" stroke="#6b7280" stroke-width="1.5"/>
+<line class="sg-edge" data-from="applicant" data-to="meetsIncome" x1="170" y1="64" x2="250" y2="228" stroke="#6b7280" stroke-width="1.5"/>
+<line class="sg-edge" data-from="policy" data-to="meetsIncome" x1="330" y1="64" x2="250" y2="228" stroke="#6b7280" stroke-width="1.5"/>
+<line class="sg-edge" data-from="meetsAge" data-to="eligible" x1="90" y1="272" x2="410" y2="228" stroke="#6b7280" stroke-width="1.5"/>
+<line class="sg-edge" data-from="meetsIncome" data-to="eligible" x1="250" y1="272" x2="410" y2="228" stroke="#6b7280" stroke-width="1.5"/>
+<g class="sg-node" data-node="applicant" title="applicant" style="cursor:pointer"><rect x="100" y="20" width="140" height="44" rx="6" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
+<text x="112" y="44" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">applicant</text></g>
+<g class="sg-node" data-node="policy" title="policy" style="cursor:pointer"><rect x="260" y="20" width="140" height="44" rx="6" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
+<text x="272" y="44" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">policy</text></g>
+<g class="sg-node" data-node="meetsAge" title="meetsAge" style="cursor:pointer"><rect x="20" y="228" width="140" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="32" y="252" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">meetsAge</text></g>
+<g class="sg-node" data-node="meetsIncome" title="meetsIncome" style="cursor:pointer"><rect x="180" y="228" width="140" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="192" y="252" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">meetsIncome</text></g>
+<g class="sg-node" data-node="eligible" title="eligible" style="cursor:pointer"><rect x="340" y="228" width="140" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="352" y="252" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">eligible</text></g>
+</svg>
+</div>
+<div id="detail-strip" style="display:none;border:1px solid #e5e7eb;border-radius:6px;background:#fff;padding:16px;margin-top:8px;">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
+    <div id="detail-strip-content" style="flex:1;min-width:0;"></div>
+    <button onclick="closeDetail()" style="flex-shrink:0;background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;line-height:1;padding:0;">✕</button>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #e5e7eb;border-radius:6px;margin-top:8px;background:#fafafa;">
+
+  <div style="padding:16px;border-right:1px solid #e5e7eb;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;">Inputs</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button id="evaluate-btn" onclick="runEval()" style="display:none;padding:3px 10px;background:#2B1A78;color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">Evaluate</button>
+        <button id="experiment-btn" onclick="toggleExperimentMode()" style="padding:3px 10px;background:none;color:#2B1A78;border:1px solid #2B1A78;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">Try it</button>
+      </div>
+    </div>
+    
+  <div id="example-nav" style="display:flex;align-items:flex-start;gap:6px;margin-bottom:8px;">
+    <button onclick="loadExample(-1)" style="flex-shrink:0;padding:2px 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:13px;line-height:1;margin-top:1px;">‹</button>
+    <span id="example-label" style="font-size:11px;color:#374151;flex:1;">Eligible — applicant meets age and income requirements</span>
+    <button onclick="loadExample(1)" style="flex-shrink:0;padding:2px 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:13px;line-height:1;margin-top:1px;">›</button>
+  </div>
+    <textarea id="eval-inputs" rows="11"
+      style="width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px;resize:vertical;box-sizing:border-box;background:#f9fafb;color:#374151;"
+      readonly>{
+  &quot;applicant&quot;: {
+    &quot;age&quot;: 25,
+    &quot;income&quot;: 1500
+  },
+  &quot;policy&quot;: {
+    &quot;minAge&quot;: 18,
+    &quot;incomeLimit&quot;: 2000
+  }
+}</textarea>
+  </div>
+
+  <div style="padding:16px;">
+    <div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:8px;">Outputs</div>
+    <div id="eval-errors" style="margin-bottom:6px;font-size:10px;color:#991b1b;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;display:none;white-space:pre-wrap;"></div>
+    <div id="eval-results-body" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;color:#9ca3af;">Evaluating…</div>
+  </div>
+
+</div>
+
+<script>
+const GRAPH = {"$schema":"https://blueprint.codeforamerica.org/schemas/graph-schema.yaml","domain":"test","ruleset":"main","outputs":["meetsAge","meetsIncome","eligible"],"inputs":{"$.applicant.age":{"type":"integer","description":"Applicant age in years."},"$.applicant.income":{"type":"number","description":"Monthly income in dollars."},"$.policy.minAge":{"type":"integer","description":"Minimum age requirement.","default":18},"$.policy.incomeLimit":{"type":"number","description":"Maximum monthly income allowed.","default":2000}},"facts":{"meetsAge":{"expression":"applicant.age >= policy.minAge","type":"boolean","description":"Applicant meets the minimum age requirement."},"meetsIncome":{"expression":"applicant.income <= policy.incomeLimit","type":"boolean","description":"Applicant income is within the allowed limit."},"eligible":{"expression":"meetsAge && meetsIncome","type":"boolean","description":"Applicant meets all requirements."}},"dependencies":{"meetsAge":["$.applicant.age","$.policy.minAge"],"meetsIncome":["$.applicant.income","$.policy.incomeLimit"],"eligible":["meetsAge","meetsIncome"]}};
+const ANNOTATIONS = {"meetsAge":{"description":"Compares applicant age against the policy minimum.","policy":"test-age-requirement"},"meetsIncome":{"description":"Compares applicant monthly income against the policy limit.","policy":"test-income-limit"},"eligible":{"description":"Conjunction of all individual requirement checks."}};
+const POLICIES = {"test-age-requirement":{"citation":"Test § 1.1","description":"Minimum age requirement for test program eligibility","programs":["TEST"]},"test-income-limit":{"citation":"Test § 1.2","description":"Maximum income limit for test program eligibility","programs":["TEST"]}};
+const EXAMPLES = [{"description":"Eligible — applicant meets age and income requirements","inputs":{"applicant":{"age":25,"income":1500},"policy":{"minAge":18,"incomeLimit":2000}},"outputs":{"meetsAge":true,"meetsIncome":true,"eligible":true}},{"description":"Ineligible — applicant income exceeds limit","inputs":{"applicant":{"age":30,"income":2500},"policy":{"minAge":18,"incomeLimit":2000}},"outputs":{"meetsAge":true,"meetsIncome":false,"eligible":false}},{"description":"Placeholder — no policy provided, defaults apply","inputs":{"applicant":{"age":25,"income":1500}}},{"description":"Missing — no applicant provided","inputs":{"policy":{"minAge":18,"incomeLimit":2000}}}];
+const RULESET_INPUTS = {"applicant":{"type":"object","properties":{"age":{"type":"integer","description":"Applicant age in years."},"income":{"type":"number","description":"Monthly income in dollars."}}},"policy":{"type":"object","properties":{"minAge":{"type":"integer","description":"Minimum age requirement.","default":18},"incomeLimit":{"type":"number","description":"Maximum monthly income allowed.","default":2000}}}};
+let exampleIndex = 0;
+let isExperimentMode = !EXAMPLES.length; // start unlocked when no examples
+
+function loadExample(delta) {
+  if (!EXAMPLES.length || isExperimentMode) return;
+  exampleIndex = (exampleIndex + delta + EXAMPLES.length) % EXAMPLES.length;
+  const ex = EXAMPLES[exampleIndex];
+  document.getElementById('eval-inputs').value = JSON.stringify(ex.inputs, null, 2);
+  const label = document.getElementById('example-label');
+  if (label) { label.textContent = ex.description; label.title = ex.description; }
+  runEval();
+}
+
+function toggleExperimentMode() {
+  if (isExperimentMode) { resetToExample(); } else { enterExperimentMode(); }
+}
+
+function experimentEls() {
+  return {
+    textarea:    document.getElementById('eval-inputs'),
+    nav:         document.getElementById('example-nav'),
+    btn:         document.getElementById('experiment-btn'),
+    evaluateBtn: document.getElementById('evaluate-btn'),
+  };
+}
+
+function enterExperimentMode() {
+  isExperimentMode = true;
+  const { textarea, nav, btn, evaluateBtn } = experimentEls();
+  textarea.removeAttribute('readonly');
+  textarea.style.background    = '#fff';
+  textarea.style.borderColor   = '#2B1A78';
+  if (nav)         nav.style.display         = 'none';
+  if (btn)         btn.textContent            = 'Reset';
+  if (evaluateBtn) evaluateBtn.style.display  = '';
+}
+
+function resetToExample() {
+  isExperimentMode = false;
+  const { textarea, nav, btn, evaluateBtn } = experimentEls();
+  if (EXAMPLES.length) {
+    const ex = EXAMPLES[exampleIndex];
+    textarea.value = JSON.stringify(ex.inputs, null, 2);
+    const label = document.getElementById('example-label');
+    if (label) { label.textContent = ex.description; label.title = ex.description; }
+  }
+  textarea.setAttribute('readonly', '');
+  textarea.style.background  = '#f9fafb';
+  textarea.style.borderColor = '#d1d5db';
+  if (nav)         nav.style.display        = '';
+  if (btn)         btn.textContent          = 'Try it';
+  if (evaluateBtn) evaluateBtn.style.display = 'none';
+  runEval();
+}
+
+// ── Click-to-highlight (ported from spike's visualize-graph-html.js) ──────────
+// Clicking a node dims unconnected nodes/edges, highlights connected ones,
+// adds a selection ring, and scrolls to the corresponding row in the bottom panel.
+function resetHighlight(svg) {
+  svg.querySelectorAll('.sg-node').forEach(n => {
+    n.style.opacity = '';
+    const ring = n.querySelector('.sg-selected-ring');
+    if (ring) ring.remove();
+  });
+  svg.querySelectorAll('.sg-edge').forEach(l => {
+    l.style.opacity = ''; l.setAttribute('stroke', '#6b7280'); l.setAttribute('stroke-width', '1.5');
+  });
+  svg._activeNode = null;
+  closeDetail();
+}
+
+document.addEventListener('click', function (e) {
+  const nodeEl = e.target.closest('.sg-node');
+  const svg = e.target.closest('svg');
+  if (!svg) return;
+  const allNodes = svg.querySelectorAll('.sg-node');
+  const allEdges = svg.querySelectorAll('.sg-edge');
+  if (!nodeEl || !svg.contains(nodeEl)) { resetHighlight(svg); return; }
+  const node = nodeEl.dataset.node;
+  if (svg._activeNode === node) { resetHighlight(svg); return; }
+
+  svg.querySelectorAll('.sg-selected-ring').forEach(r => r.remove());
+  svg._activeNode = node;
+
+  // Build transitive connected set via two separate passes:
+  // upstream (toward inputs) and downstream (toward outputs).
+  // Mixing directions in one BFS causes household's descendants to fan out incorrectly.
+  const upstream = new Set([node]);
+  const upQueue = [node];
+  while (upQueue.length) {
+    const cur = upQueue.shift();
+    allEdges.forEach(l => {
+      if (l.dataset.to === cur && !upstream.has(l.dataset.from)) { upstream.add(l.dataset.from); upQueue.push(l.dataset.from); }
+    });
+  }
+  const downstream = new Set([node]);
+  const downQueue = [node];
+  while (downQueue.length) {
+    const cur = downQueue.shift();
+    allEdges.forEach(l => {
+      if (l.dataset.from === cur && !downstream.has(l.dataset.to)) { downstream.add(l.dataset.to); downQueue.push(l.dataset.to); }
+    });
+  }
+  const connected = new Set([...upstream, ...downstream]);
+
+  allNodes.forEach(n => {
+    const isActive = n.dataset.node === node;
+    n.style.opacity = connected.has(n.dataset.node) ? '1' : '0.15';
+    if (isActive) {
+      const rect = n.querySelector('rect');
+      if (rect) {
+        const ring = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        ring.setAttribute('x', parseFloat(rect.getAttribute('x')) - 3);
+        ring.setAttribute('y', parseFloat(rect.getAttribute('y')) - 3);
+        ring.setAttribute('width', parseFloat(rect.getAttribute('width')) + 6);
+        ring.setAttribute('height', parseFloat(rect.getAttribute('height')) + 6);
+        ring.setAttribute('rx', parseFloat(rect.getAttribute('rx') || 0) + 2);
+        ring.setAttribute('fill', 'none');
+        ring.setAttribute('stroke', '#2B1A78');
+        ring.setAttribute('stroke-width', '2.5');
+        ring.setAttribute('stroke-dasharray', '4 2');
+        ring.classList.add('sg-selected-ring');
+        n.insertBefore(ring, n.firstChild);
+      }
+    }
+  });
+  allEdges.forEach(l => {
+    const hit = connected.has(l.dataset.from) && connected.has(l.dataset.to);
+    l.style.opacity = hit ? '1' : '0.1';
+    l.setAttribute('stroke', hit ? '#2B1A78' : '#6b7280');
+    l.setAttribute('stroke-width', hit ? '2.5' : '1.5');
+  });
+  showDetail(node);
+});
+
+function closeDetail() {
+  document.getElementById('detail-strip').style.display = 'none';
+  activeNode = null;
+}
+
+// ── Detail strip ──────────────────────────────────────────────────────────────
+// Full-width strip between graph and columns. Shows on node click, hides on
+// close button or clicking empty graph area.
+let lastNodes = null; // plain { factName: { type, state, value, ... } } map
+let activeNode = null;
+
+function showDetail(nodeName) {
+  activeNode = nodeName;
+  const strip = document.getElementById('detail-strip');
+  const panel = document.getElementById('detail-strip-content');
+  const outputSet = new Set(GRAPH.outputs);
+  const fact = GRAPH.facts[nodeName];
+  const annot = ANNOTATIONS[nodeName];
+  const isInput = !fact;
+  const isOutput = outputSet.has(nodeName);
+  const isIntermediate = !isInput && !isOutput;
+  const role = isInput ? 'Input' : isOutput ? 'Output' : 'Intermediate fact';
+  const roleColor = isInput ? '#00AD93' : isOutput ? '#2B1A78' : '#E65100';
+
+  let html = '<div style="font-size:13px;font-weight:700;color:#111827;margin-bottom:3px;font-family:ui-monospace,monospace">' + escHtml(nodeName) + '</div>';
+  html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:' + roleColor + ';margin-bottom:10px;">' + role + '</div>';
+
+  // Current value — only for intermediate facts (outputs shown in panel, inputs have no computed value)
+  if (isIntermediate && lastNodes) {
+    const node = lastNodes[nodeName];
+    if (node && (node.state === 'complete' || node.state === 'placeholder')) {
+      const stateLabel = node.state === 'placeholder' ? ' <span style="font-size:9px;font-weight:600;color:#92400e;background:#fef3c7;padding:1px 4px;border-radius:2px;margin-left:4px;">placeholder</span>' : '';
+      html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">Current value' + stateLabel + '</div>';
+      html += '<code style="display:block;font-size:11px;padding:6px 8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:3px;word-break:break-all;margin-bottom:10px;font-family:ui-monospace,monospace;color:#166534;">' + escHtml(JSON.stringify(node.value)) + '</code>';
+    } else if (node?.state === 'error') {
+      html += '<div style="font-size:10px;color:#991b1b;margin-bottom:10px;font-style:italic;">Error: ' + escHtml(node.message) + '</div>';
+    } else if (node?.state === 'missing') {
+      html += '<div style="font-size:10px;color:#9ca3af;margin-bottom:10px;font-style:italic;">Missing inputs: ' + escHtml((node.missing ?? []).join(', ')) + '</div>';
+    }
+  }
+
+  if (isInput) {
+    const paths = Object.entries(GRAPH.inputs).filter(([p]) => p.slice(2).split('.')[0] === nodeName);
+    html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">Paths</div>';
+    html += '<ul style="margin:0 0 10px;padding-left:14px;">' + paths.map(([p, def]) =>
+      '<li style="font-size:10.5px;font-family:ui-monospace,monospace;color:#374151;margin-bottom:3px;">' + escHtml(p) +
+      (def?.type ? ' <span style="color:#9ca3af;">(' + escHtml(def.type) + ')</span>' : '') +
+      (def?.description ? '<br><span style="font-size:10px;color:#9ca3af;">' + escHtml(def.description) + '</span>' : '') +
+      '</li>'
+    ).join('') + '</ul>';
+  }
+
+  if (fact?.description) {
+    html += '<div style="font-size:11px;color:#374151;margin-bottom:10px;">' + escHtml(fact.description.trim()) + '</div>';
+  }
+
+  if (fact?.expression) {
+    html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">Expression</div>';
+    html += '<code style="display:block;font-size:10.5px;padding:6px 8px;background:#f3f4f6;border-radius:3px;word-break:break-all;margin-bottom:10px;font-family:ui-monospace,monospace;">' + escHtml(fact.expression) + '</code>';
+  }
+
+  if (annot?.reason) {
+    html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">Why</div>';
+    html += '<div style="font-size:11px;color:#374151;margin-bottom:10px;">' + escHtml(annot.reason.trim()) + '</div>';
+  }
+
+  if (annot?.policies?.length) {
+    html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">Policy</div>';
+    html += '<div style="margin-bottom:10px;">' + annot.policies.map(id => {
+      const p = POLICIES[id];
+      return '<span title="' + escHtml(p?.description ?? id) + '" style="display:inline-block;font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #C2C0E8;margin-right:4px;margin-bottom:4px;">' + escHtml(p?.citation ?? id) + '</span>';
+    }).join('') + '</div>';
+  }
+
+  if (annot?.interviewQuestions?.length) {
+    html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">Interview Questions</div>';
+    html += '<ul style="margin:0;padding-left:14px;">' + annot.interviewQuestions.map(q =>
+      '<li style="font-size:11px;color:#374151;margin-bottom:4px;">' + escHtml(q) + '</li>'
+    ).join('') + '</ul>';
+  }
+
+  panel.innerHTML = html;
+  strip.style.display = '';
+}
+
+// Apply ruleset input schema defaults for any namespace absent from userInputs.
+// Returns { scope, defaultedNamespaces } mirroring toGraph(rulesDoc).evaluate() behavior.
+function applyDefaults(userInputs) {
+  const scope = Object.assign({}, userInputs);
+  const defaultedNamespaces = new Set();
+  for (const [ns, schema] of Object.entries(RULESET_INPUTS)) {
+    if (userInputs[ns] !== undefined) continue;
+    if (schema.type !== 'object') continue;
+    const defaults = {};
+    for (const [prop, propSchema] of Object.entries(schema.properties ?? {})) {
+      if (propSchema.default !== undefined) defaults[prop] = propSchema.default;
+    }
+    if (Object.keys(defaults).length > 0) {
+      scope[ns] = defaults;
+      defaultedNamespaces.add(ns);
+    }
+  }
+  return { scope, defaultedNamespaces };
+}
+
+// Walk the dependency graph to find facts that transitively depend on any
+// defaulted namespace and promote them from complete → placeholder.
+function reclassifyPlaceholders(nodes, defaultedNamespaces) {
+  if (!defaultedNamespaces.size) return nodes;
+  const deps = GRAPH.dependencies;
+
+  function touchesDefault(factName, visited = new Set()) {
+    if (visited.has(factName)) return false;
+    visited.add(factName);
+    for (const dep of (deps[factName] ?? [])) {
+      if (dep.startsWith('$.')) {
+        if (defaultedNamespaces.has(dep.slice(2).split('.')[0])) return true;
+      } else if (touchesDefault(dep, visited)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  const result = Object.assign({}, nodes);
+  for (const name of Object.keys(result)) {
+    if (result[name].state === 'complete' && touchesDefault(name)) {
+      result[name] = Object.assign({}, result[name], { state: 'placeholder' });
+    }
+  }
+  return result;
+}
+
+// Render output facts into the results panel.
+// prevNodes (optional): previous eval result — rows whose value changed get a flash highlight.
+function renderOutputs(nodes, prevNodes) {
+  const el = document.getElementById('eval-results-body');
+  if (!nodes) { el.textContent = 'Evaluating…'; el.style.color = '#9ca3af'; return; }
+  const outputEntries = GRAPH.outputs.map(name => [name, nodes[name]]).filter(([, node]) => node);
+  if (!outputEntries.length) { el.textContent = 'No outputs.'; el.style.color = '#9ca3af'; return; }
+  const rows = outputEntries.map(([name, node]) => {
+    const stateColor = node.state === 'complete' ? '#111827' : node.state === 'placeholder' ? '#92400e' : node.state === 'error' ? '#991b1b' : '#9ca3af';
+    const indicator  = node.state === 'complete' ? '●' : node.state === 'placeholder' ? '◐' : node.state === 'error' ? '✕' : '○';
+    const valueStr   = node.state === 'error' ? node.message : node.state === 'missing' ? 'missing' : JSON.stringify(node.value);
+    return '<div data-name="' + escHtml(name) + '" style="padding:4px 0;border-bottom:1px solid #f3f4f6;">'
+      + '<div style="color:#374151;margin-bottom:1px;">' + escHtml(name) + '</div>'
+      + '<div style="color:' + stateColor + ';word-break:break-word;">' + indicator + ' ' + escHtml(valueStr) + '</div>'
+      + '</div>';
+  });
+  el.innerHTML = rows.join('');
+  el.style.color = '#111827';
+
+  // Flash rows whose value changed since the previous eval
+  if (prevNodes) {
+    for (const [name, node] of outputEntries) {
+      const prev = prevNodes[name];
+      if (!prev || prev.state !== node.state || JSON.stringify(prev.value) !== JSON.stringify(node.value)) {
+        const row = el.querySelector('[data-name="' + name + '"]');
+        if (row) flashHighlight(row);
+      }
+    }
+  }
+}
+
+function flashHighlight(el) {
+  el.style.transition = 'none';
+  el.style.background = '#fef9c3';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    el.style.transition = 'background 1.5s ease-out';
+    el.style.background = '';
+  }));
+}
+
+function runEval() {
+  if (!window.RulesEngine) return;
+  const errEl = document.getElementById('eval-errors');
+  const inputVal = (document.getElementById('eval-inputs')?.value ?? '').trim();
+  if (!inputVal) return;
+  let userInputs;
+  try { userInputs = JSON.parse(inputVal); } catch (e) {
+    errEl.textContent = 'Invalid JSON: ' + e.message;
+    errEl.style.display = 'block';
+    return;
+  }
+  try {
+    const { scope, defaultedNamespaces } = applyDefaults(userInputs);
+    const result = window.RulesEngine.toGraph(GRAPH).evaluate(scope);
+    const prevNodes = lastNodes;
+    lastNodes = reclassifyPlaceholders(result.toJSON(), defaultedNamespaces);
+    errEl.style.display = 'none';
+    renderOutputs(lastNodes, prevNodes);
+    if (activeNode) showDetail(activeNode);
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+runEval();
+</script></div>
+  <script>
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    
+  </script>
+</body>
+</html>

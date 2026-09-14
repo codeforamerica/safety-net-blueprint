@@ -1,0 +1,57 @@
+$schema: "https://blueprint.codeforamerica.org/schemas/rules-schema.yaml"
+domain: test
+
+rulesets:
+  main:
+    inputs:
+      applicant:
+        type: object
+        properties:
+          age:
+            type: integer
+            description: Applicant age in years.
+          income:
+            type: number
+            description: Monthly income in dollars.
+
+      policy:
+        type: object
+        properties:
+          minAge:
+            type: integer
+            description: Minimum age requirement.
+            default: 18
+          incomeLimit:
+            type: number
+            description: Maximum monthly income allowed.
+            default: 2000
+
+    outputs:
+      meetsAge:
+        type: boolean
+        description: Applicant meets the minimum age requirement.
+      meetsIncome:
+        type: boolean
+        description: Applicant income is within the allowed limit.
+      eligible:
+        type: boolean
+        description: Applicant meets all requirements.
+
+    facts:
+      - path: meetsAge
+        expression: "applicant.age >= policy.minAge"
+        description: Applicant meets the minimum age requirement.
+        type:
+          type: boolean
+
+      - path: meetsIncome
+        expression: "applicant.income <= policy.incomeLimit"
+        description: Applicant income is within the allowed limit.
+        type:
+          type: boolean
+
+      - path: eligible
+        expression: "meetsAge && meetsIncome"
+        description: Applicant meets all requirements.
+        type:
+          type: boolean

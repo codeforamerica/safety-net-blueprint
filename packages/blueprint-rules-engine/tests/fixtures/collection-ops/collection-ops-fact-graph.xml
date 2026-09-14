@@ -1,0 +1,120 @@
+<FactDictionaryModule>
+  <Fact path="/household_members">
+    <Writable>
+      <Collection/>
+    </Writable>
+  </Fact>
+  <Fact path="/household_members/*/name">
+    <Writable>
+      <String/>
+    </Writable>
+  </Fact>
+  <Fact path="/household_members/*/age">
+    <Writable>
+      <Int/>
+    </Writable>
+  </Fact>
+  <Fact path="/household_members/*/employed">
+    <Writable>
+      <Boolean/>
+    </Writable>
+  </Fact>
+  <Fact path="/household_members/*/citizenshipStatus">
+    <Writable>
+      <String/>
+    </Writable>
+  </Fact>
+  <Fact path="/policy_minAge">
+    <Writable>
+      <Int/>
+    </Writable>
+  </Fact>
+  <Fact path="/policy_maxAge">
+    <Writable>
+      <Int/>
+    </Writable>
+  </Fact>
+  <Fact path="/adultsFilter">
+    <Derived>
+      <Filter path="/household_members">
+        <All>
+          <GreaterThanOrEqual>
+            <Left>
+              <Dependency path="age"/>
+            </Left>
+            <Right>
+              <Dependency path="/policy_minAge"/>
+            </Right>
+          </GreaterThanOrEqual>
+          <LessThanOrEqual>
+            <Left>
+              <Dependency path="age"/>
+            </Left>
+            <Right>
+              <Dependency path="/policy_maxAge"/>
+            </Right>
+          </LessThanOrEqual>
+        </All>
+      </Filter>
+    </Derived>
+  </Fact>
+  <Fact path="/allEmployed">
+    <Derived>
+      <Equal>
+        <Left>
+          <CollectionSize>
+            <Filter path="/household_members">
+              <Dependency path="employed"/>
+            </Filter>
+          </CollectionSize>
+        </Left>
+        <Right>
+          <CollectionSize>
+            <Dependency path="/household_members"/>
+          </CollectionSize>
+        </Right>
+      </Equal>
+    </Derived>
+  </Fact>
+  <Fact path="/anyNonCitizen">
+    <Derived>
+      <GreaterThan>
+        <Left>
+          <CollectionSize>
+            <Filter path="/household_members">
+              <NotEqual>
+                <Left>
+                  <Dependency path="citizenshipStatus"/>
+                </Left>
+                <Right>
+                  <String>citizen</String>
+                </Right>
+              </NotEqual>
+            </Filter>
+          </CollectionSize>
+        </Left>
+        <Right>
+          <Int>0</Int>
+        </Right>
+      </GreaterThan>
+    </Derived>
+  </Fact>
+  <Fact path="/hasMemberName">
+    <Derived>
+      <GreaterThan>
+        <Left>
+          <CollectionSize>
+            <Filter path="/household_members">
+              <IsComplete>
+                <Dependency path="name"/>
+              </IsComplete>
+            </Filter>
+          </CollectionSize>
+        </Left>
+        <Right>
+          <Int>0</Int>
+        </Right>
+      </GreaterThan>
+    </Derived>
+  </Fact>
+</FactDictionaryModule>

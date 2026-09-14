@@ -23,6 +23,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import yaml from 'js-yaml';
 import { resolveRef, collectTopLevelProperties, resolveSchemaRefs } from '@codeforamerica/blueprint-core/state-machine-validator';
+import { detectType } from '@codeforamerica/blueprint-core';
 
 function walkForPattern(dir, suffix) {
   const results = [];
@@ -237,9 +238,9 @@ async function main() {
     const file = basename(filePath);
     try {
       const doc = yaml.load(readFileSync(filePath, 'utf8'));
-      const schemaBasename = doc?.$schema?.split('/').pop();
-      if (schemaBasename === 'sla-types-schema.yaml') slaFiles.push({ file, filePath, doc });
-      else if (schemaBasename === 'metrics-schema.yaml') metricsFiles.push({ file, filePath, doc });
+      const type = detectType(file, doc);
+      if (type === 'sla-types') slaFiles.push({ file, filePath, doc });
+      else if (type === 'metrics') metricsFiles.push({ file, filePath, doc });
     } catch {
       // unparseable files — caught per-file below
     }
