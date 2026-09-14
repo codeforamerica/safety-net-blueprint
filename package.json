@@ -42,10 +42,12 @@
     "changeset": "node scripts/changeset.js",
     "changeset:version": "changeset version",
     "version": "changeset version",
-    "release": "changeset publish"
+    "release": "changeset publish",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.0",
+    "husky": "^9.1.7",
     "jszip": "^3.10.1",
     "zod": "^4.0.0"
   }

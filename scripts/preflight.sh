@@ -63,11 +63,20 @@ else
 fi
 bail_if_failed
 
-step "Resolving safety-net-contracts"
-if npm run resolve 2>&1; then
-  pass "Contracts resolved"
+step "Generating committed artifacts (contracts, clients, browser bundle, explorer)"
+if bash scripts/generate-artifacts.sh 2>&1; then
+  pass "Artifacts generated"
 else
-  fail "Contract resolution failed"
+  fail "Artifact generation failed"
+fi
+bail_if_failed
+
+step "Checking committed artifacts are up to date"
+if git diff HEAD --exit-code packages/blueprint-rules-engine/dist/browser.js packages/safety-net-explorer/ > /dev/null 2>&1; then
+  pass "Committed artifacts are up to date"
+else
+  git add packages/blueprint-rules-engine/dist/browser.js packages/safety-net-explorer/
+  fail "Committed artifacts were out of date — they have been staged. Commit them and re-run preflight."
 fi
 bail_if_failed
 
@@ -78,14 +87,6 @@ else
   fail "Contract validation failed"
 fi
 
-step "Generating TypeScript clients for resolved safety-net-contracts"
-if npm run clients:typescript -- --spec=packages/generated/contracts --out=packages/generated/clients 2>&1; then
-  pass "TypeScript clients generated"
-else
-  fail "TypeScript client generation failed"
-fi
-bail_if_failed
-
 # TODO: TypeScript typecheck on generated clients — disabled until generated client
 # scaffold code (from @hey-api/openapi-ts) passes strict type checking.
 # step "Typechecking generated safety-net-contracts TypeScript clients"
@@ -95,24 +96,6 @@ bail_if_failed
 #   fail "TypeScript clients typecheck failed"
 # fi
 # bail_if_failed
-
-step "Rebuilding rules-engine browser bundle"
-if node packages/blueprint-rules-engine/scripts/build-browser.js 2>&1; then
-  git add packages/blueprint-rules-engine/dist/browser.js
-  pass "Browser bundle rebuilt and staged"
-else
-  fail "Browser bundle build failed"
-fi
-bail_if_failed
-
-step "Rebuilding safety-net-explorer outputs"
-if node packages/blueprint-explorer/build.js --content=packages/safety-net-explorer --resolved=packages/generated/contracts --clients=packages/generated/clients 2>&1; then
-  git add packages/safety-net-explorer/
-  pass "Explorer rebuilt and staged"
-else
-  fail "Explorer build failed"
-fi
-bail_if_failed
 
 step "Validating safety-net-contracts mock data"
 if npm run validate:mock-data 2>&1; then
