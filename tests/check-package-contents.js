@@ -4,13 +4,31 @@
  */
 
 import { execSync } from 'child_process';
+import { readdirSync, statSync } from 'fs';
+import { join, relative } from 'path';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+
+/**
+ * Recursively list all files under a directory, returning paths relative to that directory.
+ */
+function listFilesRecursive(dir, base = dir) {
+  const entries = readdirSync(dir, { withFileTypes: true });
+  return entries.flatMap(entry => {
+    const full = join(dir, entry.name);
+    return entry.isDirectory() ? listFilesRecursive(full, base) : [relative(base, full).replace(/\\/g, '/')];
+  });
+}
 
 const PACKAGES = [
   {
     workspace: 'packages/blueprint-core',
-    required: ['src/index.js', 'schemas/state-machine-schema.yaml', 'README.md'],
+    required: [
+      'src/index.js',
+      'schemas/state-machine-schema.yaml',
+      'README.md',
+      ...listFilesRecursive('packages/blueprint-core/base-contracts').map(f => `base-contracts/${f}`),
+    ],
   },
   {
     workspace: 'packages/blueprint-cli',
