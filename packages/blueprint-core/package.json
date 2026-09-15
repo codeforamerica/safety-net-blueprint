@@ -1,6 +1,6 @@
 {
   "name": "@codeforamerica/blueprint-core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Blueprint framework core — contract resolution and validation",
   "type": "module",
   "files": [
