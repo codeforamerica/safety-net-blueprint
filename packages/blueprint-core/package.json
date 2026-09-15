@@ -8,7 +8,8 @@
     "schemas/",
     "components/",
     "templates/",
-    "base-contracts/"
+    "base-contracts/",
+    "assets/"
   ],
   "exports": {
     ".": "./src/index.js",

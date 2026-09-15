@@ -28,6 +28,7 @@ const PACKAGES = [
       'schemas/state-machine-schema.yaml',
       'README.md',
       ...listFilesRecursive('packages/blueprint-core/base-contracts').map(f => `base-contracts/${f}`),
+      ...listFilesRecursive('packages/blueprint-core/assets').map(f => `assets/${f}`),
     ],
   },
   {
