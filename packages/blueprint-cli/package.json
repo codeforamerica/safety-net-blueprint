@@ -1,6 +1,6 @@
 {
   "name": "@codeforamerica/blueprint-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "CLI tooling for the Blueprint framework — validate, resolve, scaffold, and generate artifacts across all contract types",
   "type": "module",
   "files": [

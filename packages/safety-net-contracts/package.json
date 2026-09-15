@@ -17,7 +17,7 @@
     "@codeforamerica/blueprint-mock-server": "^0.1.0"
   },
   "devDependencies": {
-    "@codeforamerica/blueprint-cli": "^0.1.0"
+    "@codeforamerica/blueprint-cli": "^0.2.0"
   },
   "engines": {
     "node": ">=22.11.0"
