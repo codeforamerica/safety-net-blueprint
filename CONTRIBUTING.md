@@ -28,7 +28,7 @@ If the change fixes a GitHub issue, include the issue number at the end of the d
 **Breaking:** `blueprint-scaffold-api` no longer accepts `--template` — use `--domain` instead. (#456)
 ```
 
-Not every PR needs a changeset — skip it for documentation changes, CI fixes, test-only changes, and anything that doesn't affect published package behavior. The changesets bot will comment on PRs missing a changeset; you can dismiss the comment if the PR doesn't warrant one.
+Not every PR needs a changeset — skip it for documentation changes, CI fixes, test-only changes, new packages, and anything that doesn't affect published package behavior. The changesets bot will comment on PRs missing a changeset; you can dismiss the comment if the PR doesn't warrant one.
 
 **Testing changeset version bumping locally:** To preview how your changeset will affect versions and CHANGELOGs without publishing, run:
 
@@ -55,9 +55,11 @@ Only packages with a changeset are published in a given release — not all pack
 - `@codeforamerica/blueprint-core`
 - `@codeforamerica/blueprint-cli`
 - `@codeforamerica/blueprint-mock-server`
+- `@codeforamerica/blueprint-rules-engine`
+- `@codeforamerica/blueprint-explorer`
 - `@codeforamerica/blueprint-safety-net-contracts`
 
-`blueprint-explorer` and `safety-net-explorer` are private and never published.
+`safety-net-explorer` is private and never published.
 
 **Versioning groups:**
 
