@@ -178,7 +178,7 @@ The Explorer makes rules reviewable by non-engineers. A policy analyst can load 
 **Considerations:**
 - Major platforms (Salesforce Government Cloud, IBM Cúram, ServiceNow) integrate with enterprise rules engines (Corticon, Drools, ILOG) rather than shipping their own. The engine is typically the most vendor-specific part of a benefits system.
 - Several states already have Corticon or IBM Cúram licenses. Mandating a different engine would block adoption.
-- The dependency graph model and evaluation contract (resolved/missing/errors output shape, `$.path` input format) are the stable interfaces. The evaluator is an implementation of those interfaces. A state that uses Corticon in production can still use the reference evaluator in the browser and in development.
+- The dependency graph model and evaluation contract (flat nodes map output shape — each fact keyed by name with `state`, `value`, and optional `missing` or `message` fields — and `$.path` input format) are the stable interfaces. The evaluator is an implementation of those interfaces. A state that uses Corticon in production can still use the reference evaluator in the browser and in development.
 - The reference implementation proves the model is sound and provides a working evaluator for development, testing, and browser-side use cases where a vendor engine isn't available.
 
 **Options:**

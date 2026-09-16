@@ -11,7 +11,7 @@ All available npm scripts in the Safety Net Blueprint toolkit.
 | `npm run validate` | Validate resolved specs (all layers) |
 | `npm run resolve` | Run the overlay resolve pipeline |
 | `npm run mock:reset` | Reset database to example data |
-| `npm test` | Run unit tests |
+| `npm test` | Run all tests |
 | `npm run test:integration` | Run integration tests (includes Postman/newman) |
 | `npm run preflight` | Run all checks before creating a PR |
 | `npm run evaluate` | Evaluate a ruleset against inputs from the command line |
@@ -177,7 +177,7 @@ Default: http://localhost:3000
 
 ### `npm test`
 
-Runs unit tests across all workspaces.
+Runs all tests across all workspaces.
 
 ```bash
 npm test
@@ -196,19 +196,11 @@ Includes:
 - Cross-API accessibility tests
 - Postman collection execution via Newman
 
-### `npm run test:all`
-
-Runs unit, integration, and functional tests.
-
-```bash
-npm run test:all
-```
-
 ### `npm run preflight`
 
 Runs all checks in sequence — use before creating a PR:
 
-1. Unit tests
+1. All tests (unit, functional, integration across all packages)
 2. Validate (all layers)
 3. Resolve pipeline
 4. Postman generation
@@ -270,5 +262,5 @@ npm run resolve && npm run validate
 npm run mock:reset && npm start
 
 # Full pipeline: resolve, generate clients, run all tests
-npm run resolve && npm run clients:typescript && npm run test:all
+npm run resolve && npm run clients:typescript && npm test
 ```
