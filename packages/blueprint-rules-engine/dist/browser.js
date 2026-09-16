@@ -240,7 +240,7 @@ function resolveInputPath(path, inputs) {
   return node;
 }
 
-// ── Default scope building ────────────────────────────────────────────────────
+// ── Core evaluator ─────────────────────────────────────────────────────────────
 
 /**
  * Build a scope object from a schema's property defaults.
@@ -250,101 +250,20 @@ function buildDefaultScope(inputSchema) {
   if (inputSchema.type !== 'object') return undefined;
   const obj = {};
   for (const [propName, propSchema] of Object.entries(inputSchema.properties ?? {})) {
-    if (propSchema.default !== undefined) {
-      obj[propName] = propSchema.default;
-    }
+    if (propSchema.default !== undefined) obj[propName] = propSchema.default;
   }
   return Object.keys(obj).length > 0 ? obj : undefined;
 }
 
-// ── EvalResult ────────────────────────────────────────────────────────────────
-
 /**
- * Result of evaluating a graph. A map of fact names to typed nodes.
+ * Evaluate a compiled graph against a (possibly partial) set of inputs.
  *
- * Each node: { type, state, value, message?, missing? }
- *   type    — 'intermediate' | 'output'
- *   state   — 'complete' | 'placeholder' | 'missing' | 'error'
- *   value   — resolved value, or null for missing/error
- *   message — error description (state: 'error' only)
- *   missing — list of unresolved input paths (state: 'missing' only)
+ * @param {Object} graph          - compiled graph document (facts, outputs, inputs, dependencies)
+ * @param {Object} inputs         - named input objects, e.g. { household: { ... } }
+ * @param {Object} [_rulesetInputs] - internal: raw namespace schemas for default application
+ * @returns {Object}              - plain map of fact names to typed nodes
  */
-class EvalResult {
-  constructor(nodes) {
-    this._nodes = nodes;
-  }
-
-  /** Return the node for a specific fact name, or undefined if not found. */
-  get(name) {
-    return this._nodes[name];
-  }
-
-  /**
-   * Return a new EvalResult containing only matching facts.
-   * @param {string|string[]} typeOrNames — a type string ('output', 'intermediate')
-   *   or an array of fact names to include.
-   */
-  filter(typeOrNames) {
-    if (Array.isArray(typeOrNames)) {
-      const names = new Set(typeOrNames);
-      return new EvalResult(
-        Object.fromEntries(Object.entries(this._nodes).filter(([k]) => names.has(k)))
-      );
-    }
-    return new EvalResult(
-      Object.fromEntries(Object.entries(this._nodes).filter(([, n]) => n.type === typeOrNames))
-    );
-  }
-
-  /**
-   * Collect facts in a given state into a plain object.
-   *   'complete'/'placeholder' → { factName: value }
-   *   'error'                  → { factName: message }
-   *   'missing'                → { factName: [paths] }
-   */
-  collect(state) {
-    return Object.fromEntries(
-      Object.entries(this._nodes)
-        .filter(([, n]) => n.state === state)
-        .map(([k, n]) => {
-          if (state === 'error')   return [k, n.message];
-          if (state === 'missing') return [k, n.missing];
-          return [k, n.value];
-        })
-    );
-  }
-
-  /** Plain object representation (for JSON serialization). */
-  toJSON() {
-    return this._nodes;
-  }
-}
-
-// ── Graph ──────────────────────────────────────────────────────────────────────
-
-/**
- * A compiled graph ready for evaluation.
- * Returned by toGraph(). Call .evaluate(inputs) to produce an EvalResult.
- */
-class Graph {
-  constructor(compiled, rulesetInputs) {
-    this._compiled = compiled;
-    this._rulesetInputs = rulesetInputs ?? null;
-  }
-
-  /**
-   * Evaluate the graph against a (possibly partial) set of inputs.
-   * @param {Object} inputs - named input objects, e.g. { household: { ... } }
-   * @returns {EvalResult}
-   */
-  evaluate(inputs) {
-    return evaluateCompiled(this._compiled, inputs, this._rulesetInputs);
-  }
-}
-
-// ── Core evaluator ─────────────────────────────────────────────────────────────
-
-function evaluateCompiled(graph, inputs, rulesetInputs) {
+function evaluate(graph, inputs, _rulesetInputs = null) {
   const outputSet = new Set(graph.outputs);
   const factNames = Object.keys(graph.facts);
   const ordered = topoSort(factNames, graph.dependencies);
@@ -352,9 +271,8 @@ function evaluateCompiled(graph, inputs, rulesetInputs) {
   const scope = {};
   const defaultedNamespaces = new Set();
 
-  if (rulesetInputs) {
-    // Apply schema defaults for any namespace absent from inputs
-    for (const [inputName, inputSchema] of Object.entries(rulesetInputs)) {
+  if (_rulesetInputs) {
+    for (const [inputName, inputSchema] of Object.entries(_rulesetInputs)) {
       if (inputs[inputName] !== undefined) {
         scope[inputName] = inputs[inputName];
       } else {
@@ -363,7 +281,6 @@ function evaluateCompiled(graph, inputs, rulesetInputs) {
           scope[inputName] = defaults;
           defaultedNamespaces.add(inputName);
         }
-        // else: scope[inputName] remains undefined (fact will be blocked)
       }
     }
   } else {
@@ -448,59 +365,47 @@ function evaluateCompiled(graph, inputs, rulesetInputs) {
     }
   }
 
-  return new EvalResult(nodes);
+  return nodes;
 }
 
-// ── evaluate ──────────────────────────────────────────────────────────────────
+// ── Internal fluent API (intra-package use only; not exported from index.js) ──
 
-/**
- * Evaluate a compiled graph against a (possibly partial) set of inputs.
- *
- * @param {Object} graph   - compiled graph document (*-graph.yaml)
- * @param {Object} inputs  - named input objects, e.g. { household: { ... } }
- * @returns {Object} plain nodes map: { factName: { type, state, value, missing?, message? } }
- */
-function evaluate(graph, inputs) {
-  // Derive top-level input schema from graph.inputs so evaluateCompiled can apply
-  // schema defaults (producing placeholder states) and scope inputs correctly.
-  // All namespaces are included; only those with field defaults get properties entries.
-  const rulesetInputs = {};
-  for (const [path, spec] of Object.entries(graph.inputs ?? {})) {
-    if (!path.startsWith('$.')) continue;
-    const parts = path.slice(2).split('.');
-    const ns = parts[0];
-    if (!rulesetInputs[ns]) rulesetInputs[ns] = { type: 'object', properties: {} };
-    if (parts.length >= 2 && spec?.default !== undefined) {
-      rulesetInputs[ns].properties[parts[1]] = { default: spec.default };
+class EvalResult {
+  constructor(nodes) { this._nodes = nodes; }
+  get(name) { return this._nodes[name]; }
+  filter(typeOrNames) {
+    if (Array.isArray(typeOrNames)) {
+      const names = new Set(typeOrNames);
+      return new EvalResult(Object.fromEntries(Object.entries(this._nodes).filter(([k]) => names.has(k))));
     }
+    return new EvalResult(Object.fromEntries(Object.entries(this._nodes).filter(([, n]) => n.type === typeOrNames)));
   }
-  return evaluateCompiled(
-    graph,
-    inputs,
-    Object.keys(rulesetInputs).length > 0 ? rulesetInputs : null,
-  ).toJSON();
+  collect(state) {
+    return Object.fromEntries(
+      Object.entries(this._nodes).filter(([, n]) => n.state === state).map(([k, n]) => {
+        if (state === 'error')   return [k, n.message];
+        if (state === 'missing') return [k, n.missing];
+        return [k, n.value];
+      })
+    );
+  }
+  toJSON() { return this._nodes; }
 }
 
-// ── toGraph ───────────────────────────────────────────────────────────────────
+class Graph {
+  constructor(compiled, rulesetInputs) {
+    this._compiled = compiled;
+    this._rulesetInputs = rulesetInputs ?? null;
+  }
+  evaluate(inputs) {
+    return new EvalResult(evaluate(this._compiled, inputs, this._rulesetInputs));
+  }
+}
 
-/**
- * Compile a rules document (or wrap an already-compiled graph) into a Graph
- * ready for evaluation.
- *
- * Accepts either:
- *   - A parsed *-rules.yaml document (compiles to graph, preserves schema defaults)
- *   - An already-compiled graph object (wraps directly, no defaults applied)
- *
- * @param {Object} rulesDocOrGraph - rules doc or compiled graph
- * @param {string} [rulesetName]   - which ruleset to use (defaults to first)
- * @returns {Graph}
- */
 function toGraph(rulesDocOrGraph, rulesetName) {
-  // Already compiled: has facts + outputs but no rulesets key
   if (rulesDocOrGraph.facts && rulesDocOrGraph.outputs) {
     return new Graph(rulesDocOrGraph);
   }
-  // Rules doc — compile first
   const rulesets = rulesDocOrGraph.rulesets ?? {};
   const name = rulesetName ?? Object.keys(rulesets)[0];
   const ruleset = rulesets[name];
