@@ -2,61 +2,52 @@
 /**
  * Blueprint Evaluate CLI
  *
- * Evaluates a compiled graph or rules file against one or more input files.
+ * Evaluates a compiled graph or rules file against a set of inputs.
+ * When given a rules-examples file, runs all rulesets/examples in batch mode.
  *
  * Usage:
- *   blueprint-evaluate --graph <path> [--inputs <path>]... [--ruleset <name>] [--engine cel|fact-graph]
+ *   blueprint-evaluate --spec=<path> [--ruleset=<name>] [--input=<JSON>] [--engine=cel|fact-graph]
  *
  * Arguments:
- *   --graph <path>     Path to a compiled graph (*-graph.yaml) or rules file (*-rules.yaml).
+ *   --spec=<path>      Path to a compiled graph (*-graph.yaml), rules file (*-rules.yaml),
+ *                      or rules examples file (*-rules-examples.yaml).
  *                      Type is detected automatically from the file's $schema field.
- *   --inputs <path>    Path to a JSON file of named inputs (repeatable).
- *                      Multiple --inputs files are merged in order.
- *   --ruleset <name>   Which ruleset to evaluate (rules files only; defaults to the first).
- *   --engine <name>    Evaluation engine: cel (default) or fact-graph.
+ *   --input=<JSON>     Inline JSON string of named inputs (e.g. '{"household":{...}}').
+ *                      Defaults to empty inputs when omitted.
+ *   --ruleset=<name>   Which ruleset to evaluate (rules files only; defaults to the first).
+ *   --engine=<name>    Evaluation engine: cel (default) or fact-graph.
  *
  * Output:
- *   JSON object with four buckets: complete, placeholder, missing, errors.
+ *   Graph/rules:         flat JSON map of fact names to typed nodes
+ *   Rules-examples file: { [ruleset]: [ ...per-example node maps ] }
  *
  * Examples:
- *   blueprint-evaluate --graph snap-interview-probes-graph.yaml --inputs household.json
- *   blueprint-evaluate --graph snap-interview-probes-rules.yaml --inputs household.json --ruleset snapInterviewProbes
- *   blueprint-evaluate --graph snap-interview-probes-graph.yaml --inputs household.json --engine fact-graph
+ *   blueprint-evaluate --spec=snap-graph.yaml --input='{"household":{"size":4}}'
+ *   blueprint-evaluate --spec=snap-rules.yaml --ruleset=snapProbes
+ *   blueprint-evaluate --spec=snap-rules-examples.yaml
  */
 
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { detectType } from '@codeforamerica/blueprint-core';
-import { validateContract } from '@codeforamerica/blueprint-core/contract-validator';
-import { evaluate, evaluateGraph } from '@codeforamerica/blueprint-rules-engine';
-import { evaluateWithFactGraph, evaluateGraphWithFactGraph } from '@codeforamerica/blueprint-rules-engine/fact-graph';
+import { compileRuleset } from '@codeforamerica/blueprint-core';
+import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const options = { graph: null, inputs: [], ruleset: null, engine: 'cel', help: false };
+  const options = { spec: null, input: null, ruleset: null, engine: 'cel', help: false };
 
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
+  for (const arg of args) {
     if (arg === '--help' || arg === '-h') {
       options.help = true;
-    } else if (arg.startsWith('--graph=')) {
-      options.graph = arg.slice('--graph='.length);
-    } else if (arg === '--graph') {
-      options.graph = args[++i];
-    } else if (arg.startsWith('--inputs=')) {
-      options.inputs.push(arg.slice('--inputs='.length));
-    } else if (arg === '--inputs') {
-      options.inputs.push(args[++i]);
+    } else if (arg.startsWith('--spec=')) {
+      options.spec = arg.slice('--spec='.length);
+    } else if (arg.startsWith('--input=')) {
+      options.input = arg.slice('--input='.length);
     } else if (arg.startsWith('--ruleset=')) {
       options.ruleset = arg.slice('--ruleset='.length);
-    } else if (arg === '--ruleset') {
-      options.ruleset = args[++i];
     } else if (arg.startsWith('--engine=')) {
       options.engine = arg.slice('--engine='.length);
-    } else if (arg === '--engine') {
-      options.engine = args[++i];
     } else {
       console.error(`Error: Unknown argument: ${arg}`);
       process.exit(1);
@@ -66,16 +57,69 @@ function parseArgs() {
   return options;
 }
 
+function loadFile(path) {
+  try {
+    return yaml.load(readFileSync(resolve(path), 'utf8'));
+  } catch (err) {
+    console.error(`Error: Could not read ${path}: ${err.message}`);
+    process.exit(1);
+  }
+}
+
+function detectType(doc) {
+  const schema = doc.$schema ?? '';
+  if (schema.includes('graph-schema')) return 'graph';
+  if (schema.includes('rules-examples-schema')) return 'examples';
+  if (schema.includes('rules-schema')) return 'rules';
+  return null;
+}
+
+function evaluateGraph(graph, inputs) {
+  return evaluate(graph, inputs);
+}
+
+function evaluateRules(doc, inputs, rulesetName) {
+  const rulesets = doc.rulesets ?? {};
+  const name = rulesetName ?? Object.keys(rulesets)[0];
+  const ruleset = rulesets[name];
+  if (!ruleset) {
+    console.error(`Error: Ruleset "${name}" not found`);
+    process.exit(1);
+  }
+  const graph = compileRuleset(doc.domain ?? 'unknown', name, ruleset);
+  return evaluate(graph, inputs);
+}
+
+function evaluateExamples(doc, specPath) {
+  // Discover companion *-rules.yaml in the same directory
+  const companionPath = specPath.replace(/-rules-examples\.yaml$/, '-rules.yaml');
+  const rulesDoc = loadFile(companionPath);
+  const rulesets = rulesDoc.rulesets ?? {};
+
+  const result = {};
+  for (const [rulesetName, rulesetExamples] of Object.entries(doc.rulesets ?? {})) {
+    const ruleset = rulesets[rulesetName];
+    if (!ruleset) {
+      console.error(`Error: Ruleset "${rulesetName}" not found in companion rules file`);
+      process.exit(1);
+    }
+    const graph = compileRuleset(rulesDoc.domain ?? 'unknown', rulesetName, ruleset);
+    const examples = rulesetExamples.examples ?? [];
+    result[rulesetName] = examples.map(example => evaluate(graph, example.inputs ?? {}));
+  }
+  return result;
+}
+
 function main() {
   const options = parseArgs();
 
   if (options.help) {
-    console.log('Usage: blueprint-evaluate --graph <path> [--inputs <path>]... [--ruleset <name>] [--engine cel|fact-graph]');
+    console.log('Usage: blueprint-evaluate --spec=<path> [--input=<JSON>] [--ruleset=<name>] [--engine=cel|fact-graph]');
     process.exit(0);
   }
 
-  if (!options.graph) {
-    console.error('Error: --graph is required');
+  if (!options.spec) {
+    console.error('Error: <file> is required');
     process.exit(1);
   }
 
@@ -84,57 +128,33 @@ function main() {
     process.exit(1);
   }
 
-  // Load the graph/rules file
-  const graphPath = resolve(options.graph);
-  let doc;
-  try {
-    doc = yaml.load(readFileSync(graphPath, 'utf8'));
-  } catch (err) {
-    console.error(`Error: Could not read ${options.graph}: ${err.message}`);
+  const doc = loadFile(options.spec);
+  const type = detectType(doc);
+
+  if (!type) {
+    console.error(`Error: ${options.spec} is not a recognized blueprint contract file (no $schema field)`);
     process.exit(1);
   }
 
-  const filename = graphPath.split('/').pop();
-  const type = detectType(filename, doc);
-
-  if (type !== 'graph' && type !== 'rules') {
-    console.error(`Error: ${options.graph} is not a rules or compiled graph file (detected type: ${type || 'unknown'})`);
-    process.exit(1);
-  }
-
-  // Validate before evaluating
-  const validationErrors = validateContract(doc, filename);
-  if (validationErrors.length > 0) {
-    for (const { rule, message, path } of validationErrors) {
-      console.error(`[${rule}] ${message}`);
-      if (path) console.error(`  at: ${path}`);
-    }
-    process.exit(1);
-  }
-
-  // Merge all --inputs files into a single inputs object
-  const inputs = {};
-  for (const inputPath of options.inputs) {
-    let inputDoc;
+  // Parse inputs (examples mode ignores --input; each example carries its own)
+  let inputs = {};
+  if (options.input) {
     try {
-      inputDoc = JSON.parse(readFileSync(resolve(inputPath), 'utf8'));
+      inputs = JSON.parse(options.input);
     } catch (err) {
-      console.error(`Error: Could not read ${inputPath}: ${err.message}`);
+      console.error(`Error: --input is not valid JSON: ${err.message}`);
       process.exit(1);
     }
-    Object.assign(inputs, inputDoc);
   }
 
-  // Evaluate
   let result;
   if (type === 'graph') {
-    result = options.engine === 'fact-graph'
-      ? evaluateGraphWithFactGraph(doc, inputs)
-      : evaluateGraph(doc, inputs);
+    result = evaluateGraph(doc, inputs);
+  } else if (type === 'rules') {
+    result = evaluateRules(doc, inputs, options.ruleset);
   } else {
-    result = options.engine === 'fact-graph'
-      ? evaluateWithFactGraph(doc, inputs, options.ruleset)
-      : evaluate(doc, inputs, options.ruleset);
+    // examples — batch mode
+    result = evaluateExamples(doc, resolve(options.spec));
   }
 
   console.log(JSON.stringify(result, null, 2));

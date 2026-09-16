@@ -1,0 +1,40 @@
+$id: https://blueprint.codeforamerica.org/base/schemas/rules-evaluation.yaml
+EvalNode:
+  type: object
+  required:
+    - type
+    - state
+    - value
+  additionalProperties: true
+  properties:
+    type:
+      type: string
+      enum:
+        - output
+        - intermediate
+      description: Whether this fact is an output or intermediate computation.
+    state:
+      type: string
+      enum:
+        - complete
+        - placeholder
+        - missing
+        - error
+      description: |
+        Resolution state of the fact. complete — resolved; all inputs explicitly provided. placeholder — resolved; at least one input used a schema default. missing — could not compute; one or more required input paths are absent. error — threw during evaluation (e.g. dependency error or expression failure).
+    value:
+      description: Computed value. Null when state is missing or error.
+    missing:
+      type: array
+      items:
+        type: string
+      description: Input paths required to compute this fact. Present when state is missing.
+    message:
+      type: string
+      description: Error description. Present when state is error.
+EvaluationResult:
+  type: object
+  description: |
+    Evaluation result — a map of output fact names to typed nodes. Each key is a fact name declared as an output in the ruleset. Use the node's state field to distinguish resolved, placeholder, missing, and error facts.
+  additionalProperties:
+    $ref: "#/EvalNode"

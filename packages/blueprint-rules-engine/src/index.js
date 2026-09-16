@@ -1,1 +1,1 @@
-export { toGraph, EvalResult, matchesType } from './evaluator.js';
+export { evaluate } from './evaluator.js';

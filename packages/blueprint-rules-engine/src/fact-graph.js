@@ -463,7 +463,7 @@ function indentXml(flat) {
   return out.join('\n');
 }
 
-function buildFactDictionaryXml(graph) {
+export function toFactGraph(graph) {
   const lines = ['<FactDictionaryModule>'];
   const ctx = buildContext(graph.inputs);
 
@@ -515,7 +515,7 @@ export function toFactGraphXml(rulesDoc, rulesetName) {
 
   const domain = rulesDoc.domain ?? 'unknown';
   const graph = compileRuleset(domain, name, ruleset);
-  return buildFactDictionaryXml(graph);
+  return toFactGraph(graph);
 }
 
 // ── Graph seeding ─────────────────────────────────────────────────────────────
@@ -717,7 +717,7 @@ function extractResult(result, uuidToItem) {
  */
 function evaluateCompiledWithFactGraph(graph, inputs) {
   const outputSet = new Set(graph.outputs);
-  const xml = buildFactDictionaryXml(graph);
+  const xml = toFactGraph(graph);
 
   const dict = FactDictionaryFactory.importFromXml(xml);
   const fgGraph = GraphFactory.apply(dict);
@@ -772,6 +772,17 @@ class FactGraphGraph extends Graph {
   evaluate(inputs) {
     return evaluateCompiledWithFactGraph(this._compiled, inputs);
   }
+}
+
+/**
+ * Evaluate a compiled graph using the FactGraph engine.
+ *
+ * @param {Object} graph   - compiled graph document (*-graph.yaml)
+ * @param {Object} inputs  - named input objects
+ * @returns {Object} plain nodes map: { factName: { type, state, value, missing?, message? } }
+ */
+export function evaluateWithFactGraph(graph, inputs) {
+  return evaluateCompiledWithFactGraph(graph, inputs).toJSON();
 }
 
 /**

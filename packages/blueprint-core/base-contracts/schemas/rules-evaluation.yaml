@@ -4,59 +4,67 @@ $id: "https://blueprint.codeforamerica.org/base/schemas/rules-evaluation.yaml"
 # Returned by ruleset endpoints that assess eligibility, probes, or other rule-driven decisions.
 # States extend item schemas via overlay to add domain-specific fields or tighten types.
 
-EvaluationResolvedItem:
-  type: object
-  required: [name]
-  additionalProperties: true
-  properties:
-    name:
-      type: string
-      description: The fact that was successfully computed.
-    value:
-      description: The computed value. Type varies by ruleset.
+EvaluationFact:
+  oneOf:
+    - $ref: '#/EvaluationFactComplete'
+    - $ref: '#/EvaluationFactPlaceholder'
+    - $ref: '#/EvaluationFactMissing'
+    - $ref: '#/EvaluationFactError'
+  discriminator:
+    propertyName: state
 
-EvaluationMissingItem:
+EvaluationFactComplete:
   type: object
-  required: [name, needs]
-  additionalProperties: true
+  required: [state, value]
   properties:
-    name:
+    state:
       type: string
-      description: The fact that could not be computed.
-    needs:
+      enum: [complete]
+    value:
+      description: The computed value.
+
+EvaluationFactPlaceholder:
+  type: object
+  required: [state, value]
+  properties:
+    state:
+      type: string
+      enum: [placeholder]
+    value:
+      description: The computed value, derived using one or more schema defaults.
+
+EvaluationFactMissing:
+  type: object
+  required: [state, value, missing]
+  properties:
+    state:
+      type: string
+      enum: [missing]
+    value:
+      type: 'null'
+    missing:
       type: array
-      description: Input paths required to compute this fact.
+      description: Input paths required to resolve this fact.
       items:
         type: string
 
-EvaluationErrorItem:
+EvaluationFactError:
   type: object
-  required: [name, message]
-  additionalProperties: true
+  required: [state, value, message]
   properties:
-    name:
+    state:
       type: string
-      description: The fact that failed to evaluate.
+      enum: [error]
+    value:
+      type: 'null'
     message:
       type: string
       description: The reason evaluation failed.
 
 EvaluationResult:
   type: object
-  required: [resolved, missing, errors]
-  properties:
-    resolved:
-      type: array
-      description: Facts that were successfully computed.
-      items:
-        $ref: '#/EvaluationResolvedItem'
-    missing:
-      type: array
-      description: Facts that could not be computed due to missing inputs.
-      items:
-        $ref: '#/EvaluationMissingItem'
-    errors:
-      type: array
-      description: Facts that failed to evaluate.
-      items:
-        $ref: '#/EvaluationErrorItem'
+  description: >
+    Map of output fact names to their evaluation result.
+    Only output facts are included; intermediate facts are not returned.
+  additionalProperties:
+    $ref: '#/EvaluationFact'

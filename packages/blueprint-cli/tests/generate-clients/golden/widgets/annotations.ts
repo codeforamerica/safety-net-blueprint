@@ -1,0 +1,28 @@
+export const Annotations = {
+  "schema": {
+    "widgets.name": {
+      "reason": "Widget identifier shown to users"
+    },
+    "widgets.description": {
+      "reason": "Optional additional context for the widget"
+    }
+  },
+  "operations": {
+    "widget.create": {
+      "policies": []
+    }
+  },
+  "events": {
+    "widgets.widget.created": {
+      "programs": []
+    }
+  },
+  "facts": {
+    "widgetEligibility.eligible": {
+      "policies": []
+    },
+    "widgetEligibility.reason": {
+      "policies": []
+    }
+  }
+} as const;

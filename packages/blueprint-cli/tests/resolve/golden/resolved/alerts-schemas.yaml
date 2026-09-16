@@ -1,0 +1,8 @@
+$defs:
+  NoticeCategory:
+    type: string
+    enum:
+      - system
+      - caseworker
+      - administrative
+    description: Category of notice

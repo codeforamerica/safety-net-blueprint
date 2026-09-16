@@ -1,0 +1,54 @@
+export const Annotations = {
+  "schema": {
+    "notice.status": {
+      "programs": [
+        "snap",
+        "medicaid"
+      ]
+    },
+    "notice.reviewer": {
+      "programs": [
+        "snap"
+      ]
+    }
+  },
+  "operations": {
+    "notice.send": {
+      "policies": [
+        "alerts-data-access"
+      ]
+    },
+    "notice.acknowledge": {
+      "policies": [
+        "alerts-data-access"
+      ]
+    },
+    "notice.expire": {
+      "policies": [
+        "alerts-data-access"
+      ]
+    }
+  },
+  "events": {
+    "notice.sent": {
+      "programs": [
+        "snap",
+        "medicaid"
+      ]
+    }
+  },
+  "facts": {
+    "urgency.isUrgent": {
+      "programs": [
+        "snap",
+        "medicaid"
+      ]
+    },
+    "urgency.urgencyLevel": {
+      "programs": [
+        "snap",
+        "medicaid"
+      ]
+    }
+  }
+} as const;

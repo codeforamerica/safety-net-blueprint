@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "required": [
+    "message"
+  ],
+  "properties": {
+    "message": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "system",
+        "caseworker",
+        "administrative"
+      ],
+      "description": "Category of notice"
+    },
+    "caseWorkerId": {
+      "type": "string",
+      "format": "uuid"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/NoticeCreate"
+}

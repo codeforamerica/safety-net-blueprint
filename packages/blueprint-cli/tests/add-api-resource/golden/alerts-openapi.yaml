@@ -1,0 +1,447 @@
+openapi: 3.1.0
+info:
+  title: Alerts API
+  version: 1.0.0
+  x-domain: alerts
+x-events:
+  notice.sent:
+    type: org.codeforamerica.safety-net-blueprint.alerts.notice.sent
+    summary: Emitted when a notice transitions to sent state
+  notice.expired:
+    type: org.codeforamerica.safety-net-blueprint.alerts.notice.expired
+    summary: Emitted when a notice expires
+paths:
+  /alerts/notices:
+    get:
+      summary: List notices
+      operationId: listNotices
+      tags:
+        - Notices
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoticeList"
+        "400":
+          $ref: ./components/responses.yaml#/BadRequest
+        "500":
+          $ref: ./components/responses.yaml#/InternalError
+    post:
+      summary: Create a notice
+      operationId: createNotice
+      tags:
+        - Notices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeCreate"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notice"
+        "400":
+          $ref: ./components/responses.yaml#/BadRequest
+        "500":
+          $ref: ./components/responses.yaml#/InternalError
+  /alerts/notices/{noticeId}:
+    parameters:
+      - $ref: "#/components/parameters/NoticeIdParam"
+    get:
+      summary: Get a notice
+      operationId: getNotice
+      tags:
+        - Notices
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notice"
+        "404":
+          $ref: ./components/responses.yaml#/NotFound
+        "500":
+          $ref: ./components/responses.yaml#/InternalError
+    patch:
+      summary: Update a notice
+      operationId: updateNotice
+      tags:
+        - Notices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notice"
+        "400":
+          $ref: ./components/responses.yaml#/BadRequest
+        "404":
+          $ref: ./components/responses.yaml#/NotFound
+        "500":
+          $ref: ./components/responses.yaml#/InternalError
+    delete:
+      summary: Delete a notice
+      operationId: deleteNotice
+      tags:
+        - Notices
+      responses:
+        "204":
+          description: No Content
+        "404":
+          $ref: ./components/responses.yaml#/NotFound
+        "500":
+          $ref: ./components/responses.yaml#/InternalError
+  /alerts/subscriptions:
+    get:
+      summary: List subscriptions
+      description: Retrieve a paginated list of subscriptions.
+      operationId: listSubscriptions
+      tags:
+        - Subscriptions
+      parameters:
+        - $ref: ./components/parameters.yaml#/SearchQueryParam
+        - $ref: ./components/parameters.yaml#/LimitParam
+        - $ref: ./components/parameters.yaml#/OffsetParam
+        - $ref: ./components/parameters.yaml#/SortParam
+      responses:
+        "200":
+          description: A paginated collection of subscriptions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionList"
+        "400":
+          $ref: ./components/responses.yaml#/BadRequest
+        "500":
+          $ref: ./components/responses.yaml#/InternalError
+    post:
+      summary: Create a subscription
+      description: Create a new subscription record.
+      operationId: createSubscription
+      tags:
+        - Subscriptions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionCreate"
+      responses:
+        "201":
+          description: Subscription created successfully.
+          headers:
+            Location:
+              description: URL of the newly created subscription resource.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+        "400":
+          $ref: ./components/responses.yaml#/BadRequest
+        "422":
+          $ref: ./components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ./components/responses.yaml#/InternalError
+  /alerts/subscriptions/{subscriptionId}:
+    parameters:
+      - $ref: "#/components/parameters/SubscriptionIdParam"
+    get:
+      summary: Get a subscription
+      description: Retrieve a single subscription by identifier.
+      operationId: getSubscription
+      tags:
+        - Subscriptions
+      responses:
+        "200":
+          description: Subscription retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+              examples:
+                SubscriptionExample1:
+                  $ref: "#/components/examples/SubscriptionExample1"
+        "404":
+          $ref: ./components/responses.yaml#/NotFound
+        "500":
+          $ref: ./components/responses.yaml#/InternalError
+    patch:
+      summary: Update a subscription
+      description: Apply partial updates to an existing subscription.
+      operationId: updateSubscription
+      tags:
+        - Subscriptions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionUpdate"
+      responses:
+        "200":
+          description: Subscription updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+        "400":
+          $ref: ./components/responses.yaml#/BadRequest
+        "404":
+          $ref: ./components/responses.yaml#/NotFound
+        "422":
+          $ref: ./components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ./components/responses.yaml#/InternalError
+    delete:
+      summary: Delete a subscription
+      description: Permanently remove a subscription record.
+      operationId: deleteSubscription
+      tags:
+        - Subscriptions
+      responses:
+        "204":
+          description: Subscription deleted successfully.
+        "404":
+          $ref: ./components/responses.yaml#/NotFound
+        "500":
+          $ref: ./components/responses.yaml#/InternalError
+components:
+  parameters:
+    NoticeIdParam:
+      name: noticeId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SubscriptionIdParam:
+      name: subscriptionId
+      in: path
+      required: true
+      description: Unique identifier of the subscription.
+      schema:
+        type: string
+        format: uuid
+      example: 4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2
+  schemas:
+    Notice:
+      type: object
+      required:
+        - id
+        - status
+        - createdAt
+        - updatedAt
+      example:
+        id: 00000000-0000-0000-0000-000000000001
+        status: draft
+        message: Your application has been received
+        createdAt: "2024-01-01T00:00:00Z"
+        updatedAt: "2024-01-01T00:00:00Z"
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        status:
+          type: string
+          x-enum-source: states[].id
+        category:
+          $ref: ./alerts-schemas.yaml#/$defs/NoticeCategory
+        reviewer:
+          type: string
+          nullable: true
+          x-relationship:
+            domain: case-management
+            resource: CaseWorker
+            style: expand
+        message:
+          type: string
+        caseWorkerId:
+          type: string
+          format: uuid
+          deprecated: true
+          x-relationship:
+            domain: case-management
+            resource: CaseWorker
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+    NoticeCreate:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        category:
+          $ref: ./alerts-schemas.yaml#/$defs/NoticeCategory
+        caseWorkerId:
+          type: string
+          format: uuid
+    NoticeUpdate:
+      type: object
+      properties:
+        message:
+          type: string
+        category:
+          $ref: ./alerts-schemas.yaml#/$defs/NoticeCategory
+    NoticeList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notice"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasNext:
+          type: boolean
+    Subscription:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier (server-generated).
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Name of the subscription.
+        description:
+          type: string
+          maxLength: 1000
+          description: Optional description.
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - pending
+          description: Current status.
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the subscription was created.
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the subscription was last updated.
+    SubscriptionCreate:
+      allOf:
+        - $ref: "#/components/schemas/Subscription"
+        - type: object
+          description: |
+            Payload to create a new subscription record.
+
+            Note: id, createdAt, and updatedAt are server-generated (readOnly) and will be returned in the response.
+    SubscriptionUpdate:
+      allOf:
+        - $ref: "#/components/schemas/Subscription"
+        - type: object
+          description: |
+            Payload to update one or more mutable fields of an existing subscription. Partial updates are supported.
+
+            Note: id, createdAt, and updatedAt are server-generated (readOnly) and cannot be updated.
+          minProperties: 1
+    SubscriptionList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Subscription"
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of subscriptions available.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of subscriptions requested.
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of items skipped before the current page.
+        hasNext:
+          type: boolean
+          description: Indicates whether more subscriptions are available beyond the current page.
+    SubscriptionCreatedEvent:
+      description: Snapshot of the newly created subscription resource.
+      $ref: "#/components/schemas/Subscription"
+    SubscriptionUpdatedEvent:
+      $ref: ./components/../schemas/events.yaml#/ResourceUpdatedEvent
+    SubscriptionDeletedEvent:
+      $ref: ./components/../schemas/events.yaml#/ResourceDeletedEvent
+  examples:
+    SubscriptionExample1:
+      summary: Example Subscription record
+      value:
+        id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        name: Example Subscription 1
+        description: This is an example subscription.
+        status: active
+        createdAt: "2024-01-15T10:30:00Z"
+        updatedAt: "2024-01-15T10:30:00Z"
+tags:
+  - name: Subscriptions
+    description: Manage subscriptions.

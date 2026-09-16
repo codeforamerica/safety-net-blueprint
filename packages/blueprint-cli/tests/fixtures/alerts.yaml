@@ -1,0 +1,13 @@
+Notice1:
+  id: 00000000-0000-0000-0000-000000000001
+  status: draft
+  message: Your application has been received
+  createdAt: "2024-01-15T10:00:00Z"
+  updatedAt: "2024-01-15T10:00:00Z"
+
+Notice2:
+  id: 00000000-0000-0000-0000-000000000002
+  status: sent
+  message: Additional documents required
+  createdAt: "2024-01-16T09:00:00Z"
+  updatedAt: "2024-01-16T09:30:00Z"

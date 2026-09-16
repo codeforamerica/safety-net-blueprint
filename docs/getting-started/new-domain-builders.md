@@ -10,9 +10,10 @@ See also: [Contract-Driven Architecture](../architecture/contract-driven-archite
 
 | Package | What it provides |
 |---------|-----------------|
-| `@codeforamerica/blueprint-core` | Overlay resolution, OpenAPI validation, state machine engine, annotations, compositions |
-| `@codeforamerica/blueprint-cli` | CLI scripts: scaffold APIs, validate specs, resolve overlays, generate clients |
+| `@codeforamerica/blueprint-core` | Overlay resolution, OpenAPI validation, state machine engine, rules contract schema, annotations, compositions |
+| `@codeforamerica/blueprint-cli` | CLI scripts: scaffold APIs, validate specs, resolve overlays, generate clients, evaluate rulesets |
 | `@codeforamerica/blueprint-mock-server` | Mock API server that auto-generates CRUD endpoints from OpenAPI specs and RPC endpoints from state machine YAML |
+| `@codeforamerica/blueprint-rules-engine` | CEL evaluator for compiled rule graphs — runs identically in Node.js and the browser |
 
 The framework is domain-agnostic. It doesn't know or care what your domain is — you bring the contracts, it provides the tooling.
 
@@ -20,7 +21,12 @@ The framework is domain-agnostic. It doesn't know or care what your domain is �
 
 - Node.js >= 22.11.0
 - Git
-- Familiarity with OpenAPI
+- The blueprint contracts span several formats — you don't need to know all of them upfront, but you'll encounter them as you build:
+  - **OpenAPI** — REST API specs and generated RPC endpoints
+  - **JSON Schema** — shared entity types referenced across contract artifacts
+  - **AsyncAPI / CloudEvents** — event definitions and schema for emitted domain events
+  - **CEL (Common Expression Language)** — expressions in state machine guards, rules facts, and field conditions
+  - **Dependency graphs** — the structure underlying rules contracts; facts declared as a DAG of CEL expressions
 
 ## Setup
 
@@ -29,7 +35,8 @@ Install the framework packages into your project:
 ```bash
 npm install @codeforamerica/blueprint-core \
             @codeforamerica/blueprint-cli \
-            @codeforamerica/blueprint-mock-server
+            @codeforamerica/blueprint-mock-server \
+            @codeforamerica/blueprint-rules-engine
 ```
 
 ## Suggested Project Structure
@@ -46,14 +53,16 @@ my-project/
     │       ├── {domain}-schema.yaml          # Domain entity schemas
     │       ├── {domain}-mock-data.yaml       # Seed data for the mock server
     │       ├── {domain}-state-machine.yaml   # Lifecycle and RPC operations (optional)
-    │       ├── {domain}-annotations.yaml     # Field-level metadata (optional)
-    │       └── {domain}-compositions.yaml    # Composite resources (optional)
+    │       ├── {domain}-annotations.yaml          # Field-level metadata (optional)
+    │       ├── {domain}-compositions.yaml         # Composite resources (optional)
+    │       ├── {domain}-rules.yaml                # Rules contract — facts as CEL expressions (optional)
+    │       └── {domain}-rules-examples.yaml       # Example input scenarios for rules (optional)
     └── common/
         ├── components/                       # Shared OpenAPI components (parameters, responses, etc.)
         └── schemas/                          # Shared JSON Schema files reused across domains
 ```
 
-The `{domain}-` file naming convention is a suggestion — most tools support specifying artifact types directly, so you can name files however fits your project. Not every domain needs every artifact type; add files as the domain requires them.
+The `{domain}-` file naming convention is a suggestion — most contracts support specifying artifact types directly, so you can name files however fits your project. Not every domain needs every artifact type; add files as the domain requires them.
 
 `common/components/` is for OpenAPI-specific shared components. `common/schemas/` is for JSON Schema definitions — domain entity types and any shared schemas referenced by non-OpenAPI artifacts (state machines, annotations, compositions).
 
@@ -103,9 +112,23 @@ See [Contract Metadata](../architecture/cross-cutting/contract-metadata.md) for 
 
 ### Compositions
 
-Compositions define composite resources that aggregate data from multiple APIs into a single response — useful when a consumer needs a unified view of records that live in separate domains. Compositions are defined declaratively and resolved by blueprint-core.
+Compositions define composite resources that aggregate data from multiple APIs into a single response — useful when a consumer needs a unified view of records that live within the same domain. Compositions are defined declaratively and resolved by blueprint-core.
 
 See [Resource Composition](../architecture/cross-cutting/resource-composition.md) for the format and examples.
+
+### Rules
+
+Rules contracts define domain logic as dependency graphs of named facts — eligibility criteria, screening probes, work requirement checks, income calculations, or any logic where the answer to "what do we need to know next?" depends on what's already known. The evaluator runs against partial data and returns not just what it resolved, but the specific inputs still needed to resolve what it couldn't. This makes progressive intake forms, adaptive interviews, and real-time eligibility screening possible without writing custom logic in every adapter.
+
+Rules can be invoked three ways: as an `evaluate:` step in a state machine action, as a generated standalone POST endpoint, or directly in the browser via `blueprint-rules-engine` — all returning the same evaluation contract. One ruleset, every context.
+
+Test a ruleset from the command line without starting the mock server:
+
+```bash
+npm run evaluate -- --spec=src/domains/eligibility/eligibility-rules.yaml --input='{"household": {"monthlyIncome": 800}}'
+```
+
+See [Rules Contracts](../architecture/rules-contracts.md) for the full model, what partial evaluation enables, invocation modes, and validation rules.
 
 ## Overlays (optional)
 
@@ -181,6 +204,7 @@ Visit `http://localhost:3000` for interactive API docs.
 | `blueprint-generate-ts-clients` | Generate typed TypeScript clients from resolved specs |
 | `blueprint-generate-postman-collection` | Generate a Postman collection |
 | `blueprint-mock` | Start the mock server (auto-discovers `*-openapi.yaml`) |
+| `blueprint-evaluate` | Evaluate a ruleset against inputs from the command line |
 | `blueprint-swagger` | Start Swagger UI at http://localhost:3000 |
 
 ## Next Steps
@@ -190,3 +214,4 @@ Visit `http://localhost:3000` for interactive API docs.
 - [Overlay Guide](../guides/overlay-guide.md) — Overlay syntax, JSONPath targeting, and the resolve pipeline
 - [Mock Server](../guides/mock-server.md) — Seeding data, querying the mock, testing event-driven behavior
 - [Explorer](../../packages/blueprint-explorer/README.md) — Generate a static reference site (API docs, state machine diagrams, event catalog) from your resolved specs and clients
+- [Rules Contracts](../architecture/rules-contracts.md) — The dependency graph model, partial evaluation, invocation modes, and validation rules

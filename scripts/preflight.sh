@@ -43,6 +43,14 @@ bail_if_failed() {
   fi
 }
 
+step "Checking committed artifacts are up to date"
+if bash scripts/generate-artifacts.sh --check-only; then
+  pass "Committed artifacts are up to date"
+else
+  fail "Generated artifacts are out of date — they have been staged. Run \`bash scripts/generate-artifacts.sh --commit\` or commit them manually, then re-run preflight."
+fi
+bail_if_failed
+
 step "Stopping any running mock server for a clean-slate run"
 lsof -ti :1080 | xargs kill -9 2>/dev/null || true
 pass "Mock server stopped (or was not running)"
@@ -55,11 +63,14 @@ step "Checking vendored dependencies"
 node packages/blueprint-rules-engine/scripts/check-vendor.js
 pass "Vendor check complete"
 
-step "Running unit tests"
-if npm run test:unit --workspaces --if-present 2>&1; then
-  pass "Unit tests passed"
+step "Running all tests"
+if npm test --workspace=packages/blueprint-core \
+            --workspace=packages/blueprint-cli \
+            --workspace=packages/blueprint-rules-engine \
+            --workspace=packages/blueprint-explorer 2>&1; then
+  pass "All tests passed"
 else
-  fail "Unit tests failed"
+  fail "Tests failed"
 fi
 bail_if_failed
 
@@ -68,15 +79,6 @@ if bash scripts/generate-artifacts.sh 2>&1; then
   pass "Artifacts generated"
 else
   fail "Artifact generation failed"
-fi
-bail_if_failed
-
-step "Checking committed artifacts are up to date"
-if git diff HEAD --exit-code packages/blueprint-rules-engine/dist/browser.js packages/safety-net-explorer/ > /dev/null 2>&1; then
-  pass "Committed artifacts are up to date"
-else
-  git add packages/blueprint-rules-engine/dist/browser.js packages/safety-net-explorer/
-  fail "Committed artifacts were out of date — they have been staged. Commit them and re-run preflight."
 fi
 bail_if_failed
 
@@ -111,26 +113,19 @@ else
   fail "Postman collection generation failed"
 fi
 
-step "Running blueprint-mock-server functional tests"
-if node packages/blueprint-mock-server/tests/run-tests.js --functional 2>&1; then
-  pass "Functional tests passed"
+step "Running blueprint-mock-server tests"
+if node packages/blueprint-mock-server/tests/run-tests.js --all --contracts=packages/generated/contracts --raw-contracts=packages/safety-net-contracts/src --stop 2>&1; then
+  pass "Tests passed"
 else
-  fail "Functional tests failed"
-fi
-
-step "Running blueprint-mock-server integration tests"
-if node packages/blueprint-mock-server/tests/run-tests.js --integration --contracts=packages/generated/contracts --raw-contracts=packages/safety-net-contracts/src --stop 2>&1; then
-  pass "Integration tests passed"
-else
-  fail "Integration tests failed"
+  fail "Tests failed"
 fi
 bail_if_failed
 
-step "Running safety-net-contracts integration tests"
-if node packages/safety-net-contracts/tests/run-tests.js --integration --contracts=packages/generated/contracts --seed=packages/safety-net-contracts/tests/integration/seed --clients=packages/generated/clients --stop 2>&1; then
-  pass "Integration tests passed"
+step "Running safety-net-contracts tests"
+if node packages/safety-net-contracts/tests/run-tests.js --all --contracts=packages/generated/contracts --seed=packages/safety-net-contracts/tests/integration/seed --clients=packages/generated/clients --stop 2>&1; then
+  pass "Tests passed"
 else
-  fail "Integration tests failed"
+  fail "Tests failed"
 fi
 
 step "Checking package contents"

@@ -8,7 +8,10 @@
     "dist/"
   ],
   "exports": {
-    ".": "./src/index.js",
+    ".": {
+      "types": "./types.d.ts",
+      "default": "./src/index.js"
+    },
     "./fact-graph": "./src/fact-graph.js",
     "./browser": "./dist/browser.js"
   },

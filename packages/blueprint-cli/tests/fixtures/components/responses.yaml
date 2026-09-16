@@ -1,0 +1,41 @@
+# Minimal error responses for test fixtures
+# Mirrors the structure of base-contracts/components/responses.yaml
+BadRequest:
+  description: Bad request — validation failed
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          message:
+            type: string
+
+NotFound:
+  description: Resource not found
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          message:
+            type: string
+
+Conflict:
+  description: Conflict — state transition not allowed
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          message:
+            type: string
+
+InternalError:
+  description: Internal server error
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          message:
+            type: string

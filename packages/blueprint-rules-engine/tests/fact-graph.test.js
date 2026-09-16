@@ -40,7 +40,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { toFactGraphXml, toGraphWithFactGraph } from '../src/fact-graph.js';
-import { toGraph } from '../src/index.js';
+import { toGraph } from '../src/evaluator.js';
 import { compileRuleset } from '@codeforamerica/blueprint-core';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

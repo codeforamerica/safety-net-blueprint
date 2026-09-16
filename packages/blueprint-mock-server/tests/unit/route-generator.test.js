@@ -662,8 +662,9 @@ test('registerRulesRoutes', async (t) => {
     };
 
     await handler(req, res);
-    assert.ok(responseBody.complete, 'result must have complete');
-    assert.strictEqual(responseBody.complete.eligible, true);
+    assert.ok(responseBody.eligible, 'result must have eligible');
+    assert.strictEqual(responseBody.eligible.state, 'complete');
+    assert.strictEqual(responseBody.eligible.value, true);
     assert.strictEqual(statusCode, 200);
   });
 
@@ -695,8 +696,8 @@ test('registerRulesRoutes', async (t) => {
 
     await handler(req, res);
     assert.strictEqual(statusCode, 200);
-    assert.ok(responseBody.errors, 'broken expression must appear in errors');
-    assert.ok('result' in responseBody.errors);
+    assert.ok(responseBody.result, 'broken expression must appear in result');
+    assert.strictEqual(responseBody.result.state, 'error');
   });
 
   await t.test('returns registered endpoint descriptors', () => {

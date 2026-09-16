@@ -19,8 +19,9 @@ export function detectType(filename, doc) {
     const schema = doc.$schema;
     if (schema) {
       const base = schema.split('/').pop();
-      if (base === 'rules-schema.yaml')        return 'rules';
-      if (base === 'graph-schema.yaml')        return 'graph';
+      if (base === 'rules-schema.yaml')          return 'rules';
+      if (base === 'rules-examples-schema.yaml') return 'rules-examples';
+      if (base === 'graph-schema.yaml')          return 'graph';
       if (base === 'state-machine-schema.yaml') return 'state-machine';
       if (base === 'annotations-schema.yaml')  return 'annotations';
       if (base === 'sla-types-schema.yaml')    return 'sla-types';
@@ -36,6 +37,7 @@ export function detectType(filename, doc) {
   if (filename.endsWith('-asyncapi.yaml'))         return 'asyncapi';
   if (filename.endsWith('-state-machine.yaml'))    return 'state-machine';
   if (filename.endsWith('-rules.yaml'))            return 'rules';
+  if (filename.endsWith('-rules-examples.yaml'))  return 'rules-examples';
   if (filename.endsWith('-graph.yaml'))            return 'graph';
   if (filename.endsWith('-schema.yaml'))           return 'schema';
   if (filename.endsWith('-mock-data.yaml'))        return 'mock-data';

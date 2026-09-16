@@ -1,0 +1,73 @@
+$schema: state-machine-schema.yaml
+version: "1.0"
+domain: alerts
+apiSpec: alerts-openapi.yaml
+machines:
+  - object: Notice
+    states:
+      - id: draft
+        slaClock: stopped
+        description: Created but not yet delivered
+      - id: sent
+        slaClock: running
+        description: Delivered to recipient; awaiting acknowledgment
+      - id: acknowledged
+        slaClock: stopped
+        description: Recipient has confirmed receipt
+      - id: expired
+        slaClock: stopped
+        description: Notice is no longer actionable. Terminal.
+    initialState: draft
+    actions:
+      # No request body — simple transition with emit step
+      - id: send
+        transition:
+          from: draft
+          to: sent
+        steps:
+          - emit:
+              type: notice.sent
+
+      # Inline request schema
+      - id: acknowledge
+        transition:
+          from: sent
+          to: acknowledged
+        schema:
+          request:
+            type: object
+            required: [acknowledgedBy]
+            properties:
+              acknowledgedBy:
+                type: string
+                description: ID of the person acknowledging the notice
+        steps:
+          - set:
+              field: acknowledgedBy
+              value: $request.acknowledgedBy
+
+      # $ref to $defs — triggers hoist into components.schemas in generate-rpc-overlay
+      - id: expire
+        transition:
+          from: [sent, acknowledged]
+          to: expired
+        schema:
+          request:
+            $ref: '#/$defs/ExpireRequest'
+        steps:
+          - set:
+              field: expiredReason
+              value: $request.reason
+
+$defs:
+  ExpireRequest:
+    type: object
+    required: [reason]
+    properties:
+      reason:
+        type: string
+        enum: [superseded, deadline_passed, cancelled]
+        description: Why the notice is being expired
+      notes:
+        type: string
+        description: Optional additional context

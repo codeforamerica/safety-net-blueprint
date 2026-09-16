@@ -14,7 +14,7 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { toGraph } from '../src/index.js';
+import { toGraph } from '../src/evaluator.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturesDir = join(__dirname, 'fixtures/snap-interview-probes');

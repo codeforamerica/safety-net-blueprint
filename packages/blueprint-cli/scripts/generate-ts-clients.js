@@ -535,6 +535,10 @@ async function main() {
   const annotationDomains = [];
   await generateAnnotationsAndPolicies(specsDir, outputDir, annotationDomains);
 
+  // Generate rules clients from compiled graph files
+  console.log('\nGenerating rules clients...');
+  generateRules(specsDir, outputDir);
+
   // Create index.ts that re-exports all domains and search helpers.
   // Annotations are part of each domain namespace (intake.Annotations) — no root-level re-export needed.
   console.log('\nCreating index exports...');
@@ -676,8 +680,150 @@ function patchDomainBarrelForAnnotations(domainIndexPath) {
   writeFileSync(domainIndexPath, existing.trimEnd() + `\nexport { Annotations } from './annotations.js';\n`);
 }
 
+// ── Rules client generation ──────────────────────────────────────────────────
+
+/**
+ * Convert a graph input type string to its TypeScript equivalent.
+ */
+function schemaTypeToTs(type) {
+  if (type === 'integer' || type === 'number') return 'number';
+  if (type === 'boolean') return 'boolean';
+  if (type === 'string') return 'string';
+  if (type === 'array') return 'unknown[]';
+  return 'unknown';
+}
+
+/**
+ * Reconstruct a nested TypeScript object type from flat graph input paths.
+ * e.g. { '$.notice.status': { type: 'string' }, '$.notice.daysSinceCreated': { type: 'integer' } }
+ *   → { notice?: { status?: string; daysSinceCreated?: number; }; }
+ */
+function buildInputType(graphInputs) {
+  // Group by top-level namespace, then by nested path
+  const namespaces = {};
+  for (const [path, spec] of Object.entries(graphInputs ?? {})) {
+    // Strip '$.' prefix and '[]' array markers for type reconstruction
+    const clean = path.slice(2).replace(/\[\](\.[a-zA-Z])/g, '$1').replace(/\[\]$/, '');
+    const parts = clean.split('.');
+    const ns = parts[0];
+    if (!namespaces[ns]) namespaces[ns] = {};
+    if (parts.length === 2) {
+      namespaces[ns][parts[1]] = schemaTypeToTs(spec.type);
+    }
+    // Skip deeper nesting (array sub-fields) for now — they show up as collection-level deps
+  }
+
+  const lines = [];
+  for (const [ns, fields] of Object.entries(namespaces)) {
+    const fieldLines = Object.entries(fields).map(([f, t]) => `    ${f}?: ${t};`).join('\n');
+    lines.push(`  ${ns}?: {\n${fieldLines}\n  };`);
+  }
+  return `{\n${lines.join('\n')}\n}`;
+}
+
+/**
+ * Build a TypeScript result type from graph outputs, using FactNode<T> for each fact.
+ */
+function buildResultType(graph) {
+  const lines = [];
+  for (const factName of graph.outputs ?? []) {
+    const fact = graph.facts?.[factName];
+    const tsType = fact?.type ? schemaTypeToTs(fact.type) : 'unknown';
+    lines.push(`  ${factName}: FactNode<${tsType}>;`);
+  }
+  lines.push(`  nodes: Record<string, FactNode<unknown>>;`);
+  return `{\n${lines.join('\n')}\n}`;
+}
+
+/**
+ * Generate rules.ts and rules-types.gen.ts for all graph files found in specsDir,
+ * grouped by domain. Patches the domain index.ts barrel if it exists.
+ *
+ * @param {string} specsDir  - directory containing compiled *-graph.yaml files
+ * @param {string} outputDir - directory containing generated domain client folders
+ */
+function generateRules(specsDir, outputDir) {
+  const graphFiles = readdirSync(specsDir, { recursive: true })
+    .filter(f => (typeof f === 'string' ? f : f.toString()).endsWith('-graph.yaml'));
+
+  // Group graphs by domain
+  const byDomain = new Map();
+  for (const file of graphFiles) {
+    const content = yaml.load(readFileSync(join(specsDir, file), 'utf8'));
+    if (!content?.domain || !content?.ruleset) continue;
+    if (!byDomain.has(content.domain)) byDomain.set(content.domain, []);
+    byDomain.get(content.domain).push(content);
+  }
+
+  for (const [domain, graphs] of byDomain) {
+    const domainDir = join(outputDir, domain);
+    if (!existsSync(domainDir)) continue;
+
+    const pascal = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+    // Collect all type names across rulesets for barrel patching
+    const allTypeNames = [];
+
+    // Build rules-types.gen.ts
+    const typeLines = [`import type { FactNode } from '@codeforamerica/blueprint-rules-engine';`];
+    for (const graph of graphs) {
+      const p = pascal(graph.ruleset);
+      const inputsType = buildInputType(graph.inputs);
+      const resultType = buildResultType(graph);
+      typeLines.push(`\nexport type ${p}Inputs = ${inputsType};\n`);
+      typeLines.push(`export type ${p}Result = ${resultType};\n`);
+      allTypeNames.push(`${p}Inputs`, `${p}Result`);
+    }
+    writeFileSync(join(domainDir, 'rules-types.gen.ts'), typeLines.join('\n'));
+
+    // Build rules.ts
+    const typeImports = allTypeNames.join(', ');
+    const ruleEntries = graphs.map(graph => {
+      const p = pascal(graph.ruleset);
+      const graphJson = JSON.stringify(graph);
+      const outputProps = (graph.outputs ?? []).map(factName => {
+        const fact = graph.facts?.[factName];
+        const tsType = fact?.type ? schemaTypeToTs(fact.type) : 'unknown';
+        return `      ${factName}: nodes['${factName}'] as FactNode<${tsType}>`;
+      }).join(',\n');
+      return [
+        `  ${graph.ruleset}: { evaluate: (inputs: ${p}Inputs): ${p}Result => {`,
+        `    const nodes = evaluate(${graphJson}, inputs);`,
+        `    return {\n${outputProps},\n      nodes,\n    };`,
+        `  } }`,
+      ].join('\n');
+    });
+    const rulesContent = [
+      `import { evaluate } from '@codeforamerica/blueprint-rules-engine';`,
+      `import type { FactNode } from '@codeforamerica/blueprint-rules-engine';`,
+      `import type { ${typeImports} } from './rules-types.gen.js';`,
+      ``,
+      `export const Rules = {`,
+      ruleEntries.join(',\n'),
+      `};`,
+      ``,
+    ].join('\n');
+    writeFileSync(join(domainDir, 'rules.ts'), rulesContent);
+
+    // Patch domain barrel if it exists
+    const indexPath = join(domainDir, 'index.ts');
+    if (existsSync(indexPath)) {
+      const existing = readFileSync(indexPath, 'utf8');
+      const additions = [
+        `export { Rules } from './rules.js'`,
+        `export type { ${allTypeNames.join(', ')} } from './rules-types.gen.js'`,
+      ].filter(line => !existing.includes(line));
+      if (additions.length > 0) {
+        writeFileSync(indexPath, existing.trimEnd() + '\n' + additions.map(l => l + ';\n').join(''));
+      }
+    }
+
+    console.log(`  ✓ Generated ${domain}/rules.ts and ${domain}/rules-types.gen.ts`);
+  }
+}
+
 // Export for testing
-export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, generateAnnotationsAndPolicies, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums, patchDomainBarrelForAnnotations };
+export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, generateAnnotationsAndPolicies, generateRules, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums, patchDomainBarrelForAnnotations };
 export { collectNamedEnumDefs } from './collect-named-enum-defs.js';
 
 // Run main function only if this is the entry point

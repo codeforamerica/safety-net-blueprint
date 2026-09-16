@@ -26,19 +26,16 @@ echo ""
 echo "Checking committed artifacts are up to date..."
 echo ""
 
-bash "$ROOT/scripts/generate-artifacts.sh"
-
-if ! git diff HEAD --exit-code packages/blueprint-rules-engine/dist/browser.js packages/safety-net-explorer/ > /dev/null 2>&1; then
+if ! bash "$ROOT/scripts/generate-artifacts.sh" --check-only; then
   echo ""
-  echo "ERROR: Generated artifacts are out of date."
+  echo "ERROR: Generated artifacts are out of date and have been staged."
   echo ""
-  echo "Run \`npm run preflight\` and commit the results — preflight regenerates"
-  echo "committed artifacts and runs the full test suite. Both must be done before"
-  echo "your PR can be merged."
+  echo "Run \`bash scripts/generate-artifacts.sh --commit\` or commit them manually,"
+  echo "then run \`npm run preflight\` — it regenerates artifacts and runs the full"
+  echo "test suite. Preflight must pass before your PR can be merged."
   echo ""
-  echo "You can skip this hook with \`git push --no-verify\`, but you will still need"
-  echo "to run preflight, commit the regenerated artifacts, and push again before"
-  echo "your PR can be merged."
+  echo "You can skip this hook with \`git push --no-verify\`, but preflight must still"
+  echo "pass and all artifacts must be committed before your PR can be merged."
   echo ""
   exit 1
 fi

@@ -16,6 +16,7 @@ dist-packages/
 data/
 generated/
 resolved/
+!packages/blueprint-cli/tests/resolve/golden/resolved/
 
 # safety-net-explorer is private and has no README
 

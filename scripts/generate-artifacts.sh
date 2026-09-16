@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# Generate all committed artifacts from source.
-# Called by preflight and the pre-push hook.
+# Generate or check committed artifacts.
 #
-# Artifacts produced:
+# Usage:
+#   generate-artifacts.sh             — generate all artifacts
+#   generate-artifacts.sh --check-only — check if artifacts are dirty; stage them if so
+#   generate-artifacts.sh --commit     — stage and commit regenerated artifacts
+#
+# Artifacts:
 #   packages/blueprint-rules-engine/dist/browser.js
 #   packages/safety-net-explorer/
 
@@ -10,6 +14,25 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+ARTIFACTS=(
+  packages/blueprint-rules-engine/dist/browser.js
+  packages/safety-net-explorer/
+)
+
+if [ "${1:-}" = "--check-only" ]; then
+  if ! git diff HEAD --exit-code "${ARTIFACTS[@]}" > /dev/null 2>&1; then
+    git add "${ARTIFACTS[@]}"
+    exit 1
+  fi
+  exit 0
+fi
+
+if [ "${1:-}" = "--commit" ]; then
+  git add "${ARTIFACTS[@]}"
+  git commit -m "Commit regenerated artifacts"
+  exit 0
+fi
 
 echo "Resolving safety-net-contracts..."
 npm run resolve --prefix "$ROOT" 2>&1

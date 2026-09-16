@@ -255,7 +255,8 @@ export function generateRulesEndpointOverlay(domain, rulesDoc) {
     const pascal = toPascalCase(rulesetName);
     const requestSchemaName = `${pascal}Request`;
     const responseSchemaName = `${pascal}Response`;
-    const operationId = `assess${pascal}`;
+    const lastSegment = ruleset.endpoint.path.split('/').filter(Boolean).pop();
+    const operationId = toCamelCase(lastSegment);
 
     // Request body: one property per named input, using the input schema
     const requestProperties = {};
@@ -271,7 +272,7 @@ export function generateRulesEndpointOverlay(domain, rulesDoc) {
 
     pathsUpdate[endpointPath] = {
       post: {
-        summary: `Assess ${rulesetName}`,
+        summary: `Evaluate ${rulesetName}`,
         operationId,
         requestBody: {
           required: true,
@@ -369,4 +370,8 @@ export function generateRulesResults(rulesFiles) {
 
 function toPascalCase(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function toCamelCase(str) {
+  return str.split('-').map((s, i) => i === 0 ? s : toPascalCase(s)).join('');
 }

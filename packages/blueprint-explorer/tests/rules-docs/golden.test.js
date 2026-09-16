@@ -6,7 +6,13 @@
  * the golden with `npm run test:goldens-regenerate` if the change was
  * intentional, or investigate the regression.
  *
- * Golden files live in: tests/rules-docs/fixtures/content/rules-docs/
+ * Fixture inputs:  tests/rules-docs/fixtures/inputs/
+ * Golden outputs:  tests/rules-docs/fixtures/outputs/rules-docs/
+ *
+ * To regenerate golden outputs:
+ *   node src/rules-docs/build.js \
+ *     --content=tests/rules-docs/fixtures/outputs \
+ *     --resolved=tests/rules-docs/fixtures/inputs
  */
 
 import { describe, it } from 'node:test';
@@ -18,8 +24,8 @@ import { load } from 'js-yaml';
 import { generateRulesetHtml } from '../../src/rules-docs/generate-html.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const contractsDir = join(__dirname, 'fixtures/contracts');
-const goldensDir   = join(__dirname, 'fixtures/content/rules-docs');
+const contractsDir = join(__dirname, 'fixtures/inputs');
+const goldensDir   = join(__dirname, 'fixtures/outputs/rules-docs');
 
 // hubHref mirrors what build.js computes:
 //   relative('fixtures/content/rules-docs', 'fixtures/content/index.html') = '../index.html'
@@ -41,7 +47,7 @@ function loadAnnotations(domain, rulesetName) {
 // ── Golden comparisons ────────────────────────────────────────────────────────
 
 const rulesets = [
-  { domain: 'test', rulesetName: 'main' },
+  { domain: 'platform', rulesetName: 'main' },
 ];
 
 describe('rules-docs golden', () => {

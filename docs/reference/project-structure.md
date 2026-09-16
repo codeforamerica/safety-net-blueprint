@@ -4,7 +4,7 @@ Overview of the repository layout and file conventions.
 
 ## Directory Layout
 
-This project uses npm workspaces with six packages:
+This project uses npm workspaces with seven packages:
 
 ```
 safety-net-blueprint/
@@ -58,6 +58,16 @@ safety-net-blueprint/
 │   │       ├── unit/
 │   │       ├── integration/
 │   │       └── functional/
+│   │
+│   ├── blueprint-rules-engine/     # CEL evaluator for compiled rule graphs
+│   │   ├── package.json
+│   │   ├── src/
+│   │   │   ├── evaluator.js        # evaluate() — public API; EvalResult, Graph, toGraph internal
+│   │   │   ├── cel.js              # CEL expression evaluator
+│   │   │   └── fact-graph.js       # IRS FactGraph translator (parity testing)
+│   │   ├── dist/
+│   │   │   └── browser.js          # Self-contained browser bundle (window.RulesEngine)
+│   │   └── tests/
 │   │
 │   ├── blueprint-explorer/         # Explorer build tooling
 │   │   └── build.js               # Generates safety-net-explorer/ HTML output
@@ -116,6 +126,7 @@ domains/intake/
   intake-annotations.yaml        # Field annotation metadata
   intake-annotations-docs.yaml   # Annotation documentation
   intake-asyncapi.yaml           # AsyncAPI event catalog
+  intake-rules.yaml              # Rules contract (authored — inputs, outputs, facts as CEL expressions)
   intake-schema.yaml             # Shared domain schemas
   intake-mock-data.yaml          # Mock server seed data
   authored/                      # Source tables for generated YAML (CSV)
@@ -133,6 +144,8 @@ Not every domain has every artifact — only the ones relevant to the domain.
 | Compositions | `-compositions` | Hand-authored |
 | Annotations | `-annotations` | Hand-authored |
 | Async events | `-asyncapi` | Generated from state machine |
+| Rules contract | `-rules` | Hand-authored |
+| Rules examples | `-rules-examples` | Hand-authored |
 
 ## Workspaces
 
@@ -141,7 +154,8 @@ Not every domain has every artifact — only the ones relevant to the domain.
 | `blueprint-core` | `@codeforamerica/blueprint-core` | Framework library | `js-yaml`, `ajv`, `@apidevtools/json-schema-ref-parser` |
 | `blueprint-cli` | `@codeforamerica/blueprint-cli` | CLI scripts | `blueprint-core`, `@hey-api/openapi-ts`, `@redocly/cli` |
 | `blueprint-mock-server` | `@codeforamerica/blueprint-mock-server` | Mock API server | `blueprint-core`, `express`, `better-sqlite3` |
-| `blueprint-explorer` | `@codeforamerica/blueprint-explorer` | Explorer build | `blueprint-core` |
+| `blueprint-rules-engine` | `@codeforamerica/blueprint-rules-engine` | CEL evaluator + browser bundle | `js-yaml`, `cel-js` |
+| `blueprint-explorer` | `@codeforamerica/blueprint-explorer` | Explorer build | `blueprint-core`, `blueprint-rules-engine` |
 | `safety-net-contracts` | `@codeforamerica/blueprint-safety-net-contracts` | Domain contracts | `blueprint-cli` (devDep) |
 
 ### Framework vs. Domain Separation

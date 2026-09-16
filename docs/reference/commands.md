@@ -14,6 +14,7 @@ All available npm scripts in the Safety Net Blueprint toolkit.
 | `npm test` | Run unit tests |
 | `npm run test:integration` | Run integration tests (includes Postman/newman) |
 | `npm run preflight` | Run all checks before creating a PR |
+| `npm run evaluate` | Evaluate a ruleset against inputs from the command line |
 
 ## Validation Commands
 
@@ -216,6 +217,38 @@ Runs all checks in sequence — use before creating a PR:
 ```bash
 npm run preflight
 ```
+
+## Rules Evaluation Commands
+
+### `npm run evaluate`
+
+Evaluates a ruleset against a JSON input map from the command line. No mock server required.
+
+```bash
+npm run evaluate -- --spec=packages/safety-net-contracts/src/domains/eligibility/eligibility-rules.yaml \
+                    --input='{"household": {"monthlyIncome": 800}}'
+```
+
+Select the evaluation engine with `--engine`:
+
+```bash
+# CEL evaluator (default — reference implementation)
+npm run evaluate -- --spec=... --input=... --engine cel
+
+# IRS FactGraph engine (for parity testing)
+npm run evaluate -- --spec=... --input=... --engine fact-graph
+```
+
+Output:
+
+```json
+{
+  "eligible": { "state": "complete", "value": true },
+  "benefitAmount": { "state": "missing", "value": null, "missing": ["$.household.income"] }
+}
+```
+
+See [Rules Contracts](../architecture/rules-contracts.md) for the evaluation model and contract format.
 
 ## Environment Variables
 

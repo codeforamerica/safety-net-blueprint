@@ -17,6 +17,7 @@ import { createDocumentUploadHandler, createDocumentVersionUploadHandler } from 
 import { createDocumentContentHandler } from './handlers/document-content-handler.js';
 import { findSlaTypes } from './sla-loader.js';
 import { generateStateSchemas } from '@codeforamerica/blueprint-core/compositions';
+import { compileRuleset } from '@codeforamerica/blueprint-core';
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, registerParentLink } from './composition-assembler.js';
 import { findAll, findById, insertResource, update, registerCollectionDefaults } from './database-manager.js';
@@ -969,6 +970,20 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, slaType
  * @param {Array<Object>} apiSpecs
  * @returns {Array<{ method: string, path: string, description: string }>}
  */
+/**
+ * Compile all rulesets across all rules files into a flat index.
+ * Returns { rulesetName: compiledGraph } for use by the state machine engine.
+ */
+export function buildRulesIndex(rulesFiles = []) {
+  const index = {};
+  for (const { domain, doc } of rulesFiles) {
+    for (const [rulesetName, ruleset] of Object.entries(doc.rulesets || {})) {
+      index[rulesetName] = compileRuleset(domain, rulesetName, ruleset);
+    }
+  }
+  return index;
+}
+
 export function registerRulesRoutes(app, rulesFiles = [], apiSpecs = []) {
   const registeredEndpoints = [];
 
@@ -984,9 +999,17 @@ export function registerRulesRoutes(app, rulesFiles = [], apiSpecs = []) {
         ? `${basePath}${endpointPath}`
         : endpointPath;
 
+      const graph = compileRuleset(domain, rulesetName, ruleset);
+
       app.post(fullPath, (req, res) => {
         try {
-          const result = evaluate(doc, req.body ?? {}, rulesetName);
+          const nodes = evaluate(graph, req.body ?? {});
+          const result = {};
+          for (const [name, node] of Object.entries(nodes)) {
+            if (node.type !== 'output') continue;
+            const { type: _type, ...rest } = node;
+            result[name] = rest;
+          }
           res.json(result);
         } catch (err) {
           console.error(`Rules evaluation error (${rulesetName}):`, err);

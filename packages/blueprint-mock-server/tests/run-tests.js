@@ -210,6 +210,26 @@ async function runAllTests() {
     }
   }
 
+  // Run functional tests if requested
+  if (runFunctional) {
+    console.log('\n🧪 Functional Tests');
+    console.log('-'.repeat(70));
+
+    console.log('Starting functional server...');
+    await startFunctionalServer();
+    functionalServerStarted = true;
+    await new Promise(res => setTimeout(res, 1500));
+    console.log('Functional server started\n');
+
+    for (const testFile of functionalTestFiles) {
+      await withTimeout(runTest(testFile), TEST_TIMEOUT_MS, testFile)
+        .then(() => passed++)
+        .catch(err => bail(testFile, err));
+    }
+
+    await stopFunctionalServer();
+  }
+
   // Run integration tests if requested
   if (runIntegration) {
     console.log('\n🔗 Integration Tests');
@@ -254,26 +274,6 @@ async function runAllTests() {
 
     if (integrationServerStarted && doStop) await stopServer(false);
     integrationServerStarted = false;
-  }
-
-  // Run functional tests if requested
-  if (runFunctional) {
-    console.log('\n🧪 Functional Tests');
-    console.log('-'.repeat(70));
-
-    console.log('Starting functional server...');
-    await startFunctionalServer();
-    functionalServerStarted = true;
-    await new Promise(res => setTimeout(res, 1500));
-    console.log('Functional server started\n');
-
-    for (const testFile of functionalTestFiles) {
-      await withTimeout(runTest(testFile), TEST_TIMEOUT_MS, testFile)
-        .then(() => passed++)
-        .catch(err => bail(testFile, err));
-    }
-
-    await stopFunctionalServer();
   }
 
   // Summary

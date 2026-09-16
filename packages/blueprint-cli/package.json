@@ -19,8 +19,8 @@
   },
 
   "scripts": {
-    "test": "node --test tests/*.test.js",
-    "test:unit": "node --test tests/*.test.js"
+    "test": "node --test tests/**/*.test.js",
+    "test:unit": "node --test tests/**/*.test.js"
   },
   "engines": {
     "node": ">=22.11.0"

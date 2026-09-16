@@ -13,7 +13,8 @@ import { resolve } from 'path';
 import { resolveUploadsDir } from '../src/handlers/document-upload-handler.js';
 import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
-import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes, registerRulesRoutes } from '../src/route-generator.js';
+import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes, registerRulesRoutes, buildRulesIndex } from '../src/route-generator.js';
+import { initRulesIndex } from '../src/state-machine-engine.js';
 import { registerEventSubscriptions } from '../src/event-subscription.js';
 import { closeAll, clearAllDatabases, insertResource, findById } from '../src/database-manager.js';
 import { seedAllDatabases } from '../src/seeder.js';
@@ -296,10 +297,11 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
       registerCompositionRoutes(app, allCompositions, apiSpecs);
     }
 
-    // Register rules evaluation routes
+    // Register rules evaluation routes and initialize the state machine rules index
     if (allRulesFiles.length > 0) {
       console.log('\nRegistering rules evaluation routes...');
       registerRulesRoutes(app, allRulesFiles, apiSpecs);
+      initRulesIndex(buildRulesIndex(allRulesFiles));
     }
 
     const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics, resolvedUploadsDir);

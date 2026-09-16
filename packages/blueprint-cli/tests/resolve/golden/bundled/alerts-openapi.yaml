@@ -1,0 +1,1223 @@
+openapi: 3.1.0
+info:
+  title: Alerts API
+  version: 1.0.0
+  x-domain: alerts
+x-events:
+  notice.sent:
+    type: org.codeforamerica.safety-net-blueprint.alerts.notice.sent
+    summary: Emitted when a notice transitions to sent state
+  notice.expired:
+    type: org.codeforamerica.safety-net-blueprint.alerts.notice.expired
+    summary: Emitted when a notice expires
+paths:
+  /alerts/notices:
+    get:
+      summary: List notices
+      operationId: listNotices
+      tags:
+        - Notices
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - status
+                        - createdAt
+                        - updatedAt
+                      example:
+                        id: 00000000-0000-0000-0000-000000000001
+                        status: draft
+                        message: Your application has been received
+                        createdAt: "2024-01-01T00:00:00Z"
+                        updatedAt: "2024-01-01T00:00:00Z"
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          readOnly: true
+                        status:
+                          type: string
+                          enum:
+                            - draft
+                            - sent
+                            - acknowledged
+                            - expired
+                        category:
+                          type: string
+                          enum:
+                            - system
+                            - caseworker
+                            - administrative
+                          description: Category of notice
+                        message:
+                          type: string
+                        createdAt:
+                          type: string
+                          format: date-time
+                          readOnly: true
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          readOnly: true
+                        county_code:
+                          type: string
+                          description: County-specific code for routing this notice
+                        reviewer:
+                          type: object
+                          description: Expanded CaseWorker.
+                          x-relationship:
+                            domain: case-management
+                            resource: CaseWorker
+                            style: expand
+                        caseWorker:
+                          type: object
+                          description: Expanded CaseWorker.
+                          x-relationship:
+                            domain: case-management
+                            resource: CaseWorker
+                            style: expand
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+                  hasNext:
+                    type: boolean
+        "400":
+          description: Bad request — validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+    post:
+      summary: Create a notice
+      operationId: createNotice
+      tags:
+        - Notices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                category:
+                  type: string
+                  enum:
+                    - system
+                    - caseworker
+                    - administrative
+                  description: Category of notice
+                caseWorkerId:
+                  type: string
+                  format: uuid
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - status
+                  - createdAt
+                  - updatedAt
+                example:
+                  id: 00000000-0000-0000-0000-000000000001
+                  status: draft
+                  message: Your application has been received
+                  createdAt: "2024-01-01T00:00:00Z"
+                  updatedAt: "2024-01-01T00:00:00Z"
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                  status:
+                    type: string
+                    enum:
+                      - draft
+                      - sent
+                      - acknowledged
+                      - expired
+                  category:
+                    type: string
+                    enum:
+                      - system
+                      - caseworker
+                      - administrative
+                    description: Category of notice
+                  message:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  county_code:
+                    type: string
+                    description: County-specific code for routing this notice
+                  reviewer:
+                    type: object
+                    description: Expanded CaseWorker.
+                    x-relationship:
+                      domain: case-management
+                      resource: CaseWorker
+                      style: expand
+                  caseWorker:
+                    type: object
+                    description: Expanded CaseWorker.
+                    x-relationship:
+                      domain: case-management
+                      resource: CaseWorker
+                      style: expand
+        "400":
+          description: Bad request — validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /alerts/notices/{noticeId}:
+    parameters:
+      - name: noticeId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get a notice
+      operationId: getNotice
+      tags:
+        - Notices
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - status
+                  - createdAt
+                  - updatedAt
+                example:
+                  id: 00000000-0000-0000-0000-000000000001
+                  status: draft
+                  message: Your application has been received
+                  createdAt: "2024-01-01T00:00:00Z"
+                  updatedAt: "2024-01-01T00:00:00Z"
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                  status:
+                    type: string
+                    enum:
+                      - draft
+                      - sent
+                      - acknowledged
+                      - expired
+                  category:
+                    type: string
+                    enum:
+                      - system
+                      - caseworker
+                      - administrative
+                    description: Category of notice
+                  message:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  county_code:
+                    type: string
+                    description: County-specific code for routing this notice
+                  reviewer:
+                    type: object
+                    description: Expanded CaseWorker.
+                    x-relationship:
+                      domain: case-management
+                      resource: CaseWorker
+                      style: expand
+                  caseWorker:
+                    type: object
+                    description: Expanded CaseWorker.
+                    x-relationship:
+                      domain: case-management
+                      resource: CaseWorker
+                      style: expand
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+    patch:
+      summary: Update a notice
+      operationId: updateNotice
+      tags:
+        - Notices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                category:
+                  type: string
+                  enum:
+                    - system
+                    - caseworker
+                    - administrative
+                  description: Category of notice
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - status
+                  - createdAt
+                  - updatedAt
+                example:
+                  id: 00000000-0000-0000-0000-000000000001
+                  status: draft
+                  message: Your application has been received
+                  createdAt: "2024-01-01T00:00:00Z"
+                  updatedAt: "2024-01-01T00:00:00Z"
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                  status:
+                    type: string
+                    enum:
+                      - draft
+                      - sent
+                      - acknowledged
+                      - expired
+                  category:
+                    type: string
+                    enum:
+                      - system
+                      - caseworker
+                      - administrative
+                    description: Category of notice
+                  message:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  county_code:
+                    type: string
+                    description: County-specific code for routing this notice
+                  reviewer:
+                    type: object
+                    description: Expanded CaseWorker.
+                    x-relationship:
+                      domain: case-management
+                      resource: CaseWorker
+                      style: expand
+                  caseWorker:
+                    type: object
+                    description: Expanded CaseWorker.
+                    x-relationship:
+                      domain: case-management
+                      resource: CaseWorker
+                      style: expand
+        "400":
+          description: Bad request — validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+    delete:
+      summary: Delete a notice
+      operationId: deleteNotice
+      tags:
+        - Notices
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /alerts/notices/{noticeId}/send:
+    post:
+      summary: Send notice
+      description: Trigger the send transition (draft → sent).
+      operationId: sendNotice
+      tags:
+        - Notices
+      parameters:
+        - name: noticeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - status
+                  - createdAt
+                  - updatedAt
+                example:
+                  id: 00000000-0000-0000-0000-000000000001
+                  status: draft
+                  message: Your application has been received
+                  createdAt: "2024-01-01T00:00:00Z"
+                  updatedAt: "2024-01-01T00:00:00Z"
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                  status:
+                    type: string
+                    enum:
+                      - draft
+                      - sent
+                      - acknowledged
+                      - expired
+                  category:
+                    type: string
+                    enum:
+                      - system
+                      - caseworker
+                      - administrative
+                    description: Category of notice
+                  message:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  county_code:
+                    type: string
+                    description: County-specific code for routing this notice
+                  reviewer:
+                    type: object
+                    description: Expanded CaseWorker.
+                    x-relationship:
+                      domain: case-management
+                      resource: CaseWorker
+                      style: expand
+                  caseWorker:
+                    type: object
+                    description: Expanded CaseWorker.
+                    x-relationship:
+                      domain: case-management
+                      resource: CaseWorker
+                      style: expand
+        "400":
+          description: Bad request — validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "409":
+          description: Conflict — state transition not allowed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /alerts/notices/{noticeId}/acknowledge:
+    post:
+      summary: Acknowledge notice
+      description: Trigger the acknowledge transition (sent → acknowledged).
+      operationId: acknowledgeNotice
+      tags:
+        - Notices
+      parameters:
+        - name: noticeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - acknowledgedBy
+              properties:
+                acknowledgedBy:
+                  type: string
+                  description: ID of the person acknowledging the notice
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - status
+                  - createdAt
+                  - updatedAt
+                example:
+                  id: 00000000-0000-0000-0000-000000000001
+                  status: draft
+                  message: Your application has been received
+                  createdAt: "2024-01-01T00:00:00Z"
+                  updatedAt: "2024-01-01T00:00:00Z"
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                  status:
+                    type: string
+                    enum:
+                      - draft
+                      - sent
+                      - acknowledged
+                      - expired
+                  category:
+                    type: string
+                    enum:
+                      - system
+                      - caseworker
+                      - administrative
+                    description: Category of notice
+                  message:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  county_code:
+                    type: string
+                    description: County-specific code for routing this notice
+                  reviewer:
+                    type: object
+                    description: Expanded CaseWorker.
+                    x-relationship:
+                      domain: case-management
+                      resource: CaseWorker
+                      style: expand
+                  caseWorker:
+                    type: object
+                    description: Expanded CaseWorker.
+                    x-relationship:
+                      domain: case-management
+                      resource: CaseWorker
+                      style: expand
+        "400":
+          description: Bad request — validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "409":
+          description: Conflict — state transition not allowed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /alerts/notices/{noticeId}/expire:
+    post:
+      summary: Expire notice
+      description: Trigger the expire transition (sent | acknowledged → expired).
+      operationId: expireNotice
+      tags:
+        - Notices
+      parameters:
+        - name: noticeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  enum:
+                    - superseded
+                    - deadline_passed
+                    - cancelled
+                  description: Why the notice is being expired
+                notes:
+                  type: string
+                  description: Optional additional context
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - status
+                  - createdAt
+                  - updatedAt
+                example:
+                  id: 00000000-0000-0000-0000-000000000001
+                  status: draft
+                  message: Your application has been received
+                  createdAt: "2024-01-01T00:00:00Z"
+                  updatedAt: "2024-01-01T00:00:00Z"
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                  status:
+                    type: string
+                    enum:
+                      - draft
+                      - sent
+                      - acknowledged
+                      - expired
+                  category:
+                    type: string
+                    enum:
+                      - system
+                      - caseworker
+                      - administrative
+                    description: Category of notice
+                  message:
+                    type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  county_code:
+                    type: string
+                    description: County-specific code for routing this notice
+                  reviewer:
+                    type: object
+                    description: Expanded CaseWorker.
+                    x-relationship:
+                      domain: case-management
+                      resource: CaseWorker
+                      style: expand
+                  caseWorker:
+                    type: object
+                    description: Expanded CaseWorker.
+                    x-relationship:
+                      domain: case-management
+                      resource: CaseWorker
+                      style: expand
+        "400":
+          description: Bad request — validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "409":
+          description: Conflict — state transition not allowed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /alerts/notices/evaluate-urgency:
+    post:
+      summary: Evaluate urgency
+      operationId: evaluateUrgency
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Input data for urgency evaluation. All fields are optional — partial inputs trigger partial evaluation.
+              properties:
+                notice:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                    daysSinceCreated:
+                      type: integer
+                policy:
+                  type: object
+                  properties:
+                    urgencyThresholdDays:
+                      type: integer
+                      default: 3
+      responses:
+        "200":
+          description: urgency evaluation result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    description: |
+                      Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
+                    additionalProperties:
+                      oneOf:
+                        - type: object
+                          required:
+                            - state
+                            - value
+                          properties:
+                            state:
+                              type: string
+                              enum:
+                                - complete
+                            value:
+                              description: The computed value.
+                        - type: object
+                          required:
+                            - state
+                            - value
+                          properties:
+                            state:
+                              type: string
+                              enum:
+                                - placeholder
+                            value:
+                              description: The computed value, derived using one or more schema defaults.
+                        - type: object
+                          required:
+                            - state
+                            - value
+                            - missing
+                          properties:
+                            state:
+                              type: string
+                              enum:
+                                - missing
+                            value:
+                              type: "null"
+                            missing:
+                              type: array
+                              description: Input paths required to resolve this fact.
+                              items:
+                                type: string
+                        - type: object
+                          required:
+                            - state
+                            - value
+                            - message
+                          properties:
+                            state:
+                              type: string
+                              enum:
+                                - error
+                            value:
+                              type: "null"
+                            message:
+                              type: string
+                              description: The reason evaluation failed.
+                      discriminator:
+                        propertyName: state
+                description: Evaluation result for urgency.
+        "400":
+          description: Bad request — validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+components:
+  parameters:
+    NoticeIdParam:
+      name: noticeId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    Notice:
+      type: object
+      required:
+        - id
+        - status
+        - createdAt
+        - updatedAt
+      example:
+        id: 00000000-0000-0000-0000-000000000001
+        status: draft
+        message: Your application has been received
+        createdAt: "2024-01-01T00:00:00Z"
+        updatedAt: "2024-01-01T00:00:00Z"
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        status:
+          type: string
+          enum:
+            - draft
+            - sent
+            - acknowledged
+            - expired
+        category:
+          type: string
+          enum:
+            - system
+            - caseworker
+            - administrative
+          description: Category of notice
+        message:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        county_code:
+          type: string
+          description: County-specific code for routing this notice
+        reviewer:
+          type: object
+          description: Expanded CaseWorker.
+          x-relationship:
+            domain: case-management
+            resource: CaseWorker
+            style: expand
+        caseWorker:
+          type: object
+          description: Expanded CaseWorker.
+          x-relationship:
+            domain: case-management
+            resource: CaseWorker
+            style: expand
+    NoticeCreate:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        category:
+          type: string
+          enum:
+            - system
+            - caseworker
+            - administrative
+          description: Category of notice
+        caseWorkerId:
+          type: string
+          format: uuid
+    NoticeUpdate:
+      type: object
+      properties:
+        message:
+          type: string
+        category:
+          type: string
+          enum:
+            - system
+            - caseworker
+            - administrative
+          description: Category of notice
+    NoticeList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - status
+              - createdAt
+              - updatedAt
+            example:
+              id: 00000000-0000-0000-0000-000000000001
+              status: draft
+              message: Your application has been received
+              createdAt: "2024-01-01T00:00:00Z"
+              updatedAt: "2024-01-01T00:00:00Z"
+            properties:
+              id:
+                type: string
+                format: uuid
+                readOnly: true
+              status:
+                type: string
+                enum:
+                  - draft
+                  - sent
+                  - acknowledged
+                  - expired
+              category:
+                type: string
+                enum:
+                  - system
+                  - caseworker
+                  - administrative
+                description: Category of notice
+              message:
+                type: string
+              createdAt:
+                type: string
+                format: date-time
+                readOnly: true
+              updatedAt:
+                type: string
+                format: date-time
+                readOnly: true
+              county_code:
+                type: string
+                description: County-specific code for routing this notice
+              reviewer:
+                type: object
+                description: Expanded CaseWorker.
+                x-relationship:
+                  domain: case-management
+                  resource: CaseWorker
+                  style: expand
+              caseWorker:
+                type: object
+                description: Expanded CaseWorker.
+                x-relationship:
+                  domain: case-management
+                  resource: CaseWorker
+                  style: expand
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasNext:
+          type: boolean
+    ExpireRequest:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          enum:
+            - superseded
+            - deadline_passed
+            - cancelled
+          description: Why the notice is being expired
+        notes:
+          type: string
+          description: Optional additional context
+    UrgencyRequest:
+      type: object
+      description: Input data for urgency evaluation. All fields are optional — partial inputs trigger partial evaluation.
+      properties:
+        notice:
+          type: object
+          properties:
+            status:
+              type: string
+            daysSinceCreated:
+              type: integer
+        policy:
+          type: object
+          properties:
+            urgencyThresholdDays:
+              type: integer
+              default: 3
+    UrgencyResponse:
+      allOf:
+        - type: object
+          description: |
+            Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
+          additionalProperties:
+            oneOf:
+              - type: object
+                required:
+                  - state
+                  - value
+                properties:
+                  state:
+                    type: string
+                    enum:
+                      - complete
+                  value:
+                    description: The computed value.
+              - type: object
+                required:
+                  - state
+                  - value
+                properties:
+                  state:
+                    type: string
+                    enum:
+                      - placeholder
+                  value:
+                    description: The computed value, derived using one or more schema defaults.
+              - type: object
+                required:
+                  - state
+                  - value
+                  - missing
+                properties:
+                  state:
+                    type: string
+                    enum:
+                      - missing
+                  value:
+                    type: "null"
+                  missing:
+                    type: array
+                    description: Input paths required to resolve this fact.
+                    items:
+                      type: string
+              - type: object
+                required:
+                  - state
+                  - value
+                  - message
+                properties:
+                  state:
+                    type: string
+                    enum:
+                      - error
+                  value:
+                    type: "null"
+                  message:
+                    type: string
+                    description: The reason evaluation failed.
+            discriminator:
+              propertyName: state
+      description: Evaluation result for urgency.

@@ -1,0 +1,59 @@
+# test-domain field inventory
+# Do not edit — regenerate with: node generate-field-inventory.mjs --domain=test-domain
+
+# ── application ─────────────────────────────────────────────────────────────────
+
+application.caseWorkerId: { type: uuid, relationship: CaseWorker }
+application.documentIds[]: { type: uuid }
+application.referenceNumber: { type: string }
+application.submittedAt: { type: datetime }
+application.interviewDate: { type: date }
+application.contactEmail: { type: email }
+application.isExpedited: { type: boolean }
+application.householdSize: { type: integer }
+application.monthlyIncome: { type: number }
+application.channel: { type: enum, values: [online, in_person, phone, mail] }
+application.status: { type: enum, values: [draft, submitted, under_review, approved, denied, withdrawn] }
+application.verificationStatus: { type: string }
+application.externalContact: { type: ContactDetails }
+application.externalContact.phone: { type: PhoneNumber }
+application.externalContact.phone.number: { type: string }
+application.externalContact.phone.extension: { type: string }
+application.externalContact.altPhone: { type: PhoneNumber }
+application.programsAppliedFor[]: { type: enum, values: [snap, medicaid, chip, tanf] }
+application.contact: { type: ContactInfo }
+application.contact.name: { type: Name }
+application.contact.name.firstName: { type: string }
+application.contact.name.middleName: { type: string }
+application.contact.name.lastName: { type: string }
+application.contact.phone: { type: string }
+application.contact.email: { type: email }
+application.contact.address: { type: Address }
+application.contact.address.addressLine1: { type: string }
+application.contact.address.addressLine2: { type: string }
+application.contact.address.city: { type: string }
+application.contact.address.state: { type: string }
+application.contact.address.zip: { type: string }
+application.primaryIncome.type: { type: enum, values: [employment, self_employment, benefit] }
+application.primaryIncome.monthlyAmount: { type: number }
+application.primaryIncome.startDate: { type: date }
+application.primaryIncome.employerName: { type: string, appliesWhen: 'type = employment' }
+application.primaryIncome.hoursPerWeek: { type: number, appliesWhen: 'type = employment' }
+application.primaryIncome.businessName: { type: string, appliesWhen: 'type = self_employment' }
+application.primaryIncome.netMonthlyProfit: { type: number, appliesWhen: 'type = self_employment' }
+application.primaryIncome.benefitType: { type: enum, values: [ssi, ssdi, unemployment, veterans, other], appliesWhen: 'type = benefit' }
+application.primaryIncome.agencyName: { type: string, appliesWhen: 'type = benefit' }
+
+# ── members ─────────────────────────────────────────────────────────────────────
+
+application.members[]: { type: list(Member) }
+application.members[].id: { type: uuid }
+application.members[].applicationId: { type: uuid, relationship: Application }
+application.members[].personId: { type: uuid, relationship: Person }
+application.members[].roles[]: { type: enum, values: [primary_applicant, household_member, authorized_representative] }
+application.members[].dateOfBirth: { type: date }
+application.members[].isDisabled: { type: boolean }
+application.members[].name: { type: Name }
+application.members[].name.firstName: { type: string }
+application.members[].name.middleName: { type: string }
+application.members[].name.lastName: { type: string }

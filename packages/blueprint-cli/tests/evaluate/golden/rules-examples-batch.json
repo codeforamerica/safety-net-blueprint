@@ -1,0 +1,34 @@
+{
+  "urgency": [
+    {
+      "isUrgent": {
+        "type": "output",
+        "state": "complete",
+        "value": true
+      },
+      "urgencyLevel": {
+        "type": "output",
+        "state": "complete",
+        "value": "high"
+      }
+    },
+    {
+      "isUrgent": {
+        "type": "output",
+        "state": "missing",
+        "value": null,
+        "missing": [
+          "$.notice.daysSinceCreated"
+        ]
+      },
+      "urgencyLevel": {
+        "type": "output",
+        "state": "missing",
+        "value": null,
+        "missing": [
+          "$.notice.daysSinceCreated"
+        ]
+      }
+    }
+  ]
+}

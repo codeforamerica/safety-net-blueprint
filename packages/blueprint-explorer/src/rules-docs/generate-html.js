@@ -10,7 +10,7 @@
  *
  * Each ruleset page has a browse/experiment panel below the graph. Browse mode
  * shows example inputs (read-only, navigable); "Try it" unlocks the textarea for
- * live experimentation. Browser-side evaluation uses window.RulesEngine.toGraph
+ * live experimentation. Browser-side evaluation uses window.RulesEngine.evaluate
  * exposed by the rules-engine.js IIFE — no mock server required.
  */
 
@@ -483,24 +483,23 @@ function showDetail(nodeName) {
     html += '<code style="display:block;font-size:10.5px;padding:6px 8px;background:#f3f4f6;border-radius:3px;word-break:break-all;margin-bottom:10px;font-family:ui-monospace,monospace;">' + escHtml(fact.expression) + '</code>';
   }
 
-  if (annot?.reason) {
-    html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">Why</div>';
-    html += '<div style="font-size:11px;color:#374151;margin-bottom:10px;">' + escHtml(annot.reason.trim()) + '</div>';
-  }
-
-  if (annot?.policies?.length) {
-    html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">Policy</div>';
-    html += '<div style="margin-bottom:10px;">' + annot.policies.map(id => {
-      const p = POLICIES[id];
-      return '<span title="' + escHtml(p?.description ?? id) + '" style="display:inline-block;font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #C2C0E8;margin-right:4px;margin-bottom:4px;">' + escHtml(p?.citation ?? id) + '</span>';
-    }).join('') + '</div>';
-  }
-
-  if (annot?.interviewQuestions?.length) {
-    html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">Interview Questions</div>';
-    html += '<ul style="margin:0;padding-left:14px;">' + annot.interviewQuestions.map(q =>
-      '<li style="font-size:11px;color:#374151;margin-bottom:4px;">' + escHtml(q) + '</li>'
-    ).join('') + '</ul>';
+  if (annot) {
+    for (const [key, val] of Object.entries(annot)) {
+      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+      html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">' + escHtml(label) + '</div>';
+      if (key === 'policies' && Array.isArray(val)) {
+        html += '<div style="margin-bottom:10px;">' + val.map(id => {
+          const p = POLICIES[id];
+          return '<span title="' + escHtml(p?.description ?? id) + '" style="display:inline-block;font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #C2C0E8;margin-right:4px;margin-bottom:4px;">' + escHtml(p?.citation ?? id) + '</span>';
+        }).join('') + '</div>';
+      } else if (Array.isArray(val)) {
+        html += '<ul style="margin:0 0 10px;padding-left:14px;">' + val.map(item =>
+          '<li style="font-size:11px;color:#374151;margin-bottom:4px;">' + escHtml(String(item)) + '</li>'
+        ).join('') + '</ul>';
+      } else if (typeof val === 'string') {
+        html += '<div style="font-size:11px;color:#374151;margin-bottom:10px;">' + escHtml(val.trim()) + '</div>';
+      }
+    }
   }
 
   panel.innerHTML = html;
@@ -508,7 +507,7 @@ function showDetail(nodeName) {
 }
 
 // Apply ruleset input schema defaults for any namespace absent from userInputs.
-// Returns { scope, defaultedNamespaces } mirroring toGraph(rulesDoc).evaluate() behavior.
+// Returns { scope, defaultedNamespaces } for use with window.RulesEngine.evaluate(GRAPH, scope).
 function applyDefaults(userInputs) {
   const scope = Object.assign({}, userInputs);
   const defaultedNamespaces = new Set();
@@ -608,9 +607,9 @@ function runEval() {
   }
   try {
     const { scope, defaultedNamespaces } = applyDefaults(userInputs);
-    const result = window.RulesEngine.toGraph(GRAPH).evaluate(scope);
+    const nodes = window.RulesEngine.evaluate(GRAPH, scope);
     const prevNodes = lastNodes;
-    lastNodes = reclassifyPlaceholders(result.toJSON(), defaultedNamespaces);
+    lastNodes = reclassifyPlaceholders(nodes, defaultedNamespaces);
     errEl.style.display = 'none';
     renderOutputs(lastNodes, prevNodes);
     if (activeNode) showDetail(activeNode);

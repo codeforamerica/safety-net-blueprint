@@ -491,7 +491,7 @@ $defs:
   #   Evaluate a ruleset (same domain) against mapped inputs; bind the result
   #   to a variable for use in subsequent steps.
   #   Input keys match the ruleset's SchemaMap keys; values are value expressions.
-  #   The bound variable has resolved, missing, and errors keys.
+  #   The bound variable is a flat map of fact names to nodes: { type, state, value, missing?, message? }.
   #
   #   String bind form — bind the whole result to one variable:
   #     - evaluate: workRequirements
@@ -499,18 +499,18 @@ $defs:
   #         person: $object.applicant
   #         policy: $policyConfig
   #       bind: $evaluation
-  #     - if: "$evaluation.resolved.eligible == true"
+  #     - if: "$evaluation.eligible.value == true"
   #       then:
   #         - emit:
   #             type: intake.application.eligible
   #
-  #   Map bind form — bind selected outputs to named variables:
+  #   Map bind form — bind selected output fact values to named variables:
   #     - evaluate: snapInterviewProbes
   #       inputs:
   #         household: $members
   #       bind:
-  #         incomeInconsistency: $incomeInconsistency
-  #         abawdMembers: $abawdMembers
+  #         incomeInconsistency: incomeInconsistencyProbe
+  #         abawdFlag: abawdProbe
   #
   # IF
   #   Conditional branch — evaluates a CEL expression; runs then: on true, else: on false.
@@ -633,7 +633,7 @@ $defs:
     description: >
       Evaluate a ruleset (same domain) against mapped inputs; bind the result
       to a variable for use in subsequent steps.
-      The bound variable has resolved, missing, and errors keys.
+      The bound variable is a flat map of fact names to typed nodes ({ type, state, value, missing?, message? }).
     required: [evaluate]
     additionalProperties: false
     properties:
@@ -652,8 +652,8 @@ $defs:
       bind:
         description: >
           Bind the evaluation result for use in subsequent steps.
-          String form binds the whole result to one variable (has resolved, missing, errors keys).
-          Map form binds selected output fields to named variables.
+          String form binds the whole nodes map to one variable (fact names → typed nodes).
+          Map form binds selected output fact values to named variables.
         oneOf:
           - type: string
             description: Variable name to bind the entire evaluation result to.

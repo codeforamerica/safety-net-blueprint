@@ -14,9 +14,9 @@
     "build:rules-docs": "node build.js --only=rules-docs",
     "build:state-machine-docs": "node build.js --only=state-machine-docs",
     "build:field-inventory": "node src/data-dictionaries/generate-field-inventory.mjs",
-    "test": "node --test tests/context-map/*.test.js tests/data-dictionaries/*.test.js tests/lib/*.test.js tests/rules-docs/*.test.js",
-    "test:unit": "node --test tests/context-map/*.test.js tests/data-dictionaries/*.test.js tests/lib/*.test.js tests/rules-docs/*.test.js",
-    "test:goldens-regenerate": "node src/rules-docs/build.js --content=tests/rules-docs/fixtures/content --resolved=tests/rules-docs/fixtures/contracts"
+    "test": "node --test tests/**/*.test.js",
+    "test:unit": "node --test tests/**/*.test.js",
+    "test:goldens-regenerate": "node src/rules-docs/build.js --content=tests/rules-docs/fixtures/outputs --resolved=tests/rules-docs/fixtures/inputs && node src/data-dictionaries/generate-field-inventory.mjs --spec=tests/data-dictionaries/fixtures/inputs/test-openapi.yaml --out=tests/data-dictionaries/fixtures/outputs"
   },
   "engines": {
     "node": ">=22.11.0"

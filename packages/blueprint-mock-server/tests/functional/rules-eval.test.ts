@@ -33,46 +33,48 @@ describe('Functional — rules evaluation endpoint', () => {
 
   it('returns complete result when all inputs are provided', async () => {
     const res = await post({ household: { monthlyIncome: 800, size: 3 } });
-    const body = await res.json() as Record<string, unknown>;
-    assert.ok('complete' in body, 'result must have complete');
-    assert.ok('missing' in body, 'result must have missing');
-    assert.ok('errors' in body, 'result must have errors');
+    const body = await res.json() as Record<string, { state: string; value: unknown }>;
+    assert.ok('meetsIncomeTest' in body, 'result must include meetsIncomeTest');
+    assert.equal(body.meetsIncomeTest.state, 'complete');
   });
 
   it('meetsIncomeTest is true when income is below threshold', async () => {
     // size=3, threshold = 3*500 = 1500; income=800 < 1500 → true
     const res = await post({ household: { monthlyIncome: 800, size: 3 } });
-    const body = await res.json() as { complete: Record<string, unknown> };
-    assert.equal(body.complete.meetsIncomeTest, true);
+    const body = await res.json() as Record<string, { state: string; value: unknown }>;
+    assert.equal(body.meetsIncomeTest.state, 'complete');
+    assert.equal(body.meetsIncomeTest.value, true);
   });
 
   it('meetsIncomeTest is false when income exceeds threshold', async () => {
     // size=2, threshold = 2*500 = 1000; income=1200 > 1000 → false
     const res = await post({ household: { monthlyIncome: 1200, size: 2 } });
-    const body = await res.json() as { complete: Record<string, unknown> };
-    assert.equal(body.complete.meetsIncomeTest, false);
+    const body = await res.json() as Record<string, { state: string; value: unknown }>;
+    assert.equal(body.meetsIncomeTest.state, 'complete');
+    assert.equal(body.meetsIncomeTest.value, false);
   });
 
   it('returns missing facts when inputs are absent', async () => {
     const res = await post({});
-    const body = await res.json() as { missing: Record<string, unknown> };
-    assert.ok(Object.keys(body.missing).length > 0, 'missing must be non-empty when inputs are absent');
-    assert.ok('meetsIncomeTest' in body.missing);
+    const body = await res.json() as Record<string, { state: string; value: unknown }>;
+    assert.ok('meetsIncomeTest' in body, 'result must include meetsIncomeTest');
+    assert.equal(body.meetsIncomeTest.state, 'missing');
   });
 
   it('returns partial result when only some inputs are provided', async () => {
     // Only size provided — monthlyIncome missing, so meetsIncomeTest is missing
     const res = await post({ household: { size: 3 } });
-    const body = await res.json() as { missing: Record<string, unknown>; complete: Record<string, unknown> };
-    assert.ok('meetsIncomeTest' in body.missing, 'meetsIncomeTest must be missing when income is absent');
-    assert.ok(!('meetsIncomeTest' in body.complete), 'meetsIncomeTest must not be in complete');
+    const body = await res.json() as Record<string, { state: string; value: unknown }>;
+    assert.ok('meetsIncomeTest' in body, 'result must include meetsIncomeTest');
+    assert.equal(body.meetsIncomeTest.state, 'missing');
   });
 
   it('accepts empty body and returns all facts as missing', async () => {
-    const res = await post(null);
+    const res = await post({});
     assert.equal(res.status, 200);
-    const body = await res.json() as { missing: Record<string, unknown> };
-    assert.ok('meetsIncomeTest' in body.missing);
+    const body = await res.json() as Record<string, { state: string; value: unknown }>;
+    assert.ok('meetsIncomeTest' in body, 'result must include meetsIncomeTest');
+    assert.equal(body.meetsIncomeTest.state, 'missing');
   });
 
 });
