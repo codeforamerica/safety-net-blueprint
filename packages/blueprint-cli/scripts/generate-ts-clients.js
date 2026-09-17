@@ -35,6 +35,7 @@ import { spawn } from 'child_process';
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync, copyFileSync, realpathSync } from 'fs';
 import { join, dirname, basename, resolve as resolvePath } from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import yaml from 'js-yaml';
 import { bundleSpec } from '@codeforamerica/blueprint-core/bundle';
 import { loadContractFiles } from '@codeforamerica/blueprint-core';
@@ -126,6 +127,20 @@ function exec(command, args, options = {}) {
 
     child.on('error', reject);
   });
+}
+
+/**
+ * Resolve the openapi-ts binary path from blueprint-cli's own node_modules.
+ * Using createRequire avoids npx, which would otherwise download @latest on a
+ * cold cache instead of using the locally installed version.
+ */
+function resolveOpenApiTsBin() {
+  const _require = createRequire(import.meta.url);
+  const pkgJsonPath = _require.resolve('@hey-api/openapi-ts/package.json');
+  const pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
+  const binSpec = pkgJson.bin;
+  const binRelPath = typeof binSpec === 'string' ? binSpec : binSpec['openapi-ts'];
+  return join(dirname(pkgJsonPath), binRelPath);
 }
 
 /**
@@ -475,9 +490,10 @@ async function main() {
     writeFileSync(configPath, configContent);
 
     // Generate client using @hey-api/openapi-ts.
-    // cwd must be within the project tree so npx resolves the locally installed
-    // version from node_modules rather than fetching @latest from the registry.
-    await exec('npx', ['@hey-api/openapi-ts', '-f', configPath], { cwd: clientsRoot });
+    // Resolve the binary directly from blueprint-cli's own node_modules so we
+    // always use the pinned version rather than relying on npx, which fetches
+    // @latest from the registry on a cold cache.
+    await exec('node', [resolveOpenApiTsBin(), '-f', configPath]);
 
     // Clean up bundled spec temp file
     rmSync(bundledSpecPath);
@@ -669,7 +685,7 @@ function patchDomainBarrelForAnnotations(domainIndexPath) {
 }
 
 // Export for testing
-export { parseArgs, createOpenApiTsConfig, exec, domainToAnnotationExportName, generateAnnotationsAndPolicies, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums, patchDomainBarrelForAnnotations };
+export { parseArgs, createOpenApiTsConfig, exec, resolveOpenApiTsBin, domainToAnnotationExportName, generateAnnotationsAndPolicies, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums, patchDomainBarrelForAnnotations };
 export { collectNamedEnumDefs } from './collect-named-enum-defs.js';
 
 // Run main function only if this is the entry point
