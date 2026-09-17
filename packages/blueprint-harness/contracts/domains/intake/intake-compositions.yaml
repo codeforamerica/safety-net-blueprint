@@ -1,0 +1,20 @@
+$schema: compositions-schema.yaml
+version: "1.0"
+domain: intake
+
+compositions:
+  # applicationSummary — composes an application with its household members.
+  # Produces: GET /applications/{applicationId}/summary
+  # Used by eligibility to get a structured view of the application and household
+  # before running eligibility determination rules.
+  applicationSummary:
+    resource: applications
+    fields: [id, referenceId, status, programsApplied, channel, submittedAt]
+    endpoint:
+      path: /applications/{applicationId}/summary
+      parentLink: true
+    include:
+      members:
+        resource: application-members
+        bind: applicationId
+        fields: [id, firstName, lastName, dateOfBirth, relationship, incomeSource]

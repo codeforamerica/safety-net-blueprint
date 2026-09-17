@@ -1,0 +1,683 @@
+openapi: 3.1.0
+info:
+  title: Intake API
+  version: 1.0.0
+  x-domain: intake
+  x-status: stable
+  x-visibility: public
+x-events:
+  intake.application.submitted:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.submitted
+    summary: Emitted when an applicant formally submits an application, starting the regulatory processing clock.
+  intake.application.withdrawn:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.withdrawn
+    summary: Emitted when a household withdraws their application.
+  intake.application.closed:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.closed
+    summary: Emitted when intake is complete and the application is closed.
+paths:
+  /applications:
+    get:
+      summary: List applications
+      operationId: listApplications
+      tags:
+        - Applications
+      parameters:
+        - $ref: ../../base/components/parameters.yaml#/SearchQueryParam
+        - $ref: ../../base/components/parameters.yaml#/LimitParam
+        - $ref: ../../base/components/parameters.yaml#/OffsetParam
+        - $ref: ../../base/components/parameters.yaml#/SortParam
+        - name: status
+          in: query
+          schema:
+            type: string
+          description: Filter by application status.
+        - name: channel
+          in: query
+          schema:
+            type: string
+          description: Filter by submission channel.
+      responses:
+        "200":
+          description: A paginated list of applications.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationList"
+        "400":
+          $ref: ../../common/components/responses.yaml#/BadRequest
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+    post:
+      summary: Create an application
+      operationId: createApplication
+      tags:
+        - Applications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationCreate"
+      responses:
+        "201":
+          description: Application created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "400":
+          $ref: ../../common/components/responses.yaml#/BadRequest
+        "422":
+          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+  /applications/{applicationId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+    get:
+      summary: Get an application
+      operationId: getApplication
+      tags:
+        - Applications
+      responses:
+        "200":
+          description: Application retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+    patch:
+      summary: Update an application
+      operationId: updateApplication
+      tags:
+        - Applications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationUpdate"
+      responses:
+        "200":
+          description: Application updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "400":
+          $ref: ../../common/components/responses.yaml#/BadRequest
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "422":
+          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+    delete:
+      summary: Delete a draft application
+      operationId: deleteApplication
+      tags:
+        - Applications
+      responses:
+        "204":
+          description: Application deleted successfully.
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+  /applications/{applicationId}/members:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+    get:
+      summary: List household members
+      operationId: listApplicationMembers
+      tags:
+        - Household Members
+      parameters:
+        - $ref: ../../base/components/parameters.yaml#/LimitParam
+        - $ref: ../../base/components/parameters.yaml#/OffsetParam
+      responses:
+        "200":
+          description: Household members for this application.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationMemberList"
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+    post:
+      summary: Add a household member
+      operationId: createApplicationMember
+      tags:
+        - Household Members
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationMemberCreate"
+      responses:
+        "201":
+          description: Household member added successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationMember"
+        "400":
+          $ref: ../../common/components/responses.yaml#/BadRequest
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "422":
+          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+  /applications/{applicationId}/members/{memberId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - $ref: "#/components/parameters/MemberIdParam"
+    get:
+      summary: Get a household member
+      operationId: getApplicationMember
+      tags:
+        - Household Members
+      responses:
+        "200":
+          description: Household member retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationMember"
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+    patch:
+      summary: Update a household member
+      operationId: updateApplicationMember
+      tags:
+        - Household Members
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationMemberUpdate"
+      responses:
+        "200":
+          description: Household member updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationMember"
+        "400":
+          $ref: ../../common/components/responses.yaml#/BadRequest
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "422":
+          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+    delete:
+      summary: Remove a household member
+      operationId: deleteApplicationMember
+      tags:
+        - Household Members
+      responses:
+        "204":
+          description: Household member removed successfully.
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+  /applications/{applicationId}/submit:
+    post:
+      summary: Submit application
+      description: Formally submits a draft application, starting the regulatory processing clock.
+      operationId: submitApplication
+      tags:
+        - Applications
+      parameters:
+        - $ref: "#/components/parameters/ApplicationIdParam"
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "400":
+          $ref: ../../base/components/responses.yaml#/BadRequest
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+  /applications/{applicationId}/open:
+    post:
+      summary: Open application
+      description: Moves a submitted application into active caseworker review.
+      operationId: openApplication
+      tags:
+        - Applications
+      parameters:
+        - $ref: "#/components/parameters/ApplicationIdParam"
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "400":
+          $ref: ../../base/components/responses.yaml#/BadRequest
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+  /applications/{applicationId}/close:
+    post:
+      summary: Close application
+      description: Closes the application once intake processing is complete.
+      operationId: closeApplication
+      tags:
+        - Applications
+      parameters:
+        - $ref: "#/components/parameters/ApplicationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloseRequest"
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "400":
+          $ref: ../../base/components/responses.yaml#/BadRequest
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+  /applications/{applicationId}/withdraw:
+    post:
+      summary: Withdraw application
+      description: Withdraws the application at the household's request.
+      operationId: withdrawApplication
+      tags:
+        - Applications
+      parameters:
+        - $ref: "#/components/parameters/ApplicationIdParam"
+      responses:
+        "200":
+          description: Transition applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "400":
+          $ref: ../../base/components/responses.yaml#/BadRequest
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "409":
+          $ref: ../../base/components/responses.yaml#/Conflict
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+  /applications/{applicationId}/summary:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+    get:
+      summary: Get applicationSummary
+      operationId: getApplicationSummary
+      responses:
+        "200":
+          description: applicationSummary retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationSummaryResponse"
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+components:
+  parameters:
+    ApplicationIdParam:
+      name: applicationId
+      in: path
+      required: true
+      description: Unique identifier of the application.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-0000-0000-000000000001
+    MemberIdParam:
+      name: memberId
+      in: path
+      required: true
+      description: Unique identifier of the household member.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-0000-0000-000000000010
+  schemas:
+    ApplicationWritable:
+      type: object
+      properties:
+        programsApplied:
+          type: array
+          items:
+            type: string
+            enum:
+              - snap
+              - medicaid
+              - chip
+              - tanf
+          description: Benefit programs the household is applying for.
+        channel:
+          type: string
+          enum:
+            - online
+            - phone
+            - in_person
+            - mail
+          description: Channel through which the application was submitted.
+        address:
+          $ref: ../../common/schemas/shared.yaml#/$defs/Address
+        contactInfo:
+          $ref: ../../common/schemas/shared.yaml#/$defs/ContactInfo
+        county_code:
+          type: string
+          maxLength: 10
+          description: County code for routing this application to the correct local office.
+    Application:
+      type: object
+      required:
+        - id
+        - status
+        - programsApplied
+        - referenceId
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier (server-generated).
+        referenceId:
+          type: string
+          readOnly: true
+          x-derived: $this.id.substring(0, 8).toUpperCase()
+          description: Short human-readable reference code for this application.
+        status:
+          type: string
+          readOnly: true
+          description: Current lifecycle status of the application.
+          enum:
+            - draft
+            - submitted
+            - under_review
+            - withdrawn
+            - closed
+        programsApplied:
+          type: array
+          items:
+            type: string
+            enum:
+              - snap
+              - medicaid
+              - chip
+              - tanf
+          description: Benefit programs the household is applying for.
+        channel:
+          type: string
+          enum:
+            - online
+            - phone
+            - in_person
+            - mail
+          description: Channel through which the application was submitted.
+        submittedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+          description: Timestamp when the application was formally submitted. Null until submitted.
+        openedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+          description: Timestamp when a caseworker began active review. Null until the application is opened.
+        slaTypeCode:
+          type: string
+          readOnly: true
+          description: SLA type governing the processing deadline for this application.
+          enum:
+            - snap_standard
+            - medicaid_standard
+        address:
+          $ref: ../../common/schemas/shared.yaml#/$defs/Address
+        contactInfo:
+          $ref: ../../common/schemas/shared.yaml#/$defs/ContactInfo
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the application was created.
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the application was last updated.
+        _links:
+          type: object
+          readOnly: true
+          description: Generated composition links.
+          properties:
+            applicationSummary:
+              type: object
+              description: Link to the applicationSummary composition.
+              properties:
+                href:
+                  type: string
+                  format: uri-reference
+                  readOnly: true
+    ApplicationCreate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationWritable"
+        - type: object
+          required:
+            - programsApplied
+            - channel
+    ApplicationUpdate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationWritable"
+        - type: object
+          minProperties: 1
+    ApplicationList:
+      type: object
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Application"
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of matching applications.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of applications per page.
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of applications skipped.
+        hasNext:
+          type: boolean
+          description: Whether more applications are available.
+    ApplicationMemberWritable:
+      type: object
+      properties:
+        firstName:
+          type: string
+          description: Member's first name.
+        lastName:
+          type: string
+          description: Member's last name.
+        dateOfBirth:
+          type: string
+          format: date
+          description: Member's date of birth (YYYY-MM-DD).
+        relationship:
+          type: string
+          enum:
+            - self
+            - spouse
+            - child
+            - parent
+            - sibling
+            - other
+          description: Relationship of this member to the primary applicant.
+        incomeSource:
+          $ref: ./intake-schemas.yaml#/$defs/IncomeSource
+    ApplicationMember:
+      type: object
+      required:
+        - id
+        - applicationId
+        - firstName
+        - lastName
+        - relationship
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier (server-generated).
+        applicationId:
+          type: string
+          format: uuid
+          description: The application this member belongs to.
+          x-relationship:
+            resource: Application
+            style: links-only
+        firstName:
+          type: string
+          description: Member's first name.
+        lastName:
+          type: string
+          description: Member's last name.
+        dateOfBirth:
+          type: string
+          format: date
+          description: Member's date of birth (YYYY-MM-DD).
+        relationship:
+          type: string
+          enum:
+            - self
+            - spouse
+            - child
+            - parent
+            - sibling
+            - other
+          description: Relationship of this member to the primary applicant.
+        incomeSource:
+          $ref: ./intake-schemas.yaml#/$defs/IncomeSource
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the member was added.
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the member was last updated.
+        links:
+          type: object
+          readOnly: true
+          description: Related resource links.
+          properties:
+            application:
+              type: string
+              format: uri-reference
+              description: Link to the related Application resource.
+    ApplicationMemberCreate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationMemberWritable"
+        - type: object
+          required:
+            - firstName
+            - lastName
+            - relationship
+    ApplicationMemberUpdate:
+      allOf:
+        - $ref: "#/components/schemas/ApplicationMemberWritable"
+        - type: object
+          minProperties: 1
+    ApplicationMemberList:
+      type: object
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApplicationMember"
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean
+    CloseRequest:
+      type: object
+      required:
+        - outcome
+      properties:
+        outcome:
+          type: string
+          enum:
+            - approved
+            - denied
+          description: Whether the application was approved or denied at close.
+        notes:
+          type: string
+          description: Optional caseworker notes on the closure decision.
+    ApplicationSummaryResponse:
+      type: object
+      description: Generated composition response for applicationSummary.

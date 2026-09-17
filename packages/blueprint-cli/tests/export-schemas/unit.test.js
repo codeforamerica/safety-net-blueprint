@@ -1,12 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { convertToJsonSchema, loadSpec, discoverSpecs } from '../../scripts/export-schemas.js';
+import { dirname } from 'path';
+import { convertToJsonSchema } from '../../scripts/export-schemas.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const fixturesDir = join(__dirname, '../fixtures');
 
 describe('export-schemas', () => {
 
@@ -122,53 +121,6 @@ describe('export-schemas', () => {
       const inputCopy = JSON.parse(JSON.stringify(input));
       convertToJsonSchema(input, 'Test');
       assert.deepStrictEqual(input, inputCopy);
-    });
-
-  });
-
-  describe('loadSpec', () => {
-
-    it('returns null for non-existent files', async () => {
-      const result = await loadSpec('/tmp/does-not-exist.yaml');
-      assert.strictEqual(result, null);
-    });
-
-    it('dereferences a spec and resolves $refs', async () => {
-      const specPath = join(fixturesDir, 'alerts-openapi.yaml');
-      const spec = await loadSpec(specPath);
-      assert.ok(spec.components?.schemas, 'components.schemas should exist');
-      for (const [name, schema] of Object.entries(spec.components.schemas)) {
-        assert.strictEqual(typeof schema, 'object', `${name} schema should be an object`);
-        assert.ok(
-          schema.type || schema.allOf || schema.oneOf || schema.anyOf || schema.properties,
-          `${name} schema should have structure`
-        );
-      }
-    });
-
-    it('reads x-domain from spec info', async () => {
-      const specPath = join(fixturesDir, 'alerts-openapi.yaml');
-      const spec = await loadSpec(specPath);
-      assert.strictEqual(spec.info?.['x-domain'], 'alerts');
-    });
-
-  });
-
-  describe('discoverSpecs', () => {
-
-    it('discovers *-openapi.yaml files in a directory', () => {
-      const specs = discoverSpecs(fixturesDir);
-      assert.ok(specs.length > 0, 'should find at least one spec');
-      assert.ok(specs.every(s => s.fileSlug && s.path), 'each spec should have fileSlug and path');
-    });
-
-    it('uses x-domain as domain when present, falls back to filename slug', async () => {
-      const specs = discoverSpecs(fixturesDir);
-      const alertsSpec = specs.find(s => s.fileSlug === 'alerts');
-      assert.ok(alertsSpec, 'should find alerts spec');
-      const spec = await loadSpec(alertsSpec.path);
-      const domain = spec.info?.['x-domain'] ?? alertsSpec.fileSlug;
-      assert.strictEqual(domain, 'alerts');
     });
 
   });

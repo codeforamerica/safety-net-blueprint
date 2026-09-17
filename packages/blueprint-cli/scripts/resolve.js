@@ -368,7 +368,9 @@ function resolveActionTargets(actionFileMap) {
     // self-documenting, avoiding the need to know internal path conventions like
     // the base/ prefix used for blueprint-core base-contracts files.
     if (explicitFile || explicitFiles) {
-      const specifiedFiles = explicitFiles || [explicitFile];
+      // Normalize: files: accepts a string or array; file: is a legacy string alias.
+      const raw = explicitFiles ?? explicitFile;
+      const specifiedFiles = Array.isArray(raw) ? raw : [raw];
       const validFiles = specifiedFiles.filter(f => {
         if (f.startsWith('https://')) {
           return matchingFiles.some(m => m.schemaId === f);
@@ -1218,8 +1220,23 @@ async function main() {
         console.log(`  \u2713 Compiled: ${relativePath}`);
       }
 
-      for (const { overlay, domain } of overlays) {
+      for (let { overlay, domain } of overlays) {
         const currentInputFiles = [...currentResults.entries()].map(([relativePath, spec]) => ({ relativePath, spec }));
+
+        // Rewrite bare filenames in action.file to full relative paths, matching
+        // how state machine overlays are resolved (same basename search pattern).
+        const apiSpecFile = `${domain}-openapi.yaml`;
+        const targetFile = currentInputFiles.find(f => basename(f.relativePath) === basename(apiSpecFile));
+        if (targetFile) {
+          for (const action of (overlay.actions || [])) {
+            if (typeof action.file === 'string' && basename(action.file) === basename(apiSpecFile)) {
+              action.file = targetFile.relativePath;
+            }
+          }
+          const prefix = detectComponentPrefix(targetFile.spec);
+          overlay = rewriteOverlayRefs(overlay, './', prefix);
+        }
+
         const actionFileMap = analyzeTargetLocations(overlay, currentInputFiles);
         const { actionTargets, warnings } = resolveActionTargets(actionFileMap);
         allWarnings = allWarnings.concat(warnings);

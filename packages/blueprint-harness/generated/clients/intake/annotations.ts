@@ -1,0 +1,148 @@
+export const Annotations = {
+  "schema": {
+    "application.programsApplied[]": {
+      "programs": [
+        "snap",
+        "medicaid",
+        "chip",
+        "tanf"
+      ]
+    },
+    "application.channel": {
+      "programs": [
+        "snap",
+        "medicaid",
+        "tanf"
+      ]
+    },
+    "application.submittedAt": {
+      "policies": [
+        "snap-processing-clock",
+        "medicaid-processing-clock"
+      ],
+      "programs": [
+        "snap",
+        "medicaid"
+      ]
+    },
+    "application.address": {
+      "programs": [
+        "snap",
+        "medicaid",
+        "tanf",
+        "chip"
+      ]
+    },
+    "application.contactInfo": {
+      "programs": [
+        "snap",
+        "medicaid",
+        "tanf",
+        "chip"
+      ]
+    },
+    "applicationMember.dateOfBirth": {
+      "dataClassification": [
+        "pii"
+      ],
+      "policies": [
+        "chip-age-eligibility",
+        "snap-elderly-disabled-deductions"
+      ],
+      "programs": [
+        "snap",
+        "medicaid",
+        "chip"
+      ]
+    },
+    "applicationMember.relationship": {
+      "policies": [
+        "snap-household-composition",
+        "medicaid-caretaker-relative"
+      ],
+      "programs": [
+        "snap",
+        "medicaid"
+      ]
+    },
+    "applicationMember.incomeSource": {
+      "dataClassification": [
+        "pii",
+        "fti"
+      ],
+      "policies": [
+        "snap-income-verification"
+      ],
+      "programs": [
+        "snap",
+        "medicaid"
+      ]
+    }
+  },
+  "operations": {
+    "application.submit": {
+      "policies": [
+        "snap-application-acceptance",
+        "snap-processing-clock",
+        "medicaid-processing-clock",
+        "snap-right-to-apply"
+      ],
+      "programs": [
+        "snap",
+        "medicaid"
+      ]
+    },
+    "application.withdraw": {
+      "policies": [
+        "snap-notice-of-action"
+      ],
+      "programs": [
+        "snap"
+      ]
+    },
+    "application.close": {
+      "policies": [
+        "snap-notice-of-eligibility",
+        "medicaid-notice-of-eligibility",
+        "snap-fair-hearing-rights"
+      ],
+      "programs": [
+        "snap",
+        "medicaid"
+      ]
+    }
+  },
+  "events": {
+    "intake.application.submitted": {
+      "policies": [
+        "snap-processing-clock",
+        "medicaid-processing-clock",
+        "snap-household-composition"
+      ],
+      "programs": [
+        "snap",
+        "medicaid"
+      ]
+    },
+    "intake.application.withdrawn": {
+      "policies": [
+        "snap-notice-of-action"
+      ],
+      "programs": [
+        "snap"
+      ]
+    },
+    "intake.application.closed": {
+      "policies": [
+        "snap-notice-of-eligibility",
+        "medicaid-notice-of-eligibility",
+        "snap-fair-hearing-rights"
+      ],
+      "programs": [
+        "snap",
+        "medicaid"
+      ]
+    }
+  },
+  "facts": {}
+} as const;

@@ -1,0 +1,27 @@
+$schema: compositions-schema.yaml
+version: "1.0"
+domain: intake
+compositions:
+  applicationSummary:
+    resource: applications
+    fields:
+      - id
+      - referenceId
+      - status
+      - programsApplied
+      - channel
+      - submittedAt
+    endpoint:
+      path: /applications/{applicationId}/summary
+      parentLink: true
+    include:
+      members:
+        resource: application-members
+        bind: applicationId
+        fields:
+          - id
+          - firstName
+          - lastName
+          - dateOfBirth
+          - relationship
+          - incomeSource

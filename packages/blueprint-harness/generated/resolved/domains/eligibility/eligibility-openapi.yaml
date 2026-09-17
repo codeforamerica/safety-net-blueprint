@@ -1,0 +1,499 @@
+openapi: 3.1.0
+info:
+  title: Eligibility API
+  version: 1.0.0
+  x-domain: eligibility
+  x-status: stable
+  x-visibility: internal
+x-events:
+  eligibility.determination.complete:
+    type: org.codeforamerica.safety-net-blueprint.eligibility.determination.complete
+    summary: Emitted when an eligibility determination is finalized for all applied programs.
+paths:
+  /determinations:
+    get:
+      summary: List determinations
+      operationId: listDeterminations
+      tags:
+        - Determinations
+      parameters:
+        - $ref: ../../base/components/parameters.yaml#/LimitParam
+        - $ref: ../../base/components/parameters.yaml#/OffsetParam
+        - $ref: ../../base/components/parameters.yaml#/SortParam
+        - name: status
+          in: query
+          schema:
+            type: string
+          description: Filter by determination status.
+        - name: applicationId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by intake application.
+      responses:
+        "200":
+          description: A paginated list of determinations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeterminationList"
+        "400":
+          $ref: ../../common/components/responses.yaml#/BadRequest
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+    post:
+      summary: Create a determination
+      operationId: createDetermination
+      tags:
+        - Determinations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeterminationCreate"
+      responses:
+        "201":
+          description: Determination created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Determination"
+        "400":
+          $ref: ../../common/components/responses.yaml#/BadRequest
+        "422":
+          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+  /determinations/{determinationId}:
+    parameters:
+      - $ref: "#/components/parameters/DeterminationIdParam"
+    get:
+      summary: Get a determination
+      operationId: getDetermination
+      tags:
+        - Determinations
+      responses:
+        "200":
+          description: Determination retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Determination"
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+    patch:
+      summary: Update a determination
+      operationId: updateDetermination
+      tags:
+        - Determinations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeterminationUpdate"
+      responses:
+        "200":
+          description: Determination updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Determination"
+        "400":
+          $ref: ../../common/components/responses.yaml#/BadRequest
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "422":
+          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+  /determinations/{determinationId}/programs:
+    parameters:
+      - $ref: "#/components/parameters/DeterminationIdParam"
+    get:
+      summary: List program results
+      operationId: listProgramResults
+      tags:
+        - Program Results
+      parameters:
+        - $ref: ../../base/components/parameters.yaml#/LimitParam
+        - $ref: ../../base/components/parameters.yaml#/OffsetParam
+      responses:
+        "200":
+          description: Program-level eligibility results for this determination.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgramResultList"
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+  /determinations/{determinationId}/programs/{programResultId}:
+    parameters:
+      - $ref: "#/components/parameters/DeterminationIdParam"
+      - $ref: "#/components/parameters/ProgramResultIdParam"
+    get:
+      summary: Get a program result
+      operationId: getProgramResult
+      tags:
+        - Program Results
+      responses:
+        "200":
+          description: Program result retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgramResult"
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../common/components/responses.yaml#/InternalError
+  /eligibility/determinations/evaluate-expedited-snap:
+    post:
+      summary: Evaluate expeditedSnap
+      operationId: evaluateExpeditedSnap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpeditedSnapRequest"
+      responses:
+        "200":
+          description: expeditedSnap evaluation result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpeditedSnapResponse"
+        "400":
+          $ref: ../../base/components/responses.yaml#/BadRequest
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+  /eligibility/determinations/evaluate-interview-probes:
+    post:
+      summary: Evaluate interviewProbes
+      operationId: evaluateInterviewProbes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewProbesRequest"
+      responses:
+        "200":
+          description: interviewProbes evaluation result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewProbesResponse"
+        "400":
+          $ref: ../../base/components/responses.yaml#/BadRequest
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+components:
+  parameters:
+    DeterminationIdParam:
+      name: determinationId
+      in: path
+      required: true
+      description: Unique identifier of the determination.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-0000-0001-000000000001
+    ProgramResultIdParam:
+      name: programResultId
+      in: path
+      required: true
+      description: Unique identifier of the program result.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-0000-0002-000000000001
+  schemas:
+    DeterminationWritable:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+          description: The intake application this determination is for.
+          x-relationship:
+            domain: intake
+            resource: Application
+            style: links-only
+        links:
+          type: object
+          readOnly: true
+          description: Related resource links.
+          properties:
+            application:
+              type: string
+              format: uri-reference
+              description: Link to the related Application resource.
+    Determination:
+      type: object
+      required:
+        - id
+        - applicationId
+        - status
+        - expedited
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier (server-generated).
+        applicationId:
+          type: string
+          format: uuid
+          description: The intake application this determination is for.
+          x-relationship:
+            domain: intake
+            resource: Application
+            style: links-only
+        status:
+          type: string
+          enum:
+            - pending
+            - in_progress
+            - complete
+          readOnly: true
+          description: Current status of the eligibility determination.
+        expedited:
+          type: boolean
+          readOnly: true
+          description: Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
+        determinedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+          description: Timestamp when the determination was finalized. Null until complete.
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the determination was created.
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the determination was last updated.
+        links:
+          type: object
+          readOnly: true
+          description: Related resource links.
+          properties:
+            application:
+              type: string
+              format: uri-reference
+              description: Link to the related Application resource.
+    DeterminationCreate:
+      allOf:
+        - $ref: "#/components/schemas/DeterminationWritable"
+        - type: object
+          required:
+            - applicationId
+    DeterminationUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        status:
+          type: string
+          enum:
+            - pending
+            - in_progress
+            - complete
+    DeterminationList:
+      type: object
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Determination"
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean
+    ProgramResult:
+      type: object
+      required:
+        - id
+        - determinationId
+        - program
+        - eligible
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier (server-generated).
+        determinationId:
+          type: string
+          format: uuid
+          description: The determination this result belongs to.
+          x-relationship:
+            resource: Determination
+            style: links-only
+        program:
+          type: string
+          enum:
+            - snap
+            - medicaid
+            - chip
+            - tanf
+          description: The benefit program this result applies to.
+        eligible:
+          type: boolean
+          description: Whether the household is eligible for this program.
+        reason:
+          type: string
+          nullable: true
+          description: Explanation of the eligibility determination.
+        benefitAmount:
+          type: number
+          minimum: 0
+          nullable: true
+          description: Estimated monthly benefit amount if eligible (dollars).
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        links:
+          type: object
+          readOnly: true
+          description: Related resource links.
+          properties:
+            determination:
+              type: string
+              format: uri-reference
+              description: Link to the related Determination resource.
+    ProgramResultList:
+      type: object
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProgramResult"
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean
+    ExpeditedSnapRequest:
+      type: object
+      description: Input data for expeditedSnap evaluation. All fields are optional — partial inputs trigger partial evaluation.
+      properties:
+        household:
+          type: object
+          description: Household financial circumstances at the time of application.
+          properties:
+            monthlyGrossIncome:
+              type: number
+              description: Total monthly gross income for all household members (dollars).
+            liquidResources:
+              type: number
+              description: Total liquid resources (cash, bank accounts) available to the household (dollars).
+            monthlyShelterCost:
+              type: number
+              description: Monthly shelter cost including rent/mortgage and utilities (dollars).
+            isMigrantFarmworker:
+              type: boolean
+              description: Whether any household member is a migrant or seasonal farmworker.
+        policy:
+          type: object
+          properties:
+            incomeThreshold:
+              type: number
+              default: 150
+              description: Monthly gross income threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
+            resourceThreshold:
+              type: number
+              default: 100
+              description: Liquid resource threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
+    ExpeditedSnapResponse:
+      allOf:
+        - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationResult
+      description: Evaluation result for expeditedSnap.
+    InterviewProbesRequest:
+      type: object
+      description: Input data for interviewProbes evaluation. All fields are optional — partial inputs trigger partial evaluation.
+      properties:
+        household:
+          type: object
+          description: Household composition and financial circumstances.
+          properties:
+            monthlyIncome:
+              type: number
+              description: Total monthly gross income reported by the household.
+            monthlyExpenses:
+              type: number
+              description: Total monthly expenses reported by the household.
+            members:
+              type: array
+              description: All individuals in the household.
+              items:
+                type: object
+                properties:
+                  age:
+                    type: integer
+                    description: Member's age in years.
+                  isEmployed:
+                    type: boolean
+                    description: Whether the member is currently employed.
+                  isStudent:
+                    type: boolean
+                    description: Whether the member is enrolled at least half-time in higher education.
+                  isNonCitizen:
+                    type: boolean
+                    description: Whether the member is a non-citizen subject to immigration screening.
+        application:
+          type: object
+          description: Application-level context relevant to the interview.
+          properties:
+            hasChangedCircumstances:
+              type: boolean
+              description: Whether the household reported changes since the application was submitted.
+    InterviewProbesResponse:
+      allOf:
+        - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationResult
+      description: Evaluation result for interviewProbes.

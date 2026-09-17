@@ -1,0 +1,190 @@
+{
+  "type": "object",
+  "required": [
+    "items",
+    "total",
+    "limit",
+    "offset"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "applicationId",
+          "firstName",
+          "lastName",
+          "relationship",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true,
+            "description": "Unique identifier (server-generated)."
+          },
+          "applicationId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The application this member belongs to."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Member's first name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Member's last name."
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date",
+            "description": "Member's date of birth (YYYY-MM-DD)."
+          },
+          "relationship": {
+            "type": "string",
+            "enum": [
+              "self",
+              "spouse",
+              "child",
+              "parent",
+              "sibling",
+              "other"
+            ],
+            "description": "Relationship of this member to the primary applicant."
+          },
+          "incomeSource": {
+            "description": "Income reported by a household member. Type discriminator determines the variant.",
+            "oneOf": [
+              {
+                "type": "object",
+                "description": "Income from wages or salary employment.",
+                "required": [
+                  "type",
+                  "employer",
+                  "monthlyGrossIncome"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "employment"
+                  },
+                  "employer": {
+                    "type": "string",
+                    "description": "Name of the employer."
+                  },
+                  "monthlyGrossIncome": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Monthly gross income before deductions (dollars)."
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "description": "Income from self-employment or a sole proprietorship.",
+                "required": [
+                  "type",
+                  "businessType",
+                  "monthlyNetIncome"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "self_employment"
+                  },
+                  "businessType": {
+                    "type": "string",
+                    "description": "Type of business (e.g., sole proprietor, freelance)."
+                  },
+                  "monthlyNetIncome": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Monthly net income after business expenses (dollars)."
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "description": "Income from a government benefit program.",
+                "required": [
+                  "type",
+                  "benefitType",
+                  "monthlyAmount"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "benefit"
+                  },
+                  "benefitType": {
+                    "type": "string",
+                    "enum": [
+                      "ssi",
+                      "ssdi",
+                      "unemployment",
+                      "veterans",
+                      "other"
+                    ],
+                    "description": "The benefit program providing income."
+                  },
+                  "monthlyAmount": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Monthly benefit amount (dollars)."
+                  }
+                }
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "description": "Timestamp when the member was added."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "description": "Timestamp when the member was last updated."
+          },
+          "links": {
+            "type": "object",
+            "readOnly": true,
+            "description": "Related resource links.",
+            "properties": {
+              "application": {
+                "type": "string",
+                "format": "uri-reference",
+                "description": "Link to the related Application resource."
+              }
+            }
+          }
+        }
+      }
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "hasNext": {
+      "type": "boolean"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/ApplicationMemberList"
+}

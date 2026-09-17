@@ -1,0 +1,1657 @@
+openapi: 3.1.0
+info:
+  title: Eligibility API
+  version: 1.0.0
+  x-domain: eligibility
+  x-status: stable
+  x-visibility: internal
+x-events:
+  eligibility.determination.complete:
+    type: org.codeforamerica.safety-net-blueprint.eligibility.determination.complete
+    summary: Emitted when an eligibility determination is finalized for all applied programs.
+paths:
+  /determinations:
+    get:
+      summary: List determinations
+      operationId: listDeterminations
+      tags:
+        - Determinations
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of items to return (1-100).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: offset
+          in: query
+          description: Number of items to skip before collecting results.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Comma-separated list of fields to sort the response by. Prefix a field
+            with `-` for descending order. The first field is the primary sort;
+            subsequent fields are tie-breakers in declaration order.
+
+            **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+            Most HTTP clients handle this automatically. Examples below show
+            human-readable syntax for clarity.
+
+            Which fields a given list endpoint allows is declared in the operation's
+            `x-sortable.fields` extension. Sending a field name not present in that
+            list returns `400 FIELD_NOT_SORTABLE`. Sending a field name that doesn't
+            exist on the resource schema returns `400 INVALID_SORT_FIELD`. When this
+            parameter is omitted, the operation's `x-sortable.default` (if declared)
+            is applied; otherwise no client-driven sort is applied. A configured
+            tie-breaker (default `id`) is always appended for stable pagination.
+
+            See `api-patterns.yaml#sorting` for the full convention and
+            `docs/architecture/x-extensions.md` for the extension shape.
+
+            ## Syntax
+
+            | Pattern | Description | Example |
+            |---------|-------------|---------|
+            | `fieldName` | Ascending | `sort=createdAt` |
+            | `-fieldName` | Descending | `sort=-createdAt` |
+            | `field1,field2` | Multi-field | `sort=status,-priority` |
+            | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
+
+            ## Examples
+
+            - `sort=createdAt` — oldest first
+            - `sort=-createdAt` — newest first
+            - `sort=-priority,dueDate` — highest priority first, then oldest due date
+            - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+          examples:
+            ascendingByDate:
+              summary: Oldest first
+              value: createdAt
+            descendingByDate:
+              summary: Newest first
+              value: "-createdAt"
+            multiField:
+              summary: Multi-field — primary then tie-breaker
+              value: "-priority,dueDate"
+            nestedField:
+              summary: Sort by a nested field
+              value: name.lastName
+        - name: status
+          in: query
+          schema:
+            type: string
+          description: Filter by determination status.
+        - name: applicationId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by intake application.
+      responses:
+        "200":
+          description: A paginated list of determinations.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - limit
+                  - offset
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - applicationId
+                        - status
+                        - expedited
+                        - createdAt
+                        - updatedAt
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          readOnly: true
+                          description: Unique identifier (server-generated).
+                        applicationId:
+                          type: string
+                          format: uuid
+                          description: The intake application this determination is for.
+                          x-relationship:
+                            domain: intake
+                            resource: Application
+                            style: links-only
+                        status:
+                          type: string
+                          enum:
+                            - pending
+                            - in_progress
+                            - complete
+                          readOnly: true
+                          description: Current status of the eligibility determination.
+                        expedited:
+                          type: boolean
+                          readOnly: true
+                          description: Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
+                        determinedAt:
+                          type: string
+                          format: date-time
+                          nullable: true
+                          readOnly: true
+                          description: Timestamp when the determination was finalized. Null until complete.
+                        createdAt:
+                          type: string
+                          format: date-time
+                          readOnly: true
+                          description: Timestamp when the determination was created.
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          readOnly: true
+                          description: Timestamp when the determination was last updated.
+                        links:
+                          type: object
+                          readOnly: true
+                          description: Related resource links.
+                          properties:
+                            application:
+                              type: string
+                              format: uri-reference
+                              description: Link to the related Application resource.
+                  total:
+                    type: integer
+                    minimum: 0
+                  limit:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                  offset:
+                    type: integer
+                    minimum: 0
+                  hasNext:
+                    type: boolean
+        "400":
+          description: Bad request — validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+    post:
+      summary: Create a determination
+      operationId: createDetermination
+      tags:
+        - Determinations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  properties:
+                    applicationId:
+                      type: string
+                      format: uuid
+                      description: The intake application this determination is for.
+                      x-relationship:
+                        domain: intake
+                        resource: Application
+                        style: links-only
+                    links:
+                      type: object
+                      readOnly: true
+                      description: Related resource links.
+                      properties:
+                        application:
+                          type: string
+                          format: uri-reference
+                          description: Link to the related Application resource.
+                - type: object
+                  required:
+                    - applicationId
+      responses:
+        "201":
+          description: Determination created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - applicationId
+                  - status
+                  - expedited
+                  - createdAt
+                  - updatedAt
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                    description: Unique identifier (server-generated).
+                  applicationId:
+                    type: string
+                    format: uuid
+                    description: The intake application this determination is for.
+                    x-relationship:
+                      domain: intake
+                      resource: Application
+                      style: links-only
+                  status:
+                    type: string
+                    enum:
+                      - pending
+                      - in_progress
+                      - complete
+                    readOnly: true
+                    description: Current status of the eligibility determination.
+                  expedited:
+                    type: boolean
+                    readOnly: true
+                    description: Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
+                  determinedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    readOnly: true
+                    description: Timestamp when the determination was finalized. Null until complete.
+                  createdAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                    description: Timestamp when the determination was created.
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                    description: Timestamp when the determination was last updated.
+                  links:
+                    type: object
+                    readOnly: true
+                    description: Related resource links.
+                    properties:
+                      application:
+                        type: string
+                        format: uri-reference
+                        description: Link to the related Application resource.
+        "400":
+          description: Bad request — validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "422":
+          description: Unprocessable entity — business rule validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /determinations/{determinationId}:
+    parameters:
+      - name: determinationId
+        in: path
+        required: true
+        description: Unique identifier of the determination.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-0000-0001-000000000001
+    get:
+      summary: Get a determination
+      operationId: getDetermination
+      tags:
+        - Determinations
+      responses:
+        "200":
+          description: Determination retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - applicationId
+                  - status
+                  - expedited
+                  - createdAt
+                  - updatedAt
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                    description: Unique identifier (server-generated).
+                  applicationId:
+                    type: string
+                    format: uuid
+                    description: The intake application this determination is for.
+                    x-relationship:
+                      domain: intake
+                      resource: Application
+                      style: links-only
+                  status:
+                    type: string
+                    enum:
+                      - pending
+                      - in_progress
+                      - complete
+                    readOnly: true
+                    description: Current status of the eligibility determination.
+                  expedited:
+                    type: boolean
+                    readOnly: true
+                    description: Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
+                  determinedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    readOnly: true
+                    description: Timestamp when the determination was finalized. Null until complete.
+                  createdAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                    description: Timestamp when the determination was created.
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                    description: Timestamp when the determination was last updated.
+                  links:
+                    type: object
+                    readOnly: true
+                    description: Related resource links.
+                    properties:
+                      application:
+                        type: string
+                        format: uri-reference
+                        description: Link to the related Application resource.
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+    patch:
+      summary: Update a determination
+      operationId: updateDetermination
+      tags:
+        - Determinations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - pending
+                    - in_progress
+                    - complete
+      responses:
+        "200":
+          description: Determination updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - applicationId
+                  - status
+                  - expedited
+                  - createdAt
+                  - updatedAt
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                    description: Unique identifier (server-generated).
+                  applicationId:
+                    type: string
+                    format: uuid
+                    description: The intake application this determination is for.
+                    x-relationship:
+                      domain: intake
+                      resource: Application
+                      style: links-only
+                  status:
+                    type: string
+                    enum:
+                      - pending
+                      - in_progress
+                      - complete
+                    readOnly: true
+                    description: Current status of the eligibility determination.
+                  expedited:
+                    type: boolean
+                    readOnly: true
+                    description: Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
+                  determinedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    readOnly: true
+                    description: Timestamp when the determination was finalized. Null until complete.
+                  createdAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                    description: Timestamp when the determination was created.
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                    description: Timestamp when the determination was last updated.
+                  links:
+                    type: object
+                    readOnly: true
+                    description: Related resource links.
+                    properties:
+                      application:
+                        type: string
+                        format: uri-reference
+                        description: Link to the related Application resource.
+        "400":
+          description: Bad request — validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "422":
+          description: Unprocessable entity — business rule validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /determinations/{determinationId}/programs:
+    parameters:
+      - name: determinationId
+        in: path
+        required: true
+        description: Unique identifier of the determination.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-0000-0001-000000000001
+    get:
+      summary: List program results
+      operationId: listProgramResults
+      tags:
+        - Program Results
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of items to return (1-100).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: offset
+          in: query
+          description: Number of items to skip before collecting results.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Program-level eligibility results for this determination.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                  - limit
+                  - offset
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - determinationId
+                        - program
+                        - eligible
+                        - createdAt
+                        - updatedAt
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          readOnly: true
+                          description: Unique identifier (server-generated).
+                        determinationId:
+                          type: string
+                          format: uuid
+                          description: The determination this result belongs to.
+                          x-relationship:
+                            resource: Determination
+                            style: links-only
+                        program:
+                          type: string
+                          enum:
+                            - snap
+                            - medicaid
+                            - chip
+                            - tanf
+                          description: The benefit program this result applies to.
+                        eligible:
+                          type: boolean
+                          description: Whether the household is eligible for this program.
+                        reason:
+                          type: string
+                          nullable: true
+                          description: Explanation of the eligibility determination.
+                        benefitAmount:
+                          type: number
+                          minimum: 0
+                          nullable: true
+                          description: Estimated monthly benefit amount if eligible (dollars).
+                        createdAt:
+                          type: string
+                          format: date-time
+                          readOnly: true
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          readOnly: true
+                        links:
+                          type: object
+                          readOnly: true
+                          description: Related resource links.
+                          properties:
+                            determination:
+                              type: string
+                              format: uri-reference
+                              description: Link to the related Determination resource.
+                  total:
+                    type: integer
+                    minimum: 0
+                  limit:
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                  offset:
+                    type: integer
+                    minimum: 0
+                  hasNext:
+                    type: boolean
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /determinations/{determinationId}/programs/{programResultId}:
+    parameters:
+      - name: determinationId
+        in: path
+        required: true
+        description: Unique identifier of the determination.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-0000-0001-000000000001
+      - name: programResultId
+        in: path
+        required: true
+        description: Unique identifier of the program result.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-0000-0002-000000000001
+    get:
+      summary: Get a program result
+      operationId: getProgramResult
+      tags:
+        - Program Results
+      responses:
+        "200":
+          description: Program result retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - determinationId
+                  - program
+                  - eligible
+                  - createdAt
+                  - updatedAt
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                    description: Unique identifier (server-generated).
+                  determinationId:
+                    type: string
+                    format: uuid
+                    description: The determination this result belongs to.
+                    x-relationship:
+                      resource: Determination
+                      style: links-only
+                  program:
+                    type: string
+                    enum:
+                      - snap
+                      - medicaid
+                      - chip
+                      - tanf
+                    description: The benefit program this result applies to.
+                  eligible:
+                    type: boolean
+                    description: Whether the household is eligible for this program.
+                  reason:
+                    type: string
+                    nullable: true
+                    description: Explanation of the eligibility determination.
+                  benefitAmount:
+                    type: number
+                    minimum: 0
+                    nullable: true
+                    description: Estimated monthly benefit amount if eligible (dollars).
+                  createdAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  links:
+                    type: object
+                    readOnly: true
+                    description: Related resource links.
+                    properties:
+                      determination:
+                        type: string
+                        format: uri-reference
+                        description: Link to the related Determination resource.
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /eligibility/determinations/evaluate-expedited-snap:
+    post:
+      summary: Evaluate expeditedSnap
+      operationId: evaluateExpeditedSnap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Input data for expeditedSnap evaluation. All fields are optional — partial inputs trigger partial evaluation.
+              properties:
+                household:
+                  type: object
+                  description: Household financial circumstances at the time of application.
+                  properties:
+                    monthlyGrossIncome:
+                      type: number
+                      description: Total monthly gross income for all household members (dollars).
+                    liquidResources:
+                      type: number
+                      description: Total liquid resources (cash, bank accounts) available to the household (dollars).
+                    monthlyShelterCost:
+                      type: number
+                      description: Monthly shelter cost including rent/mortgage and utilities (dollars).
+                    isMigrantFarmworker:
+                      type: boolean
+                      description: Whether any household member is a migrant or seasonal farmworker.
+                policy:
+                  type: object
+                  properties:
+                    incomeThreshold:
+                      type: number
+                      default: 150
+                      description: Monthly gross income threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
+                    resourceThreshold:
+                      type: number
+                      default: 100
+                      description: Liquid resource threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
+      responses:
+        "200":
+          description: expeditedSnap evaluation result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    description: |
+                      Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
+                    additionalProperties:
+                      oneOf:
+                        - type: object
+                          required:
+                            - state
+                            - value
+                          properties:
+                            state:
+                              type: string
+                              enum:
+                                - complete
+                            value:
+                              description: The computed value.
+                        - type: object
+                          required:
+                            - state
+                            - value
+                          properties:
+                            state:
+                              type: string
+                              enum:
+                                - placeholder
+                            value:
+                              description: The computed value, derived using one or more schema defaults.
+                        - type: object
+                          required:
+                            - state
+                            - value
+                            - missing
+                          properties:
+                            state:
+                              type: string
+                              enum:
+                                - missing
+                            value:
+                              type: "null"
+                            missing:
+                              type: array
+                              description: Input paths required to resolve this fact.
+                              items:
+                                type: string
+                        - type: object
+                          required:
+                            - state
+                            - value
+                            - message
+                          properties:
+                            state:
+                              type: string
+                              enum:
+                                - error
+                            value:
+                              type: "null"
+                            message:
+                              type: string
+                              description: The reason evaluation failed.
+                      discriminator:
+                        propertyName: state
+                description: Evaluation result for expeditedSnap.
+        "400":
+          description: The request is malformed or contains invalid parameters.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "500":
+          description: An unexpected error occurred on the server.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+  /eligibility/determinations/evaluate-interview-probes:
+    post:
+      summary: Evaluate interviewProbes
+      operationId: evaluateInterviewProbes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Input data for interviewProbes evaluation. All fields are optional — partial inputs trigger partial evaluation.
+              properties:
+                household:
+                  type: object
+                  description: Household composition and financial circumstances.
+                  properties:
+                    monthlyIncome:
+                      type: number
+                      description: Total monthly gross income reported by the household.
+                    monthlyExpenses:
+                      type: number
+                      description: Total monthly expenses reported by the household.
+                    members:
+                      type: array
+                      description: All individuals in the household.
+                      items:
+                        type: object
+                        properties:
+                          age:
+                            type: integer
+                            description: Member's age in years.
+                          isEmployed:
+                            type: boolean
+                            description: Whether the member is currently employed.
+                          isStudent:
+                            type: boolean
+                            description: Whether the member is enrolled at least half-time in higher education.
+                          isNonCitizen:
+                            type: boolean
+                            description: Whether the member is a non-citizen subject to immigration screening.
+                application:
+                  type: object
+                  description: Application-level context relevant to the interview.
+                  properties:
+                    hasChangedCircumstances:
+                      type: boolean
+                      description: Whether the household reported changes since the application was submitted.
+      responses:
+        "200":
+          description: interviewProbes evaluation result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    description: |
+                      Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
+                    additionalProperties:
+                      oneOf:
+                        - type: object
+                          required:
+                            - state
+                            - value
+                          properties:
+                            state:
+                              type: string
+                              enum:
+                                - complete
+                            value:
+                              description: The computed value.
+                        - type: object
+                          required:
+                            - state
+                            - value
+                          properties:
+                            state:
+                              type: string
+                              enum:
+                                - placeholder
+                            value:
+                              description: The computed value, derived using one or more schema defaults.
+                        - type: object
+                          required:
+                            - state
+                            - value
+                            - missing
+                          properties:
+                            state:
+                              type: string
+                              enum:
+                                - missing
+                            value:
+                              type: "null"
+                            missing:
+                              type: array
+                              description: Input paths required to resolve this fact.
+                              items:
+                                type: string
+                        - type: object
+                          required:
+                            - state
+                            - value
+                            - message
+                          properties:
+                            state:
+                              type: string
+                              enum:
+                                - error
+                            value:
+                              type: "null"
+                            message:
+                              type: string
+                              description: The reason evaluation failed.
+                      discriminator:
+                        propertyName: state
+                description: Evaluation result for interviewProbes.
+        "400":
+          description: The request is malformed or contains invalid parameters.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+        "500":
+          description: An unexpected error occurred on the server.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    description: Machine-readable error code.
+                  message:
+                    type: string
+                    description: Human-readable error description.
+                  details:
+                    type: array
+                    description: Additional error details.
+                    items:
+                      type: object
+                      additionalProperties: true
+components:
+  parameters:
+    DeterminationIdParam:
+      name: determinationId
+      in: path
+      required: true
+      description: Unique identifier of the determination.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-0000-0001-000000000001
+    ProgramResultIdParam:
+      name: programResultId
+      in: path
+      required: true
+      description: Unique identifier of the program result.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-0000-0002-000000000001
+  schemas:
+    DeterminationWritable:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+          description: The intake application this determination is for.
+          x-relationship:
+            domain: intake
+            resource: Application
+            style: links-only
+        links:
+          type: object
+          readOnly: true
+          description: Related resource links.
+          properties:
+            application:
+              type: string
+              format: uri-reference
+              description: Link to the related Application resource.
+    Determination:
+      type: object
+      required:
+        - id
+        - applicationId
+        - status
+        - expedited
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier (server-generated).
+        applicationId:
+          type: string
+          format: uuid
+          description: The intake application this determination is for.
+          x-relationship:
+            domain: intake
+            resource: Application
+            style: links-only
+        status:
+          type: string
+          enum:
+            - pending
+            - in_progress
+            - complete
+          readOnly: true
+          description: Current status of the eligibility determination.
+        expedited:
+          type: boolean
+          readOnly: true
+          description: Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
+        determinedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+          description: Timestamp when the determination was finalized. Null until complete.
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the determination was created.
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the determination was last updated.
+        links:
+          type: object
+          readOnly: true
+          description: Related resource links.
+          properties:
+            application:
+              type: string
+              format: uri-reference
+              description: Link to the related Application resource.
+    DeterminationCreate:
+      allOf:
+        - type: object
+          properties:
+            applicationId:
+              type: string
+              format: uuid
+              description: The intake application this determination is for.
+              x-relationship:
+                domain: intake
+                resource: Application
+                style: links-only
+            links:
+              type: object
+              readOnly: true
+              description: Related resource links.
+              properties:
+                application:
+                  type: string
+                  format: uri-reference
+                  description: Link to the related Application resource.
+        - type: object
+          required:
+            - applicationId
+    DeterminationUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        status:
+          type: string
+          enum:
+            - pending
+            - in_progress
+            - complete
+    DeterminationList:
+      type: object
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - applicationId
+              - status
+              - expedited
+              - createdAt
+              - updatedAt
+            properties:
+              id:
+                type: string
+                format: uuid
+                readOnly: true
+                description: Unique identifier (server-generated).
+              applicationId:
+                type: string
+                format: uuid
+                description: The intake application this determination is for.
+                x-relationship:
+                  domain: intake
+                  resource: Application
+                  style: links-only
+              status:
+                type: string
+                enum:
+                  - pending
+                  - in_progress
+                  - complete
+                readOnly: true
+                description: Current status of the eligibility determination.
+              expedited:
+                type: boolean
+                readOnly: true
+                description: Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
+              determinedAt:
+                type: string
+                format: date-time
+                nullable: true
+                readOnly: true
+                description: Timestamp when the determination was finalized. Null until complete.
+              createdAt:
+                type: string
+                format: date-time
+                readOnly: true
+                description: Timestamp when the determination was created.
+              updatedAt:
+                type: string
+                format: date-time
+                readOnly: true
+                description: Timestamp when the determination was last updated.
+              links:
+                type: object
+                readOnly: true
+                description: Related resource links.
+                properties:
+                  application:
+                    type: string
+                    format: uri-reference
+                    description: Link to the related Application resource.
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean
+    ProgramResult:
+      type: object
+      required:
+        - id
+        - determinationId
+        - program
+        - eligible
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier (server-generated).
+        determinationId:
+          type: string
+          format: uuid
+          description: The determination this result belongs to.
+          x-relationship:
+            resource: Determination
+            style: links-only
+        program:
+          type: string
+          enum:
+            - snap
+            - medicaid
+            - chip
+            - tanf
+          description: The benefit program this result applies to.
+        eligible:
+          type: boolean
+          description: Whether the household is eligible for this program.
+        reason:
+          type: string
+          nullable: true
+          description: Explanation of the eligibility determination.
+        benefitAmount:
+          type: number
+          minimum: 0
+          nullable: true
+          description: Estimated monthly benefit amount if eligible (dollars).
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        links:
+          type: object
+          readOnly: true
+          description: Related resource links.
+          properties:
+            determination:
+              type: string
+              format: uri-reference
+              description: Link to the related Determination resource.
+    ProgramResultList:
+      type: object
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - determinationId
+              - program
+              - eligible
+              - createdAt
+              - updatedAt
+            properties:
+              id:
+                type: string
+                format: uuid
+                readOnly: true
+                description: Unique identifier (server-generated).
+              determinationId:
+                type: string
+                format: uuid
+                description: The determination this result belongs to.
+                x-relationship:
+                  resource: Determination
+                  style: links-only
+              program:
+                type: string
+                enum:
+                  - snap
+                  - medicaid
+                  - chip
+                  - tanf
+                description: The benefit program this result applies to.
+              eligible:
+                type: boolean
+                description: Whether the household is eligible for this program.
+              reason:
+                type: string
+                nullable: true
+                description: Explanation of the eligibility determination.
+              benefitAmount:
+                type: number
+                minimum: 0
+                nullable: true
+                description: Estimated monthly benefit amount if eligible (dollars).
+              createdAt:
+                type: string
+                format: date-time
+                readOnly: true
+              updatedAt:
+                type: string
+                format: date-time
+                readOnly: true
+              links:
+                type: object
+                readOnly: true
+                description: Related resource links.
+                properties:
+                  determination:
+                    type: string
+                    format: uri-reference
+                    description: Link to the related Determination resource.
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean
+    ExpeditedSnapRequest:
+      type: object
+      description: Input data for expeditedSnap evaluation. All fields are optional — partial inputs trigger partial evaluation.
+      properties:
+        household:
+          type: object
+          description: Household financial circumstances at the time of application.
+          properties:
+            monthlyGrossIncome:
+              type: number
+              description: Total monthly gross income for all household members (dollars).
+            liquidResources:
+              type: number
+              description: Total liquid resources (cash, bank accounts) available to the household (dollars).
+            monthlyShelterCost:
+              type: number
+              description: Monthly shelter cost including rent/mortgage and utilities (dollars).
+            isMigrantFarmworker:
+              type: boolean
+              description: Whether any household member is a migrant or seasonal farmworker.
+        policy:
+          type: object
+          properties:
+            incomeThreshold:
+              type: number
+              default: 150
+              description: Monthly gross income threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
+            resourceThreshold:
+              type: number
+              default: 100
+              description: Liquid resource threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
+    ExpeditedSnapResponse:
+      allOf:
+        - type: object
+          description: |
+            Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
+          additionalProperties:
+            oneOf:
+              - type: object
+                required:
+                  - state
+                  - value
+                properties:
+                  state:
+                    type: string
+                    enum:
+                      - complete
+                  value:
+                    description: The computed value.
+              - type: object
+                required:
+                  - state
+                  - value
+                properties:
+                  state:
+                    type: string
+                    enum:
+                      - placeholder
+                  value:
+                    description: The computed value, derived using one or more schema defaults.
+              - type: object
+                required:
+                  - state
+                  - value
+                  - missing
+                properties:
+                  state:
+                    type: string
+                    enum:
+                      - missing
+                  value:
+                    type: "null"
+                  missing:
+                    type: array
+                    description: Input paths required to resolve this fact.
+                    items:
+                      type: string
+              - type: object
+                required:
+                  - state
+                  - value
+                  - message
+                properties:
+                  state:
+                    type: string
+                    enum:
+                      - error
+                  value:
+                    type: "null"
+                  message:
+                    type: string
+                    description: The reason evaluation failed.
+            discriminator:
+              propertyName: state
+      description: Evaluation result for expeditedSnap.
+    InterviewProbesRequest:
+      type: object
+      description: Input data for interviewProbes evaluation. All fields are optional — partial inputs trigger partial evaluation.
+      properties:
+        household:
+          type: object
+          description: Household composition and financial circumstances.
+          properties:
+            monthlyIncome:
+              type: number
+              description: Total monthly gross income reported by the household.
+            monthlyExpenses:
+              type: number
+              description: Total monthly expenses reported by the household.
+            members:
+              type: array
+              description: All individuals in the household.
+              items:
+                type: object
+                properties:
+                  age:
+                    type: integer
+                    description: Member's age in years.
+                  isEmployed:
+                    type: boolean
+                    description: Whether the member is currently employed.
+                  isStudent:
+                    type: boolean
+                    description: Whether the member is enrolled at least half-time in higher education.
+                  isNonCitizen:
+                    type: boolean
+                    description: Whether the member is a non-citizen subject to immigration screening.
+        application:
+          type: object
+          description: Application-level context relevant to the interview.
+          properties:
+            hasChangedCircumstances:
+              type: boolean
+              description: Whether the household reported changes since the application was submitted.
+    InterviewProbesResponse:
+      allOf:
+        - type: object
+          description: |
+            Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
+          additionalProperties:
+            oneOf:
+              - type: object
+                required:
+                  - state
+                  - value
+                properties:
+                  state:
+                    type: string
+                    enum:
+                      - complete
+                  value:
+                    description: The computed value.
+              - type: object
+                required:
+                  - state
+                  - value
+                properties:
+                  state:
+                    type: string
+                    enum:
+                      - placeholder
+                  value:
+                    description: The computed value, derived using one or more schema defaults.
+              - type: object
+                required:
+                  - state
+                  - value
+                  - missing
+                properties:
+                  state:
+                    type: string
+                    enum:
+                      - missing
+                  value:
+                    type: "null"
+                  missing:
+                    type: array
+                    description: Input paths required to resolve this fact.
+                    items:
+                      type: string
+              - type: object
+                required:
+                  - state
+                  - value
+                  - message
+                properties:
+                  state:
+                    type: string
+                    enum:
+                      - error
+                  value:
+                    type: "null"
+                  message:
+                    type: string
+                    description: The reason evaluation failed.
+            discriminator:
+              propertyName: state
+      description: Evaluation result for interviewProbes.

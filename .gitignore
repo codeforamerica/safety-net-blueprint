@@ -15,8 +15,11 @@ packages/blueprint-rules-engine/dist/*
 dist-packages/
 data/
 generated/
+!packages/blueprint-harness/generated/
 resolved/
 !packages/blueprint-cli/tests/resolve/golden/resolved/
+!packages/blueprint-harness/generated/resolved/
+!packages/blueprint-harness/generated/clients/
 
 # safety-net-explorer is private and has no README
 

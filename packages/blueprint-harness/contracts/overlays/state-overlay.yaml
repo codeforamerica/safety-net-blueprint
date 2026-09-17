@@ -1,0 +1,27 @@
+overlay: 1.0.0
+info:
+  title: Example state customization overlay
+  version: 1.0.0
+
+# Project-level configuration settings applied across all resolved specs.
+# These override blueprint defaults for a specific state deployment.
+config:
+  x-casing: snake_case
+  x-pagination:
+    style: cursor
+  x-search:
+    style: filtered
+  x-relationship:
+    style: expand
+  x-event-type-prefix: ca
+
+# JSONPath-targeted actions that add or modify fields in specific specs.
+actions:
+  # Add a state-specific field to the Application schema.
+  - target: "$.components.schemas.ApplicationWritable.properties"
+    update:
+      county_code:
+        type: string
+        maxLength: 10
+        description: County code for routing this application to the correct local office.
+

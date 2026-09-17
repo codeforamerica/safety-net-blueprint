@@ -1,0 +1,22 @@
+{
+  "name": "@codeforamerica/blueprint-harness",
+  "version": "0.1.0",
+  "description": "Shared sample contracts and generated artifacts for testing blueprint tooling packages",
+  "private": true,
+  "files": [
+    "contracts/",
+    "generated/",
+    "explorer/"
+  ],
+  "scripts": {
+    "generate:resolved": "node ../blueprint-cli/scripts/resolve.js --spec=contracts --overlay=contracts/overlays --out=generated/resolved",
+    "generate:clients": "node ../blueprint-cli/scripts/generate-ts-clients.js --spec=generated/resolved --out=generated/clients",
+    "generate": "npm run generate:resolved && npm run generate:clients"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codeforamerica/safety-net-blueprint.git",
+    "directory": "packages/blueprint-harness"
+  }
+}

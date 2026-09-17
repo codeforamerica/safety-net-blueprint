@@ -1,0 +1,201 @@
+$schema: "https://blueprint.codeforamerica.org/schemas/rules-schema.yaml"
+domain: eligibility
+rulesets:
+
+  # Determines whether a household qualifies for expedited SNAP processing.
+  # Expedited processing must begin within 7 days of application filing (7 CFR § 273.2(i)).
+  # Three qualifying conditions:
+  #   1. Monthly gross income below $150 and liquid resources below $100
+  #   2. Combined income and liquid resources less than monthly shelter cost
+  #   3. Migrant or seasonal farmworker household with liquid resources below $100
+  expeditedSnap:
+    endpoint:
+      path: /determinations/evaluate-expedited-snap
+    inputs:
+      household:
+        type: object
+        description: Household financial circumstances at the time of application.
+        properties:
+          monthlyGrossIncome:
+            type: number
+            description: Total monthly gross income for all household members (dollars).
+          liquidResources:
+            type: number
+            description: Total liquid resources (cash, bank accounts) available to the household (dollars).
+          monthlyShelterCost:
+            type: number
+            description: Monthly shelter cost including rent/mortgage and utilities (dollars).
+          isMigrantFarmworker:
+            type: boolean
+            description: Whether any household member is a migrant or seasonal farmworker.
+      policy:
+        type: object
+        properties:
+          incomeThreshold:
+            type: number
+            default: 150
+            description: Monthly gross income threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
+          resourceThreshold:
+            type: number
+            default: 100
+            description: Liquid resource threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
+    facts:
+      - path: isLowIncome
+        type: boolean
+        description: Monthly gross income is below the expedited income threshold.
+        expression: "household.monthlyGrossIncome < policy.incomeThreshold"
+
+      - path: hasLowResources
+        type: boolean
+        description: Liquid resources are below the expedited resource threshold.
+        expression: "household.liquidResources < policy.resourceThreshold"
+
+      - path: isCombinedUnderShelter
+        type: boolean
+        description: Combined income and liquid resources are less than monthly shelter cost.
+        expression: "(household.monthlyGrossIncome + household.liquidResources) < household.monthlyShelterCost"
+
+      - path: isMigrantWithLowResources
+        type: boolean
+        description: Household includes a migrant or seasonal farmworker with low liquid resources.
+        expression: "household.isMigrantFarmworker && household.liquidResources < policy.resourceThreshold"
+
+      - path: isExpeditedEligible
+        type: boolean
+        description: >
+          Household qualifies for expedited processing under any of the three
+          qualifying conditions (7 CFR § 273.2(i)).
+        expression: "(isLowIncome && hasLowResources) || isCombinedUnderShelter || isMigrantWithLowResources"
+
+    outputs:
+      isExpeditedEligible:
+        type: boolean
+      isLowIncome:
+        type: boolean
+      hasLowResources:
+        type: boolean
+
+  # Determines which interview topics require probing based on household composition.
+  # Uses collection operations (exists, filter, all) over household member arrays.
+  # Implements FNS interview guidance (FNS-1104) and SNAP regulations (7 CFR § 273.2(e)).
+  interviewProbes:
+    endpoint:
+      path: /determinations/evaluate-interview-probes
+    inputs:
+      household:
+        type: object
+        description: Household composition and financial circumstances.
+        properties:
+          monthlyIncome:
+            type: number
+            description: Total monthly gross income reported by the household.
+          monthlyExpenses:
+            type: number
+            description: Total monthly expenses reported by the household.
+          members:
+            type: array
+            description: All individuals in the household.
+            items:
+              type: object
+              properties:
+                age:
+                  type: integer
+                  description: Member's age in years.
+                isEmployed:
+                  type: boolean
+                  description: Whether the member is currently employed.
+                isStudent:
+                  type: boolean
+                  description: Whether the member is enrolled at least half-time in higher education.
+                isNonCitizen:
+                  type: boolean
+                  description: Whether the member is a non-citizen subject to immigration screening.
+      application:
+        type: object
+        description: Application-level context relevant to the interview.
+        properties:
+          hasChangedCircumstances:
+            type: boolean
+            description: Whether the household reported changes since the application was submitted.
+    facts:
+      - path: incomeGapExists
+        type: boolean
+        description: >
+          Monthly income is less than monthly expenses — an inconsistency that requires
+          probing for other income sources or assistance (FNS-1104).
+        expression: "household.monthlyIncome < household.monthlyExpenses"
+
+      - path: workEligibleMembers
+        description: >
+          Members aged 16–59 who are not employed and may be subject to work
+          requirement screening (7 CFR § 273.7).
+        expression: "household.members.filter(m, m.age >= 16 && m.age <= 54 && !m.isEmployed)"
+
+      - path: hasUnemployedWorkEligible
+        type: boolean
+        description: At least one member aged 16–59 is not employed.
+        expression: "household.members.exists(m, m.age >= 16 && m.age <= 59 && !m.isEmployed)"
+
+      - path: hasStudentMembers
+        type: boolean
+        description: At least one household member is enrolled in higher education.
+        expression: "household.members.exists(m, m.isStudent)"
+
+      - path: hasNonCitizenMembers
+        type: boolean
+        description: At least one household member is a non-citizen.
+        expression: "household.members.exists(m, m.isNonCitizen)"
+
+      - path: allMembersEmployed
+        type: boolean
+        description: Every household member is currently employed.
+        expression: "household.members.all(m, m.isEmployed)"
+
+      - path: incomeInconsistencyProbe
+        type: boolean
+        description: >
+          Probe the household for unexplained income sources or assistance that
+          account for the gap between income and expenses.
+        expression: "incomeGapExists"
+
+      - path: workRequirementProbe
+        type: boolean
+        description: >
+          Screen non-employed members aged 16–59 for work requirement exemptions
+          (physical/mental fitness, caregiving, education, etc.).
+        expression: "hasUnemployedWorkEligible"
+
+      - path: studentEligibilityProbe
+        type: boolean
+        description: >
+          Screen student members for SNAP student eligibility exceptions
+          (employment, dependent care, work-study, etc.).
+        expression: "hasStudentMembers"
+
+      - path: immigrationStatusProbe
+        type: boolean
+        description: >
+          Screen non-citizen members for immigration status and apply sponsor
+          income deeming rules where applicable.
+        expression: "hasNonCitizenMembers"
+
+      - path: changeVerificationProbe
+        type: boolean
+        description: >
+          Identify and verify changes in household circumstances that occurred
+          between the application date and the interview date.
+        expression: "application.hasChangedCircumstances"
+
+    outputs:
+      incomeInconsistencyProbe:
+        type: boolean
+      workRequirementProbe:
+        type: boolean
+      studentEligibilityProbe:
+        type: boolean
+      immigrationStatusProbe:
+        type: boolean
+      changeVerificationProbe:
+        type: boolean
+      allMembersEmployed:
+        type: boolean

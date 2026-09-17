@@ -11,7 +11,7 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'fs';
-import { join, resolve } from 'path';
+import { join, resolve, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { realpathSync } from 'fs';
 import yaml from 'js-yaml';
@@ -52,7 +52,7 @@ function parseArgs() {
 export function discoverStateMachines(specsDir) {
   let files;
   try {
-    files = readdirSync(specsDir);
+    files = readdirSync(specsDir, { recursive: true });
   } catch {
     return [];
   }
@@ -136,14 +136,29 @@ export function extractItemEndpointFromSpec(spec, objectName) {
  * @returns {{ itemPath: string, paramRefs: Array, tag: string } | null}
  */
 export function extractItemEndpoint(specsDir, apiSpecFile, objectName) {
-  const specPath = join(specsDir, apiSpecFile);
+  // Search recursively for a file matching the basename of apiSpecFile,
+  // since specs may live in nested subdirectories (e.g. domains/intake/intake-openapi.yaml)
+  const target = basename(apiSpecFile);
+  let relativePath = apiSpecFile;
+  let specPath;
+  try {
+    const allFiles = readdirSync(specsDir, { recursive: true });
+    const match = allFiles.find(f => basename(f) === target);
+    if (!match) return null;
+    relativePath = match;
+    specPath = join(specsDir, match);
+  } catch {
+    return null;
+  }
   let spec;
   try {
     spec = yaml.load(readFileSync(specPath, 'utf8'));
   } catch {
     return null;
   }
-  return extractItemEndpointFromSpec(spec, objectName);
+  const result = extractItemEndpointFromSpec(spec, objectName);
+  if (!result) return null;
+  return { ...result, relativePath };
 }
 
 // =============================================================================
@@ -254,7 +269,8 @@ function hoistDefs(defs, rootNames, domain) {
  * @returns {Object} Overlay document
  */
 export function generateOverlay(stateMachine, endpointInfo) {
-  const { itemPath, paramRefs, tag, schemaRef } = endpointInfo;
+  const { itemPath, paramRefs, tag, schemaRef, relativePath } = endpointInfo;
+  const apiSpecRef = relativePath || stateMachine.apiSpec;
 
   const pathsUpdate = {};
   const seenIds = new Set();
@@ -323,7 +339,7 @@ export function generateOverlay(stateMachine, endpointInfo) {
   const actions = [
     {
       target: '$.paths',
-      file: stateMachine.apiSpec,
+      file: apiSpecRef,
       description: `Add state machine transition endpoints for ${stateMachine.domain}`,
       update: pathsUpdate
     }
@@ -332,7 +348,7 @@ export function generateOverlay(stateMachine, endpointInfo) {
   if (Object.keys(hoistedSchemas).length > 0) {
     actions.push({
       target: '$.components.schemas',
-      file: stateMachine.apiSpec,
+      file: apiSpecRef,
       description: `Hoist state-machine action $defs into components.schemas for ${stateMachine.domain}`,
       update: hoistedSchemas
     });

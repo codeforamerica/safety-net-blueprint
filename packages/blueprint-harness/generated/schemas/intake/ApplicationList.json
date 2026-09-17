@@ -1,0 +1,203 @@
+{
+  "type": "object",
+  "required": [
+    "items",
+    "total",
+    "limit",
+    "offset"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "programsApplied",
+          "referenceId",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true,
+            "description": "Unique identifier (server-generated)."
+          },
+          "referenceId": {
+            "type": "string",
+            "readOnly": true,
+            "description": "Short human-readable reference code for this application."
+          },
+          "status": {
+            "type": "string",
+            "readOnly": true,
+            "description": "Current lifecycle status of the application.",
+            "enum": [
+              "draft",
+              "submitted",
+              "under_review",
+              "withdrawn",
+              "closed"
+            ]
+          },
+          "programsApplied": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "snap",
+                "medicaid",
+                "chip",
+                "tanf"
+              ]
+            },
+            "description": "Benefit programs the household is applying for."
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "online",
+              "phone",
+              "in_person",
+              "mail"
+            ],
+            "description": "Channel through which the application was submitted."
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "description": "Timestamp when the application was formally submitted. Null until submitted."
+          },
+          "openedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "description": "Timestamp when a caseworker began active review. Null until the application is opened."
+          },
+          "slaTypeCode": {
+            "type": "string",
+            "readOnly": true,
+            "description": "SLA type governing the processing deadline for this application.",
+            "enum": [
+              "snap_standard",
+              "medicaid_standard"
+            ]
+          },
+          "address": {
+            "type": "object",
+            "description": "Mailing or residential address.",
+            "required": [
+              "street",
+              "city",
+              "state",
+              "zip"
+            ],
+            "properties": {
+              "street": {
+                "type": "string",
+                "description": "Street address including apartment or unit number."
+              },
+              "city": {
+                "type": "string",
+                "description": "City name."
+              },
+              "state": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "description": "Two-letter US state abbreviation."
+              },
+              "zip": {
+                "type": "string",
+                "pattern": "^\\d{5}(-\\d{4})?$",
+                "description": "ZIP code or ZIP+4."
+              }
+            }
+          },
+          "contactInfo": {
+            "type": "object",
+            "description": "Contact details for the primary applicant.",
+            "properties": {
+              "phone": {
+                "type": "string",
+                "description": "Primary phone number."
+              },
+              "email": {
+                "type": "string",
+                "format": "email",
+                "description": "Email address."
+              },
+              "preferredContact": {
+                "type": "string",
+                "enum": [
+                  "phone",
+                  "email",
+                  "mail"
+                ],
+                "description": "Applicant's preferred method of contact."
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "description": "Timestamp when the application was created."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "description": "Timestamp when the application was last updated."
+          },
+          "_links": {
+            "type": "object",
+            "readOnly": true,
+            "description": "Generated composition links.",
+            "properties": {
+              "applicationSummary": {
+                "type": "object",
+                "description": "Link to the applicationSummary composition.",
+                "properties": {
+                  "href": {
+                    "type": "string",
+                    "format": "uri-reference",
+                    "readOnly": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of matching applications."
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "description": "Maximum number of applications per page."
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of applications skipped."
+    },
+    "hasNext": {
+      "type": "boolean",
+      "description": "Whether more applications are available."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/ApplicationList"
+}
