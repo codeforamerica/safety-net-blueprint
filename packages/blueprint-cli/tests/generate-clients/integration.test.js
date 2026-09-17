@@ -1,19 +1,17 @@
 /**
  * Golden file tests for TypeScript client generation.
  *
- * Resolves the shared fixture specs (compiling rules to a graph), then generates
- * TypeScript clients and compares against committed golden output files.
- * Fixture inputs:  tests/fixtures/
- * Golden outputs:  tests/generate-clients/golden/
+ * Resolves the harness contracts (compiling rules to a graph, injecting RPC
+ * endpoints, etc.), then generates TypeScript clients and compares against
+ * committed golden output files in the harness.
+ *
+ * Contract inputs:  packages/blueprint-harness/contracts/
+ * Golden outputs:   packages/blueprint-harness/generated/clients/
  *
  * To regenerate golden outputs:
- *   node scripts/resolve.js \
- *     --spec=tests/fixtures \
- *     --overlay=tests/fixtures/overlays \
- *     --out=/tmp/snb-regen
- *   node scripts/generate-ts-clients.js \
- *     --spec=/tmp/snb-regen \
- *     --out=tests/generate-clients/golden
+ *   node packages/blueprint-cli/scripts/generate-ts-clients.js \
+ *     --spec=packages/blueprint-harness/generated/resolved \
+ *     --out=packages/blueprint-harness/generated/clients
  */
 
 import { describe, it, before, after } from 'node:test';
@@ -25,20 +23,26 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const sharedFixtures = join(__dirname, '../fixtures');
-const golden = join(__dirname, 'golden');
+const HARNESS = join(__dirname, '../../../blueprint-harness');
+const contracts = join(HARNESS, 'contracts');
+const golden = join(HARNESS, 'generated/clients');
 const resolveScript = join(__dirname, '../../scripts/resolve.js');
 const clientScript = join(__dirname, '../../scripts/generate-ts-clients.js');
 const projectRoot = join(__dirname, '../../..');
 
 const GOLDEN_FILES = [
-  'alerts/sdk.gen.ts',
-  'alerts/types.gen.ts',  // includes NoticeCategory named enum const (from external $defs)
-  'alerts/zod.gen.ts',    // reviewer field patched with .nullable()
-  'alerts/index.ts',
-  'alerts/annotations.ts',      // generated from alerts-annotations.yaml
-  'alerts/rules.ts',            // generated from alerts-graph.yaml (compiled by resolve from alerts-rules.yaml)
-  'alerts/rules-types.gen.ts',  // domain-specific input/result types using FactNode<T>
+  'eligibility/sdk.gen.ts',
+  'eligibility/types.gen.ts',
+  'eligibility/zod.gen.ts',
+  'eligibility/index.ts',
+  'eligibility/annotations.ts',
+  'eligibility/rules.ts',
+  'eligibility/rules-types.gen.ts',
+  'intake/sdk.gen.ts',
+  'intake/types.gen.ts',
+  'intake/zod.gen.ts',
+  'intake/index.ts',
+  'intake/annotations.ts',
 ];
 
 describe('generate-clients golden', () => {
@@ -46,13 +50,12 @@ describe('generate-clients golden', () => {
   let outDir;
 
   before(() => {
-    // Step 1: Resolve shared fixtures — this compiles alerts-rules.yaml → alerts-graph.yaml
-    // and applies the state overlay (enum source, x-relationship expand, RPC endpoints, etc.)
+    // Step 1: Resolve harness contracts
     resolvedDir = mkdtempSync(join(tmpdir(), 'snb-clients-resolved-'));
     const resolveResult = spawnSync(process.execPath, [
       resolveScript,
-      `--spec=${sharedFixtures}`,
-      `--overlay=${join(sharedFixtures, 'overlays')}`,
+      `--spec=${contracts}`,
+      `--overlay=${join(contracts, 'overlays')}`,
       `--out=${resolvedDir}`,
     ], { cwd: projectRoot, encoding: 'utf8' });
     assert.equal(resolveResult.status, 0, `Resolve failed:\n${resolveResult.stderr}`);
@@ -77,7 +80,7 @@ describe('generate-clients golden', () => {
       const actual = readFileSync(join(outDir, file), 'utf8');
       const goldenContent = readFileSync(join(golden, file), 'utf8');
       assert.strictEqual(actual, goldenContent,
-        `${file} differs from golden — run \`npm run test:goldens-regenerate\` if intentional`);
+        `${file} differs from golden — regenerate with generate-ts-clients.js against generated/resolved/ and update generated/clients/ if intentional`);
     });
   }
 });

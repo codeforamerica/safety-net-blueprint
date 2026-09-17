@@ -1,8 +1,0 @@
-# External schema file referenced by alerts-openapi.yaml.
-# The $defs here are named string enums — they get inlined by bundleSpec before hey-api sees them,
-# so collectNamedEnumDefs reads this file directly and appends const exports to types.gen.ts.
-$defs:
-  NoticeCategory:
-    type: string
-    enum: [system, caseworker, administrative]
-    description: Category of notice

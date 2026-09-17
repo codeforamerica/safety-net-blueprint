@@ -1,17 +1,17 @@
 /**
  * Golden file tests for blueprint-resolve CLI — bundled resolution.
  *
- * Runs resolve with --bundle to inline all $refs, and compares the
- * bundled output YAML against committed golden files.
+ * Runs resolve with --bundle against the shared harness contracts and compares
+ * the bundled output YAML against committed golden files in the harness.
  *
- * Shared inputs:  tests/fixtures/
- * Golden outputs: tests/resolve/golden/bundled/
+ * Shared inputs:  packages/blueprint-harness/contracts/
+ * Golden outputs: packages/blueprint-harness/generated/bundled/
  *
  * To regenerate golden outputs:
- *   node scripts/resolve.js \
- *     --spec=tests/fixtures \
- *     --overlay=tests/fixtures/overlays \
- *     --out=tests/resolve/golden/bundled \
+ *   node packages/blueprint-cli/scripts/resolve.js \
+ *     --spec=packages/blueprint-harness/contracts \
+ *     --overlay=packages/blueprint-harness/contracts/overlays \
+ *     --out=packages/blueprint-harness/generated/bundled \
  *     --bundle
  */
 
@@ -25,12 +25,14 @@ import { spawnSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = join(__dirname, '../../scripts/resolve.js');
-const INPUTS = join(__dirname, '../fixtures');
-const GOLDENS = join(__dirname, 'golden/bundled');
+const HARNESS = join(__dirname, '../../../blueprint-harness');
+const INPUTS = join(HARNESS, 'contracts');
+const GOLDENS = join(HARNESS, 'generated/bundled');
 const projectRoot = join(__dirname, '../../..');
 
 const GOLDEN_FILES = [
-  'alerts-openapi.yaml',
+  'domains/intake/intake-openapi.yaml',
+  'domains/eligibility/eligibility-openapi.yaml',
 ];
 
 describe('resolve golden — bundled', () => {
@@ -61,7 +63,7 @@ describe('resolve golden — bundled', () => {
       const actual = readFileSync(join(outDir, file), 'utf8');
       const golden = readFileSync(join(GOLDENS, file), 'utf8');
       assert.strictEqual(actual, golden,
-        `${file} differs from golden — run \`npm run test:goldens-regenerate\` if intentional`);
+        `${file} differs from golden — regenerate with resolve.js --bundle against contracts/ and update generated/bundled/ if intentional`);
     });
   }
 });

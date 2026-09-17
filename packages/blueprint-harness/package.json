@@ -8,12 +8,7 @@
     "generated/",
     "explorer/"
   ],
-  "scripts": {
-    "generate:resolved": "node ../blueprint-cli/scripts/resolve.js --spec=contracts --overlay=contracts/overlays --out=generated/resolved",
-    "generate:clients": "node ../blueprint-cli/scripts/generate-ts-clients.js --spec=generated/resolved --out=generated/clients",
-    "generate": "npm run generate:resolved && npm run generate:clients"
-  },
-  "license": "SEE LICENSE IN LICENSE",
+"license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/codeforamerica/safety-net-blueprint.git",

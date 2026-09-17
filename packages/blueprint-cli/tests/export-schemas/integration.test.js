@@ -1,16 +1,17 @@
 /**
  * Golden file tests for blueprint-export-schemas CLI.
  *
- * Runs the export-schemas script against the shared fixture specs and
- * compares every generated JSON Schema file against committed golden outputs.
+ * Runs the export-schemas script against the harness resolved specs and
+ * compares every generated JSON Schema file against committed golden outputs
+ * in the harness.
  *
- * Fixture inputs:  tests/fixtures/
- * Golden outputs:  tests/export-schemas/golden/
+ * Resolved inputs:  packages/blueprint-harness/generated/resolved/
+ * Golden outputs:   packages/blueprint-harness/generated/schemas/
  *
  * To regenerate golden outputs:
- *   node scripts/export-schemas.js \
- *     --spec=tests/fixtures \
- *     --out=tests/export-schemas/golden
+ *   node packages/blueprint-cli/scripts/export-schemas.js \
+ *     --spec=packages/blueprint-harness/generated/resolved \
+ *     --out=packages/blueprint-harness/generated/schemas
  */
 
 import { describe, it, before, after } from 'node:test';
@@ -23,15 +24,16 @@ import { spawnSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = join(__dirname, '../../scripts/export-schemas.js');
-const INPUTS = join(__dirname, '../fixtures');
-const GOLDENS = join(__dirname, 'golden');
+const HARNESS = join(__dirname, '../../../blueprint-harness');
+const INPUTS = join(HARNESS, 'generated/resolved');
+const GOLDENS = join(HARNESS, 'generated/schemas');
 const projectRoot = join(__dirname, '../../..');
 
 const GOLDEN_FILES = [
-  'alerts/Notice.json',
-  'alerts/NoticeCreate.json',
-  'alerts/NoticeList.json',
-  'alerts/NoticeUpdate.json',
+  'intake/Application.json',
+  'intake/ApplicationWritable.json',
+  'eligibility/Determination.json',
+  'eligibility/DeterminationWritable.json',
 ];
 
 describe('export-schemas golden', () => {
@@ -55,7 +57,7 @@ describe('export-schemas golden', () => {
       const actual = readFileSync(join(outDir, file), 'utf8');
       const golden = readFileSync(join(GOLDENS, file), 'utf8');
       assert.strictEqual(actual, golden,
-        `${file} differs from golden — run \`npm run test:goldens-regenerate\` if intentional`);
+        `${file} differs from golden — regenerate with export-schemas.js against generated/resolved/ and update generated/schemas/ if intentional`);
     });
   }
 });

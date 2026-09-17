@@ -1,16 +1,17 @@
 /**
  * Golden file tests for blueprint-generate-rpc-overlay CLI.
  *
- * Copies shared fixtures to a temp directory, runs the overlay generator,
- * and compares the generated overlay YAML against the committed golden.
+ * Copies harness contracts to a temp directory, runs the overlay generator,
+ * and compares the generated overlay YAML against committed goldens in the harness.
  *
- * Shared inputs:  tests/fixtures/
- * Golden outputs: tests/generate-rpc-overlay/golden/
+ * Contract inputs:  packages/blueprint-harness/contracts/
+ * Golden outputs:   packages/blueprint-harness/generated/overlays/
  *
  * To regenerate golden outputs:
- *   cp -r tests/fixtures /tmp/snb-rpc-regen && \
- *   node scripts/generate-rpc-overlay.js --spec=/tmp/snb-rpc-regen && \
- *   cp /tmp/snb-rpc-regen/overlays/alerts-rpc.yaml tests/generate-rpc-overlay/golden/
+ *   node packages/blueprint-cli/scripts/generate-rpc-overlay.js \
+ *     --spec=packages/blueprint-harness/contracts
+ *   cp packages/blueprint-harness/contracts/overlays/intake-rpc.yaml \
+ *     packages/blueprint-harness/generated/overlays/intake-rpc.yaml
  */
 
 import { describe, it, before, after } from 'node:test';
@@ -23,11 +24,12 @@ import { spawnSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = join(__dirname, '../../scripts/generate-rpc-overlay.js');
-const INPUTS = join(__dirname, '../fixtures');
-const GOLDEN = join(__dirname, 'golden');
+const HARNESS = join(__dirname, '../../../blueprint-harness');
+const INPUTS = join(HARNESS, 'contracts');
+const GOLDEN = join(HARNESS, 'generated/overlays');
 
 const GOLDEN_FILES = [
-  'alerts-rpc.yaml',
+  'intake-rpc.yaml',
 ];
 
 describe('generate-rpc-overlay golden', () => {
@@ -51,7 +53,7 @@ describe('generate-rpc-overlay golden', () => {
       const actual = readFileSync(join(workDir, 'overlays', file), 'utf8');
       const golden = readFileSync(join(GOLDEN, file), 'utf8');
       assert.strictEqual(actual, golden,
-        `${file} differs from golden — run \`npm run test:goldens-regenerate\` if intentional`);
+        `${file} differs from golden — regenerate with generate-rpc-overlay.js against contracts/ and update generated/overlays/ if intentional`);
     });
   }
 });

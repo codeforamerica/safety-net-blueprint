@@ -1,17 +1,17 @@
 /**
  * Golden file tests for blueprint-resolve CLI — standard resolution.
  *
- * Runs resolve with an overlay (including config) and compares the
- * resolved output YAML against committed golden files.
+ * Runs resolve against the shared harness contracts and compares the
+ * resolved output YAML against committed golden files in the harness.
  *
- * Shared inputs:  tests/fixtures/
- * Golden outputs: tests/resolve/golden/resolved/
+ * Shared inputs:  packages/blueprint-harness/contracts/
+ * Golden outputs: packages/blueprint-harness/generated/resolved/
  *
  * To regenerate golden outputs:
- *   node scripts/resolve.js \
- *     --spec=tests/fixtures \
- *     --overlay=tests/fixtures/overlays \
- *     --out=tests/resolve/golden/resolved
+ *   node packages/blueprint-cli/scripts/resolve.js \
+ *     --spec=packages/blueprint-harness/contracts \
+ *     --overlay=packages/blueprint-harness/contracts/overlays \
+ *     --out=packages/blueprint-harness/generated/resolved
  */
 
 import { describe, it, before, after } from 'node:test';
@@ -24,12 +24,16 @@ import { spawnSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = join(__dirname, '../../scripts/resolve.js');
-const INPUTS = join(__dirname, '../fixtures');
-const GOLDENS = join(__dirname, 'golden/resolved');
+const HARNESS = join(__dirname, '../../../blueprint-harness');
+const INPUTS = join(HARNESS, 'contracts');
+const GOLDENS = join(HARNESS, 'generated/resolved');
 const projectRoot = join(__dirname, '../../..');
 
 const GOLDEN_FILES = [
-  'alerts-openapi.yaml',
+  'domains/intake/intake-openapi.yaml',
+  'domains/eligibility/eligibility-openapi.yaml',
+  'domains/intake/intake-state-machine.yaml',
+  'base/schemas/enums.yaml',
 ];
 
 describe('resolve golden — resolved', () => {
@@ -59,7 +63,7 @@ describe('resolve golden — resolved', () => {
       const actual = readFileSync(join(outDir, file), 'utf8');
       const golden = readFileSync(join(GOLDENS, file), 'utf8');
       assert.strictEqual(actual, golden,
-        `${file} differs from golden — run \`npm run test:goldens-regenerate\` if intentional`);
+        `${file} differs from golden — regenerate with resolve.js against contracts/ and update generated/resolved/ if intentional`);
     });
   }
 });

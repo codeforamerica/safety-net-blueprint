@@ -1,17 +1,17 @@
 /**
  * Golden file test for generate-postman-collection CLI.
  *
- * Runs the script against a minimal fixture spec and compares the output against
- * a committed golden file. A failure here means the Postman collection structure
- * changed — regenerate if intentional.
+ * Runs the script against the harness resolved specs and compares the output
+ * against a committed golden file in the harness. A failure here means the
+ * Postman collection structure changed — regenerate if intentional.
  *
- * Fixture inputs:  tests/fixtures/
- * Golden output:   tests/generate-postman-collection/golden/postman-collection.json
+ * Resolved inputs: packages/blueprint-harness/generated/resolved/
+ * Golden output:   packages/blueprint-harness/generated/postman/postman-collection.json
  *
  * To regenerate golden output:
- *   node scripts/generate-postman-collection.js \
- *     --spec=tests/fixtures \
- *     --out=tests/generate-postman-collection/golden/postman-collection.json
+ *   node packages/blueprint-cli/scripts/generate-postman-collection.js \
+ *     --spec=packages/blueprint-harness/generated/resolved \
+ *     --out=packages/blueprint-harness/generated/postman
  */
 
 import { describe, it, before, after } from 'node:test';
@@ -24,8 +24,9 @@ import { spawnSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = join(__dirname, '../../scripts/generate-postman-collection.js');
-const INPUTS = join(__dirname, '../fixtures');
-const GOLDEN = join(__dirname, 'golden/postman-collection.json');
+const HARNESS = join(__dirname, '../../../blueprint-harness');
+const INPUTS = join(HARNESS, 'generated/resolved');
+const GOLDEN = join(HARNESS, 'generated/postman/postman-collection.json');
 const projectRoot = join(__dirname, '../../..');
 
 // Strip _postman_id before comparing — it's a random UUID that changes every run
@@ -59,6 +60,6 @@ describe('generate-postman-collection golden', () => {
     const actual = normalize(readFileSync(outFile, 'utf8'));
     const golden = normalize(readFileSync(GOLDEN, 'utf8'));
     assert.strictEqual(actual, golden,
-      'postman-collection.json differs from golden — regenerate with `npm run test:goldens-regenerate` if intentional');
+      'postman-collection.json differs from golden — regenerate with generate-postman-collection.js against generated/resolved/ and update generated/postman/ if intentional');
   });
 });
