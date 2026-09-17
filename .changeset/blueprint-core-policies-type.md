@@ -2,4 +2,4 @@
 "@codeforamerica/blueprint-core": patch
 ---
 
-`detectType` now recognizes policies files — both by `$schema: policies-schema.yaml` and by the `-policies.yaml` filename suffix. Previously policies files returned `'unknown'`, causing them to be incorrectly removed from bundled resolve output.
+`detectType` now returns `'policies'` for policy registry files (matched by `$schema: policies-schema.yaml` or the `-policies.yaml` filename suffix). Previously these files returned `'unknown'`.
