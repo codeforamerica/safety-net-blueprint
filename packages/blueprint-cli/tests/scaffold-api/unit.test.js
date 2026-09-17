@@ -5,6 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
+import yaml from 'js-yaml';
 import {
   parseArgs,
   toKebabCase,
@@ -98,6 +99,20 @@ test('generate-api tests', async (t) => {
 
   await t.test('pluralize - word ending in sh adds es', () => {
     assert.strictEqual(pluralize('Wish'), 'Wishes');
+  });
+
+  await t.test('pluralize - irregular nouns', () => {
+    assert.strictEqual(pluralize('Child'), 'Children');
+    assert.strictEqual(pluralize('Person'), 'People');
+  });
+
+  await t.test('pluralize - word ending in ch not ending in y', () => {
+    assert.strictEqual(pluralize('Church'), 'Churches');
+  });
+
+  await t.test('pluralize - preserves PascalCase on multi-word resources', () => {
+    assert.strictEqual(pluralize('CaseWorker'), 'CaseWorkers');
+    assert.strictEqual(pluralize('Owner'), 'Owners');
   });
 
   // ===========================================================================
@@ -221,6 +236,41 @@ test('generate-api tests', async (t) => {
     assert.ok(spec.includes('"/caseworkers"'));
     assert.ok(spec.includes('operationId: listCaseWorkers'));
     assert.ok(spec.includes('"$ref": "#/components/schemas/CaseWorker"'));
+  });
+
+  await t.test('generateApiSpec - uses correct plural for irregular resources', () => {
+    const spec = generateApiSpec('children', 'Child');
+    assert.ok(spec.includes('"/children"'));
+    assert.ok(spec.includes('"/children/{childId}"'));
+    assert.ok(spec.includes('operationId: listChildren'));
+    assert.ok(spec.includes('- name: Children'));
+    assert.ok(!/childs/i.test(spec), 'spec must not contain "childs"');
+  });
+
+  await t.test('generateApiSpec - schemas follow the Writable pattern', () => {
+    const { components } = yaml.load(generateApiSpec('benefits', 'Benefit'));
+    const { BenefitWritable, Benefit, BenefitCreate, BenefitUpdate } = components.schemas;
+    const writableRef = { $ref: '#/components/schemas/BenefitWritable' };
+
+    // Writable base holds only client-writable fields
+    assert.deepStrictEqual(Object.keys(BenefitWritable.properties), ['name', 'description', 'status']);
+    assert.strictEqual(BenefitWritable.required, undefined);
+
+    // Full resource = Writable + server-managed fields
+    assert.deepStrictEqual(Benefit.allOf[0], writableRef);
+    assert.deepStrictEqual(Object.keys(Benefit.allOf[1].properties), ['id', 'createdAt', 'updatedAt']);
+    assert.deepStrictEqual(Benefit.required, ['id', 'name', 'createdAt', 'updatedAt']);
+    assert.strictEqual(Benefit.unevaluatedProperties, false);
+
+    // Create/Update extend the Writable base, not the full resource
+    assert.deepStrictEqual(BenefitCreate.allOf[0], writableRef);
+    assert.deepStrictEqual(BenefitCreate.allOf[1].required, ['name']);
+    assert.deepStrictEqual(BenefitUpdate.allOf[0], writableRef);
+    assert.strictEqual(BenefitUpdate.allOf[1].minProperties, 1);
+    const refsFullResource = schema =>
+      schema.allOf.some(entry => entry.$ref === '#/components/schemas/Benefit');
+    assert.ok(!refsFullResource(BenefitCreate));
+    assert.ok(!refsFullResource(BenefitUpdate));
   });
 
   await t.test('generateApiSpec - examples $ref points to inline example', () => {

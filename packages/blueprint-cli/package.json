@@ -1,6 +1,6 @@
 {
   "name": "@codeforamerica/blueprint-cli",
-  "version": "0.1.0",
+  "version": "0.2.2",
   "description": "CLI tooling for the Blueprint framework — validate, resolve, scaffold, and generate artifacts across all contract types",
   "type": "module",
   "files": [
@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
-    "@codeforamerica/blueprint-core": "^0.1.0",
+    "@codeforamerica/blueprint-core": "^0.1.1",
     "@codeforamerica/blueprint-explorer": "^0.1.0",
     "@codeforamerica/blueprint-rules-engine": "^0.1.0",
     "@hey-api/openapi-ts": "^0.90.3",

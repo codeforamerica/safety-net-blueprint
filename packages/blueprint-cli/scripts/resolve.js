@@ -1060,14 +1060,17 @@ async function main() {
   }
 
   // Always include blueprint-core base contracts in the output
-  if (existsSync(baseContractsDir)) {
-    const baseFiles = collectYamlFiles(baseContractsDir);
-    for (const { relativePath, sourcePath, spec } of baseFiles) {
-      const baseRelPath = `base/${relativePath}`.replace(/\\/g, '/');
-      yamlFiles.push({ relativePath: baseRelPath, sourcePath, spec });
-    }
-    console.log(`Base contracts: ${baseContractsDir} (${baseFiles.length} file(s))`);
+  if (!existsSync(baseContractsDir)) {
+    console.error(`Error: blueprint-core base-contracts directory not found: ${baseContractsDir}`);
+    console.error('This usually means blueprint-core was installed from an incomplete tarball. Re-install @codeforamerica/blueprint-core.');
+    process.exit(1);
   }
+  const baseFiles = collectYamlFiles(baseContractsDir);
+  for (const { relativePath, sourcePath, spec } of baseFiles) {
+    const baseRelPath = `base/${relativePath}`.replace(/\\/g, '/');
+    yamlFiles.push({ relativePath: baseRelPath, sourcePath, spec });
+  }
+  console.log(`Base contracts: ${baseContractsDir} (${baseFiles.length} file(s))`);
 
   let allWarnings = [];
   let currentResults = null;
