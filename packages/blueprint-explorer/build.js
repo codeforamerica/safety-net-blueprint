@@ -127,9 +127,5 @@ if (doBuild('client-reference')) {
   execFileSync(node, [resolve(__dirname, 'src', 'client-reference.js'), ...fwdContent, ...fwdResolved, ...fwdClients], { stdio: 'inherit' });
 }
 
-if (doBuild('authored')) {
-  execFileSync(node, [resolve(__dirname, 'src', 'authored.js'), ...fwdContent], { stdio: 'inherit' });
-}
-
 // Hub is always rebuilt last so it can scan all tool output directories
 execFileSync(node, [resolve(__dirname, 'src', 'hub.js'), ...fwdContent], { stdio: 'inherit' });

@@ -5,9 +5,10 @@ import { fileURLToPath } from 'url';
 import { resolveConfig } from '../../src/context-map/resolve-config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const fixturesContent = join(__dirname, 'fixtures', 'content');
-const fixturesContracts = join(__dirname, 'fixtures', 'contracts');
-const emptyContracts = '/tmp/nonexistent-contracts-dir-for-test';
+const fixturesContent   = join(__dirname, '../fixtures');
+const harnessDir        = join(__dirname, '../../../blueprint-harness');
+const fixturesContracts = join(harnessDir, 'resolved');
+const emptyContracts    = '/tmp/nonexistent-contracts-dir-for-test';
 
 describe('resolveConfig', () => {
   it('loads config.yaml from contentDir', () => {
@@ -18,8 +19,8 @@ describe('resolveConfig', () => {
 
   it('preserves flow structure', () => {
     const config = resolveConfig(emptyContracts, fixturesContent);
-    assert.equal(config.flows[0].id, 'submission');
-    assert.equal(config.flows[0].label, 'Application Submission');
+    assert.equal(config.flows[0].id, 'send-notice');
+    assert.equal(config.flows[0].label, 'Send Notice');
   });
 
   it('enriches steps with policies when annotations exist', () => {

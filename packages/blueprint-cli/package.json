@@ -7,6 +7,7 @@
     "scripts/"
   ],
   "bin": {
+    "blueprint-build-explorer": "./scripts/build-explorer.js",
     "blueprint-validate": "./scripts/validate.js",
     "blueprint-evaluate": "./scripts/evaluate.js",
     "blueprint-add-api-resource": "./scripts/add-api-resource.js",
@@ -37,6 +38,7 @@
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
     "@codeforamerica/blueprint-core": "^0.1.0",
+    "@codeforamerica/blueprint-explorer": "^0.1.0",
     "@codeforamerica/blueprint-rules-engine": "^0.1.0",
     "@hey-api/openapi-ts": "^0.90.3",
     "ajv": "^8.12.0",
@@ -45,6 +47,7 @@
     "pluralize": "^8.0.0"
   },
   "devDependencies": {
+    "@codeforamerica/blueprint-harness": "*",
     "typescript": "^5.3.3"
   }
 }

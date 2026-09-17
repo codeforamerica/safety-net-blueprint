@@ -36,7 +36,7 @@ import { bundleSpec } from '@codeforamerica/blueprint-core/bundle';
 import { baseContractsDir, resolverMap } from '@codeforamerica/blueprint-core';
 import { extractItemEndpointFromSpec, generateOverlay } from './generate-rpc-overlay.js';
 import { generateCompositionOverlays } from '@codeforamerica/blueprint-core/compositions';
-import { generateRulesResults } from '@codeforamerica/blueprint-core';
+import { generateRulesResults, detectType } from '@codeforamerica/blueprint-core';
 import { validateSchemas } from './validate/json-schema-core.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1414,7 +1414,6 @@ async function main() {
   if (options.bundle) {
     console.log('\nBundling: inlining external $refs...');
     for (const [relativePath, spec] of currentResults) {
-      if (!isOpenApi(spec)) continue;
       const filePath = join(outDir, relativePath);
       const dereferenced = await bundleSpec(filePath);
       const output = yaml.dump(dereferenced, {
@@ -1427,29 +1426,33 @@ async function main() {
       console.log(`  ✓ ${relativePath}`);
     }
 
-    // Remove shared component files (they've been inlined).
-    // Preserve companion YAML files the mock server needs at runtime —
-    // *-compositions.yaml and *-state-machine.yaml are not $ref targets;
-    // they are standalone files that drive route registration.
+    // Remove shared component files (base/, common/) that were inlined into
+    // bundled specs. Standalone contract files — identified by a recognized type
+    // from detectType — are preserved as-is.
+    const BUNDLED_STANDALONE_TYPES = new Set([
+      'openapi', 'asyncapi', 'state-machine', 'rules', 'rules-examples',
+      'graph', 'annotations', 'policies', 'sla-types', 'metrics',
+      'compositions', 'mock-data', 'config',
+    ]);
     for (const [relativePath, spec] of currentResults) {
-      if (!isOpenApi(spec) && !isCompositions(spec) && !isStateMachine(spec) && !isRules(spec) && !isGraph(spec)) {
+      const type = detectType(basename(relativePath), spec);
+      if (!BUNDLED_STANDALONE_TYPES.has(type)) {
         const filePath = join(outDir, relativePath);
         if (existsSync(filePath)) {
           rmSync(filePath, { recursive: true });
         }
       }
     }
-    // Remove empty component directories
-    const outEntries = readdirSync(outDir, { withFileTypes: true });
-    for (const entry of outEntries) {
-      if (entry.isDirectory()) {
-        const dirPath = join(outDir, entry.name);
-        const contents = readdirSync(dirPath);
-        if (contents.length === 0) {
-          rmSync(dirPath, { recursive: true });
-        }
+    // Remove empty directories left behind after file cleanup (walk bottom-up).
+    const removeEmptyDirs = (dir) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) removeEmptyDirs(join(dir, entry.name));
       }
-    }
+      if (readdirSync(dir).length === 0 && dir !== outDir) {
+        rmSync(dir, { recursive: true });
+      }
+    };
+    removeEmptyDirs(outDir);
   }
 
   // Display warnings if any

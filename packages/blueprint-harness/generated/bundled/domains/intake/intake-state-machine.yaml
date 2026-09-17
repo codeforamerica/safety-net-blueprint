@@ -49,7 +49,19 @@ machines:
         description: Closes the application once intake processing is complete.
         schema:
           request:
-            $ref: "#/$defs/CloseRequest"
+            type: object
+            required:
+              - outcome
+            properties:
+              outcome:
+                type: string
+                enum:
+                  - approved
+                  - denied
+                description: Whether the application was approved or denied at close.
+              notes:
+                type: string
+                description: Optional caseworker notes on the closure decision.
         transition:
           from: under_review
           to: closed

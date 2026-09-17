@@ -24,6 +24,7 @@ export function detectType(filename, doc) {
       if (base === 'graph-schema.yaml')          return 'graph';
       if (base === 'state-machine-schema.yaml') return 'state-machine';
       if (base === 'annotations-schema.yaml')  return 'annotations';
+      if (base === 'policies-schema.yaml')     return 'policies';
       if (base === 'sla-types-schema.yaml')    return 'sla-types';
       if (base === 'metrics-schema.yaml')      return 'metrics';
       if (base === 'compositions-schema.yaml') return 'compositions';
@@ -45,6 +46,7 @@ export function detectType(filename, doc) {
   if (filename.endsWith('-compositions.yaml'))     return 'compositions';
   if (filename.endsWith('-annotations-docs.yaml')) return 'annotations';
   if (filename.endsWith('-annotations.yaml'))      return 'annotations';
+  if (filename.endsWith('-policies.yaml'))         return 'policies';
   if (filename.endsWith('-sla-types.yaml'))        return 'sla-types';
   if (filename.endsWith('-config.yaml'))           return 'config';
   if (filename.endsWith('-overlay.yaml'))          return 'overlay';

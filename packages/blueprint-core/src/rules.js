@@ -353,7 +353,8 @@ export function generateRulesResults(rulesFiles) {
 
     for (const [rulesetName, ruleset] of Object.entries(doc.rulesets)) {
       const graph = compileRuleset(domain, rulesetName, ruleset);
-      const graphPath = `${domain}-${rulesetName}-graph.yaml`;
+      const dir = relativePath.includes('/') ? relativePath.slice(0, relativePath.lastIndexOf('/') + 1) : '';
+      const graphPath = `${dir}${domain}-${rulesetName}-graph.yaml`;
       graphs.set(graphPath, graph);
     }
 

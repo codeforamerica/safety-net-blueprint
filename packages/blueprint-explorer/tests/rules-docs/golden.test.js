@@ -1,18 +1,18 @@
 /**
  * Golden file tests for rules-docs HTML generation.
  *
- * Generates HTML from the fixture contracts and compares against committed
- * golden files. A failure here means the rendering changed — either update
- * the golden with `npm run test:goldens-regenerate` if the change was
- * intentional, or investigate the regression.
+ * Generates HTML from the shared harness contracts and compares against committed
+ * golden files. A failure here means the rendering changed — either update the
+ * golden with `npm run test:goldens-regenerate` if the change was intentional,
+ * or investigate the regression.
  *
- * Fixture inputs:  tests/rules-docs/fixtures/inputs/
- * Golden outputs:  tests/rules-docs/fixtures/outputs/rules-docs/
+ * Resolved contracts: packages/blueprint-harness/resolved/
+ * Golden outputs:     tests/rules-docs/goldens/
  *
  * To regenerate golden outputs:
  *   node src/rules-docs/build.js \
- *     --content=tests/rules-docs/fixtures/outputs \
- *     --resolved=tests/rules-docs/fixtures/inputs
+ *     --content=tests/rules-docs/goldens \
+ *     --resolved=../../blueprint-harness/resolved
  */
 
 import { describe, it } from 'node:test';
@@ -23,41 +23,50 @@ import { fileURLToPath } from 'url';
 import { load } from 'js-yaml';
 import { generateRulesetHtml } from '../../src/rules-docs/generate-html.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const contractsDir = join(__dirname, 'fixtures/inputs');
-const goldensDir   = join(__dirname, 'fixtures/outputs/rules-docs');
+const __dirname  = dirname(fileURLToPath(import.meta.url));
+const harnessDir = join(__dirname, '../../../blueprint-harness');
+const resolvedDir = join(harnessDir, 'resolved');
+const goldensDir = join(__dirname, 'goldens');
 
 // hubHref mirrors what build.js computes:
-//   relative('fixtures/content/rules-docs', 'fixtures/content/index.html') = '../index.html'
+//   relative('goldens/rules-docs', 'goldens/index.html') = '../index.html'
 const HUB_HREF = '../index.html';
 
 function loadYaml(path) { return load(readFileSync(path, 'utf8')); }
 
-function loadAnnotations(domain, rulesetName) {
-  const doc = loadYaml(join(contractsDir, `${domain}-annotations.yaml`));
-  const out = {};
-  for (const [key, value] of Object.entries(doc?.facts ?? {})) {
-    if (key.startsWith(`${rulesetName}.`)) {
-      out[key.slice(rulesetName.length + 1)] = value;
-    }
-  }
-  return out;
-}
+// ── Harness file locations ────────────────────────────────────────────────────
+// Resolved structure: resolved/alerts-urgency-graph.yaml (root),
+//   resolved/domains/alerts/{annotations,rules,rules-examples}.yaml,
+//   resolved/domains/platform/platform-policies.yaml
 
-// ── Golden comparisons ────────────────────────────────────────────────────────
+const alertsDir = join(resolvedDir, 'domains', 'alerts');
 
 const rulesets = [
-  { domain: 'platform', rulesetName: 'main' },
+  {
+    domain:     'alerts',
+    rulesetName: 'urgency',
+    graphPath:   join(resolvedDir, 'alerts-urgency-graph.yaml'),
+    rulesPath:   join(alertsDir,   'alerts-rules.yaml'),
+    examplesPath: join(alertsDir,  'alerts-rules-examples.yaml'),
+    annotationsPath: join(alertsDir, 'alerts-annotations.yaml'),
+  },
 ];
 
 describe('rules-docs golden', () => {
-  const policies = loadYaml(join(contractsDir, 'test-policies.yaml')) ?? {};
+  const policies = loadYaml(join(resolvedDir, 'domains', 'platform', 'platform-policies.yaml'))?.policies ?? {};
 
-  for (const { domain, rulesetName } of rulesets) {
-    const graph         = loadYaml(join(contractsDir, `${domain}-graph.yaml`));
-    const annotations   = loadAnnotations(domain, rulesetName);
-    const examples      = loadYaml(join(contractsDir, `${domain}-rules-examples.yaml`))?.rulesets?.[rulesetName]?.examples ?? [];
-    const rulesetInputs = loadYaml(join(contractsDir, `${domain}-rules.yaml`))?.rulesets?.[rulesetName]?.inputs ?? {};
+  for (const { domain, rulesetName, graphPath, rulesPath, examplesPath, annotationsPath } of rulesets) {
+    const graph         = loadYaml(graphPath);
+    const examples      = loadYaml(examplesPath)?.rulesets?.[rulesetName]?.examples ?? [];
+    const rulesetInputs = loadYaml(rulesPath)?.rulesets?.[rulesetName]?.inputs ?? {};
+
+    const annotationDoc = loadYaml(annotationsPath);
+    const annotations = {};
+    for (const [key, value] of Object.entries(annotationDoc?.facts ?? {})) {
+      if (key.startsWith(`${rulesetName}.`)) {
+        annotations[key.slice(rulesetName.length + 1)] = value;
+      }
+    }
 
     it(`${domain}/${rulesetName} matches golden file`, () => {
       const html   = generateRulesetHtml(graph, annotations, policies, examples, rulesetInputs, { hubHref: HUB_HREF });

@@ -1,8 +1,0 @@
-domain: test
-machines:
-  - object: Verification
-    states:
-      - id: pending
-      - id: satisfied
-      - id: waived
-      - id: cannot_verify

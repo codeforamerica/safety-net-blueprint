@@ -17,6 +17,7 @@
 import { readdirSync, writeFileSync, existsSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { execFileSync } from 'child_process';
 import { loadConfig } from './lib/config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -27,6 +28,10 @@ if (!contentArg) {
   process.exit(1);
 }
 const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
+
+// ── Authored pages ────────────────────────────────────────────────────────────
+
+execFileSync(process.execPath, [resolve(__dirname, 'authored.js'), `--content=${contentDir}`], { stdio: 'inherit' });
 
 // ── Load content config ───────────────────────────────────────────────────────
 
