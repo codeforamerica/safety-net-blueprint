@@ -7,7 +7,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { addAtPath, applyOverlay } from '../../src/overlay/overlay-resolver.js';
+import { addAtPath, applyOverlay } from '../../../src/overlay/overlay-resolver.js';
 
 // ---------------------------------------------------------------------------
 // addAtPath

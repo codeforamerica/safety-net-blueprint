@@ -30,7 +30,7 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import yaml from 'js-yaml';
-import { compileRuleset } from '@codeforamerica/blueprint-core';
+import { compileRuleset } from '@codeforamerica/blueprint-core/rules';
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 
 function parseArgs() {

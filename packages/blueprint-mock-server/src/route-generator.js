@@ -17,7 +17,7 @@ import { createDocumentUploadHandler, createDocumentVersionUploadHandler } from 
 import { createDocumentContentHandler } from './handlers/document-content-handler.js';
 import { findSlaTypes } from './sla-loader.js';
 import { generateStateSchemas } from '@codeforamerica/blueprint-core/compositions';
-import { compileRuleset } from '@codeforamerica/blueprint-core';
+import { compileRuleset } from '@codeforamerica/blueprint-core/rules';
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, registerParentLink } from './composition-assembler.js';
 import { findAll, findById, insertResource, update, registerCollectionDefaults } from './database-manager.js';

@@ -10,7 +10,7 @@
  * pattern is handled correctly, regardless of directory depth.
  */
 
-import { loadExternalRefs } from '@codeforamerica/blueprint-core';
+import { loadExternalRefs } from '@codeforamerica/blueprint-core/openapi';
 import { readFileSync } from 'fs';
 import { resolve as resolvePath } from 'path';
 import yaml from 'js-yaml';

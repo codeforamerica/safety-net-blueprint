@@ -13,8 +13,7 @@ import { join, dirname, resolve as resolvePath } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'url';
 import { exec, resolveOpenApiTsBin, collectNamedEnumDefs, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums } from '../../scripts/generate-ts-clients.js';
-import { bundleSpec } from '@codeforamerica/blueprint-core/bundle';
-import { loadContractFiles } from '@codeforamerica/blueprint-core';
+import { bundleSpec, loadContractFiles } from '@codeforamerica/blueprint-core/openapi';
 import yaml from 'js-yaml';
 import { spawnSync } from 'node:child_process';
 

@@ -13,7 +13,7 @@ import {
   canResolveRef,
   validateRuleset,
   validateRulesDoc,
-} from '../../src/rules-validator.js';
+} from '../../../src/rules-validator.js';
 
 // ── detectCycles ──────────────────────────────────────────────────────────────
 

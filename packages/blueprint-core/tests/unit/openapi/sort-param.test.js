@@ -20,7 +20,7 @@ import yaml from 'js-yaml';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const PARAMETERS_PATH = join(__dirname, '..', '..', 'base-contracts', 'components', 'parameters.yaml');
+const PARAMETERS_PATH = join(__dirname, '..', '..', '..', 'base-contracts', 'components', 'parameters.yaml');
 
 test('SortParam component', async (t) => {
   const params = yaml.load(readFileSync(PARAMETERS_PATH, 'utf8'));

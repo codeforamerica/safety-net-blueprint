@@ -19,8 +19,8 @@ import { resolve, join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import yaml from 'js-yaml';
-import { validateRulesDoc } from '@codeforamerica/blueprint-core/rules-validator';
-import { detectType } from '@codeforamerica/blueprint-core';
+import { validateRulesDoc } from '@codeforamerica/blueprint-core/validator';
+import { detectType } from '@codeforamerica/blueprint-core/openapi';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

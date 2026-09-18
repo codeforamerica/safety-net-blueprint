@@ -12,7 +12,7 @@
 
 import { readFileSync } from 'fs';
 import yaml from 'js-yaml';
-import { loadAllSpecs } from '@codeforamerica/blueprint-core/loader';
+import { loadAllSpecs } from '@codeforamerica/blueprint-core/openapi';
 import { BASE_URL, fetch, resetServer } from '@codeforamerica/blueprint-mock-server/test-utils';
 import { ROLES } from '../roles.js';
 

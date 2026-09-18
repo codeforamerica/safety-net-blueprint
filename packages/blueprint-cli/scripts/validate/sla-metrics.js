@@ -22,8 +22,8 @@ import { resolve, join, relative, isAbsolute, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import yaml from 'js-yaml';
-import { resolveRef, collectTopLevelProperties, resolveSchemaRefs } from '@codeforamerica/blueprint-core/state-machine-validator';
-import { detectType } from '@codeforamerica/blueprint-core';
+import { resolveRef, collectTopLevelProperties, resolveSchemaRefs } from '@codeforamerica/blueprint-core/state-machines';
+import { detectType } from '@codeforamerica/blueprint-core/openapi';
 
 function walkForPattern(dir, suffix) {
   const results = [];

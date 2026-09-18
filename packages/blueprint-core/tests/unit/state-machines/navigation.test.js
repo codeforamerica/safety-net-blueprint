@@ -6,7 +6,7 @@ import {
   getForEachBody,
   collectEmitSteps,
   buildEventIndex,
-} from '../../src/state-machines.js';
+} from '../../../src/state-machines.js';
 
 // ── getSteps ──────────────────────────────────────────────────────────────────
 

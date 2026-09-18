@@ -15,7 +15,7 @@ import {
   applySteps,
   initRulesIndex,
 } from '../../src/state-machine-engine.js';
-import { compileRuleset } from '@codeforamerica/blueprint-core';
+import { compileRuleset } from '@codeforamerica/blueprint-core/rules';
 import { insertResource, clearAll } from '../../src/database-manager.js';
 import { ROLES } from '../roles.js';
 

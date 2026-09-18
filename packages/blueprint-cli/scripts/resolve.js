@@ -29,14 +29,13 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, cpSync
 import { join, dirname, relative, resolve, basename } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { applyOverlay, checkPathExists, parsePath } from '@codeforamerica/blueprint-core/overlay';
-import { extractConfig, validateConfig } from '@codeforamerica/blueprint-core/config';
+import { applyOverlay, checkPathExists, parsePath, extractConfig, validateConfig } from '@codeforamerica/blueprint-core/overlay';
 import { discoverRelationships, buildSchemaIndex, resolveRelationships, buildExamplesIndex, resolveExampleRelationships, summarizeResolverDecisions } from '@codeforamerica/blueprint-core/relationships';
-import { bundleSpec } from '@codeforamerica/blueprint-core/bundle';
+import { bundleSpec, detectType } from '@codeforamerica/blueprint-core/openapi';
 import { baseContractsDir, resolverMap } from '@codeforamerica/blueprint-core';
 import { extractItemEndpointFromSpec, generateOverlay } from './generate-rpc-overlay.js';
 import { generateCompositionOverlays } from '@codeforamerica/blueprint-core/compositions';
-import { generateRulesResults, detectType } from '@codeforamerica/blueprint-core';
+import { generateRulesResults } from '@codeforamerica/blueprint-core/rules';
 import { validateSchemas } from './validate/json-schema-core.js';
 
 const __filename = fileURLToPath(import.meta.url);

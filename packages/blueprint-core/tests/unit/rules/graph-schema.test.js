@@ -14,7 +14,7 @@ import yaml from 'js-yaml';
 import Ajv2020 from 'ajv/dist/2020.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const schemaPath = join(__dirname, '../../schemas/graph-schema.yaml');
+const schemaPath = join(__dirname, '../../../schemas/graph-schema.yaml');
 
 function makeValidator() {
   const raw = readFileSync(schemaPath, 'utf8');

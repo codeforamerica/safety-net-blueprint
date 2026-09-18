@@ -33,8 +33,8 @@ import {
   validateCrossArtifact,
   buildSchemaIndex,
   buildEndpointIndex,
-} from '@codeforamerica/blueprint-core/state-machine-validator';
-import { detectType } from '@codeforamerica/blueprint-core';
+} from '@codeforamerica/blueprint-core/validator';
+import { detectType } from '@codeforamerica/blueprint-core/openapi';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

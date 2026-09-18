@@ -22,7 +22,8 @@ import { esc, titleCase, breadcrumb, statusBadge, methodBadge, typeBadge, nextEi
 import { inlineMd, renderMarkdown } from './lib/markdown.js';
 import { twoColumnPage, singleColumnPage } from './lib/layout.js';
 import { resolvedDir, resolvedSourcePairs } from './lib/paths.js';
-import { resolveExternalDefRef, loadContractFiles, loadExternalRefs } from '@codeforamerica/blueprint-core';
+import { resolveExternalDefRef } from '@codeforamerica/blueprint-core/relationships';
+import { loadContractFiles, loadExternalRefs } from '@codeforamerica/blueprint-core/openapi';
 import { loadConfig } from './lib/config.js';
 
 const __dirname  = dirname(fileURLToPath(import.meta.url));

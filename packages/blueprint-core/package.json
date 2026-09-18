@@ -13,25 +13,18 @@
     ".": "./src/index.js",
     "./annotations": "./src/annotations.js",
     "./policies": "./src/policies.js",
-    "./bundle": "./src/bundle.js",
-    "./state-machines": "./src/state-machines.js",
-    "./config": "./src/overlay/config.js",
-    "./overlay": "./src/overlay/overlay-resolver.js",
-    "./validation": "./src/validation/openapi-validator.js",
-    "./loader": "./src/validation/openapi-loader.js",
-    "./patterns": "./src/validation/pattern-validator.js",
-    "./example-validator": "./src/validation/example-validator.js",
+    "./rules": "./src/rules.js",
     "./relationships": "./src/relationships.js",
     "./compositions": "./src/compositions.js",
-    "./state-machine-validator": "./src/validation/state-machine-validator.js",
-    "./rules": "./src/rules.js",
-    "./rules-validator": "./src/rules-validator.js",
-    "./contract-validator": "./src/contract-validator.js"
+    "./state-machines": "./src/state-machines.js",
+    "./overlay": "./src/overlay.js",
+    "./openapi": "./src/openapi.js",
+    "./validator": "./src/validator.js"
   },
   "scripts": {
-    "test": "node --test tests/**/*.test.js",
-    "test:unit": "node --test tests/unit/*.test.js",
-    "test:integration": "node --test tests/integration/*.test.js"
+    "test": "node --test",
+    "test:unit": "node --test tests/unit",
+    "test:integration": "node --test tests/integration"
   },
   "engines": {
     "node": ">=22.11.0"

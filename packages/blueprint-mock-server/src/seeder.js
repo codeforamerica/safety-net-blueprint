@@ -5,7 +5,7 @@
 import { readFileSync, readdirSync, statSync } from 'fs';
 import yaml from 'js-yaml';
 import { insertResource, clearAll } from './database-manager.js';
-import { collectionToSchemaPrefix, extractIndividualResources } from '@codeforamerica/blueprint-core/loader';
+import { collectionToSchemaPrefix, extractIndividualResources } from '@codeforamerica/blueprint-core/openapi';
 import { deriveCollectionName as deriveCollectionNameFromPath } from './collection-utils.js';
 import { join } from 'path';
 import { resolveTimeTokens } from './time-tokens.js';

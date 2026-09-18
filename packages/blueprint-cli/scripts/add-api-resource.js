@@ -17,7 +17,7 @@ import { existsSync, realpathSync } from 'fs';
 import { join, relative, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { bundleSpec } from '@codeforamerica/blueprint-core/bundle';
+import { bundleSpec } from '@codeforamerica/blueprint-core/openapi';
 import {
   parseArgs,
   toKebabCase,

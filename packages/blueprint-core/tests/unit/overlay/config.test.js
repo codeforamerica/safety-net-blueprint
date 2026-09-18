@@ -8,7 +8,7 @@ import { writeFileSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import yaml from 'js-yaml';
-import { extractConfig, validateConfig, getConfigDefaults } from '../../src/overlay/config.js';
+import { extractConfig, validateConfig, getConfigDefaults } from '../../../src/overlay/config.js';
 
 function createTmpDir() {
   const dir = join(tmpdir(), `config-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);

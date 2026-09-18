@@ -9,7 +9,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { collectionToSchemaPrefix } from '../../src/validation/openapi-loader.js';
+import { collectionToSchemaPrefix } from '../../../src/validation/openapi-loader.js';
 
 test('collectionToSchemaPrefix', async (t) => {
   await t.test('singularizes ordinary plural collections', () => {

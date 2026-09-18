@@ -5,7 +5,7 @@
 
 import { resolve } from 'path';
 import { performSetup, displaySetupSummary } from '../src/setup.js';
-import { loadAllSpecs } from '@codeforamerica/blueprint-core/loader';
+import { loadAllSpecs } from '@codeforamerica/blueprint-core/openapi';
 import { clearAll, closeAll } from '../src/database-manager.js';
 
 function parseSpecDir() {

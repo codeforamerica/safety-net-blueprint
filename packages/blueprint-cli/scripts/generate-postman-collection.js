@@ -13,7 +13,7 @@
  *   -h, --help     Show this help message
  */
 
-import { loadAllSpecs, collectionToSchemaPrefix, extractIndividualResources } from '@codeforamerica/blueprint-core/loader';
+import { loadAllSpecs, collectionToSchemaPrefix, extractIndividualResources } from '@codeforamerica/blueprint-core/openapi';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, realpathSync, statSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';

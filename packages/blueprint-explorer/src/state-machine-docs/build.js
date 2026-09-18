@@ -3,7 +3,7 @@ import { dirname, join, resolve, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { load } from 'js-yaml';
 import { generate, generateOverview, generateEventsPage } from './generate.js';
-import { buildEventIndex } from '@codeforamerica/blueprint-core';
+import { buildEventIndex } from '@codeforamerica/blueprint-core/state-machines';
 import { generateHtml, generateOverviewHtml, generateEventsHtml } from './generate-html.js';
 import { resolvedDir } from '../lib/paths.js';
 

@@ -12,7 +12,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { validateSpec } from '../../src/validation/pattern-validator.js';
+import { validateSpec } from '../../../src/validation/pattern-validator.js';
 
 // =============================================================================
 // Spec factory — minimal valid list endpoint, customize per test

@@ -18,7 +18,7 @@
  * @module fact-graph
  */
 
-import { compileRuleset } from '@codeforamerica/blueprint-core';
+import { compileRuleset } from '@codeforamerica/blueprint-core/rules';
 import { matchesType, EvalResult, Graph } from './evaluator.js';
 import {
   FactDictionaryFactory,

@@ -4,8 +4,8 @@
  * Validates OpenAPI specifications and examples
  */
 
-import { discoverApiSpecs } from '@codeforamerica/blueprint-core/loader';
-import { validateAll, formatResults } from '@codeforamerica/blueprint-core/validation';
+import { discoverApiSpecs } from '@codeforamerica/blueprint-core/openapi';
+import { validateAll, formatResults } from '@codeforamerica/blueprint-core/validator';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import { statSync } from 'fs';

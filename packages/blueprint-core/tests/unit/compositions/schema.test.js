@@ -15,7 +15,7 @@ import yaml from 'js-yaml';
 import Ajv2020 from 'ajv/dist/2020.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const contractsRoot = join(__dirname, '../../');
+const contractsRoot = join(__dirname, '../../../');
 const schemaPath = join(contractsRoot, 'schemas/compositions-schema.yaml');
 
 function makeValidator() {

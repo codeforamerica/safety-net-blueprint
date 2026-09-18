@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import yaml from 'js-yaml';
-import { loadContractFiles, loadExternalRefs } from '../../src/contract-files.js';
+import { loadContractFiles, loadExternalRefs } from '../../../src/contract-files.js';
 
 function createTmpDir() {
   return mkdtempSync(join(tmpdir(), 'contract-files-test-'));

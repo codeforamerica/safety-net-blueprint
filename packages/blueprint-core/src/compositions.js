@@ -19,7 +19,7 @@
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import yaml from 'js-yaml';
-import { resolveSchemaRefs, collectTopLevelProperties } from './validation/state-machine-validator.js';
+import { resolveSchemaRefs, collectTopLevelProperties } from './state-machines.js';
 
 const LIST_QUERY_PARAMS = [
   { $ref: './components/parameters.yaml#/SearchQueryParam' },

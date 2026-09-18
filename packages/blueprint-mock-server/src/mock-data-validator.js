@@ -6,7 +6,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { readdirSync, statSync } from 'fs';
 import yaml from 'js-yaml';
-import { validateExamples } from '@codeforamerica/blueprint-core/example-validator';
+import { validateExamples } from '@codeforamerica/blueprint-core/validator';
 
 /**
  * Recursively find all *-mock-data.yaml files under rootDir.

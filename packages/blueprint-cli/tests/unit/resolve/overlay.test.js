@@ -38,7 +38,7 @@ import {
 
 // Use checkPathExists from the overlay module (same as the script does)
 import { checkPathExists } from '@codeforamerica/blueprint-core/overlay';
-import { generateRulesResults } from '@codeforamerica/blueprint-core';
+import { generateRulesResults } from '@codeforamerica/blueprint-core/rules';
 
 function createTmpDir() {
   const dir = join(tmpdir(), `resolve-overlay-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);

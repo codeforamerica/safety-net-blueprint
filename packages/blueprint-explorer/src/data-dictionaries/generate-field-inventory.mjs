@@ -27,7 +27,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join, resolve, relative, basename, sep } from 'path';
 import yaml from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-import { loadContractFiles } from '@codeforamerica/blueprint-core';
+import { loadContractFiles } from '@codeforamerica/blueprint-core/openapi';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

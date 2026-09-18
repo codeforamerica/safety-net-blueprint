@@ -17,7 +17,7 @@ import {
   isActionPath,
   validateForeignKeys,
   validateSpec
-} from '../../src/validation/pattern-validator.js';
+} from '../../../src/validation/pattern-validator.js';
 
 test('Pattern Validator Tests', async (t) => {
 

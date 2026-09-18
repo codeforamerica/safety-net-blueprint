@@ -24,16 +24,18 @@ import {
   extractEnumComparisons,
   collectContextBindings,
   extractConditionIds,
+  walkPushBodiesInCalls,
+  collectCallBodyLiterals,
+} from '../../../src/validation/state-machine-validator.js';
+import {
   collectTopLevelProperties,
   getPropertyAtPath,
   resolveRef,
-  walkPushBodiesInCalls,
-  collectCallBodyLiterals,
-} from '../../src/validation/state-machine-validator.js';
+} from '../../../src/state-machines.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const contractsRoot = join(__dirname, '../../');
+const contractsRoot = join(__dirname, '../../../');
 
 // ---------------------------------------------------------------------------
 // Helpers

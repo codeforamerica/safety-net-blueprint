@@ -25,7 +25,7 @@ import {
   generateCompositionOverlays,
   generateSectionViewPanelEndpoints,
   generateStateSchemas,
-} from '../../src/compositions.js';
+} from '../../../src/compositions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

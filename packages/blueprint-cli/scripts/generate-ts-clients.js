@@ -37,8 +37,8 @@ import { join, dirname, basename, resolve as resolvePath } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import yaml from 'js-yaml';
-import { bundleSpec } from '@codeforamerica/blueprint-core/bundle';
-import { loadContractFiles, schemasDir } from '@codeforamerica/blueprint-core';
+import { bundleSpec, loadContractFiles } from '@codeforamerica/blueprint-core/openapi';
+import { schemasDir } from '@codeforamerica/blueprint-core';
 import { collectNamedEnumDefs } from './collect-named-enum-defs.js';
 
 const __filename = fileURLToPath(import.meta.url);

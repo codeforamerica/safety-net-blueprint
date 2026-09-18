@@ -13,7 +13,7 @@ import { resolve, dirname, sep, relative, join } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { loadAnnotations } from '@codeforamerica/blueprint-core/annotations';
-import { loadContractFiles } from '@codeforamerica/blueprint-core';
+import { loadContractFiles } from '@codeforamerica/blueprint-core/openapi';
 import { loadPolicies } from '@codeforamerica/blueprint-core/policies';
 import { COLORS } from '../lib/theme.js';
 import { esc as h, titleCase, breadcrumb, headerMetaSubtitle, HEADER_CODE_STYLE } from '../lib/html.js';

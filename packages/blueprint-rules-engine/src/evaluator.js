@@ -24,7 +24,7 @@
  * @module evaluator
  */
 
-import { compileRuleset } from '@codeforamerica/blueprint-core';
+import { compileRuleset } from '@codeforamerica/blueprint-core/rules';
 import { evaluateCEL } from './cel.js';
 
 // ── Type checking ─────────────────────────────────────────────────────────────

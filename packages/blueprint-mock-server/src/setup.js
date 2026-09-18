@@ -3,10 +3,10 @@
  * Handles loading specs and seeding databases
  */
 
-import { loadAllSpecs, discoverApiSpecs } from '@codeforamerica/blueprint-core/loader';
+import { loadAllSpecs, discoverApiSpecs } from '@codeforamerica/blueprint-core/openapi';
 import { seedAllDatabases } from './seeder.js';
 import { validateMockData } from './mock-data-validator.js';
-import { validateAll, getValidationStatus } from '@codeforamerica/blueprint-core/validation';
+import { validateAll, getValidationStatus } from '@codeforamerica/blueprint-core/validator';
 import { discoverStateMachines } from './state-machine-loader.js';
 import { discoverSlaTypes } from './sla-loader.js';
 import { discoverMetrics } from './metrics-loader.js';

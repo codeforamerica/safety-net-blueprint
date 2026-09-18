@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { load } from 'js-yaml';
 import path from 'path';
 import { titleCase } from '../lib/html.js';
-import { buildEventIndex, collectEmitSteps, getSteps, getMatchBranches, getForEachBody } from '@codeforamerica/blueprint-core';
+import { buildEventIndex, collectEmitSteps, getSteps, getMatchBranches, getForEachBody } from '@codeforamerica/blueprint-core/state-machines';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

@@ -41,7 +41,7 @@ test('Mock Data Validator Tests', async (t) => {
   });
 
   await t.test('validateMockData - validates fixture spec dir successfully', async () => {
-    const { loadAllSpecs } = await import('@codeforamerica/blueprint-core/loader');
+    const { loadAllSpecs } = await import('@codeforamerica/blueprint-core/openapi');
     const apiSpecs = await loadAllSpecs({ specsDir: fixtureSpecDir });
     const errors = validateMockData(fixtureSpecDir, apiSpecs);
 

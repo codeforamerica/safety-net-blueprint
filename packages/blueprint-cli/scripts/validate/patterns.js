@@ -16,7 +16,7 @@ import { statSync } from 'fs';
 import { join, basename, extname, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-import { validateSpec } from '@codeforamerica/blueprint-core/patterns';
+import { validateApiPatterns as validateSpec } from '@codeforamerica/blueprint-core/validator';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
