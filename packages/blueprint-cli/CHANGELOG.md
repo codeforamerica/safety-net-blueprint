@@ -1,5 +1,11 @@
 # @codeforamerica/blueprint-cli
 
+## 0.2.3
+
+### Patch Changes
+
+- 391e5f7: `blueprint-generate-ts-clients` now works reliably from a clean checkout. Previously, a cold npx cache caused the generator to download `@hey-api/openapi-ts@latest` instead of the pinned version, which crashed on startup with a `TypeError`. (#439)
+
 ## 0.2.2
 
 ### Patch Changes
