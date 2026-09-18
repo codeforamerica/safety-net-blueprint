@@ -2,35 +2,27 @@
  * Integration tests for the blueprint-evaluate CLI.
  *
  * Tests evaluate-specific behaviors: output structure, batch mode, ruleset
- * selection, and engine flag handling. Also includes a golden comparison
- * against committed batch output in the harness.
+ * selection, and engine flag handling.
  *
  * For generic CLI behaviors (missing args, unknown flags), see cli-behavior.test.js.
+ * For golden output comparison, see golden/evaluate.test.js.
  *
- * Contract inputs:  packages/blueprint-harness/contracts/domains/eligibility/
- * Golden outputs:   packages/blueprint-harness/generated/evaluate/
- *
- * To regenerate golden outputs:
- *   node packages/blueprint-cli/scripts/evaluate.js \
- *     --spec=packages/blueprint-harness/contracts/domains/eligibility/eligibility-rules-examples.yaml \
- *     > packages/blueprint-harness/generated/evaluate/eligibility-rules-examples-batch.json
+ * Contract inputs: packages/blueprint-harness/contracts/domains/eligibility/
  */
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { contractsDir, evaluateDir } from '../paths.js';
+import { contractsDir } from '../paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = join(__dirname, '../../scripts/evaluate.js');
 const ELIGIBILITY = join(contractsDir, 'domains/eligibility');
 const RULES = join(ELIGIBILITY, 'eligibility-rules.yaml');
 const EXAMPLES = join(ELIGIBILITY, 'eligibility-rules-examples.yaml');
-const GOLDEN_DIR = evaluateDir;
 
 function run(...args) {
   return spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' });
@@ -125,13 +117,5 @@ describe('blueprint-evaluate CLI — rules examples file (batch mode)', () => {
         }
       }
     }
-  });
-
-  it('batch output matches golden', () => {
-    const { status, stdout, stderr } = run(`--spec=${EXAMPLES}`);
-    assert.equal(status, 0, `script failed:\n${stderr}`);
-    const golden = readFileSync(join(GOLDEN_DIR, 'eligibility-rules-examples-batch.json'), 'utf8');
-    assert.strictEqual(stdout, golden,
-      'output differs from golden — regenerate with evaluate.js against the rules examples file and update generated/evaluate/ if intentional');
   });
 });

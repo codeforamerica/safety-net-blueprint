@@ -13,15 +13,15 @@
     "blueprint-add-api-resource": "./scripts/add-api-resource.js",
     "blueprint-export-schemas": "./scripts/export-schemas.js",
     "blueprint-generate-postman-collection": "./scripts/generate-postman-collection.js",
-    "blueprint-generate-rpc-overlay": "./scripts/generate-rpc-overlay.js",
     "blueprint-generate-ts-clients": "./scripts/generate-ts-clients.js",
     "blueprint-resolve": "./scripts/resolve.js",
     "blueprint-scaffold-api": "./scripts/scaffold-api.js"
   },
 
   "scripts": {
-    "test": "node --test tests/**/*.test.js",
-    "test:unit": "node --test tests/**/*.test.js"
+    "test": "node --test",
+    "test:unit": "node --test tests/unit",
+    "test:integration": "node --test tests/integration"
   },
   "engines": {
     "node": ">=22.11.0"
