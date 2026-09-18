@@ -1,6 +1,6 @@
 {
   "name": "@codeforamerica/blueprint-cli",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "CLI tooling for the Blueprint framework — validate, resolve, scaffold, and generate artifacts across all contract types",
   "type": "module",
   "files": [
@@ -49,6 +49,7 @@
   },
   "devDependencies": {
     "@codeforamerica/blueprint-harness": "*",
+    "@redocly/cli": "^2.31.3",
     "typescript": "^5.3.3"
   }
 }
