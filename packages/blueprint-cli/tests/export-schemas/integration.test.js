@@ -22,11 +22,12 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
+import { resolvedDir, schemasDir } from '../paths.js';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = join(__dirname, '../../scripts/export-schemas.js');
-const HARNESS = join(__dirname, '../../../blueprint-harness');
-const INPUTS = join(HARNESS, 'generated/resolved');
-const GOLDENS = join(HARNESS, 'generated/schemas');
+const INPUTS = resolvedDir;
+const GOLDENS = schemasDir;
 const projectRoot = join(__dirname, '../../..');
 
 const GOLDEN_FILES = [

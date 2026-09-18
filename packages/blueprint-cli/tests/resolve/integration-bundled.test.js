@@ -23,11 +23,12 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
+import { contractsDir, bundledDir } from '../paths.js';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = join(__dirname, '../../scripts/resolve.js');
-const HARNESS = join(__dirname, '../../../blueprint-harness');
-const INPUTS = join(HARNESS, 'contracts');
-const GOLDENS = join(HARNESS, 'generated/bundled');
+const INPUTS = contractsDir;
+const GOLDENS = bundledDir;
 const projectRoot = join(__dirname, '../../..');
 
 const GOLDEN_FILES = [

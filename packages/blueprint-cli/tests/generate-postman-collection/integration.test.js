@@ -22,11 +22,12 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
+import { resolvedDir, postmanDir } from '../paths.js';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = join(__dirname, '../../scripts/generate-postman-collection.js');
-const HARNESS = join(__dirname, '../../../blueprint-harness');
-const INPUTS = join(HARNESS, 'generated/resolved');
-const GOLDEN = join(HARNESS, 'generated/postman/postman-collection.json');
+const INPUTS = resolvedDir;
+const GOLDEN = join(postmanDir, 'postman-collection.json');
 const projectRoot = join(__dirname, '../../..');
 
 // Strip _postman_id before comparing — it's a random UUID that changes every run

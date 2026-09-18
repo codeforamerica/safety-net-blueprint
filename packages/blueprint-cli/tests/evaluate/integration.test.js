@@ -23,13 +23,14 @@ import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { contractsDir, evaluateDir } from '../paths.js';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = join(__dirname, '../../scripts/evaluate.js');
-const HARNESS = join(__dirname, '../../../blueprint-harness');
-const ELIGIBILITY = join(HARNESS, 'contracts/domains/eligibility');
+const ELIGIBILITY = join(contractsDir, 'domains/eligibility');
 const RULES = join(ELIGIBILITY, 'eligibility-rules.yaml');
 const EXAMPLES = join(ELIGIBILITY, 'eligibility-rules-examples.yaml');
-const GOLDEN_DIR = join(HARNESS, 'generated/evaluate');
+const GOLDEN_DIR = evaluateDir;
 
 function run(...args) {
   return spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' });

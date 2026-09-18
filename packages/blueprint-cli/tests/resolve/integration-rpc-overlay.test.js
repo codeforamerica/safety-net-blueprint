@@ -22,11 +22,12 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
+import { contractsDir, overlaysDir } from '../paths.js';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = join(__dirname, '../../scripts/generate-rpc-overlay.js');
-const HARNESS = join(__dirname, '../../../blueprint-harness');
-const INPUTS = join(HARNESS, 'contracts');
-const GOLDEN = join(HARNESS, 'generated/overlays');
+const INPUTS = contractsDir;
+const GOLDEN = overlaysDir;
 
 const GOLDEN_FILES = [
   'intake-rpc.yaml',
