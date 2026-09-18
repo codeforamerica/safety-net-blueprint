@@ -85,8 +85,9 @@ describe('add-api-resource', () => {
 
   it('Widget schema has id, createdAt, updatedAt fields', () => {
     const widget = spec.components.schemas.Widget;
-    assert.ok(widget.properties?.id, 'Widget should have id');
-    assert.ok(widget.properties?.createdAt, 'Widget should have createdAt');
-    assert.ok(widget.properties?.updatedAt, 'Widget should have updatedAt');
+    const serverFields = widget.allOf?.find(s => s.properties?.id)?.properties ?? widget.properties ?? {};
+    assert.ok(serverFields.id, 'Widget should have id');
+    assert.ok(serverFields.createdAt, 'Widget should have createdAt');
+    assert.ok(serverFields.updatedAt, 'Widget should have updatedAt');
   });
 });

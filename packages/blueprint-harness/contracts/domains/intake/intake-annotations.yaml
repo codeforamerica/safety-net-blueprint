@@ -19,16 +19,16 @@ schema:
   application.contactInfo:
     programs: [snap, medicaid, tanf, chip]
 
-  applicationMember.dateOfBirth:
+  member.dateOfBirth:
     dataClassification: [pii]
     policies: [chip-age-eligibility, snap-elderly-disabled-deductions]
     programs: [snap, medicaid, chip]
 
-  applicationMember.relationship:
+  member.relationship:
     policies: [snap-household-composition, medicaid-caretaker-relative]
     programs: [snap, medicaid]
 
-  applicationMember.incomeSource:
+  member.incomeSource:
     dataClassification: [pii, fti]
     policies: [snap-income-verification]
     programs: [snap, medicaid]

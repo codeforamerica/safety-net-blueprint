@@ -131,7 +131,7 @@ Examples:
  * Prepend a state-specific prefix to all event type strings in a state machine spec.
  * Updates emit.type in steps and type in events[] entries.
  */
-function injectPrefixInStateMachine(spec, prefix) {
+function injectEventPrefixInStateMachine(spec, prefix) {
   const copy = JSON.parse(JSON.stringify(spec));
   if (!Array.isArray(copy.machines)) return copy;
 
@@ -177,7 +177,7 @@ function prefixEmitInSteps(steps, prefix) {
  * Prepend a state-specific prefix to all event type strings in an AsyncAPI spec.
  * Updates channel addresses, message names, and payload type consts.
  */
-function injectPrefixInAsyncApi(spec, prefix) {
+function injectEventPrefixInAsyncApi(spec, prefix) {
   const copy = JSON.parse(JSON.stringify(spec));
 
   if (copy.channels && typeof copy.channels === 'object') {
@@ -209,6 +209,22 @@ function injectPrefixInAsyncApi(spec, prefix) {
     }
   }
 
+  return copy;
+}
+
+/**
+ * Prepend a state-specific prefix to all event type keys in an annotations spec.
+ * Updates keys under the top-level events: section.
+ */
+function injectEventPrefixInAnnotations(spec, prefix) {
+  const copy = JSON.parse(JSON.stringify(spec));
+  if (copy.events && typeof copy.events === 'object') {
+    const updatedEvents = {};
+    for (const [key, value] of Object.entries(copy.events)) {
+      updatedEvents[prefix + key] = value;
+    }
+    copy.events = updatedEvents;
+  }
   return copy;
 }
 
@@ -1268,15 +1284,18 @@ async function main() {
     allWarnings = allWarnings.concat(enumWarnings);
   }
 
-  // Inject x-event-type-prefix into event type strings in state machine and AsyncAPI files
+  // Inject x-event-type-prefix into event type strings in state machine, AsyncAPI, and annotation files
   if (overlayConfig?.['x-event-type-prefix']) {
     const prefix = overlayConfig['x-event-type-prefix'];
     for (const [relativePath, spec] of currentResults) {
       if (isStateMachine(spec)) {
-        currentResults.set(relativePath, injectPrefixInStateMachine(spec, prefix));
+        currentResults.set(relativePath, injectEventPrefixInStateMachine(spec, prefix));
         console.log(`Event prefix: ${relativePath} (prefix: ${prefix})`);
       } else if (isAsyncApi(spec)) {
-        currentResults.set(relativePath, injectPrefixInAsyncApi(spec, prefix));
+        currentResults.set(relativePath, injectEventPrefixInAsyncApi(spec, prefix));
+        console.log(`Event prefix: ${relativePath} (prefix: ${prefix})`);
+      } else if (detectType(basename(relativePath), spec) === 'annotations') {
+        currentResults.set(relativePath, injectEventPrefixInAnnotations(spec, prefix));
         console.log(`Event prefix: ${relativePath} (prefix: ${prefix})`);
       }
     }
@@ -1489,8 +1508,9 @@ export {
   findEnumSources,
   parseEnumSource,
   applyEnumSourceInjections,
-  injectPrefixInStateMachine,
-  injectPrefixInAsyncApi
+  injectEventPrefixInStateMachine,
+  injectEventPrefixInAsyncApi,
+  injectEventPrefixInAnnotations
 };
 
 // Run main when executed directly

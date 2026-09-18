@@ -154,6 +154,8 @@ rulesets:
     outputs:
       incomeInconsistencyProbe:
         type: boolean
+      workEligibleMembers:
+        type: array
       workRequirementProbe:
         type: boolean
       studentEligibilityProbe:

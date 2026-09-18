@@ -32,7 +32,7 @@ schema:
       - medicaid
       - tanf
       - chip
-  applicationMember.dateOfBirth:
+  member.dateOfBirth:
     dataClassification:
       - pii
     policies:
@@ -42,14 +42,14 @@ schema:
       - snap
       - medicaid
       - chip
-  applicationMember.relationship:
+  member.relationship:
     policies:
       - snap-household-composition
       - medicaid-caretaker-relative
     programs:
       - snap
       - medicaid
-  applicationMember.incomeSource:
+  member.incomeSource:
     dataClassification:
       - pii
       - fti
@@ -82,7 +82,7 @@ operations:
       - snap
       - medicaid
 events:
-  intake.application.submitted:
+  ca.intake.application.submitted:
     policies:
       - snap-processing-clock
       - medicaid-processing-clock
@@ -90,12 +90,12 @@ events:
     programs:
       - snap
       - medicaid
-  intake.application.withdrawn:
+  ca.intake.application.withdrawn:
     policies:
       - snap-notice-of-action
     programs:
       - snap
-  intake.application.closed:
+  ca.intake.application.closed:
     policies:
       - snap-notice-of-eligibility
       - medicaid-notice-of-eligibility

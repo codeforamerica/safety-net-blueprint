@@ -1,0 +1,15 @@
+title: "Blueprint Harness — Context Map"
+subtitle: "Domain integration overview"
+
+nav:
+  - { file: domains,           label: Overview }
+  - { file: domain_intake,     label: Intake }
+  - { file: domain_eligibility, label: Eligibility }
+  - { file: domain_platform,   label: Platform }
+
+# x, y: top-left corner of the domain box in the overview layout (px)
+# Box dimensions: 220 wide × 105 tall
+layout:
+  intake:      { x:  40, y: 160 }
+  eligibility: { x: 300, y: 160 }
+  platform:    { x: 560, y: 160 }

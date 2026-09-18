@@ -41,7 +41,7 @@ export const Annotations = {
         "chip"
       ]
     },
-    "applicationMember.dateOfBirth": {
+    "member.dateOfBirth": {
       "dataClassification": [
         "pii"
       ],
@@ -55,7 +55,7 @@ export const Annotations = {
         "chip"
       ]
     },
-    "applicationMember.relationship": {
+    "member.relationship": {
       "policies": [
         "snap-household-composition",
         "medicaid-caretaker-relative"
@@ -65,7 +65,7 @@ export const Annotations = {
         "medicaid"
       ]
     },
-    "applicationMember.incomeSource": {
+    "member.incomeSource": {
       "dataClassification": [
         "pii",
         "fti"
@@ -113,7 +113,7 @@ export const Annotations = {
     }
   },
   "events": {
-    "intake.application.submitted": {
+    "ca.intake.application.submitted": {
       "policies": [
         "snap-processing-clock",
         "medicaid-processing-clock",
@@ -124,7 +124,7 @@ export const Annotations = {
         "medicaid"
       ]
     },
-    "intake.application.withdrawn": {
+    "ca.intake.application.withdrawn": {
       "policies": [
         "snap-notice-of-action"
       ],
@@ -132,7 +132,7 @@ export const Annotations = {
         "snap"
       ]
     },
-    "intake.application.closed": {
+    "ca.intake.application.closed": {
       "policies": [
         "snap-notice-of-eligibility",
         "medicaid-notice-of-eligibility",

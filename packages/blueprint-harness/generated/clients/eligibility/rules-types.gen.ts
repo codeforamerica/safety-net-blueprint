@@ -34,6 +34,7 @@ export type InterviewProbesInputs = {
 
 export type InterviewProbesResult = {
   incomeInconsistencyProbe: FactNode<boolean>;
+  workEligibleMembers: FactNode<unknown>;
   workRequirementProbe: FactNode<boolean>;
   studentEligibilityProbe: FactNode<boolean>;
   immigrationStatusProbe: FactNode<boolean>;

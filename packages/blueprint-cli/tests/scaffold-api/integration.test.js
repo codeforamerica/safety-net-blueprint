@@ -75,8 +75,9 @@ describe('scaffold-api', () => {
 
   it('Notification schema has id, createdAt, updatedAt fields', () => {
     const notification = spec.components.schemas.Notification;
-    assert.ok(notification.properties?.id, 'Notification should have id');
-    assert.ok(notification.properties?.createdAt, 'Notification should have createdAt');
-    assert.ok(notification.properties?.updatedAt, 'Notification should have updatedAt');
+    const serverFields = notification.allOf?.find(s => s.properties?.id)?.properties ?? notification.properties ?? {};
+    assert.ok(serverFields.id, 'Notification should have id');
+    assert.ok(serverFields.createdAt, 'Notification should have createdAt');
+    assert.ok(serverFields.updatedAt, 'Notification should have updatedAt');
   });
 });

@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Blueprint Harness — Client Reference: Eligibility</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    details summary::-webkit-details-marker { display: none; }
+
+    /* Full-viewport layout: header pinned, sidebar + content fill remaining height */
+    #page-header { flex-shrink: 0; }
+    .page-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+    #sidebar {
+      width: 220px;
+      min-width: 220px;
+      background: #2B1A78;
+      color: white;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #sidebar-nav { padding: 0.5rem 0; overflow-y: auto; flex: 1; min-height: 0; }
+    #content { flex: 1; min-width: 0; padding: 2rem 2.5rem 4rem; overflow-y: auto; }
+    mark.search-hl { background: #fff176; color: inherit; border-radius: 2px; padding: 0 1px; }
+    #content [id]:target { scroll-margin-top: 1rem; outline: none; box-shadow: none; }
+
+    /* Nav links */
+    a.nav-link {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 4px 0.75rem; font-size: 11px;
+      color: rgba(255,255,255,0.65); text-decoration: none;
+      transition: background 0.1s;
+    }
+    a.nav-link:hover { background: rgba(255,255,255,0.08); color: white; }
+    a.nav-link.nav-active { background: rgba(255,255,255,0.15); color: white; font-weight: 700; }
+    /* Make inline code readable on the dark sidebar */
+    #sidebar a.nav-link code {
+      color: rgba(255,255,255,0.55); background: transparent; border: none; font-size: 10px;
+    }
+    .nav-section-label {
+      font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35); padding: 0.75rem 0.75rem 0.2rem;
+    }
+    .nav-count {
+      font-size: 0.65rem; font-weight: 400;
+      background: rgba(255,255,255,0.15); border-radius: 8px;
+      padding: 0.1rem 0.35rem; margin-left: auto;
+    }
+
+    /* Interactive element hover states — applied centrally so all tools get consistent behavior */
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    a { color: #5650BE; }
+  </style>
+</head>
+<body>
+  <div id="page-header">
+    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Client Reference</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Eligibility</a></div>
+    <div style="background:#2B1A78;color:white;">
+      <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:0.9375rem;font-weight:800;">Eligibility</span>
+        <code style="font-size:11px;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:3px;">packages/generated/clients/eligibility</code>
+      </div>
+      <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">eligibility</code> · API spec: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts/domains/eligibility/eligibility-openapi.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">eligibility-openapi.yaml</code></a><span style="margin-left:auto;"><a href="../api-reference/eligibility.html" style="font-size:12px;color:#5650BE;">View full API reference →</a></span></div>
+    </div>
+  </div>
+  <div class="page-layout">
+    <nav id="sidebar">
+      
+      <div style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;">
+        <input id="nav-search" type="search" placeholder="Filter…"
+          style="width:100%;padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.2);border-radius:4px;background:rgba(255,255,255,0.1);color:white;font-size:0.75rem;outline:none;"
+          aria-label="Filter navigation" />
+      </div>
+      <div id="sidebar-nav">
+        <div class="nav-section">
+      <div class="nav-section-label">Methods</div>
+      <a href="#group-determinations" class="nav-link">Determinations <span class="nav-count">4</span></a><a href="#group-programs" class="nav-link">Programs <span class="nav-count">2</span></a><a href="#group-eligibility" class="nav-link">Eligibility <span class="nav-count">2</span></a>
+    </div>
+    <div class="nav-section">
+        <div class="nav-section-label">Constants</div>
+        <a href="#const-Annotations" class="nav-link">Annotations</a>
+      </div>
+    <div class="nav-section">
+        <div class="nav-section-label">Types</div>
+        <a href="#type-DeterminationWritable" class="nav-link">DeterminationWritable</a><a href="#type-Determination" class="nav-link">Determination</a><a href="#type-DeterminationCreate" class="nav-link">DeterminationCreate</a><a href="#type-DeterminationUpdate" class="nav-link">DeterminationUpdate</a><a href="#type-DeterminationList" class="nav-link">DeterminationList</a><a href="#type-ProgramResult" class="nav-link">ProgramResult</a><a href="#type-ProgramResultList" class="nav-link">ProgramResultList</a><a href="#type-ExpeditedSnapRequest" class="nav-link">ExpeditedSnapRequest</a><a href="#type-InterviewProbesRequest" class="nav-link">InterviewProbesRequest</a><a href="#type-DeterminationWritableWritable" class="nav-link">DeterminationWritableWritable</a><a href="#type-DeterminationWritable2" class="nav-link">DeterminationWritable2</a><a href="#type-DeterminationCreateWritable" class="nav-link">DeterminationCreateWritable</a><a href="#type-DeterminationListWritable" class="nav-link">DeterminationListWritable</a><a href="#type-ProgramResultWritable" class="nav-link">ProgramResultWritable</a><a href="#type-ProgramResultListWritable" class="nav-link">ProgramResultListWritable</a>
+      </div>
+      </div>
+    </nav>
+    <main id="content">
+      <section id="group-determinations" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Determinations (4)</h2>
+        <div id="ep-listDeterminations" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">listDeterminations<span style="color:#aaa;font-weight:400;">()</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">You can provide a client instance returned by `createClient()` instead of</span>
+      <a href="../api-reference/eligibility.html#op-get-determinations" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-listDeterminations" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility.listDeterminations({
+  query: { limit?: number, offset?: number, sort?: string, status?: string, applicationId?: string },
+})</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">limit</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">number</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">offset</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">number</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">sort</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">status</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">applicationId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div><div id="ep-createDetermination" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">createDetermination<span style="color:#aaa;font-weight:400;">()</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Create a determination</span>
+      <a href="../api-reference/eligibility.html#op-post-determinations" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-createDetermination" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility.createDetermination({ body: { ... } })</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div><div id="ep-getDetermination" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getDetermination<span style="color:#aaa;font-weight:400;">(determinationId)</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get a determination</span>
+      <a href="../api-reference/eligibility.html#op-get-determinations-determinationId" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-getDetermination" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility.getDetermination({ path: { determinationId: string } })</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">determinationId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div><div id="ep-updateDetermination" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">updateDetermination<span style="color:#aaa;font-weight:400;">(determinationId)</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Update a determination</span>
+      <a href="../api-reference/eligibility.html#op-patch-determinations-determinationId" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-updateDetermination" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility.updateDetermination({
+  path: { determinationId: string },
+  body: { ... },
+})</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">determinationId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div>
+      </section><section id="group-programs" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Programs (2)</h2>
+        <div id="ep-listProgramResults" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">listProgramResults<span style="color:#aaa;font-weight:400;">(determinationId)</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">List program results</span>
+      <a href="../api-reference/eligibility.html#op-get-determinations-determinationId-programs" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-listProgramResults" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility.listProgramResults({
+  path: { determinationId: string },
+  query: { limit?: number, offset?: number },
+})</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">determinationId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">limit</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">number</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">offset</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">number</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div><div id="ep-getProgramResult" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getProgramResult<span style="color:#aaa;font-weight:400;">(determinationId, programResultId)</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get a program result</span>
+      <a href="../api-reference/eligibility.html#op-get-determinations-determinationId-programs-programResultId" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-getProgramResult" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility.getProgramResult({
+  path: { determinationId: string, programResultId: string },
+})</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">determinationId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">programResultId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div>
+      </section><section id="group-eligibility" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Eligibility (2)</h2>
+        <div id="ep-evaluateExpeditedSnap" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">evaluateExpeditedSnap<span style="color:#aaa;font-weight:400;">()</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Evaluate expeditedSnap</span>
+      <a href="../api-reference/eligibility.html#op-post-eligibility-determinations-evaluate-expedited-snap" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-evaluateExpeditedSnap" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility.evaluateExpeditedSnap({ body: { ... } })</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div><div id="ep-evaluateInterviewProbes" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">evaluateInterviewProbes<span style="color:#aaa;font-weight:400;">()</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Evaluate interviewProbes</span>
+      <a href="../api-reference/eligibility.html#op-post-eligibility-determinations-evaluate-interview-probes" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="#ep-evaluateInterviewProbes" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility.evaluateInterviewProbes({ body: { ... } })</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div>
+      </section><section id="section-constants" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Constants (1)</h2>
+        <div id="const-Annotations" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">Annotations</code>
+      <span style="font-size:11px;color:#888;flex:1;">map — annotations compiled from <code>eligibility-annotations*.yaml</code> at generation time</span>
+      <a href="#const-Annotations" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility.Annotations.schema['field/path']      // field annotations
+eligibility.Annotations.operations['action-id']   // operation annotations
+eligibility.Annotations.events['event.type']      // event annotations</pre>
+      <div style="border:1px solid #eee;border-radius:4px;overflow:hidden;">
+        <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Sub-maps</div>
+        <table style="width:100%;border-collapse:collapse;"><tbody>
+          <tr><td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;font-weight:600;">schema</td><td style="padding:4px 10px;font-size:11px;color:#555;border-bottom:1px solid #f2f2f2;">Field-level annotations keyed by JSON path</td></tr>
+          <tr><td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;font-weight:600;">operations</td><td style="padding:4px 10px;font-size:11px;color:#555;border-bottom:1px solid #f2f2f2;">State machine action and OpenAPI operation annotations</td></tr>
+          <tr><td style="padding:4px 10px;font-size:11.5px;font-family:monospace;font-weight:600;">events</td><td style="padding:4px 10px;font-size:11px;color:#555;">AsyncAPI event channel annotations</td></tr>
+        </tbody></table>
+      </div></div>
+  </details>
+</div>
+      </section><section id="section-types" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (15)</h2>
+        <div id="type-DeterminationWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DeterminationWritable</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-DeterminationWritable" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DeterminationWritable</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">applicationId</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-Determination" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">Determination</code>
+      <span style="font-size:11px;color:#aaa;">2 fields</span>
+      <a href="#type-Determination" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">Determination</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">applicationId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">status</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;pending&quot;, &quot;in_progress&quot;, &quot;complete&quot;</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-DeterminationCreate" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DeterminationCreate</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-DeterminationCreate" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DeterminationCreate</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">applicationId</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-DeterminationUpdate" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DeterminationUpdate</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-DeterminationUpdate" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DeterminationUpdate</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">status</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;pending&quot;, &quot;in_progress&quot;, &quot;complete&quot;</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-DeterminationList" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DeterminationList</code>
+      <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <a href="#type-DeterminationList" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DeterminationList</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">items</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">?:</span> <span style="color:#006152;">boolean</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-ProgramResult" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ProgramResult</code>
+      <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <a href="#type-ProgramResult" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ProgramResult</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">determinationId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">program</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;snap&quot;, &quot;medicaid&quot;, &quot;chip&quot;, &quot;tanf&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">eligible</span><span style="color:#888;">:</span> <span style="color:#006152;">boolean</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">reason</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">benefitAmount</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-ProgramResultList" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ProgramResultList</code>
+      <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <a href="#type-ProgramResultList" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ProgramResultList</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">items</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">?:</span> <span style="color:#006152;">boolean</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-ExpeditedSnapRequest" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ExpeditedSnapRequest</code>
+      <span style="font-size:11px;color:#aaa;">2 fields</span>
+      <a href="#type-ExpeditedSnapRequest" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ExpeditedSnapRequest</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">household</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">policy</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-InterviewProbesRequest" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">InterviewProbesRequest</code>
+      <span style="font-size:11px;color:#aaa;">2 fields</span>
+      <a href="#type-InterviewProbesRequest" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">InterviewProbesRequest</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">household</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">application</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-DeterminationWritableWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DeterminationWritableWritable</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-DeterminationWritableWritable" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DeterminationWritableWritable</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">applicationId</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-DeterminationWritable2" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DeterminationWritable2</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-DeterminationWritable2" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DeterminationWritable2</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">applicationId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-DeterminationCreateWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DeterminationCreateWritable</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-DeterminationCreateWritable" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DeterminationCreateWritable</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">applicationId</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-DeterminationListWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DeterminationListWritable</code>
+      <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <a href="#type-DeterminationListWritable" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DeterminationListWritable</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">items</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">?:</span> <span style="color:#006152;">boolean</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-ProgramResultWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ProgramResultWritable</code>
+      <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <a href="#type-ProgramResultWritable" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ProgramResultWritable</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">determinationId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">program</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;snap&quot;, &quot;medicaid&quot;, &quot;chip&quot;, &quot;tanf&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">eligible</span><span style="color:#888;">:</span> <span style="color:#006152;">boolean</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">reason</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">benefitAmount</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-ProgramResultListWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ProgramResultListWritable</code>
+      <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <a href="#type-ProgramResultListWritable" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ProgramResultListWritable</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">items</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">?:</span> <span style="color:#006152;">boolean</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div>
+      </section>
+    </main>
+  </div>
+  <script>
+    // Chevron toggle for <details> — set initial state and keep in sync on toggle
+    document.querySelectorAll('details').forEach(d => {
+      const ch = d.querySelector('.chevron');
+      if (ch) ch.textContent = d.open ? '▼' : '▶';
+      d.addEventListener('toggle', () => {
+        const ch = d.querySelector('.chevron');
+        if (ch) ch.textContent = d.open ? '▼' : '▶';
+      });
+    });
+    // data-expand-id toggles — click any [data-expand-id] element to show/hide the
+    // element with the matching id. Works for any target element type (<div>, <tr>, etc.)
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    // Active nav highlighting — click sets immediately; IntersectionObserver keeps it current on scroll
+    (function () {
+      const links = Array.from(document.querySelectorAll('#sidebar a.nav-link[href^="#"]'));
+      if (!links.length) return;
+      function setActive(id) {
+        links.forEach(a => a.classList.toggle('nav-active', a.getAttribute('href') === '#' + id));
+      }
+      // Highlight immediately on click so there's instant feedback
+      links.forEach(a => a.addEventListener('click', () => setActive(a.getAttribute('href').slice(1))));
+      const sections = links
+        .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+        .filter(Boolean);
+      if (!sections.length) return;
+      const io = new IntersectionObserver(entries => {
+        const hit = entries.find(e => e.isIntersecting);
+        if (hit) setActive(hit.target.id);
+      }, { root: document.getElementById('content'), rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      sections.forEach(s => io.observe(s));
+      setActive(sections[0].id);
+    })();
+    
+    (function () {
+      // Returns only text that is currently visible — skips content inside closed <details>
+      function visibleText(node) {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+        if (node.tagName === 'DETAILS' && !node.open) {
+          const summary = node.querySelector('summary');
+          return summary ? summary.textContent : '';
+        }
+        return [...node.childNodes].map(visibleText).join('');
+      }
+      function clearHighlights() {
+        document.querySelectorAll('#content mark.search-hl').forEach(el => {
+          const parent = el.parentNode;
+          el.replaceWith(document.createTextNode(el.textContent));
+          parent?.normalize();
+        });
+      }
+      // Only highlight text in visible nodes (skip closed <details> bodies)
+      function highlightInElement(root, q) {
+        function walk(node) {
+          if (node.tagName === 'DETAILS' && !node.open) {
+            // Only walk the summary
+            const summary = node.querySelector('summary');
+            if (summary) walk(summary);
+            return;
+          }
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            const lower = text.toLowerCase();
+            if (!lower.includes(q)) return;
+            const frag = document.createDocumentFragment();
+            let last = 0, idx = lower.indexOf(q);
+            while (idx !== -1) {
+              if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+              const mark = document.createElement('mark');
+              mark.className = 'search-hl';
+              mark.textContent = text.slice(idx, idx + q.length);
+              frag.appendChild(mark);
+              last = idx + q.length;
+              idx = lower.indexOf(q, last);
+            }
+            if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+            node.parentNode.replaceChild(frag, node);
+            return;
+          }
+          for (const child of [...node.childNodes]) walk(child);
+        }
+        walk(root);
+      }
+      document.getElementById('nav-search')?.addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        clearHighlights();
+        document.querySelectorAll('#sidebar .nav-link[href^="#"]').forEach(a => {
+          const id = a.getAttribute('href').slice(1);
+          const el = document.getElementById(id);
+          const items = el ? [...el.querySelectorAll('.content-item')] : [];
+          const navMatches = !q || a.textContent.toLowerCase().includes(q);
+          const anyItemMatches = q && items.some(item => visibleText(item).toLowerCase().includes(q));
+          // Section visible if nav label matches, any item matches, or (no items) visible section text matches
+          const sectionMatches = !q || navMatches || anyItemMatches ||
+            (el && !items.length && visibleText(el).toLowerCase().includes(q));
+          a.style.display = sectionMatches ? '' : 'none';
+          if (el) {
+            el.style.display = sectionMatches ? '' : 'none';
+            if (items.length > 0) {
+              items.forEach(item => {
+                // Show all items when nav label matched; otherwise filter by visible text only
+                item.style.display = (!q || navMatches || visibleText(item).toLowerCase().includes(q)) ? '' : 'none';
+              });
+            }
+          }
+        });
+        document.querySelectorAll('#sidebar .nav-section').forEach(sec => {
+          const any = [...sec.querySelectorAll('.nav-link')].some(a => a.style.display !== 'none');
+          sec.style.display = any ? '' : 'none';
+        });
+        if (q) {
+          // Highlight within visible content items; fall back to top-level id'd sections without content items
+          document.querySelectorAll('#content .content-item:not([style*="display: none"])').forEach(el => highlightInElement(el, q));
+          document.querySelectorAll('#content > *[id]:not([style*="display: none"])').forEach(el => {
+            if (!el.querySelector('.content-item')) highlightInElement(el, q);
+          });
+        }
+      });
+    })();
+    
+  </script>
+</body>
+</html>

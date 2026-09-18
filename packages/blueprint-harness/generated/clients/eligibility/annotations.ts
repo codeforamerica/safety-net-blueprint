@@ -25,7 +25,7 @@ export const Annotations = {
         "tanf"
       ]
     },
-    "programResult.program": {
+    "program.program": {
       "programs": [
         "snap",
         "medicaid",
@@ -33,7 +33,7 @@ export const Annotations = {
         "tanf"
       ]
     },
-    "programResult.eligible": {
+    "program.eligible": {
       "policies": [
         "snap-notice-of-eligibility",
         "medicaid-notice-of-eligibility",
@@ -47,7 +47,7 @@ export const Annotations = {
         "tanf"
       ]
     },
-    "programResult.benefitAmount": {
+    "program.benefitAmount": {
       "policies": [
         "snap-benefit-calculation",
         "medicaid-cost-sharing"
@@ -60,7 +60,7 @@ export const Annotations = {
   },
   "operations": {},
   "events": {
-    "eligibility.determination.complete": {
+    "ca.eligibility.determination.complete": {
       "policies": [
         "snap-notice-of-eligibility",
         "medicaid-notice-of-eligibility"

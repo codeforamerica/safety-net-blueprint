@@ -6,33 +6,42 @@
  * from the @codeforamerica/blueprint-explorer package.
  *
  * Usage:
- *   node scripts/build-explorer.js --spec=<resolved-dir> --out=<content-dir>
+ *   node scripts/build-explorer.js --spec=<resolved-dir> --out=<out-dir>
+ *   node scripts/build-explorer.js --spec=<path> --out=<path> --config=<config-dir>
  *   node scripts/build-explorer.js --spec=<path> --out=<path> --only=rules-docs
  *
- *   --spec     Path to resolved contracts directory (output of blueprint-resolve)
- *   --out      Path to the content directory — contains config.yaml and receives HTML output
- *   --clients  Path to generated TypeScript clients (output of blueprint-generate-ts-clients)
- *   --only     Build one tool only: context-map, sequence-diagrams, data-dictionaries,
- *              state-machine-docs, rules-docs, event-catalog, api-reference, client-reference
+ *   --spec      Path to resolved contracts directory (output of blueprint-resolve)
+ *   --out       Path to the output directory — receives all generated HTML files
+ *   --config    Path to the authored configuration directory — contains config.yaml,
+ *               context-map/config/, and sequence-diagrams/config/. Defaults to --out.
+ *               When different from --out, config files are copied to --out before
+ *               building so that tool scripts can find them there.
+ *   --authored  Path to authored HTML pages source directory. Defaults to the
+ *               blueprint-explorer package's built-in authored/ directory.
+ *   --clients   Path to generated TypeScript clients (output of blueprint-generate-ts-clients).
+ *   --only      Build one tool only: context-map, sequence-diagrams, data-dictionaries,
+ *               state-machine-docs, rules-docs, event-catalog, api-reference, client-reference
  */
 
-import { readdirSync, rmSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { readdirSync, rmSync, cpSync, existsSync, mkdirSync } from 'fs';
+import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 
-const args       = process.argv.slice(2);
-const onlyArg    = args.find(a => a.startsWith('--only='));
-const only       = onlyArg ? onlyArg.slice('--only='.length) : null;
-const specArg    = args.find(a => a.startsWith('--spec='));
-const outArg     = args.find(a => a.startsWith('--out='));
-const clientsArg = args.find(a => a.startsWith('--clients='));
+const args        = process.argv.slice(2);
+const onlyArg     = args.find(a => a.startsWith('--only='));
+const only        = onlyArg ? onlyArg.slice('--only='.length) : null;
+const specArg     = args.find(a => a.startsWith('--spec='));
+const outArg      = args.find(a => a.startsWith('--out='));
+const configArg   = args.find(a => a.startsWith('--config='));
+const authoredArg = args.find(a => a.startsWith('--authored='));
+const clientsArg  = args.find(a => a.startsWith('--clients='));
 
 if (!specArg || !outArg) {
-  console.error('Usage: node build-explorer.js --spec=<resolved-dir> --out=<content-dir> [--clients=<path>] [--only=<tool>]');
+  console.error('Usage: node build-explorer.js --spec=<resolved-dir> --out=<out-dir> [--config=<config-dir>] [--authored=<path>] [--clients=<path>] [--only=<tool>]');
   process.exit(1);
 }
 
@@ -42,15 +51,30 @@ const explorerDir = dirname(require.resolve('@codeforamerica/blueprint-explorer/
 
 const node       = process.execPath;
 const specDir    = resolve(process.cwd(), specArg.slice('--spec='.length));
-const contentDir = resolve(process.cwd(), outArg.slice('--out='.length));
+const outDir     = resolve(process.cwd(), outArg.slice('--out='.length));
+const configDir  = configArg
+  ? resolve(process.cwd(), configArg.slice('--config='.length))
+  : outDir;
+
+// When config and out differ, copy authored config files to outDir so that
+// tool scripts (which read from their --content arg) can find them there.
+if (configDir !== outDir) {
+  mkdirSync(outDir, { recursive: true });
+  cpSync(join(configDir, 'config.yaml'), join(outDir, 'config.yaml'));
+  const cmConfig  = join(configDir, 'context-map', 'config');
+  if (existsSync(cmConfig))  cpSync(cmConfig,  join(outDir, 'context-map', 'config'),  { recursive: true });
+  const seqConfig = join(configDir, 'sequence-diagrams', 'config');
+  if (existsSync(seqConfig)) cpSync(seqConfig, join(outDir, 'sequence-diagrams', 'config'), { recursive: true });
+}
 
 // Forward args to tool subprocesses using their existing param names.
 const fwdResolved = [`--resolved=${specDir}`];
-const fwdContent  = [`--content=${contentDir}`];
-const fwdClients  = clientsArg ? [clientsArg] : [];
+const fwdContent  = [`--content=${outDir}`];
+const fwdClients  = clientsArg  ? [clientsArg]  : [];
+const fwdAuthored = authoredArg ? [authoredArg] : [];
 
-const src      = (...parts) => resolve(explorerDir, 'src', ...parts);
-const doBuild  = tool => !only || only === tool;
+const src     = (...parts) => resolve(explorerDir, 'src', ...parts);
+const doBuild = tool => !only || only === tool;
 
 // ── Context map ───────────────────────────────────────────────────────────────
 
@@ -62,8 +86,8 @@ if (doBuild('context-map')) {
 
 if (doBuild('sequence-diagrams')) {
   const seqSrcDir    = src('sequence-diagrams');
-  const seqConfigDir = resolve(contentDir, 'sequence-diagrams', 'config');
-  const seqOutDir    = resolve(contentDir, 'sequence-diagrams');
+  const seqConfigDir = join(outDir, 'sequence-diagrams', 'config');
+  const seqOutDir    = join(outDir, 'sequence-diagrams');
   execFileSync(node, [resolve(seqSrcDir, 'validate-config.js'), `--config-dir=${seqConfigDir}`, ...fwdResolved], { stdio: 'inherit' });
   execFileSync(node, [resolve(seqSrcDir, 'render-action-flow.js'), seqOutDir, `--config-dir=${seqConfigDir}`, ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
   execFileSync(node, [resolve(seqSrcDir, 'build-phases-html.js'), seqOutDir, seqOutDir, `--config-dir=${seqConfigDir}`, ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
@@ -74,11 +98,11 @@ if (doBuild('sequence-diagrams')) {
 if (doBuild('data-dictionaries')) {
   // Clean stale field inventories before regenerating — build.js reads these,
   // so they must be removed before the generator runs, not inside build.js itself.
-  const ddOutDir = resolve(contentDir, 'data-dictionaries');
+  const ddOutDir = join(outDir, 'data-dictionaries');
   try {
     readdirSync(ddOutDir)
       .filter(f => f.endsWith('-field-inventory.yaml'))
-      .forEach(f => rmSync(resolve(ddOutDir, f)));
+      .forEach(f => rmSync(join(ddOutDir, f)));
   } catch { /* dir may not exist yet */ }
 
   execFileSync(node, [src('data-dictionaries', 'generate-field-inventory.mjs'), `--spec=${specDir}`, `--out=${ddOutDir}`], { stdio: 'inherit' });
@@ -117,4 +141,4 @@ if (doBuild('client-reference')) {
 
 // ── Hub (always rebuilt last — scans all tool output directories) ─────────────
 
-execFileSync(node, [src('hub.js'), ...fwdContent], { stdio: 'inherit' });
+execFileSync(node, [src('hub.js'), ...fwdContent, ...fwdAuthored], { stdio: 'inherit' });

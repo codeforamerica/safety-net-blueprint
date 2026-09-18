@@ -1,0 +1,29 @@
+# intake field inventory
+# Do not edit — regenerate with: node generate-field-inventory.mjs --domain=intake
+
+# ── application ─────────────────────────────────────────────────────────────────
+
+application.programsApplied[]: { type: enum, values: [snap, medicaid, chip, tanf] }
+application.channel: { type: enum, values: [online, phone, in_person, mail] }
+application.address: { type: object }
+application.address.street: { type: string }
+application.address.city: { type: string }
+application.address.state: { type: string }
+application.address.zip: { type: string }
+application.contactInfo: { type: object }
+application.contactInfo.phone: { type: string }
+application.contactInfo.email: { type: email }
+application.contactInfo.preferredContact: { type: enum, values: [phone, email, mail] }
+application.county_code: { type: string }
+
+# ── members ─────────────────────────────────────────────────────────────────────
+
+application.members[]: { type: list(ApplicationMember) }
+application.members[].id: { type: uuid }
+application.members[].applicationId: { type: uuid, relationship: Application }
+application.members[].firstName: { type: string }
+application.members[].lastName: { type: string }
+application.members[].dateOfBirth: { type: date }
+application.members[].relationship: { type: enum, values: [self, spouse, child, parent, sibling, other] }
+application.members[].links: { type: object }
+application.members[].links.application: { type: string }

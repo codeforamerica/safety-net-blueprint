@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Intake — State Machine Docs</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; font-size: 14px; line-height: 1.6; }
+    a { color: #5650BE; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12px; background: #F7EDE8; padding: 1px 5px; border-radius: 3px; border: 1px solid #E9CCBE; color: #2a2a2a; }
+    table { border-collapse: collapse; width: 100%; }
+    th { background: #F7EDE8; color: #1a1a1a; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 8px 12px; text-align: left; border-bottom: 2px solid #E9CCBE; }
+    td { padding: 10px 12px; border-bottom: 1px solid #E9CCBE; vertical-align: top; font-size: 13px; word-break: break-word; overflow-wrap: anywhere; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #F7EDE8; }
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    
+  </style>
+</head>
+<body>
+  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">State Machine Docs</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Intake</a></div>
+  <div style="background:#2B1A78;padding:0 1.5rem;display:flex;align-items:center;gap:0.25rem;height:40px;border-bottom:3px solid #5650BE;">
+  <nav style="display:flex;align-items:center;gap:0.25rem;"><a href="index.html" style="color:#C2C0E8;font-size:12px;font-weight:400;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:none;">Overview</a><a href="intake.html" style="color:#FFFFFF;font-size:12px;font-weight:700;text-decoration:none;padding:0.25rem 0.625rem;border-radius:4px;background:rgba(255,255,255,0.15);">Intake</a></nav>
+</div><div style="max-width:960px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
+    <div style="margin-bottom:2rem;">
+      <h1 style="font-size:1.5rem;font-weight:800;color:#2B1A78;margin-bottom:0.375rem;">Intake State Machine</h1>
+      <p style="font-size:12px;color:#666;">Domain: <code>intake</code> · API spec: <code>intake-openapi.yaml</code></p>
+    </div>
+    <section id="machine-application" style="margin-bottom:2.5rem;">
+      <h2 style="font-size:1.125rem;font-weight:800;color:#2B1A78;padding-bottom:0.5rem;border-bottom:2px solid #E6EBF9;margin-bottom:1rem;">Application</h2>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin-bottom:0.625rem;">States</h4>
+      <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;margin-bottom:0.5rem;">
+        <table>
+          <thead><tr>
+            <th>State</th><th>Description</th><th style="text-align:center;">SLA clock</th>
+          </tr></thead>
+          <tbody><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;white-space:nowrap;">draft</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Created but not yet filed; regulatory clock has not started.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;white-space:nowrap;">submitted</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Formally filed; regulatory clock starts (7 CFR § 273.2(g)).</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#006152;">running</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;white-space:nowrap;">under_review</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Caseworker is actively reviewing; clock running toward processing deadline.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#006152;">running</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;white-space:nowrap;">withdrawn</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Household withdrew the application. Terminal.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr><tr>
+        <td style="width:1%;white-space:nowrap;"><span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;white-space:nowrap;">closed</span></td>
+        <td style="font-size:12px;color:#1a1a1a;">Intake complete; case opened if approved. Terminal.</td>
+        <td style="width:1%;white-space:nowrap;text-align:center;"><span style="font-size:11px;color:#666;">stopped</span></td>
+      </tr></tbody>
+        </table>
+      </div>
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Actions</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table>
+            <thead><tr>
+              <th>Action</th><th>Actors</th><th>Transition</th><th>Steps</th>
+            </tr></thead>
+            <tbody><tr id="action-submit">
+          <td><strong style="color:#2B1A78;">submit</strong><br><span style="font-size:12px;color:#666;">Formally submits a draft application, starting the regulatory processing clock.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">draft</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">submitted</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record the submission timestamp (regulatory clock start). <code>sets submittedAt</code></li><li>Emit <a href="../event-catalog/index.html#event-caintake.application.submitted" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">caintake.application.submitted</a> — Triggers eligibility screening, caseworker task creation, and confirmation notice.</li></ul></td>
+        </tr><tr id="action-open">
+          <td><strong style="color:#2B1A78;">open</strong><br><span style="font-size:12px;color:#666;">Moves a submitted application into active caseworker review.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">submitted</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">under_review</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record when caseworker began review, marking the start of active processing. <code>sets openedAt</code></li></ul></td>
+        </tr><tr id="action-close">
+          <td><strong style="color:#2B1A78;">close</strong><br><span style="font-size:12px;color:#666;">Closes the application once intake processing is complete.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">under_review</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">closed</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-caintake.application.closed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">caintake.application.closed</a></li></ul></td>
+        </tr><tr id="action-withdraw">
+          <td><strong style="color:#2B1A78;">withdraw</strong><br><span style="font-size:12px;color:#666;">Withdraws the application at the household's request.</span></td>
+          <td style="white-space:nowrap;"></td>
+          <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">draft</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">submitted</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">under_review</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">withdrawn</span></span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-caintake.application.withdrawn" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">caintake.application.withdrawn</a></li></ul></td>
+        </tr></tbody>
+          </table>
+        </div>
+      
+    </section></div>
+  <script>
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    
+  </script>
+</body>
+</html>

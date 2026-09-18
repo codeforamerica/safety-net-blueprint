@@ -13,7 +13,7 @@ config:
     style: filtered
   x-relationship:
     style: expand
-  x-event-type-prefix: ca
+  x-event-type-prefix: ca.
 
 # JSONPath-targeted actions that add or modify fields in specific specs.
 actions:

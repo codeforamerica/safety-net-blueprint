@@ -22,16 +22,18 @@ import { loadConfig } from './lib/config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const contentArg = process.argv.slice(2).find(a => a.startsWith('--content='));
+const contentArg  = process.argv.slice(2).find(a => a.startsWith('--content='));
+const authoredArg = process.argv.slice(2).find(a => a.startsWith('--authored='));
 if (!contentArg) {
-  console.error('Usage: node hub.js --content=<path>');
+  console.error('Usage: node hub.js --content=<path> [--authored=<source-dir>]');
   process.exit(1);
 }
 const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
 
 // ── Authored pages ────────────────────────────────────────────────────────────
 
-execFileSync(process.execPath, [resolve(__dirname, 'authored.js'), `--content=${contentDir}`], { stdio: 'inherit' });
+const authoredArgs = authoredArg ? [`--content=${contentDir}`, authoredArg] : [`--content=${contentDir}`];
+execFileSync(process.execPath, [resolve(__dirname, 'authored.js'), ...authoredArgs], { stdio: 'inherit' });
 
 // ── Load content config ───────────────────────────────────────────────────────
 

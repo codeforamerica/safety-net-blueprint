@@ -1,0 +1,66 @@
+asyncapi: 3.0.0
+info:
+  title: Intake Domain Events
+  version: 0.1.0
+  x-status: draft
+  description: |
+    Event catalog for the Intake domain.
+    Generated from intake-state-machine.yaml — add payload schemas below.
+channels:
+  intake.application.closed:
+    address: intake.application.closed
+    messages:
+      ApplicationClosed:
+        $ref: '#/components/messages/ApplicationClosedMessage'
+  intake.application.submitted:
+    address: intake.application.submitted
+    messages:
+      ApplicationSubmitted:
+        $ref: '#/components/messages/ApplicationSubmittedMessage'
+  intake.application.withdrawn:
+    address: intake.application.withdrawn
+    messages:
+      ApplicationWithdrawn:
+        $ref: '#/components/messages/ApplicationWithdrawnMessage'
+components:
+  messages:
+    ApplicationClosedMessage:
+      name: intake.application.closed
+      summary: TODO — describe when this event is emitted and who consumes it.
+      payload:
+        $ref: '#/components/schemas/ApplicationClosedEvent'
+    ApplicationSubmittedMessage:
+      name: intake.application.submitted
+      summary: TODO — describe when this event is emitted and who consumes it.
+      payload:
+        $ref: '#/components/schemas/ApplicationSubmittedEvent'
+    ApplicationWithdrawnMessage:
+      name: intake.application.withdrawn
+      summary: TODO — describe when this event is emitted and who consumes it.
+      payload:
+        $ref: '#/components/schemas/ApplicationWithdrawnEvent'
+  schemas:
+    ApplicationClosedEvent:
+      allOf:
+        - $ref: https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.application.closed
+    ApplicationSubmittedEvent:
+      allOf:
+        - $ref: https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.application.submitted
+    ApplicationWithdrawnEvent:
+      allOf:
+        - $ref: https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.application.withdrawn

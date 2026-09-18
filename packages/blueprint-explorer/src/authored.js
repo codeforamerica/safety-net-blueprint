@@ -21,13 +21,19 @@ import { fileURLToPath } from 'url';
 import { loadConfig } from './lib/config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const authoredDir = resolve(__dirname, '..', 'authored');
 
-const contentArg = process.argv.find(a => a.startsWith('--content='));
+const contentArg  = process.argv.find(a => a.startsWith('--content='));
+const authoredArg = process.argv.find(a => a.startsWith('--authored='));
 if (!contentArg) {
-  console.error('Usage: node authored.js --content=<path>');
+  console.error('Usage: node authored.js --content=<path> [--authored=<source-dir>]');
   process.exit(1);
 }
+
+// Source for authored HTML pages — defaults to the blueprint-explorer package's
+// built-in authored/ directory, but can be overridden via --authored=<path>.
+const authoredDir = authoredArg
+  ? resolve(process.cwd(), authoredArg.slice('--authored='.length))
+  : resolve(__dirname, '..', 'authored');
 const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
 
 const { name: projectName, repo } = loadConfig(contentDir);

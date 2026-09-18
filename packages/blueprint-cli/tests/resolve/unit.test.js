@@ -31,8 +31,9 @@ import {
   findEnumSources,
   parseEnumSource,
   applyEnumSourceInjections,
-  injectPrefixInStateMachine,
-  injectPrefixInAsyncApi
+  injectEventPrefixInStateMachine,
+  injectEventPrefixInAsyncApi,
+  injectEventPrefixInAnnotations
 } from '../../scripts/resolve.js';
 
 // Use checkPathExists from the overlay module (same as the script does)
@@ -1402,10 +1403,10 @@ test('x-enum-source injection', async (t) => {
   });
 
   // ===========================================================================
-  // injectPrefixInStateMachine
+  // injectEventPrefixInStateMachine
   // ===========================================================================
 
-  await t.test('injectPrefixInStateMachine - prepends prefix to machine events and emit steps', () => {
+  await t.test('injectEventPrefixInStateMachine - prepends prefix to machine events and emit steps', () => {
     const spec = {
       machines: [{
         object: 'Widget',
@@ -1417,27 +1418,27 @@ test('x-enum-source injection', async (t) => {
       }]
     };
 
-    const result = injectPrefixInStateMachine(spec, 'org.example.');
+    const result = injectEventPrefixInStateMachine(spec, 'org.example.');
 
     assert.strictEqual(result.machines[0].events[0].type, 'org.example.test.widget.submitted');
     assert.strictEqual(result.machines[0].actions[0].steps[0].emit.type, 'org.example.test.widget.submitted');
   });
 
-  await t.test('injectPrefixInStateMachine - passes through unchanged when no machines array', () => {
+  await t.test('injectEventPrefixInStateMachine - passes through unchanged when no machines array', () => {
     const spec = { domain: 'test', context: null };
-    const result = injectPrefixInStateMachine(spec, 'org.example.');
+    const result = injectEventPrefixInStateMachine(spec, 'org.example.');
     assert.deepStrictEqual(result, spec);
   });
 
-  await t.test('injectPrefixInStateMachine - does not mutate the original spec', () => {
+  await t.test('injectEventPrefixInStateMachine - does not mutate the original spec', () => {
     const spec = {
       machines: [{ object: 'Widget', actions: [{ id: 'submit', steps: [{ emit: { type: 'test.widget.submitted' } }] }] }]
     };
-    injectPrefixInStateMachine(spec, 'org.example.');
+    injectEventPrefixInStateMachine(spec, 'org.example.');
     assert.strictEqual(spec.machines[0].actions[0].steps[0].emit.type, 'test.widget.submitted');
   });
 
-  await t.test('injectPrefixInStateMachine - prepends prefix to emit steps nested in then/do/forEach.do', () => {
+  await t.test('injectEventPrefixInStateMachine - prepends prefix to emit steps nested in then/do/forEach.do', () => {
     const spec = {
       machines: [{
         object: 'Widget',
@@ -1452,17 +1453,17 @@ test('x-enum-source injection', async (t) => {
       }]
     };
 
-    const result = injectPrefixInStateMachine(spec, 'org.example.');
+    const result = injectEventPrefixInStateMachine(spec, 'org.example.');
     const ifStep = result.machines[0].actions[0].steps[0];
     assert.strictEqual(ifStep.then[0].emit.type, 'org.example.test.widget.expedited');
     assert.strictEqual(ifStep.else[0].emit.type, 'org.example.test.widget.standard');
   });
 
   // ===========================================================================
-  // injectPrefixInAsyncApi
+  // injectEventPrefixInAsyncApi
   // ===========================================================================
 
-  await t.test('injectPrefixInAsyncApi - prepends prefix to channel addresses and message names', () => {
+  await t.test('injectEventPrefixInAsyncApi - prepends prefix to channel addresses and message names', () => {
     const spec = {
       channels: {
         'test.widget.submitted': {
@@ -1478,25 +1479,51 @@ test('x-enum-source injection', async (t) => {
       }
     };
 
-    const result = injectPrefixInAsyncApi(spec, 'org.example.');
+    const result = injectEventPrefixInAsyncApi(spec, 'org.example.');
 
     assert.ok('org.example.test.widget.submitted' in result.channels);
     assert.strictEqual(result.channels['org.example.test.widget.submitted'].address, 'org.example.test.widget.submitted');
     assert.strictEqual(result.components.messages.WidgetSubmitted.name, 'org.example.test.widget.submitted');
   });
 
-  await t.test('injectPrefixInAsyncApi - passes through unchanged when no channels', () => {
+  await t.test('injectEventPrefixInAsyncApi - passes through unchanged when no channels', () => {
     const spec = { asyncapi: '3.0.0', info: { title: 'Test', version: '1.0.0' } };
-    const result = injectPrefixInAsyncApi(spec, 'org.example.');
+    const result = injectEventPrefixInAsyncApi(spec, 'org.example.');
     assert.deepStrictEqual(result, spec);
   });
 
-  await t.test('injectPrefixInAsyncApi - does not mutate the original spec', () => {
+  await t.test('injectEventPrefixInAsyncApi - does not mutate the original spec', () => {
     const spec = {
       channels: { 'test.widget.submitted': { address: 'test.widget.submitted' } }
     };
-    injectPrefixInAsyncApi(spec, 'org.example.');
+    injectEventPrefixInAsyncApi(spec, 'org.example.');
     assert.ok('test.widget.submitted' in spec.channels);
+  });
+
+  // injectEventPrefixInAnnotations
+  await t.test('injectEventPrefixInAnnotations - prepends prefix to events section keys', () => {
+    const spec = {
+      events: {
+        'intake.application.submitted': { programs: ['snap'] },
+        'intake.application.closed': { programs: ['snap'] },
+      },
+    };
+    const result = injectEventPrefixInAnnotations(spec, 'org.example.');
+    assert.ok('org.example.intake.application.submitted' in result.events);
+    assert.ok('org.example.intake.application.closed' in result.events);
+    assert.ok(!('intake.application.submitted' in result.events));
+  });
+
+  await t.test('injectEventPrefixInAnnotations - passes through unchanged when no events section', () => {
+    const spec = { schema: { 'application.id': { programs: ['snap'] } } };
+    const result = injectEventPrefixInAnnotations(spec, 'org.example.');
+    assert.deepStrictEqual(result, spec);
+  });
+
+  await t.test('injectEventPrefixInAnnotations - does not mutate the original spec', () => {
+    const spec = { events: { 'intake.application.submitted': { programs: ['snap'] } } };
+    injectEventPrefixInAnnotations(spec, 'org.example.');
+    assert.ok('intake.application.submitted' in spec.events);
   });
 
   // ===========================================================================

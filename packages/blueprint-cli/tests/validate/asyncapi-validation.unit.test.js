@@ -11,7 +11,12 @@ import { mkdtempSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import yaml from 'js-yaml';
-import { buildAsyncApiChannelIndex, validateStateMachineEvents } from '../../scripts/validate/annotations.js';
+import {
+  buildAsyncApiChannelIndex,
+  buildAsyncApiSchemaIndex,
+  validateStateMachineEvents,
+  validateEmitDataFields,
+} from '../../scripts/validate/annotations.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -119,13 +124,23 @@ describe('buildAsyncApiChannelIndex', () => {
 // ---------------------------------------------------------------------------
 
 describe('validateStateMachineEvents', () => {
-  test('returns empty array when channel index is empty (no AsyncAPI specs loaded)', () => {
+  test('returns empty array when state machine has no emit steps and channel index is empty', () => {
+    const doc = makeStateMachineDoc({
+      eventsSpec: 'intake-asyncapi.yaml',
+      emitTypes: [],
+      subscriptionTypes: [],
+    });
+    assert.deepEqual(validateStateMachineEvents(doc, { byFile: new Map(), all: new Set() }), []);
+  });
+
+  test('errors when state machine has emit steps but channel index is empty (no AsyncAPI specs loaded)', () => {
     const doc = makeStateMachineDoc({
       eventsSpec: 'intake-asyncapi.yaml',
       emitTypes: ['intake.application.submitted'],
-      subscriptionTypes: ['workflow.task.claimed'],
+      subscriptionTypes: [],
     });
-    assert.deepEqual(validateStateMachineEvents(doc, { byFile: new Map(), all: new Set() }), []);
+    const errors = validateStateMachineEvents(doc, { byFile: new Map(), all: new Set() });
+    assert.ok(errors.some(e => e.includes('"intake.application.submitted"')));
   });
 
   test('passes when emit type exists in the declared eventsSpec', () => {
@@ -319,6 +334,135 @@ describe('scenario: subscribed channel removed from another domain', () => {
       subscriptionTypes: ['workflow.task.completed'],
     });
     assert.deepEqual(validateStateMachineEvents(doc, channelIndex), []);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildAsyncApiSchemaIndex
+// ---------------------------------------------------------------------------
+
+describe('buildAsyncApiSchemaIndex', () => {
+  test('returns empty map when directory has no AsyncAPI specs', () => {
+    const dir = makeSpecDir({});
+    assert.equal(buildAsyncApiSchemaIndex(dir).size, 0);
+  });
+
+  test('indexes component schemas by filename', () => {
+    const dir = makeSpecDir({
+      'intake-asyncapi.yaml': yaml.dump({
+        asyncapi: '3.0.0',
+        info: { title: 'T', version: '1' },
+        channels: {},
+        components: {
+          schemas: {
+            ApplicationSubmittedData: { type: 'object', properties: { programs: { type: 'array' } } },
+          },
+        },
+      }),
+    });
+    const index = buildAsyncApiSchemaIndex(dir);
+    assert.ok(index.has('intake-asyncapi.yaml'));
+    assert.ok(index.get('intake-asyncapi.yaml').ApplicationSubmittedData);
+  });
+
+  test('returns empty schemas object for AsyncAPI file with no components', () => {
+    const dir = makeSpecDir({
+      'intake-asyncapi.yaml': yaml.dump(makeAsyncApiDoc(['intake.application.submitted'])),
+    });
+    const index = buildAsyncApiSchemaIndex(dir);
+    assert.ok(index.has('intake-asyncapi.yaml'));
+    assert.deepEqual(index.get('intake-asyncapi.yaml'), {});
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateEmitDataFields
+// ---------------------------------------------------------------------------
+
+describe('validateEmitDataFields', () => {
+  function makeStateMachineWithData(emitSteps) {
+    return {
+      domain: 'intake',
+      eventsSpec: 'intake-asyncapi.yaml',
+      machines: [{
+        object: 'Application',
+        actions: [{ id: 'submit', steps: emitSteps }],
+      }],
+    };
+  }
+
+  function makeSchemaIndex(schemas) {
+    return new Map([['intake-asyncapi.yaml', schemas]]);
+  }
+
+  test('returns empty array when no emit steps have data blocks', () => {
+    const doc = makeStateMachineWithData([{ emit: { type: 'intake.application.submitted' } }]);
+    const index = makeSchemaIndex({
+      ApplicationSubmittedEvent: { type: 'object' },
+    });
+    assert.deepEqual(validateEmitDataFields(doc, index), []);
+  });
+
+  test('returns empty array when doc has no eventsSpec', () => {
+    const doc = {
+      domain: 'intake',
+      machines: [{
+        object: 'Application',
+        actions: [{ id: 'submit', steps: [{ emit: { type: 'intake.application.submitted', data: { reason: '$request.reason' } } }] }],
+      }],
+    };
+    assert.deepEqual(validateEmitDataFields(doc, makeSchemaIndex({})), []);
+  });
+
+  test('passes when all emit.data fields exist in the *Data schema', () => {
+    const doc = makeStateMachineWithData([{
+      emit: { type: 'intake.application.submitted', data: { programs: '$object.programs', channel: '$object.channel' } },
+    }]);
+    const index = makeSchemaIndex({
+      ApplicationSubmittedData: {
+        type: 'object',
+        properties: { programs: { type: 'array' }, channel: { type: 'string' } },
+      },
+    });
+    assert.deepEqual(validateEmitDataFields(doc, index), []);
+  });
+
+  test('errors when *Data schema is missing entirely', () => {
+    const doc = makeStateMachineWithData([{
+      emit: { type: 'intake.application.submitted', data: { programs: '$object.programs' } },
+    }]);
+    const index = makeSchemaIndex({
+      ApplicationSubmittedEvent: { type: 'object' },
+    });
+    const errors = validateEmitDataFields(doc, index);
+    assert.ok(errors.some(e => e.includes('"intake.application.submitted"')));
+    assert.ok(errors.some(e => e.includes('ApplicationSubmittedData')));
+  });
+
+  test('errors when a data field is missing from the *Data schema', () => {
+    const doc = makeStateMachineWithData([{
+      emit: { type: 'intake.application.submitted', data: { programs: '$object.programs', memberIds: '$members.*.id' } },
+    }]);
+    const index = makeSchemaIndex({
+      ApplicationSubmittedData: {
+        type: 'object',
+        properties: { programs: { type: 'array' } }, // memberIds missing
+      },
+    });
+    const errors = validateEmitDataFields(doc, index);
+    assert.ok(errors.some(e => e.includes('"memberIds"')));
+    assert.ok(errors.some(e => e.includes('ApplicationSubmittedData')));
+  });
+
+  test('reports no errors for emit steps without data blocks', () => {
+    const doc = makeStateMachineWithData([
+      { emit: { type: 'intake.application.closed' } }, // no data
+      { emit: { type: 'intake.application.submitted', data: { programs: '$object.programs' } } },
+    ]);
+    const index = makeSchemaIndex({
+      ApplicationSubmittedData: { type: 'object', properties: { programs: { type: 'array' } } },
+    });
+    assert.deepEqual(validateEmitDataFields(doc, index), []);
   });
 });
 

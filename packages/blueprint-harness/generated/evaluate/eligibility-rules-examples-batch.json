@@ -117,7 +117,7 @@
         "value": true
       },
       "workEligibleMembers": {
-        "type": "intermediate",
+        "type": "output",
         "state": "complete",
         "value": [
           {
@@ -181,7 +181,7 @@
         "value": false
       },
       "workEligibleMembers": {
-        "type": "intermediate",
+        "type": "output",
         "state": "complete",
         "value": []
       },
@@ -238,7 +238,7 @@
         "value": false
       },
       "workEligibleMembers": {
-        "type": "intermediate",
+        "type": "output",
         "state": "complete",
         "value": []
       },

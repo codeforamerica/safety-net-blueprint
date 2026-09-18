@@ -13,14 +13,14 @@ schema:
   determination.status:
     programs: [snap, medicaid, chip, tanf]
 
-  programResult.program:
+  program.program:
     programs: [snap, medicaid, chip, tanf]
 
-  programResult.eligible:
+  program.eligible:
     policies: [snap-notice-of-eligibility, medicaid-notice-of-eligibility, snap-fair-hearing-rights, medicaid-determination-documentation]
     programs: [snap, medicaid, chip, tanf]
 
-  programResult.benefitAmount:
+  program.benefitAmount:
     policies: [snap-benefit-calculation, medicaid-cost-sharing]
     programs: [snap, medicaid]
 

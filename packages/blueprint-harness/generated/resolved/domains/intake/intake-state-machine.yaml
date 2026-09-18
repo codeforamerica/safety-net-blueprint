@@ -33,7 +33,7 @@ machines:
               value: $now
               description: Record the submission timestamp (regulatory clock start).
           - emit:
-              type: caintake.application.submitted
+              type: ca.intake.application.submitted
               description: Triggers eligibility screening, caseworker task creation, and confirmation notice.
       - id: open
         description: Moves a submitted application into active caseworker review.
@@ -55,7 +55,7 @@ machines:
           to: closed
         steps:
           - emit:
-              type: caintake.application.closed
+              type: ca.intake.application.closed
       - id: withdraw
         description: Withdraws the application at the household's request.
         transition:
@@ -66,7 +66,7 @@ machines:
           to: withdrawn
         steps:
           - emit:
-              type: caintake.application.withdrawn
+              type: ca.intake.application.withdrawn
 $defs:
   CloseRequest:
     type: object
