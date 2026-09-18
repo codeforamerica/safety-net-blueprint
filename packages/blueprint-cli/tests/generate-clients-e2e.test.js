@@ -12,7 +12,7 @@ import { mkdtempSync, writeFileSync, mkdirSync, existsSync, rmSync, readFileSync
 import { join, dirname, resolve as resolvePath } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'url';
-import { exec, collectNamedEnumDefs, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums } from '../scripts/generate-ts-clients.js';
+import { exec, resolveOpenApiTsBin, collectNamedEnumDefs, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums } from '../scripts/generate-ts-clients.js';
 import { bundleSpec } from '@codeforamerica/blueprint-core/bundle';
 import { loadContractFiles } from '@codeforamerica/blueprint-core';
 import yaml from 'js-yaml';
@@ -80,14 +80,14 @@ export default {
 `;
 
 describe('Client generation pipeline (e2e)', () => {
-  it('openapi-ts is installed in node_modules (not relying on global or registry)', () => {
-    const localBin = join(clientsRoot, 'node_modules', '.bin', 'openapi-ts');
-    const rootBin = join(projectRoot, 'node_modules', '.bin', 'openapi-ts');
-    const found = existsSync(localBin) || existsSync(rootBin);
-    assert.ok(
-      found,
-      `openapi-ts binary not found at ${localBin} or ${rootBin} — run npm install`
-    );
+  it('openapi-ts is resolvable from blueprint-cli\'s own node_modules (not relying on global or registry)', () => {
+    let binPath;
+    try {
+      binPath = resolveOpenApiTsBin();
+    } catch (err) {
+      assert.fail(`resolveOpenApiTsBin() threw: ${err.message} — run npm install`);
+    }
+    assert.ok(existsSync(binPath), `openapi-ts binary not found at ${binPath} — run npm install`);
   });
 
   it('generates TypeScript client files from a minimal OpenAPI spec', async () => {
@@ -100,9 +100,7 @@ describe('Client generation pipeline (e2e)', () => {
       writeFileSync(specPath, MINIMAL_SPEC);
       writeFileSync(configPath, OPENAPI_TS_CONFIG(specPath, outPath));
 
-      // cwd must be within the project so npx resolves the installed version
-      // from node_modules rather than fetching @latest from the registry
-      await exec('npx', ['@hey-api/openapi-ts', '-f', configPath], { cwd: clientsRoot });
+      await exec('node', [resolveOpenApiTsBin(), '-f', configPath]);
 
       assert.ok(existsSync(join(outPath, 'types.gen.ts')), 'types.gen.ts was not generated');
       assert.ok(existsSync(join(outPath, 'sdk.gen.ts')), 'sdk.gen.ts was not generated');
@@ -185,7 +183,7 @@ components:
       const configPath = join(workDir, 'openapi-ts.config.js');
       writeFileSync(configPath, OPENAPI_TS_CONFIG(bundledPath, outPath));
 
-      await exec('npx', ['@hey-api/openapi-ts', '-f', configPath], { cwd: clientsRoot });
+      await exec('node', [resolveOpenApiTsBin(), '-f', configPath]);
 
       const zodGen = readFileSync(join(outPath, 'zod.gen.ts'), 'utf8');
 
@@ -333,7 +331,7 @@ components:
       const outPath = join(workDir, 'out');
       const configPath = join(workDir, 'openapi-ts.config.js');
       writeFileSync(configPath, OPENAPI_TS_CONFIG(bundledPath, outPath));
-      await exec('npx', ['@hey-api/openapi-ts', '-f', configPath], { cwd: clientsRoot });
+      await exec('node', [resolveOpenApiTsBin(), '-f', configPath]);
 
       const typesGenPath = join(outPath, 'types.gen.ts');
       const namedEnums = collectNamedEnumDefs(resolvePath(specPath), loadContractFiles(workDir));

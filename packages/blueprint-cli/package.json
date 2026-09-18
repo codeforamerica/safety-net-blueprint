@@ -35,13 +35,13 @@
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
     "@codeforamerica/blueprint-core": "^0.1.1",
+    "@hey-api/openapi-ts": "^0.90.3",
     "ajv": "^8.12.0",
     "ajv-formats": "^3.0.1",
     "js-yaml": "^4.1.0",
     "pluralize": "^8.0.0"
   },
   "devDependencies": {
-    "@hey-api/openapi-ts": "^0.90.3",
     "@redocly/cli": "^2.31.3",
     "typescript": "^5.3.3"
   }
