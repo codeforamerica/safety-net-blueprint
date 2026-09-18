@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CloseApplicationData, CloseApplicationErrors, CloseApplicationResponses, CreateApplicationData, CreateApplicationErrors, CreateApplicationMemberData, CreateApplicationMemberErrors, CreateApplicationMemberResponses, CreateApplicationResponses, DeleteApplicationData, DeleteApplicationErrors, DeleteApplicationMemberData, DeleteApplicationMemberErrors, DeleteApplicationMemberResponses, DeleteApplicationResponses, GetApplicationData, GetApplicationErrors, GetApplicationMemberData, GetApplicationMemberErrors, GetApplicationMemberResponses, GetApplicationResponses, GetApplicationSummaryData, GetApplicationSummaryErrors, GetApplicationSummaryResponses, ListApplicationMembersData, ListApplicationMembersErrors, ListApplicationMembersResponses, ListApplicationsData, ListApplicationsErrors, ListApplicationsResponses, OpenApplicationData, OpenApplicationErrors, OpenApplicationResponses, SubmitApplicationData, SubmitApplicationErrors, SubmitApplicationResponses, UpdateApplicationData, UpdateApplicationErrors, UpdateApplicationMemberData, UpdateApplicationMemberErrors, UpdateApplicationMemberResponses, UpdateApplicationResponses, WithdrawApplicationData, WithdrawApplicationErrors, WithdrawApplicationResponses } from './types.gen';
-import { zCloseApplicationData, zCloseApplicationResponse, zCreateApplicationData, zCreateApplicationMemberData, zCreateApplicationMemberResponse, zCreateApplicationResponse, zDeleteApplicationData, zDeleteApplicationMemberData, zDeleteApplicationMemberResponse, zDeleteApplicationResponse, zGetApplicationData, zGetApplicationMemberData, zGetApplicationMemberResponse, zGetApplicationResponse, zGetApplicationSummaryData, zGetApplicationSummaryResponse, zListApplicationMembersData, zListApplicationMembersResponse, zListApplicationsData, zListApplicationsResponse, zOpenApplicationData, zOpenApplicationResponse, zSubmitApplicationData, zSubmitApplicationResponse, zUpdateApplicationData, zUpdateApplicationMemberData, zUpdateApplicationMemberResponse, zUpdateApplicationResponse, zWithdrawApplicationData, zWithdrawApplicationResponse } from './zod.gen';
+import type { CloseApplicationData, CloseApplicationErrors, CloseApplicationResponses, CreateApplicationData, CreateApplicationErrors, CreateApplicationMemberData, CreateApplicationMemberErrors, CreateApplicationMemberResponses, CreateApplicationResponses, DeleteApplicationData, DeleteApplicationErrors, DeleteApplicationMemberData, DeleteApplicationMemberErrors, DeleteApplicationMemberResponses, DeleteApplicationResponses, EvaluateInterviewProbesData, EvaluateInterviewProbesErrors, EvaluateInterviewProbesResponses, GetApplicationData, GetApplicationErrors, GetApplicationMemberData, GetApplicationMemberErrors, GetApplicationMemberResponses, GetApplicationResponses, GetApplicationSummaryData, GetApplicationSummaryErrors, GetApplicationSummaryResponses, ListApplicationMembersData, ListApplicationMembersErrors, ListApplicationMembersResponses, ListApplicationsData, ListApplicationsErrors, ListApplicationsResponses, OpenApplicationData, OpenApplicationErrors, OpenApplicationResponses, SubmitApplicationData, SubmitApplicationErrors, SubmitApplicationResponses, UpdateApplicationData, UpdateApplicationErrors, UpdateApplicationMemberData, UpdateApplicationMemberErrors, UpdateApplicationMemberResponses, UpdateApplicationResponses, WithdrawApplicationData, WithdrawApplicationErrors, WithdrawApplicationResponses } from './types.gen';
+import { zCloseApplicationData, zCloseApplicationResponse, zCreateApplicationData, zCreateApplicationMemberData, zCreateApplicationMemberResponse, zCreateApplicationResponse, zDeleteApplicationData, zDeleteApplicationMemberData, zDeleteApplicationMemberResponse, zDeleteApplicationResponse, zEvaluateInterviewProbesData, zEvaluateInterviewProbesResponse, zGetApplicationData, zGetApplicationMemberData, zGetApplicationMemberResponse, zGetApplicationResponse, zGetApplicationSummaryData, zGetApplicationSummaryResponse, zListApplicationMembersData, zListApplicationMembersResponse, zListApplicationsData, zListApplicationsResponse, zOpenApplicationData, zOpenApplicationResponse, zSubmitApplicationData, zSubmitApplicationResponse, zUpdateApplicationData, zUpdateApplicationMemberData, zUpdateApplicationMemberResponse, zUpdateApplicationResponse, zWithdrawApplicationData, zWithdrawApplicationResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -208,4 +208,19 @@ export const getApplicationSummary = <ThrowOnError extends boolean = false>(opti
     responseValidator: async (data) => await zGetApplicationSummaryResponse.parseAsync(data),
     url: '/applications/{applicationId}/summary',
     ...options
+});
+
+/**
+ * Evaluate interviewProbes
+ */
+export const evaluateInterviewProbes = <ThrowOnError extends boolean = false>(options: Options<EvaluateInterviewProbesData, ThrowOnError>) => (options.client ?? client).post<EvaluateInterviewProbesResponses, EvaluateInterviewProbesErrors, ThrowOnError>({
+    requestValidator: async (data) => await zEvaluateInterviewProbesData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zEvaluateInterviewProbesResponse.parseAsync(data),
+    url: '/intake/determinations/evaluate-interview-probes',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });

@@ -1,8 +1,9 @@
 $schema: https://blueprint.codeforamerica.org/schemas/graph-schema.yaml
-domain: eligibility
+domain: intake
 ruleset: interviewProbes
 outputs:
   - incomeInconsistencyProbe
+  - workEligibleMembers
   - workRequirementProbe
   - studentEligibilityProbe
   - immigrationStatusProbe

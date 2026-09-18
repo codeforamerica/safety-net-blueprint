@@ -1,0 +1,70 @@
+$schema: https://blueprint.codeforamerica.org/schemas/rules-examples-schema.yaml
+domain: intake
+rulesets:
+  interviewProbes:
+    examples:
+      - description: Income gap and unemployed members — multiple probes triggered
+        inputs:
+          household:
+            monthlyIncome: 800
+            monthlyExpenses: 1200
+            members:
+              - age: 35
+                isEmployed: false
+                isStudent: false
+                isNonCitizen: false
+              - age: 8
+                isEmployed: false
+                isStudent: false
+                isNonCitizen: false
+          application:
+            hasChangedCircumstances: false
+        outputs:
+          incomeInconsistencyProbe: true
+          workRequirementProbe: true
+          studentEligibilityProbe: false
+          immigrationStatusProbe: false
+          changeVerificationProbe: false
+          allMembersEmployed: false
+      - description: Non-citizen student with changed circumstances
+        inputs:
+          household:
+            monthlyIncome: 1500
+            monthlyExpenses: 1400
+            members:
+              - age: 22
+                isEmployed: true
+                isStudent: true
+                isNonCitizen: true
+          application:
+            hasChangedCircumstances: true
+        outputs:
+          incomeInconsistencyProbe: false
+          workRequirementProbe: false
+          studentEligibilityProbe: true
+          immigrationStatusProbe: true
+          changeVerificationProbe: true
+          allMembersEmployed: true
+      - description: All members employed — no work requirement probe
+        inputs:
+          household:
+            monthlyIncome: 3000
+            monthlyExpenses: 2500
+            members:
+              - age: 40
+                isEmployed: true
+                isStudent: false
+                isNonCitizen: false
+              - age: 38
+                isEmployed: true
+                isStudent: false
+                isNonCitizen: false
+          application:
+            hasChangedCircumstances: false
+        outputs:
+          incomeInconsistencyProbe: false
+          workRequirementProbe: false
+          studentEligibilityProbe: false
+          immigrationStatusProbe: false
+          changeVerificationProbe: false
+          allMembersEmployed: true

@@ -149,50 +149,6 @@ export const zExpeditedSnapResponse = z.record(z.string(), z.union([
     })
 ]));
 
-/**
- * Input data for interviewProbes evaluation. All fields are optional — partial inputs trigger partial evaluation.
- */
-export const zInterviewProbesRequest = z.object({
-    household: z.optional(z.object({
-        monthlyIncome: z.optional(z.number()),
-        monthlyExpenses: z.optional(z.number()),
-        members: z.optional(z.array(z.object({
-            age: z.optional(z.int()),
-            isEmployed: z.optional(z.boolean()),
-            isStudent: z.optional(z.boolean()),
-            isNonCitizen: z.optional(z.boolean())
-        })))
-    })),
-    application: z.optional(z.object({
-        hasChangedCircumstances: z.optional(z.boolean())
-    }))
-});
-
-/**
- * Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
- *
- */
-export const zInterviewProbesResponse = z.record(z.string(), z.union([
-    z.object({
-        state: z.enum(['complete']),
-        value: z.unknown()
-    }),
-    z.object({
-        state: z.enum(['placeholder']),
-        value: z.unknown()
-    }),
-    z.object({
-        state: z.enum(['missing']),
-        value: z.null(),
-        missing: z.array(z.string())
-    }),
-    z.object({
-        state: z.enum(['error']),
-        value: z.null(),
-        message: z.string()
-    })
-]));
-
 export const zDeterminationWritableWritable = z.object({
     applicationId: z.optional(z.uuid())
 });
@@ -480,51 +436,6 @@ export const zEvaluateExpeditedSnapData = z.object({
  *
  */
 export const zEvaluateExpeditedSnapResponse = z.record(z.string(), z.union([
-    z.object({
-        state: z.enum(['complete']),
-        value: z.unknown()
-    }),
-    z.object({
-        state: z.enum(['placeholder']),
-        value: z.unknown()
-    }),
-    z.object({
-        state: z.enum(['missing']),
-        value: z.null(),
-        missing: z.array(z.string())
-    }),
-    z.object({
-        state: z.enum(['error']),
-        value: z.null(),
-        message: z.string()
-    })
-]));
-
-export const zEvaluateInterviewProbesData = z.object({
-    body: z.object({
-        household: z.optional(z.object({
-            monthlyIncome: z.optional(z.number()),
-            monthlyExpenses: z.optional(z.number()),
-            members: z.optional(z.array(z.object({
-                age: z.optional(z.int()),
-                isEmployed: z.optional(z.boolean()),
-                isStudent: z.optional(z.boolean()),
-                isNonCitizen: z.optional(z.boolean())
-            })))
-        })),
-        application: z.optional(z.object({
-            hasChangedCircumstances: z.optional(z.boolean())
-        }))
-    }),
-    path: z.optional(z.never()),
-    query: z.optional(z.never())
-});
-
-/**
- * Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
- *
- */
-export const zEvaluateInterviewProbesResponse = z.record(z.string(), z.union([
     z.object({
         state: z.enum(['complete']),
         value: z.unknown()

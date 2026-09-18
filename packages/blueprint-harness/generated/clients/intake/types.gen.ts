@@ -712,6 +712,89 @@ export type ApplicationSummaryResponse = {
     [key: string]: unknown;
 };
 
+/**
+ * Input data for interviewProbes evaluation. All fields are optional — partial inputs trigger partial evaluation.
+ */
+export type InterviewProbesRequest = {
+    /**
+     * Household composition and financial circumstances.
+     */
+    household?: {
+        /**
+         * Total monthly gross income reported by the household.
+         */
+        monthlyIncome?: number;
+        /**
+         * Total monthly expenses reported by the household.
+         */
+        monthlyExpenses?: number;
+        /**
+         * All individuals in the household.
+         */
+        members?: Array<{
+            /**
+             * Member's age in years.
+             */
+            age?: number;
+            /**
+             * Whether the member is currently employed.
+             */
+            isEmployed?: boolean;
+            /**
+             * Whether the member is enrolled at least half-time in higher education.
+             */
+            isStudent?: boolean;
+            /**
+             * Whether the member is a non-citizen subject to immigration screening.
+             */
+            isNonCitizen?: boolean;
+        }>;
+    };
+    /**
+     * Application-level context relevant to the interview.
+     */
+    application?: {
+        /**
+         * Whether the household reported changes since the application was submitted.
+         */
+        hasChangedCircumstances?: boolean;
+    };
+};
+
+/**
+ * Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
+ *
+ */
+export type InterviewProbesResponse = {
+    [key: string]: {
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        state: 'missing';
+        value: null;
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        state: 'error';
+        value: null;
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    };
+};
+
 export type ApplicationWritable2 = {
     /**
      * Benefit programs the household is applying for.
@@ -3255,3 +3338,138 @@ export type GetApplicationSummaryResponses = {
 };
 
 export type GetApplicationSummaryResponse = GetApplicationSummaryResponses[keyof GetApplicationSummaryResponses];
+
+export type EvaluateInterviewProbesData = {
+    /**
+     * Input data for interviewProbes evaluation. All fields are optional — partial inputs trigger partial evaluation.
+     */
+    body: {
+        /**
+         * Household composition and financial circumstances.
+         */
+        household?: {
+            /**
+             * Total monthly gross income reported by the household.
+             */
+            monthlyIncome?: number;
+            /**
+             * Total monthly expenses reported by the household.
+             */
+            monthlyExpenses?: number;
+            /**
+             * All individuals in the household.
+             */
+            members?: Array<{
+                /**
+                 * Member's age in years.
+                 */
+                age?: number;
+                /**
+                 * Whether the member is currently employed.
+                 */
+                isEmployed?: boolean;
+                /**
+                 * Whether the member is enrolled at least half-time in higher education.
+                 */
+                isStudent?: boolean;
+                /**
+                 * Whether the member is a non-citizen subject to immigration screening.
+                 */
+                isNonCitizen?: boolean;
+            }>;
+        };
+        /**
+         * Application-level context relevant to the interview.
+         */
+        application?: {
+            /**
+             * Whether the household reported changes since the application was submitted.
+             */
+            hasChangedCircumstances?: boolean;
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/intake/determinations/evaluate-interview-probes';
+};
+
+export type EvaluateInterviewProbesErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type EvaluateInterviewProbesError = EvaluateInterviewProbesErrors[keyof EvaluateInterviewProbesErrors];
+
+export type EvaluateInterviewProbesResponses = {
+    /**
+     * Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
+     *
+     */
+    200: {
+        [key: string]: {
+            state: 'complete';
+            /**
+             * The computed value.
+             */
+            value: unknown;
+        } | {
+            state: 'placeholder';
+            /**
+             * The computed value, derived using one or more schema defaults.
+             */
+            value: unknown;
+        } | {
+            state: 'missing';
+            value: null;
+            /**
+             * Input paths required to resolve this fact.
+             */
+            missing: Array<string>;
+        } | {
+            state: 'error';
+            value: null;
+            /**
+             * The reason evaluation failed.
+             */
+            message: string;
+        };
+    };
+};
+
+export type EvaluateInterviewProbesResponse = EvaluateInterviewProbesResponses[keyof EvaluateInterviewProbesResponses];

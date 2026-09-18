@@ -632,26 +632,31 @@ runEval();
 // ── Index page ────────────────────────────────────────────────────────────────
 
 export function generateIndexHtml(rulesets, outputDir, hubHref) {
-  const rows = rulesets.map(({ domain, rulesetName, slug }) =>
-    `<tr style="border-bottom:1px solid #f3f4f6">
-      <td style="padding:8px 16px 8px 0;font-family:${MONOSPACE};font-size:13px;font-weight:700;color:#2B1A78;">
-        <a href="${esc(slug)}.html" style="color:inherit;text-decoration:none;">${esc(rulesetName)}</a>
-      </td>
-      <td style="padding:8px 0;font-size:12px;color:#6b7280;">${esc(domain)}</td>
-    </tr>`
-  ).join('');
+  // Group rulesets by domain
+  const byDomain = {};
+  for (const r of rulesets) {
+    if (!byDomain[r.domain]) byDomain[r.domain] = [];
+    byDomain[r.domain].push(r);
+  }
 
-  const body = `
-<h1 style="font-size:1.25rem;font-weight:800;color:#111827;margin-bottom:1.5rem">Rules Docs</h1>
+  const sections = Object.entries(byDomain).map(([domain, items]) => {
+    const domainTitle = domain.replace(/\b\w/g, c => c.toUpperCase());
+    const rows = items.map(({ rulesetName, slug }) =>
+      `<tr style="border-bottom:1px solid #f3f4f6">
+        <td style="padding:8px 0;font-family:${MONOSPACE};font-size:13px;font-weight:700;color:#2B1A78;">
+          <a href="${esc(slug)}.html" style="color:inherit;text-decoration:none;">${esc(rulesetName)}</a>
+        </td>
+      </tr>`
+    ).join('');
+    return `
+<h2 style="font-size:0.85rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#9ca3af;margin:2rem 0 0.5rem">${esc(domainTitle)}</h2>
 <table style="width:100%;border-collapse:collapse">
-  <thead>
-    <tr>
-      <th style="padding:6px 16px 4px 0;font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;text-align:left">Ruleset</th>
-      <th style="padding:6px 0 4px;font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;text-align:left">Domain</th>
-    </tr>
-  </thead>
   <tbody>${rows}</tbody>
 </table>`;
+  }).join('');
+
+  const body = `
+<h1 style="font-size:1.25rem;font-weight:800;color:#111827;margin-bottom:0.5rem">Rules Docs</h1>${sections}`;
 
   const html = shell('Rules Docs', body, hubHref);
   writeFileSync(join(outputDir, 'index.html'), html);

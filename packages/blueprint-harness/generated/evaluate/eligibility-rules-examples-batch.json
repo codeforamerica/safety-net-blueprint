@@ -2,12 +2,12 @@
   "expeditedSnap": [
     {
       "isLowIncome": {
-        "type": "output",
+        "type": "intermediate",
         "state": "complete",
         "value": true
       },
       "hasLowResources": {
-        "type": "output",
+        "type": "intermediate",
         "state": "complete",
         "value": true
       },
@@ -29,12 +29,12 @@
     },
     {
       "isLowIncome": {
-        "type": "output",
+        "type": "intermediate",
         "state": "complete",
         "value": false
       },
       "hasLowResources": {
-        "type": "output",
+        "type": "intermediate",
         "state": "complete",
         "value": true
       },
@@ -56,12 +56,12 @@
     },
     {
       "isLowIncome": {
-        "type": "output",
+        "type": "intermediate",
         "state": "complete",
         "value": false
       },
       "hasLowResources": {
-        "type": "output",
+        "type": "intermediate",
         "state": "complete",
         "value": true
       },
@@ -83,12 +83,12 @@
     },
     {
       "isLowIncome": {
-        "type": "output",
+        "type": "intermediate",
         "state": "complete",
         "value": false
       },
       "hasLowResources": {
-        "type": "output",
+        "type": "intermediate",
         "state": "complete",
         "value": false
       },
@@ -103,186 +103,6 @@
         "value": false
       },
       "isExpeditedEligible": {
-        "type": "output",
-        "state": "complete",
-        "value": false
-      }
-    }
-  ],
-  "interviewProbes": [
-    {
-      "incomeGapExists": {
-        "type": "intermediate",
-        "state": "complete",
-        "value": true
-      },
-      "workEligibleMembers": {
-        "type": "output",
-        "state": "complete",
-        "value": [
-          {
-            "age": 35,
-            "isEmployed": false,
-            "isStudent": false,
-            "isNonCitizen": false
-          }
-        ]
-      },
-      "hasUnemployedWorkEligible": {
-        "type": "intermediate",
-        "state": "complete",
-        "value": true
-      },
-      "hasStudentMembers": {
-        "type": "intermediate",
-        "state": "complete",
-        "value": false
-      },
-      "hasNonCitizenMembers": {
-        "type": "intermediate",
-        "state": "complete",
-        "value": false
-      },
-      "allMembersEmployed": {
-        "type": "output",
-        "state": "complete",
-        "value": false
-      },
-      "changeVerificationProbe": {
-        "type": "output",
-        "state": "complete",
-        "value": false
-      },
-      "incomeInconsistencyProbe": {
-        "type": "output",
-        "state": "complete",
-        "value": true
-      },
-      "workRequirementProbe": {
-        "type": "output",
-        "state": "complete",
-        "value": true
-      },
-      "studentEligibilityProbe": {
-        "type": "output",
-        "state": "complete",
-        "value": false
-      },
-      "immigrationStatusProbe": {
-        "type": "output",
-        "state": "complete",
-        "value": false
-      }
-    },
-    {
-      "incomeGapExists": {
-        "type": "intermediate",
-        "state": "complete",
-        "value": false
-      },
-      "workEligibleMembers": {
-        "type": "output",
-        "state": "complete",
-        "value": []
-      },
-      "hasUnemployedWorkEligible": {
-        "type": "intermediate",
-        "state": "complete",
-        "value": false
-      },
-      "hasStudentMembers": {
-        "type": "intermediate",
-        "state": "complete",
-        "value": true
-      },
-      "hasNonCitizenMembers": {
-        "type": "intermediate",
-        "state": "complete",
-        "value": true
-      },
-      "allMembersEmployed": {
-        "type": "output",
-        "state": "complete",
-        "value": true
-      },
-      "changeVerificationProbe": {
-        "type": "output",
-        "state": "complete",
-        "value": true
-      },
-      "incomeInconsistencyProbe": {
-        "type": "output",
-        "state": "complete",
-        "value": false
-      },
-      "workRequirementProbe": {
-        "type": "output",
-        "state": "complete",
-        "value": false
-      },
-      "studentEligibilityProbe": {
-        "type": "output",
-        "state": "complete",
-        "value": true
-      },
-      "immigrationStatusProbe": {
-        "type": "output",
-        "state": "complete",
-        "value": true
-      }
-    },
-    {
-      "incomeGapExists": {
-        "type": "intermediate",
-        "state": "complete",
-        "value": false
-      },
-      "workEligibleMembers": {
-        "type": "output",
-        "state": "complete",
-        "value": []
-      },
-      "hasUnemployedWorkEligible": {
-        "type": "intermediate",
-        "state": "complete",
-        "value": false
-      },
-      "hasStudentMembers": {
-        "type": "intermediate",
-        "state": "complete",
-        "value": false
-      },
-      "hasNonCitizenMembers": {
-        "type": "intermediate",
-        "state": "complete",
-        "value": false
-      },
-      "allMembersEmployed": {
-        "type": "output",
-        "state": "complete",
-        "value": true
-      },
-      "changeVerificationProbe": {
-        "type": "output",
-        "state": "complete",
-        "value": false
-      },
-      "incomeInconsistencyProbe": {
-        "type": "output",
-        "state": "complete",
-        "value": false
-      },
-      "workRequirementProbe": {
-        "type": "output",
-        "state": "complete",
-        "value": false
-      },
-      "studentEligibilityProbe": {
-        "type": "output",
-        "state": "complete",
-        "value": false
-      },
-      "immigrationStatusProbe": {
         "type": "output",
         "state": "complete",
         "value": false

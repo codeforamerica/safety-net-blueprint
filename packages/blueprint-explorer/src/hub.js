@@ -81,13 +81,19 @@ function contextMapLabel(slug) {
   return slug.replace(/^domain_/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
+// Rules-docs slugs are `{domain}-{rulesetName}` — strip the domain prefix for the chip label
+function rulesLabel(slug) {
+  const rulesetName = slug.replace(/^[^-]+-/, '');
+  return rulesetName.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase());
+}
+
 // ── Discover pages ────────────────────────────────────────────────────────────
 
 const apiPages     = scanPages(join(contentDir, 'api-reference'));
 const dictPages    = scanPages(join(contentDir, 'data-dictionaries'));
 const clientPages  = scanPages(join(contentDir, 'client-reference'));
 const smPages      = scanPages(join(contentDir, 'state-machine-docs'));
-const rulesPages   = scanPages(join(contentDir, 'rules-docs'));
+const rulesPages   = scanPages(join(contentDir, 'rules-docs'), rulesLabel);
 const contextPages = scanPages(join(contentDir, 'context-map'), contextMapLabel)
   .filter(p => p.slug.startsWith('domain_'));
 const seqPages     = scanPages(join(contentDir, 'sequence-diagrams'));

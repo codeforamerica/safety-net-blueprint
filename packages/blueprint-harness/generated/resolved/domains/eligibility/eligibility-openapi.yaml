@@ -174,27 +174,6 @@ paths:
           $ref: ../../base/components/responses.yaml#/BadRequest
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
-  /eligibility/determinations/evaluate-interview-probes:
-    post:
-      summary: Evaluate interviewProbes
-      operationId: evaluateInterviewProbes
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/InterviewProbesRequest"
-      responses:
-        "200":
-          description: interviewProbes evaluation result.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InterviewProbesResponse"
-        "400":
-          $ref: ../../base/components/responses.yaml#/BadRequest
-        "500":
-          $ref: ../../base/components/responses.yaml#/InternalError
 components:
   parameters:
     DeterminationIdParam:
@@ -454,46 +433,3 @@ components:
       allOf:
         - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationResult
       description: Evaluation result for expeditedSnap.
-    InterviewProbesRequest:
-      type: object
-      description: Input data for interviewProbes evaluation. All fields are optional — partial inputs trigger partial evaluation.
-      properties:
-        household:
-          type: object
-          description: Household composition and financial circumstances.
-          properties:
-            monthlyIncome:
-              type: number
-              description: Total monthly gross income reported by the household.
-            monthlyExpenses:
-              type: number
-              description: Total monthly expenses reported by the household.
-            members:
-              type: array
-              description: All individuals in the household.
-              items:
-                type: object
-                properties:
-                  age:
-                    type: integer
-                    description: Member's age in years.
-                  isEmployed:
-                    type: boolean
-                    description: Whether the member is currently employed.
-                  isStudent:
-                    type: boolean
-                    description: Whether the member is enrolled at least half-time in higher education.
-                  isNonCitizen:
-                    type: boolean
-                    description: Whether the member is a non-citizen subject to immigration screening.
-        application:
-          type: object
-          description: Application-level context relevant to the interview.
-          properties:
-            hasChangedCircumstances:
-              type: boolean
-              description: Whether the household reported changes since the application was submitted.
-    InterviewProbesResponse:
-      allOf:
-        - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationResult
-      description: Evaluation result for interviewProbes.
