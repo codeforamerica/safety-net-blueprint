@@ -22,13 +22,13 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
-import { contractsDir, resolvedDir } from '../paths.js';
+import { contractsDir, resolvedDir } from '../../../paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SCRIPT = join(__dirname, '../../scripts/resolve.js');
+const SCRIPT = join(__dirname, '../../../../scripts/resolve.js');
 const INPUTS = contractsDir;
 const GOLDENS = resolvedDir;
-const projectRoot = join(__dirname, '../../..');
+const projectRoot = join(__dirname, '../../../..');
 
 const GOLDEN_FILES = [
   'domains/intake/intake-openapi.yaml',

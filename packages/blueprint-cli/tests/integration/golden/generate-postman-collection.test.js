@@ -22,10 +22,10 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
-import { resolvedDir, postmanDir } from '../paths.js';
+import { resolvedDir, postmanDir } from '../../paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SCRIPT = join(__dirname, '../../scripts/generate-postman-collection.js');
+const SCRIPT = join(__dirname, '../../../scripts/generate-postman-collection.js');
 const INPUTS = resolvedDir;
 const GOLDEN = join(postmanDir, 'postman-collection.json');
 const projectRoot = join(__dirname, '../../..');

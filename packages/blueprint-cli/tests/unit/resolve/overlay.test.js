@@ -34,7 +34,7 @@ import {
   injectEventPrefixInStateMachine,
   injectEventPrefixInAsyncApi,
   injectEventPrefixInAnnotations
-} from '../../scripts/resolve.js';
+} from '../../../scripts/resolve.js';
 
 // Use checkPathExists from the overlay module (same as the script does)
 import { checkPathExists } from '@codeforamerica/blueprint-core/overlay';
@@ -1945,7 +1945,7 @@ test('x-enum-source injection', async (t) => {
       });
 
       const outDir = join(dir, 'out');
-      const resolveScript = join(__dirname, '../..', 'scripts', 'resolve.js');
+      const resolveScript = join(__dirname, '../../..', 'scripts', 'resolve.js');
 
       const result = spawnSync(
         process.execPath,

@@ -16,7 +16,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SCRIPTS = join(__dirname, '../scripts');
+const SCRIPTS = join(__dirname, '../../scripts');
 
 function run(script, ...args) {
   return spawnSync(process.execPath, [join(SCRIPTS, script), ...args], { encoding: 'utf8' });

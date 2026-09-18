@@ -9,7 +9,7 @@ import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import yaml from 'js-yaml';
-import { discoverStateMachines } from '../../scripts/validate/state-machines.js';
+import { discoverStateMachines } from '../../../scripts/validate/state-machines.js';
 
 // ---------------------------------------------------------------------------
 // discoverStateMachines

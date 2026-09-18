@@ -18,7 +18,7 @@ import {
   validateAnnotationPolicyCitations,
   validateAnnotationEvent,
   validateFactKey,
-} from '../../scripts/validate/annotations.js';
+} from '../../../scripts/validate/annotations.js';
 
 // ---------------------------------------------------------------------------
 // Helpers

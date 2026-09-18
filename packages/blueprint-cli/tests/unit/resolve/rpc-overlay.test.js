@@ -17,7 +17,7 @@ import {
   buildOperationId,
   rewriteLocalDefsRefs,
   hoistDefs
-} from '../../scripts/generate-rpc-overlay.js';
+} from '../../../scripts/generate-rpc-overlay.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

@@ -14,7 +14,7 @@ import {
   validateMetrics,
   extractVarFields,
   buildCollectionSchemaMap,
-} from '../../scripts/validate/sla-metrics.js';
+} from '../../../scripts/validate/sla-metrics.js';
 import { collectTopLevelProperties } from '@codeforamerica/blueprint-core/state-machine-validator';
 
 const __filename = fileURLToPath(import.meta.url);

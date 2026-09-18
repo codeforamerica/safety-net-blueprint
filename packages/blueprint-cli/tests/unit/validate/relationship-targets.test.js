@@ -11,7 +11,7 @@ import { mkdtempSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import yaml from 'js-yaml';
-import { buildCrossDomainSchemaIndex, validateRelationshipTargets } from '../../scripts/validate/annotations.js';
+import { buildCrossDomainSchemaIndex, validateRelationshipTargets } from '../../../scripts/validate/annotations.js';
 
 // ---------------------------------------------------------------------------
 // Helpers

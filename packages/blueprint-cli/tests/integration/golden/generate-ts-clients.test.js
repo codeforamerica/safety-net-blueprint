@@ -22,13 +22,13 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
-import { contractsDir, clientsDir } from '../paths.js';
+import { contractsDir, clientsDir } from '../../paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const contracts = contractsDir;
 const golden = clientsDir;
-const resolveScript = join(__dirname, '../../scripts/resolve.js');
-const clientScript = join(__dirname, '../../scripts/generate-ts-clients.js');
+const resolveScript = join(__dirname, '../../../scripts/resolve.js');
+const clientScript = join(__dirname, '../../../scripts/generate-ts-clients.js');
 const projectRoot = join(__dirname, '../../..');
 
 const GOLDEN_FILES = [
