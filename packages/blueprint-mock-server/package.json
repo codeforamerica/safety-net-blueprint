@@ -6,11 +6,11 @@
   "files": [
     "src/",
     "cli/",
-    "test-utils.js"
+    "tests/test-utils.js"
   ],
   "exports": {
     ".": "./cli/server.js",
-    "./test-utils": "./test-utils.js"
+    "./test-utils": "./tests/test-utils.js"
   },
   "bin": {
     "blueprint-mock": "cli/server.js",
