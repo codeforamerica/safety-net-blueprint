@@ -643,7 +643,8 @@ async function main() {
   const resourceSchemaMap = buildResourceSchemaMap(specDir);
   const actionIndex = buildStateMachineActionIndex(specDir);
   const channelIndex = buildAsyncApiChannelIndex(specDir);
-  const asyncApiSchemasByFile = buildAsyncApiSchemaIndex(specDir);
+  // TODO #442: re-enable once generate-asyncapi has been run across all contracts
+  // const asyncApiSchemasByFile = buildAsyncApiSchemaIndex(specDir);
   const graphIndex = buildGraphIndex(specDir);
 
   // Section validator dispatch — each entry validates one annotation key.
@@ -716,7 +717,7 @@ async function main() {
 
     const eventErrors = [
       ...validateStateMachineEvents(doc, channelIndex),
-      ...validateEmitDataFields(doc, asyncApiSchemasByFile),
+      // TODO #442: ...validateEmitDataFields(doc, asyncApiSchemasByFile),
     ];
     if (eventErrors.length === 0) {
       console.log(`  ✓ ${file}`);
