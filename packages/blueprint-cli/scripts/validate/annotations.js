@@ -314,89 +314,6 @@ export function buildAsyncApiChannelIndex(specsDir) {
 }
 
 /**
- * Build an index of AsyncAPI component schemas from all *-asyncapi.yaml files.
- * Returns: Map<filename, Record<schemaName, schema>>
- */
-export function buildAsyncApiSchemaIndex(specsDir) {
-  const byFile = new Map();
-
-  for (const filePath of walkForPattern(specsDir, '-asyncapi.yaml')) {
-    let doc;
-    try { doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); } catch { continue; }
-    byFile.set(basename(filePath), doc?.components?.schemas ?? {});
-  }
-
-  return byFile;
-}
-
-// intake.application.submitted → ApplicationSubmitted (for schema name derivation)
-function eventTypeToSchemaName(eventType, domain) {
-  const withoutDomain = eventType.startsWith(domain + '.')
-    ? eventType.slice(domain.length + 1)
-    : eventType;
-  return withoutDomain
-    .split(/[._]/)
-    .map(s => s.charAt(0).toUpperCase() + s.slice(1))
-    .join('');
-}
-
-/**
- * Collect all emit steps with a `data:` block from a state machine document.
- * Returns an array of { type, data } objects.
- */
-function collectEmitDataSteps(doc) {
-  const results = [];
-  for (const machine of doc?.machines ?? []) {
-    for (const action of machine.actions ?? []) {
-      for (const step of action.steps ?? []) {
-        if (step.emit?.type && step.emit.data) {
-          results.push({ type: step.emit.type, data: step.emit.data });
-        }
-      }
-    }
-  }
-  return results;
-}
-
-/**
- * Validate that every emit.data field in a state machine has a matching property
- * in the corresponding AsyncAPI *Data schema.
- *
- * @param {object} doc - parsed state machine document
- * @param {Map<string, Record<string, object>>} asyncApiSchemasByFile - from buildAsyncApiSchemaIndex
- * @returns {string[]} array of error messages
- */
-export function validateEmitDataFields(doc, asyncApiSchemasByFile) {
-  const domain = doc?.domain;
-  const eventsSpec = doc?.eventsSpec;
-  if (!eventsSpec) return [];
-
-  const asyncApiSchemas = asyncApiSchemasByFile.get(eventsSpec);
-  if (!asyncApiSchemas) return [];
-
-  const errors = [];
-
-  for (const { type, data } of collectEmitDataSteps(doc)) {
-    const schemaName = `${eventTypeToSchemaName(type, domain)}Data`;
-    const dataSchema = asyncApiSchemas[schemaName];
-
-    if (!dataSchema) {
-      errors.push(`emit.data for "${type}" has no "${schemaName}" schema in ${eventsSpec} — run blueprint-generate-asyncapi to generate it`);
-      continue;
-    }
-
-    const schemaProps = new Set(Object.keys(dataSchema.properties ?? {}));
-    for (const fieldName of Object.keys(data)) {
-      if (!schemaProps.has(fieldName)) {
-        errors.push(`emit.data field "${fieldName}" for "${type}" not found in "${schemaName}" in ${eventsSpec}`);
-      }
-    }
-  }
-
-  return errors;
-}
-
-/**
  * Recursively collect all emit type values from a state machine document.
  * Returns an array of { type, path } for each emit step found.
  */
@@ -643,8 +560,6 @@ async function main() {
   const resourceSchemaMap = buildResourceSchemaMap(specDir);
   const actionIndex = buildStateMachineActionIndex(specDir);
   const channelIndex = buildAsyncApiChannelIndex(specDir);
-  // TODO #442: re-enable once generate-asyncapi has been run across all contracts
-  // const asyncApiSchemasByFile = buildAsyncApiSchemaIndex(specDir);
   const graphIndex = buildGraphIndex(specDir);
 
   // Section validator dispatch — each entry validates one annotation key.
@@ -717,7 +632,6 @@ async function main() {
 
     const eventErrors = [
       ...validateStateMachineEvents(doc, channelIndex),
-      // TODO #442: ...validateEmitDataFields(doc, asyncApiSchemasByFile),
     ];
     if (eventErrors.length === 0) {
       console.log(`  ✓ ${file}`);
