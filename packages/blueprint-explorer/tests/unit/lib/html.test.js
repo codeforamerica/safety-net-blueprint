@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { esc, titleCase, methodBadge, typeBadge, statusBadge } from '../../src/lib/html.js';
+import { esc, titleCase, methodBadge, typeBadge, statusBadge } from '../../../src/lib/html.js';
 
 describe('esc', () => {
   it('escapes &', () => assert.equal(esc('a & b'), 'a &amp; b'));

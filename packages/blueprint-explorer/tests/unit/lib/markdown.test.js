@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { inlineMd, renderMarkdown, parsePipeTable } from '../../src/lib/markdown.js';
+import { inlineMd, renderMarkdown, parsePipeTable } from '../../../src/lib/markdown.js';
 
 describe('inlineMd', () => {
   it('renders bold', () => assert.match(inlineMd('**bold**'), /<strong>bold<\/strong>/));

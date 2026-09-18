@@ -135,6 +135,13 @@ else
   fail "Package contents check failed"
 fi
 
+step "Checking changeset config"
+if node --test tests/check-changeset-config.js 2>&1; then
+  pass "Changeset config valid"
+else
+  fail "Changeset config check failed"
+fi
+
 # Summary
 printf "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
 if [ "$failed" -eq 0 ]; then

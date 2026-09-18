@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SCRIPT = join(__dirname, '..', '..', 'src', 'data-dictionaries', 'generate-field-inventory.mjs');
+const SCRIPT = join(__dirname, '..', '..', '..', 'src', 'data-dictionaries', 'generate-field-inventory.mjs');
 const FIXTURE_DIR = join(__dirname, 'fixtures');
 const FIXTURE_SPEC = join(FIXTURE_DIR, 'test-openapi.yaml');
 
