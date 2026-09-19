@@ -3093,17 +3093,26 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
-  /intake/determinations/evaluate-interview-probes:
+  /intake/applications/{applicationId}/evaluate-interview-prompts:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        description: Unique identifier of the application.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-0000-0000-000000000001
     post:
-      summary: Evaluate interviewProbes
-      operationId: evaluateInterviewProbes
+      summary: Evaluate interviewPrompts
+      operationId: evaluateInterviewPrompts
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              description: Input data for interviewProbes evaluation. All fields are optional — partial inputs trigger partial evaluation.
+              description: Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
               properties:
                 household:
                   type: object
@@ -3142,7 +3151,7 @@ paths:
                       description: Whether the household reported changes since the application was submitted.
       responses:
         "200":
-          description: interviewProbes evaluation result.
+          description: interviewPrompts evaluation result.
           content:
             application/json:
               schema:
@@ -3208,7 +3217,7 @@ paths:
                               description: The reason evaluation failed.
                       discriminator:
                         propertyName: state
-                description: Evaluation result for interviewProbes.
+                description: Evaluation result for interviewPrompts.
         "400":
           description: The request is malformed or contains invalid parameters.
           content:
@@ -4346,9 +4355,9 @@ components:
     ApplicationSummaryResponse:
       type: object
       description: Generated composition response for applicationSummary.
-    InterviewProbesRequest:
+    InterviewPromptsRequest:
       type: object
-      description: Input data for interviewProbes evaluation. All fields are optional — partial inputs trigger partial evaluation.
+      description: Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
       properties:
         household:
           type: object
@@ -4385,7 +4394,7 @@ components:
             hasChangedCircumstances:
               type: boolean
               description: Whether the household reported changes since the application was submitted.
-    InterviewProbesResponse:
+    InterviewPromptsResponse:
       allOf:
         - type: object
           description: |
@@ -4448,4 +4457,4 @@ components:
                     description: The reason evaluation failed.
             discriminator:
               propertyName: state
-      description: Evaluation result for interviewProbes.
+      description: Evaluation result for interviewPrompts.

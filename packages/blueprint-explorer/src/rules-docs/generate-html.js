@@ -639,25 +639,49 @@ export function generateIndexHtml(rulesets, outputDir, hubHref) {
     byDomain[r.domain].push(r);
   }
 
-  const sections = Object.entries(byDomain).map(([domain, items]) => {
+  const cards = Object.entries(byDomain).map(([domain, items]) => {
     const domainTitle = domain.replace(/\b\w/g, c => c.toUpperCase());
-    const rows = items.map(({ rulesetName, slug }) =>
-      `<tr style="border-bottom:1px solid #f3f4f6">
-        <td style="padding:8px 0;font-family:${MONOSPACE};font-size:13px;font-weight:700;color:#2B1A78;">
-          <a href="${esc(slug)}.html" style="color:inherit;text-decoration:none;">${esc(rulesetName)}</a>
-        </td>
-      </tr>`
-    ).join('');
-    return `
-<h2 style="font-size:0.85rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#9ca3af;margin:2rem 0 0.5rem">${esc(domainTitle)}</h2>
-<table style="width:100%;border-collapse:collapse">
-  <tbody>${rows}</tbody>
-</table>`;
+    const rows = items.map(({ rulesetName, slug }) => {
+      const label = rulesetName.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase());
+      return `<a href="${esc(slug)}.html" class="ruleset-row" onmouseover="this.style.background='#E6EBF9'" onmouseout="this.style.background=''">
+        <span class="ruleset-row-label">${esc(label)}</span>
+      </a>`;
+    }).join('');
+    return `<div class="domain-card">
+      <div class="domain-card-title">${esc(domainTitle)}</div>
+      <div class="ruleset-list">${rows}</div>
+    </div>`;
   }).join('');
 
-  const body = `
-<h1 style="font-size:1.25rem;font-weight:800;color:#111827;margin-bottom:0.5rem">Rules Docs</h1>${sections}`;
+  const bodyHtml = `
+<div class="index-layout">
+  <div class="index-header">
+    <h1>Rules Docs</h1>
+    <p class="index-sub">Dependency graph visualizer for blueprint rulesets — inputs, intermediate facts, outputs, and policy citations.</p>
+  </div>
+  <div class="domain-grid">${cards}</div>
+</div>`;
 
-  const html = shell('Rules Docs', body, hubHref);
+  const extraStyle = `
+.index-layout { max-width: 900px; margin: 0 auto; padding: 3rem 2rem; }
+.index-header { margin-bottom: 2.5rem; }
+.index-header h1 { font-size: 2rem; font-weight: 700; color: ${COLORS.darkBlue}; margin-bottom: 0.5rem; }
+.index-sub { color: #555; font-size: 0.9rem; max-width: 560px; line-height: 1.5; }
+.domain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.domain-card { background: #fff; border: 1px solid ${COLORS.sandDark}; border-radius: 8px; padding: 1.25rem 1.25rem 1rem; }
+.domain-card-title { font-size: 1rem; font-weight: 800; color: ${COLORS.darkBlue}; margin-bottom: 0.5rem; }
+.ruleset-list { border: 1px solid ${COLORS.sandDark}; border-radius: 4px; overflow: hidden; }
+.ruleset-row { display: flex; align-items: center; padding: 6px 8px; text-decoration: none; color: ${COLORS.text}; }
+.ruleset-row-label { font-size: 12px; font-weight: 600; color: ${COLORS.midBlue}; }`;
+
+  const html = singleColumnPage({
+    title: 'Rules Docs',
+    breadcrumbs: [
+      { label: 'Explorer',   href: hubHref },
+      { label: 'Rules Docs', href: '#' },
+    ],
+    bodyHtml,
+    extraStyle,
+  });
   writeFileSync(join(outputDir, 'index.html'), html);
 }

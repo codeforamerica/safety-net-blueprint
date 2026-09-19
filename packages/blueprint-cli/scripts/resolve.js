@@ -1228,7 +1228,7 @@ async function main() {
         .filter(f => isRules(f.spec) && f.spec?.rulesets)
         .map(f => ({ relativePath: f.relativePath, doc: f.spec }));
 
-      const { graphs, overlays } = generateRulesResults(rulesFiles);
+      const { graphs, overlays } = generateRulesResults(rulesFiles, yamlFiles);
 
       for (const [relativePath, graph] of graphs) {
         if (!currentResults) {

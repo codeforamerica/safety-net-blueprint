@@ -1,9 +1,9 @@
 $schema: https://blueprint.codeforamerica.org/schemas/rules-schema.yaml
 domain: intake
 rulesets:
-  interviewProbes:
+  interviewPrompts:
     endpoint:
-      path: /determinations/evaluate-interview-probes
+      path: /applications/{applicationId}/evaluate-interview-prompts
     inputs:
       household:
         type: object
@@ -66,43 +66,43 @@ rulesets:
         type: boolean
         description: Every household member is currently employed.
         expression: household.members.all(m, m.isEmployed)
-      - path: incomeInconsistencyProbe
+      - path: incomeInconsistencyPrompt
         type: boolean
         description: |
-          Probe the household for unexplained income sources or assistance that account for the gap between income and expenses.
+          Prompt the household for unexplained income sources or assistance that account for the gap between income and expenses.
         expression: incomeGapExists
-      - path: workRequirementProbe
+      - path: workRequirementPrompt
         type: boolean
         description: |
           Screen non-employed members aged 16–59 for work requirement exemptions (physical/mental fitness, caregiving, education, etc.).
         expression: hasUnemployedWorkEligible
-      - path: studentEligibilityProbe
+      - path: studentEligibilityPrompt
         type: boolean
         description: |
           Screen student members for SNAP student eligibility exceptions (employment, dependent care, work-study, etc.).
         expression: hasStudentMembers
-      - path: immigrationStatusProbe
+      - path: immigrationStatusPrompt
         type: boolean
         description: |
           Screen non-citizen members for immigration status and apply sponsor income deeming rules where applicable.
         expression: hasNonCitizenMembers
-      - path: changeVerificationProbe
+      - path: changeVerificationPrompt
         type: boolean
         description: |
           Identify and verify changes in household circumstances that occurred between the application date and the interview date.
         expression: application.hasChangedCircumstances
     outputs:
-      incomeInconsistencyProbe:
+      incomeInconsistencyPrompt:
         type: boolean
       workEligibleMembers:
         type: array
-      workRequirementProbe:
+      workRequirementPrompt:
         type: boolean
-      studentEligibilityProbe:
+      studentEligibilityPrompt:
         type: boolean
-      immigrationStatusProbe:
+      immigrationStatusPrompt:
         type: boolean
-      changeVerificationProbe:
+      changeVerificationPrompt:
         type: boolean
       allMembersEmployed:
         type: boolean

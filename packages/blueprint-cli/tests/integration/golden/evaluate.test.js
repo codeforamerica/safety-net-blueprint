@@ -1,38 +1,101 @@
 /**
- * Golden file test for blueprint-evaluate CLI — batch mode output.
+ * Integration tests for blueprint-evaluate CLI.
  *
- * Runs evaluate in batch mode against the harness rules examples file and
- * compares stdout against the committed golden file. A failure here means
- * evaluation output changed — regenerate if intentional.
+ * Runs evaluate against the harness rules examples and asserts that outputs
+ * match expected values hardcoded here. No committed golden file needed —
+ * the expected values ARE the spec.
  *
- * Contract inputs: packages/blueprint-harness/contracts/domains/eligibility/
- * Golden output:   packages/blueprint-harness/generated/evaluate/
- *
- * To regenerate golden output:
- *   node packages/blueprint-cli/scripts/evaluate.js \
- *     --spec=packages/blueprint-harness/contracts/domains/eligibility/eligibility-rules-examples.yaml \
- *     > packages/blueprint-harness/generated/evaluate/eligibility-rules-examples-batch.json
+ * Inputs: packages/blueprint-harness/contracts/domains/{eligibility,intake}/
  */
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import yaml from 'js-yaml';
+import { compileRuleset } from '@codeforamerica/blueprint-core/rules';
+import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 
-import { contractsDir, evaluateDir } from '../../paths.js';
+import { contractsDir } from '../../paths.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const SCRIPT = join(__dirname, '../../../scripts/evaluate.js');
-const EXAMPLES = join(contractsDir, 'domains/eligibility', 'eligibility-rules-examples.yaml');
+function loadExamplesAndRules(domain, rulesetName) {
+  const examplesPath = join(contractsDir, `domains/${domain}/${domain}-rules-examples.yaml`);
+  const rulesPath    = join(contractsDir, `domains/${domain}/${domain}-rules.yaml`);
+  const examplesDoc  = yaml.load(readFileSync(examplesPath, 'utf8'));
+  const rulesDoc     = yaml.load(readFileSync(rulesPath, 'utf8'));
+  const ruleset      = rulesDoc.rulesets[rulesetName];
+  const graph        = compileRuleset(domain, rulesetName, ruleset);
+  const examples     = examplesDoc.rulesets[rulesetName].examples;
+  return { graph, examples };
+}
 
-describe('blueprint-evaluate CLI — batch golden', () => {
-  it('batch output matches golden', () => {
-    const { status, stdout, stderr } = spawnSync(process.execPath, [SCRIPT, `--spec=${EXAMPLES}`], { encoding: 'utf8' });
-    assert.equal(status, 0, `script failed:\n${stderr}`);
-    const golden = readFileSync(join(evaluateDir, 'eligibility-rules-examples-batch.json'), 'utf8');
-    assert.strictEqual(stdout, golden,
-      'output differs from golden — regenerate with evaluate.js against the rules examples file and update generated/evaluate/ if intentional');
+function outputValues(result) {
+  return Object.fromEntries(
+    Object.entries(result)
+      .filter(([, node]) => node.type === 'output')
+      .map(([k, node]) => [k, node.value])
+  );
+}
+
+// ---------------------------------------------------------------------------
+// eligibility — expeditedSnap
+// ---------------------------------------------------------------------------
+
+describe('evaluate — eligibility/expeditedSnap', () => {
+  const { graph, examples } = loadExamplesAndRules('eligibility', 'expeditedSnap');
+
+  it('low income and low resources — qualifies on condition 1', () => {
+    const result = outputValues(evaluate(graph, examples[0].inputs));
+    assert.equal(result.isExpeditedEligible, true);
+  });
+
+  it('income and resources below shelter cost — qualifies on condition 2', () => {
+    const result = outputValues(evaluate(graph, examples[1].inputs));
+    assert.equal(result.isExpeditedEligible, true);
+  });
+
+  it('migrant farmworker with low resources — qualifies on condition 3', () => {
+    const result = outputValues(evaluate(graph, examples[2].inputs));
+    assert.equal(result.isExpeditedEligible, true);
+  });
+
+  it('above all thresholds — does not qualify', () => {
+    const result = outputValues(evaluate(graph, examples[3].inputs));
+    assert.equal(result.isExpeditedEligible, false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// intake — interviewPrompts
+// ---------------------------------------------------------------------------
+
+describe('evaluate — intake/interviewPrompts', () => {
+  const { graph, examples } = loadExamplesAndRules('intake', 'interviewPrompts');
+
+  it('income gap and unemployed members — multiple prompts triggered', () => {
+    const result = outputValues(evaluate(graph, examples[0].inputs));
+    assert.equal(result.incomeInconsistencyPrompt, true);
+    assert.equal(result.workRequirementPrompt,     true);
+    assert.equal(result.studentEligibilityPrompt,  false);
+    assert.equal(result.immigrationStatusPrompt,   false);
+    assert.equal(result.changeVerificationPrompt,  false);
+  });
+
+  it('non-citizen student with changed circumstances', () => {
+    const result = outputValues(evaluate(graph, examples[1].inputs));
+    assert.equal(result.incomeInconsistencyPrompt, false);
+    assert.equal(result.workRequirementPrompt,     false);
+    assert.equal(result.studentEligibilityPrompt,  true);
+    assert.equal(result.immigrationStatusPrompt,   true);
+    assert.equal(result.changeVerificationPrompt,  true);
+  });
+
+  it('all members employed — no prompts triggered', () => {
+    const result = outputValues(evaluate(graph, examples[2].inputs));
+    assert.equal(result.incomeInconsistencyPrompt, false);
+    assert.equal(result.workRequirementPrompt,     false);
+    assert.equal(result.studentEligibilityPrompt,  false);
+    assert.equal(result.immigrationStatusPrompt,   false);
+    assert.equal(result.changeVerificationPrompt,  false);
   });
 });

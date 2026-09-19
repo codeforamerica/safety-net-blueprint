@@ -1,6 +1,6 @@
 import type { FactNode } from '@codeforamerica/blueprint-rules-engine';
 
-export type InterviewProbesInputs = {
+export type InterviewPromptsInputs = {
   household?: {
     monthlyIncome?: number;
     monthlyExpenses?: number;
@@ -11,13 +11,13 @@ export type InterviewProbesInputs = {
   };
 };
 
-export type InterviewProbesResult = {
-  incomeInconsistencyProbe: FactNode<boolean>;
+export type InterviewPromptsResult = {
+  incomeInconsistencyPrompt: FactNode<boolean>;
   workEligibleMembers: FactNode<unknown>;
-  workRequirementProbe: FactNode<boolean>;
-  studentEligibilityProbe: FactNode<boolean>;
-  immigrationStatusProbe: FactNode<boolean>;
-  changeVerificationProbe: FactNode<boolean>;
+  workRequirementPrompt: FactNode<boolean>;
+  studentEligibilityPrompt: FactNode<boolean>;
+  immigrationStatusPrompt: FactNode<boolean>;
+  changeVerificationPrompt: FactNode<boolean>;
   allMembersEmployed: FactNode<boolean>;
   nodes: Record<string, FactNode<unknown>>;
 };

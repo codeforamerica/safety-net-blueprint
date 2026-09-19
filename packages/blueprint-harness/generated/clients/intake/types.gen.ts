@@ -713,9 +713,9 @@ export type ApplicationSummaryResponse = {
 };
 
 /**
- * Input data for interviewProbes evaluation. All fields are optional — partial inputs trigger partial evaluation.
+ * Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
  */
-export type InterviewProbesRequest = {
+export type InterviewPromptsRequest = {
     /**
      * Household composition and financial circumstances.
      */
@@ -765,7 +765,7 @@ export type InterviewProbesRequest = {
  * Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
  *
  */
-export type InterviewProbesResponse = {
+export type InterviewPromptsResponse = {
     [key: string]: {
         state: 'complete';
         /**
@@ -3339,9 +3339,9 @@ export type GetApplicationSummaryResponses = {
 
 export type GetApplicationSummaryResponse = GetApplicationSummaryResponses[keyof GetApplicationSummaryResponses];
 
-export type EvaluateInterviewProbesData = {
+export type EvaluateInterviewPromptsData = {
     /**
-     * Input data for interviewProbes evaluation. All fields are optional — partial inputs trigger partial evaluation.
+     * Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
      */
     body: {
         /**
@@ -3388,12 +3388,17 @@ export type EvaluateInterviewProbesData = {
             hasChangedCircumstances?: boolean;
         };
     };
-    path?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+    };
     query?: never;
-    url: '/intake/determinations/evaluate-interview-probes';
+    url: '/intake/applications/{applicationId}/evaluate-interview-prompts';
 };
 
-export type EvaluateInterviewProbesErrors = {
+export type EvaluateInterviewPromptsErrors = {
     /**
      * The request is malformed or contains invalid parameters.
      */
@@ -3434,9 +3439,9 @@ export type EvaluateInterviewProbesErrors = {
     };
 };
 
-export type EvaluateInterviewProbesError = EvaluateInterviewProbesErrors[keyof EvaluateInterviewProbesErrors];
+export type EvaluateInterviewPromptsError = EvaluateInterviewPromptsErrors[keyof EvaluateInterviewPromptsErrors];
 
-export type EvaluateInterviewProbesResponses = {
+export type EvaluateInterviewPromptsResponses = {
     /**
      * Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
      *
@@ -3472,4 +3477,4 @@ export type EvaluateInterviewProbesResponses = {
     };
 };
 
-export type EvaluateInterviewProbesResponse = EvaluateInterviewProbesResponses[keyof EvaluateInterviewProbesResponses];
+export type EvaluateInterviewPromptsResponse = EvaluateInterviewPromptsResponses[keyof EvaluateInterviewPromptsResponses];

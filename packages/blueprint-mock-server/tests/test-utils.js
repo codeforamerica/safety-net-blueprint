@@ -6,7 +6,7 @@
 
 import http from 'http';
 import { URL } from 'url';
-import { startMockServer, stopServer, isServerRunning } from './cli/server.js';
+import { startMockServer, stopServer, isServerRunning } from '../cli/server.js';
 
 export const BASE_URL = 'http://localhost:1080';
 // Event types are short-form (no org prefix). The x-event-type-prefix overlay config

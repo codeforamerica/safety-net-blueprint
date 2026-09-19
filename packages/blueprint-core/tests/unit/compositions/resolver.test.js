@@ -18,14 +18,13 @@ import {
   validateBindFields,
   validateFieldsArrays,
   validateSortableConfig,
-  extractPathParams,
-  buildParameterIndex,
   buildPathToSchemaMap,
   generateCompositionOverlay,
   generateCompositionOverlays,
   generateSectionViewPanelEndpoints,
   generateStateSchemas,
 } from '../../../src/compositions.js';
+import { extractPathParams, buildParameterIndex } from '../../../src/utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -813,68 +812,6 @@ describe('validateSortableConfig', () => {
   test('null tieBreaker is valid (disables tie-breaking)', () => {
     const errors = validateSortableConfig(makeDoc({ sortable: { fields: ['amount'], tieBreaker: null } }));
     assert.equal(errors.length, 0);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// extractPathParams
-// ---------------------------------------------------------------------------
-
-describe('extractPathParams', () => {
-  test('extracts single param', () => {
-    assert.deepEqual(extractPathParams('/applications/{applicationId}/review'), ['applicationId']);
-  });
-
-  test('extracts multiple params', () => {
-    assert.deepEqual(
-      extractPathParams('/applications/{applicationId}/members/{memberId}'),
-      ['applicationId', 'memberId']
-    );
-  });
-
-  test('returns empty array for paths with no params', () => {
-    assert.deepEqual(extractPathParams('/health'), []);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// buildParameterIndex
-// ---------------------------------------------------------------------------
-
-describe('buildParameterIndex', () => {
-  test('builds index from components.parameters', () => {
-    const yamlFiles = [{ relativePath: 'test-openapi.yaml', spec: sampleOpenApiSpec }];
-    const index = buildParameterIndex(yamlFiles);
-    assert.ok(index.has('applicationId'));
-    assert.equal(index.get('applicationId'), '#/components/parameters/ApplicationIdParam');
-  });
-
-  test('returns empty map when no parameters defined', () => {
-    const yamlFiles = [{ relativePath: 'test.yaml', spec: { openapi: '3.1.0' } }];
-    const index = buildParameterIndex(yamlFiles);
-    assert.equal(index.size, 0);
-  });
-
-  test('first-writer wins across multiple files', () => {
-    const spec1 = {
-      components: {
-        parameters: {
-          ApplicationIdParam: { name: 'applicationId', in: 'path' }
-        }
-      }
-    };
-    const spec2 = {
-      components: {
-        parameters: {
-          ApplicationIdParamV2: { name: 'applicationId', in: 'path' }
-        }
-      }
-    };
-    const index = buildParameterIndex([
-      { relativePath: 'a.yaml', spec: spec1 },
-      { relativePath: 'b.yaml', spec: spec2 }
-    ]);
-    assert.equal(index.get('applicationId'), '#/components/parameters/ApplicationIdParam');
   });
 });
 

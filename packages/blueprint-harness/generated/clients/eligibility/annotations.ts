@@ -90,7 +90,7 @@ export const Annotations = {
         "snap"
       ]
     },
-    "interviewProbes.workRequirementProbe": {
+    "interviewPrompts.workRequirementPrompt": {
       "policies": [
         "snap-abawd-work-requirement",
         "snap-general-work-requirement"
@@ -99,7 +99,7 @@ export const Annotations = {
         "snap"
       ]
     },
-    "interviewProbes.immigrationStatusProbe": {
+    "interviewPrompts.immigrationStatusPrompt": {
       "policies": [
         "qualified-alien-eligibility",
         "prwora-sponsor-deeming"

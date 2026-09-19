@@ -1,13 +1,13 @@
 $schema: https://blueprint.codeforamerica.org/schemas/graph-schema.yaml
 domain: intake
-ruleset: interviewProbes
+ruleset: interviewPrompts
 outputs:
-  - incomeInconsistencyProbe
+  - incomeInconsistencyPrompt
   - workEligibleMembers
-  - workRequirementProbe
-  - studentEligibilityProbe
-  - immigrationStatusProbe
-  - changeVerificationProbe
+  - workRequirementPrompt
+  - studentEligibilityPrompt
+  - immigrationStatusPrompt
+  - changeVerificationPrompt
   - allMembersEmployed
 inputs:
   $.household.monthlyIncome:
@@ -60,27 +60,27 @@ facts:
     expression: household.members.all(m, m.isEmployed)
     type: boolean
     description: Every household member is currently employed.
-  incomeInconsistencyProbe:
+  incomeInconsistencyPrompt:
     expression: incomeGapExists
     type: boolean
     description: |
-      Probe the household for unexplained income sources or assistance that account for the gap between income and expenses.
-  workRequirementProbe:
+      Prompt the household for unexplained income sources or assistance that account for the gap between income and expenses.
+  workRequirementPrompt:
     expression: hasUnemployedWorkEligible
     type: boolean
     description: |
       Screen non-employed members aged 16–59 for work requirement exemptions (physical/mental fitness, caregiving, education, etc.).
-  studentEligibilityProbe:
+  studentEligibilityPrompt:
     expression: hasStudentMembers
     type: boolean
     description: |
       Screen student members for SNAP student eligibility exceptions (employment, dependent care, work-study, etc.).
-  immigrationStatusProbe:
+  immigrationStatusPrompt:
     expression: hasNonCitizenMembers
     type: boolean
     description: |
       Screen non-citizen members for immigration status and apply sponsor income deeming rules where applicable.
-  changeVerificationProbe:
+  changeVerificationPrompt:
     expression: application.hasChangedCircumstances
     type: boolean
     description: |
@@ -99,13 +99,13 @@ dependencies:
     - $.household.members[]
   allMembersEmployed:
     - $.household.members[]
-  incomeInconsistencyProbe:
+  incomeInconsistencyPrompt:
     - incomeGapExists
-  workRequirementProbe:
+  workRequirementPrompt:
     - hasUnemployedWorkEligible
-  studentEligibilityProbe:
+  studentEligibilityPrompt:
     - hasStudentMembers
-  immigrationStatusProbe:
+  immigrationStatusPrompt:
     - hasNonCitizenMembers
-  changeVerificationProbe:
+  changeVerificationPrompt:
     - $.application.hasChangedCircumstances

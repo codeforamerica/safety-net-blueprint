@@ -55,13 +55,13 @@ facts:
       - snap-expedited-screening
     programs:
       - snap
-  interviewProbes.workRequirementProbe:
+  interviewPrompts.workRequirementPrompt:
     policies:
       - snap-abawd-work-requirement
       - snap-general-work-requirement
     programs:
       - snap
-  interviewProbes.immigrationStatusProbe:
+  interviewPrompts.immigrationStatusPrompt:
     policies:
       - qualified-alien-eligibility
       - prwora-sponsor-deeming

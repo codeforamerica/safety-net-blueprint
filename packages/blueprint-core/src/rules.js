@@ -20,6 +20,7 @@
  */
 
 import { loadContractFiles } from './contract-files.js';
+import { extractPathParams, buildParameterIndex } from './utils.js';
 
 // ── Discovery ─────────────────────────────────────────────────────────────────
 
@@ -243,7 +244,7 @@ export function compileRuleset(domain, rulesetName, ruleset) {
  * @param {Object} rulesDoc - parsed rules YAML document
  * @returns {Object|null} OpenAPI Overlay 1.0.0 document, or null
  */
-export function generateRulesEndpointOverlay(domain, rulesDoc) {
+export function generateRulesEndpointOverlay(domain, rulesDoc, paramIndex = new Map()) {
   const apiSpecFile = `${domain}-openapi.yaml`;
   const pathsUpdate = {};
   const schemasUpdate = {};
@@ -258,6 +259,14 @@ export function generateRulesEndpointOverlay(domain, rulesDoc) {
     const lastSegment = ruleset.endpoint.path.split('/').filter(Boolean).pop();
     const operationId = toCamelCase(lastSegment);
 
+    const paramNames = extractPathParams(endpointPath);
+    const parameters = paramNames.map(name => {
+      const ref = paramIndex.get(name);
+      return ref
+        ? { $ref: ref }
+        : { name, in: 'path', required: true, schema: { type: 'string' } };
+    });
+
     // Request body: one property per named input, using the input schema
     const requestProperties = {};
     for (const [inputName, inputSchema] of Object.entries(ruleset.inputs || {})) {
@@ -270,32 +279,33 @@ export function generateRulesEndpointOverlay(domain, rulesDoc) {
       resolvedProperties[propName] = propSchema;
     }
 
-    pathsUpdate[endpointPath] = {
-      post: {
-        summary: `Evaluate ${rulesetName}`,
-        operationId,
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: { $ref: `#/components/schemas/${requestSchemaName}` },
-            },
+    const pathEntry = {};
+    if (parameters.length > 0) pathEntry.parameters = parameters;
+    pathEntry.post = {
+      summary: `Evaluate ${rulesetName}`,
+      operationId,
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: { $ref: `#/components/schemas/${requestSchemaName}` },
           },
-        },
-        responses: {
-          '200': {
-            description: `${rulesetName} evaluation result.`,
-            content: {
-              'application/json': {
-                schema: { $ref: `#/components/schemas/${responseSchemaName}` },
-              },
-            },
-          },
-          '400': { $ref: './components/responses.yaml#/BadRequest' },
-          '500': { $ref: './components/responses.yaml#/InternalError' },
         },
       },
+      responses: {
+        '200': {
+          description: `${rulesetName} evaluation result.`,
+          content: {
+            'application/json': {
+              schema: { $ref: `#/components/schemas/${responseSchemaName}` },
+            },
+          },
+        },
+        '400': { $ref: './components/responses.yaml#/BadRequest' },
+        '500': { $ref: './components/responses.yaml#/InternalError' },
+      },
     };
+    pathsUpdate[endpointPath] = pathEntry;
 
     schemasUpdate[requestSchemaName] = {
       type: 'object',
@@ -343,9 +353,10 @@ export function generateRulesEndpointOverlay(domain, rulesDoc) {
  * @param {Array<{ relativePath: string, doc: Object }>} rulesFiles
  * @returns {{ graphs: Map<string, Object>, overlays: Array<{ overlay: Object, domain: string }> }}
  */
-export function generateRulesResults(rulesFiles) {
+export function generateRulesResults(rulesFiles, yamlFiles = []) {
   const graphs = new Map();
   const overlays = [];
+  const paramIndex = buildParameterIndex(yamlFiles);
 
   for (const { relativePath, doc } of rulesFiles) {
     const domain = doc.domain;
@@ -358,7 +369,7 @@ export function generateRulesResults(rulesFiles) {
       graphs.set(graphPath, graph);
     }
 
-    const overlay = generateRulesEndpointOverlay(domain, doc);
+    const overlay = generateRulesEndpointOverlay(domain, doc, paramIndex);
     if (overlay) {
       overlays.push({ overlay, domain });
     }

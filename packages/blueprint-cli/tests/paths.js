@@ -16,7 +16,6 @@ export const resolvedDir        = join(harnessDir, 'generated/resolved');
 export const bundledDir         = join(harnessDir, 'generated/bundled');
 export const overlaysDir        = join(harnessDir, 'generated/overlays');
 export const clientsDir         = join(harnessDir, 'generated/clients');
-export const evaluateDir        = join(harnessDir, 'generated/evaluate');
 export const postmanDir         = join(harnessDir, 'generated/postman');
 export const schemasDir         = join(harnessDir, 'generated/schemas');
 export const harnessAuthoredDir = join(harnessDir, 'explorer');

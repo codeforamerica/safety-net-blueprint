@@ -415,9 +415,9 @@ export const zCloseRequest = z.object({
 export const zApplicationSummaryResponse = z.record(z.string(), z.unknown());
 
 /**
- * Input data for interviewProbes evaluation. All fields are optional — partial inputs trigger partial evaluation.
+ * Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
  */
-export const zInterviewProbesRequest = z.object({
+export const zInterviewPromptsRequest = z.object({
     household: z.optional(z.object({
         monthlyIncome: z.optional(z.number()),
         monthlyExpenses: z.optional(z.number()),
@@ -437,7 +437,7 @@ export const zInterviewProbesRequest = z.object({
  * Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
  *
  */
-export const zInterviewProbesResponse = z.record(z.string(), z.union([
+export const zInterviewPromptsResponse = z.record(z.string(), z.union([
     z.object({
         state: z.enum(['complete']),
         value: z.unknown()
@@ -1507,7 +1507,7 @@ export const zGetApplicationSummaryData = z.object({
  */
 export const zGetApplicationSummaryResponse = z.record(z.string(), z.unknown());
 
-export const zEvaluateInterviewProbesData = z.object({
+export const zEvaluateInterviewPromptsData = z.object({
     body: z.object({
         household: z.optional(z.object({
             monthlyIncome: z.optional(z.number()),
@@ -1523,7 +1523,9 @@ export const zEvaluateInterviewProbesData = z.object({
             hasChangedCircumstances: z.optional(z.boolean())
         }))
     }),
-    path: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid()
+    }),
     query: z.optional(z.never())
 });
 
@@ -1531,7 +1533,7 @@ export const zEvaluateInterviewProbesData = z.object({
  * Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
  *
  */
-export const zEvaluateInterviewProbesResponse = z.record(z.string(), z.union([
+export const zEvaluateInterviewPromptsResponse = z.record(z.string(), z.union([
     z.object({
         state: z.enum(['complete']),
         value: z.unknown()

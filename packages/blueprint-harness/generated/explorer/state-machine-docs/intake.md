@@ -12,6 +12,7 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Transition: `draft` → `submitted`
   - Record the submission timestamp (regulatory clock start). (sets `submittedAt`)
   - Emit: `ca.intake.application.submitted` — Triggers eligibility screening, caseworker task creation, and confirmation notice.
+    - Subscribed by: [Eligibility/Determination](eligibility.md)
 - **open** — Moves a submitted application into active caseworker review.
   - Transition: `submitted` → `under_review`
   - Record when caseworker began review, marking the start of active processing. (sets `openedAt`)

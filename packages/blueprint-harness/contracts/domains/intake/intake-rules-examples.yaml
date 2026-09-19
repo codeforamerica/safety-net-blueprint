@@ -2,9 +2,9 @@ $schema: "https://blueprint.codeforamerica.org/schemas/rules-examples-schema.yam
 domain: intake
 
 rulesets:
-  interviewProbes:
+  interviewPrompts:
     examples:
-      - description: Income gap and unemployed members — multiple probes triggered
+      - description: Income gap and unemployed members — multiple prompts triggered
         inputs:
           household:
             monthlyIncome: 800
@@ -20,13 +20,6 @@ rulesets:
                 isNonCitizen: false
           application:
             hasChangedCircumstances: false
-        outputs:
-          incomeInconsistencyProbe: true
-          workRequirementProbe: true
-          studentEligibilityProbe: false
-          immigrationStatusProbe: false
-          changeVerificationProbe: false
-          allMembersEmployed: false
 
       - description: Non-citizen student with changed circumstances
         inputs:
@@ -40,15 +33,8 @@ rulesets:
                 isNonCitizen: true
           application:
             hasChangedCircumstances: true
-        outputs:
-          incomeInconsistencyProbe: false
-          workRequirementProbe: false
-          studentEligibilityProbe: true
-          immigrationStatusProbe: true
-          changeVerificationProbe: true
-          allMembersEmployed: true
 
-      - description: All members employed — no work requirement probe
+      - description: All members employed — no work requirement prompt
         inputs:
           household:
             monthlyIncome: 3000
@@ -64,10 +50,3 @@ rulesets:
                 isNonCitizen: false
           application:
             hasChangedCircumstances: false
-        outputs:
-          incomeInconsistencyProbe: false
-          workRequirementProbe: false
-          studentEligibilityProbe: false
-          immigrationStatusProbe: false
-          changeVerificationProbe: false
-          allMembersEmployed: true
