@@ -65,6 +65,7 @@
     [id]:target { scroll-margin-top: 1rem; }
     tr[id]:target td { animation: target-fade 4s ease forwards; }
     .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
 
     /* Permalink anchors — hidden until parent is hovered */
     .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
@@ -171,7 +172,7 @@
     <main id="content">
       <section class="dict-section" id="sec-case">
       <h2 class="section-title">case</h2>
-      <div class="cards-grid"><div class="card content-item" data-path="case.primaryApplicantId"><div class="card-header"><code class="field-path">case.primaryApplicantId</code><span class="type-badge">uuid(Person)</span></div></div><div class="card content-item" data-path="case.assignedToId"><div class="card-header"><code class="field-path">case.assignedToId</code><span class="type-badge">uuid(User)</span></div></div><div class="card content-item" data-path="case.status"><div class="card-header"><code class="field-path">case.status</code><span class="type-badge">enum</span></div><div class="card-body"><div class="ann-row"><span class="ann-label ann-label--values">Values</span><span class="val-list"><code>active</code> <code>closed</code></span></div></div></div><div class="card content-item" data-path="case.effectiveStartDate"><div class="card-header"><code class="field-path">case.effectiveStartDate</code><span class="type-badge">date</span></div></div><div class="card content-item" data-path="case.effectiveEndDate"><div class="card-header"><code class="field-path">case.effectiveEndDate</code><span class="type-badge">date</span></div></div><div class="card content-item" data-path="case.members[]"><div class="card-header"><code class="field-path">case.members[]</code><span class="type-badge">list(CaseMember)</span></div></div><div class="card content-item" data-path="case.members[].personId"><div class="card-header"><code class="field-path">case.members[].personId</code><span class="type-badge">uuid(Person)</span></div></div><div class="card content-item" data-path="case.members[].relationship"><div class="card-header"><code class="field-path">case.members[].relationship</code><span class="type-badge">string</span></div></div></div>
+      <div class="cards-grid"><div class="card content-item" id="field-case.primaryApplicantId" data-path="case.primaryApplicantId"><div class="card-header"><code class="field-path">case.primaryApplicantId</code><span class="type-badge">uuid(Person)</span></div></div><div class="card content-item" id="field-case.assignedToId" data-path="case.assignedToId"><div class="card-header"><code class="field-path">case.assignedToId</code><span class="type-badge">uuid(User)</span></div></div><div class="card content-item" id="field-case.status" data-path="case.status"><div class="card-header"><code class="field-path">case.status</code><span class="type-badge">enum</span></div><div class="card-body"><div class="ann-row"><span class="ann-label ann-label--values">Values</span><span class="val-list"><code>active</code> <code>closed</code></span></div></div></div><div class="card content-item" id="field-case.effectiveStartDate" data-path="case.effectiveStartDate"><div class="card-header"><code class="field-path">case.effectiveStartDate</code><span class="type-badge">date</span></div></div><div class="card content-item" id="field-case.effectiveEndDate" data-path="case.effectiveEndDate"><div class="card-header"><code class="field-path">case.effectiveEndDate</code><span class="type-badge">date</span></div></div><div class="card content-item" id="field-case.members[]" data-path="case.members[]"><div class="card-header"><code class="field-path">case.members[]</code><span class="type-badge">list(CaseMember)</span></div></div><div class="card content-item" id="field-case.members[].personId" data-path="case.members[].personId"><div class="card-header"><code class="field-path">case.members[].personId</code><span class="type-badge">uuid(Person)</span></div></div><div class="card content-item" id="field-case.members[].relationship" data-path="case.members[].relationship"><div class="card-header"><code class="field-path">case.members[].relationship</code><span class="type-badge">string</span></div></div></div>
     </section>
     </main>
   </div>
@@ -302,6 +303,22 @@
           });
         }
       });
+    })();
+    // Fragment navigation — body has overflow:hidden so the browser cannot scroll to
+    // anchors natively. Read the hash and scroll #content to the target element instead.
+    (function () {
+      function scrollToHash() {
+        const hash = window.location.hash;
+        if (!hash) return;
+        const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+        if (!el) return;
+        const content = document.getElementById('content');
+        if (!content) { el.scrollIntoView(); return; }
+        const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top + content.scrollTop - 16;
+        content.scrollTop = top;
+      }
+      document.addEventListener('DOMContentLoaded', scrollToHash);
+      window.addEventListener('hashchange', scrollToHash);
     })();
     
 function exportCsv() {
