@@ -134,14 +134,14 @@
   background: var(--sand-light); color: #6b4c3b; border: 1px solid var(--sand);
 }
 .badge { font-size: 0.65rem; font-weight: 600; border-radius: 3px; padding: 0.1rem 0.35rem; letter-spacing: 0.03em; background: #e8e8e8; color: #444; }
+.ann-chip { text-decoration: none; background: var(--lb-light); color: var(--blue-mid); border: 1px solid var(--blue-light); }
+.ann-chip:hover { background: var(--blue-light); }
 .val-list code { font-size: 0.72rem; background: #f0f0f0; border-radius: 3px; padding: 0.05rem 0.3rem; color: #444; }
-.policy-list { display: flex; flex-direction: column; gap: 0.4rem; }
-.policy-item { font-size: 0.75rem; }
-.policy-item-head { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.15rem; }
-.policy-id { font-size: 0.72rem; background: #f0f0f0; border-radius: 3px; padding: 0.05rem 0.3rem; color: #444; }
-.policy-citation { font-size: 0.7rem; color: var(--blue-mid); text-decoration: none; }
-.policy-citation:hover { text-decoration: underline; }
-.policy-desc { font-size: 0.75rem; color: #555; line-height: 1.45; margin: 0; }
+@keyframes field-highlight {
+  0%   { background: #fef9c3; border-left-color: #ca8a04; }
+  100% { background: #fff;    border-left-color: var(--blue-mid); }
+}
+.card.field-highlight { animation: field-highlight 1.8s ease-out; }
 
   </style>
 </head>
@@ -151,7 +151,7 @@
     <div style="background:#2B1A78;color:white;">
     <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <span style="font-size:0.9375rem;font-weight:800;">Case Management</span>
-      <span style="font-size:11px;color:rgba(255,255,255,0.45);font-family:monospace;">8 fields</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.45);font-family:monospace;">9 fields</span>
       <button class="csv-btn" onclick="exportCsv()" style="margin-left:auto;">Export CSV</button>
     </div>
     <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">case-management</code> · API spec: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/refactor/blueprint-core-package/packages/safety-net-contracts/src/domains/case-management/case-management-openapi.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">case-management-openapi.yaml</code></a></div>
@@ -166,13 +166,13 @@
           aria-label="Filter navigation" />
       </div>
       <div id="sidebar-nav">
-        <a href="#sec-case" class="nav-link">case <span class="nav-count">8</span></a>
+        <a href="#sec-Case" class="nav-link">Case <span class="nav-count">9</span></a>
       </div>
     </nav>
     <main id="content">
-      <section class="dict-section" id="sec-case">
-      <h2 class="section-title">case</h2>
-      <div class="cards-grid"><div class="card content-item" id="field-case.primaryApplicantId" data-path="case.primaryApplicantId"><div class="card-header"><code class="field-path">case.primaryApplicantId</code><span class="type-badge">uuid(Person)</span></div></div><div class="card content-item" id="field-case.assignedToId" data-path="case.assignedToId"><div class="card-header"><code class="field-path">case.assignedToId</code><span class="type-badge">uuid(User)</span></div></div><div class="card content-item" id="field-case.status" data-path="case.status"><div class="card-header"><code class="field-path">case.status</code><span class="type-badge">enum</span></div><div class="card-body"><div class="ann-row"><span class="ann-label ann-label--values">Values</span><span class="val-list"><code>active</code> <code>closed</code></span></div></div></div><div class="card content-item" id="field-case.effectiveStartDate" data-path="case.effectiveStartDate"><div class="card-header"><code class="field-path">case.effectiveStartDate</code><span class="type-badge">date</span></div></div><div class="card content-item" id="field-case.effectiveEndDate" data-path="case.effectiveEndDate"><div class="card-header"><code class="field-path">case.effectiveEndDate</code><span class="type-badge">date</span></div></div><div class="card content-item" id="field-case.members[]" data-path="case.members[]"><div class="card-header"><code class="field-path">case.members[]</code><span class="type-badge">list(CaseMember)</span></div></div><div class="card content-item" id="field-case.members[].personId" data-path="case.members[].personId"><div class="card-header"><code class="field-path">case.members[].personId</code><span class="type-badge">uuid(Person)</span></div></div><div class="card content-item" id="field-case.members[].relationship" data-path="case.members[].relationship"><div class="card-header"><code class="field-path">case.members[].relationship</code><span class="type-badge">string</span></div></div></div>
+      <section class="dict-section" id="sec-Case">
+      <h2 class="section-title">Case</h2>
+      <div class="cards-grid"><div class="card content-item" id="field-case.primaryApplicantId" data-path="case.primaryApplicantId"><div class="card-header"><code class="field-path">case.primaryApplicantId</code><span class="type-badge">uuid(Person)</span></div></div><div class="card content-item" id="field-case.assignedToId" data-path="case.assignedToId"><div class="card-header"><code class="field-path">case.assignedToId</code><span class="type-badge">uuid(User)</span></div></div><div class="card content-item" id="field-case.id" data-path="case.id"><div class="card-header"><code class="field-path">case.id</code><span class="type-badge">uuid</span></div></div><div class="card content-item" id="field-case.status" data-path="case.status"><div class="card-header"><code class="field-path">case.status</code><span class="type-badge">enum</span></div><div class="card-body"><div class="ann-row"><span class="ann-label ann-label--values">Values</span><span class="val-list"><code>active</code> <code>closed</code></span></div></div></div><div class="card content-item" id="field-case.effectiveStartDate" data-path="case.effectiveStartDate"><div class="card-header"><code class="field-path">case.effectiveStartDate</code><span class="type-badge">date</span></div></div><div class="card content-item" id="field-case.effectiveEndDate" data-path="case.effectiveEndDate"><div class="card-header"><code class="field-path">case.effectiveEndDate</code><span class="type-badge">date</span></div></div><div class="card content-item" id="field-case.members[]" data-path="case.members[]"><div class="card-header"><code class="field-path">case.members[]</code><span class="type-badge">list(CaseMember)</span></div></div><div class="card content-item" id="field-case.members[].personId" data-path="case.members[].personId"><div class="card-header"><code class="field-path">case.members[].personId</code><span class="type-badge">uuid(Person)</span></div></div><div class="card content-item" id="field-case.members[].relationship" data-path="case.members[].relationship"><div class="card-header"><code class="field-path">case.members[].relationship</code><span class="type-badge">string</span></div></div></div>
     </section>
     </main>
   </div>
@@ -321,6 +321,16 @@
       window.addEventListener('hashchange', scrollToHash);
     })();
     
+(function() {
+  const hash = window.location.hash;
+  if (!hash) return;
+  const id = decodeURIComponent(hash.slice(1));
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('field-highlight');
+  setTimeout(function() { el.classList.remove('field-highlight'); }, 2000);
+})();
+
 function exportCsv() {
   const rows = [['path', 'type', 'programs', 'policies', 'dataClassification']];
   document.querySelectorAll('.card:not(.hidden)').forEach(card => {

@@ -1,11 +1,13 @@
 # identity-access field inventory
 # Do not edit — regenerate with: node generate-field-inventory.mjs --domain=identity-access
 
-# ── user ────────────────────────────────────────────────────────────────────────
+# ── User ────────────────────────────────────────────────────────────────────────
 
 user.organizationId: { type: uuid, relationship: External }
 user.personId: { type: uuid, relationship: Person }
 user.caseWorkerId: { type: uuid, relationship: External }
+user.userId: { type: uuid }
+user.id: { type: uuid }
 user.idpSubject: { type: string }
 user.email: { type: email }
 user.name: { type: string }
@@ -15,3 +17,4 @@ user.roles.permissions[]: { type: string }
 user.status: { type: enum, values: [active, inactive, pending, suspended] }
 user.counties[]: { type: string }
 user.preferences: { type: object }
+user.ui: { type: object }
