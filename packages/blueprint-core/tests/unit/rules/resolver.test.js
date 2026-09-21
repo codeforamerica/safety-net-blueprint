@@ -419,12 +419,13 @@ test('generateRulesEndpointOverlay', async (t) => {
     assert.ok(Array.isArray(overlay.actions));
   });
 
-  await t.test('adds POST endpoint at declared path', () => {
+  await t.test('adds POST endpoint at declared path with inferred tag', () => {
     const overlay = generateRulesEndpointOverlay('eligibility', rulesDoc);
     const pathsAction = overlay.actions.find(a => a.target === '$.paths');
-    assert.ok(pathsAction.update['/eligibility/assess-expedited-snap']);
-    assert.ok(pathsAction.update['/eligibility/assess-expedited-snap'].post);
-    assert.equal(pathsAction.update['/eligibility/assess-expedited-snap'].post.operationId, 'assessExpeditedSnap');
+    assert.ok(pathsAction.update['/assess-expedited-snap']);
+    assert.ok(pathsAction.update['/assess-expedited-snap'].post);
+    assert.equal(pathsAction.update['/assess-expedited-snap'].post.operationId, 'assessExpeditedSnap');
+    assert.deepEqual(pathsAction.update['/assess-expedited-snap'].post.tags, ['Assess Expedited Snap']);
   });
 
   await t.test('generates request and response schemas', () => {

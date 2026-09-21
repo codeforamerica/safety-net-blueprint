@@ -140,36 +140,77 @@ x_extensions:
 
   x-relationship:
     description: >
-      Annotates a UUID foreign-key field to identify the related resource.
-      Required on all fields that end in Id and have format: uuid. Enables
-      tooling to generate relationship diagrams, validate referential integrity,
-      and optionally expand related resources inline (style: expand).
-    location: schema property level (on FK fields)
+      Declares a relationship between a spec element and another contract artifact.
+      Used in two contexts: on UUID foreign-key fields (type: fk, the default) to
+      identify the related resource; and on generated operations (type: state-machine-action,
+      ruleset, or composition) to record which contract artifact produced the endpoint.
+      The type field controls which other fields are required and how tooling interprets
+      the annotation. Omitting type is equivalent to type: fk for backward compatibility.
+    location: >
+      Schema property level (FK fields); or operation level (generated endpoints injected
+      by the resolve pipeline).
     type: object
     fields:
-      resource: Name of the related schema (PascalCase, e.g., Queue)
+      type: >
+        Optional. Identifies the kind of relationship. Defaults to fk when absent.
+        Valid values: fk (foreign-key field pointing to a resource schema),
+        state-machine-action (operation generated from a state machine action),
+        ruleset (operation generated from a rules contract ruleset),
+        composition (operation generated from a compositions contract).
+      resource: >
+        FK only. Name of the related schema (PascalCase, e.g., Queue). Required
+        when type is fk or absent.
       domain: >
-        Optional. The blueprint domain that owns the related resource (e.g., intake,
-        workflow). Required when the referenced resource lives in a different domain
-        than the spec declaring the relationship. Omit for same-domain references.
-        Values must be a valid Domain enum value (see schemas/common/enums.yaml).
+        Optional for fk; required for all other types. The blueprint domain that
+        owns the referenced artifact (e.g., intake, workflow). For FK fields, omit
+        for same-domain references. Values must be a valid Domain enum value.
       style: >
-        Optional. "expand" causes the mock server to replace the Id field with
-        an inline object of the related resource. Default: reference by ID only.
+        FK only. Controls how the resolver transforms the FK field. "expand" inlines
+        the related resource; "links-only" adds a links navigation object. Omitting
+        style leaves the field untouched — x-relationship is metadata only.
+      id: >
+        Non-FK only. The identifier of the artifact within its domain contract.
+        For state-machine-action: the action id. For ruleset: the ruleset name.
+        For composition: the composition name.
     example: |
+      # FK — same-domain reference (type omitted, defaults to fk)
       queueId:
         type: string
         format: uuid
         x-relationship:
           resource: Queue
 
-      # Cross-domain reference
+      # FK — cross-domain reference
       applicationId:
         type: string
         format: uuid
         x-relationship:
           resource: Application
           domain: intake
+
+      # Operation — generated from a state machine action
+      post:
+        operationId: submitApplication
+        x-relationship:
+          type: state-machine-action
+          domain: intake
+          id: submit
+
+      # Operation — generated from a rules contract ruleset
+      post:
+        operationId: evaluateInterviewPrompts
+        x-relationship:
+          type: ruleset
+          domain: intake
+          id: interviewPrompts
+
+      # Operation — generated from a compositions contract
+      get:
+        operationId: getApplicationSummary
+        x-relationship:
+          type: composition
+          domain: intake
+          id: applicationSummary
 
   x-sortable:
     description: >

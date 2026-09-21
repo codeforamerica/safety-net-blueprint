@@ -43,21 +43,25 @@ bail_if_failed() {
   fi
 }
 
-step "Checking committed artifacts are up to date"
-if bash scripts/generate-artifacts.sh --check-only; then
-  pass "Committed artifacts are up to date"
-else
-  fail "Generated artifacts are out of date — they have been staged. Run \`bash scripts/generate-artifacts.sh --commit\` or commit them manually, then re-run preflight."
-fi
-bail_if_failed
-
-step "Stopping any running mock server for a clean-slate run"
-lsof -ti :1080 | xargs kill -9 2>/dev/null || true
-pass "Mock server stopped (or was not running)"
-
 step "Clearing generated artifacts for a clean-slate run"
 rm -rf packages/generated
 pass "Cleared generated artifacts"
+
+step "Generating committed artifacts (contracts, clients, browser bundle, explorer)"
+if bash scripts/generate-artifacts.sh 2>&1; then
+  pass "Artifacts generated"
+else
+  fail "Artifact generation failed"
+fi
+bail_if_failed
+
+step "Checking committed artifacts are up to date"
+if git diff HEAD --exit-code packages/blueprint-rules-engine/dist/browser.js packages/safety-net-explorer/ > /dev/null 2>&1; then
+  pass "Committed artifacts are up to date"
+else
+  fail "Generated artifacts are out of date — run \`bash scripts/generate-artifacts.sh --commit\` or commit them manually, then re-run preflight."
+fi
+bail_if_failed
 
 step "Checking vendored dependencies"
 node packages/blueprint-rules-engine/scripts/check-vendor.js
@@ -71,14 +75,6 @@ if npm test --workspace=packages/blueprint-core \
   pass "All tests passed"
 else
   fail "Tests failed"
-fi
-bail_if_failed
-
-step "Generating committed artifacts (contracts, clients, browser bundle, explorer)"
-if bash scripts/generate-artifacts.sh 2>&1; then
-  pass "Artifacts generated"
-else
-  fail "Artifact generation failed"
 fi
 bail_if_failed
 
@@ -112,6 +108,10 @@ if npm run postman:generate 2>&1; then
 else
   fail "Postman collection generation failed"
 fi
+
+step "Stopping any running mock server for a clean-slate run"
+lsof -ti :1080 | xargs kill -9 2>/dev/null || true
+pass "Mock server stopped (or was not running)"
 
 step "Running blueprint-mock-server tests"
 if node packages/blueprint-mock-server/tests/run-tests.js --all --contracts=packages/generated/contracts --raw-contracts=packages/safety-net-contracts/src --stop 2>&1; then

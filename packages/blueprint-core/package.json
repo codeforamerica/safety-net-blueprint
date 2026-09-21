@@ -18,8 +18,9 @@
     "./compositions": "./src/compositions.js",
     "./state-machines": "./src/state-machines.js",
     "./overlay": "./src/overlay.js",
-    "./openapi": "./src/openapi.js",
-    "./validator": "./src/validator.js"
+    "./openapi": "./src/openapi/index.js",
+    "./validator": "./src/validator/index.js",
+    "./json-schema": "./src/json-schema/index.js"
   },
   "scripts": {
     "test": "node --test",

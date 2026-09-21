@@ -210,6 +210,7 @@ export function twoColumnPage({
     [id]:target { scroll-margin-top: 1rem; }
     tr[id]:target td { animation: target-fade 4s ease forwards; }
     .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
 
     /* Permalink anchors — hidden until parent is hovered */
     .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
@@ -278,6 +279,22 @@ export function twoColumnPage({
       setActive(sections[0].id);
     })();
     ${searchJs}
+    // Fragment navigation — body has overflow:hidden so the browser cannot scroll to
+    // anchors natively. Read the hash and scroll #content to the target element instead.
+    (function () {
+      function scrollToHash() {
+        const hash = window.location.hash;
+        if (!hash) return;
+        const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+        if (!el) return;
+        const content = document.getElementById('content');
+        if (!content) { el.scrollIntoView(); return; }
+        const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top + content.scrollTop - 16;
+        content.scrollTop = top;
+      }
+      document.addEventListener('DOMContentLoaded', scrollToHash);
+      window.addEventListener('hashchange', scrollToHash);
+    })();
     ${extraScript}
   </script>
 </body>
@@ -331,6 +348,7 @@ export function singleColumnPage({
     [id]:target { scroll-margin-top: 1rem; }
     tr[id]:target td { animation: target-fade 4s ease forwards; }
     .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
 
     /* Permalink anchors — hidden until parent is hovered */
     .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }

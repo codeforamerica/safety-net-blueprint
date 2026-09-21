@@ -220,3 +220,35 @@ The Explorer makes rules reviewable by non-engineers. A policy analyst can load 
 **Options:**
 - **(A)** Adopt FactGraph directly — use its XML format for rule authoring and its Scala engine for evaluation
 - **(B)** ✓ Build on FactGraph's model — use the same dependency graph and partial-evaluation approach, with CEL expressions in YAML and a lightweight JavaScript evaluator; provide a FactGraph compatibility bridge for interoperability
+
+---
+
+### Decision 7: CEL library for blueprint-rules-engine
+
+**Status:** Decided — implemented
+
+**What's being decided:** Which JavaScript library evaluates CEL expressions in `blueprint-rules-engine`. The current `src/cel.js` is the mock server's regex-based transpiler copied verbatim — it rewrites a small subset of CEL to JavaScript strings and evaluates them via `new Function()`. It is not a deliberate library choice; it is a placeholder carried over from the spike and must be replaced with a spec-compliant implementation before the package is stable.
+
+**Constraints:**
+- The evaluator must run in the browser (`dist/browser.js`) without a build-time native module or WASM compilation step. Libraries with native `.node` bindings are not viable.
+- The reference implementation should remain lightweight — no unnecessary runtime dependencies.
+- The library must support the CEL operations eligibility rules require: `has()`, `.size()`, `.contains()`, `.filter()`, `.map()`, `.all()`, `.exists()`, list membership (`in`), arithmetic, and comparison operators.
+
+**Considerations:**
+- The current custom transpiler supports only ~8 CEL constructs, is not spec-compliant, uses `new Function()` (an eval equivalent, a security concern in a rules context), and will hit hard limits as rule complexity grows. It is not a viable long-term foundation for a production rules engine. Any expression using string methods (`startsWith`, `matches`), timestamp arithmetic, nested macros, or `has()` on deeply nested paths will silently return `undefined` — no parse error, no diagnostic, just a missing result.
+- `cel-js` (ChromeGG, ~72K weekly npm downloads) was the most widely used JavaScript CEL library and is referenced in CEL's own documentation as a JavaScript implementation. It was archived by its maintainer on June 2, 2026. It should not be adopted for new projects.
+- `@cel-community/cel-js` does not exist — the npm package and GitHub org are not real. `cel-javascript` (robbertvanelk) exists but has ~5 weekly downloads, was last published January 2024, and is explicitly marked "not production ready."
+- Google does not publish a JavaScript CEL library. All official Google CEL work is in `cel-go` (Go) and a C++ toolchain.
+- `@bufbuild/cel` (~527K weekly downloads) is maintained by Buf Technologies, whose track record of spec-compliant protocol implementations (cf. protobuf-es) is strong. It ships `@bufbuild/cel-spec`, which includes the official Google CEL conformance test corpus — expressions can be validated against the same suite used for `cel-go`. Its `@bufbuild/re2` dependency is a pure JavaScript port of the RE2 regex engine (no native bindings, no WASM), making it fully browser-compatible. Static type checking is not yet implemented (open issue), but the library covers all operations eligibility rules require. Licensed Apache 2.0.
+- `@marcbachmann/cel-js` (~289K weekly downloads) is a zero-dependency, ESM-only implementation with a `check()` API for static type validation at authoring time — the closest a JS library currently comes to formal verification support. Browser-compatible. Does not use RE2, so regex behavior may diverge from CEL spec in edge cases (unlikely to matter for eligibility rule expressions, which do not use regex). No published conformance test results.
+- Formal verification of CEL expressions — proving that two rules cannot produce contradictory outcomes, or that a guard fires before the check that depends on it — has no npm equivalent. Google's `cel-java` verifier (backed by the Z3 SMT solver, announced August 2026) is the only available tool for this, and it is Java-only. For a future formal verification layer, the recommended pattern is: (1) parse and store ASTs at rule authoring time, (2) run the `cel-java` verifier against rule files as a CI step, failing the pipeline if declared invariants are violated. CEL's non-Turing completeness — expressions always terminate and cannot access data outside what is explicitly injected — is a structural auditability guarantee that holds regardless of library.
+- **Bundle size:** `@bufbuild/cel` bundled with esbuild produces a `dist/browser.js` of ~272 KB raw / ~68 KB gzipped (including `@bufbuild/re2`; `@bufbuild/cel-spec` tree-shakes out). The regex transpiler it replaces was 16 KB raw / 8 KB gzipped. For comparison, the vendored FactGraph compatibility bridge (`vendor/fg.js`) is 7.1 MB raw / 800 KB gzipped — making `@bufbuild/cel` roughly 12x smaller than FactGraph at the same gzip level. At 68 KB gzipped, the size impact is negligible in a browser context; it is smaller than a typical hero image and well under any reasonable performance budget for a rules engine that states would ship as an alternative to FactGraph.
+
+**Options:**
+- **(A)** Keep custom regex transpiler — no additional dependency, but not spec-compliant, limited coverage, eval-based security concern, not maintainable long-term
+- **(B) ✓** `@bufbuild/cel` — highest maintenance confidence, official conformance test corpus, fully browser-compatible, covers all required CEL operations
+- **(C)** `@marcbachmann/cel-js` — zero dependencies, `check()` API for authoring-time type validation, browser-compatible; reasonable fallback if `@bufbuild/cel` proves problematic
+
+**Decision:** `@bufbuild/cel` (B). The conformance test corpus is the deciding factor — expressions in rules contracts can be validated against the same suite Google uses for `cel-go`, which matters for auditability in a benefits context. Browser compatibility is confirmed (pure-JS RE2 port). The bundle size (~68 KB gzipped) is acceptable and well-justified given that the alternative reference engine (FactGraph) is 12x larger. If static type checking at authoring time becomes a requirement before Buf implements it, `@marcbachmann/cel-js` is the fallback.
+
+**CEL type system note:** CEL is strictly typed — `int` and `double` are distinct types with no implicit coercion. Comparisons between them work (`double >= int` has a defined overload), but arithmetic does not (`double * int` is a type error). Since JavaScript has no integer type, all numeric inputs arrive as CEL `double`. Expressions that mix numeric inputs with integer literals in arithmetic must use explicit casts or float literals: `double(household.size) * 500.0`, not `household.size * 500`. This is a CEL spec requirement, not a library limitation — `@marcbachmann/cel-js` behaves identically.

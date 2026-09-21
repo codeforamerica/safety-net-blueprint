@@ -1,17 +1,22 @@
 {
   "allOf": [
     {
-      "type": "object",
-      "description": "Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.\n",
-      "additionalProperties": {
+      "type": "array",
+      "description": "Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.\n",
+      "items": {
         "oneOf": [
           {
             "type": "object",
             "required": [
+              "fact",
               "state",
               "value"
             ],
             "properties": {
+              "fact": {
+                "type": "string",
+                "description": "The fact name."
+              },
               "state": {
                 "type": "string",
                 "enum": [
@@ -26,10 +31,15 @@
           {
             "type": "object",
             "required": [
+              "fact",
               "state",
               "value"
             ],
             "properties": {
+              "fact": {
+                "type": "string",
+                "description": "The fact name."
+              },
               "state": {
                 "type": "string",
                 "enum": [
@@ -44,19 +54,20 @@
           {
             "type": "object",
             "required": [
+              "fact",
               "state",
-              "value",
               "missing"
             ],
             "properties": {
+              "fact": {
+                "type": "string",
+                "description": "The fact name."
+              },
               "state": {
                 "type": "string",
                 "enum": [
                   "missing"
                 ]
-              },
-              "value": {
-                "type": "null"
               },
               "missing": {
                 "type": "array",
@@ -70,19 +81,20 @@
           {
             "type": "object",
             "required": [
+              "fact",
               "state",
-              "value",
               "message"
             ],
             "properties": {
+              "fact": {
+                "type": "string",
+                "description": "The fact name."
+              },
               "state": {
                 "type": "string",
                 "enum": [
                   "error"
                 ]
-              },
-              "value": {
-                "type": "null"
               },
               "message": {
                 "type": "string",

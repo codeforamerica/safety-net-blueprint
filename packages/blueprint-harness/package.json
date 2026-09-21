@@ -3,12 +3,16 @@
   "version": "0.1.0",
   "description": "Shared sample contracts and generated artifacts for testing blueprint tooling packages",
   "private": true,
+  "type": "module",
+  "scripts": {
+    "regenerate": "node scripts/regenerate.js"
+  },
   "files": [
     "contracts/",
     "generated/",
     "explorer/"
   ],
-"license": "SEE LICENSE IN LICENSE",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/codeforamerica/safety-net-blueprint.git",

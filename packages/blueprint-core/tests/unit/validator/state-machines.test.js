@@ -26,7 +26,7 @@ import {
   extractConditionIds,
   walkPushBodiesInCalls,
   collectCallBodyLiterals,
-} from '../../../src/validation/state-machine-validator.js';
+} from '../../../src/validator/state-machine-validator.js';
 import {
   collectTopLevelProperties,
   getPropertyAtPath,

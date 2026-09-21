@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>programs — Annotation Explorer — Blueprint Harness</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    details summary::-webkit-details-marker { display: none; }
+
+    /* Full-viewport layout: header pinned, sidebar + content fill remaining height */
+    #page-header { flex-shrink: 0; }
+    .page-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+    #sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: #2B1A78;
+      color: white;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #sidebar-nav { padding: 0.5rem 0; overflow-y: auto; flex: 1; min-height: 0; }
+    #content { flex: 1; min-width: 0; padding: 2rem 2.5rem 4rem; overflow-y: auto; }
+    mark.search-hl { background: #fff176; color: inherit; border-radius: 2px; padding: 0 1px; }
+    #content [id]:target { scroll-margin-top: 1rem; outline: none; box-shadow: none; }
+
+    /* Nav links */
+    a.nav-link {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 4px 0.75rem; font-size: 11px;
+      color: rgba(255,255,255,0.65); text-decoration: none;
+      transition: background 0.1s;
+    }
+    a.nav-link:hover { background: rgba(255,255,255,0.08); color: white; }
+    a.nav-link.nav-active { background: rgba(255,255,255,0.15); color: white; font-weight: 700; }
+    /* Make inline code readable on the dark sidebar */
+    #sidebar a.nav-link code {
+      color: rgba(255,255,255,0.55); background: transparent; border: none; font-size: 10px;
+    }
+    .nav-section-label {
+      font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35); padding: 0.75rem 0.75rem 0.2rem;
+    }
+    .nav-count {
+      font-size: 0.65rem; font-weight: 400;
+      background: rgba(255,255,255,0.15); border-radius: 8px;
+      padding: 0.1rem 0.35rem; margin-left: auto;
+    }
+
+    /* Interactive element hover states — applied centrally so all tools get consistent behavior */
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    
+  </style>
+</head>
+<body>
+  <div id="page-header">
+    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Blueprint Harness</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Annotation Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">programs</a></div>
+    
+      <div style="background:#2B1A78;padding:0.75rem 1.25rem 0.9rem;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="font-size:16px;font-weight:700;color:white;"><code style="color:rgba(255,255,255,0.9);background:transparent;">programs</code></div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:0.2rem;">Annotation Explorer</div>
+      </div>
+  </div>
+  <div class="page-layout">
+    <nav id="sidebar">
+      
+      <div style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;">
+        <input id="nav-search" type="search" placeholder="Filter…"
+          style="width:100%;padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.2);border-radius:4px;background:rgba(255,255,255,0.1);color:white;font-size:0.75rem;outline:none;"
+          aria-label="Filter navigation" />
+      </div>
+      <div id="sidebar-nav">
+        <a class="nav-link" href="#entry--chip">
+        <code style="font-size:10px;">chip</code>
+        <span class="nav-count" style="">10</span>
+      </a>
+<a class="nav-link" href="#entry--medicaid">
+        <code style="font-size:10px;">medicaid</code>
+        <span class="nav-count" style="">20</span>
+      </a>
+<a class="nav-link" href="#entry--snap">
+        <code style="font-size:10px;">snap</code>
+        <span class="nav-count" style="">26</span>
+      </a>
+<a class="nav-link" href="#entry--tanf">
+        <code style="font-size:10px;">tanf</code>
+        <span class="nav-count" style="">10</span>
+      </a>
+      </div>
+    </nav>
+    <main id="content">
+      <div style="padding:2rem 0.5rem;">
+      <h1 style="font-size:1.5rem;font-weight:700;color:#2B1A78;margin-bottom:0.3rem;"><code>programs</code></h1>
+      <p style="color:#555;font-size:0.875rem;margin-bottom:1.5rem;">4 entries</p>
+      <div id="entry--chip" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <code style="font-size:12px;font-weight:700;">chip</code>
+          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">10 usages</span>
+        </div>
+        <div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../event-catalog/index.html#event-ca.eligibility.determination.complete" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;">ca.eligibility.determination.complete</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.applicationId" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.applicationId</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.programs[].eligible" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.programs[].eligible</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.programs[].program" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.programs[].program</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.status" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.status</code></a></div>
+        </div><div style="margin-bottom:0.5rem;">
+          <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-application.address" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.address</code></a> <a href="../data-dictionaries/intake.html#field-application.contactInfo" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.contactInfo</code></a> <a href="../data-dictionaries/intake.html#field-application.programsApplied[]" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.programsApplied[]</code></a> <a href="../data-dictionaries/intake.html#field-application.status" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.status</code></a> <a href="../data-dictionaries/intake.html#field-applicationMember.dateOfBirth" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">applicationMember.dateOfBirth</code></a></div>
+        </div></div>
+      </div><div id="entry--medicaid" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <code style="font-size:12px;font-weight:700;">medicaid</code>
+          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">20 usages</span>
+        </div>
+        <div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../event-catalog/index.html#event-ca.eligibility.determination.complete" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;">ca.eligibility.determination.complete</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.applicationId" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.applicationId</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.programs[].benefitAmount" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.programs[].benefitAmount</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.programs[].eligible" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.programs[].eligible</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.programs[].program" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.programs[].program</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.status" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.status</code></a></div>
+        </div><div style="margin-bottom:0.5rem;">
+          <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-application.address" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.address</code></a> <a href="../data-dictionaries/intake.html#field-application.channel" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.channel</code></a> <a href="../state-machine-docs/intake.html#action-close" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;">application.close</code></a> <a href="../data-dictionaries/intake.html#field-application.contactInfo" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.contactInfo</code></a> <a href="../data-dictionaries/intake.html#field-application.programsApplied[]" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.programsApplied[]</code></a> <a href="../data-dictionaries/intake.html#field-application.status" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.status</code></a> <a href="../state-machine-docs/intake.html#action-submit" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;">application.submit</code></a> <a href="../data-dictionaries/intake.html#field-application.submittedAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.submittedAt</code></a> <a href="../data-dictionaries/intake.html#field-applicationMember.dateOfBirth" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">applicationMember.dateOfBirth</code></a> <a href="../data-dictionaries/intake.html#field-applicationMember.incomeSource" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">applicationMember.incomeSource</code></a> <a href="../data-dictionaries/intake.html#field-applicationMember.relationship" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">applicationMember.relationship</code></a> <a href="../event-catalog/index.html#event-ca.intake.application.closed" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;">ca.intake.application.closed</code></a> <a href="../event-catalog/index.html#event-ca.intake.application.submitted" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;">ca.intake.application.submitted</code></a> <a href="../rules-docs/intake-interviewPrompts.html#fact-immigrationStatusPrompt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;">interviewPrompts.immigrationStatusPrompt</code></a></div>
+        </div></div>
+      </div><div id="entry--snap" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <code style="font-size:12px;font-weight:700;">snap</code>
+          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">26 usages</span>
+        </div>
+        <div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../event-catalog/index.html#event-ca.eligibility.determination.complete" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;">ca.eligibility.determination.complete</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.applicationId" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.applicationId</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.expedited" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.expedited</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.programs[].benefitAmount" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.programs[].benefitAmount</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.programs[].eligible" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.programs[].eligible</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.programs[].program" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.programs[].program</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.status" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.status</code></a> <a href="../rules-docs/eligibility-expeditedSnap.html#fact-isExpeditedEligible" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;">expeditedSnap.isExpeditedEligible</code></a> <a href="../rules-docs/eligibility-expeditedSnap.html#fact-isLowIncome" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;">expeditedSnap.isLowIncome</code></a></div>
+        </div><div style="margin-bottom:0.5rem;">
+          <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-application.address" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.address</code></a> <a href="../data-dictionaries/intake.html#field-application.channel" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.channel</code></a> <a href="../state-machine-docs/intake.html#action-close" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;">application.close</code></a> <a href="../data-dictionaries/intake.html#field-application.contactInfo" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.contactInfo</code></a> <a href="../data-dictionaries/intake.html#field-application.programsApplied[]" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.programsApplied[]</code></a> <a href="../data-dictionaries/intake.html#field-application.status" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.status</code></a> <a href="../state-machine-docs/intake.html#action-submit" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;">application.submit</code></a> <a href="../data-dictionaries/intake.html#field-application.submittedAt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.submittedAt</code></a> <a href="../state-machine-docs/intake.html#action-withdraw" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">operations</span><code style="padding:1px 6px;background:#f8f9fc;">application.withdraw</code></a> <a href="../data-dictionaries/intake.html#field-applicationMember.dateOfBirth" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">applicationMember.dateOfBirth</code></a> <a href="../data-dictionaries/intake.html#field-applicationMember.incomeSource" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">applicationMember.incomeSource</code></a> <a href="../data-dictionaries/intake.html#field-applicationMember.relationship" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">applicationMember.relationship</code></a> <a href="../event-catalog/index.html#event-ca.intake.application.closed" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;">ca.intake.application.closed</code></a> <a href="../event-catalog/index.html#event-ca.intake.application.submitted" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;">ca.intake.application.submitted</code></a> <a href="../event-catalog/index.html#event-ca.intake.application.withdrawn" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;">ca.intake.application.withdrawn</code></a> <a href="../rules-docs/intake-interviewPrompts.html#fact-immigrationStatusPrompt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;">interviewPrompts.immigrationStatusPrompt</code></a> <a href="../rules-docs/intake-interviewPrompts.html#fact-workRequirementPrompt" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">facts</span><code style="padding:1px 6px;background:#f8f9fc;">interviewPrompts.workRequirementPrompt</code></a></div>
+        </div></div>
+      </div><div id="entry--tanf" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <code style="font-size:12px;font-weight:700;">tanf</code>
+          <span style="margin-left:auto;font-size:11px;color:#5650BE;font-weight:600;">10 usages</span>
+        </div>
+        <div style="margin-top:0.25rem;"><div style="margin-bottom:0.5rem;">
+          <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">eligibility</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../event-catalog/index.html#event-ca.eligibility.determination.complete" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">events</span><code style="padding:1px 6px;background:#f8f9fc;">ca.eligibility.determination.complete</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.applicationId" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.applicationId</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.programs[].eligible" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.programs[].eligible</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.programs[].program" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.programs[].program</code></a> <a href="../data-dictionaries/eligibility.html#field-determination.status" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">determination.status</code></a></div>
+        </div><div style="margin-bottom:0.5rem;">
+          <div style="font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:#5650BE;margin-bottom:0.3rem;padding-bottom:0.2rem;border-bottom:1px solid #E9CCBE;">intake</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem;"><a href="../data-dictionaries/intake.html#field-application.address" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.address</code></a> <a href="../data-dictionaries/intake.html#field-application.channel" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.channel</code></a> <a href="../data-dictionaries/intake.html#field-application.contactInfo" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.contactInfo</code></a> <a href="../data-dictionaries/intake.html#field-application.programsApplied[]" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.programsApplied[]</code></a> <a href="../data-dictionaries/intake.html#field-application.status" style="display:inline-flex;align-items:center;gap:0;border:1px solid #E9CCBE;border-radius:4px;overflow:hidden;font-size:11px;text-decoration:none;color:inherit;" onmouseover="this.style.borderColor='#5650BE'" onmouseout="this.style.borderColor='#E9CCBE'"><span style="padding:1px 5px;background:#e8ecf5;color:#5650BE;font-size:10px;font-weight:600;border-right:1px solid #E9CCBE;">schema</span><code style="padding:1px 6px;background:#f8f9fc;">application.status</code></a></div>
+        </div></div>
+      </div>
+    </div>
+    </main>
+  </div>
+  <script>
+    // Chevron toggle for <details> — set initial state and keep in sync on toggle
+    document.querySelectorAll('details').forEach(d => {
+      const ch = d.querySelector('.chevron');
+      if (ch) ch.textContent = d.open ? '▼' : '▶';
+      d.addEventListener('toggle', () => {
+        const ch = d.querySelector('.chevron');
+        if (ch) ch.textContent = d.open ? '▼' : '▶';
+      });
+    });
+    // data-expand-id toggles — click any [data-expand-id] element to show/hide the
+    // element with the matching id. Works for any target element type (<div>, <tr>, etc.)
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    // Active nav highlighting — click sets immediately; IntersectionObserver keeps it current on scroll
+    (function () {
+      const links = Array.from(document.querySelectorAll('#sidebar a.nav-link[href^="#"]'));
+      if (!links.length) return;
+      function setActive(id) {
+        links.forEach(a => a.classList.toggle('nav-active', a.getAttribute('href') === '#' + id));
+      }
+      // Highlight immediately on click so there's instant feedback
+      links.forEach(a => a.addEventListener('click', () => setActive(a.getAttribute('href').slice(1))));
+      const sections = links
+        .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+        .filter(Boolean);
+      if (!sections.length) return;
+      const io = new IntersectionObserver(entries => {
+        const hit = entries.find(e => e.isIntersecting);
+        if (hit) setActive(hit.target.id);
+      }, { root: document.getElementById('content'), rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      sections.forEach(s => io.observe(s));
+      setActive(sections[0].id);
+    })();
+    
+    (function () {
+      // Returns only text that is currently visible — skips content inside closed <details>
+      function visibleText(node) {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+        if (node.tagName === 'DETAILS' && !node.open) {
+          const summary = node.querySelector('summary');
+          return summary ? summary.textContent : '';
+        }
+        return [...node.childNodes].map(visibleText).join('');
+      }
+      function clearHighlights() {
+        document.querySelectorAll('#content mark.search-hl').forEach(el => {
+          const parent = el.parentNode;
+          el.replaceWith(document.createTextNode(el.textContent));
+          parent?.normalize();
+        });
+      }
+      // Only highlight text in visible nodes (skip closed <details> bodies)
+      function highlightInElement(root, q) {
+        function walk(node) {
+          if (node.tagName === 'DETAILS' && !node.open) {
+            // Only walk the summary
+            const summary = node.querySelector('summary');
+            if (summary) walk(summary);
+            return;
+          }
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            const lower = text.toLowerCase();
+            if (!lower.includes(q)) return;
+            const frag = document.createDocumentFragment();
+            let last = 0, idx = lower.indexOf(q);
+            while (idx !== -1) {
+              if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+              const mark = document.createElement('mark');
+              mark.className = 'search-hl';
+              mark.textContent = text.slice(idx, idx + q.length);
+              frag.appendChild(mark);
+              last = idx + q.length;
+              idx = lower.indexOf(q, last);
+            }
+            if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+            node.parentNode.replaceChild(frag, node);
+            return;
+          }
+          for (const child of [...node.childNodes]) walk(child);
+        }
+        walk(root);
+      }
+      document.getElementById('nav-search')?.addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        clearHighlights();
+        document.querySelectorAll('#sidebar .nav-link[href^="#"]').forEach(a => {
+          const id = a.getAttribute('href').slice(1);
+          const el = document.getElementById(id);
+          const items = el ? [...el.querySelectorAll('.content-item')] : [];
+          const navMatches = !q || a.textContent.toLowerCase().includes(q);
+          const anyItemMatches = q && items.some(item => visibleText(item).toLowerCase().includes(q));
+          // Section visible if nav label matches, any item matches, or (no items) visible section text matches
+          const sectionMatches = !q || navMatches || anyItemMatches ||
+            (el && !items.length && visibleText(el).toLowerCase().includes(q));
+          a.style.display = sectionMatches ? '' : 'none';
+          if (el) {
+            el.style.display = sectionMatches ? '' : 'none';
+            if (items.length > 0) {
+              items.forEach(item => {
+                // Show all items when nav label matched; otherwise filter by visible text only
+                item.style.display = (!q || navMatches || visibleText(item).toLowerCase().includes(q)) ? '' : 'none';
+              });
+            }
+          }
+        });
+        document.querySelectorAll('#sidebar .nav-section').forEach(sec => {
+          const any = [...sec.querySelectorAll('.nav-link')].some(a => a.style.display !== 'none');
+          sec.style.display = any ? '' : 'none';
+        });
+        if (q) {
+          // Highlight within visible content items; fall back to top-level id'd sections without content items
+          document.querySelectorAll('#content .content-item:not([style*="display: none"])').forEach(el => highlightInElement(el, q));
+          document.querySelectorAll('#content > *[id]:not([style*="display: none"])').forEach(el => {
+            if (!el.querySelector('.content-item')) highlightInElement(el, q);
+          });
+        }
+      });
+    })();
+    // Fragment navigation — body has overflow:hidden so the browser cannot scroll to
+    // anchors natively. Read the hash and scroll #content to the target element instead.
+    (function () {
+      function scrollToHash() {
+        const hash = window.location.hash;
+        if (!hash) return;
+        const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+        if (!el) return;
+        const content = document.getElementById('content');
+        if (!content) { el.scrollIntoView(); return; }
+        const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top + content.scrollTop - 16;
+        content.scrollTop = top;
+      }
+      document.addEventListener('DOMContentLoaded', scrollToHash);
+      window.addEventListener('hashchange', scrollToHash);
+    })();
+    
+  </script>
+</body>
+</html>

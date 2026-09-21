@@ -1,0 +1,48 @@
+{
+  "type": "object",
+  "required": [
+    "channel",
+    "address"
+  ],
+  "properties": {
+    "channel": {
+      "type": "string",
+      "enum": [
+        "mail"
+      ]
+    },
+    "address": {
+      "type": "object",
+      "description": "Mailing or residential address.",
+      "required": [
+        "street",
+        "city",
+        "state",
+        "zip"
+      ],
+      "properties": {
+        "street": {
+          "type": "string",
+          "description": "Street address including apartment or unit number."
+        },
+        "city": {
+          "type": "string",
+          "description": "City name."
+        },
+        "state": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 2,
+          "description": "Two-letter US state abbreviation."
+        },
+        "zip": {
+          "type": "string",
+          "pattern": "^\\d{5}(-\\d{4})?$",
+          "description": "ZIP code or ZIP+4."
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/MailNotification"
+}

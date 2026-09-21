@@ -1,12 +1,100 @@
 $schema: policies-schema.yaml
 version: 1.0.0
+domain: platform
 policies:
-  widget-processing-clock:
-    citation: Example citation 1.0
-    citationUrl: https://example.gov/rules/1.0
+  snap-application-acceptance:
+    citation: 7 CFR § 273.2(c)
     description: |
-      Example processing clock policy used in tests. Widgets must be processed within a defined timeframe.
-  widget-eligibility-rule:
-    citation: Example regulation 2.0
+      SNAP application acceptance requirements — agencies must accept applications on the day of initial contact and must not discourage or delay submission.
+  snap-right-to-apply:
+    citation: 7 CFR § 273.2(a)
     description: |
-      Example eligibility rule used in tests.
+      SNAP right-to-apply — any household wishing to participate must be allowed to file an application, and the filing date establishes the benefit month.
+  snap-processing-clock:
+    citation: 7 CFR § 273.2(g)
+    description: |
+      SNAP application processing standards — 30-day processing clock from date of filing; expedited service within 7 days for qualifying households.
+  medicaid-processing-clock:
+    citation: 42 CFR § 435.912
+    description: |
+      Medicaid application processing standards — 45-day processing clock for most applicants; 90 days for disability-based applicants.
+  snap-notice-of-action:
+    citation: 7 CFR § 273.13
+    description: |
+      SNAP notice of adverse action — agencies must provide timely and adequate written notice before reducing, suspending, or terminating benefits.
+  snap-notice-of-eligibility:
+    citation: 7 CFR § 273.10(g)
+    description: |
+      SNAP notice of eligibility determination — written notice of approval or denial with reason, rights, and certification period.
+  medicaid-notice-of-eligibility:
+    citation: 42 CFR § 435.917
+    description: |
+      Medicaid notice of eligibility determination — written notice of approval or denial with reason, appeal rights, and effective date.
+  snap-fair-hearing-rights:
+    citation: 7 CFR § 273.15
+    description: |
+      SNAP fair hearing rights — households have the right to request a fair hearing within 90 days of any adverse action notice.
+  snap-interview-toolkit:
+    citation: FNS-1104 (March 2023, revised June 2025)
+    description: |
+      FNS SNAP Interview Toolkit — six essential interview functions, probe triggers for inconsistency flags, verification requirements, and interview conclusion standards.
+  snap-general-work-requirement:
+    citation: 7 CFR § 273.7
+    description: |
+      SNAP general work requirements — able-bodied adults aged 16–59 must register for work, accept suitable employment, and participate in assigned employment and training programs. Exemptions include physical/mental incapacity, caregiving, school enrollment, and participation in other programs.
+  snap-abawd-work-requirement:
+    citation: 7 CFR § 273.24
+    description: |
+      SNAP able-bodied adults without dependents (ABAWD) work requirement — individuals aged 18–54 without dependents are limited to 3 months of benefits in any 36-month period unless they meet work, exemption, or waiver criteria.
+  snap-student-eligibility:
+    citation: 7 CFR § 273.5
+    description: |
+      SNAP eligibility rules for students enrolled at least half-time in higher education — generally ineligible unless they meet one of the statutory exceptions (employment, work-study, dependent care, TANF participation, etc.).
+  snap-expedited-processing:
+    citation: 7 CFR § 273.2(i)
+    description: |
+      SNAP expedited service — households with gross monthly income below $150 and liquid resources below $100 (or migrant/seasonal farmworkers) must receive benefits within 7 days of application.
+  snap-expedited-screening:
+    citation: 7 CFR § 273.2(i)(1)
+    description: |
+      SNAP expedited screening criteria — agencies must screen all applications on the day of receipt and identify households entitled to expedited service.
+  qualified-alien-eligibility:
+    citation: 7 CFR § 273.4
+    description: |
+      SNAP eligibility for non-citizens — only qualified aliens are eligible; status categories include LPRs, refugees, asylees, and other federally defined categories with varying waiting periods.
+  prwora-sponsor-deeming:
+    citation: 8 U.S.C. § 1631
+    description: |
+      PRWORA sponsor income deeming — income and resources of a sponsor who signed an I-864 Affidavit of Support on or after December 19, 1997 are deemed available to the sponsored non-citizen for SNAP purposes.
+  snap-household-composition:
+    citation: 7 CFR § 273.1
+    description: |
+      SNAP household composition rules — defines who must be included in a SNAP household, including mandatory household members, separate household rules, and treatment of boarders, roommates, and institutionalized individuals.
+  snap-income-verification:
+    citation: 7 CFR § 273.2(f)
+    description: |
+      SNAP income verification requirements — agencies must verify earned and unearned income at application and recertification, including acceptable documentary evidence and collateral contact standards.
+  snap-elderly-disabled-deductions:
+    citation: 7 CFR § 273.9(d)
+    description: |
+      SNAP deductions for elderly and disabled households — households with an elderly or disabled member may claim excess medical expense deductions and are exempt from the gross income test.
+  snap-benefit-calculation:
+    citation: 7 CFR § 273.10
+    description: |
+      SNAP benefit calculation — net monthly income is used to determine benefit allotment; benefit equals 30% of net income subtracted from the maximum allotment for household size.
+  chip-age-eligibility:
+    citation: 42 CFR § 457.310
+    description: |
+      CHIP age eligibility — states must define an upper age limit for CHIP eligibility (up to age 19), and may extend coverage to unborn children and former foster youth up to age 26 under state plan options.
+  medicaid-caretaker-relative:
+    citation: 42 CFR § 435.110
+    description: |
+      Medicaid caretaker relative eligibility — states must provide Medicaid to caretaker relatives of dependent children who meet income and resource standards, including parents and other adults who are the primary caregiver.
+  medicaid-cost-sharing:
+    citation: 42 CFR § 447.50
+    description: |
+      Medicaid cost sharing — limits on premiums, copayments, and other cost sharing for Medicaid enrollees, including aggregate limits by income level and prohibition on cost sharing for certain populations and services.
+  medicaid-determination-documentation:
+    citation: 42 CFR § 435.940
+    description: |
+      Medicaid eligibility verification — agencies must verify eligibility factors through electronic data sources before requesting documentation from applicants; paper documentation may be requested only when electronic verification is unavailable.

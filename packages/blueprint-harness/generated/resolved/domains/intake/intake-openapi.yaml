@@ -6,6 +6,24 @@ info:
   x-status: stable
   x-visibility: public
 x-events:
+  application.created:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.created
+    summary: Emitted when an application is created.
+  application.updated:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.updated
+    summary: Emitted when an application is updated via PATCH.
+  application.deleted:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.deleted
+    summary: Emitted when an application is deleted.
+  applicationMember.created:
+    type: org.codeforamerica.safety-net-blueprint.intake.application-member.created
+    summary: Emitted when a household member is added to an application.
+  applicationMember.updated:
+    type: org.codeforamerica.safety-net-blueprint.intake.application-member.updated
+    summary: Emitted when a household member is updated via PATCH.
+  applicationMember.deleted:
+    type: org.codeforamerica.safety-net-blueprint.intake.application-member.deleted
+    summary: Emitted when a household member is removed from an application.
   intake.application.submitted:
     type: org.codeforamerica.safety-net-blueprint.intake.application.submitted
     summary: Emitted when an applicant formally submits an application, starting the regulatory processing clock.
@@ -138,8 +156,10 @@ paths:
       tags:
         - Household Members
       parameters:
+        - $ref: ../../base/components/parameters.yaml#/SearchQueryParam
         - $ref: ../../base/components/parameters.yaml#/LimitParam
         - $ref: ../../base/components/parameters.yaml#/OffsetParam
+        - $ref: ../../base/components/parameters.yaml#/SortParam
       responses:
         "200":
           description: Household members for this application.
@@ -236,14 +256,16 @@ paths:
         "500":
           $ref: ../../common/components/responses.yaml#/InternalError
   /applications/{applicationId}/submit:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema:
+          type: string
     post:
       summary: Submit application
       description: Formally submits a draft application, starting the regulatory processing clock.
       operationId: submitApplication
-      tags:
-        - Applications
-      parameters:
-        - $ref: "#/components/parameters/ApplicationIdParam"
       responses:
         "200":
           description: Transition applied successfully.
@@ -259,15 +281,23 @@ paths:
           $ref: ../../base/components/responses.yaml#/Conflict
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
+      tags:
+        - Applications
+      x-relationship:
+        type: state-machine-action
+        domain: intake
+        id: submit
   /applications/{applicationId}/open:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema:
+          type: string
     post:
       summary: Open application
       description: Moves a submitted application into active caseworker review.
       operationId: openApplication
-      tags:
-        - Applications
-      parameters:
-        - $ref: "#/components/parameters/ApplicationIdParam"
       responses:
         "200":
           description: Transition applied successfully.
@@ -283,15 +313,23 @@ paths:
           $ref: ../../base/components/responses.yaml#/Conflict
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
+      tags:
+        - Applications
+      x-relationship:
+        type: state-machine-action
+        domain: intake
+        id: open
   /applications/{applicationId}/close:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema:
+          type: string
     post:
       summary: Close application
       description: Closes the application once intake processing is complete.
       operationId: closeApplication
-      tags:
-        - Applications
-      parameters:
-        - $ref: "#/components/parameters/ApplicationIdParam"
       requestBody:
         required: true
         content:
@@ -313,15 +351,23 @@ paths:
           $ref: ../../base/components/responses.yaml#/Conflict
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
+      tags:
+        - Applications
+      x-relationship:
+        type: state-machine-action
+        domain: intake
+        id: close
   /applications/{applicationId}/withdraw:
+    parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema:
+          type: string
     post:
       summary: Withdraw application
       description: Withdraws the application at the household's request.
       operationId: withdrawApplication
-      tags:
-        - Applications
-      parameters:
-        - $ref: "#/components/parameters/ApplicationIdParam"
       responses:
         "200":
           description: Transition applied successfully.
@@ -337,6 +383,12 @@ paths:
           $ref: ../../base/components/responses.yaml#/Conflict
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
+      tags:
+        - Applications
+      x-relationship:
+        type: state-machine-action
+        domain: intake
+        id: withdraw
   /applications/{applicationId}/summary:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -354,7 +406,13 @@ paths:
           $ref: ../../base/components/responses.yaml#/NotFound
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
-  /intake/applications/{applicationId}/evaluate-interview-prompts:
+      tags:
+        - Applications
+      x-relationship:
+        type: composition
+        domain: domains/intake/intake
+        id: applicationSummary
+  /applications/{applicationId}/evaluate-interview-prompts:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
     post:
@@ -377,6 +435,12 @@ paths:
           $ref: ../../base/components/responses.yaml#/BadRequest
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
+      tags:
+        - Applications
+      x-relationship:
+        type: ruleset
+        domain: intake
+        id: interviewPrompts
 components:
   parameters:
     ApplicationIdParam:
@@ -423,12 +487,19 @@ components:
           $ref: ../../common/schemas/shared.yaml#/$defs/Address
         contactInfo:
           $ref: ../../common/schemas/shared.yaml#/$defs/ContactInfo
-        county_code:
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+          description: |
+            Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+        countyCode:
           type: string
           maxLength: 10
           description: County code for routing this application to the correct local office.
     Application:
-      type: object
+      description: A benefit application record, including server-managed fields.
+      unevaluatedProperties: false
       required:
         - id
         - status
@@ -436,91 +507,85 @@ components:
         - referenceId
         - createdAt
         - updatedAt
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-          description: Unique identifier (server-generated).
-        referenceId:
-          type: string
-          readOnly: true
-          x-derived: $this.id.substring(0, 8).toUpperCase()
-          description: Short human-readable reference code for this application.
-        status:
-          type: string
-          readOnly: true
-          description: Current lifecycle status of the application.
-          enum:
-            - draft
-            - submitted
-            - under_review
-            - withdrawn
-            - closed
-        programsApplied:
-          type: array
-          items:
-            type: string
-            enum:
-              - snap
-              - medicaid
-              - chip
-              - tanf
-          description: Benefit programs the household is applying for.
-        channel:
-          type: string
-          enum:
-            - online
-            - phone
-            - in_person
-            - mail
-          description: Channel through which the application was submitted.
-        submittedAt:
-          type: string
-          format: date-time
-          nullable: true
-          readOnly: true
-          description: Timestamp when the application was formally submitted. Null until submitted.
-        openedAt:
-          type: string
-          format: date-time
-          nullable: true
-          readOnly: true
-          description: Timestamp when a caseworker began active review. Null until the application is opened.
-        slaTypeCode:
-          type: string
-          readOnly: true
-          description: SLA type governing the processing deadline for this application.
-          enum:
-            - snap_standard
-            - medicaid_standard
-        address:
-          $ref: ../../common/schemas/shared.yaml#/$defs/Address
-        contactInfo:
-          $ref: ../../common/schemas/shared.yaml#/$defs/ContactInfo
-        createdAt:
-          type: string
-          format: date-time
-          readOnly: true
-          description: Timestamp when the application was created.
-        updatedAt:
-          type: string
-          format: date-time
-          readOnly: true
-          description: Timestamp when the application was last updated.
-        _links:
-          type: object
-          readOnly: true
-          description: Generated composition links.
+      allOf:
+        - $ref: "#/components/schemas/ApplicationWritable"
+        - type: object
           properties:
-            applicationSummary:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+              description: Unique identifier (server-generated).
+            referenceId:
+              type: string
+              readOnly: true
+              x-derived: $this.id.substring(0, 8).toUpperCase()
+              description: Short human-readable reference code for this application.
+            confirmationNumber:
+              type: string
+              readOnly: true
+              deprecated: true
+              description: |
+                Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+            status:
+              type: string
+              readOnly: true
+              description: Current lifecycle status of the application.
+              enum:
+                - draft
+                - submitted
+                - under_review
+                - withdrawn
+                - closed
+            submittedAt:
+              type: string
+              format: date-time
+              nullable: true
+              readOnly: true
+              description: Timestamp when the application was formally submitted. Null until submitted.
+            openedAt:
+              type: string
+              format: date-time
+              nullable: true
+              readOnly: true
+              description: Timestamp when a caseworker began active review. Null until the application is opened.
+            slaTypeCode:
+              type: string
+              readOnly: true
+              description: SLA type governing the processing deadline for this application.
+              enum:
+                - snap_standard
+                - medicaid_standard
+            members:
+              type: array
+              items:
+                $ref: "#/components/schemas/ApplicationMember"
+              description: Household members on this application.
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the application was created.
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the application was last updated.
+        - type: object
+          properties:
+            _links:
               type: object
-              description: Link to the applicationSummary composition.
+              readOnly: true
+              description: Generated composition links.
               properties:
-                href:
-                  type: string
-                  format: uri-reference
-                  readOnly: true
+                applicationSummary:
+                  type: object
+                  description: Link to the applicationSummary composition.
+                  properties:
+                    href:
+                      type: string
+                      format: uri-reference
+                      readOnly: true
     ApplicationCreate:
       allOf:
         - $ref: "#/components/schemas/ApplicationWritable"
@@ -535,6 +600,7 @@ components:
           minProperties: 1
     ApplicationList:
       type: object
+      additionalProperties: false
       required:
         - items
         - total
@@ -586,8 +652,23 @@ components:
           description: Relationship of this member to the primary applicant.
         incomeSource:
           $ref: ./intake-schemas.yaml#/$defs/IncomeSource
+        notificationPreference:
+          description: How this member prefers to receive benefit notices and updates.
+          oneOf:
+            - $ref: "#/components/schemas/EmailNotification"
+            - $ref: "#/components/schemas/SmsNotification"
+            - $ref: "#/components/schemas/MailNotification"
+          discriminator:
+            propertyName: channel
+        verificationEvidence:
+          description: |
+            Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+          anyOf:
+            - $ref: "#/components/schemas/ElectronicVerification"
+            - $ref: "#/components/schemas/ManualVerification"
     ApplicationMember:
-      type: object
+      description: A household member on a benefit application.
+      unevaluatedProperties: false
       required:
         - id
         - applicationId
@@ -596,60 +677,42 @@ components:
         - relationship
         - createdAt
         - updatedAt
-      properties:
-        id:
-          type: string
-          format: uuid
-          readOnly: true
-          description: Unique identifier (server-generated).
-        applicationId:
-          type: string
-          format: uuid
-          description: The application this member belongs to.
-          x-relationship:
-            resource: Application
-            style: links-only
-        firstName:
-          type: string
-          description: Member's first name.
-        lastName:
-          type: string
-          description: Member's last name.
-        dateOfBirth:
-          type: string
-          format: date
-          description: Member's date of birth (YYYY-MM-DD).
-        relationship:
-          type: string
-          enum:
-            - self
-            - spouse
-            - child
-            - parent
-            - sibling
-            - other
-          description: Relationship of this member to the primary applicant.
-        incomeSource:
-          $ref: ./intake-schemas.yaml#/$defs/IncomeSource
-        createdAt:
-          type: string
-          format: date-time
-          readOnly: true
-          description: Timestamp when the member was added.
-        updatedAt:
-          type: string
-          format: date-time
-          readOnly: true
-          description: Timestamp when the member was last updated.
-        links:
-          type: object
-          readOnly: true
-          description: Related resource links.
+      allOf:
+        - $ref: "#/components/schemas/ApplicationMemberWritable"
+        - type: object
           properties:
-            application:
+            id:
               type: string
-              format: uri-reference
-              description: Link to the related Application resource.
+              format: uuid
+              readOnly: true
+              description: Unique identifier (server-generated).
+            applicationId:
+              type: string
+              format: uuid
+              description: The application this member belongs to.
+              x-relationship:
+                type: fk
+                resource: Application
+                style: links-only
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the member was added.
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the member was last updated.
+            links:
+              type: object
+              readOnly: true
+              description: Related resource links.
+              properties:
+                application:
+                  type: string
+                  format: uri-reference
+                  description: Link to the related Application resource.
     ApplicationMemberCreate:
       allOf:
         - $ref: "#/components/schemas/ApplicationMemberWritable"
@@ -665,6 +728,7 @@ components:
           minProperties: 1
     ApplicationMemberList:
       type: object
+      additionalProperties: false
       required:
         - items
         - total
@@ -678,15 +742,91 @@ components:
         total:
           type: integer
           minimum: 0
+          description: Total number of matching household members.
         limit:
           type: integer
           minimum: 1
           maximum: 100
+          description: Maximum number of household members per page.
         offset:
           type: integer
           minimum: 0
+          description: Number of household members skipped.
         hasNext:
           type: boolean
+          description: Whether more household members are available.
+    EmailNotification:
+      type: object
+      required:
+        - channel
+        - address
+      properties:
+        channel:
+          type: string
+          enum:
+            - email
+        address:
+          type: string
+          format: email
+          description: Email address for benefit notices.
+    ElectronicVerification:
+      type: object
+      required:
+        - source
+        - matchCode
+        - verifiedAt
+      properties:
+        source:
+          type: string
+          description: Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+        matchCode:
+          type: string
+          description: Result code returned by the data source.
+        verifiedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the electronic verification was completed.
+    MailNotification:
+      type: object
+      required:
+        - channel
+        - address
+      properties:
+        channel:
+          type: string
+          enum:
+            - mail
+        address:
+          $ref: ../../common/schemas/shared.yaml#/$defs/Address
+    ManualVerification:
+      type: object
+      required:
+        - verifiedBy
+        - verifiedAt
+      properties:
+        verifiedBy:
+          type: string
+          description: ID of the caseworker who performed the manual verification.
+        verifiedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the manual verification was completed.
+        notes:
+          type: string
+          description: Optional caseworker notes on the verification outcome.
+    SmsNotification:
+      type: object
+      required:
+        - channel
+        - phone
+      properties:
+        channel:
+          type: string
+          enum:
+            - sms
+        phone:
+          type: string
+          description: Phone number for SMS benefit notices (E.164 format).
     CloseRequest:
       type: object
       required:

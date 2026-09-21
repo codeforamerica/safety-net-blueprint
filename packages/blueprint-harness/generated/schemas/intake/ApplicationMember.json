@@ -1,5 +1,6 @@
 {
-  "type": "object",
+  "description": "A household member on a benefit application.",
+  "unevaluatedProperties": false,
   "required": [
     "id",
     "applicationId",
@@ -9,152 +10,302 @@
     "createdAt",
     "updatedAt"
   ],
-  "properties": {
-    "id": {
-      "type": "string",
-      "format": "uuid",
-      "readOnly": true,
-      "description": "Unique identifier (server-generated)."
-    },
-    "applicationId": {
-      "type": "string",
-      "format": "uuid",
-      "description": "The application this member belongs to."
-    },
-    "firstName": {
-      "type": "string",
-      "description": "Member's first name."
-    },
-    "lastName": {
-      "type": "string",
-      "description": "Member's last name."
-    },
-    "dateOfBirth": {
-      "type": "string",
-      "format": "date",
-      "description": "Member's date of birth (YYYY-MM-DD)."
-    },
-    "relationship": {
-      "type": "string",
-      "enum": [
-        "self",
-        "spouse",
-        "child",
-        "parent",
-        "sibling",
-        "other"
-      ],
-      "description": "Relationship of this member to the primary applicant."
-    },
-    "incomeSource": {
-      "description": "Income reported by a household member. Type discriminator determines the variant.",
-      "oneOf": [
-        {
-          "type": "object",
-          "description": "Income from wages or salary employment.",
-          "required": [
-            "type",
-            "employer",
-            "monthlyGrossIncome"
-          ],
-          "properties": {
-            "type": {
-              "type": "string",
-              "const": "employment"
-            },
-            "employer": {
-              "type": "string",
-              "description": "Name of the employer."
-            },
-            "monthlyGrossIncome": {
-              "type": "number",
-              "minimum": 0,
-              "description": "Monthly gross income before deductions (dollars)."
-            }
-          }
-        },
-        {
-          "type": "object",
-          "description": "Income from self-employment or a sole proprietorship.",
-          "required": [
-            "type",
-            "businessType",
-            "monthlyNetIncome"
-          ],
-          "properties": {
-            "type": {
-              "type": "string",
-              "const": "self_employment"
-            },
-            "businessType": {
-              "type": "string",
-              "description": "Type of business (e.g., sole proprietor, freelance)."
-            },
-            "monthlyNetIncome": {
-              "type": "number",
-              "minimum": 0,
-              "description": "Monthly net income after business expenses (dollars)."
-            }
-          }
-        },
-        {
-          "type": "object",
-          "description": "Income from a government benefit program.",
-          "required": [
-            "type",
-            "benefitType",
-            "monthlyAmount"
-          ],
-          "properties": {
-            "type": {
-              "type": "string",
-              "const": "benefit"
-            },
-            "benefitType": {
-              "type": "string",
-              "enum": [
-                "ssi",
-                "ssdi",
-                "unemployment",
-                "veterans",
-                "other"
-              ],
-              "description": "The benefit program providing income."
-            },
-            "monthlyAmount": {
-              "type": "number",
-              "minimum": 0,
-              "description": "Monthly benefit amount (dollars)."
-            }
-          }
-        }
-      ]
-    },
-    "createdAt": {
-      "type": "string",
-      "format": "date-time",
-      "readOnly": true,
-      "description": "Timestamp when the member was added."
-    },
-    "updatedAt": {
-      "type": "string",
-      "format": "date-time",
-      "readOnly": true,
-      "description": "Timestamp when the member was last updated."
-    },
-    "links": {
+  "allOf": [
+    {
       "type": "object",
-      "readOnly": true,
-      "description": "Related resource links.",
       "properties": {
-        "application": {
+        "firstName": {
           "type": "string",
-          "format": "uri-reference",
-          "description": "Link to the related Application resource."
+          "description": "Member's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Member's last name."
+        },
+        "dateOfBirth": {
+          "type": "string",
+          "format": "date",
+          "description": "Member's date of birth (YYYY-MM-DD)."
+        },
+        "relationship": {
+          "type": "string",
+          "enum": [
+            "self",
+            "spouse",
+            "child",
+            "parent",
+            "sibling",
+            "other"
+          ],
+          "description": "Relationship of this member to the primary applicant."
+        },
+        "incomeSource": {
+          "description": "Income reported by a household member. Type discriminator determines the variant.",
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "Income from wages or salary employment.",
+              "required": [
+                "type",
+                "employer",
+                "monthlyGrossIncome"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "employment"
+                },
+                "employer": {
+                  "type": "string",
+                  "description": "Name of the employer."
+                },
+                "monthlyGrossIncome": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Monthly gross income before deductions (dollars)."
+                }
+              }
+            },
+            {
+              "type": "object",
+              "description": "Income from self-employment or a sole proprietorship.",
+              "required": [
+                "type",
+                "businessType",
+                "monthlyNetIncome"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "self_employment"
+                },
+                "businessType": {
+                  "type": "string",
+                  "description": "Type of business (e.g., sole proprietor, freelance)."
+                },
+                "monthlyNetIncome": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Monthly net income after business expenses (dollars)."
+                }
+              }
+            },
+            {
+              "type": "object",
+              "description": "Income from a government benefit program.",
+              "required": [
+                "type",
+                "benefitType",
+                "monthlyAmount"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "benefit"
+                },
+                "benefitType": {
+                  "type": "string",
+                  "enum": [
+                    "ssi",
+                    "ssdi",
+                    "unemployment",
+                    "veterans",
+                    "other"
+                  ],
+                  "description": "The benefit program providing income."
+                },
+                "monthlyAmount": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Monthly benefit amount (dollars)."
+                }
+              }
+            }
+          ]
+        },
+        "notificationPreference": {
+          "description": "How this member prefers to receive benefit notices and updates.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "channel",
+                "address"
+              ],
+              "properties": {
+                "channel": {
+                  "type": "string",
+                  "enum": [
+                    "email"
+                  ]
+                },
+                "address": {
+                  "type": "string",
+                  "format": "email",
+                  "description": "Email address for benefit notices."
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "channel",
+                "phone"
+              ],
+              "properties": {
+                "channel": {
+                  "type": "string",
+                  "enum": [
+                    "sms"
+                  ]
+                },
+                "phone": {
+                  "type": "string",
+                  "description": "Phone number for SMS benefit notices (E.164 format)."
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "channel",
+                "address"
+              ],
+              "properties": {
+                "channel": {
+                  "type": "string",
+                  "enum": [
+                    "mail"
+                  ]
+                },
+                "address": {
+                  "type": "object",
+                  "description": "Mailing or residential address.",
+                  "required": [
+                    "street",
+                    "city",
+                    "state",
+                    "zip"
+                  ],
+                  "properties": {
+                    "street": {
+                      "type": "string",
+                      "description": "Street address including apartment or unit number."
+                    },
+                    "city": {
+                      "type": "string",
+                      "description": "City name."
+                    },
+                    "state": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 2,
+                      "description": "Two-letter US state abbreviation."
+                    },
+                    "zip": {
+                      "type": "string",
+                      "pattern": "^\\d{5}(-\\d{4})?$",
+                      "description": "ZIP code or ZIP+4."
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "verificationEvidence": {
+          "description": "Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.\n",
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "source",
+                "matchCode",
+                "verifiedAt"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "description": "Data source used for the electronic match (e.g., SSA, IRS-IEVS)."
+                },
+                "matchCode": {
+                  "type": "string",
+                  "description": "Result code returned by the data source."
+                },
+                "verifiedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Timestamp when the electronic verification was completed."
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "verifiedBy",
+                "verifiedAt"
+              ],
+              "properties": {
+                "verifiedBy": {
+                  "type": "string",
+                  "description": "ID of the caseworker who performed the manual verification."
+                },
+                "verifiedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Timestamp when the manual verification was completed."
+                },
+                "notes": {
+                  "type": "string",
+                  "description": "Optional caseworker notes on the verification outcome."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "readOnly": true,
+          "description": "Unique identifier (server-generated)."
+        },
+        "applicationId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The application this member belongs to."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true,
+          "description": "Timestamp when the member was added."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true,
+          "description": "Timestamp when the member was last updated."
+        },
+        "links": {
+          "type": "object",
+          "readOnly": true,
+          "description": "Related resource links.",
+          "properties": {
+            "application": {
+              "type": "string",
+              "format": "uri-reference",
+              "description": "Link to the related Application resource."
+            }
+          }
         }
       }
     }
-  },
+  ],
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "#/components/schemas/ApplicationMember"
 }

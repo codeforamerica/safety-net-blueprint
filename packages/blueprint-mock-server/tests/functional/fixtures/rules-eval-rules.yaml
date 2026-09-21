@@ -20,4 +20,4 @@ rulesets:
     facts:
       - path: meetsIncomeTest
         description: Household income is below the threshold for the given size
-        expression: "household.monthlyIncome < household.size * 500"
+        expression: "household.monthlyIncome < double(household.size) * 500.0"

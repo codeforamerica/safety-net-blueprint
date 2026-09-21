@@ -22,7 +22,7 @@ import { resolve, join, relative, isAbsolute, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import yaml from 'js-yaml';
-import { resolveRef, collectTopLevelProperties, resolveSchemaRefs } from '@codeforamerica/blueprint-core/state-machines';
+import { resolveRef, collectTopLevelProperties, resolveSchemaRefs } from '@codeforamerica/blueprint-core/json-schema';
 import { detectType } from '@codeforamerica/blueprint-core/openapi';
 
 function walkForPattern(dir, suffix) {

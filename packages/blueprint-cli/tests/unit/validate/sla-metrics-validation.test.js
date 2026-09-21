@@ -15,7 +15,7 @@ import {
   extractVarFields,
   buildCollectionSchemaMap,
 } from '../../../scripts/validate/sla-metrics.js';
-import { collectTopLevelProperties } from '@codeforamerica/blueprint-core/state-machines';
+import { collectTopLevelProperties } from '@codeforamerica/blueprint-core/json-schema';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

@@ -19,8 +19,8 @@
  * a stub request/response schema to the domain's OpenAPI spec.
  */
 
-import { loadContractFiles } from './contract-files.js';
-import { extractPathParams, buildParameterIndex } from './utils.js';
+import { loadContractFiles } from './openapi/contract-files.js';
+import { buildParameterIndex, buildPathEntry } from './openapi/utils.js';
 
 // ── Discovery ─────────────────────────────────────────────────────────────────
 
@@ -252,20 +252,12 @@ export function generateRulesEndpointOverlay(domain, rulesDoc, paramIndex = new 
   for (const [rulesetName, ruleset] of Object.entries(rulesDoc.rulesets || {})) {
     if (!ruleset.endpoint?.path) continue;
 
-    const endpointPath = `/${domain}${ruleset.endpoint.path}`;
+    const endpointPath = ruleset.endpoint.path;
     const pascal = toPascalCase(rulesetName);
     const requestSchemaName = `${pascal}Request`;
     const responseSchemaName = `${pascal}Response`;
-    const lastSegment = ruleset.endpoint.path.split('/').filter(Boolean).pop();
+    const lastSegment = endpointPath.split('/').filter(Boolean).pop();
     const operationId = toCamelCase(lastSegment);
-
-    const paramNames = extractPathParams(endpointPath);
-    const parameters = paramNames.map(name => {
-      const ref = paramIndex.get(name);
-      return ref
-        ? { $ref: ref }
-        : { name, in: 'path', required: true, schema: { type: 'string' } };
-    });
 
     // Request body: one property per named input, using the input schema
     const requestProperties = {};
@@ -279,9 +271,7 @@ export function generateRulesEndpointOverlay(domain, rulesDoc, paramIndex = new 
       resolvedProperties[propName] = propSchema;
     }
 
-    const pathEntry = {};
-    if (parameters.length > 0) pathEntry.parameters = parameters;
-    pathEntry.post = {
+    pathsUpdate[endpointPath] = buildPathEntry(endpointPath, 'post', {
       summary: `Evaluate ${rulesetName}`,
       operationId,
       requestBody: {
@@ -304,8 +294,7 @@ export function generateRulesEndpointOverlay(domain, rulesDoc, paramIndex = new 
         '400': { $ref: './components/responses.yaml#/BadRequest' },
         '500': { $ref: './components/responses.yaml#/InternalError' },
       },
-    };
-    pathsUpdate[endpointPath] = pathEntry;
+    }, paramIndex, { type: 'ruleset', domain, id: rulesetName });
 
     schemasUpdate[requestSchemaName] = {
       type: 'object',

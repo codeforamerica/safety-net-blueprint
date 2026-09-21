@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "required": [
+    "verifiedBy",
+    "verifiedAt"
+  ],
+  "properties": {
+    "verifiedBy": {
+      "type": "string",
+      "description": "ID of the caseworker who performed the manual verification."
+    },
+    "verifiedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the manual verification was completed."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional caseworker notes on the verification outcome."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/ManualVerification"
+}

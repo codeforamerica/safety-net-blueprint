@@ -3,23 +3,15 @@
   "version": "0.1.0",
   "description": "Static documentation generator for Blueprint framework projects — contract reference, state machine diagrams, event catalog, and data dictionaries",
   "type": "module",
+  "exports": "./index.js",
   "files": [
+    "index.js",
     "src/",
     "build.js",
     "schemas/",
     "authored/"
   ],
   "scripts": {
-    "build": "node build.js",
-    "build:api-reference": "node build.js --only=api-reference",
-    "build:client-reference": "node build.js --only=client-reference",
-    "build:context-map": "node build.js --only=context-map",
-    "build:data-dictionaries": "node build.js --only=data-dictionaries",
-    "build:event-catalog": "node build.js --only=event-catalog",
-    "build:sequence-diagrams": "node build.js --only=sequence-diagrams",
-    "build:rules-docs": "node build.js --only=rules-docs",
-    "build:state-machine-docs": "node build.js --only=state-machine-docs",
-    "build:field-inventory": "node src/data-dictionaries/generate-field-inventory.mjs",
     "test": "node --test",
     "test:unit": "node --test tests/unit",
     "test:integration": "node --test tests/integration"

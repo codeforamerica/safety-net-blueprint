@@ -24,7 +24,7 @@ import {
   generateSectionViewPanelEndpoints,
   generateStateSchemas,
 } from '../../../src/compositions.js';
-import { extractPathParams, buildParameterIndex } from '../../../src/utils.js';
+import { extractPathParams, buildParameterIndex } from '../../../src/openapi/utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

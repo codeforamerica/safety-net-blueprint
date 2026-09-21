@@ -12,6 +12,11 @@ channels:
     messages:
       ApplicationClosed:
         $ref: '#/components/messages/ApplicationClosedMessage'
+  intake.application.review-reminder:
+    address: intake.application.review-reminder
+    messages:
+      ApplicationReviewReminder:
+        $ref: '#/components/messages/ApplicationReviewReminderMessage'
   intake.application.submitted:
     address: intake.application.submitted
     messages:
@@ -24,6 +29,11 @@ channels:
         $ref: '#/components/messages/ApplicationWithdrawnMessage'
 components:
   messages:
+    ApplicationReviewReminderMessage:
+      name: intake.application.review-reminder
+      summary: Emitted when an application has been awaiting caseworker review for too long.
+      payload:
+        $ref: '#/components/schemas/ApplicationReviewReminderEvent'
     ApplicationClosedMessage:
       name: intake.application.closed
       summary: TODO — describe when this event is emitted and who consumes it.
@@ -40,6 +50,14 @@ components:
       payload:
         $ref: '#/components/schemas/ApplicationWithdrawnEvent'
   schemas:
+    ApplicationReviewReminderEvent:
+      allOf:
+        - $ref: https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event
+        - type: object
+          properties:
+            type:
+              type: string
+              const: intake.application.review-reminder
     ApplicationClosedEvent:
       allOf:
         - $ref: https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event

@@ -10,7 +10,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { load } from 'js-yaml';
 import path from 'path';
 import { COLORS } from '../lib/theme.js';
-import { titleCase, breadcrumb } from '../lib/html.js';
+import { titleCase, breadcrumb, apiReferenceLink, apiReferenceHref } from '../lib/html.js';
 import { singleColumnPage } from '../lib/layout.js';
 
 // Semantic state coloring
@@ -226,7 +226,7 @@ export function generateOverviewHtml(allStateMachines, outputDir, eventIndex, hu
 
 // ── Domain detail page ────────────────────────────────────────────────────────
 
-export function generateHtml(inputPath, outputDir, eventIndex, allStateMachines, hubHref = '../index.html') {
+export function generateHtml(inputPath, outputDir, eventIndex, allStateMachines, hubHref = '../index.html', endpointIndex = null) {
   const sm = load(readFileSync(inputPath, 'utf8'));
   mkdirSync(outputDir, { recursive: true });
   const allDomains = allStateMachines.map(s => s.domain);
@@ -258,7 +258,6 @@ export function generateHtml(inputPath, outputDir, eventIndex, allStateMachines,
       </div>`;
 
     // Actions table
-    const RPC_RE = /^(GET|POST|PATCH|PUT|DELETE)\s+(\S+)/i;
     const actionsHtml = (machine.actions || []).length ? (() => {
       const rows = machine.actions.map(op => {
         const desc = op.description ? stripRpcPrefix(op.description) || op.description : '';
@@ -269,15 +268,11 @@ export function generateHtml(inputPath, outputDir, eventIndex, allStateMachines,
           ? `<span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;">${froms.length ? froms.map(f => stateBadge(f)).join('<span style="color:#aaa;font-size:10px;">or</span>') + '<span style="color:#aaa;padding:0 2px;">→</span>' : ''}${stateBadge(op.transition.to)}</span>`
           : op.transition ? '<span style="color:#999;font-size:11px;">no state change</span>' : '';
         const steps = renderStepsHtml(getSteps(op), sm, machine, eventIndex, allStateMachines);
-        const rpcMatch = op.description ? RPC_RE.exec(op.description) : null;
         let apiLinkHtml = '';
-        if (rpcMatch && sm.apiSpec) {
-          const rpcMethod = rpcMatch[1].toLowerCase();
-          const rpcPath = rpcMatch[2];
-          const apiAnchor = `op-${rpcMethod}-${rpcPath.replace(/\//g, '-').replace(/[{}]/g, '').replace(/--+/g, '-').replace(/^-|-$/g, '')}`;
-          const apiSlug = sm.apiSpec.replace('-openapi.yaml', '');
-          const apiLink = `../api-reference/${apiSlug}.html#${apiAnchor}`;
-          apiLinkHtml = ` <a href="${apiLink}" title="View API endpoint" style="font-size:10px;background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:3px;padding:1px 6px;color:${COLORS.midBlue};text-decoration:none;white-space:nowrap;">API →</a>`;
+        const endpointInfo = endpointIndex?.get(`state-machine-action:${sm.domain}:${op.id}`);
+        if (endpointInfo) {
+          const { path, method } = endpointInfo;
+          apiLinkHtml = ' ' + apiReferenceLink(apiReferenceHref(sm.domain, method, path), 'API →', '', 'View API endpoint');
         }
         return `<tr id="action-${op.id}">
           <td><strong style="color:${COLORS.darkBlue};">${op.id}</strong>${apiLinkHtml}${desc ? `<br><span style="font-size:12px;color:${COLORS.textLight};">${desc}</span>` : ''}</td>

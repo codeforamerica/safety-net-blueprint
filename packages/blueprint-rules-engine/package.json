@@ -32,5 +32,11 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "@bufbuild/cel": "^0.6.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }

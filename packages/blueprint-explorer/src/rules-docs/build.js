@@ -15,17 +15,16 @@ import { dirname, join, resolve, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { load } from 'js-yaml';
-import { resolvedDir } from '../lib/paths.js';
+import { buildEndpointIndex, loadContractFiles } from '@codeforamerica/blueprint-core/openapi';
+import { registryAnnotationTypes } from '@codeforamerica/blueprint-core/annotations';
 import { generateRulesetHtml, generateIndexHtml } from './generate-html.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const contentArg = process.argv.find(a => a.startsWith('--content='));
-if (!contentArg) {
-  console.error('Usage: node build.js --content=<path> [--resolved=<path>]');
-  process.exit(1);
-}
-const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
+/**
+ * @param {{ contentDir: string, resolvedDir: string }} opts
+ */
+export function build({ contentDir, resolvedDir }) {
 const outputDir  = join(contentDir, 'rules-docs');
 const hubHref    = relative(outputDir, join(contentDir, 'index.html'));
 
@@ -107,6 +106,14 @@ for (const af of annotationFiles) {
   }
 }
 
+// ── Build endpoint index and registry types ───────────────────────────────────
+
+const openApiFiles = readdirSync(resolvedDir, { recursive: true })
+  .filter(f => typeof f === 'string' && f.endsWith('-openapi.yaml'))
+  .map(f => ({ spec: load(readFileSync(join(resolvedDir, f), 'utf8')) }));
+const endpointIndex = buildEndpointIndex(openApiFiles);
+const registryTypes = registryAnnotationTypes(loadContractFiles(resolvedDir));
+
 // ── Copy browser bundle ───────────────────────────────────────────────────────
 
 const require = createRequire(import.meta.url);
@@ -136,7 +143,8 @@ for (const graphFile of graphFiles) {
   const examples = examplesByDomainRuleset[domain]?.[rulesetName] ?? [];
   const rulesetInputs = rulesetInputsByDomainRuleset[domain]?.[rulesetName] ?? {};
   const slug = `${domain}-${rulesetName}`;
-  const html = generateRulesetHtml(graph, annotations, policies, examples, rulesetInputs, { hubHref, outputDir });
+  const endpointInfo = endpointIndex.get(`ruleset:${domain}:${rulesetName}`);
+  const html = generateRulesetHtml(graph, annotations, policies, examples, rulesetInputs, { hubHref, outputDir, endpointInfo, registryTypes });
   writeFileSync(join(outputDir, `${slug}.html`), html);
   allRulesets.push({ domain, rulesetName, slug });
   console.log(`  ✓ ${domain}/${rulesetName}`);
@@ -144,3 +152,18 @@ for (const graphFile of graphFiles) {
 
 generateIndexHtml(allRulesets, outputDir, hubHref);
 console.log('Done.');
+} // end build()
+
+// CLI entry point
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const contentArg  = process.argv.find(a => a.startsWith('--content='));
+  const resolvedArg = process.argv.find(a => a.startsWith('--resolved='));
+  if (!contentArg) {
+    console.error('Usage: node build.js --content=<path> [--resolved=<path>]');
+    process.exit(1);
+  }
+  build({
+    contentDir:  resolve(process.cwd(), contentArg.slice('--content='.length)),
+    resolvedDir: resolvedArg ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length)) : null,
+  });
+}

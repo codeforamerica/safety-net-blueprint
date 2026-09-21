@@ -9,7 +9,7 @@ import { writeFileSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import yaml from 'js-yaml';
-import { bundleSpec } from '../../../src/bundle.js';
+import { bundleSpec } from '../../../src/openapi/bundle.js';
 
 function createTmpDir() {
   const dir = join(tmpdir(), `bundle-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);

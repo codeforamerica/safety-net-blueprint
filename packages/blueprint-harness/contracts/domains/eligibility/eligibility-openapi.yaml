@@ -111,43 +111,43 @@ paths:
         '500':
           $ref: '../../common/components/responses.yaml#/InternalError'
 
-  /determinations/{determinationId}/programs:
+  /determinations/{determinationId}/decisions:
     parameters:
       - $ref: '#/components/parameters/DeterminationIdParam'
     get:
-      summary: List program results
-      operationId: listProgramResults
-      tags: [Program Results]
+      summary: List decisions
+      operationId: listDecisions
+      tags: [Decisions]
       parameters:
         - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam'
         - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam'
       responses:
         '200':
-          description: Program-level eligibility results for this determination.
+          description: Per-program eligibility decisions for this determination.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProgramResultList'
+                $ref: '#/components/schemas/DecisionList'
         '404':
           $ref: '../../common/components/responses.yaml#/NotFound'
         '500':
           $ref: '../../common/components/responses.yaml#/InternalError'
 
-  /determinations/{determinationId}/programs/{programResultId}:
+  /determinations/{determinationId}/decisions/{decisionId}:
     parameters:
       - $ref: '#/components/parameters/DeterminationIdParam'
-      - $ref: '#/components/parameters/ProgramResultIdParam'
+      - $ref: '#/components/parameters/DecisionIdParam'
     get:
-      summary: Get a program result
-      operationId: getProgramResult
-      tags: [Program Results]
+      summary: Get a decision
+      operationId: getDecision
+      tags: [Decisions]
       responses:
         '200':
-          description: Program result retrieved successfully.
+          description: Decision retrieved successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProgramResult'
+                $ref: '#/components/schemas/Decision'
         '404':
           $ref: '../../common/components/responses.yaml#/NotFound'
         '500':
@@ -165,11 +165,11 @@ components:
         format: uuid
       example: 00000000-0000-0000-0001-000000000001
 
-    ProgramResultIdParam:
-      name: programResultId
+    DecisionIdParam:
+      name: decisionId
       in: path
       required: true
-      description: Unique identifier of the program result.
+      description: Unique identifier of the decision.
       schema:
         type: string
         format: uuid
@@ -188,6 +188,7 @@ components:
           description: The intake application this determination is for.
           # x-relationship — cross-domain link to the intake Application resource.
           x-relationship:
+            type: fk
             domain: intake
             resource: Application
             style: links-only
@@ -206,6 +207,7 @@ components:
           format: uuid
           description: The intake application this determination is for.
           x-relationship:
+            type: fk
             domain: intake
             resource: Application
             style: links-only
@@ -271,9 +273,9 @@ components:
           type: boolean
 
     # ---------------------------------------------------------------------------
-    # ProgramResult (sub-resource of Determination)
+    # Decision (sub-resource of Determination)
     # ---------------------------------------------------------------------------
-    ProgramResult:
+    Decision:
       type: object
       required: [id, determinationId, program, eligible, createdAt, updatedAt]
       properties:
@@ -285,22 +287,23 @@ components:
         determinationId:
           type: string
           format: uuid
-          description: The determination this result belongs to.
-          # x-relationship — intra-domain link from result back to its parent determination.
+          description: The determination this decision belongs to.
+          # x-relationship — intra-domain link from decision back to its parent determination.
           x-relationship:
+            type: fk
             resource: Determination
             style: links-only
         program:
           type: string
           enum: [snap, medicaid, chip, tanf]
-          description: The benefit program this result applies to.
+          description: The benefit program this decision applies to.
         eligible:
           type: boolean
           description: Whether the household is eligible for this program.
         reason:
           type: string
           nullable: true
-          description: Explanation of the eligibility determination.
+          description: Explanation of the eligibility decision.
         benefitAmount:
           type: number
           minimum: 0
@@ -315,14 +318,14 @@ components:
           format: date-time
           readOnly: true
 
-    ProgramResultList:
+    DecisionList:
       type: object
       required: [items, total, limit, offset]
       properties:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/ProgramResult'
+            $ref: '#/components/schemas/Decision'
         total:
           type: integer
           minimum: 0

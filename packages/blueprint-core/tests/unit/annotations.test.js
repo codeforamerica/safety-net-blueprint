@@ -18,7 +18,7 @@ test('loadAnnotations', async (t) => {
     const dir = createTmpDir();
     try {
       const result = loadAnnotations('nonexistent', dir);
-      assert.deepStrictEqual(result, { schema: {}, operations: {}, events: {}, facts: {} });
+      assert.deepStrictEqual(result, { schema: {}, operations: {}, events: {}, facts: {}, registryTypes: new Set() });
     } finally {
       rmSync(dir, { recursive: true });
     }
@@ -157,7 +157,7 @@ test('loadAnnotations', async (t) => {
       domain: 'workflow',
     });
     const result = loadAnnotations('intake', fileMap);
-    assert.deepStrictEqual(result, { schema: {}, operations: {}, events: {}, facts: {} });
+    assert.deepStrictEqual(result, { schema: {}, operations: {}, events: {}, facts: {}, registryTypes: new Set(['policies']) });
   });
 });
 

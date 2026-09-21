@@ -1,10 +1,10 @@
 /**
- * Unit tests for shared internal utilities (src/utils.js).
+ * Unit tests for shared OpenAPI utilities (src/openapi/utils.js).
  */
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractPathParams, buildParameterIndex } from '../../src/utils.js';
+import { extractPathParams, buildParameterIndex, inferTagFromPath, buildPathEntry } from '../../src/openapi/utils.js';
 
 // ---------------------------------------------------------------------------
 // extractPathParams
@@ -59,5 +59,73 @@ describe('buildParameterIndex', () => {
       { relativePath: 'b.yaml', spec: spec2 }
     ]);
     assert.equal(index.get('applicationId'), '#/components/parameters/ApplicationIdParam');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// inferTagFromPath
+// ---------------------------------------------------------------------------
+
+describe('inferTagFromPath', () => {
+  test('returns title-cased first static segment', () => {
+    assert.equal(inferTagFromPath('/applications/{applicationId}/summary'), 'Applications');
+  });
+
+  test('converts kebab-case to title case', () => {
+    assert.equal(inferTagFromPath('/case-workers/{id}/tasks'), 'Case Workers');
+  });
+
+  test('skips leading param segments', () => {
+    assert.equal(inferTagFromPath('/{id}/sub-resource'), 'Sub Resource');
+  });
+
+  test('returns Other for empty path', () => {
+    assert.equal(inferTagFromPath('/'), 'Other');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildPathEntry
+// ---------------------------------------------------------------------------
+
+describe('buildPathEntry', () => {
+  const op = { summary: 'Do thing', operationId: 'doThing', responses: {} };
+
+  test('injects tag inferred from path', () => {
+    const entry = buildPathEntry('/applications/{id}/summary', 'get', op);
+    assert.deepEqual(entry.get.tags, ['Applications']);
+  });
+
+  test('resolves path params via index', () => {
+    const paramIndex = new Map([['id', '#/components/parameters/ApplicationIdParam']]);
+    const entry = buildPathEntry('/applications/{id}/summary', 'get', op, paramIndex);
+    assert.deepEqual(entry.parameters, [{ $ref: '#/components/parameters/ApplicationIdParam' }]);
+  });
+
+  test('falls back to inline param when not in index', () => {
+    const entry = buildPathEntry('/applications/{id}/summary', 'get', op);
+    assert.deepEqual(entry.parameters, [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }]);
+  });
+
+  test('omits parameters key when path has no params', () => {
+    const entry = buildPathEntry('/applications', 'get', op);
+    assert.equal(entry.parameters, undefined);
+  });
+
+  test('places operation under correct method key', () => {
+    const entry = buildPathEntry('/applications', 'post', op);
+    assert.ok(entry.post);
+    assert.equal(entry.get, undefined);
+  });
+
+  test('injects x-relationship when provided', () => {
+    const xRel = { type: 'ruleset', domain: 'eligibility', id: 'expeditedSnap' };
+    const entry = buildPathEntry('/applications', 'post', op, new Map(), xRel);
+    assert.deepEqual(entry.post['x-relationship'], xRel);
+  });
+
+  test('omits x-relationship when not provided', () => {
+    const entry = buildPathEntry('/applications', 'post', op);
+    assert.equal(entry.post['x-relationship'], undefined);
   });
 });

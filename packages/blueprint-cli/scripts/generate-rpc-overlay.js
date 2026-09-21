@@ -15,6 +15,7 @@ import { join, resolve, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { realpathSync } from 'fs';
 import yaml from 'js-yaml';
+import { buildParameterIndex, buildPathEntry, extractRefName } from '@codeforamerica/blueprint-core/openapi';
 
 // =============================================================================
 // Argument Parsing
@@ -158,7 +159,7 @@ export function extractItemEndpoint(specsDir, apiSpecFile, objectName) {
   }
   const result = extractItemEndpointFromSpec(spec, objectName);
   if (!result) return null;
-  return { ...result, relativePath };
+  return { ...result, relativePath, spec };
 }
 
 // =============================================================================
@@ -216,7 +217,7 @@ function rewriteLocalDefsRefs(node, collected) {
   }
   for (const [key, value] of Object.entries(node)) {
     if (key === '$ref' && typeof value === 'string' && value.startsWith('#/$defs/')) {
-      const name = value.slice('#/$defs/'.length);
+      const name = extractRefName(value);
       collected.add(name);
       node[key] = `#/components/schemas/${name}`;
     } else {
@@ -269,8 +270,10 @@ function hoistDefs(defs, rootNames, domain) {
  * @returns {Object} Overlay document
  */
 export function generateOverlay(stateMachine, endpointInfo) {
-  const { itemPath, paramRefs, tag, schemaRef, relativePath } = endpointInfo;
+  const { itemPath, schemaRef, relativePath, spec } = endpointInfo;
   const apiSpecRef = relativePath || stateMachine.apiSpec;
+
+  const paramIndex = spec ? buildParameterIndex([{ relativePath: apiSpecRef, spec }]) : new Map();
 
   const pathsUpdate = {};
   const seenIds = new Set();
@@ -292,16 +295,8 @@ export function generateOverlay(stateMachine, endpointInfo) {
       const operation = {
         summary: `${transition.id.charAt(0).toUpperCase() + transition.id.slice(1).replace(/-/g, ' ')} ${objectName.toLowerCase()}`,
         description: transition.description || `Trigger the ${transition.id} transition (${fromLabel} → ${to}).`,
-        operationId
+        operationId,
       };
-
-      if (tag) {
-        operation.tags = [tag];
-      }
-
-      if (paramRefs.length > 0) {
-        operation.parameters = paramRefs.map(ref => ref.$ref ? { $ref: ref.$ref } : ref);
-      }
 
       const requestBody = buildRequestBody(transition.schema?.request || null);
       if (requestBody) {
@@ -323,7 +318,11 @@ export function generateOverlay(stateMachine, endpointInfo) {
         '500': { $ref: './components/responses.yaml#/InternalError' }
       };
 
-      pathsUpdate[rpcPath] = { post: operation };
+      pathsUpdate[rpcPath] = buildPathEntry(rpcPath, 'post', operation, paramIndex, {
+        type: 'state-machine-action',
+        domain: stateMachine.domain,
+        id: transition.id,
+      });
     }
   }
 

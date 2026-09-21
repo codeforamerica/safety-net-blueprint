@@ -65,6 +65,7 @@
     [id]:target { scroll-margin-top: 1rem; }
     tr[id]:target td { animation: target-fade 4s ease forwards; }
     .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
 
     /* Permalink anchors — hidden until parent is hovered */
     .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
@@ -104,7 +105,7 @@
       </div>
     <div class="nav-section">
         <div class="nav-section-label">Types</div>
-        <a href="#type-ApplicationWritable" class="nav-link">ApplicationWritable</a><a href="#type-Application" class="nav-link">Application</a><a href="#type-ApplicationCreate" class="nav-link">ApplicationCreate</a><a href="#type-ApplicationUpdate" class="nav-link">ApplicationUpdate</a><a href="#type-ApplicationList" class="nav-link">ApplicationList</a><a href="#type-ApplicationMemberWritable" class="nav-link">ApplicationMemberWritable</a><a href="#type-ApplicationMember" class="nav-link">ApplicationMember</a><a href="#type-ApplicationMemberCreate" class="nav-link">ApplicationMemberCreate</a><a href="#type-ApplicationMemberUpdate" class="nav-link">ApplicationMemberUpdate</a><a href="#type-ApplicationMemberList" class="nav-link">ApplicationMemberList</a><a href="#type-CloseRequest" class="nav-link">CloseRequest</a><a href="#type-InterviewPromptsRequest" class="nav-link">InterviewPromptsRequest</a><a href="#type-ApplicationWritable2" class="nav-link">ApplicationWritable2</a><a href="#type-ApplicationListWritable" class="nav-link">ApplicationListWritable</a><a href="#type-ApplicationMemberWritable2" class="nav-link">ApplicationMemberWritable2</a><a href="#type-ApplicationMemberListWritable" class="nav-link">ApplicationMemberListWritable</a>
+        <a href="#type-ApplicationWritable" class="nav-link">ApplicationWritable</a><a href="#type-Application" class="nav-link">Application</a><a href="#type-ApplicationCreate" class="nav-link">ApplicationCreate</a><a href="#type-ApplicationUpdate" class="nav-link">ApplicationUpdate</a><a href="#type-ApplicationList" class="nav-link">ApplicationList</a><a href="#type-ApplicationMemberWritable" class="nav-link">ApplicationMemberWritable</a><a href="#type-ApplicationMember" class="nav-link">ApplicationMember</a><a href="#type-ApplicationMemberCreate" class="nav-link">ApplicationMemberCreate</a><a href="#type-ApplicationMemberUpdate" class="nav-link">ApplicationMemberUpdate</a><a href="#type-ApplicationMemberList" class="nav-link">ApplicationMemberList</a><a href="#type-EmailNotification" class="nav-link">EmailNotification</a><a href="#type-ElectronicVerification" class="nav-link">ElectronicVerification</a><a href="#type-MailNotification" class="nav-link">MailNotification</a><a href="#type-ManualVerification" class="nav-link">ManualVerification</a><a href="#type-SmsNotification" class="nav-link">SmsNotification</a><a href="#type-CloseRequest" class="nav-link">CloseRequest</a><a href="#type-InterviewPromptsRequest" class="nav-link">InterviewPromptsRequest</a><a href="#type-ApplicationWritable2" class="nav-link">ApplicationWritable2</a><a href="#type-ApplicationListWritable" class="nav-link">ApplicationListWritable</a><a href="#type-ApplicationMemberWritable2" class="nav-link">ApplicationMemberWritable2</a><a href="#type-ApplicationMemberListWritable" class="nav-link">ApplicationMemberListWritable</a>
       </div>
       </div>
     </nav>
@@ -117,7 +118,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">listApplications<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">You can provide a client instance returned by `createClient()` instead of</span>
-      <a href="../api-reference/intake.html#op-get-applications" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/intake.html#op-get-applications" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-listApplications" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -167,7 +168,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">createApplication<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Create an application</span>
-      <a href="../api-reference/intake.html#op-post-applications" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/intake.html#op-post-applications" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-createApplication" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -190,7 +191,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">deleteApplication<span style="color:#aaa;font-weight:400;">(applicationId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Delete a draft application</span>
-      <a href="../api-reference/intake.html#op-delete-applications-applicationId" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/intake.html#op-delete-applications-applicationId" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-deleteApplication" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -213,7 +214,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getApplication<span style="color:#aaa;font-weight:400;">(applicationId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get an application</span>
-      <a href="../api-reference/intake.html#op-get-applications-applicationId" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/intake.html#op-get-applications-applicationId" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-getApplication" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -236,7 +237,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">updateApplication<span style="color:#aaa;font-weight:400;">(applicationId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Update an application</span>
-      <a href="../api-reference/intake.html#op-patch-applications-applicationId" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/intake.html#op-patch-applications-applicationId" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-updateApplication" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -270,13 +271,13 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">listApplicationMembers<span style="color:#aaa;font-weight:400;">(applicationId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">List household members</span>
-      <a href="../api-reference/intake.html#op-get-applications-applicationId-members" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/intake.html#op-get-applications-applicationId-members" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-listApplicationMembers" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">intake.listApplicationMembers({
   path: { applicationId: string },
-  query: { limit?: number, offset?: number },
+  query: { q?: string, limit?: number, offset?: number, sort?: string },
 })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
@@ -287,6 +288,11 @@
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
     </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><a href="search-helpers.html" style="font-family:monospace;font-weight:600;color:#5650BE;text-decoration:none;" title="See Search Helpers">q <span style="font-size:10px;font-weight:400;">search →</span></a></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
+    </tr><tr>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">limit</span></td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">number</span></td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
@@ -294,6 +300,11 @@
     </tr><tr>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">offset</span></td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">number</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">sort</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
     </tr></tbody></table>
@@ -306,7 +317,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">createApplicationMember<span style="color:#aaa;font-weight:400;">(applicationId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Add a household member</span>
-      <a href="../api-reference/intake.html#op-post-applications-applicationId-members" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/intake.html#op-post-applications-applicationId-members" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-createApplicationMember" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -337,7 +348,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">deleteApplicationMember<span style="color:#aaa;font-weight:400;">(applicationId, memberId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Remove a household member</span>
-      <a href="../api-reference/intake.html#op-delete-applications-applicationId-members-memberId" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/intake.html#op-delete-applications-applicationId-members-memberId" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-deleteApplicationMember" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -367,7 +378,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getApplicationMember<span style="color:#aaa;font-weight:400;">(applicationId, memberId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get a household member</span>
-      <a href="../api-reference/intake.html#op-get-applications-applicationId-members-memberId" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/intake.html#op-get-applications-applicationId-members-memberId" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-getApplicationMember" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -397,7 +408,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">updateApplicationMember<span style="color:#aaa;font-weight:400;">(applicationId, memberId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Update a household member</span>
-      <a href="../api-reference/intake.html#op-patch-applications-applicationId-members-memberId" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/intake.html#op-patch-applications-applicationId-members-memberId" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-updateApplicationMember" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -436,7 +447,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">submitApplication<span style="color:#aaa;font-weight:400;">(applicationId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Submit application</span>
-      <a href="../api-reference/intake.html#op-post-applications-applicationId-submit" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/intake.html#op-post-applications-applicationId-submit" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-submitApplication" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -462,7 +473,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">openApplication<span style="color:#aaa;font-weight:400;">(applicationId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Open application</span>
-      <a href="../api-reference/intake.html#op-post-applications-applicationId-open" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/intake.html#op-post-applications-applicationId-open" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-openApplication" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -488,7 +499,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">closeApplication<span style="color:#aaa;font-weight:400;">(applicationId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Close application</span>
-      <a href="../api-reference/intake.html#op-post-applications-applicationId-close" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/intake.html#op-post-applications-applicationId-close" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-closeApplication" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -522,7 +533,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">withdrawApplication<span style="color:#aaa;font-weight:400;">(applicationId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Withdraw application</span>
-      <a href="../api-reference/intake.html#op-post-applications-applicationId-withdraw" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/intake.html#op-post-applications-applicationId-withdraw" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-withdrawApplication" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -548,7 +559,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getApplicationSummary<span style="color:#aaa;font-weight:400;">(applicationId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get applicationSummary</span>
-      <a href="../api-reference/intake.html#op-get-applications-applicationId-summary" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/intake.html#op-get-applications-applicationId-summary" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-getApplicationSummary" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -574,7 +585,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">evaluateInterviewPrompts<span style="color:#aaa;font-weight:400;">(applicationId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Evaluate interviewPrompts</span>
-      <a href="../api-reference/intake.html#op-post-intake-applications-applicationId-evaluate-interview-prompts" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/intake.html#op-post-applications-applicationId-evaluate-interview-prompts" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-evaluateInterviewPrompts" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -625,18 +636,18 @@ intake.Annotations.events['event.type']      // event annotations</pre>
   </details>
 </div>
       </section><section id="section-types" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (16)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (21)</h2>
         <div id="type-ApplicationWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ApplicationWritable</code>
-      <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <span style="font-size:11px;color:#aaa;">6 fields</span>
       <a href="#type-ApplicationWritable" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ApplicationWritable</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">programsApplied</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">array[enum: &quot;snap&quot;, &quot;medicaid&quot;, &quot;chip&quot;, &quot;tanf&quot;]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">channel</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;online&quot;, &quot;phone&quot;, &quot;in_person&quot;, &quot;mail&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">address</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">contactInfo</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">county_code</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">programsApplied</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">array[enum: &quot;snap&quot;, &quot;medicaid&quot;, &quot;chip&quot;, &quot;tanf&quot;]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">channel</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;online&quot;, &quot;phone&quot;, &quot;in_person&quot;, &quot;mail&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">address</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">contactInfo</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">labels</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">countyCode</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -650,7 +661,7 @@ intake.Annotations.events['event.type']      // event annotations</pre>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">Application</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">status</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;draft&quot;, &quot;submitted&quot;, &quot;under_review&quot;, &quot;withdrawn&quot;, &quot;closed&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">programsApplied</span><span style="color:#888;">:</span> <span style="color:#b5490a;">array[enum: &quot;snap&quot;, &quot;medicaid&quot;, &quot;chip&quot;, &quot;tanf&quot;]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">channel</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;online&quot;, &quot;phone&quot;, &quot;in_person&quot;, &quot;mail&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">slaTypeCode</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;snap_standard&quot;, &quot;medicaid_standard&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">address</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">contactInfo</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">programsApplied</span><span style="color:#888;">:</span> <span style="color:#b5490a;">array[enum: &quot;snap&quot;, &quot;medicaid&quot;, &quot;chip&quot;, &quot;tanf&quot;]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">channel</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;online&quot;, &quot;phone&quot;, &quot;in_person&quot;, &quot;mail&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">address</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">contactInfo</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">labels</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">countyCode</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -659,12 +670,12 @@ intake.Annotations.events['event.type']      // event annotations</pre>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ApplicationCreate</code>
-      <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <span style="font-size:11px;color:#aaa;">6 fields</span>
       <a href="#type-ApplicationCreate" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ApplicationCreate</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">programsApplied</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">array[enum: &quot;snap&quot;, &quot;medicaid&quot;, &quot;chip&quot;, &quot;tanf&quot;]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">channel</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;online&quot;, &quot;phone&quot;, &quot;in_person&quot;, &quot;mail&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">address</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">contactInfo</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">county_code</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">programsApplied</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">array[enum: &quot;snap&quot;, &quot;medicaid&quot;, &quot;chip&quot;, &quot;tanf&quot;]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">channel</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;online&quot;, &quot;phone&quot;, &quot;in_person&quot;, &quot;mail&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">address</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">contactInfo</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">labels</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">countyCode</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -673,12 +684,12 @@ intake.Annotations.events['event.type']      // event annotations</pre>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ApplicationUpdate</code>
-      <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <span style="font-size:11px;color:#aaa;">6 fields</span>
       <a href="#type-ApplicationUpdate" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ApplicationUpdate</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">programsApplied</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">array[enum: &quot;snap&quot;, &quot;medicaid&quot;, &quot;chip&quot;, &quot;tanf&quot;]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">channel</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;online&quot;, &quot;phone&quot;, &quot;in_person&quot;, &quot;mail&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">address</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">contactInfo</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">county_code</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">programsApplied</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">array[enum: &quot;snap&quot;, &quot;medicaid&quot;, &quot;chip&quot;, &quot;tanf&quot;]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">channel</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;online&quot;, &quot;phone&quot;, &quot;in_person&quot;, &quot;mail&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">address</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">contactInfo</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">labels</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">countyCode</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -701,12 +712,12 @@ intake.Annotations.events['event.type']      // event annotations</pre>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ApplicationMemberWritable</code>
-      <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <span style="font-size:11px;color:#aaa;">7 fields</span>
       <a href="#type-ApplicationMemberWritable" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ApplicationMemberWritable</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">firstName</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">lastName</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">dateOfBirth</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">relationship</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum (6 values)</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">incomeSource</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">firstName</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">lastName</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">dateOfBirth</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">relationship</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum (6 values)</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">incomeSource</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">notificationPreference</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">verificationEvidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -715,12 +726,12 @@ intake.Annotations.events['event.type']      // event annotations</pre>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ApplicationMember</code>
-      <span style="font-size:11px;color:#aaa;">6 fields</span>
+      <span style="font-size:11px;color:#aaa;">7 fields</span>
       <a href="#type-ApplicationMember" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ApplicationMember</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">applicationId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">firstName</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">lastName</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">dateOfBirth</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">relationship</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum (6 values)</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">incomeSource</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">firstName</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">lastName</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">dateOfBirth</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">relationship</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum (6 values)</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">incomeSource</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">notificationPreference</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">verificationEvidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -729,12 +740,12 @@ intake.Annotations.events['event.type']      // event annotations</pre>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ApplicationMemberCreate</code>
-      <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <span style="font-size:11px;color:#aaa;">7 fields</span>
       <a href="#type-ApplicationMemberCreate" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ApplicationMemberCreate</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">firstName</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">lastName</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">dateOfBirth</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">relationship</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum (6 values)</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">incomeSource</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">firstName</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">lastName</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">dateOfBirth</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">relationship</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum (6 values)</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">incomeSource</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">notificationPreference</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">verificationEvidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -743,12 +754,12 @@ intake.Annotations.events['event.type']      // event annotations</pre>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ApplicationMemberUpdate</code>
-      <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <span style="font-size:11px;color:#aaa;">7 fields</span>
       <a href="#type-ApplicationMemberUpdate" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ApplicationMemberUpdate</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">firstName</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">lastName</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">dateOfBirth</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">relationship</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum (6 values)</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">incomeSource</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">firstName</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">lastName</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">dateOfBirth</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">relationship</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum (6 values)</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">incomeSource</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">notificationPreference</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">verificationEvidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -763,6 +774,76 @@ intake.Annotations.events['event.type']      // event annotations</pre>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ApplicationMemberList</span> <span style="color:#666;">{</span></div>
       <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">items</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">?:</span> <span style="color:#006152;">boolean</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-EmailNotification" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">EmailNotification</code>
+      <span style="font-size:11px;color:#aaa;">2 fields</span>
+      <a href="#type-EmailNotification" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">EmailNotification</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">channel</span><span style="color:#888;">:</span> <span style="color:#b5490a;">&quot;email&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">address</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-ElectronicVerification" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ElectronicVerification</code>
+      <span style="font-size:11px;color:#aaa;">3 fields</span>
+      <a href="#type-ElectronicVerification" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ElectronicVerification</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">source</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">matchCode</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">verifiedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-MailNotification" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">MailNotification</code>
+      <span style="font-size:11px;color:#aaa;">2 fields</span>
+      <a href="#type-MailNotification" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">MailNotification</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">channel</span><span style="color:#888;">:</span> <span style="color:#b5490a;">&quot;mail&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">address</span><span style="color:#888;">:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-ManualVerification" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ManualVerification</code>
+      <span style="font-size:11px;color:#aaa;">3 fields</span>
+      <a href="#type-ManualVerification" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ManualVerification</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">verifiedBy</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">verifiedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">notes</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-SmsNotification" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">SmsNotification</code>
+      <span style="font-size:11px;color:#aaa;">2 fields</span>
+      <a href="#type-SmsNotification" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">SmsNotification</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">channel</span><span style="color:#888;">:</span> <span style="color:#b5490a;">&quot;sms&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">phone</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -799,12 +880,12 @@ intake.Annotations.events['event.type']      // event annotations</pre>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ApplicationWritable2</code>
-      <span style="font-size:11px;color:#aaa;">4 fields</span>
+      <span style="font-size:11px;color:#aaa;">6 fields</span>
       <a href="#type-ApplicationWritable2" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ApplicationWritable2</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">programsApplied</span><span style="color:#888;">:</span> <span style="color:#b5490a;">array[enum: &quot;snap&quot;, &quot;medicaid&quot;, &quot;chip&quot;, &quot;tanf&quot;]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">channel</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;online&quot;, &quot;phone&quot;, &quot;in_person&quot;, &quot;mail&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">address</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">contactInfo</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">programsApplied</span><span style="color:#888;">:</span> <span style="color:#b5490a;">array[enum: &quot;snap&quot;, &quot;medicaid&quot;, &quot;chip&quot;, &quot;tanf&quot;]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">channel</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;online&quot;, &quot;phone&quot;, &quot;in_person&quot;, &quot;mail&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">address</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">contactInfo</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">labels</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">countyCode</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -827,12 +908,12 @@ intake.Annotations.events['event.type']      // event annotations</pre>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <code style="font-size:13px;font-weight:700;color:#2B1A78;">ApplicationMemberWritable2</code>
-      <span style="font-size:11px;color:#aaa;">6 fields</span>
+      <span style="font-size:11px;color:#aaa;">7 fields</span>
       <a href="#type-ApplicationMemberWritable2" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ApplicationMemberWritable2</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">applicationId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">firstName</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">lastName</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">dateOfBirth</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">relationship</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum (6 values)</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">incomeSource</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">firstName</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">lastName</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">dateOfBirth</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">relationship</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum (6 values)</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">incomeSource</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">notificationPreference</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">verificationEvidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">object</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -981,6 +1062,22 @@ intake.Annotations.events['event.type']      // event annotations</pre>
           });
         }
       });
+    })();
+    // Fragment navigation — body has overflow:hidden so the browser cannot scroll to
+    // anchors natively. Read the hash and scroll #content to the target element instead.
+    (function () {
+      function scrollToHash() {
+        const hash = window.location.hash;
+        if (!hash) return;
+        const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+        if (!el) return;
+        const content = document.getElementById('content');
+        if (!content) { el.scrollIntoView(); return; }
+        const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top + content.scrollTop - 16;
+        content.scrollTop = top;
+      }
+      document.addEventListener('DOMContentLoaded', scrollToHash);
+      window.addEventListener('hashchange', scrollToHash);
     })();
     
   </script>

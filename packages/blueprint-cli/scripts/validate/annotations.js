@@ -14,27 +14,13 @@
  *   node scripts/validate-annotations.js --spec=.
  */
 
-import { readFileSync, readdirSync, statSync } from 'fs';
-import { resolve, join, relative, isAbsolute, basename } from 'path';
+import { readFileSync } from 'fs';
+import { resolve, relative, isAbsolute, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import yaml from 'js-yaml';
-import { resolveRef, collectTopLevelProperties, getPropertyAtPath, resolveSchemaRefs } from '@codeforamerica/blueprint-core/state-machines';
-import { detectType } from '@codeforamerica/blueprint-core/openapi';
-
-function walkForPattern(dir, suffix) {
-  const results = [];
-  let entries;
-  try { entries = readdirSync(dir); } catch { return results; }
-  for (const entry of entries) {
-    if (entry.startsWith('.') || entry === 'node_modules') continue;
-    const fullPath = join(dir, entry);
-    const stat = statSync(fullPath);
-    if (stat.isDirectory()) results.push(...walkForPattern(fullPath, suffix));
-    else if (stat.isFile() && entry.endsWith(suffix)) results.push(fullPath);
-  }
-  return results;
-}
+import { resolveRef, resolveSchemaRefs, collectTopLevelProperties, getPropertyAtPath } from '@codeforamerica/blueprint-core/json-schema';
+import { loadContractFiles } from '@codeforamerica/blueprint-core/openapi';
 
 
 
@@ -55,89 +41,71 @@ function parseArgs() {
 }
 
 /**
- * Build a resource schema map from all OpenAPI specs.
- * Returns: Map<resourceName (lowercase singular), { spec, schema }>
- *
- * Discovers resource names from:
- *   - schemas named like Application, ApplicationMember → application, application-member
- *   - the x-domain + schema name heuristic
+ * Build a map of domain → loaded OpenAPI spec from all OpenAPI specs in a directory.
+ * Returns: Map<domain, { spec, filePath }>
  */
-// Convert kebab-case path segment to camelCase (e.g. "tax-filers" → "taxFilers")
-function kebabToCamel(str) {
-  return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+export function buildDomainSpecMap(specsDir) {
+  const map = new Map();
+
+  for (const [filePath, { content: spec, type }] of loadContractFiles(specsDir)) {
+    if (type !== 'openapi') continue;
+    const domain = spec?.info?.['x-domain'];
+    if (domain && !map.has(domain)) map.set(domain, { spec, filePath });
+  }
+
+  return map;
 }
 
-// Register a schema under a key if not already present
-function registerSchema(map, key, entry) {
-  if (!map.has(key)) map.set(key, entry);
-}
+/**
+ * Build a map of camelCase sub-resource segment → resolved schema for a given spec.
+ * Scans API paths for sub-resource endpoints (paths with a parent param segment)
+ * and registers the GET response schema under the camelCase path segment name.
+ *
+ * Used as a fallback in validateAnnotationPath for annotation keys like
+ * "application.householdInfo.utilitiesIncludedInRent" where "householdInfo"
+ * is a sub-resource (served at /applications/{id}/household-info) rather than
+ * a direct property of the Application schema.
+ *
+ * @param {object} spec
+ * @param {string} specFilePath
+ * @returns {Map<string, object>} camelCaseSegment → resolvedSchema
+ */
+function buildSubResourceSchemaMap(spec, specFilePath) {
+  const map = new Map();
+  const schemas = spec?.components?.schemas ?? {};
 
-function resolveGetSchema(pathItem, spec, specFilePath, components) {
-  const schemaRef = pathItem.get?.responses?.['200']?.content?.['application/json']?.schema;
-  if (!schemaRef?.$ref) return null;
-  const match = schemaRef.$ref.match(/^#\/components\/schemas\/(.+)$/);
-  if (!match) return null;
-  const rawSchema = components?.[match[1]];
-  if (!rawSchema) return null;
-  return { schema: resolveSchemaRefs(rawSchema, { spec, specFilePath }), spec };
-}
+  function getSchemaForRef(ref) {
+    const name = typeof ref === 'string' ? ref.match(/^#\/components\/schemas\/(.+)$/)?.[1] : null;
+    const raw = name ? schemas[name] : null;
+    return raw ? resolveSchemaRefs(raw, { spec, specFilePath }) : null;
+  }
 
-export function buildResourceSchemaMap(specsDir) {
-  const map = new Map(); // resourceKey → { spec, schema }
+  for (const [path, pathItem] of Object.entries(spec?.paths ?? {})) {
+    const segments = path.split('/').filter(Boolean);
+    const lastSeg = segments[segments.length - 1];
+    const hasParentParam = segments.slice(0, -1).some(s => s.startsWith('{'));
+    if (!hasParentParam) continue; // skip top-level paths
 
-  for (const specFilePath of walkForPattern(specsDir, '-openapi.yaml')) {
-    let spec;
-    try { spec = yaml.load(readFileSync(specFilePath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA }); } catch { continue; }
-
-    if (!spec?.components?.schemas) continue;
-    const components = spec.components.schemas;
-
-    const allPaths = Object.keys(spec.paths || {});
-
-    for (const [path, pathItem] of Object.entries(spec.paths || {})) {
-      const segments = path.split('/').filter(Boolean);
-      const lastSeg = segments[segments.length - 1];
-      const nonParamSegs = segments.filter(s => !s.startsWith('{'));
-      if (nonParamSegs.length === 0) continue;
-      const lastNonParamSeg = nonParamSegs[nonParamSegs.length - 1];
-      const hasParentParam = segments.slice(0, -1).some(s => s.startsWith('{'));
-
-      if (lastSeg.startsWith('{')) {
-        // Detail endpoint: register under singular kebab key (e.g. "tax-filer")
-        // and camelCase plural key (e.g. "taxFilers") for annotation path traversal
-        const singularKey = lastNonParamSeg.replace(/s$/, '');
-        const camelPluralKey = kebabToCamel(lastNonParamSeg);
-        const entry = resolveGetSchema(pathItem, spec, specFilePath, components);
-        if (entry) {
-          registerSchema(map, singularKey, entry);
-          registerSchema(map, camelPluralKey, entry);
-        }
-      } else if (hasParentParam) {
-        // Might be a singleton sub-resource (e.g. /applications/{id}/household-info)
-        // or a collection list (e.g. /applications/{id}/tax-filers).
-        // Only register singletons; collection lists have a companion detail path.
-        const hasDetailCompanion = allPaths.some(
-          p => p.startsWith(path + '/') && /^\{[^}]+\}$/.test(p.slice(path.length + 1))
-        );
-        if (!hasDetailCompanion) {
-          const camelKey = kebabToCamel(lastSeg);
-          const entry = resolveGetSchema(pathItem, spec, specFilePath, components);
-          if (entry) registerSchema(map, camelKey, entry);
-        }
+    if (lastSeg.startsWith('{')) {
+      // Detail endpoint (e.g. /applications/{id}/tax-filers/{taxFilerId}).
+      // Register the item schema under both plural camelCase ("taxFilers") and
+      // singular ("taxFiler") keys. Item schema takes priority over collection list schema.
+      const collectionSeg = segments[segments.length - 2];
+      if (!collectionSeg || collectionSeg.startsWith('{')) continue;
+      const camelKey = collectionSeg.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+      const singularKey = camelKey.replace(/s$/, ''); // naive singularization
+      const schema = getSchemaForRef(pathItem.get?.responses?.['200']?.content?.['application/json']?.schema?.$ref);
+      if (schema) {
+        map.set(camelKey, schema); // overwrite list schema if present
+        if (singularKey !== camelKey && !map.has(singularKey)) map.set(singularKey, schema);
       }
-      // else: top-level list/collection endpoint — skip (list schema ≠ resource schema)
-    }
-
-    // Schema name heuristic fills in anything not covered by paths:
-    // Application → "application", ApplicationMember → "application-member"
-    for (const [name, rawSchema] of Object.entries(components)) {
-      const resourceKey = name
-        .replace(/([A-Z])/g, (m, c, i) => (i > 0 ? '-' : '') + c.toLowerCase())
-        .replace(/^-/, '');
-      if (!map.has(resourceKey)) {
-        const schema = resolveSchemaRefs(rawSchema, { spec, specFilePath });
-        map.set(resourceKey, { spec, schema });
-      }
+    } else {
+      // Singleton sub-resource or collection without a detail companion.
+      // Only register if not already mapped (item schema from detail endpoint takes priority).
+      const camelKey = lastSeg.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+      if (map.has(camelKey)) continue;
+      const schema = getSchemaForRef(pathItem.get?.responses?.['200']?.content?.['application/json']?.schema?.$ref);
+      if (schema) map.set(camelKey, schema);
     }
   }
 
@@ -152,11 +120,9 @@ export function buildResourceSchemaMap(specsDir) {
 export function buildStateMachineActionIndex(specsDir) {
   const index = new Set();
 
-  for (const filePath of walkForPattern(specsDir, '-state-machine.yaml')) {
-    let doc;
-    try { doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); } catch { continue; }
-
-    for (const machine of doc?.machines || []) {
+  for (const { content, type } of loadContractFiles(specsDir).values()) {
+    if (type !== 'state-machine') continue;
+    for (const machine of content?.machines || []) {
       if (!machine.object) continue;
       const objectKey = machine.object.toLowerCase();
       for (const action of machine.actions || []) {
@@ -189,16 +155,66 @@ export function validateAnnotationOperation(operationKey, actionIndex) {
 export function buildPolicyIndex(specsDir) {
   const index = new Set();
 
-  for (const filePath of walkForPattern(specsDir, '-registry-policies.yaml')) {
-    let doc;
-    try { doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); } catch { continue; }
-
-    for (const policyId of Object.keys(doc?.policies || {})) {
+  for (const { content, type } of loadContractFiles(specsDir).values()) {
+    if (type !== 'policies') continue;
+    for (const policyId of Object.keys(content?.policies || {})) {
       index.add(policyId);
     }
   }
 
   return index;
+}
+
+const ANNOTATION_METADATA_FIELDS = new Set(['$schema', 'version', 'domain']);
+
+/**
+ * Build an index of valid entry IDs from all generic registry files.
+ * Discovers files whose $schema ends with registry-schema.yaml.
+ * Returns: Map<registryType, Set<entryId>>
+ */
+export function buildRegistryIndex(specsDir) {
+  const index = new Map();
+
+  for (const { content, type } of loadContractFiles(specsDir).values()) {
+    if (type !== 'registry') continue;
+    const registryType = content.type;
+    if (!registryType) continue;
+    if (!index.has(registryType)) index.set(registryType, new Set());
+    for (const entryId of Object.keys(content?.entries || {})) {
+      index.get(registryType).add(entryId);
+    }
+  }
+
+  return index;
+}
+
+/**
+ * Validate all registry citations in an annotation document against the registry index.
+ * For each annotation entry, any property whose name matches a known registry type is
+ * treated as an array of entry IDs and validated against that type's index.
+ *
+ * Returns an array of error message strings (empty if all citations are valid).
+ */
+export function validateAnnotationRegistryCitations(annotationDoc, registryIndex) {
+  if (registryIndex.size === 0) return [];
+
+  const errors = [];
+
+  for (const [sectionName, section] of Object.entries(annotationDoc || {})) {
+    if (ANNOTATION_METADATA_FIELDS.has(sectionName)) continue;
+    if (typeof section !== 'object' || Array.isArray(section)) continue;
+    for (const [key, entry] of Object.entries(section)) {
+      for (const [registryType, entryIndex] of registryIndex) {
+        for (const entryId of entry?.[registryType] || []) {
+          if (!entryIndex.has(entryId)) {
+            errors.push(`${registryType} entry "${entryId}" cited at ${sectionName}["${key}"] not found in ${registryType} registry`);
+          }
+        }
+      }
+    }
+  }
+
+  return errors;
 }
 
 /**
@@ -208,8 +224,6 @@ export function buildPolicyIndex(specsDir) {
  *
  * Returns an array of error message strings (empty if all citations are valid).
  */
-const ANNOTATION_METADATA_FIELDS = new Set(['$schema', 'version', 'domain']);
-
 export function validateAnnotationPolicyCitations(annotationDoc, policyIndex) {
   if (policyIndex.size === 0) return []; // no policies loaded — skip
 
@@ -231,61 +245,105 @@ export function validateAnnotationPolicyCitations(annotationDoc, policyIndex) {
 }
 
 /**
- * Validate a single annotation path key against the resource schema map.
- * Path format: "resource.field" or "resource.collection[].field.subfield"
+ * Validate a single annotation schema key against the domain spec map.
  *
- * Returns null on success, or an error message string on failure.
+ * Path format: spec-relative dot-bracket notation.
+ *   - First segment is the camelCase schema name (e.g. "application" → Application)
+ *   - Remaining segments are the field path (e.g. "members[].dateOfBirth")
+ *   - [] denotes array item traversal
+ *
+ * Annotation keys are always written in camelCase (the canonical YAML property
+ * naming convention), regardless of any x-casing configuration in the overlay.
+ * x-casing is a rendering hint for the API surface, not a rename of YAML properties.
+ *
+ * @param {string} pathKey - e.g. "application.members[].dateOfBirth"
+ * @param {Map<string, { spec, filePath }>} domainSpecMap
+ * @param {string|null} annotationDomain - domain declared in the annotation file
+ * @returns {string|null} error message, or null on success
  */
-export function validateAnnotationPath(pathKey, resourceSchemaMap) {
-  // Strip [] array markers
-  const parts = pathKey.replace(/\[\]/g, '').split('.').filter(Boolean);
+export function validateAnnotationPath(pathKey, domainSpecMap, annotationDomain) {
+  if (!pathKey) return `Empty path key`;
 
-  if (parts.length < 1) return `Empty path key`;
+  const dotIndex = pathKey.indexOf('.');
+  const prefix = dotIndex === -1 ? pathKey : pathKey.slice(0, dotIndex);
+  const fieldPath = dotIndex === -1 ? null : pathKey.slice(dotIndex + 1);
 
-  const resourceName = parts[0];
-  let entry = resourceSchemaMap.get(resourceName);
-  if (!entry) {
-    return resourceSchemaMap.size > 0
-      ? `Resource "${resourceName}" not found in any OpenAPI spec`
+  const baseName = prefix.charAt(0).toUpperCase() + prefix.slice(1);
+  // Annotation keys use the base schema name without Request/Response suffixes.
+  // Try exact match first, then common generated suffixes.
+  const candidateNames = [baseName, `${baseName}Response`, `${baseName}Request`];
+
+  // Find the spec and the resolved schema name: prefer the annotation's declared
+  // domain, fall back to any domain that contains one of the candidate names.
+  let specEntry = null;
+  let schemaName = null;
+
+  const tryDomain = (entry) => {
+    for (const name of candidateNames) {
+      if (entry.spec?.components?.schemas?.[name]) return name;
+    }
+    return null;
+  };
+
+  if (annotationDomain) {
+    const domainEntry = domainSpecMap.get(annotationDomain);
+    if (domainEntry) {
+      const found = tryDomain(domainEntry);
+      if (found) { specEntry = domainEntry; schemaName = found; }
+    }
+  }
+
+  if (!specEntry) {
+    for (const entry of domainSpecMap.values()) {
+      const found = tryDomain(entry);
+      if (found) { specEntry = entry; schemaName = found; break; }
+    }
+  }
+
+  if (!specEntry) {
+    return domainSpecMap.size > 0
+      ? `Schema "${baseName}" not found in any OpenAPI spec`
       : null;
   }
 
-  if (parts.length === 1) return null; // Annotating the top-level resource — OK
+  const { spec, filePath: specFilePath } = specEntry;
+  const rawSchema = spec.components?.schemas?.[schemaName];
+  if (!rawSchema) {
+    return `Schema "${baseName}" not found in spec`;
+  }
 
-  let { spec, schema } = entry;
+  if (!fieldPath) return null; // Annotating the top-level schema — OK
 
-  // Walk each segment. collectTopLevelProperties handles allOf/oneOf/anyOf recursively,
-  // which is needed for polymorphic schemas (e.g. health.yaml oneOf variants). If a
-  // segment isn't a property at any level, try it as a sub-resource map key instead.
-  for (let i = 1; i < parts.length; i++) {
-    const part = parts[i];
+  // Resolve external $refs (e.g. ../intake-schema.yaml#/$defs/Application) before
+  // navigating — the generated contracts may still reference intra-domain schema files.
+  const schema = resolveSchemaRefs(rawSchema, { spec, specFilePath });
 
-    // Collect all properties at this schema level, including through combinators
-    const allProps = collectTopLevelProperties(spec, schema);
-    if (allProps.has(part)) {
-      schema = allProps.get(part);
+  // Try direct path navigation first.
+  if (getPropertyAtPath(spec, schema, fieldPath)) return null;
+
+  // Fall back to segment-by-segment walk with sub-resource lookup. This handles
+  // annotation keys like "application.householdInfo.utilitiesIncludedInRent" where
+  // "householdInfo" is a sub-resource (at /applications/{id}/household-info) rather
+  // than a direct property of Application.
+  const subResourceMap = buildSubResourceSchemaMap(spec, specFilePath);
+  const segments = fieldPath.replace(/\[\]/g, '').split('.').filter(Boolean);
+  let current = schema;
+  for (const seg of segments) {
+    const props = collectTopLevelProperties(spec, current);
+    if (props.has(seg)) {
+      current = props.get(seg);
       continue;
     }
-
-    // Not a direct property — try inside array items (for paths like someArray[].field)
-    if (schema.items) {
-      const items = schema.items?.$ref ? (resolveRef(spec, schema.items.$ref) ?? schema.items) : schema.items;
+    // Try inside array items (for paths that already navigated into an array)
+    if (current.items) {
+      const items = current.items.$ref ? (resolveRef(spec, current.items.$ref) ?? current.items) : current.items;
       const itemProps = collectTopLevelProperties(spec, items);
-      if (itemProps.has(part)) {
-        schema = itemProps.get(part);
-        continue;
-      }
+      if (itemProps.has(seg)) { current = itemProps.get(seg); continue; }
     }
+    // Try as a sub-resource segment
+    if (subResourceMap.has(seg)) { current = subResourceMap.get(seg); continue; }
 
-    // Try as sub-resource key (e.g. "taxFilers", "householdInfo")
-    const subEntry = resourceSchemaMap.get(part);
-    if (subEntry) {
-      spec = subEntry.spec;
-      schema = subEntry.schema;
-      continue;
-    }
-
-    return `Field path "${parts.slice(1).join('.')}" does not exist on resource "${resourceName}"`;
+    return `Path "${pathKey}" does not exist in schema`;
   }
 
   return null;
@@ -301,10 +359,8 @@ export function buildAsyncApiChannelIndex(specsDir) {
   const byFile = new Map();
   const all = new Set();
 
-  for (const filePath of walkForPattern(specsDir, '-asyncapi.yaml')) {
-    let doc;
-    try { doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); } catch { continue; }
-
+  for (const [filePath, { content: doc, type }] of loadContractFiles(specsDir)) {
+    if (type !== 'asyncapi') continue;
     const channels = new Set(Object.keys(doc?.channels || {}));
     byFile.set(basename(filePath), channels);
     for (const ch of channels) all.add(ch);
@@ -375,22 +431,21 @@ export function validateStateMachineEvents(doc, channelIndex) {
     }
   }
 
-  // Build set of internal timer event types to skip — these are fired by the
-  // workflow engine's timer scheduler, not published as external AsyncAPI events.
-  // Timer events follow {domain}.{timerId} where domain is the eventsSpec prefix.
-  const timerTypes = new Set();
-  if (eventsSpec) {
-    const domain = eventsSpec.replace(/-asyncapi\.yaml$/, '');
-    for (const machine of doc?.machines || []) {
-      for (const timer of machine.timers || []) {
-        if (timer.id) timerTypes.add(`${domain}.${timer.id}`);
-      }
+  // Build set of timer IDs declared in this state machine. Timer callback events
+  // are fired by the workflow engine's scheduler and are NOT published as AsyncAPI
+  // channels. After overlay resolution the event type prefix (e.g. "ca.") is baked
+  // into the subscription type, so we match by ID suffix rather than exact prefix.
+  const timerIds = new Set();
+  for (const machine of doc?.machines || []) {
+    for (const timer of machine.timers || []) {
+      if (timer.id) timerIds.add(timer.id);
     }
   }
 
-  // Validate subscription types against all known channels
+  // Validate subscription types against all known channels, skipping timer callbacks.
   for (const type of collectSubscriptionTypes(doc)) {
-    if (timerTypes.has(type)) continue;
+    const isTimerCallback = [...timerIds].some(id => type === id || type.endsWith(`.${id}`));
+    if (isTimerCallback) continue;
     if (!all.has(type)) {
       errors.push(`subscription type "${type}" not found in any AsyncAPI spec`);
     }
@@ -406,10 +461,8 @@ export function validateStateMachineEvents(doc, channelIndex) {
 export function buildCrossDomainSchemaIndex(specsDir) {
   const index = new Map();
 
-  for (const filePath of walkForPattern(specsDir, '-openapi.yaml')) {
-    let spec;
-    try { spec = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); } catch { continue; }
-
+  for (const { content: spec, type } of loadContractFiles(specsDir).values()) {
+    if (type !== 'openapi') continue;
     const domain = spec?.info?.['x-domain'];
     if (!domain) continue;
 
@@ -483,18 +536,13 @@ export function validateAnnotationEvent(eventKey, allChannels) {
  * Returns: Map<rulesetName, Set<factName>>
  */
 export function buildGraphIndex(specsDir) {
-  const index = new Map();
+  const index = new Map(); // Map<ruleset, { domain, facts: Set<factName> }>
 
-  for (const filePath of walkForPattern(specsDir, '.yaml')) {
-    const file = basename(filePath);
-    let doc;
-    try { doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); } catch { continue; }
-    if (detectType(file, doc) !== 'graph') continue;
-
+  for (const { content: doc, type, domain } of loadContractFiles(specsDir).values()) {
+    if (type !== 'graph') continue;
     const ruleset = doc.ruleset;
     if (!ruleset) continue;
-
-    index.set(ruleset, new Set(Object.keys(doc.facts || {})));
+    index.set(ruleset, { domain, facts: new Set(Object.keys(doc.facts || {})) });
   }
 
   return index;
@@ -505,7 +553,7 @@ export function buildGraphIndex(specsDir) {
  * Key format: "{ruleset}.{factName}" (e.g. "snapInterviewProbes.incomeInconsistency").
  * Returns null on success, or an error message string on failure.
  */
-export function validateFactKey(key, graphIndex) {
+export function validateFactKey(key, graphIndex, annotationDomain) {
   if (graphIndex.size === 0) return null; // no graphs loaded — skip
 
   const dot = key.indexOf('.');
@@ -514,9 +562,12 @@ export function validateFactKey(key, graphIndex) {
   const ruleset = key.slice(0, dot);
   const factName = key.slice(dot + 1);
 
-  const facts = graphIndex.get(ruleset);
-  if (!facts) return `Ruleset "${ruleset}" not found in any compiled graph`;
-  if (!facts.has(factName)) return `Fact "${factName}" not found in ruleset "${ruleset}"`;
+  const entry = graphIndex.get(ruleset);
+  if (!entry) return `Ruleset "${ruleset}" not found in any compiled graph`;
+  if (annotationDomain && entry.domain !== annotationDomain) {
+    return `Ruleset "${ruleset}" belongs to domain "${entry.domain}" but is annotated in domain "${annotationDomain}"`;
+  }
+  if (!entry.facts.has(factName)) return `Fact "${factName}" not found in ruleset "${ruleset}"`;
 
   return null;
 }
@@ -536,20 +587,16 @@ async function main() {
   console.log('='.repeat(70));
   console.log(`  Directory: ${specDir}\n`);
 
+  const contractFiles = loadContractFiles(specDir);
+
   // Discover annotation files by $schema, not filename convention
   const annotationFiles = [];
-  for (const filePath of walkForPattern(specDir, '.yaml')) {
-    const file = basename(filePath);
-    try {
-      const doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA });
-      if (detectType(file, doc) === 'annotations') {
-        annotationFiles.push({ file, filePath, doc });
-      }
-    } catch {
-      // unparseable files — caught per-file below
+  for (const [filePath, { content: doc, type }] of contractFiles) {
+    if (type === 'annotations') {
+      const file = basename(filePath);
+      annotationFiles.push({ file, filePath, doc });
     }
   }
-
   if (annotationFiles.length === 0) {
     console.log('  No annotation files found. Nothing to validate.\n');
     process.exit(0);
@@ -557,19 +604,12 @@ async function main() {
 
   console.log(`  Found ${annotationFiles.length} annotation file(s)\n`);
 
-  const resourceSchemaMap = buildResourceSchemaMap(specDir);
+  const domainSpecMap = buildDomainSpecMap(specDir);
   const actionIndex = buildStateMachineActionIndex(specDir);
   const channelIndex = buildAsyncApiChannelIndex(specDir);
   const graphIndex = buildGraphIndex(specDir);
-
-  // Section validator dispatch — each entry validates one annotation key.
-  // Adding a new section type: add a buildXIndex() call above and one entry here.
-  const sectionValidators = {
-    schema:     key => validateAnnotationPath(key, resourceSchemaMap),
-    operations: key => validateAnnotationOperation(key, actionIndex),
-    events:     key => validateAnnotationEvent(key, channelIndex.all),
-    facts:      key => validateFactKey(key, graphIndex),
-  };
+  const registryIndex = buildRegistryIndex(specDir);
+  const policyIndex = buildPolicyIndex(specDir);
 
   let totalErrors = 0;
 
@@ -587,6 +627,14 @@ async function main() {
     const fileErrors = [];
     let totalKeys = 0;
 
+    const annotationDomain = doc.domain;
+    const sectionValidators = {
+      schema:     key => validateAnnotationPath(key, domainSpecMap, annotationDomain),
+      operations: key => validateAnnotationOperation(key, actionIndex),
+      events:     key => validateAnnotationEvent(key, channelIndex.all),
+      facts:      key => validateFactKey(key, graphIndex, annotationDomain),
+    };
+
     for (const [sectionName, sectionData] of Object.entries(doc || {})) {
       if (ANNOTATION_METADATA_FIELDS.has(sectionName)) continue;
       if (typeof sectionData !== 'object' || Array.isArray(sectionData)) continue;
@@ -601,13 +649,21 @@ async function main() {
       }
     }
 
+    for (const msg of validateAnnotationRegistryCitations(doc, registryIndex)) {
+      fileErrors.push({ section: null, key: null, message: msg });
+    }
+
+    for (const msg of validateAnnotationPolicyCitations(doc, policyIndex)) {
+      fileErrors.push({ section: null, key: null, message: msg });
+    }
+
     if (fileErrors.length === 0) {
       console.log(`  ✓ ${file} (${totalKeys} keys)`);
     } else {
       console.error(`  ✗ ${file}`);
       for (const { section, key, message } of fileErrors) {
         console.error(`      ${message}`);
-        console.error(`        at: ${section}["${key}"]`);
+        if (section != null) console.error(`        at: ${section}["${key}"]`);
       }
       totalErrors += fileErrors.length;
     }
@@ -622,13 +678,8 @@ async function main() {
   console.log('='.repeat(70));
   console.log(`  Directory: ${specDir}\n`);
 
-  const files = walkForPattern(specDir, '.yaml').map(f => relative(specDir, f));
-  const stateMachineFiles = files.filter(f => f.endsWith('-state-machine.yaml'));
-
-  for (const file of stateMachineFiles) {
-    const filePath = join(specDir, file);
-    let doc;
-    try { doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); } catch { continue; }
+  for (const [filePath, { content: doc, type, relativePath: file }] of contractFiles) {
+    if (type !== 'state-machine') continue;
 
     const eventErrors = [
       ...validateStateMachineEvents(doc, channelIndex),
@@ -654,12 +705,9 @@ async function main() {
   console.log(`  Directory: ${specDir}\n`);
 
   const schemaIndex = buildCrossDomainSchemaIndex(specDir);
-  const openApiFiles = files.filter(f => f.endsWith('-openapi.yaml'));
 
-  for (const file of openApiFiles) {
-    const filePath = join(specDir, file);
-    let spec;
-    try { spec = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); } catch { continue; }
+  for (const [filePath, { content: spec, type, relativePath: file }] of contractFiles) {
+    if (type !== 'openapi') continue;
 
     const relErrors = validateRelationshipTargets(spec, schemaIndex);
     if (relErrors.length === 0) {

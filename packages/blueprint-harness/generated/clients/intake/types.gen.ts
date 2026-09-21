@@ -52,24 +52,22 @@ export type ApplicationWritable = {
         preferredContact?: 'phone' | 'email' | 'mail';
     };
     /**
+     * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+     *
+     */
+    labels?: {
+        [key: string]: string;
+    };
+    /**
      * County code for routing this application to the correct local office.
      */
-    county_code?: string;
+    countyCode?: string;
 };
 
+/**
+ * A benefit application record, including server-managed fields.
+ */
 export type Application = {
-    /**
-     * Unique identifier (server-generated).
-     */
-    readonly id: string;
-    /**
-     * Short human-readable reference code for this application.
-     */
-    readonly referenceId: string;
-    /**
-     * Current lifecycle status of the application.
-     */
-    status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
     /**
      * Benefit programs the household is applying for.
      */
@@ -78,18 +76,6 @@ export type Application = {
      * Channel through which the application was submitted.
      */
     channel?: 'online' | 'phone' | 'in_person' | 'mail';
-    /**
-     * Timestamp when the application was formally submitted. Null until submitted.
-     */
-    readonly submittedAt?: string;
-    /**
-     * Timestamp when a caseworker began active review. Null until the application is opened.
-     */
-    readonly openedAt?: string;
-    /**
-     * SLA type governing the processing deadline for this application.
-     */
-    slaTypeCode?: 'snap_standard' | 'medicaid_standard';
     /**
      * Mailing or residential address.
      */
@@ -129,6 +115,200 @@ export type Application = {
         preferredContact?: 'phone' | 'email' | 'mail';
     };
     /**
+     * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+     *
+     */
+    labels?: {
+        [key: string]: string;
+    };
+    /**
+     * County code for routing this application to the correct local office.
+     */
+    countyCode?: string;
+} & {
+    /**
+     * Unique identifier (server-generated).
+     */
+    readonly id: string;
+    /**
+     * Short human-readable reference code for this application.
+     */
+    readonly referenceId: string;
+    /**
+     * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+     *
+     *
+     * @deprecated
+     */
+    readonly confirmationNumber?: string;
+    /**
+     * Current lifecycle status of the application.
+     */
+    status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+    /**
+     * Timestamp when the application was formally submitted. Null until submitted.
+     */
+    readonly submittedAt?: string;
+    /**
+     * Timestamp when a caseworker began active review. Null until the application is opened.
+     */
+    readonly openedAt?: string;
+    /**
+     * SLA type governing the processing deadline for this application.
+     */
+    slaTypeCode?: 'snap_standard' | 'medicaid_standard';
+    /**
+     * A household member on a benefit application.
+     */
+    members?: Array<{
+        /**
+         * Member's first name.
+         */
+        firstName: string;
+        /**
+         * Member's last name.
+         */
+        lastName: string;
+        /**
+         * Member's date of birth (YYYY-MM-DD).
+         */
+        dateOfBirth?: string;
+        /**
+         * Relationship of this member to the primary applicant.
+         */
+        relationship: 'self' | 'spouse' | 'child' | 'parent' | 'sibling' | 'other';
+        /**
+         * Income reported by a household member. Type discriminator determines the variant.
+         */
+        incomeSource?: {
+            type: 'employment';
+            /**
+             * Name of the employer.
+             */
+            employer: string;
+            /**
+             * Monthly gross income before deductions (dollars).
+             */
+            monthlyGrossIncome: number;
+        } | {
+            type: 'self_employment';
+            /**
+             * Type of business (e.g., sole proprietor, freelance).
+             */
+            businessType: string;
+            /**
+             * Monthly net income after business expenses (dollars).
+             */
+            monthlyNetIncome: number;
+        } | {
+            type: 'benefit';
+            /**
+             * The benefit program providing income.
+             */
+            benefitType: 'ssi' | 'ssdi' | 'unemployment' | 'veterans' | 'other';
+            /**
+             * Monthly benefit amount (dollars).
+             */
+            monthlyAmount: number;
+        };
+        /**
+         * How this member prefers to receive benefit notices and updates.
+         */
+        notificationPreference?: {
+            channel: 'email';
+            /**
+             * Email address for benefit notices.
+             */
+            address: string;
+        } | {
+            channel: 'sms';
+            /**
+             * Phone number for SMS benefit notices (E.164 format).
+             */
+            phone: string;
+        } | {
+            channel: 'mail';
+            /**
+             * Mailing or residential address.
+             */
+            address: {
+                /**
+                 * Street address including apartment or unit number.
+                 */
+                street: string;
+                /**
+                 * City name.
+                 */
+                city: string;
+                /**
+                 * Two-letter US state abbreviation.
+                 */
+                state: string;
+                /**
+                 * ZIP code or ZIP+4.
+                 */
+                zip: string;
+            };
+        };
+        /**
+         * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+         *
+         */
+        verificationEvidence?: {
+            /**
+             * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+             */
+            source: string;
+            /**
+             * Result code returned by the data source.
+             */
+            matchCode: string;
+            /**
+             * Timestamp when the electronic verification was completed.
+             */
+            verifiedAt: string;
+        } | {
+            /**
+             * ID of the caseworker who performed the manual verification.
+             */
+            verifiedBy: string;
+            /**
+             * Timestamp when the manual verification was completed.
+             */
+            verifiedAt: string;
+            /**
+             * Optional caseworker notes on the verification outcome.
+             */
+            notes?: string;
+        };
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * The application this member belongs to.
+         */
+        applicationId: string;
+        /**
+         * Timestamp when the member was added.
+         */
+        readonly createdAt: string;
+        /**
+         * Timestamp when the member was last updated.
+         */
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Application resource.
+             */
+            application?: string;
+        };
+    }>;
+    /**
      * Timestamp when the application was created.
      */
     readonly createdAt: string;
@@ -136,6 +316,7 @@ export type Application = {
      * Timestamp when the application was last updated.
      */
     readonly updatedAt: string;
+} & {
     /**
      * Generated composition links.
      */
@@ -197,9 +378,16 @@ export type ApplicationCreate = {
         preferredContact?: 'phone' | 'email' | 'mail';
     };
     /**
+     * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+     *
+     */
+    labels?: {
+        [key: string]: string;
+    };
+    /**
      * County code for routing this application to the correct local office.
      */
-    county_code?: string;
+    countyCode?: string;
 } & {
     [key: string]: unknown;
 };
@@ -252,27 +440,25 @@ export type ApplicationUpdate = {
         preferredContact?: 'phone' | 'email' | 'mail';
     };
     /**
+     * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+     *
+     */
+    labels?: {
+        [key: string]: string;
+    };
+    /**
      * County code for routing this application to the correct local office.
      */
-    county_code?: string;
+    countyCode?: string;
 } & {
     [key: string]: unknown;
 };
 
 export type ApplicationList = {
+    /**
+     * A benefit application record, including server-managed fields.
+     */
     items: Array<{
-        /**
-         * Unique identifier (server-generated).
-         */
-        readonly id: string;
-        /**
-         * Short human-readable reference code for this application.
-         */
-        readonly referenceId: string;
-        /**
-         * Current lifecycle status of the application.
-         */
-        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
         /**
          * Benefit programs the household is applying for.
          */
@@ -281,18 +467,6 @@ export type ApplicationList = {
          * Channel through which the application was submitted.
          */
         channel?: 'online' | 'phone' | 'in_person' | 'mail';
-        /**
-         * Timestamp when the application was formally submitted. Null until submitted.
-         */
-        readonly submittedAt?: string;
-        /**
-         * Timestamp when a caseworker began active review. Null until the application is opened.
-         */
-        readonly openedAt?: string;
-        /**
-         * SLA type governing the processing deadline for this application.
-         */
-        slaTypeCode?: 'snap_standard' | 'medicaid_standard';
         /**
          * Mailing or residential address.
          */
@@ -332,6 +506,200 @@ export type ApplicationList = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+         *
+         */
+        labels?: {
+            [key: string]: string;
+        };
+        /**
+         * County code for routing this application to the correct local office.
+         */
+        countyCode?: string;
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * Short human-readable reference code for this application.
+         */
+        readonly referenceId: string;
+        /**
+         * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+         *
+         *
+         * @deprecated
+         */
+        readonly confirmationNumber?: string;
+        /**
+         * Current lifecycle status of the application.
+         */
+        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        /**
+         * Timestamp when the application was formally submitted. Null until submitted.
+         */
+        readonly submittedAt?: string;
+        /**
+         * Timestamp when a caseworker began active review. Null until the application is opened.
+         */
+        readonly openedAt?: string;
+        /**
+         * SLA type governing the processing deadline for this application.
+         */
+        slaTypeCode?: 'snap_standard' | 'medicaid_standard';
+        /**
+         * A household member on a benefit application.
+         */
+        members?: Array<{
+            /**
+             * Member's first name.
+             */
+            firstName: string;
+            /**
+             * Member's last name.
+             */
+            lastName: string;
+            /**
+             * Member's date of birth (YYYY-MM-DD).
+             */
+            dateOfBirth?: string;
+            /**
+             * Relationship of this member to the primary applicant.
+             */
+            relationship: 'self' | 'spouse' | 'child' | 'parent' | 'sibling' | 'other';
+            /**
+             * Income reported by a household member. Type discriminator determines the variant.
+             */
+            incomeSource?: {
+                type: 'employment';
+                /**
+                 * Name of the employer.
+                 */
+                employer: string;
+                /**
+                 * Monthly gross income before deductions (dollars).
+                 */
+                monthlyGrossIncome: number;
+            } | {
+                type: 'self_employment';
+                /**
+                 * Type of business (e.g., sole proprietor, freelance).
+                 */
+                businessType: string;
+                /**
+                 * Monthly net income after business expenses (dollars).
+                 */
+                monthlyNetIncome: number;
+            } | {
+                type: 'benefit';
+                /**
+                 * The benefit program providing income.
+                 */
+                benefitType: 'ssi' | 'ssdi' | 'unemployment' | 'veterans' | 'other';
+                /**
+                 * Monthly benefit amount (dollars).
+                 */
+                monthlyAmount: number;
+            };
+            /**
+             * How this member prefers to receive benefit notices and updates.
+             */
+            notificationPreference?: {
+                channel: 'email';
+                /**
+                 * Email address for benefit notices.
+                 */
+                address: string;
+            } | {
+                channel: 'sms';
+                /**
+                 * Phone number for SMS benefit notices (E.164 format).
+                 */
+                phone: string;
+            } | {
+                channel: 'mail';
+                /**
+                 * Mailing or residential address.
+                 */
+                address: {
+                    /**
+                     * Street address including apartment or unit number.
+                     */
+                    street: string;
+                    /**
+                     * City name.
+                     */
+                    city: string;
+                    /**
+                     * Two-letter US state abbreviation.
+                     */
+                    state: string;
+                    /**
+                     * ZIP code or ZIP+4.
+                     */
+                    zip: string;
+                };
+            };
+            /**
+             * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+             *
+             */
+            verificationEvidence?: {
+                /**
+                 * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+                 */
+                source: string;
+                /**
+                 * Result code returned by the data source.
+                 */
+                matchCode: string;
+                /**
+                 * Timestamp when the electronic verification was completed.
+                 */
+                verifiedAt: string;
+            } | {
+                /**
+                 * ID of the caseworker who performed the manual verification.
+                 */
+                verifiedBy: string;
+                /**
+                 * Timestamp when the manual verification was completed.
+                 */
+                verifiedAt: string;
+                /**
+                 * Optional caseworker notes on the verification outcome.
+                 */
+                notes?: string;
+            };
+        } & {
+            /**
+             * Unique identifier (server-generated).
+             */
+            readonly id: string;
+            /**
+             * The application this member belongs to.
+             */
+            applicationId: string;
+            /**
+             * Timestamp when the member was added.
+             */
+            readonly createdAt: string;
+            /**
+             * Timestamp when the member was last updated.
+             */
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related Application resource.
+                 */
+                application?: string;
+            };
+        }>;
+        /**
          * Timestamp when the application was created.
          */
         readonly createdAt: string;
@@ -339,6 +707,7 @@ export type ApplicationList = {
          * Timestamp when the application was last updated.
          */
         readonly updatedAt: string;
+    } & {
         /**
          * Generated composition links.
          */
@@ -420,17 +789,82 @@ export type ApplicationMemberWritable = {
          */
         monthlyAmount: number;
     };
+    /**
+     * How this member prefers to receive benefit notices and updates.
+     */
+    notificationPreference?: {
+        channel: 'email';
+        /**
+         * Email address for benefit notices.
+         */
+        address: string;
+    } | {
+        channel: 'sms';
+        /**
+         * Phone number for SMS benefit notices (E.164 format).
+         */
+        phone: string;
+    } | {
+        channel: 'mail';
+        /**
+         * Mailing or residential address.
+         */
+        address: {
+            /**
+             * Street address including apartment or unit number.
+             */
+            street: string;
+            /**
+             * City name.
+             */
+            city: string;
+            /**
+             * Two-letter US state abbreviation.
+             */
+            state: string;
+            /**
+             * ZIP code or ZIP+4.
+             */
+            zip: string;
+        };
+    };
+    /**
+     * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+     *
+     */
+    verificationEvidence?: {
+        /**
+         * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+         */
+        source: string;
+        /**
+         * Result code returned by the data source.
+         */
+        matchCode: string;
+        /**
+         * Timestamp when the electronic verification was completed.
+         */
+        verifiedAt: string;
+    } | {
+        /**
+         * ID of the caseworker who performed the manual verification.
+         */
+        verifiedBy: string;
+        /**
+         * Timestamp when the manual verification was completed.
+         */
+        verifiedAt: string;
+        /**
+         * Optional caseworker notes on the verification outcome.
+         */
+        notes?: string;
+    };
 };
 
+/**
+ * A household member on a benefit application.
+ */
 export type ApplicationMember = {
-    /**
-     * Unique identifier (server-generated).
-     */
-    readonly id: string;
-    /**
-     * The application this member belongs to.
-     */
-    applicationId: string;
     /**
      * Member's first name.
      */
@@ -481,6 +915,85 @@ export type ApplicationMember = {
          */
         monthlyAmount: number;
     };
+    /**
+     * How this member prefers to receive benefit notices and updates.
+     */
+    notificationPreference?: {
+        channel: 'email';
+        /**
+         * Email address for benefit notices.
+         */
+        address: string;
+    } | {
+        channel: 'sms';
+        /**
+         * Phone number for SMS benefit notices (E.164 format).
+         */
+        phone: string;
+    } | {
+        channel: 'mail';
+        /**
+         * Mailing or residential address.
+         */
+        address: {
+            /**
+             * Street address including apartment or unit number.
+             */
+            street: string;
+            /**
+             * City name.
+             */
+            city: string;
+            /**
+             * Two-letter US state abbreviation.
+             */
+            state: string;
+            /**
+             * ZIP code or ZIP+4.
+             */
+            zip: string;
+        };
+    };
+    /**
+     * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+     *
+     */
+    verificationEvidence?: {
+        /**
+         * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+         */
+        source: string;
+        /**
+         * Result code returned by the data source.
+         */
+        matchCode: string;
+        /**
+         * Timestamp when the electronic verification was completed.
+         */
+        verifiedAt: string;
+    } | {
+        /**
+         * ID of the caseworker who performed the manual verification.
+         */
+        verifiedBy: string;
+        /**
+         * Timestamp when the manual verification was completed.
+         */
+        verifiedAt: string;
+        /**
+         * Optional caseworker notes on the verification outcome.
+         */
+        notes?: string;
+    };
+} & {
+    /**
+     * Unique identifier (server-generated).
+     */
+    readonly id: string;
+    /**
+     * The application this member belongs to.
+     */
+    applicationId: string;
     /**
      * Timestamp when the member was added.
      */
@@ -551,6 +1064,76 @@ export type ApplicationMemberCreate = {
          */
         monthlyAmount: number;
     };
+    /**
+     * How this member prefers to receive benefit notices and updates.
+     */
+    notificationPreference?: {
+        channel: 'email';
+        /**
+         * Email address for benefit notices.
+         */
+        address: string;
+    } | {
+        channel: 'sms';
+        /**
+         * Phone number for SMS benefit notices (E.164 format).
+         */
+        phone: string;
+    } | {
+        channel: 'mail';
+        /**
+         * Mailing or residential address.
+         */
+        address: {
+            /**
+             * Street address including apartment or unit number.
+             */
+            street: string;
+            /**
+             * City name.
+             */
+            city: string;
+            /**
+             * Two-letter US state abbreviation.
+             */
+            state: string;
+            /**
+             * ZIP code or ZIP+4.
+             */
+            zip: string;
+        };
+    };
+    /**
+     * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+     *
+     */
+    verificationEvidence?: {
+        /**
+         * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+         */
+        source: string;
+        /**
+         * Result code returned by the data source.
+         */
+        matchCode: string;
+        /**
+         * Timestamp when the electronic verification was completed.
+         */
+        verifiedAt: string;
+    } | {
+        /**
+         * ID of the caseworker who performed the manual verification.
+         */
+        verifiedBy: string;
+        /**
+         * Timestamp when the manual verification was completed.
+         */
+        verifiedAt: string;
+        /**
+         * Optional caseworker notes on the verification outcome.
+         */
+        notes?: string;
+    };
 } & {
     [key: string]: unknown;
 };
@@ -606,20 +1189,85 @@ export type ApplicationMemberUpdate = {
          */
         monthlyAmount: number;
     };
+    /**
+     * How this member prefers to receive benefit notices and updates.
+     */
+    notificationPreference?: {
+        channel: 'email';
+        /**
+         * Email address for benefit notices.
+         */
+        address: string;
+    } | {
+        channel: 'sms';
+        /**
+         * Phone number for SMS benefit notices (E.164 format).
+         */
+        phone: string;
+    } | {
+        channel: 'mail';
+        /**
+         * Mailing or residential address.
+         */
+        address: {
+            /**
+             * Street address including apartment or unit number.
+             */
+            street: string;
+            /**
+             * City name.
+             */
+            city: string;
+            /**
+             * Two-letter US state abbreviation.
+             */
+            state: string;
+            /**
+             * ZIP code or ZIP+4.
+             */
+            zip: string;
+        };
+    };
+    /**
+     * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+     *
+     */
+    verificationEvidence?: {
+        /**
+         * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+         */
+        source: string;
+        /**
+         * Result code returned by the data source.
+         */
+        matchCode: string;
+        /**
+         * Timestamp when the electronic verification was completed.
+         */
+        verifiedAt: string;
+    } | {
+        /**
+         * ID of the caseworker who performed the manual verification.
+         */
+        verifiedBy: string;
+        /**
+         * Timestamp when the manual verification was completed.
+         */
+        verifiedAt: string;
+        /**
+         * Optional caseworker notes on the verification outcome.
+         */
+        notes?: string;
+    };
 } & {
     [key: string]: unknown;
 };
 
 export type ApplicationMemberList = {
+    /**
+     * A household member on a benefit application.
+     */
     items: Array<{
-        /**
-         * Unique identifier (server-generated).
-         */
-        readonly id: string;
-        /**
-         * The application this member belongs to.
-         */
-        applicationId: string;
         /**
          * Member's first name.
          */
@@ -671,6 +1319,85 @@ export type ApplicationMemberList = {
             monthlyAmount: number;
         };
         /**
+         * How this member prefers to receive benefit notices and updates.
+         */
+        notificationPreference?: {
+            channel: 'email';
+            /**
+             * Email address for benefit notices.
+             */
+            address: string;
+        } | {
+            channel: 'sms';
+            /**
+             * Phone number for SMS benefit notices (E.164 format).
+             */
+            phone: string;
+        } | {
+            channel: 'mail';
+            /**
+             * Mailing or residential address.
+             */
+            address: {
+                /**
+                 * Street address including apartment or unit number.
+                 */
+                street: string;
+                /**
+                 * City name.
+                 */
+                city: string;
+                /**
+                 * Two-letter US state abbreviation.
+                 */
+                state: string;
+                /**
+                 * ZIP code or ZIP+4.
+                 */
+                zip: string;
+            };
+        };
+        /**
+         * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+         *
+         */
+        verificationEvidence?: {
+            /**
+             * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+             */
+            source: string;
+            /**
+             * Result code returned by the data source.
+             */
+            matchCode: string;
+            /**
+             * Timestamp when the electronic verification was completed.
+             */
+            verifiedAt: string;
+        } | {
+            /**
+             * ID of the caseworker who performed the manual verification.
+             */
+            verifiedBy: string;
+            /**
+             * Timestamp when the manual verification was completed.
+             */
+            verifiedAt: string;
+            /**
+             * Optional caseworker notes on the verification outcome.
+             */
+            notes?: string;
+        };
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * The application this member belongs to.
+         */
+        applicationId: string;
+        /**
          * Timestamp when the member was added.
          */
         readonly createdAt: string;
@@ -688,10 +1415,93 @@ export type ApplicationMemberList = {
             application?: string;
         };
     }>;
+    /**
+     * Total number of matching household members.
+     */
     total: number;
+    /**
+     * Maximum number of household members per page.
+     */
     limit: number;
+    /**
+     * Number of household members skipped.
+     */
     offset: number;
+    /**
+     * Whether more household members are available.
+     */
     hasNext?: boolean;
+};
+
+export type EmailNotification = {
+    channel: 'email';
+    /**
+     * Email address for benefit notices.
+     */
+    address: string;
+};
+
+export type ElectronicVerification = {
+    /**
+     * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+     */
+    source: string;
+    /**
+     * Result code returned by the data source.
+     */
+    matchCode: string;
+    /**
+     * Timestamp when the electronic verification was completed.
+     */
+    verifiedAt: string;
+};
+
+export type MailNotification = {
+    channel: 'mail';
+    /**
+     * Mailing or residential address.
+     */
+    address: {
+        /**
+         * Street address including apartment or unit number.
+         */
+        street: string;
+        /**
+         * City name.
+         */
+        city: string;
+        /**
+         * Two-letter US state abbreviation.
+         */
+        state: string;
+        /**
+         * ZIP code or ZIP+4.
+         */
+        zip: string;
+    };
+};
+
+export type ManualVerification = {
+    /**
+     * ID of the caseworker who performed the manual verification.
+     */
+    verifiedBy: string;
+    /**
+     * Timestamp when the manual verification was completed.
+     */
+    verifiedAt: string;
+    /**
+     * Optional caseworker notes on the verification outcome.
+     */
+    notes?: string;
+};
+
+export type SmsNotification = {
+    channel: 'sms';
+    /**
+     * Phone number for SMS benefit notices (E.164 format).
+     */
+    phone: string;
 };
 
 export type CloseRequest = {
@@ -762,39 +1572,54 @@ export type InterviewPromptsRequest = {
 };
 
 /**
- * Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
+ * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
  *
  */
-export type InterviewPromptsResponse = {
-    [key: string]: {
-        state: 'complete';
-        /**
-         * The computed value.
-         */
-        value: unknown;
-    } | {
-        state: 'placeholder';
-        /**
-         * The computed value, derived using one or more schema defaults.
-         */
-        value: unknown;
-    } | {
-        state: 'missing';
-        value: null;
-        /**
-         * Input paths required to resolve this fact.
-         */
-        missing: Array<string>;
-    } | {
-        state: 'error';
-        value: null;
-        /**
-         * The reason evaluation failed.
-         */
-        message: string;
-    };
-};
+export type InterviewPromptsResponse = Array<{
+    /**
+     * The fact name.
+     */
+    fact: string;
+    state: 'complete';
+    /**
+     * The computed value.
+     */
+    value: unknown;
+} | {
+    /**
+     * The fact name.
+     */
+    fact: string;
+    state: 'placeholder';
+    /**
+     * The computed value, derived using one or more schema defaults.
+     */
+    value: unknown;
+} | {
+    /**
+     * The fact name.
+     */
+    fact: string;
+    state: 'missing';
+    /**
+     * Input paths required to resolve this fact.
+     */
+    missing: Array<string>;
+} | {
+    /**
+     * The fact name.
+     */
+    fact: string;
+    state: 'error';
+    /**
+     * The reason evaluation failed.
+     */
+    message: string;
+}>;
 
+/**
+ * A benefit application record, including server-managed fields.
+ */
 export type ApplicationWritable2 = {
     /**
      * Benefit programs the household is applying for.
@@ -842,138 +1667,22 @@ export type ApplicationWritable2 = {
          */
         preferredContact?: 'phone' | 'email' | 'mail';
     };
-};
-
-export type ApplicationListWritable = {
-    items: Array<{
-        /**
-         * Benefit programs the household is applying for.
-         */
-        programsApplied: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
-        /**
-         * Channel through which the application was submitted.
-         */
-        channel?: 'online' | 'phone' | 'in_person' | 'mail';
-        /**
-         * Mailing or residential address.
-         */
-        address?: {
-            /**
-             * Street address including apartment or unit number.
-             */
-            street: string;
-            /**
-             * City name.
-             */
-            city: string;
-            /**
-             * Two-letter US state abbreviation.
-             */
-            state: string;
-            /**
-             * ZIP code or ZIP+4.
-             */
-            zip: string;
-        };
-        /**
-         * Contact details for the primary applicant.
-         */
-        contactInfo?: {
-            /**
-             * Primary phone number.
-             */
-            phone?: string;
-            /**
-             * Email address.
-             */
-            email?: string;
-            /**
-             * Applicant's preferred method of contact.
-             */
-            preferredContact?: 'phone' | 'email' | 'mail';
-        };
-    }>;
     /**
-     * Total number of matching applications.
+     * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+     *
      */
-    total: number;
-    /**
-     * Maximum number of applications per page.
-     */
-    limit: number;
-    /**
-     * Number of applications skipped.
-     */
-    offset: number;
-    /**
-     * Whether more applications are available.
-     */
-    hasNext?: boolean;
-};
-
-export type ApplicationMemberWritable2 = {
-    /**
-     * The application this member belongs to.
-     */
-    applicationId: string;
-    /**
-     * Member's first name.
-     */
-    firstName: string;
-    /**
-     * Member's last name.
-     */
-    lastName: string;
-    /**
-     * Member's date of birth (YYYY-MM-DD).
-     */
-    dateOfBirth?: string;
-    /**
-     * Relationship of this member to the primary applicant.
-     */
-    relationship: 'self' | 'spouse' | 'child' | 'parent' | 'sibling' | 'other';
-    /**
-     * Income reported by a household member. Type discriminator determines the variant.
-     */
-    incomeSource?: {
-        type: 'employment';
-        /**
-         * Name of the employer.
-         */
-        employer: string;
-        /**
-         * Monthly gross income before deductions (dollars).
-         */
-        monthlyGrossIncome: number;
-    } | {
-        type: 'self_employment';
-        /**
-         * Type of business (e.g., sole proprietor, freelance).
-         */
-        businessType: string;
-        /**
-         * Monthly net income after business expenses (dollars).
-         */
-        monthlyNetIncome: number;
-    } | {
-        type: 'benefit';
-        /**
-         * The benefit program providing income.
-         */
-        benefitType: 'ssi' | 'ssdi' | 'unemployment' | 'veterans' | 'other';
-        /**
-         * Monthly benefit amount (dollars).
-         */
-        monthlyAmount: number;
+    labels?: {
+        [key: string]: string;
     };
-};
-
-export type ApplicationMemberListWritable = {
-    items: Array<{
-        /**
-         * The application this member belongs to.
-         */
-        applicationId: string;
+    /**
+     * County code for routing this application to the correct local office.
+     */
+    countyCode?: string;
+} & {
+    /**
+     * A household member on a benefit application.
+     */
+    members?: Array<{
         /**
          * Member's first name.
          */
@@ -1024,10 +1733,573 @@ export type ApplicationMemberListWritable = {
              */
             monthlyAmount: number;
         };
+        /**
+         * How this member prefers to receive benefit notices and updates.
+         */
+        notificationPreference?: {
+            channel: 'email';
+            /**
+             * Email address for benefit notices.
+             */
+            address: string;
+        } | {
+            channel: 'sms';
+            /**
+             * Phone number for SMS benefit notices (E.164 format).
+             */
+            phone: string;
+        } | {
+            channel: 'mail';
+            /**
+             * Mailing or residential address.
+             */
+            address: {
+                /**
+                 * Street address including apartment or unit number.
+                 */
+                street: string;
+                /**
+                 * City name.
+                 */
+                city: string;
+                /**
+                 * Two-letter US state abbreviation.
+                 */
+                state: string;
+                /**
+                 * ZIP code or ZIP+4.
+                 */
+                zip: string;
+            };
+        };
+        /**
+         * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+         *
+         */
+        verificationEvidence?: {
+            /**
+             * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+             */
+            source: string;
+            /**
+             * Result code returned by the data source.
+             */
+            matchCode: string;
+            /**
+             * Timestamp when the electronic verification was completed.
+             */
+            verifiedAt: string;
+        } | {
+            /**
+             * ID of the caseworker who performed the manual verification.
+             */
+            verifiedBy: string;
+            /**
+             * Timestamp when the manual verification was completed.
+             */
+            verifiedAt: string;
+            /**
+             * Optional caseworker notes on the verification outcome.
+             */
+            notes?: string;
+        };
+    } & {
+        /**
+         * The application this member belongs to.
+         */
+        applicationId: string;
     }>;
+};
+
+export type ApplicationListWritable = {
+    /**
+     * A benefit application record, including server-managed fields.
+     */
+    items: Array<{
+        /**
+         * Benefit programs the household is applying for.
+         */
+        programsApplied: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+        /**
+         * Channel through which the application was submitted.
+         */
+        channel?: 'online' | 'phone' | 'in_person' | 'mail';
+        /**
+         * Mailing or residential address.
+         */
+        address?: {
+            /**
+             * Street address including apartment or unit number.
+             */
+            street: string;
+            /**
+             * City name.
+             */
+            city: string;
+            /**
+             * Two-letter US state abbreviation.
+             */
+            state: string;
+            /**
+             * ZIP code or ZIP+4.
+             */
+            zip: string;
+        };
+        /**
+         * Contact details for the primary applicant.
+         */
+        contactInfo?: {
+            /**
+             * Primary phone number.
+             */
+            phone?: string;
+            /**
+             * Email address.
+             */
+            email?: string;
+            /**
+             * Applicant's preferred method of contact.
+             */
+            preferredContact?: 'phone' | 'email' | 'mail';
+        };
+        /**
+         * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+         *
+         */
+        labels?: {
+            [key: string]: string;
+        };
+        /**
+         * County code for routing this application to the correct local office.
+         */
+        countyCode?: string;
+    } & {
+        /**
+         * A household member on a benefit application.
+         */
+        members?: Array<{
+            /**
+             * Member's first name.
+             */
+            firstName: string;
+            /**
+             * Member's last name.
+             */
+            lastName: string;
+            /**
+             * Member's date of birth (YYYY-MM-DD).
+             */
+            dateOfBirth?: string;
+            /**
+             * Relationship of this member to the primary applicant.
+             */
+            relationship: 'self' | 'spouse' | 'child' | 'parent' | 'sibling' | 'other';
+            /**
+             * Income reported by a household member. Type discriminator determines the variant.
+             */
+            incomeSource?: {
+                type: 'employment';
+                /**
+                 * Name of the employer.
+                 */
+                employer: string;
+                /**
+                 * Monthly gross income before deductions (dollars).
+                 */
+                monthlyGrossIncome: number;
+            } | {
+                type: 'self_employment';
+                /**
+                 * Type of business (e.g., sole proprietor, freelance).
+                 */
+                businessType: string;
+                /**
+                 * Monthly net income after business expenses (dollars).
+                 */
+                monthlyNetIncome: number;
+            } | {
+                type: 'benefit';
+                /**
+                 * The benefit program providing income.
+                 */
+                benefitType: 'ssi' | 'ssdi' | 'unemployment' | 'veterans' | 'other';
+                /**
+                 * Monthly benefit amount (dollars).
+                 */
+                monthlyAmount: number;
+            };
+            /**
+             * How this member prefers to receive benefit notices and updates.
+             */
+            notificationPreference?: {
+                channel: 'email';
+                /**
+                 * Email address for benefit notices.
+                 */
+                address: string;
+            } | {
+                channel: 'sms';
+                /**
+                 * Phone number for SMS benefit notices (E.164 format).
+                 */
+                phone: string;
+            } | {
+                channel: 'mail';
+                /**
+                 * Mailing or residential address.
+                 */
+                address: {
+                    /**
+                     * Street address including apartment or unit number.
+                     */
+                    street: string;
+                    /**
+                     * City name.
+                     */
+                    city: string;
+                    /**
+                     * Two-letter US state abbreviation.
+                     */
+                    state: string;
+                    /**
+                     * ZIP code or ZIP+4.
+                     */
+                    zip: string;
+                };
+            };
+            /**
+             * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+             *
+             */
+            verificationEvidence?: {
+                /**
+                 * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+                 */
+                source: string;
+                /**
+                 * Result code returned by the data source.
+                 */
+                matchCode: string;
+                /**
+                 * Timestamp when the electronic verification was completed.
+                 */
+                verifiedAt: string;
+            } | {
+                /**
+                 * ID of the caseworker who performed the manual verification.
+                 */
+                verifiedBy: string;
+                /**
+                 * Timestamp when the manual verification was completed.
+                 */
+                verifiedAt: string;
+                /**
+                 * Optional caseworker notes on the verification outcome.
+                 */
+                notes?: string;
+            };
+        } & {
+            /**
+             * The application this member belongs to.
+             */
+            applicationId: string;
+        }>;
+    }>;
+    /**
+     * Total number of matching applications.
+     */
     total: number;
+    /**
+     * Maximum number of applications per page.
+     */
     limit: number;
+    /**
+     * Number of applications skipped.
+     */
     offset: number;
+    /**
+     * Whether more applications are available.
+     */
+    hasNext?: boolean;
+};
+
+/**
+ * A household member on a benefit application.
+ */
+export type ApplicationMemberWritable2 = {
+    /**
+     * Member's first name.
+     */
+    firstName: string;
+    /**
+     * Member's last name.
+     */
+    lastName: string;
+    /**
+     * Member's date of birth (YYYY-MM-DD).
+     */
+    dateOfBirth?: string;
+    /**
+     * Relationship of this member to the primary applicant.
+     */
+    relationship: 'self' | 'spouse' | 'child' | 'parent' | 'sibling' | 'other';
+    /**
+     * Income reported by a household member. Type discriminator determines the variant.
+     */
+    incomeSource?: {
+        type: 'employment';
+        /**
+         * Name of the employer.
+         */
+        employer: string;
+        /**
+         * Monthly gross income before deductions (dollars).
+         */
+        monthlyGrossIncome: number;
+    } | {
+        type: 'self_employment';
+        /**
+         * Type of business (e.g., sole proprietor, freelance).
+         */
+        businessType: string;
+        /**
+         * Monthly net income after business expenses (dollars).
+         */
+        monthlyNetIncome: number;
+    } | {
+        type: 'benefit';
+        /**
+         * The benefit program providing income.
+         */
+        benefitType: 'ssi' | 'ssdi' | 'unemployment' | 'veterans' | 'other';
+        /**
+         * Monthly benefit amount (dollars).
+         */
+        monthlyAmount: number;
+    };
+    /**
+     * How this member prefers to receive benefit notices and updates.
+     */
+    notificationPreference?: {
+        channel: 'email';
+        /**
+         * Email address for benefit notices.
+         */
+        address: string;
+    } | {
+        channel: 'sms';
+        /**
+         * Phone number for SMS benefit notices (E.164 format).
+         */
+        phone: string;
+    } | {
+        channel: 'mail';
+        /**
+         * Mailing or residential address.
+         */
+        address: {
+            /**
+             * Street address including apartment or unit number.
+             */
+            street: string;
+            /**
+             * City name.
+             */
+            city: string;
+            /**
+             * Two-letter US state abbreviation.
+             */
+            state: string;
+            /**
+             * ZIP code or ZIP+4.
+             */
+            zip: string;
+        };
+    };
+    /**
+     * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+     *
+     */
+    verificationEvidence?: {
+        /**
+         * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+         */
+        source: string;
+        /**
+         * Result code returned by the data source.
+         */
+        matchCode: string;
+        /**
+         * Timestamp when the electronic verification was completed.
+         */
+        verifiedAt: string;
+    } | {
+        /**
+         * ID of the caseworker who performed the manual verification.
+         */
+        verifiedBy: string;
+        /**
+         * Timestamp when the manual verification was completed.
+         */
+        verifiedAt: string;
+        /**
+         * Optional caseworker notes on the verification outcome.
+         */
+        notes?: string;
+    };
+} & {
+    /**
+     * The application this member belongs to.
+     */
+    applicationId: string;
+};
+
+export type ApplicationMemberListWritable = {
+    /**
+     * A household member on a benefit application.
+     */
+    items: Array<{
+        /**
+         * Member's first name.
+         */
+        firstName: string;
+        /**
+         * Member's last name.
+         */
+        lastName: string;
+        /**
+         * Member's date of birth (YYYY-MM-DD).
+         */
+        dateOfBirth?: string;
+        /**
+         * Relationship of this member to the primary applicant.
+         */
+        relationship: 'self' | 'spouse' | 'child' | 'parent' | 'sibling' | 'other';
+        /**
+         * Income reported by a household member. Type discriminator determines the variant.
+         */
+        incomeSource?: {
+            type: 'employment';
+            /**
+             * Name of the employer.
+             */
+            employer: string;
+            /**
+             * Monthly gross income before deductions (dollars).
+             */
+            monthlyGrossIncome: number;
+        } | {
+            type: 'self_employment';
+            /**
+             * Type of business (e.g., sole proprietor, freelance).
+             */
+            businessType: string;
+            /**
+             * Monthly net income after business expenses (dollars).
+             */
+            monthlyNetIncome: number;
+        } | {
+            type: 'benefit';
+            /**
+             * The benefit program providing income.
+             */
+            benefitType: 'ssi' | 'ssdi' | 'unemployment' | 'veterans' | 'other';
+            /**
+             * Monthly benefit amount (dollars).
+             */
+            monthlyAmount: number;
+        };
+        /**
+         * How this member prefers to receive benefit notices and updates.
+         */
+        notificationPreference?: {
+            channel: 'email';
+            /**
+             * Email address for benefit notices.
+             */
+            address: string;
+        } | {
+            channel: 'sms';
+            /**
+             * Phone number for SMS benefit notices (E.164 format).
+             */
+            phone: string;
+        } | {
+            channel: 'mail';
+            /**
+             * Mailing or residential address.
+             */
+            address: {
+                /**
+                 * Street address including apartment or unit number.
+                 */
+                street: string;
+                /**
+                 * City name.
+                 */
+                city: string;
+                /**
+                 * Two-letter US state abbreviation.
+                 */
+                state: string;
+                /**
+                 * ZIP code or ZIP+4.
+                 */
+                zip: string;
+            };
+        };
+        /**
+         * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+         *
+         */
+        verificationEvidence?: {
+            /**
+             * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+             */
+            source: string;
+            /**
+             * Result code returned by the data source.
+             */
+            matchCode: string;
+            /**
+             * Timestamp when the electronic verification was completed.
+             */
+            verifiedAt: string;
+        } | {
+            /**
+             * ID of the caseworker who performed the manual verification.
+             */
+            verifiedBy: string;
+            /**
+             * Timestamp when the manual verification was completed.
+             */
+            verifiedAt: string;
+            /**
+             * Optional caseworker notes on the verification outcome.
+             */
+            notes?: string;
+        };
+    } & {
+        /**
+         * The application this member belongs to.
+         */
+        applicationId: string;
+    }>;
+    /**
+     * Total number of matching household members.
+     */
+    total: number;
+    /**
+     * Maximum number of household members per page.
+     */
+    limit: number;
+    /**
+     * Number of household members skipped.
+     */
+    offset: number;
+    /**
+     * Whether more household members are available.
+     */
     hasNext?: boolean;
 };
 
@@ -1192,19 +2464,10 @@ export type ListApplicationsResponses = {
      * A paginated list of applications.
      */
     200: {
+        /**
+         * A benefit application record, including server-managed fields.
+         */
         items: Array<{
-            /**
-             * Unique identifier (server-generated).
-             */
-            readonly id: string;
-            /**
-             * Short human-readable reference code for this application.
-             */
-            readonly referenceId: string;
-            /**
-             * Current lifecycle status of the application.
-             */
-            status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
             /**
              * Benefit programs the household is applying for.
              */
@@ -1213,18 +2476,6 @@ export type ListApplicationsResponses = {
              * Channel through which the application was submitted.
              */
             channel?: 'online' | 'phone' | 'in_person' | 'mail';
-            /**
-             * Timestamp when the application was formally submitted. Null until submitted.
-             */
-            readonly submittedAt?: string;
-            /**
-             * Timestamp when a caseworker began active review. Null until the application is opened.
-             */
-            readonly openedAt?: string;
-            /**
-             * SLA type governing the processing deadline for this application.
-             */
-            slaTypeCode?: 'snap_standard' | 'medicaid_standard';
             /**
              * Mailing or residential address.
              */
@@ -1264,6 +2515,200 @@ export type ListApplicationsResponses = {
                 preferredContact?: 'phone' | 'email' | 'mail';
             };
             /**
+             * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+             *
+             */
+            labels?: {
+                [key: string]: string;
+            };
+            /**
+             * County code for routing this application to the correct local office.
+             */
+            countyCode?: string;
+        } & {
+            /**
+             * Unique identifier (server-generated).
+             */
+            readonly id: string;
+            /**
+             * Short human-readable reference code for this application.
+             */
+            readonly referenceId: string;
+            /**
+             * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+             *
+             *
+             * @deprecated
+             */
+            readonly confirmationNumber?: string;
+            /**
+             * Current lifecycle status of the application.
+             */
+            status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+            /**
+             * Timestamp when the application was formally submitted. Null until submitted.
+             */
+            readonly submittedAt?: string;
+            /**
+             * Timestamp when a caseworker began active review. Null until the application is opened.
+             */
+            readonly openedAt?: string;
+            /**
+             * SLA type governing the processing deadline for this application.
+             */
+            slaTypeCode?: 'snap_standard' | 'medicaid_standard';
+            /**
+             * A household member on a benefit application.
+             */
+            members?: Array<{
+                /**
+                 * Member's first name.
+                 */
+                firstName: string;
+                /**
+                 * Member's last name.
+                 */
+                lastName: string;
+                /**
+                 * Member's date of birth (YYYY-MM-DD).
+                 */
+                dateOfBirth?: string;
+                /**
+                 * Relationship of this member to the primary applicant.
+                 */
+                relationship: 'self' | 'spouse' | 'child' | 'parent' | 'sibling' | 'other';
+                /**
+                 * Income reported by a household member. Type discriminator determines the variant.
+                 */
+                incomeSource?: {
+                    type: 'employment';
+                    /**
+                     * Name of the employer.
+                     */
+                    employer: string;
+                    /**
+                     * Monthly gross income before deductions (dollars).
+                     */
+                    monthlyGrossIncome: number;
+                } | {
+                    type: 'self_employment';
+                    /**
+                     * Type of business (e.g., sole proprietor, freelance).
+                     */
+                    businessType: string;
+                    /**
+                     * Monthly net income after business expenses (dollars).
+                     */
+                    monthlyNetIncome: number;
+                } | {
+                    type: 'benefit';
+                    /**
+                     * The benefit program providing income.
+                     */
+                    benefitType: 'ssi' | 'ssdi' | 'unemployment' | 'veterans' | 'other';
+                    /**
+                     * Monthly benefit amount (dollars).
+                     */
+                    monthlyAmount: number;
+                };
+                /**
+                 * How this member prefers to receive benefit notices and updates.
+                 */
+                notificationPreference?: {
+                    channel: 'email';
+                    /**
+                     * Email address for benefit notices.
+                     */
+                    address: string;
+                } | {
+                    channel: 'sms';
+                    /**
+                     * Phone number for SMS benefit notices (E.164 format).
+                     */
+                    phone: string;
+                } | {
+                    channel: 'mail';
+                    /**
+                     * Mailing or residential address.
+                     */
+                    address: {
+                        /**
+                         * Street address including apartment or unit number.
+                         */
+                        street: string;
+                        /**
+                         * City name.
+                         */
+                        city: string;
+                        /**
+                         * Two-letter US state abbreviation.
+                         */
+                        state: string;
+                        /**
+                         * ZIP code or ZIP+4.
+                         */
+                        zip: string;
+                    };
+                };
+                /**
+                 * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+                 *
+                 */
+                verificationEvidence?: {
+                    /**
+                     * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+                     */
+                    source: string;
+                    /**
+                     * Result code returned by the data source.
+                     */
+                    matchCode: string;
+                    /**
+                     * Timestamp when the electronic verification was completed.
+                     */
+                    verifiedAt: string;
+                } | {
+                    /**
+                     * ID of the caseworker who performed the manual verification.
+                     */
+                    verifiedBy: string;
+                    /**
+                     * Timestamp when the manual verification was completed.
+                     */
+                    verifiedAt: string;
+                    /**
+                     * Optional caseworker notes on the verification outcome.
+                     */
+                    notes?: string;
+                };
+            } & {
+                /**
+                 * Unique identifier (server-generated).
+                 */
+                readonly id: string;
+                /**
+                 * The application this member belongs to.
+                 */
+                applicationId: string;
+                /**
+                 * Timestamp when the member was added.
+                 */
+                readonly createdAt: string;
+                /**
+                 * Timestamp when the member was last updated.
+                 */
+                readonly updatedAt: string;
+                /**
+                 * Related resource links.
+                 */
+                readonly links?: {
+                    /**
+                     * Link to the related Application resource.
+                     */
+                    application?: string;
+                };
+            }>;
+            /**
              * Timestamp when the application was created.
              */
             readonly createdAt: string;
@@ -1271,6 +2716,7 @@ export type ListApplicationsResponses = {
              * Timestamp when the application was last updated.
              */
             readonly updatedAt: string;
+        } & {
             /**
              * Generated composition links.
              */
@@ -1353,9 +2799,16 @@ export type CreateApplicationData = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+         *
+         */
+        labels?: {
+            [key: string]: string;
+        };
+        /**
          * County code for routing this application to the correct local office.
          */
-        county_code?: string;
+        countyCode?: string;
     } & {
         [key: string]: unknown;
     };
@@ -1389,21 +2842,9 @@ export type CreateApplicationError = CreateApplicationErrors[keyof CreateApplica
 
 export type CreateApplicationResponses = {
     /**
-     * Application created successfully.
+     * A benefit application record, including server-managed fields.
      */
     201: {
-        /**
-         * Unique identifier (server-generated).
-         */
-        readonly id: string;
-        /**
-         * Short human-readable reference code for this application.
-         */
-        readonly referenceId: string;
-        /**
-         * Current lifecycle status of the application.
-         */
-        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
         /**
          * Benefit programs the household is applying for.
          */
@@ -1412,18 +2853,6 @@ export type CreateApplicationResponses = {
          * Channel through which the application was submitted.
          */
         channel?: 'online' | 'phone' | 'in_person' | 'mail';
-        /**
-         * Timestamp when the application was formally submitted. Null until submitted.
-         */
-        readonly submittedAt?: string;
-        /**
-         * Timestamp when a caseworker began active review. Null until the application is opened.
-         */
-        readonly openedAt?: string;
-        /**
-         * SLA type governing the processing deadline for this application.
-         */
-        slaTypeCode?: 'snap_standard' | 'medicaid_standard';
         /**
          * Mailing or residential address.
          */
@@ -1463,6 +2892,200 @@ export type CreateApplicationResponses = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+         *
+         */
+        labels?: {
+            [key: string]: string;
+        };
+        /**
+         * County code for routing this application to the correct local office.
+         */
+        countyCode?: string;
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * Short human-readable reference code for this application.
+         */
+        readonly referenceId: string;
+        /**
+         * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+         *
+         *
+         * @deprecated
+         */
+        readonly confirmationNumber?: string;
+        /**
+         * Current lifecycle status of the application.
+         */
+        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        /**
+         * Timestamp when the application was formally submitted. Null until submitted.
+         */
+        readonly submittedAt?: string;
+        /**
+         * Timestamp when a caseworker began active review. Null until the application is opened.
+         */
+        readonly openedAt?: string;
+        /**
+         * SLA type governing the processing deadline for this application.
+         */
+        slaTypeCode?: 'snap_standard' | 'medicaid_standard';
+        /**
+         * A household member on a benefit application.
+         */
+        members?: Array<{
+            /**
+             * Member's first name.
+             */
+            firstName: string;
+            /**
+             * Member's last name.
+             */
+            lastName: string;
+            /**
+             * Member's date of birth (YYYY-MM-DD).
+             */
+            dateOfBirth?: string;
+            /**
+             * Relationship of this member to the primary applicant.
+             */
+            relationship: 'self' | 'spouse' | 'child' | 'parent' | 'sibling' | 'other';
+            /**
+             * Income reported by a household member. Type discriminator determines the variant.
+             */
+            incomeSource?: {
+                type: 'employment';
+                /**
+                 * Name of the employer.
+                 */
+                employer: string;
+                /**
+                 * Monthly gross income before deductions (dollars).
+                 */
+                monthlyGrossIncome: number;
+            } | {
+                type: 'self_employment';
+                /**
+                 * Type of business (e.g., sole proprietor, freelance).
+                 */
+                businessType: string;
+                /**
+                 * Monthly net income after business expenses (dollars).
+                 */
+                monthlyNetIncome: number;
+            } | {
+                type: 'benefit';
+                /**
+                 * The benefit program providing income.
+                 */
+                benefitType: 'ssi' | 'ssdi' | 'unemployment' | 'veterans' | 'other';
+                /**
+                 * Monthly benefit amount (dollars).
+                 */
+                monthlyAmount: number;
+            };
+            /**
+             * How this member prefers to receive benefit notices and updates.
+             */
+            notificationPreference?: {
+                channel: 'email';
+                /**
+                 * Email address for benefit notices.
+                 */
+                address: string;
+            } | {
+                channel: 'sms';
+                /**
+                 * Phone number for SMS benefit notices (E.164 format).
+                 */
+                phone: string;
+            } | {
+                channel: 'mail';
+                /**
+                 * Mailing or residential address.
+                 */
+                address: {
+                    /**
+                     * Street address including apartment or unit number.
+                     */
+                    street: string;
+                    /**
+                     * City name.
+                     */
+                    city: string;
+                    /**
+                     * Two-letter US state abbreviation.
+                     */
+                    state: string;
+                    /**
+                     * ZIP code or ZIP+4.
+                     */
+                    zip: string;
+                };
+            };
+            /**
+             * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+             *
+             */
+            verificationEvidence?: {
+                /**
+                 * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+                 */
+                source: string;
+                /**
+                 * Result code returned by the data source.
+                 */
+                matchCode: string;
+                /**
+                 * Timestamp when the electronic verification was completed.
+                 */
+                verifiedAt: string;
+            } | {
+                /**
+                 * ID of the caseworker who performed the manual verification.
+                 */
+                verifiedBy: string;
+                /**
+                 * Timestamp when the manual verification was completed.
+                 */
+                verifiedAt: string;
+                /**
+                 * Optional caseworker notes on the verification outcome.
+                 */
+                notes?: string;
+            };
+        } & {
+            /**
+             * Unique identifier (server-generated).
+             */
+            readonly id: string;
+            /**
+             * The application this member belongs to.
+             */
+            applicationId: string;
+            /**
+             * Timestamp when the member was added.
+             */
+            readonly createdAt: string;
+            /**
+             * Timestamp when the member was last updated.
+             */
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related Application resource.
+                 */
+                application?: string;
+            };
+        }>;
+        /**
          * Timestamp when the application was created.
          */
         readonly createdAt: string;
@@ -1470,6 +3093,7 @@ export type CreateApplicationResponses = {
          * Timestamp when the application was last updated.
          */
         readonly updatedAt: string;
+    } & {
         /**
          * Generated composition links.
          */
@@ -1555,21 +3179,9 @@ export type GetApplicationError = GetApplicationErrors[keyof GetApplicationError
 
 export type GetApplicationResponses = {
     /**
-     * Application retrieved successfully.
+     * A benefit application record, including server-managed fields.
      */
     200: {
-        /**
-         * Unique identifier (server-generated).
-         */
-        readonly id: string;
-        /**
-         * Short human-readable reference code for this application.
-         */
-        readonly referenceId: string;
-        /**
-         * Current lifecycle status of the application.
-         */
-        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
         /**
          * Benefit programs the household is applying for.
          */
@@ -1578,18 +3190,6 @@ export type GetApplicationResponses = {
          * Channel through which the application was submitted.
          */
         channel?: 'online' | 'phone' | 'in_person' | 'mail';
-        /**
-         * Timestamp when the application was formally submitted. Null until submitted.
-         */
-        readonly submittedAt?: string;
-        /**
-         * Timestamp when a caseworker began active review. Null until the application is opened.
-         */
-        readonly openedAt?: string;
-        /**
-         * SLA type governing the processing deadline for this application.
-         */
-        slaTypeCode?: 'snap_standard' | 'medicaid_standard';
         /**
          * Mailing or residential address.
          */
@@ -1629,6 +3229,200 @@ export type GetApplicationResponses = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+         *
+         */
+        labels?: {
+            [key: string]: string;
+        };
+        /**
+         * County code for routing this application to the correct local office.
+         */
+        countyCode?: string;
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * Short human-readable reference code for this application.
+         */
+        readonly referenceId: string;
+        /**
+         * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+         *
+         *
+         * @deprecated
+         */
+        readonly confirmationNumber?: string;
+        /**
+         * Current lifecycle status of the application.
+         */
+        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        /**
+         * Timestamp when the application was formally submitted. Null until submitted.
+         */
+        readonly submittedAt?: string;
+        /**
+         * Timestamp when a caseworker began active review. Null until the application is opened.
+         */
+        readonly openedAt?: string;
+        /**
+         * SLA type governing the processing deadline for this application.
+         */
+        slaTypeCode?: 'snap_standard' | 'medicaid_standard';
+        /**
+         * A household member on a benefit application.
+         */
+        members?: Array<{
+            /**
+             * Member's first name.
+             */
+            firstName: string;
+            /**
+             * Member's last name.
+             */
+            lastName: string;
+            /**
+             * Member's date of birth (YYYY-MM-DD).
+             */
+            dateOfBirth?: string;
+            /**
+             * Relationship of this member to the primary applicant.
+             */
+            relationship: 'self' | 'spouse' | 'child' | 'parent' | 'sibling' | 'other';
+            /**
+             * Income reported by a household member. Type discriminator determines the variant.
+             */
+            incomeSource?: {
+                type: 'employment';
+                /**
+                 * Name of the employer.
+                 */
+                employer: string;
+                /**
+                 * Monthly gross income before deductions (dollars).
+                 */
+                monthlyGrossIncome: number;
+            } | {
+                type: 'self_employment';
+                /**
+                 * Type of business (e.g., sole proprietor, freelance).
+                 */
+                businessType: string;
+                /**
+                 * Monthly net income after business expenses (dollars).
+                 */
+                monthlyNetIncome: number;
+            } | {
+                type: 'benefit';
+                /**
+                 * The benefit program providing income.
+                 */
+                benefitType: 'ssi' | 'ssdi' | 'unemployment' | 'veterans' | 'other';
+                /**
+                 * Monthly benefit amount (dollars).
+                 */
+                monthlyAmount: number;
+            };
+            /**
+             * How this member prefers to receive benefit notices and updates.
+             */
+            notificationPreference?: {
+                channel: 'email';
+                /**
+                 * Email address for benefit notices.
+                 */
+                address: string;
+            } | {
+                channel: 'sms';
+                /**
+                 * Phone number for SMS benefit notices (E.164 format).
+                 */
+                phone: string;
+            } | {
+                channel: 'mail';
+                /**
+                 * Mailing or residential address.
+                 */
+                address: {
+                    /**
+                     * Street address including apartment or unit number.
+                     */
+                    street: string;
+                    /**
+                     * City name.
+                     */
+                    city: string;
+                    /**
+                     * Two-letter US state abbreviation.
+                     */
+                    state: string;
+                    /**
+                     * ZIP code or ZIP+4.
+                     */
+                    zip: string;
+                };
+            };
+            /**
+             * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+             *
+             */
+            verificationEvidence?: {
+                /**
+                 * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+                 */
+                source: string;
+                /**
+                 * Result code returned by the data source.
+                 */
+                matchCode: string;
+                /**
+                 * Timestamp when the electronic verification was completed.
+                 */
+                verifiedAt: string;
+            } | {
+                /**
+                 * ID of the caseworker who performed the manual verification.
+                 */
+                verifiedBy: string;
+                /**
+                 * Timestamp when the manual verification was completed.
+                 */
+                verifiedAt: string;
+                /**
+                 * Optional caseworker notes on the verification outcome.
+                 */
+                notes?: string;
+            };
+        } & {
+            /**
+             * Unique identifier (server-generated).
+             */
+            readonly id: string;
+            /**
+             * The application this member belongs to.
+             */
+            applicationId: string;
+            /**
+             * Timestamp when the member was added.
+             */
+            readonly createdAt: string;
+            /**
+             * Timestamp when the member was last updated.
+             */
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related Application resource.
+                 */
+                application?: string;
+            };
+        }>;
+        /**
          * Timestamp when the application was created.
          */
         readonly createdAt: string;
@@ -1636,6 +3430,7 @@ export type GetApplicationResponses = {
          * Timestamp when the application was last updated.
          */
         readonly updatedAt: string;
+    } & {
         /**
          * Generated composition links.
          */
@@ -1701,9 +3496,16 @@ export type UpdateApplicationData = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+         *
+         */
+        labels?: {
+            [key: string]: string;
+        };
+        /**
          * County code for routing this application to the correct local office.
          */
-        county_code?: string;
+        countyCode?: string;
     } & {
         [key: string]: unknown;
     };
@@ -1748,21 +3550,9 @@ export type UpdateApplicationError = UpdateApplicationErrors[keyof UpdateApplica
 
 export type UpdateApplicationResponses = {
     /**
-     * Application updated successfully.
+     * A benefit application record, including server-managed fields.
      */
     200: {
-        /**
-         * Unique identifier (server-generated).
-         */
-        readonly id: string;
-        /**
-         * Short human-readable reference code for this application.
-         */
-        readonly referenceId: string;
-        /**
-         * Current lifecycle status of the application.
-         */
-        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
         /**
          * Benefit programs the household is applying for.
          */
@@ -1771,18 +3561,6 @@ export type UpdateApplicationResponses = {
          * Channel through which the application was submitted.
          */
         channel?: 'online' | 'phone' | 'in_person' | 'mail';
-        /**
-         * Timestamp when the application was formally submitted. Null until submitted.
-         */
-        readonly submittedAt?: string;
-        /**
-         * Timestamp when a caseworker began active review. Null until the application is opened.
-         */
-        readonly openedAt?: string;
-        /**
-         * SLA type governing the processing deadline for this application.
-         */
-        slaTypeCode?: 'snap_standard' | 'medicaid_standard';
         /**
          * Mailing or residential address.
          */
@@ -1822,81 +3600,52 @@ export type UpdateApplicationResponses = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
-         * Timestamp when the application was created.
+         * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+         *
          */
-        readonly createdAt: string;
-        /**
-         * Timestamp when the application was last updated.
-         */
-        readonly updatedAt: string;
-        /**
-         * Generated composition links.
-         */
-        readonly _links?: {
-            /**
-             * Link to the applicationSummary composition.
-             */
-            applicationSummary?: {
-                readonly href?: string;
-            };
+        labels?: {
+            [key: string]: string;
         };
-    };
-};
-
-export type UpdateApplicationResponse = UpdateApplicationResponses[keyof UpdateApplicationResponses];
-
-export type ListApplicationMembersData = {
-    body?: never;
-    path: {
         /**
-         * Unique identifier of the application.
+         * County code for routing this application to the correct local office.
          */
-        applicationId: string;
-    };
-    query?: {
+        countyCode?: string;
+    } & {
         /**
-         * Maximum number of items to return (1-100).
+         * Unique identifier (server-generated).
          */
-        limit?: number;
+        readonly id: string;
         /**
-         * Number of items to skip before collecting results.
+         * Short human-readable reference code for this application.
          */
-        offset?: number;
-    };
-    url: '/applications/{applicationId}/members';
-};
-
-export type ListApplicationMembersErrors = {
-    /**
-     * Resource not found
-     */
-    404: {
-        message?: string;
-    };
-    /**
-     * Internal server error
-     */
-    500: {
-        message?: string;
-    };
-};
-
-export type ListApplicationMembersError = ListApplicationMembersErrors[keyof ListApplicationMembersErrors];
-
-export type ListApplicationMembersResponses = {
-    /**
-     * Household members for this application.
-     */
-    200: {
-        items: Array<{
-            /**
-             * Unique identifier (server-generated).
-             */
-            readonly id: string;
-            /**
-             * The application this member belongs to.
-             */
-            applicationId: string;
+        readonly referenceId: string;
+        /**
+         * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+         *
+         *
+         * @deprecated
+         */
+        readonly confirmationNumber?: string;
+        /**
+         * Current lifecycle status of the application.
+         */
+        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        /**
+         * Timestamp when the application was formally submitted. Null until submitted.
+         */
+        readonly submittedAt?: string;
+        /**
+         * Timestamp when a caseworker began active review. Null until the application is opened.
+         */
+        readonly openedAt?: string;
+        /**
+         * SLA type governing the processing deadline for this application.
+         */
+        slaTypeCode?: 'snap_standard' | 'medicaid_standard';
+        /**
+         * A household member on a benefit application.
+         */
+        members?: Array<{
             /**
              * Member's first name.
              */
@@ -1948,6 +3697,85 @@ export type ListApplicationMembersResponses = {
                 monthlyAmount: number;
             };
             /**
+             * How this member prefers to receive benefit notices and updates.
+             */
+            notificationPreference?: {
+                channel: 'email';
+                /**
+                 * Email address for benefit notices.
+                 */
+                address: string;
+            } | {
+                channel: 'sms';
+                /**
+                 * Phone number for SMS benefit notices (E.164 format).
+                 */
+                phone: string;
+            } | {
+                channel: 'mail';
+                /**
+                 * Mailing or residential address.
+                 */
+                address: {
+                    /**
+                     * Street address including apartment or unit number.
+                     */
+                    street: string;
+                    /**
+                     * City name.
+                     */
+                    city: string;
+                    /**
+                     * Two-letter US state abbreviation.
+                     */
+                    state: string;
+                    /**
+                     * ZIP code or ZIP+4.
+                     */
+                    zip: string;
+                };
+            };
+            /**
+             * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+             *
+             */
+            verificationEvidence?: {
+                /**
+                 * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+                 */
+                source: string;
+                /**
+                 * Result code returned by the data source.
+                 */
+                matchCode: string;
+                /**
+                 * Timestamp when the electronic verification was completed.
+                 */
+                verifiedAt: string;
+            } | {
+                /**
+                 * ID of the caseworker who performed the manual verification.
+                 */
+                verifiedBy: string;
+                /**
+                 * Timestamp when the manual verification was completed.
+                 */
+                verifiedAt: string;
+                /**
+                 * Optional caseworker notes on the verification outcome.
+                 */
+                notes?: string;
+            };
+        } & {
+            /**
+             * Unique identifier (server-generated).
+             */
+            readonly id: string;
+            /**
+             * The application this member belongs to.
+             */
+            applicationId: string;
+            /**
              * Timestamp when the member was added.
              */
             readonly createdAt: string;
@@ -1965,9 +3793,345 @@ export type ListApplicationMembersResponses = {
                 application?: string;
             };
         }>;
+        /**
+         * Timestamp when the application was created.
+         */
+        readonly createdAt: string;
+        /**
+         * Timestamp when the application was last updated.
+         */
+        readonly updatedAt: string;
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationSummary composition.
+             */
+            applicationSummary?: {
+                readonly href?: string;
+            };
+        };
+    };
+};
+
+export type UpdateApplicationResponse = UpdateApplicationResponses[keyof UpdateApplicationResponses];
+
+export type ListApplicationMembersData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+    };
+    query?: {
+        /**
+         * Search query using field:value syntax. Multiple conditions separated by
+         * spaces are ANDed together.
+         *
+         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+         * Most HTTP clients handle this automatically. Examples in this documentation
+         * show human-readable syntax for clarity.
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `term` | Full-text exact match | `john` |
+         * | `*term*` | Full-text contains | `*john*` |
+         * | `term*` | Full-text starts with | `john*` |
+         * | `*term` | Full-text ends with | `*smith` |
+         * | `field:value` | Exact match on field | `status:approved` |
+         * | `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+         * | `field:value*` | Starts with | `name:john*` |
+         * | `field:*value` | Ends with | `email:*@example.com` |
+         * | `field:"value"` | Quoted value (for spaces) | `name:"john doe"` |
+         * | `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
+         * | `field:>value` | Greater than | `income:>1000` |
+         * | `field:>=value` | Greater than or equal | `income:>=1000` |
+         * | `field:<value` | Less than | `income:<5000` |
+         * | `field:<=value` | Less than or equal | `income:<=5000` |
+         * | `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
+         * | `-field:value` | Exclude / negate | `-status:denied` |
+         * | `field:*` | Field exists (not null) | `email:*` |
+         * | `-field:*` | Field does not exist | `-deletedAt:*` |
+         *
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * - `applicant.state:CA` — nested field filter
+         *
+         * ## URL Encoding Reference
+         *
+         * When manually constructing URLs, encode these characters:
+         *
+         * | Character | Encoded |
+         * |-----------|---------|
+         * | (space) | `%20` or `+` |
+         * | `"` | `%22` |
+         * | `:` | `%3A` |
+         * | `>` | `%3E` |
+         * | `<` | `%3C` |
+         * | `,` | `%2C` |
+         *
+         * **Example:**
+         * ```
+         * Human-readable: q=status:approved income:>=1000
+         * URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000
+         * ```
+         *
+         */
+        q?: string;
+        /**
+         * Maximum number of items to return (1-100).
+         */
+        limit?: number;
+        /**
+         * Number of items to skip before collecting results.
+         */
+        offset?: number;
+        /**
+         * Comma-separated list of fields to sort the response by. Prefix a field
+         * with `-` for descending order. The first field is the primary sort;
+         * subsequent fields are tie-breakers in declaration order.
+         *
+         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+         * Most HTTP clients handle this automatically. Examples below show
+         * human-readable syntax for clarity.
+         *
+         * Which fields a given list endpoint allows is declared in the operation's
+         * `x-sortable.fields` extension. Sending a field name not present in that
+         * list returns `400 FIELD_NOT_SORTABLE`. Sending a field name that doesn't
+         * exist on the resource schema returns `400 INVALID_SORT_FIELD`. When this
+         * parameter is omitted, the operation's `x-sortable.default` (if declared)
+         * is applied; otherwise no client-driven sort is applied. A configured
+         * tie-breaker (default `id`) is always appended for stable pagination.
+         *
+         * See `api-patterns.yaml#sorting` for the full convention and
+         * `docs/architecture/x-extensions.md` for the extension shape.
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `fieldName` | Ascending | `sort=createdAt` |
+         * | `-fieldName` | Descending | `sort=-createdAt` |
+         * | `field1,field2` | Multi-field | `sort=status,-priority` |
+         * | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
+         *
+         * ## Examples
+         *
+         * - `sort=createdAt` — oldest first
+         * - `sort=-createdAt` — newest first
+         * - `sort=-priority,dueDate` — highest priority first, then oldest due date
+         * - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+         *
+         */
+        sort?: string;
+    };
+    url: '/applications/{applicationId}/members';
+};
+
+export type ListApplicationMembersErrors = {
+    /**
+     * Resource not found
+     */
+    404: {
+        message?: string;
+    };
+    /**
+     * Internal server error
+     */
+    500: {
+        message?: string;
+    };
+};
+
+export type ListApplicationMembersError = ListApplicationMembersErrors[keyof ListApplicationMembersErrors];
+
+export type ListApplicationMembersResponses = {
+    /**
+     * Household members for this application.
+     */
+    200: {
+        /**
+         * A household member on a benefit application.
+         */
+        items: Array<{
+            /**
+             * Member's first name.
+             */
+            firstName: string;
+            /**
+             * Member's last name.
+             */
+            lastName: string;
+            /**
+             * Member's date of birth (YYYY-MM-DD).
+             */
+            dateOfBirth?: string;
+            /**
+             * Relationship of this member to the primary applicant.
+             */
+            relationship: 'self' | 'spouse' | 'child' | 'parent' | 'sibling' | 'other';
+            /**
+             * Income reported by a household member. Type discriminator determines the variant.
+             */
+            incomeSource?: {
+                type: 'employment';
+                /**
+                 * Name of the employer.
+                 */
+                employer: string;
+                /**
+                 * Monthly gross income before deductions (dollars).
+                 */
+                monthlyGrossIncome: number;
+            } | {
+                type: 'self_employment';
+                /**
+                 * Type of business (e.g., sole proprietor, freelance).
+                 */
+                businessType: string;
+                /**
+                 * Monthly net income after business expenses (dollars).
+                 */
+                monthlyNetIncome: number;
+            } | {
+                type: 'benefit';
+                /**
+                 * The benefit program providing income.
+                 */
+                benefitType: 'ssi' | 'ssdi' | 'unemployment' | 'veterans' | 'other';
+                /**
+                 * Monthly benefit amount (dollars).
+                 */
+                monthlyAmount: number;
+            };
+            /**
+             * How this member prefers to receive benefit notices and updates.
+             */
+            notificationPreference?: {
+                channel: 'email';
+                /**
+                 * Email address for benefit notices.
+                 */
+                address: string;
+            } | {
+                channel: 'sms';
+                /**
+                 * Phone number for SMS benefit notices (E.164 format).
+                 */
+                phone: string;
+            } | {
+                channel: 'mail';
+                /**
+                 * Mailing or residential address.
+                 */
+                address: {
+                    /**
+                     * Street address including apartment or unit number.
+                     */
+                    street: string;
+                    /**
+                     * City name.
+                     */
+                    city: string;
+                    /**
+                     * Two-letter US state abbreviation.
+                     */
+                    state: string;
+                    /**
+                     * ZIP code or ZIP+4.
+                     */
+                    zip: string;
+                };
+            };
+            /**
+             * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+             *
+             */
+            verificationEvidence?: {
+                /**
+                 * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+                 */
+                source: string;
+                /**
+                 * Result code returned by the data source.
+                 */
+                matchCode: string;
+                /**
+                 * Timestamp when the electronic verification was completed.
+                 */
+                verifiedAt: string;
+            } | {
+                /**
+                 * ID of the caseworker who performed the manual verification.
+                 */
+                verifiedBy: string;
+                /**
+                 * Timestamp when the manual verification was completed.
+                 */
+                verifiedAt: string;
+                /**
+                 * Optional caseworker notes on the verification outcome.
+                 */
+                notes?: string;
+            };
+        } & {
+            /**
+             * Unique identifier (server-generated).
+             */
+            readonly id: string;
+            /**
+             * The application this member belongs to.
+             */
+            applicationId: string;
+            /**
+             * Timestamp when the member was added.
+             */
+            readonly createdAt: string;
+            /**
+             * Timestamp when the member was last updated.
+             */
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related Application resource.
+                 */
+                application?: string;
+            };
+        }>;
+        /**
+         * Total number of matching household members.
+         */
         total: number;
+        /**
+         * Maximum number of household members per page.
+         */
         limit: number;
+        /**
+         * Number of household members skipped.
+         */
         offset: number;
+        /**
+         * Whether more household members are available.
+         */
         hasNext?: boolean;
     };
 };
@@ -2026,6 +4190,76 @@ export type CreateApplicationMemberData = {
              */
             monthlyAmount: number;
         };
+        /**
+         * How this member prefers to receive benefit notices and updates.
+         */
+        notificationPreference?: {
+            channel: 'email';
+            /**
+             * Email address for benefit notices.
+             */
+            address: string;
+        } | {
+            channel: 'sms';
+            /**
+             * Phone number for SMS benefit notices (E.164 format).
+             */
+            phone: string;
+        } | {
+            channel: 'mail';
+            /**
+             * Mailing or residential address.
+             */
+            address: {
+                /**
+                 * Street address including apartment or unit number.
+                 */
+                street: string;
+                /**
+                 * City name.
+                 */
+                city: string;
+                /**
+                 * Two-letter US state abbreviation.
+                 */
+                state: string;
+                /**
+                 * ZIP code or ZIP+4.
+                 */
+                zip: string;
+            };
+        };
+        /**
+         * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+         *
+         */
+        verificationEvidence?: {
+            /**
+             * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+             */
+            source: string;
+            /**
+             * Result code returned by the data source.
+             */
+            matchCode: string;
+            /**
+             * Timestamp when the electronic verification was completed.
+             */
+            verifiedAt: string;
+        } | {
+            /**
+             * ID of the caseworker who performed the manual verification.
+             */
+            verifiedBy: string;
+            /**
+             * Timestamp when the manual verification was completed.
+             */
+            verifiedAt: string;
+            /**
+             * Optional caseworker notes on the verification outcome.
+             */
+            notes?: string;
+        };
     } & {
         [key: string]: unknown;
     };
@@ -2070,17 +4304,9 @@ export type CreateApplicationMemberError = CreateApplicationMemberErrors[keyof C
 
 export type CreateApplicationMemberResponses = {
     /**
-     * Household member added successfully.
+     * A household member on a benefit application.
      */
     201: {
-        /**
-         * Unique identifier (server-generated).
-         */
-        readonly id: string;
-        /**
-         * The application this member belongs to.
-         */
-        applicationId: string;
         /**
          * Member's first name.
          */
@@ -2131,6 +4357,85 @@ export type CreateApplicationMemberResponses = {
              */
             monthlyAmount: number;
         };
+        /**
+         * How this member prefers to receive benefit notices and updates.
+         */
+        notificationPreference?: {
+            channel: 'email';
+            /**
+             * Email address for benefit notices.
+             */
+            address: string;
+        } | {
+            channel: 'sms';
+            /**
+             * Phone number for SMS benefit notices (E.164 format).
+             */
+            phone: string;
+        } | {
+            channel: 'mail';
+            /**
+             * Mailing or residential address.
+             */
+            address: {
+                /**
+                 * Street address including apartment or unit number.
+                 */
+                street: string;
+                /**
+                 * City name.
+                 */
+                city: string;
+                /**
+                 * Two-letter US state abbreviation.
+                 */
+                state: string;
+                /**
+                 * ZIP code or ZIP+4.
+                 */
+                zip: string;
+            };
+        };
+        /**
+         * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+         *
+         */
+        verificationEvidence?: {
+            /**
+             * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+             */
+            source: string;
+            /**
+             * Result code returned by the data source.
+             */
+            matchCode: string;
+            /**
+             * Timestamp when the electronic verification was completed.
+             */
+            verifiedAt: string;
+        } | {
+            /**
+             * ID of the caseworker who performed the manual verification.
+             */
+            verifiedBy: string;
+            /**
+             * Timestamp when the manual verification was completed.
+             */
+            verifiedAt: string;
+            /**
+             * Optional caseworker notes on the verification outcome.
+             */
+            notes?: string;
+        };
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * The application this member belongs to.
+         */
+        applicationId: string;
         /**
          * Timestamp when the member was added.
          */
@@ -2230,17 +4535,9 @@ export type GetApplicationMemberError = GetApplicationMemberErrors[keyof GetAppl
 
 export type GetApplicationMemberResponses = {
     /**
-     * Household member retrieved successfully.
+     * A household member on a benefit application.
      */
     200: {
-        /**
-         * Unique identifier (server-generated).
-         */
-        readonly id: string;
-        /**
-         * The application this member belongs to.
-         */
-        applicationId: string;
         /**
          * Member's first name.
          */
@@ -2291,6 +4588,85 @@ export type GetApplicationMemberResponses = {
              */
             monthlyAmount: number;
         };
+        /**
+         * How this member prefers to receive benefit notices and updates.
+         */
+        notificationPreference?: {
+            channel: 'email';
+            /**
+             * Email address for benefit notices.
+             */
+            address: string;
+        } | {
+            channel: 'sms';
+            /**
+             * Phone number for SMS benefit notices (E.164 format).
+             */
+            phone: string;
+        } | {
+            channel: 'mail';
+            /**
+             * Mailing or residential address.
+             */
+            address: {
+                /**
+                 * Street address including apartment or unit number.
+                 */
+                street: string;
+                /**
+                 * City name.
+                 */
+                city: string;
+                /**
+                 * Two-letter US state abbreviation.
+                 */
+                state: string;
+                /**
+                 * ZIP code or ZIP+4.
+                 */
+                zip: string;
+            };
+        };
+        /**
+         * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+         *
+         */
+        verificationEvidence?: {
+            /**
+             * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+             */
+            source: string;
+            /**
+             * Result code returned by the data source.
+             */
+            matchCode: string;
+            /**
+             * Timestamp when the electronic verification was completed.
+             */
+            verifiedAt: string;
+        } | {
+            /**
+             * ID of the caseworker who performed the manual verification.
+             */
+            verifiedBy: string;
+            /**
+             * Timestamp when the manual verification was completed.
+             */
+            verifiedAt: string;
+            /**
+             * Optional caseworker notes on the verification outcome.
+             */
+            notes?: string;
+        };
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * The application this member belongs to.
+         */
+        applicationId: string;
         /**
          * Timestamp when the member was added.
          */
@@ -2365,6 +4741,76 @@ export type UpdateApplicationMemberData = {
              */
             monthlyAmount: number;
         };
+        /**
+         * How this member prefers to receive benefit notices and updates.
+         */
+        notificationPreference?: {
+            channel: 'email';
+            /**
+             * Email address for benefit notices.
+             */
+            address: string;
+        } | {
+            channel: 'sms';
+            /**
+             * Phone number for SMS benefit notices (E.164 format).
+             */
+            phone: string;
+        } | {
+            channel: 'mail';
+            /**
+             * Mailing or residential address.
+             */
+            address: {
+                /**
+                 * Street address including apartment or unit number.
+                 */
+                street: string;
+                /**
+                 * City name.
+                 */
+                city: string;
+                /**
+                 * Two-letter US state abbreviation.
+                 */
+                state: string;
+                /**
+                 * ZIP code or ZIP+4.
+                 */
+                zip: string;
+            };
+        };
+        /**
+         * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+         *
+         */
+        verificationEvidence?: {
+            /**
+             * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+             */
+            source: string;
+            /**
+             * Result code returned by the data source.
+             */
+            matchCode: string;
+            /**
+             * Timestamp when the electronic verification was completed.
+             */
+            verifiedAt: string;
+        } | {
+            /**
+             * ID of the caseworker who performed the manual verification.
+             */
+            verifiedBy: string;
+            /**
+             * Timestamp when the manual verification was completed.
+             */
+            verifiedAt: string;
+            /**
+             * Optional caseworker notes on the verification outcome.
+             */
+            notes?: string;
+        };
     } & {
         [key: string]: unknown;
     };
@@ -2413,17 +4859,9 @@ export type UpdateApplicationMemberError = UpdateApplicationMemberErrors[keyof U
 
 export type UpdateApplicationMemberResponses = {
     /**
-     * Household member updated successfully.
+     * A household member on a benefit application.
      */
     200: {
-        /**
-         * Unique identifier (server-generated).
-         */
-        readonly id: string;
-        /**
-         * The application this member belongs to.
-         */
-        applicationId: string;
         /**
          * Member's first name.
          */
@@ -2475,6 +4913,85 @@ export type UpdateApplicationMemberResponses = {
             monthlyAmount: number;
         };
         /**
+         * How this member prefers to receive benefit notices and updates.
+         */
+        notificationPreference?: {
+            channel: 'email';
+            /**
+             * Email address for benefit notices.
+             */
+            address: string;
+        } | {
+            channel: 'sms';
+            /**
+             * Phone number for SMS benefit notices (E.164 format).
+             */
+            phone: string;
+        } | {
+            channel: 'mail';
+            /**
+             * Mailing or residential address.
+             */
+            address: {
+                /**
+                 * Street address including apartment or unit number.
+                 */
+                street: string;
+                /**
+                 * City name.
+                 */
+                city: string;
+                /**
+                 * Two-letter US state abbreviation.
+                 */
+                state: string;
+                /**
+                 * ZIP code or ZIP+4.
+                 */
+                zip: string;
+            };
+        };
+        /**
+         * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+         *
+         */
+        verificationEvidence?: {
+            /**
+             * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+             */
+            source: string;
+            /**
+             * Result code returned by the data source.
+             */
+            matchCode: string;
+            /**
+             * Timestamp when the electronic verification was completed.
+             */
+            verifiedAt: string;
+        } | {
+            /**
+             * ID of the caseworker who performed the manual verification.
+             */
+            verifiedBy: string;
+            /**
+             * Timestamp when the manual verification was completed.
+             */
+            verifiedAt: string;
+            /**
+             * Optional caseworker notes on the verification outcome.
+             */
+            notes?: string;
+        };
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * The application this member belongs to.
+         */
+        applicationId: string;
+        /**
          * Timestamp when the member was added.
          */
         readonly createdAt: string;
@@ -2499,9 +5016,6 @@ export type UpdateApplicationMemberResponse = UpdateApplicationMemberResponses[k
 export type SubmitApplicationData = {
     body?: never;
     path: {
-        /**
-         * Unique identifier of the application.
-         */
         applicationId: string;
     };
     query?: never;
@@ -2591,21 +5105,9 @@ export type SubmitApplicationError = SubmitApplicationErrors[keyof SubmitApplica
 
 export type SubmitApplicationResponses = {
     /**
-     * Transition applied successfully.
+     * A benefit application record, including server-managed fields.
      */
     200: {
-        /**
-         * Unique identifier (server-generated).
-         */
-        readonly id: string;
-        /**
-         * Short human-readable reference code for this application.
-         */
-        readonly referenceId: string;
-        /**
-         * Current lifecycle status of the application.
-         */
-        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
         /**
          * Benefit programs the household is applying for.
          */
@@ -2614,18 +5116,6 @@ export type SubmitApplicationResponses = {
          * Channel through which the application was submitted.
          */
         channel?: 'online' | 'phone' | 'in_person' | 'mail';
-        /**
-         * Timestamp when the application was formally submitted. Null until submitted.
-         */
-        readonly submittedAt?: string;
-        /**
-         * Timestamp when a caseworker began active review. Null until the application is opened.
-         */
-        readonly openedAt?: string;
-        /**
-         * SLA type governing the processing deadline for this application.
-         */
-        slaTypeCode?: 'snap_standard' | 'medicaid_standard';
         /**
          * Mailing or residential address.
          */
@@ -2665,6 +5155,200 @@ export type SubmitApplicationResponses = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+         *
+         */
+        labels?: {
+            [key: string]: string;
+        };
+        /**
+         * County code for routing this application to the correct local office.
+         */
+        countyCode?: string;
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * Short human-readable reference code for this application.
+         */
+        readonly referenceId: string;
+        /**
+         * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+         *
+         *
+         * @deprecated
+         */
+        readonly confirmationNumber?: string;
+        /**
+         * Current lifecycle status of the application.
+         */
+        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        /**
+         * Timestamp when the application was formally submitted. Null until submitted.
+         */
+        readonly submittedAt?: string;
+        /**
+         * Timestamp when a caseworker began active review. Null until the application is opened.
+         */
+        readonly openedAt?: string;
+        /**
+         * SLA type governing the processing deadline for this application.
+         */
+        slaTypeCode?: 'snap_standard' | 'medicaid_standard';
+        /**
+         * A household member on a benefit application.
+         */
+        members?: Array<{
+            /**
+             * Member's first name.
+             */
+            firstName: string;
+            /**
+             * Member's last name.
+             */
+            lastName: string;
+            /**
+             * Member's date of birth (YYYY-MM-DD).
+             */
+            dateOfBirth?: string;
+            /**
+             * Relationship of this member to the primary applicant.
+             */
+            relationship: 'self' | 'spouse' | 'child' | 'parent' | 'sibling' | 'other';
+            /**
+             * Income reported by a household member. Type discriminator determines the variant.
+             */
+            incomeSource?: {
+                type: 'employment';
+                /**
+                 * Name of the employer.
+                 */
+                employer: string;
+                /**
+                 * Monthly gross income before deductions (dollars).
+                 */
+                monthlyGrossIncome: number;
+            } | {
+                type: 'self_employment';
+                /**
+                 * Type of business (e.g., sole proprietor, freelance).
+                 */
+                businessType: string;
+                /**
+                 * Monthly net income after business expenses (dollars).
+                 */
+                monthlyNetIncome: number;
+            } | {
+                type: 'benefit';
+                /**
+                 * The benefit program providing income.
+                 */
+                benefitType: 'ssi' | 'ssdi' | 'unemployment' | 'veterans' | 'other';
+                /**
+                 * Monthly benefit amount (dollars).
+                 */
+                monthlyAmount: number;
+            };
+            /**
+             * How this member prefers to receive benefit notices and updates.
+             */
+            notificationPreference?: {
+                channel: 'email';
+                /**
+                 * Email address for benefit notices.
+                 */
+                address: string;
+            } | {
+                channel: 'sms';
+                /**
+                 * Phone number for SMS benefit notices (E.164 format).
+                 */
+                phone: string;
+            } | {
+                channel: 'mail';
+                /**
+                 * Mailing or residential address.
+                 */
+                address: {
+                    /**
+                     * Street address including apartment or unit number.
+                     */
+                    street: string;
+                    /**
+                     * City name.
+                     */
+                    city: string;
+                    /**
+                     * Two-letter US state abbreviation.
+                     */
+                    state: string;
+                    /**
+                     * ZIP code or ZIP+4.
+                     */
+                    zip: string;
+                };
+            };
+            /**
+             * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+             *
+             */
+            verificationEvidence?: {
+                /**
+                 * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+                 */
+                source: string;
+                /**
+                 * Result code returned by the data source.
+                 */
+                matchCode: string;
+                /**
+                 * Timestamp when the electronic verification was completed.
+                 */
+                verifiedAt: string;
+            } | {
+                /**
+                 * ID of the caseworker who performed the manual verification.
+                 */
+                verifiedBy: string;
+                /**
+                 * Timestamp when the manual verification was completed.
+                 */
+                verifiedAt: string;
+                /**
+                 * Optional caseworker notes on the verification outcome.
+                 */
+                notes?: string;
+            };
+        } & {
+            /**
+             * Unique identifier (server-generated).
+             */
+            readonly id: string;
+            /**
+             * The application this member belongs to.
+             */
+            applicationId: string;
+            /**
+             * Timestamp when the member was added.
+             */
+            readonly createdAt: string;
+            /**
+             * Timestamp when the member was last updated.
+             */
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related Application resource.
+                 */
+                application?: string;
+            };
+        }>;
+        /**
          * Timestamp when the application was created.
          */
         readonly createdAt: string;
@@ -2672,6 +5356,7 @@ export type SubmitApplicationResponses = {
          * Timestamp when the application was last updated.
          */
         readonly updatedAt: string;
+    } & {
         /**
          * Generated composition links.
          */
@@ -2691,9 +5376,6 @@ export type SubmitApplicationResponse = SubmitApplicationResponses[keyof SubmitA
 export type OpenApplicationData = {
     body?: never;
     path: {
-        /**
-         * Unique identifier of the application.
-         */
         applicationId: string;
     };
     query?: never;
@@ -2783,21 +5465,9 @@ export type OpenApplicationError = OpenApplicationErrors[keyof OpenApplicationEr
 
 export type OpenApplicationResponses = {
     /**
-     * Transition applied successfully.
+     * A benefit application record, including server-managed fields.
      */
     200: {
-        /**
-         * Unique identifier (server-generated).
-         */
-        readonly id: string;
-        /**
-         * Short human-readable reference code for this application.
-         */
-        readonly referenceId: string;
-        /**
-         * Current lifecycle status of the application.
-         */
-        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
         /**
          * Benefit programs the household is applying for.
          */
@@ -2806,18 +5476,6 @@ export type OpenApplicationResponses = {
          * Channel through which the application was submitted.
          */
         channel?: 'online' | 'phone' | 'in_person' | 'mail';
-        /**
-         * Timestamp when the application was formally submitted. Null until submitted.
-         */
-        readonly submittedAt?: string;
-        /**
-         * Timestamp when a caseworker began active review. Null until the application is opened.
-         */
-        readonly openedAt?: string;
-        /**
-         * SLA type governing the processing deadline for this application.
-         */
-        slaTypeCode?: 'snap_standard' | 'medicaid_standard';
         /**
          * Mailing or residential address.
          */
@@ -2857,6 +5515,200 @@ export type OpenApplicationResponses = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+         *
+         */
+        labels?: {
+            [key: string]: string;
+        };
+        /**
+         * County code for routing this application to the correct local office.
+         */
+        countyCode?: string;
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * Short human-readable reference code for this application.
+         */
+        readonly referenceId: string;
+        /**
+         * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+         *
+         *
+         * @deprecated
+         */
+        readonly confirmationNumber?: string;
+        /**
+         * Current lifecycle status of the application.
+         */
+        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        /**
+         * Timestamp when the application was formally submitted. Null until submitted.
+         */
+        readonly submittedAt?: string;
+        /**
+         * Timestamp when a caseworker began active review. Null until the application is opened.
+         */
+        readonly openedAt?: string;
+        /**
+         * SLA type governing the processing deadline for this application.
+         */
+        slaTypeCode?: 'snap_standard' | 'medicaid_standard';
+        /**
+         * A household member on a benefit application.
+         */
+        members?: Array<{
+            /**
+             * Member's first name.
+             */
+            firstName: string;
+            /**
+             * Member's last name.
+             */
+            lastName: string;
+            /**
+             * Member's date of birth (YYYY-MM-DD).
+             */
+            dateOfBirth?: string;
+            /**
+             * Relationship of this member to the primary applicant.
+             */
+            relationship: 'self' | 'spouse' | 'child' | 'parent' | 'sibling' | 'other';
+            /**
+             * Income reported by a household member. Type discriminator determines the variant.
+             */
+            incomeSource?: {
+                type: 'employment';
+                /**
+                 * Name of the employer.
+                 */
+                employer: string;
+                /**
+                 * Monthly gross income before deductions (dollars).
+                 */
+                monthlyGrossIncome: number;
+            } | {
+                type: 'self_employment';
+                /**
+                 * Type of business (e.g., sole proprietor, freelance).
+                 */
+                businessType: string;
+                /**
+                 * Monthly net income after business expenses (dollars).
+                 */
+                monthlyNetIncome: number;
+            } | {
+                type: 'benefit';
+                /**
+                 * The benefit program providing income.
+                 */
+                benefitType: 'ssi' | 'ssdi' | 'unemployment' | 'veterans' | 'other';
+                /**
+                 * Monthly benefit amount (dollars).
+                 */
+                monthlyAmount: number;
+            };
+            /**
+             * How this member prefers to receive benefit notices and updates.
+             */
+            notificationPreference?: {
+                channel: 'email';
+                /**
+                 * Email address for benefit notices.
+                 */
+                address: string;
+            } | {
+                channel: 'sms';
+                /**
+                 * Phone number for SMS benefit notices (E.164 format).
+                 */
+                phone: string;
+            } | {
+                channel: 'mail';
+                /**
+                 * Mailing or residential address.
+                 */
+                address: {
+                    /**
+                     * Street address including apartment or unit number.
+                     */
+                    street: string;
+                    /**
+                     * City name.
+                     */
+                    city: string;
+                    /**
+                     * Two-letter US state abbreviation.
+                     */
+                    state: string;
+                    /**
+                     * ZIP code or ZIP+4.
+                     */
+                    zip: string;
+                };
+            };
+            /**
+             * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+             *
+             */
+            verificationEvidence?: {
+                /**
+                 * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+                 */
+                source: string;
+                /**
+                 * Result code returned by the data source.
+                 */
+                matchCode: string;
+                /**
+                 * Timestamp when the electronic verification was completed.
+                 */
+                verifiedAt: string;
+            } | {
+                /**
+                 * ID of the caseworker who performed the manual verification.
+                 */
+                verifiedBy: string;
+                /**
+                 * Timestamp when the manual verification was completed.
+                 */
+                verifiedAt: string;
+                /**
+                 * Optional caseworker notes on the verification outcome.
+                 */
+                notes?: string;
+            };
+        } & {
+            /**
+             * Unique identifier (server-generated).
+             */
+            readonly id: string;
+            /**
+             * The application this member belongs to.
+             */
+            applicationId: string;
+            /**
+             * Timestamp when the member was added.
+             */
+            readonly createdAt: string;
+            /**
+             * Timestamp when the member was last updated.
+             */
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related Application resource.
+                 */
+                application?: string;
+            };
+        }>;
+        /**
          * Timestamp when the application was created.
          */
         readonly createdAt: string;
@@ -2864,6 +5716,7 @@ export type OpenApplicationResponses = {
          * Timestamp when the application was last updated.
          */
         readonly updatedAt: string;
+    } & {
         /**
          * Generated composition links.
          */
@@ -2892,9 +5745,6 @@ export type CloseApplicationData = {
         notes?: string;
     };
     path: {
-        /**
-         * Unique identifier of the application.
-         */
         applicationId: string;
     };
     query?: never;
@@ -2984,21 +5834,9 @@ export type CloseApplicationError = CloseApplicationErrors[keyof CloseApplicatio
 
 export type CloseApplicationResponses = {
     /**
-     * Transition applied successfully.
+     * A benefit application record, including server-managed fields.
      */
     200: {
-        /**
-         * Unique identifier (server-generated).
-         */
-        readonly id: string;
-        /**
-         * Short human-readable reference code for this application.
-         */
-        readonly referenceId: string;
-        /**
-         * Current lifecycle status of the application.
-         */
-        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
         /**
          * Benefit programs the household is applying for.
          */
@@ -3007,18 +5845,6 @@ export type CloseApplicationResponses = {
          * Channel through which the application was submitted.
          */
         channel?: 'online' | 'phone' | 'in_person' | 'mail';
-        /**
-         * Timestamp when the application was formally submitted. Null until submitted.
-         */
-        readonly submittedAt?: string;
-        /**
-         * Timestamp when a caseworker began active review. Null until the application is opened.
-         */
-        readonly openedAt?: string;
-        /**
-         * SLA type governing the processing deadline for this application.
-         */
-        slaTypeCode?: 'snap_standard' | 'medicaid_standard';
         /**
          * Mailing or residential address.
          */
@@ -3058,6 +5884,200 @@ export type CloseApplicationResponses = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+         *
+         */
+        labels?: {
+            [key: string]: string;
+        };
+        /**
+         * County code for routing this application to the correct local office.
+         */
+        countyCode?: string;
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * Short human-readable reference code for this application.
+         */
+        readonly referenceId: string;
+        /**
+         * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+         *
+         *
+         * @deprecated
+         */
+        readonly confirmationNumber?: string;
+        /**
+         * Current lifecycle status of the application.
+         */
+        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        /**
+         * Timestamp when the application was formally submitted. Null until submitted.
+         */
+        readonly submittedAt?: string;
+        /**
+         * Timestamp when a caseworker began active review. Null until the application is opened.
+         */
+        readonly openedAt?: string;
+        /**
+         * SLA type governing the processing deadline for this application.
+         */
+        slaTypeCode?: 'snap_standard' | 'medicaid_standard';
+        /**
+         * A household member on a benefit application.
+         */
+        members?: Array<{
+            /**
+             * Member's first name.
+             */
+            firstName: string;
+            /**
+             * Member's last name.
+             */
+            lastName: string;
+            /**
+             * Member's date of birth (YYYY-MM-DD).
+             */
+            dateOfBirth?: string;
+            /**
+             * Relationship of this member to the primary applicant.
+             */
+            relationship: 'self' | 'spouse' | 'child' | 'parent' | 'sibling' | 'other';
+            /**
+             * Income reported by a household member. Type discriminator determines the variant.
+             */
+            incomeSource?: {
+                type: 'employment';
+                /**
+                 * Name of the employer.
+                 */
+                employer: string;
+                /**
+                 * Monthly gross income before deductions (dollars).
+                 */
+                monthlyGrossIncome: number;
+            } | {
+                type: 'self_employment';
+                /**
+                 * Type of business (e.g., sole proprietor, freelance).
+                 */
+                businessType: string;
+                /**
+                 * Monthly net income after business expenses (dollars).
+                 */
+                monthlyNetIncome: number;
+            } | {
+                type: 'benefit';
+                /**
+                 * The benefit program providing income.
+                 */
+                benefitType: 'ssi' | 'ssdi' | 'unemployment' | 'veterans' | 'other';
+                /**
+                 * Monthly benefit amount (dollars).
+                 */
+                monthlyAmount: number;
+            };
+            /**
+             * How this member prefers to receive benefit notices and updates.
+             */
+            notificationPreference?: {
+                channel: 'email';
+                /**
+                 * Email address for benefit notices.
+                 */
+                address: string;
+            } | {
+                channel: 'sms';
+                /**
+                 * Phone number for SMS benefit notices (E.164 format).
+                 */
+                phone: string;
+            } | {
+                channel: 'mail';
+                /**
+                 * Mailing or residential address.
+                 */
+                address: {
+                    /**
+                     * Street address including apartment or unit number.
+                     */
+                    street: string;
+                    /**
+                     * City name.
+                     */
+                    city: string;
+                    /**
+                     * Two-letter US state abbreviation.
+                     */
+                    state: string;
+                    /**
+                     * ZIP code or ZIP+4.
+                     */
+                    zip: string;
+                };
+            };
+            /**
+             * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+             *
+             */
+            verificationEvidence?: {
+                /**
+                 * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+                 */
+                source: string;
+                /**
+                 * Result code returned by the data source.
+                 */
+                matchCode: string;
+                /**
+                 * Timestamp when the electronic verification was completed.
+                 */
+                verifiedAt: string;
+            } | {
+                /**
+                 * ID of the caseworker who performed the manual verification.
+                 */
+                verifiedBy: string;
+                /**
+                 * Timestamp when the manual verification was completed.
+                 */
+                verifiedAt: string;
+                /**
+                 * Optional caseworker notes on the verification outcome.
+                 */
+                notes?: string;
+            };
+        } & {
+            /**
+             * Unique identifier (server-generated).
+             */
+            readonly id: string;
+            /**
+             * The application this member belongs to.
+             */
+            applicationId: string;
+            /**
+             * Timestamp when the member was added.
+             */
+            readonly createdAt: string;
+            /**
+             * Timestamp when the member was last updated.
+             */
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related Application resource.
+                 */
+                application?: string;
+            };
+        }>;
+        /**
          * Timestamp when the application was created.
          */
         readonly createdAt: string;
@@ -3065,6 +6085,7 @@ export type CloseApplicationResponses = {
          * Timestamp when the application was last updated.
          */
         readonly updatedAt: string;
+    } & {
         /**
          * Generated composition links.
          */
@@ -3084,9 +6105,6 @@ export type CloseApplicationResponse = CloseApplicationResponses[keyof CloseAppl
 export type WithdrawApplicationData = {
     body?: never;
     path: {
-        /**
-         * Unique identifier of the application.
-         */
         applicationId: string;
     };
     query?: never;
@@ -3176,21 +6194,9 @@ export type WithdrawApplicationError = WithdrawApplicationErrors[keyof WithdrawA
 
 export type WithdrawApplicationResponses = {
     /**
-     * Transition applied successfully.
+     * A benefit application record, including server-managed fields.
      */
     200: {
-        /**
-         * Unique identifier (server-generated).
-         */
-        readonly id: string;
-        /**
-         * Short human-readable reference code for this application.
-         */
-        readonly referenceId: string;
-        /**
-         * Current lifecycle status of the application.
-         */
-        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
         /**
          * Benefit programs the household is applying for.
          */
@@ -3199,18 +6205,6 @@ export type WithdrawApplicationResponses = {
          * Channel through which the application was submitted.
          */
         channel?: 'online' | 'phone' | 'in_person' | 'mail';
-        /**
-         * Timestamp when the application was formally submitted. Null until submitted.
-         */
-        readonly submittedAt?: string;
-        /**
-         * Timestamp when a caseworker began active review. Null until the application is opened.
-         */
-        readonly openedAt?: string;
-        /**
-         * SLA type governing the processing deadline for this application.
-         */
-        slaTypeCode?: 'snap_standard' | 'medicaid_standard';
         /**
          * Mailing or residential address.
          */
@@ -3250,6 +6244,200 @@ export type WithdrawApplicationResponses = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+         *
+         */
+        labels?: {
+            [key: string]: string;
+        };
+        /**
+         * County code for routing this application to the correct local office.
+         */
+        countyCode?: string;
+    } & {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * Short human-readable reference code for this application.
+         */
+        readonly referenceId: string;
+        /**
+         * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+         *
+         *
+         * @deprecated
+         */
+        readonly confirmationNumber?: string;
+        /**
+         * Current lifecycle status of the application.
+         */
+        status: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        /**
+         * Timestamp when the application was formally submitted. Null until submitted.
+         */
+        readonly submittedAt?: string;
+        /**
+         * Timestamp when a caseworker began active review. Null until the application is opened.
+         */
+        readonly openedAt?: string;
+        /**
+         * SLA type governing the processing deadline for this application.
+         */
+        slaTypeCode?: 'snap_standard' | 'medicaid_standard';
+        /**
+         * A household member on a benefit application.
+         */
+        members?: Array<{
+            /**
+             * Member's first name.
+             */
+            firstName: string;
+            /**
+             * Member's last name.
+             */
+            lastName: string;
+            /**
+             * Member's date of birth (YYYY-MM-DD).
+             */
+            dateOfBirth?: string;
+            /**
+             * Relationship of this member to the primary applicant.
+             */
+            relationship: 'self' | 'spouse' | 'child' | 'parent' | 'sibling' | 'other';
+            /**
+             * Income reported by a household member. Type discriminator determines the variant.
+             */
+            incomeSource?: {
+                type: 'employment';
+                /**
+                 * Name of the employer.
+                 */
+                employer: string;
+                /**
+                 * Monthly gross income before deductions (dollars).
+                 */
+                monthlyGrossIncome: number;
+            } | {
+                type: 'self_employment';
+                /**
+                 * Type of business (e.g., sole proprietor, freelance).
+                 */
+                businessType: string;
+                /**
+                 * Monthly net income after business expenses (dollars).
+                 */
+                monthlyNetIncome: number;
+            } | {
+                type: 'benefit';
+                /**
+                 * The benefit program providing income.
+                 */
+                benefitType: 'ssi' | 'ssdi' | 'unemployment' | 'veterans' | 'other';
+                /**
+                 * Monthly benefit amount (dollars).
+                 */
+                monthlyAmount: number;
+            };
+            /**
+             * How this member prefers to receive benefit notices and updates.
+             */
+            notificationPreference?: {
+                channel: 'email';
+                /**
+                 * Email address for benefit notices.
+                 */
+                address: string;
+            } | {
+                channel: 'sms';
+                /**
+                 * Phone number for SMS benefit notices (E.164 format).
+                 */
+                phone: string;
+            } | {
+                channel: 'mail';
+                /**
+                 * Mailing or residential address.
+                 */
+                address: {
+                    /**
+                     * Street address including apartment or unit number.
+                     */
+                    street: string;
+                    /**
+                     * City name.
+                     */
+                    city: string;
+                    /**
+                     * Two-letter US state abbreviation.
+                     */
+                    state: string;
+                    /**
+                     * ZIP code or ZIP+4.
+                     */
+                    zip: string;
+                };
+            };
+            /**
+             * Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.
+             *
+             */
+            verificationEvidence?: {
+                /**
+                 * Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+                 */
+                source: string;
+                /**
+                 * Result code returned by the data source.
+                 */
+                matchCode: string;
+                /**
+                 * Timestamp when the electronic verification was completed.
+                 */
+                verifiedAt: string;
+            } | {
+                /**
+                 * ID of the caseworker who performed the manual verification.
+                 */
+                verifiedBy: string;
+                /**
+                 * Timestamp when the manual verification was completed.
+                 */
+                verifiedAt: string;
+                /**
+                 * Optional caseworker notes on the verification outcome.
+                 */
+                notes?: string;
+            };
+        } & {
+            /**
+             * Unique identifier (server-generated).
+             */
+            readonly id: string;
+            /**
+             * The application this member belongs to.
+             */
+            applicationId: string;
+            /**
+             * Timestamp when the member was added.
+             */
+            readonly createdAt: string;
+            /**
+             * Timestamp when the member was last updated.
+             */
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related Application resource.
+                 */
+                application?: string;
+            };
+        }>;
+        /**
          * Timestamp when the application was created.
          */
         readonly createdAt: string;
@@ -3257,6 +6445,7 @@ export type WithdrawApplicationResponses = {
          * Timestamp when the application was last updated.
          */
         readonly updatedAt: string;
+    } & {
         /**
          * Generated composition links.
          */
@@ -3395,7 +6584,7 @@ export type EvaluateInterviewPromptsData = {
         applicationId: string;
     };
     query?: never;
-    url: '/intake/applications/{applicationId}/evaluate-interview-prompts';
+    url: '/applications/{applicationId}/evaluate-interview-prompts';
 };
 
 export type EvaluateInterviewPromptsErrors = {
@@ -3443,38 +6632,50 @@ export type EvaluateInterviewPromptsError = EvaluateInterviewPromptsErrors[keyof
 
 export type EvaluateInterviewPromptsResponses = {
     /**
-     * Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
+     * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
      *
      */
-    200: {
-        [key: string]: {
-            state: 'complete';
-            /**
-             * The computed value.
-             */
-            value: unknown;
-        } | {
-            state: 'placeholder';
-            /**
-             * The computed value, derived using one or more schema defaults.
-             */
-            value: unknown;
-        } | {
-            state: 'missing';
-            value: null;
-            /**
-             * Input paths required to resolve this fact.
-             */
-            missing: Array<string>;
-        } | {
-            state: 'error';
-            value: null;
-            /**
-             * The reason evaluation failed.
-             */
-            message: string;
-        };
-    };
+    200: Array<{
+        /**
+         * The fact name.
+         */
+        fact: string;
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        /**
+         * The fact name.
+         */
+        fact: string;
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        /**
+         * The fact name.
+         */
+        fact: string;
+        state: 'missing';
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        /**
+         * The fact name.
+         */
+        fact: string;
+        state: 'error';
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }>;
 };
 
 export type EvaluateInterviewPromptsResponse = EvaluateInterviewPromptsResponses[keyof EvaluateInterviewPromptsResponses];

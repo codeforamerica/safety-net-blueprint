@@ -1447,17 +1447,10 @@ async function main() {
       console.log(`  ✓ ${relativePath}`);
     }
 
-    // Remove shared component files (base/, common/) that were inlined into
-    // bundled specs. Standalone contract files — identified by a recognized type
-    // from detectType — are preserved as-is.
-    const BUNDLED_STANDALONE_TYPES = new Set([
-      'openapi', 'asyncapi', 'state-machine', 'rules', 'rules-examples',
-      'graph', 'annotations', 'policies', 'sla-types', 'metrics',
-      'compositions', 'mock-data', 'config',
-    ]);
-    for (const [relativePath, spec] of currentResults) {
-      const type = detectType(basename(relativePath), spec);
-      if (!BUNDLED_STANDALONE_TYPES.has(type)) {
+    // Remove base/ component files — these were added solely as $ref targets
+    // and are now inlined into every spec that referenced them.
+    for (const [relativePath] of currentResults) {
+      if (relativePath.startsWith('base/') || relativePath.startsWith('base\\')) {
         const filePath = join(outDir, relativePath);
         if (existsSync(filePath)) {
           rmSync(filePath, { recursive: true });
@@ -1509,7 +1502,7 @@ export {
   applyEnumSourceInjections,
   injectEventPrefixInStateMachine,
   injectEventPrefixInAsyncApi,
-  injectEventPrefixInAnnotations
+  injectEventPrefixInAnnotations,
 };
 
 // Run main when executed directly

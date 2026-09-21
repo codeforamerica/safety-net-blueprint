@@ -30,19 +30,14 @@ export const zApplicationWritable = z.object({
             'mail'
         ]))
     })),
-    county_code: z.optional(z.string().max(10))
+    labels: z.optional(z.record(z.string(), z.string())),
+    countyCode: z.optional(z.string().max(10))
 });
 
+/**
+ * A benefit application record, including server-managed fields.
+ */
 export const zApplication = z.object({
-    id: z.uuid().readonly(),
-    referenceId: z.string().readonly(),
-    status: z.enum([
-        'draft',
-        'submitted',
-        'under_review',
-        'withdrawn',
-        'closed'
-    ]),
     programsApplied: z.array(z.enum([
         'snap',
         'medicaid',
@@ -55,9 +50,6 @@ export const zApplication = z.object({
         'in_person',
         'mail'
     ])),
-    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
     address: z.optional(z.object({
         street: z.string(),
         city: z.string(),
@@ -73,14 +65,106 @@ export const zApplication = z.object({
             'mail'
         ]))
     })),
+    labels: z.optional(z.record(z.string(), z.string())),
+    countyCode: z.optional(z.string().max(10))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    referenceId: z.string().readonly(),
+    confirmationNumber: z.optional(z.string().readonly()),
+    status: z.enum([
+        'draft',
+        'submitted',
+        'under_review',
+        'withdrawn',
+        'closed'
+    ]),
+    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+    members: z.optional(z.array(z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        dateOfBirth: z.optional(z.iso.date()),
+        relationship: z.enum([
+            'self',
+            'spouse',
+            'child',
+            'parent',
+            'sibling',
+            'other'
+        ]),
+        incomeSource: z.optional(z.union([
+            z.object({
+                type: z.literal('employment'),
+                employer: z.string(),
+                monthlyGrossIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('self_employment'),
+                businessType: z.string(),
+                monthlyNetIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('benefit'),
+                benefitType: z.enum([
+                    'ssi',
+                    'ssdi',
+                    'unemployment',
+                    'veterans',
+                    'other'
+                ]),
+                monthlyAmount: z.number().gte(0)
+            })
+        ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
+        ]))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid(),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            application: z.optional(z.string())
+        }).readonly())
+    })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+})).and(z.object({
     _links: z.optional(z.object({
         applicationSummary: z.optional(z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
-});
+}));
 
 export const zApplicationCreate = z.object({
     programsApplied: z.optional(z.array(z.enum([
@@ -110,7 +194,8 @@ export const zApplicationCreate = z.object({
             'mail'
         ]))
     })),
-    county_code: z.optional(z.string().max(10))
+    labels: z.optional(z.record(z.string(), z.string())),
+    countyCode: z.optional(z.string().max(10))
 }).and(z.record(z.string(), z.unknown()));
 
 export const zApplicationUpdate = z.object({
@@ -141,20 +226,12 @@ export const zApplicationUpdate = z.object({
             'mail'
         ]))
     })),
-    county_code: z.optional(z.string().max(10))
+    labels: z.optional(z.record(z.string(), z.string())),
+    countyCode: z.optional(z.string().max(10))
 }).and(z.record(z.string(), z.unknown()));
 
 export const zApplicationList = z.object({
     items: z.array(z.object({
-        id: z.uuid().readonly(),
-        referenceId: z.string().readonly(),
-        status: z.enum([
-            'draft',
-            'submitted',
-            'under_review',
-            'withdrawn',
-            'closed'
-        ]),
         programsApplied: z.array(z.enum([
             'snap',
             'medicaid',
@@ -167,9 +244,6 @@ export const zApplicationList = z.object({
             'in_person',
             'mail'
         ])),
-        submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-        openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-        slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
         address: z.optional(z.object({
             street: z.string(),
             city: z.string(),
@@ -185,14 +259,106 @@ export const zApplicationList = z.object({
                 'mail'
             ]))
         })),
+        labels: z.optional(z.record(z.string(), z.string())),
+        countyCode: z.optional(z.string().max(10))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        referenceId: z.string().readonly(),
+        confirmationNumber: z.optional(z.string().readonly()),
+        status: z.enum([
+            'draft',
+            'submitted',
+            'under_review',
+            'withdrawn',
+            'closed'
+        ]),
+        submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+        members: z.optional(z.array(z.object({
+            firstName: z.string(),
+            lastName: z.string(),
+            dateOfBirth: z.optional(z.iso.date()),
+            relationship: z.enum([
+                'self',
+                'spouse',
+                'child',
+                'parent',
+                'sibling',
+                'other'
+            ]),
+            incomeSource: z.optional(z.union([
+                z.object({
+                    type: z.literal('employment'),
+                    employer: z.string(),
+                    monthlyGrossIncome: z.number().gte(0)
+                }),
+                z.object({
+                    type: z.literal('self_employment'),
+                    businessType: z.string(),
+                    monthlyNetIncome: z.number().gte(0)
+                }),
+                z.object({
+                    type: z.literal('benefit'),
+                    benefitType: z.enum([
+                        'ssi',
+                        'ssdi',
+                        'unemployment',
+                        'veterans',
+                        'other'
+                    ]),
+                    monthlyAmount: z.number().gte(0)
+                })
+            ])),
+            notificationPreference: z.optional(z.union([
+                z.object({
+                    channel: z.enum(['email']),
+                    address: z.email()
+                }),
+                z.object({
+                    channel: z.enum(['sms']),
+                    phone: z.string()
+                }),
+                z.object({
+                    channel: z.enum(['mail']),
+                    address: z.object({
+                        street: z.string(),
+                        city: z.string(),
+                        state: z.string().length(2),
+                        zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                    })
+                })
+            ])),
+            verificationEvidence: z.optional(z.union([
+                z.object({
+                    source: z.string(),
+                    matchCode: z.string(),
+                    verifiedAt: z.iso.datetime({ offset: true })
+                }),
+                z.object({
+                    verifiedBy: z.string(),
+                    verifiedAt: z.iso.datetime({ offset: true }),
+                    notes: z.optional(z.string())
+                })
+            ]))
+        }).and(z.object({
+            id: z.uuid().readonly(),
+            applicationId: z.uuid(),
+            createdAt: z.iso.datetime({ offset: true }).readonly(),
+            updatedAt: z.iso.datetime({ offset: true }).readonly(),
+            links: z.optional(z.object({
+                application: z.optional(z.string())
+            }).readonly())
+        })))),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
-        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    })).and(z.object({
         _links: z.optional(z.object({
             applicationSummary: z.optional(z.object({
                 href: z.optional(z.string().readonly())
             }))
         }).readonly())
-    })),
+    }))),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
     offset: z.int().gte(0),
@@ -233,12 +399,44 @@ export const zApplicationMemberWritable = z.object({
             ]),
             monthlyAmount: z.number().gte(0)
         })
+    ])),
+    notificationPreference: z.optional(z.union([
+        z.object({
+            channel: z.enum(['email']),
+            address: z.email()
+        }),
+        z.object({
+            channel: z.enum(['sms']),
+            phone: z.string()
+        }),
+        z.object({
+            channel: z.enum(['mail']),
+            address: z.object({
+                street: z.string(),
+                city: z.string(),
+                state: z.string().length(2),
+                zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+            })
+        })
+    ])),
+    verificationEvidence: z.optional(z.union([
+        z.object({
+            source: z.string(),
+            matchCode: z.string(),
+            verifiedAt: z.iso.datetime({ offset: true })
+        }),
+        z.object({
+            verifiedBy: z.string(),
+            verifiedAt: z.iso.datetime({ offset: true }),
+            notes: z.optional(z.string())
+        })
     ]))
 });
 
+/**
+ * A household member on a benefit application.
+ */
 export const zApplicationMember = z.object({
-    id: z.uuid().readonly(),
-    applicationId: z.uuid(),
     firstName: z.string(),
     lastName: z.string(),
     dateOfBirth: z.optional(z.iso.date()),
@@ -273,12 +471,46 @@ export const zApplicationMember = z.object({
             monthlyAmount: z.number().gte(0)
         })
     ])),
+    notificationPreference: z.optional(z.union([
+        z.object({
+            channel: z.enum(['email']),
+            address: z.email()
+        }),
+        z.object({
+            channel: z.enum(['sms']),
+            phone: z.string()
+        }),
+        z.object({
+            channel: z.enum(['mail']),
+            address: z.object({
+                street: z.string(),
+                city: z.string(),
+                state: z.string().length(2),
+                zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+            })
+        })
+    ])),
+    verificationEvidence: z.optional(z.union([
+        z.object({
+            source: z.string(),
+            matchCode: z.string(),
+            verifiedAt: z.iso.datetime({ offset: true })
+        }),
+        z.object({
+            verifiedBy: z.string(),
+            verifiedAt: z.iso.datetime({ offset: true }),
+            notes: z.optional(z.string())
+        })
+    ]))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    applicationId: z.uuid(),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
         application: z.optional(z.string())
     }).readonly())
-});
+}));
 
 export const zApplicationMemberCreate = z.object({
     firstName: z.optional(z.string()),
@@ -313,6 +545,37 @@ export const zApplicationMemberCreate = z.object({
                 'other'
             ]),
             monthlyAmount: z.number().gte(0)
+        })
+    ])),
+    notificationPreference: z.optional(z.union([
+        z.object({
+            channel: z.enum(['email']),
+            address: z.email()
+        }),
+        z.object({
+            channel: z.enum(['sms']),
+            phone: z.string()
+        }),
+        z.object({
+            channel: z.enum(['mail']),
+            address: z.object({
+                street: z.string(),
+                city: z.string(),
+                state: z.string().length(2),
+                zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+            })
+        })
+    ])),
+    verificationEvidence: z.optional(z.union([
+        z.object({
+            source: z.string(),
+            matchCode: z.string(),
+            verifiedAt: z.iso.datetime({ offset: true })
+        }),
+        z.object({
+            verifiedBy: z.string(),
+            verifiedAt: z.iso.datetime({ offset: true }),
+            notes: z.optional(z.string())
         })
     ]))
 }).and(z.record(z.string(), z.unknown()));
@@ -351,13 +614,42 @@ export const zApplicationMemberUpdate = z.object({
             ]),
             monthlyAmount: z.number().gte(0)
         })
+    ])),
+    notificationPreference: z.optional(z.union([
+        z.object({
+            channel: z.enum(['email']),
+            address: z.email()
+        }),
+        z.object({
+            channel: z.enum(['sms']),
+            phone: z.string()
+        }),
+        z.object({
+            channel: z.enum(['mail']),
+            address: z.object({
+                street: z.string(),
+                city: z.string(),
+                state: z.string().length(2),
+                zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+            })
+        })
+    ])),
+    verificationEvidence: z.optional(z.union([
+        z.object({
+            source: z.string(),
+            matchCode: z.string(),
+            verifiedAt: z.iso.datetime({ offset: true })
+        }),
+        z.object({
+            verifiedBy: z.string(),
+            verifiedAt: z.iso.datetime({ offset: true }),
+            notes: z.optional(z.string())
+        })
     ]))
 }).and(z.record(z.string(), z.unknown()));
 
 export const zApplicationMemberList = z.object({
     items: z.array(z.object({
-        id: z.uuid().readonly(),
-        applicationId: z.uuid(),
         firstName: z.string(),
         lastName: z.string(),
         dateOfBirth: z.optional(z.iso.date()),
@@ -392,16 +684,82 @@ export const zApplicationMemberList = z.object({
                 monthlyAmount: z.number().gte(0)
             })
         ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
+        ]))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         links: z.optional(z.object({
             application: z.optional(z.string())
         }).readonly())
-    })),
+    }))),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
     offset: z.int().gte(0),
     hasNext: z.optional(z.boolean())
+});
+
+export const zEmailNotification = z.object({
+    channel: z.enum(['email']),
+    address: z.email()
+});
+
+export const zElectronicVerification = z.object({
+    source: z.string(),
+    matchCode: z.string(),
+    verifiedAt: z.iso.datetime({ offset: true })
+});
+
+export const zMailNotification = z.object({
+    channel: z.enum(['mail']),
+    address: z.object({
+        street: z.string(),
+        city: z.string(),
+        state: z.string().length(2),
+        zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+    })
+});
+
+export const zManualVerification = z.object({
+    verifiedBy: z.string(),
+    verifiedAt: z.iso.datetime({ offset: true }),
+    notes: z.optional(z.string())
+});
+
+export const zSmsNotification = z.object({
+    channel: z.enum(['sms']),
+    phone: z.string()
 });
 
 export const zCloseRequest = z.object({
@@ -434,30 +792,35 @@ export const zInterviewPromptsRequest = z.object({
 });
 
 /**
- * Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
+ * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
  *
  */
-export const zInterviewPromptsResponse = z.record(z.string(), z.union([
+export const zInterviewPromptsResponse = z.array(z.union([
     z.object({
+        fact: z.string(),
         state: z.enum(['complete']),
         value: z.unknown()
     }),
     z.object({
+        fact: z.string(),
         state: z.enum(['placeholder']),
         value: z.unknown()
     }),
     z.object({
+        fact: z.string(),
         state: z.enum(['missing']),
-        value: z.null(),
         missing: z.array(z.string())
     }),
     z.object({
+        fact: z.string(),
         state: z.enum(['error']),
-        value: z.null(),
         message: z.string()
     })
 ]));
 
+/**
+ * A benefit application record, including server-managed fields.
+ */
 export const zApplicationWritable2 = z.object({
     programsApplied: z.array(z.enum([
         'snap',
@@ -485,8 +848,80 @@ export const zApplicationWritable2 = z.object({
             'email',
             'mail'
         ]))
-    }))
-});
+    })),
+    labels: z.optional(z.record(z.string(), z.string())),
+    countyCode: z.optional(z.string().max(10))
+}).and(z.object({
+    members: z.optional(z.array(z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        dateOfBirth: z.optional(z.iso.date()),
+        relationship: z.enum([
+            'self',
+            'spouse',
+            'child',
+            'parent',
+            'sibling',
+            'other'
+        ]),
+        incomeSource: z.optional(z.union([
+            z.object({
+                type: z.literal('employment'),
+                employer: z.string(),
+                monthlyGrossIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('self_employment'),
+                businessType: z.string(),
+                monthlyNetIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('benefit'),
+                benefitType: z.enum([
+                    'ssi',
+                    'ssdi',
+                    'unemployment',
+                    'veterans',
+                    'other'
+                ]),
+                monthlyAmount: z.number().gte(0)
+            })
+        ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
+        ]))
+    }).and(z.object({
+        applicationId: z.uuid()
+    }))))
+}));
 
 export const zApplicationListWritable = z.object({
     items: z.array(z.object({
@@ -516,16 +951,90 @@ export const zApplicationListWritable = z.object({
                 'email',
                 'mail'
             ]))
-        }))
-    })),
+        })),
+        labels: z.optional(z.record(z.string(), z.string())),
+        countyCode: z.optional(z.string().max(10))
+    }).and(z.object({
+        members: z.optional(z.array(z.object({
+            firstName: z.string(),
+            lastName: z.string(),
+            dateOfBirth: z.optional(z.iso.date()),
+            relationship: z.enum([
+                'self',
+                'spouse',
+                'child',
+                'parent',
+                'sibling',
+                'other'
+            ]),
+            incomeSource: z.optional(z.union([
+                z.object({
+                    type: z.literal('employment'),
+                    employer: z.string(),
+                    monthlyGrossIncome: z.number().gte(0)
+                }),
+                z.object({
+                    type: z.literal('self_employment'),
+                    businessType: z.string(),
+                    monthlyNetIncome: z.number().gte(0)
+                }),
+                z.object({
+                    type: z.literal('benefit'),
+                    benefitType: z.enum([
+                        'ssi',
+                        'ssdi',
+                        'unemployment',
+                        'veterans',
+                        'other'
+                    ]),
+                    monthlyAmount: z.number().gte(0)
+                })
+            ])),
+            notificationPreference: z.optional(z.union([
+                z.object({
+                    channel: z.enum(['email']),
+                    address: z.email()
+                }),
+                z.object({
+                    channel: z.enum(['sms']),
+                    phone: z.string()
+                }),
+                z.object({
+                    channel: z.enum(['mail']),
+                    address: z.object({
+                        street: z.string(),
+                        city: z.string(),
+                        state: z.string().length(2),
+                        zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                    })
+                })
+            ])),
+            verificationEvidence: z.optional(z.union([
+                z.object({
+                    source: z.string(),
+                    matchCode: z.string(),
+                    verifiedAt: z.iso.datetime({ offset: true })
+                }),
+                z.object({
+                    verifiedBy: z.string(),
+                    verifiedAt: z.iso.datetime({ offset: true }),
+                    notes: z.optional(z.string())
+                })
+            ]))
+        }).and(z.object({
+            applicationId: z.uuid()
+        }))))
+    }))),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
     offset: z.int().gte(0),
     hasNext: z.optional(z.boolean())
 });
 
+/**
+ * A household member on a benefit application.
+ */
 export const zApplicationMemberWritable2 = z.object({
-    applicationId: z.uuid(),
     firstName: z.string(),
     lastName: z.string(),
     dateOfBirth: z.optional(z.iso.date()),
@@ -559,12 +1068,44 @@ export const zApplicationMemberWritable2 = z.object({
             ]),
             monthlyAmount: z.number().gte(0)
         })
+    ])),
+    notificationPreference: z.optional(z.union([
+        z.object({
+            channel: z.enum(['email']),
+            address: z.email()
+        }),
+        z.object({
+            channel: z.enum(['sms']),
+            phone: z.string()
+        }),
+        z.object({
+            channel: z.enum(['mail']),
+            address: z.object({
+                street: z.string(),
+                city: z.string(),
+                state: z.string().length(2),
+                zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+            })
+        })
+    ])),
+    verificationEvidence: z.optional(z.union([
+        z.object({
+            source: z.string(),
+            matchCode: z.string(),
+            verifiedAt: z.iso.datetime({ offset: true })
+        }),
+        z.object({
+            verifiedBy: z.string(),
+            verifiedAt: z.iso.datetime({ offset: true }),
+            notes: z.optional(z.string())
+        })
     ]))
-});
+}).and(z.object({
+    applicationId: z.uuid()
+}));
 
 export const zApplicationMemberListWritable = z.object({
     items: z.array(z.object({
-        applicationId: z.uuid(),
         firstName: z.string(),
         lastName: z.string(),
         dateOfBirth: z.optional(z.iso.date()),
@@ -598,8 +1139,41 @@ export const zApplicationMemberListWritable = z.object({
                 ]),
                 monthlyAmount: z.number().gte(0)
             })
+        ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
         ]))
-    })),
+    }).and(z.object({
+        applicationId: z.uuid()
+    }))),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
     offset: z.int().gte(0),
@@ -634,15 +1208,6 @@ export const zListApplicationsData = z.object({
  */
 export const zListApplicationsResponse = z.object({
     items: z.array(z.object({
-        id: z.uuid().readonly(),
-        referenceId: z.string().readonly(),
-        status: z.enum([
-            'draft',
-            'submitted',
-            'under_review',
-            'withdrawn',
-            'closed'
-        ]),
         programsApplied: z.array(z.enum([
             'snap',
             'medicaid',
@@ -655,9 +1220,6 @@ export const zListApplicationsResponse = z.object({
             'in_person',
             'mail'
         ])),
-        submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-        openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-        slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
         address: z.optional(z.object({
             street: z.string(),
             city: z.string(),
@@ -673,14 +1235,106 @@ export const zListApplicationsResponse = z.object({
                 'mail'
             ]))
         })),
+        labels: z.optional(z.record(z.string(), z.string())),
+        countyCode: z.optional(z.string().max(10))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        referenceId: z.string().readonly(),
+        confirmationNumber: z.optional(z.string().readonly()),
+        status: z.enum([
+            'draft',
+            'submitted',
+            'under_review',
+            'withdrawn',
+            'closed'
+        ]),
+        submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+        members: z.optional(z.array(z.object({
+            firstName: z.string(),
+            lastName: z.string(),
+            dateOfBirth: z.optional(z.iso.date()),
+            relationship: z.enum([
+                'self',
+                'spouse',
+                'child',
+                'parent',
+                'sibling',
+                'other'
+            ]),
+            incomeSource: z.optional(z.union([
+                z.object({
+                    type: z.literal('employment'),
+                    employer: z.string(),
+                    monthlyGrossIncome: z.number().gte(0)
+                }),
+                z.object({
+                    type: z.literal('self_employment'),
+                    businessType: z.string(),
+                    monthlyNetIncome: z.number().gte(0)
+                }),
+                z.object({
+                    type: z.literal('benefit'),
+                    benefitType: z.enum([
+                        'ssi',
+                        'ssdi',
+                        'unemployment',
+                        'veterans',
+                        'other'
+                    ]),
+                    monthlyAmount: z.number().gte(0)
+                })
+            ])),
+            notificationPreference: z.optional(z.union([
+                z.object({
+                    channel: z.enum(['email']),
+                    address: z.email()
+                }),
+                z.object({
+                    channel: z.enum(['sms']),
+                    phone: z.string()
+                }),
+                z.object({
+                    channel: z.enum(['mail']),
+                    address: z.object({
+                        street: z.string(),
+                        city: z.string(),
+                        state: z.string().length(2),
+                        zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                    })
+                })
+            ])),
+            verificationEvidence: z.optional(z.union([
+                z.object({
+                    source: z.string(),
+                    matchCode: z.string(),
+                    verifiedAt: z.iso.datetime({ offset: true })
+                }),
+                z.object({
+                    verifiedBy: z.string(),
+                    verifiedAt: z.iso.datetime({ offset: true }),
+                    notes: z.optional(z.string())
+                })
+            ]))
+        }).and(z.object({
+            id: z.uuid().readonly(),
+            applicationId: z.uuid(),
+            createdAt: z.iso.datetime({ offset: true }).readonly(),
+            updatedAt: z.iso.datetime({ offset: true }).readonly(),
+            links: z.optional(z.object({
+                application: z.optional(z.string())
+            }).readonly())
+        })))),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
-        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    })).and(z.object({
         _links: z.optional(z.object({
             applicationSummary: z.optional(z.object({
                 href: z.optional(z.string().readonly())
             }))
         }).readonly())
-    })),
+    }))),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
     offset: z.int().gte(0),
@@ -716,25 +1370,17 @@ export const zCreateApplicationData = z.object({
                 'mail'
             ]))
         })),
-        county_code: z.optional(z.string().max(10))
+        labels: z.optional(z.record(z.string(), z.string())),
+        countyCode: z.optional(z.string().max(10))
     }).and(z.record(z.string(), z.unknown())),
     path: z.optional(z.never()),
     query: z.optional(z.never())
 });
 
 /**
- * Application created successfully.
+ * A benefit application record, including server-managed fields.
  */
 export const zCreateApplicationResponse = z.object({
-    id: z.uuid().readonly(),
-    referenceId: z.string().readonly(),
-    status: z.enum([
-        'draft',
-        'submitted',
-        'under_review',
-        'withdrawn',
-        'closed'
-    ]),
     programsApplied: z.array(z.enum([
         'snap',
         'medicaid',
@@ -747,9 +1393,6 @@ export const zCreateApplicationResponse = z.object({
         'in_person',
         'mail'
     ])),
-    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
     address: z.optional(z.object({
         street: z.string(),
         city: z.string(),
@@ -765,42 +1408,12 @@ export const zCreateApplicationResponse = z.object({
             'mail'
         ]))
     })),
-    createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly(),
-    _links: z.optional(z.object({
-        applicationSummary: z.optional(z.object({
-            href: z.optional(z.string().readonly())
-        }))
-    }).readonly())
-});
-
-export const zDeleteApplicationData = z.object({
-    body: z.optional(z.never()),
-    path: z.object({
-        applicationId: z.uuid()
-    }),
-    query: z.optional(z.never())
-});
-
-/**
- * Application deleted successfully.
- */
-export const zDeleteApplicationResponse = z.void();
-
-export const zGetApplicationData = z.object({
-    body: z.optional(z.never()),
-    path: z.object({
-        applicationId: z.uuid()
-    }),
-    query: z.optional(z.never())
-});
-
-/**
- * Application retrieved successfully.
- */
-export const zGetApplicationResponse = z.object({
+    labels: z.optional(z.record(z.string(), z.string())),
+    countyCode: z.optional(z.string().max(10))
+}).and(z.object({
     id: z.uuid().readonly(),
     referenceId: z.string().readonly(),
+    confirmationNumber: z.optional(z.string().readonly()),
     status: z.enum([
         'draft',
         'submitted',
@@ -808,152 +1421,10 @@ export const zGetApplicationResponse = z.object({
         'withdrawn',
         'closed'
     ]),
-    programsApplied: z.array(z.enum([
-        'snap',
-        'medicaid',
-        'chip',
-        'tanf'
-    ])),
-    channel: z.optional(z.enum([
-        'online',
-        'phone',
-        'in_person',
-        'mail'
-    ])),
     submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
-    address: z.optional(z.object({
-        street: z.string(),
-        city: z.string(),
-        state: z.string().length(2),
-        zip: z.string().regex(/^\d{5}(-\d{4})?$/)
-    })),
-    contactInfo: z.optional(z.object({
-        phone: z.optional(z.string()),
-        email: z.optional(z.email()),
-        preferredContact: z.optional(z.enum([
-            'phone',
-            'email',
-            'mail'
-        ]))
-    })),
-    createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly(),
-    _links: z.optional(z.object({
-        applicationSummary: z.optional(z.object({
-            href: z.optional(z.string().readonly())
-        }))
-    }).readonly())
-});
-
-export const zUpdateApplicationData = z.object({
-    body: z.object({
-        programsApplied: z.optional(z.array(z.enum([
-            'snap',
-            'medicaid',
-            'chip',
-            'tanf'
-        ]))),
-        channel: z.optional(z.enum([
-            'online',
-            'phone',
-            'in_person',
-            'mail'
-        ])),
-        address: z.optional(z.object({
-            street: z.string(),
-            city: z.string(),
-            state: z.string().length(2),
-            zip: z.string().regex(/^\d{5}(-\d{4})?$/)
-        })),
-        contactInfo: z.optional(z.object({
-            phone: z.optional(z.string()),
-            email: z.optional(z.email()),
-            preferredContact: z.optional(z.enum([
-                'phone',
-                'email',
-                'mail'
-            ]))
-        })),
-        county_code: z.optional(z.string().max(10))
-    }).and(z.record(z.string(), z.unknown())),
-    path: z.object({
-        applicationId: z.uuid()
-    }),
-    query: z.optional(z.never())
-});
-
-/**
- * Application updated successfully.
- */
-export const zUpdateApplicationResponse = z.object({
-    id: z.uuid().readonly(),
-    referenceId: z.string().readonly(),
-    status: z.enum([
-        'draft',
-        'submitted',
-        'under_review',
-        'withdrawn',
-        'closed'
-    ]),
-    programsApplied: z.array(z.enum([
-        'snap',
-        'medicaid',
-        'chip',
-        'tanf'
-    ])),
-    channel: z.optional(z.enum([
-        'online',
-        'phone',
-        'in_person',
-        'mail'
-    ])),
-    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
-    address: z.optional(z.object({
-        street: z.string(),
-        city: z.string(),
-        state: z.string().length(2),
-        zip: z.string().regex(/^\d{5}(-\d{4})?$/)
-    })),
-    contactInfo: z.optional(z.object({
-        phone: z.optional(z.string()),
-        email: z.optional(z.email()),
-        preferredContact: z.optional(z.enum([
-            'phone',
-            'email',
-            'mail'
-        ]))
-    })),
-    createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly(),
-    _links: z.optional(z.object({
-        applicationSummary: z.optional(z.object({
-            href: z.optional(z.string().readonly())
-        }))
-    }).readonly())
-});
-
-export const zListApplicationMembersData = z.object({
-    body: z.optional(z.never()),
-    path: z.object({
-        applicationId: z.uuid()
-    }),
-    query: z.optional(z.object({
-        limit: z.optional(z.int().gte(1).lte(100)).default(25),
-        offset: z.optional(z.int().gte(0)).default(0)
-    }))
-});
-
-/**
- * Household members for this application.
- */
-export const zListApplicationMembersResponse = z.object({
-    items: z.array(z.object({
-        id: z.uuid().readonly(),
-        applicationId: z.uuid(),
+    members: z.optional(z.array(z.object({
         firstName: z.string(),
         lastName: z.string(),
         dateOfBirth: z.optional(z.iso.date()),
@@ -988,12 +1459,471 @@ export const zListApplicationMembersResponse = z.object({
                 monthlyAmount: z.number().gte(0)
             })
         ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
+        ]))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         links: z.optional(z.object({
             application: z.optional(z.string())
         }).readonly())
+    })))),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationSummary: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
+}));
+
+export const zDeleteApplicationData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Application deleted successfully.
+ */
+export const zDeleteApplicationResponse = z.void();
+
+export const zGetApplicationData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * A benefit application record, including server-managed fields.
+ */
+export const zGetApplicationResponse = z.object({
+    programsApplied: z.array(z.enum([
+        'snap',
+        'medicaid',
+        'chip',
+        'tanf'
+    ])),
+    channel: z.optional(z.enum([
+        'online',
+        'phone',
+        'in_person',
+        'mail'
+    ])),
+    address: z.optional(z.object({
+        street: z.string(),
+        city: z.string(),
+        state: z.string().length(2),
+        zip: z.string().regex(/^\d{5}(-\d{4})?$/)
     })),
+    contactInfo: z.optional(z.object({
+        phone: z.optional(z.string()),
+        email: z.optional(z.email()),
+        preferredContact: z.optional(z.enum([
+            'phone',
+            'email',
+            'mail'
+        ]))
+    })),
+    labels: z.optional(z.record(z.string(), z.string())),
+    countyCode: z.optional(z.string().max(10))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    referenceId: z.string().readonly(),
+    confirmationNumber: z.optional(z.string().readonly()),
+    status: z.enum([
+        'draft',
+        'submitted',
+        'under_review',
+        'withdrawn',
+        'closed'
+    ]),
+    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+    members: z.optional(z.array(z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        dateOfBirth: z.optional(z.iso.date()),
+        relationship: z.enum([
+            'self',
+            'spouse',
+            'child',
+            'parent',
+            'sibling',
+            'other'
+        ]),
+        incomeSource: z.optional(z.union([
+            z.object({
+                type: z.literal('employment'),
+                employer: z.string(),
+                monthlyGrossIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('self_employment'),
+                businessType: z.string(),
+                monthlyNetIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('benefit'),
+                benefitType: z.enum([
+                    'ssi',
+                    'ssdi',
+                    'unemployment',
+                    'veterans',
+                    'other'
+                ]),
+                monthlyAmount: z.number().gte(0)
+            })
+        ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
+        ]))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid(),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            application: z.optional(z.string())
+        }).readonly())
+    })))),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationSummary: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
+}));
+
+export const zUpdateApplicationData = z.object({
+    body: z.object({
+        programsApplied: z.optional(z.array(z.enum([
+            'snap',
+            'medicaid',
+            'chip',
+            'tanf'
+        ]))),
+        channel: z.optional(z.enum([
+            'online',
+            'phone',
+            'in_person',
+            'mail'
+        ])),
+        address: z.optional(z.object({
+            street: z.string(),
+            city: z.string(),
+            state: z.string().length(2),
+            zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+        })),
+        contactInfo: z.optional(z.object({
+            phone: z.optional(z.string()),
+            email: z.optional(z.email()),
+            preferredContact: z.optional(z.enum([
+                'phone',
+                'email',
+                'mail'
+            ]))
+        })),
+        labels: z.optional(z.record(z.string(), z.string())),
+        countyCode: z.optional(z.string().max(10))
+    }).and(z.record(z.string(), z.unknown())),
+    path: z.object({
+        applicationId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * A benefit application record, including server-managed fields.
+ */
+export const zUpdateApplicationResponse = z.object({
+    programsApplied: z.array(z.enum([
+        'snap',
+        'medicaid',
+        'chip',
+        'tanf'
+    ])),
+    channel: z.optional(z.enum([
+        'online',
+        'phone',
+        'in_person',
+        'mail'
+    ])),
+    address: z.optional(z.object({
+        street: z.string(),
+        city: z.string(),
+        state: z.string().length(2),
+        zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+    })),
+    contactInfo: z.optional(z.object({
+        phone: z.optional(z.string()),
+        email: z.optional(z.email()),
+        preferredContact: z.optional(z.enum([
+            'phone',
+            'email',
+            'mail'
+        ]))
+    })),
+    labels: z.optional(z.record(z.string(), z.string())),
+    countyCode: z.optional(z.string().max(10))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    referenceId: z.string().readonly(),
+    confirmationNumber: z.optional(z.string().readonly()),
+    status: z.enum([
+        'draft',
+        'submitted',
+        'under_review',
+        'withdrawn',
+        'closed'
+    ]),
+    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+    members: z.optional(z.array(z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        dateOfBirth: z.optional(z.iso.date()),
+        relationship: z.enum([
+            'self',
+            'spouse',
+            'child',
+            'parent',
+            'sibling',
+            'other'
+        ]),
+        incomeSource: z.optional(z.union([
+            z.object({
+                type: z.literal('employment'),
+                employer: z.string(),
+                monthlyGrossIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('self_employment'),
+                businessType: z.string(),
+                monthlyNetIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('benefit'),
+                benefitType: z.enum([
+                    'ssi',
+                    'ssdi',
+                    'unemployment',
+                    'veterans',
+                    'other'
+                ]),
+                monthlyAmount: z.number().gte(0)
+            })
+        ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
+        ]))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid(),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            application: z.optional(z.string())
+        }).readonly())
+    })))),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationSummary: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
+}));
+
+export const zListApplicationMembersData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid()
+    }),
+    query: z.optional(z.object({
+        q: z.optional(z.string()),
+        limit: z.optional(z.int().gte(1).lte(100)).default(25),
+        offset: z.optional(z.int().gte(0)).default(0),
+        sort: z.optional(z.string())
+    }))
+});
+
+/**
+ * Household members for this application.
+ */
+export const zListApplicationMembersResponse = z.object({
+    items: z.array(z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        dateOfBirth: z.optional(z.iso.date()),
+        relationship: z.enum([
+            'self',
+            'spouse',
+            'child',
+            'parent',
+            'sibling',
+            'other'
+        ]),
+        incomeSource: z.optional(z.union([
+            z.object({
+                type: z.literal('employment'),
+                employer: z.string(),
+                monthlyGrossIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('self_employment'),
+                businessType: z.string(),
+                monthlyNetIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('benefit'),
+                benefitType: z.enum([
+                    'ssi',
+                    'ssdi',
+                    'unemployment',
+                    'veterans',
+                    'other'
+                ]),
+                monthlyAmount: z.number().gte(0)
+            })
+        ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
+        ]))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid(),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            application: z.optional(z.string())
+        }).readonly())
+    }))),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
     offset: z.int().gte(0),
@@ -1035,6 +1965,37 @@ export const zCreateApplicationMemberData = z.object({
                 ]),
                 monthlyAmount: z.number().gte(0)
             })
+        ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
         ]))
     }).and(z.record(z.string(), z.unknown())),
     path: z.object({
@@ -1044,11 +2005,9 @@ export const zCreateApplicationMemberData = z.object({
 });
 
 /**
- * Household member added successfully.
+ * A household member on a benefit application.
  */
 export const zCreateApplicationMemberResponse = z.object({
-    id: z.uuid().readonly(),
-    applicationId: z.uuid(),
     firstName: z.string(),
     lastName: z.string(),
     dateOfBirth: z.optional(z.iso.date()),
@@ -1083,12 +2042,46 @@ export const zCreateApplicationMemberResponse = z.object({
             monthlyAmount: z.number().gte(0)
         })
     ])),
+    notificationPreference: z.optional(z.union([
+        z.object({
+            channel: z.enum(['email']),
+            address: z.email()
+        }),
+        z.object({
+            channel: z.enum(['sms']),
+            phone: z.string()
+        }),
+        z.object({
+            channel: z.enum(['mail']),
+            address: z.object({
+                street: z.string(),
+                city: z.string(),
+                state: z.string().length(2),
+                zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+            })
+        })
+    ])),
+    verificationEvidence: z.optional(z.union([
+        z.object({
+            source: z.string(),
+            matchCode: z.string(),
+            verifiedAt: z.iso.datetime({ offset: true })
+        }),
+        z.object({
+            verifiedBy: z.string(),
+            verifiedAt: z.iso.datetime({ offset: true }),
+            notes: z.optional(z.string())
+        })
+    ]))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    applicationId: z.uuid(),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
         application: z.optional(z.string())
     }).readonly())
-});
+}));
 
 export const zDeleteApplicationMemberData = z.object({
     body: z.optional(z.never()),
@@ -1114,11 +2107,9 @@ export const zGetApplicationMemberData = z.object({
 });
 
 /**
- * Household member retrieved successfully.
+ * A household member on a benefit application.
  */
 export const zGetApplicationMemberResponse = z.object({
-    id: z.uuid().readonly(),
-    applicationId: z.uuid(),
     firstName: z.string(),
     lastName: z.string(),
     dateOfBirth: z.optional(z.iso.date()),
@@ -1153,12 +2144,46 @@ export const zGetApplicationMemberResponse = z.object({
             monthlyAmount: z.number().gte(0)
         })
     ])),
+    notificationPreference: z.optional(z.union([
+        z.object({
+            channel: z.enum(['email']),
+            address: z.email()
+        }),
+        z.object({
+            channel: z.enum(['sms']),
+            phone: z.string()
+        }),
+        z.object({
+            channel: z.enum(['mail']),
+            address: z.object({
+                street: z.string(),
+                city: z.string(),
+                state: z.string().length(2),
+                zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+            })
+        })
+    ])),
+    verificationEvidence: z.optional(z.union([
+        z.object({
+            source: z.string(),
+            matchCode: z.string(),
+            verifiedAt: z.iso.datetime({ offset: true })
+        }),
+        z.object({
+            verifiedBy: z.string(),
+            verifiedAt: z.iso.datetime({ offset: true }),
+            notes: z.optional(z.string())
+        })
+    ]))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    applicationId: z.uuid(),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
         application: z.optional(z.string())
     }).readonly())
-});
+}));
 
 export const zUpdateApplicationMemberData = z.object({
     body: z.object({
@@ -1195,6 +2220,37 @@ export const zUpdateApplicationMemberData = z.object({
                 ]),
                 monthlyAmount: z.number().gte(0)
             })
+        ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
         ]))
     }).and(z.record(z.string(), z.unknown())),
     path: z.object({
@@ -1205,11 +2261,9 @@ export const zUpdateApplicationMemberData = z.object({
 });
 
 /**
- * Household member updated successfully.
+ * A household member on a benefit application.
  */
 export const zUpdateApplicationMemberResponse = z.object({
-    id: z.uuid().readonly(),
-    applicationId: z.uuid(),
     firstName: z.string(),
     lastName: z.string(),
     dateOfBirth: z.optional(z.iso.date()),
@@ -1244,34 +2298,59 @@ export const zUpdateApplicationMemberResponse = z.object({
             monthlyAmount: z.number().gte(0)
         })
     ])),
+    notificationPreference: z.optional(z.union([
+        z.object({
+            channel: z.enum(['email']),
+            address: z.email()
+        }),
+        z.object({
+            channel: z.enum(['sms']),
+            phone: z.string()
+        }),
+        z.object({
+            channel: z.enum(['mail']),
+            address: z.object({
+                street: z.string(),
+                city: z.string(),
+                state: z.string().length(2),
+                zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+            })
+        })
+    ])),
+    verificationEvidence: z.optional(z.union([
+        z.object({
+            source: z.string(),
+            matchCode: z.string(),
+            verifiedAt: z.iso.datetime({ offset: true })
+        }),
+        z.object({
+            verifiedBy: z.string(),
+            verifiedAt: z.iso.datetime({ offset: true }),
+            notes: z.optional(z.string())
+        })
+    ]))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    applicationId: z.uuid(),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
         application: z.optional(z.string())
     }).readonly())
-});
+}));
 
 export const zSubmitApplicationData = z.object({
     body: z.optional(z.never()),
     path: z.object({
-        applicationId: z.uuid()
+        applicationId: z.string()
     }),
     query: z.optional(z.never())
 });
 
 /**
- * Transition applied successfully.
+ * A benefit application record, including server-managed fields.
  */
 export const zSubmitApplicationResponse = z.object({
-    id: z.uuid().readonly(),
-    referenceId: z.string().readonly(),
-    status: z.enum([
-        'draft',
-        'submitted',
-        'under_review',
-        'withdrawn',
-        'closed'
-    ]),
     programsApplied: z.array(z.enum([
         'snap',
         'medicaid',
@@ -1284,9 +2363,6 @@ export const zSubmitApplicationResponse = z.object({
         'in_person',
         'mail'
     ])),
-    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
     address: z.optional(z.object({
         street: z.string(),
         city: z.string(),
@@ -1302,36 +2378,119 @@ export const zSubmitApplicationResponse = z.object({
             'mail'
         ]))
     })),
+    labels: z.optional(z.record(z.string(), z.string())),
+    countyCode: z.optional(z.string().max(10))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    referenceId: z.string().readonly(),
+    confirmationNumber: z.optional(z.string().readonly()),
+    status: z.enum([
+        'draft',
+        'submitted',
+        'under_review',
+        'withdrawn',
+        'closed'
+    ]),
+    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+    members: z.optional(z.array(z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        dateOfBirth: z.optional(z.iso.date()),
+        relationship: z.enum([
+            'self',
+            'spouse',
+            'child',
+            'parent',
+            'sibling',
+            'other'
+        ]),
+        incomeSource: z.optional(z.union([
+            z.object({
+                type: z.literal('employment'),
+                employer: z.string(),
+                monthlyGrossIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('self_employment'),
+                businessType: z.string(),
+                monthlyNetIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('benefit'),
+                benefitType: z.enum([
+                    'ssi',
+                    'ssdi',
+                    'unemployment',
+                    'veterans',
+                    'other'
+                ]),
+                monthlyAmount: z.number().gte(0)
+            })
+        ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
+        ]))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid(),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            application: z.optional(z.string())
+        }).readonly())
+    })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+})).and(z.object({
     _links: z.optional(z.object({
         applicationSummary: z.optional(z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
-});
+}));
 
 export const zOpenApplicationData = z.object({
     body: z.optional(z.never()),
     path: z.object({
-        applicationId: z.uuid()
+        applicationId: z.string()
     }),
     query: z.optional(z.never())
 });
 
 /**
- * Transition applied successfully.
+ * A benefit application record, including server-managed fields.
  */
 export const zOpenApplicationResponse = z.object({
-    id: z.uuid().readonly(),
-    referenceId: z.string().readonly(),
-    status: z.enum([
-        'draft',
-        'submitted',
-        'under_review',
-        'withdrawn',
-        'closed'
-    ]),
     programsApplied: z.array(z.enum([
         'snap',
         'medicaid',
@@ -1344,9 +2503,6 @@ export const zOpenApplicationResponse = z.object({
         'in_person',
         'mail'
     ])),
-    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
     address: z.optional(z.object({
         street: z.string(),
         city: z.string(),
@@ -1362,14 +2518,106 @@ export const zOpenApplicationResponse = z.object({
             'mail'
         ]))
     })),
+    labels: z.optional(z.record(z.string(), z.string())),
+    countyCode: z.optional(z.string().max(10))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    referenceId: z.string().readonly(),
+    confirmationNumber: z.optional(z.string().readonly()),
+    status: z.enum([
+        'draft',
+        'submitted',
+        'under_review',
+        'withdrawn',
+        'closed'
+    ]),
+    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+    members: z.optional(z.array(z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        dateOfBirth: z.optional(z.iso.date()),
+        relationship: z.enum([
+            'self',
+            'spouse',
+            'child',
+            'parent',
+            'sibling',
+            'other'
+        ]),
+        incomeSource: z.optional(z.union([
+            z.object({
+                type: z.literal('employment'),
+                employer: z.string(),
+                monthlyGrossIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('self_employment'),
+                businessType: z.string(),
+                monthlyNetIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('benefit'),
+                benefitType: z.enum([
+                    'ssi',
+                    'ssdi',
+                    'unemployment',
+                    'veterans',
+                    'other'
+                ]),
+                monthlyAmount: z.number().gte(0)
+            })
+        ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
+        ]))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid(),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            application: z.optional(z.string())
+        }).readonly())
+    })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+})).and(z.object({
     _links: z.optional(z.object({
         applicationSummary: z.optional(z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
-});
+}));
 
 export const zCloseApplicationData = z.object({
     body: z.object({
@@ -1377,24 +2625,15 @@ export const zCloseApplicationData = z.object({
         notes: z.optional(z.string())
     }),
     path: z.object({
-        applicationId: z.uuid()
+        applicationId: z.string()
     }),
     query: z.optional(z.never())
 });
 
 /**
- * Transition applied successfully.
+ * A benefit application record, including server-managed fields.
  */
 export const zCloseApplicationResponse = z.object({
-    id: z.uuid().readonly(),
-    referenceId: z.string().readonly(),
-    status: z.enum([
-        'draft',
-        'submitted',
-        'under_review',
-        'withdrawn',
-        'closed'
-    ]),
     programsApplied: z.array(z.enum([
         'snap',
         'medicaid',
@@ -1407,9 +2646,6 @@ export const zCloseApplicationResponse = z.object({
         'in_person',
         'mail'
     ])),
-    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
     address: z.optional(z.object({
         street: z.string(),
         city: z.string(),
@@ -1425,36 +2661,119 @@ export const zCloseApplicationResponse = z.object({
             'mail'
         ]))
     })),
+    labels: z.optional(z.record(z.string(), z.string())),
+    countyCode: z.optional(z.string().max(10))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    referenceId: z.string().readonly(),
+    confirmationNumber: z.optional(z.string().readonly()),
+    status: z.enum([
+        'draft',
+        'submitted',
+        'under_review',
+        'withdrawn',
+        'closed'
+    ]),
+    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+    members: z.optional(z.array(z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        dateOfBirth: z.optional(z.iso.date()),
+        relationship: z.enum([
+            'self',
+            'spouse',
+            'child',
+            'parent',
+            'sibling',
+            'other'
+        ]),
+        incomeSource: z.optional(z.union([
+            z.object({
+                type: z.literal('employment'),
+                employer: z.string(),
+                monthlyGrossIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('self_employment'),
+                businessType: z.string(),
+                monthlyNetIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('benefit'),
+                benefitType: z.enum([
+                    'ssi',
+                    'ssdi',
+                    'unemployment',
+                    'veterans',
+                    'other'
+                ]),
+                monthlyAmount: z.number().gte(0)
+            })
+        ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
+        ]))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid(),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            application: z.optional(z.string())
+        }).readonly())
+    })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+})).and(z.object({
     _links: z.optional(z.object({
         applicationSummary: z.optional(z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
-});
+}));
 
 export const zWithdrawApplicationData = z.object({
     body: z.optional(z.never()),
     path: z.object({
-        applicationId: z.uuid()
+        applicationId: z.string()
     }),
     query: z.optional(z.never())
 });
 
 /**
- * Transition applied successfully.
+ * A benefit application record, including server-managed fields.
  */
 export const zWithdrawApplicationResponse = z.object({
-    id: z.uuid().readonly(),
-    referenceId: z.string().readonly(),
-    status: z.enum([
-        'draft',
-        'submitted',
-        'under_review',
-        'withdrawn',
-        'closed'
-    ]),
     programsApplied: z.array(z.enum([
         'snap',
         'medicaid',
@@ -1467,9 +2786,6 @@ export const zWithdrawApplicationResponse = z.object({
         'in_person',
         'mail'
     ])),
-    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
     address: z.optional(z.object({
         street: z.string(),
         city: z.string(),
@@ -1485,14 +2801,106 @@ export const zWithdrawApplicationResponse = z.object({
             'mail'
         ]))
     })),
+    labels: z.optional(z.record(z.string(), z.string())),
+    countyCode: z.optional(z.string().max(10))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    referenceId: z.string().readonly(),
+    confirmationNumber: z.optional(z.string().readonly()),
+    status: z.enum([
+        'draft',
+        'submitted',
+        'under_review',
+        'withdrawn',
+        'closed'
+    ]),
+    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+    members: z.optional(z.array(z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        dateOfBirth: z.optional(z.iso.date()),
+        relationship: z.enum([
+            'self',
+            'spouse',
+            'child',
+            'parent',
+            'sibling',
+            'other'
+        ]),
+        incomeSource: z.optional(z.union([
+            z.object({
+                type: z.literal('employment'),
+                employer: z.string(),
+                monthlyGrossIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('self_employment'),
+                businessType: z.string(),
+                monthlyNetIncome: z.number().gte(0)
+            }),
+            z.object({
+                type: z.literal('benefit'),
+                benefitType: z.enum([
+                    'ssi',
+                    'ssdi',
+                    'unemployment',
+                    'veterans',
+                    'other'
+                ]),
+                monthlyAmount: z.number().gte(0)
+            })
+        ])),
+        notificationPreference: z.optional(z.union([
+            z.object({
+                channel: z.enum(['email']),
+                address: z.email()
+            }),
+            z.object({
+                channel: z.enum(['sms']),
+                phone: z.string()
+            }),
+            z.object({
+                channel: z.enum(['mail']),
+                address: z.object({
+                    street: z.string(),
+                    city: z.string(),
+                    state: z.string().length(2),
+                    zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+                })
+            })
+        ])),
+        verificationEvidence: z.optional(z.union([
+            z.object({
+                source: z.string(),
+                matchCode: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true })
+            }),
+            z.object({
+                verifiedBy: z.string(),
+                verifiedAt: z.iso.datetime({ offset: true }),
+                notes: z.optional(z.string())
+            })
+        ]))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        applicationId: z.uuid(),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            application: z.optional(z.string())
+        }).readonly())
+    })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+})).and(z.object({
     _links: z.optional(z.object({
         applicationSummary: z.optional(z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
-});
+}));
 
 export const zGetApplicationSummaryData = z.object({
     body: z.optional(z.never()),
@@ -1530,26 +2938,28 @@ export const zEvaluateInterviewPromptsData = z.object({
 });
 
 /**
- * Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
+ * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
  *
  */
-export const zEvaluateInterviewPromptsResponse = z.record(z.string(), z.union([
+export const zEvaluateInterviewPromptsResponse = z.array(z.union([
     z.object({
+        fact: z.string(),
         state: z.enum(['complete']),
         value: z.unknown()
     }),
     z.object({
+        fact: z.string(),
         state: z.enum(['placeholder']),
         value: z.unknown()
     }),
     z.object({
+        fact: z.string(),
         state: z.enum(['missing']),
-        value: z.null(),
         missing: z.array(z.string())
     }),
     z.object({
+        fact: z.string(),
         state: z.enum(['error']),
-        value: z.null(),
         message: z.string()
     })
 ]));

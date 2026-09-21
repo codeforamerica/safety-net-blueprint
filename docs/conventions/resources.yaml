@@ -311,6 +311,24 @@ sub_resource_paths:
       - PATCH /applications/{applicationId}/interview
 
   # ---------------------------------------------------------------------------
+  # OpenAPI tags for sub-resources
+  # ---------------------------------------------------------------------------
+  # Each sub-resource gets its own tag, separate from the parent resource tag.
+  # This keeps the API reference nav readable and groups operations by the
+  # resource type they act on.
+  #
+  # Example:
+  #   /applications/{id}/members → tag: Household Members   (not Applications)
+  #   /determinations/{id}/decisions → tag: Decisions       (not Determinations)
+  tagging:
+    rule: Sub-resource operations use a tag distinct from the parent resource tag.
+    rationale: |
+      Grouping sub-resource operations under the parent tag buries them — readers
+      scanning the nav cannot tell at a glance that a nested resource exists.
+      A dedicated tag gives the sub-resource a visible entry in the nav.
+    format: Title-cased plural noun matching the sub-resource concept.
+
+  # ---------------------------------------------------------------------------
   # Server-initialized collections
   # ---------------------------------------------------------------------------
   # Some sub-resource collections are pre-populated by the server rather than
@@ -508,6 +526,103 @@ schema_patterns:
     list:
       description: Response schema for GET collection endpoints
       suffix: List
+
+  # Closing schemas that use allOf composition
+  closing_composed_schemas:
+    description: |
+      Use unevaluatedProperties: false (not additionalProperties: false) to close
+      schemas that compose properties via allOf, oneOf, or anyOf.
+
+      additionalProperties: false only considers properties declared directly on
+      the schema object — it cannot see properties inherited through $ref or
+      composition keywords, so it rejects them as "additional." This breaks the
+      Writable composition pattern: a Task schema that composes TaskWritable via
+      allOf would reject every writable field if additionalProperties: false were
+      set on the Task schema.
+
+      unevaluatedProperties: false (JSON Schema 2019-09+) considers a property
+      "evaluated" if it was declared in any allOf/oneOf/anyOf branch, making it
+      the correct choice for composed schemas.
+    rule: |
+      - Use unevaluatedProperties: false on the base resource schema ({Resource}).
+      - Use additionalProperties: false only on schemas that declare all properties
+        directly (no allOf/oneOf/anyOf composition), such as {Resource}List.
+      - Never use additionalProperties: false on a schema that composes via allOf.
+    example: |
+      TaskWritable:           # no closing keyword — it is a base to be composed
+        type: object
+        properties:
+          name: ...
+
+      Task:                   # unevaluatedProperties: false — correct for allOf
+        unevaluatedProperties: false
+        allOf:
+          - $ref: TaskWritable
+          - type: object
+            properties:
+              id: ...
+
+      TaskList:               # additionalProperties: false — correct, no composition
+        type: object
+        additionalProperties: false
+        properties:
+          items: ...
+
+  # Compositional sub-resources as parent schema properties
+  sub_resource_schema_properties:
+    description: |
+      When a resource has a compositional sub-resource — one that is part of the
+      parent's primary representation rather than an independently-lifecycled
+      entity — the parent schema should declare the sub-resource collection as a
+      typed property.
+
+      This mirrors how major APIs model nested data: Stripe's PaymentIntent embeds
+      charges[] because charges are part of what a payment intent is; Kubernetes
+      Pod embeds containers[] because containers are definitionally part of a pod's
+      spec. Neither embeds independent entities: Stripe Customer does not embed
+      invoices[], GitHub Repository does not embed issues[].
+
+      The distinction:
+        - Compositional: the child exists as part of the parent's data model.
+          The child has no meaningful existence independent of the parent.
+          Examples: ApplicationMember, HouseholdExpense, IncomeEntry
+        - Associative/independent: the child is a separate resource that happens
+          to reference the parent via FK. The child can be queried, filtered, and
+          managed without loading the parent.
+          Examples: Document, Note, AuditLogEntry, Task
+
+    rule: |
+      Compositional sub-resources: declare as a typed property on the parent
+      schema. The property type is array with items $ref to the child schema.
+
+      Associative sub-resources: use FK-only. The child carries {parentId};
+      the parent schema has no property for the child collection.
+
+    tooling_note: |
+      A typed property on the parent is required for spec-relative path navigation.
+      application.members[].dateOfBirth is only a valid spec-relative path if
+      Application declares members as a typed array property. FK-only relationships
+      have no spec-relative path traversing from parent to child — annotate the
+      child schema directly (e.g., applicationMember.dateOfBirth).
+
+    example: |
+      # Compositional — Application declares members as a typed property
+      ApplicationWritable:
+        type: object
+        properties:
+          members:
+            type: array
+            items:
+              $ref: "#/components/schemas/ApplicationMember"
+
+      # Associative — Document carries applicationId; Application has no documents property
+      Document:
+        properties:
+          applicationId:
+            type: string
+            format: uuid
+            x-relationship:
+              resource: Application
 
   # Immutable type fields in categorized resources
   immutable_type_pattern:

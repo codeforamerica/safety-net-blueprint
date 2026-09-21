@@ -17,7 +17,7 @@
 import { writeFileSync } from 'fs';
 import { join, relative } from 'path';
 import { COLORS, FONT } from '../lib/theme.js';
-import { esc, titleCase, breadcrumb } from '../lib/html.js';
+import { esc, titleCase, breadcrumb, apiReferenceLink, apiReferenceHref } from '../lib/html.js';
 import { singleColumnPage } from '../lib/layout.js';
 import { PALETTE, MONOSPACE, box, rawSvgElement } from '../lib/diagram.js';
 
@@ -229,6 +229,7 @@ function shell(title, body, hubHref) {
       { label: title },
     ],
     bodyHtml: `<script src="rules-engine.js"></script>\n<div style="max-width:1100px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">${body}</div>`,
+    extraStyle: `.ann-chip { display:inline-block; font-size:10px; font-weight:600; padding:2px 6px; border-radius:3px; background:#E6EBF9; color:#2B1A78; border:1px solid #C2C0E8; margin-right:4px; margin-bottom:4px; text-decoration:none; } .ann-chip:hover { background:#d4daf5; }`,
   });
 }
 
@@ -253,9 +254,16 @@ function legendHtml() {
 // ── Per-ruleset page ──────────────────────────────────────────────────────────
 
 export function generateRulesetHtml(graph, annotations, policies, examples, rulesetInputs, opts) {
-  const { hubHref } = opts;
+  const { hubHref, endpointInfo, registryTypes = new Set() } = opts;
   const rulesetName = graph.ruleset;
   const domainBadge = `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px;background:#E6EBF9;color:#2B1A78;border:1px solid #C2C0E8;margin-left:8px;">${esc(graph.domain)}</span>`;
+
+  let apiLinkHtml = '';
+  if (endpointInfo) {
+    const { path, method } = endpointInfo;
+    const anchor = `op-${method}-${path.replace(/\//g, '-').replace(/[{}]/g, '').replace(/--+/g, '-').replace(/^-|-$/g, '')}`;
+    apiLinkHtml = apiReferenceLink(apiReferenceHref(graph.domain, method, path), 'API endpoint →', 'font-size:11px;border-radius:4px;padding:2px 8px;margin-left:10px;');
+  }
 
   const svgHtml = buildGraphSvg(graph, `arrow-${rulesetName}`);
   const detailStripHtml = renderDetailStrip();
@@ -267,10 +275,13 @@ export function generateRulesetHtml(graph, annotations, policies, examples, rule
   const policiesJson = JSON.stringify(policies);
   const examplesJson = JSON.stringify(examples);
   const rulesetInputsJson = JSON.stringify(rulesetInputs);
+  const registryFieldsJson = JSON.stringify([...registryTypes]);
 
   const body = `
 <div style="margin-bottom:1.5rem">
-  <h1 style="font-size:1.25rem;font-weight:800;color:#111827;display:inline">${esc(rulesetName)}</h1>${domainBadge}
+  <div style="display:flex;align-items:baseline;gap:0;flex-wrap:wrap;">
+    <h1 style="font-size:1.25rem;font-weight:800;color:#111827;display:inline;margin:0;">${esc(rulesetName)}</h1>${domainBadge}${apiLinkHtml}
+  </div>
   <div style="font-size:12px;color:#6b7280;margin-top:4px;">${esc(graph.facts ? Object.keys(graph.facts).length : 0)} facts &middot; ${esc(graph.outputs?.length ?? 0)} outputs &middot; ${esc(Object.keys(graph.inputs ?? {}).length)} inputs</div>
 </div>
 
@@ -287,6 +298,7 @@ const ANNOTATIONS = ${annotJson};
 const POLICIES = ${policiesJson};
 const EXAMPLES = ${examplesJson};
 const RULESET_INPUTS = ${rulesetInputsJson};
+const REGISTRY_FIELDS = new Set(${registryFieldsJson});
 let exampleIndex = 0;
 let isExperimentMode = !EXAMPLES.length; // start unlocked when no examples
 
@@ -427,6 +439,37 @@ function closeDetail() {
   activeNode = null;
 }
 
+// ── Annotation field rendering ────────────────────────────────────────────────
+const ANN_EXPLORER = '../annotations-explorer';
+const ANN_LABEL_STYLE = 'font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;';
+
+function renderAnnotFields(annot) {
+  let html = '';
+  for (const [key, val] of Object.entries(annot)) {
+    const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+    html += '<div style="' + ANN_LABEL_STYLE + '">' + escHtml(label) + '</div>';
+    if (REGISTRY_FIELDS.has(key) && Array.isArray(val)) {
+      const typeSlug = key.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+      html += '<div style="margin-bottom:10px;">' + val.map(id => {
+        const entrySlug = String(id).replace(/[^a-z0-9]/gi, '-').toLowerCase();
+        const href = ANN_EXPLORER + '/' + typeSlug + '.html#entry--' + entrySlug;
+        const tooltip = key === 'policies' ? (POLICIES[id]?.description ?? id) : id;
+        const displayLabel = key === 'policies' ? (POLICIES[id]?.citation ?? id) : id;
+        return '<a href="' + escHtml(href) + '" title="' + escHtml(tooltip) + '" class="ann-chip">' + escHtml(displayLabel) + '</a>';
+      }).join('') + '</div>';
+    } else if (Array.isArray(val) && val.length === 1) {
+      html += '<div style="font-size:11px;color:#374151;margin-bottom:10px;">' + escHtml(String(val[0]).trim()) + '</div>';
+    } else if (Array.isArray(val)) {
+      html += '<ol style="margin:0 0 10px;padding-left:16px;">' + val.map(item =>
+        '<li style="font-size:11px;color:#374151;margin-bottom:6px;line-height:1.5;">' + escHtml(String(item).trim()) + '</li>'
+      ).join('') + '</ol>';
+    } else if (typeof val === 'string') {
+      html += '<div style="font-size:11px;color:#374151;margin-bottom:10px;">' + escHtml(val.trim()) + '</div>';
+    }
+  }
+  return html;
+}
+
 // ── Detail strip ──────────────────────────────────────────────────────────────
 // Full-width strip between graph and columns. Shows on node click, hides on
 // close button or clicking empty graph area.
@@ -484,22 +527,7 @@ function showDetail(nodeName) {
   }
 
   if (annot) {
-    for (const [key, val] of Object.entries(annot)) {
-      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
-      html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">' + escHtml(label) + '</div>';
-      if (key === 'policies' && Array.isArray(val)) {
-        html += '<div style="margin-bottom:10px;">' + val.map(id => {
-          const p = POLICIES[id];
-          return '<span title="' + escHtml(p?.description ?? id) + '" style="display:inline-block;font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #C2C0E8;margin-right:4px;margin-bottom:4px;">' + escHtml(p?.citation ?? id) + '</span>';
-        }).join('') + '</div>';
-      } else if (Array.isArray(val)) {
-        html += '<ul style="margin:0 0 10px;padding-left:14px;">' + val.map(item =>
-          '<li style="font-size:11px;color:#374151;margin-bottom:4px;">' + escHtml(String(item)) + '</li>'
-        ).join('') + '</ul>';
-      } else if (typeof val === 'string') {
-        html += '<div style="font-size:11px;color:#374151;margin-bottom:10px;">' + escHtml(val.trim()) + '</div>';
-      }
-    }
+    html += renderAnnotFields(annot);
   }
 
   panel.innerHTML = html;
@@ -624,6 +652,29 @@ function escHtml(s) {
 }
 
 runEval();
+
+// ── Hash-based fact navigation ─────────────────────────────────────────────
+// Navigating to #fact-{factName} simulates a click on that node so the full
+// highlight + detail-strip behavior fires, exactly as if the user clicked it.
+function activateFactFromHash() {
+  const hash = window.location.hash;
+  if (!hash.startsWith('#fact-')) return;
+  const factName = decodeURIComponent(hash.slice('#fact-'.length));
+  const svg = document.querySelector('svg');
+  if (!svg) return;
+  let nodeEl = null;
+  svg.querySelectorAll('.sg-node').forEach(el => {
+    if (el.dataset.node === factName) nodeEl = el;
+  });
+  if (nodeEl) {
+    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    setTimeout(() => {
+      document.getElementById('detail-strip')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
+  }
+}
+document.addEventListener('DOMContentLoaded', activateFactFromHash);
+window.addEventListener('hashchange', activateFactFromHash);
 </script>`;
 
   return shell(rulesetName, body, hubHref);

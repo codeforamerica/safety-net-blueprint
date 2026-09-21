@@ -185,7 +185,7 @@ test('running twice on same output appends without duplicating sections', () => 
   run([`--spec=${FIXTURE_SPEC}`, `--out=${outDir}`]);
   const content = readFileSync(join(outDir, 'test-domain-field-inventory.yaml'), 'utf8');
   // Section headers should appear exactly once each
-  const applicationSections = (content.match(/# ── application/g) || []).length;
+  const applicationSections = (content.match(/# ── Application/g) || []).length;
   assert.strictEqual(applicationSections, 1, 'application section should appear exactly once after two runs');
 });
 

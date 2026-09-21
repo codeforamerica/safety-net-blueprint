@@ -23,13 +23,20 @@
  *               state-machine-docs, rules-docs, event-catalog, api-reference, client-reference
  */
 
-import { readdirSync, rmSync, cpSync, existsSync, mkdirSync } from 'fs';
-import { resolve, dirname, join } from 'path';
-import { fileURLToPath } from 'url';
-import { execFileSync } from 'child_process';
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
+import { cpSync, existsSync, mkdirSync } from 'fs';
+import { resolve, join } from 'path';
+import {
+  buildAnnotationsExplorer,
+  buildContextMap,
+  buildSequenceDiagrams,
+  buildDataDictionaries,
+  buildStateMachineDocs,
+  buildRulesDocs,
+  buildEventCatalog,
+  buildApiReference,
+  buildClientReference,
+  buildHub,
+} from '@codeforamerica/blueprint-explorer';
 
 const args        = process.argv.slice(2);
 const onlyArg     = args.find(a => a.startsWith('--only='));
@@ -45,16 +52,11 @@ if (!specArg || !outArg) {
   process.exit(1);
 }
 
-// Resolve blueprint-explorer's install directory — works both in the monorepo
-// (via workspace symlinks) and when installed from npm.
-const explorerDir = dirname(require.resolve('@codeforamerica/blueprint-explorer/package.json'));
-
-const node       = process.execPath;
 const specDir    = resolve(process.cwd(), specArg.slice('--spec='.length));
 const outDir     = resolve(process.cwd(), outArg.slice('--out='.length));
-const configDir  = configArg
-  ? resolve(process.cwd(), configArg.slice('--config='.length))
-  : outDir;
+const configDir  = configArg ? resolve(process.cwd(), configArg.slice('--config='.length)) : outDir;
+const authoredDir = authoredArg ? resolve(process.cwd(), authoredArg.slice('--authored='.length)) : undefined;
+const clientsDir  = clientsArg  ? resolve(process.cwd(), clientsArg.slice('--clients='.length))  : undefined;
 
 // When config and out differ, copy authored config files to outDir so that
 // tool scripts (which read from their --content arg) can find them there.
@@ -67,78 +69,19 @@ if (configDir !== outDir) {
   if (existsSync(seqConfig)) cpSync(seqConfig, join(outDir, 'sequence-diagrams', 'config'), { recursive: true });
 }
 
-// Forward args to tool subprocesses using their existing param names.
-const fwdResolved = [`--resolved=${specDir}`];
-const fwdContent  = [`--content=${outDir}`];
-const fwdClients  = clientsArg  ? [clientsArg]  : [];
-const fwdAuthored = authoredArg ? [authoredArg] : [];
-
-const src     = (...parts) => resolve(explorerDir, 'src', ...parts);
+const contentDir  = outDir;
+const resolvedDir = specDir;
 const doBuild = tool => !only || only === tool;
 
-// ── Context map ───────────────────────────────────────────────────────────────
+if (doBuild('annotations-explorer')) buildAnnotationsExplorer({ contentDir, resolvedDir });
+if (doBuild('context-map'))       buildContextMap({ contentDir, resolvedDir });
+if (doBuild('sequence-diagrams')) buildSequenceDiagrams({ contentDir, resolvedDir });
+if (doBuild('data-dictionaries')) await buildDataDictionaries({ contentDir, resolvedDir });
+if (doBuild('state-machine-docs')) buildStateMachineDocs({ contentDir, resolvedDir });
+if (doBuild('rules-docs'))        buildRulesDocs({ contentDir, resolvedDir });
+if (doBuild('event-catalog'))     buildEventCatalog({ contentDir, resolvedDir });
+if (doBuild('api-reference'))     await buildApiReference({ contentDir, resolvedDir });
+if (doBuild('client-reference'))  buildClientReference({ contentDir, resolvedDir, clientsDir });
 
-if (doBuild('context-map')) {
-  execFileSync(node, [src('context-map', 'build.js'), ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
-}
-
-// ── Sequence diagrams ─────────────────────────────────────────────────────────
-
-if (doBuild('sequence-diagrams')) {
-  const seqSrcDir    = src('sequence-diagrams');
-  const seqConfigDir = join(outDir, 'sequence-diagrams', 'config');
-  const seqOutDir    = join(outDir, 'sequence-diagrams');
-  execFileSync(node, [resolve(seqSrcDir, 'validate-config.js'), `--config-dir=${seqConfigDir}`, ...fwdResolved], { stdio: 'inherit' });
-  execFileSync(node, [resolve(seqSrcDir, 'render-action-flow.js'), seqOutDir, `--config-dir=${seqConfigDir}`, ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
-  execFileSync(node, [resolve(seqSrcDir, 'build-phases-html.js'), seqOutDir, seqOutDir, `--config-dir=${seqConfigDir}`, ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
-}
-
-// ── Data dictionaries ─────────────────────────────────────────────────────────
-
-if (doBuild('data-dictionaries')) {
-  // Clean stale field inventories before regenerating — build.js reads these,
-  // so they must be removed before the generator runs, not inside build.js itself.
-  const ddOutDir = join(outDir, 'data-dictionaries');
-  try {
-    readdirSync(ddOutDir)
-      .filter(f => f.endsWith('-field-inventory.yaml'))
-      .forEach(f => rmSync(join(ddOutDir, f)));
-  } catch { /* dir may not exist yet */ }
-
-  execFileSync(node, [src('data-dictionaries', 'generate-field-inventory.mjs'), `--spec=${specDir}`, `--out=${ddOutDir}`], { stdio: 'inherit' });
-  execFileSync(node, [src('data-dictionaries', 'build.js'), ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
-}
-
-// ── State machine docs ────────────────────────────────────────────────────────
-
-if (doBuild('state-machine-docs')) {
-  execFileSync(node, [src('state-machine-docs', 'build.js'), ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
-}
-
-// ── Rules docs ────────────────────────────────────────────────────────────────
-
-if (doBuild('rules-docs')) {
-  execFileSync(node, [src('rules-docs', 'build.js'), ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
-}
-
-// ── Event catalog ─────────────────────────────────────────────────────────────
-
-if (doBuild('event-catalog')) {
-  execFileSync(node, [src('event-catalog.js'), ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
-}
-
-// ── API reference ─────────────────────────────────────────────────────────────
-
-if (doBuild('api-reference')) {
-  execFileSync(node, [src('api-reference.js'), ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
-}
-
-// ── Client reference ──────────────────────────────────────────────────────────
-
-if (doBuild('client-reference')) {
-  execFileSync(node, [src('client-reference.js'), ...fwdContent, ...fwdResolved, ...fwdClients], { stdio: 'inherit' });
-}
-
-// ── Hub (always rebuilt last — scans all tool output directories) ─────────────
-
-execFileSync(node, [src('hub.js'), ...fwdContent, ...fwdAuthored], { stdio: 'inherit' });
+// Hub is always rebuilt last so it can scan all tool output directories
+buildHub({ contentDir, authoredDir });

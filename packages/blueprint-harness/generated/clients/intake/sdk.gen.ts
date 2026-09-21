@@ -217,7 +217,7 @@ export const evaluateInterviewPrompts = <ThrowOnError extends boolean = false>(o
     requestValidator: async (data) => await zEvaluateInterviewPromptsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zEvaluateInterviewPromptsResponse.parseAsync(data),
-    url: '/intake/applications/{applicationId}/evaluate-interview-prompts',
+    url: '/applications/{applicationId}/evaluate-interview-prompts',
     ...options,
     headers: {
         'Content-Type': 'application/json',

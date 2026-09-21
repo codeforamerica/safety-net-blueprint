@@ -31,6 +31,12 @@ properties:
     type: string
     description: Schema version for change tracking.
 
+  domain:
+    type: string
+    description: >
+      The domain that defines and owns this policy registry (e.g., platform, intake).
+      Used by tooling to show the defining domain in the annotations explorer index.
+
   policies:
     type: object
     description: >

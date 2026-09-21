@@ -89,9 +89,15 @@ const sampleStateMachine = {
 
 const sampleEndpointInfo = {
   itemPath: '/tasks/{taskId}',
-  paramRefs: [{ $ref: '#/components/parameters/TaskIdParam' }],
-  tag: 'Tasks',
-  schemaRef: '#/components/schemas/Task'
+  schemaRef: '#/components/schemas/Task',
+  relativePath: 'workflow-openapi.yaml',
+  spec: {
+    components: {
+      parameters: {
+        TaskIdParam: { name: 'taskId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }
+      }
+    }
+  }
 };
 
 // =============================================================================
@@ -243,10 +249,10 @@ test('generateOverlay — each path has POST operation', () => {
 
 test('generateOverlay — includes parameter refs', () => {
   const overlay = generateOverlay(sampleStateMachine, sampleEndpointInfo);
-  const claimOp = overlay.actions[0].update['/tasks/{taskId}/claim'].post;
+  const pathItem = overlay.actions[0].update['/tasks/{taskId}/claim'];
 
-  assert.strictEqual(claimOp.parameters.length, 1);
-  assert.strictEqual(claimOp.parameters[0].$ref, '#/components/parameters/TaskIdParam');
+  assert.strictEqual(pathItem.parameters.length, 1);
+  assert.strictEqual(pathItem.parameters[0].$ref, '#/components/parameters/TaskIdParam');
 });
 
 test('generateOverlay — includes tags from API spec', () => {

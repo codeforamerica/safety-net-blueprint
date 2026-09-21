@@ -65,6 +65,7 @@
     [id]:target { scroll-margin-top: 1rem; }
     tr[id]:target td { animation: target-fade 4s ease forwards; }
     .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
 
     /* Permalink anchors — hidden until parent is hovered */
     .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
@@ -133,14 +134,14 @@
   background: var(--sand-light); color: #6b4c3b; border: 1px solid var(--sand);
 }
 .badge { font-size: 0.65rem; font-weight: 600; border-radius: 3px; padding: 0.1rem 0.35rem; letter-spacing: 0.03em; background: #e8e8e8; color: #444; }
+.ann-chip { text-decoration: none; background: var(--lb-light); color: var(--blue-mid); border: 1px solid var(--blue-light); }
+.ann-chip:hover { background: var(--blue-light); }
 .val-list code { font-size: 0.72rem; background: #f0f0f0; border-radius: 3px; padding: 0.05rem 0.3rem; color: #444; }
-.policy-list { display: flex; flex-direction: column; gap: 0.4rem; }
-.policy-item { font-size: 0.75rem; }
-.policy-item-head { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.15rem; }
-.policy-id { font-size: 0.72rem; background: #f0f0f0; border-radius: 3px; padding: 0.05rem 0.3rem; color: #444; }
-.policy-citation { font-size: 0.7rem; color: var(--blue-mid); text-decoration: none; }
-.policy-citation:hover { text-decoration: underline; }
-.policy-desc { font-size: 0.75rem; color: #555; line-height: 1.45; margin: 0; }
+@keyframes field-highlight {
+  0%   { background: #fef9c3; border-left-color: #ca8a04; }
+  100% { background: #fff;    border-left-color: var(--blue-mid); }
+}
+.card.field-highlight { animation: field-highlight 1.8s ease-out; }
 
   </style>
 </head>
@@ -150,7 +151,7 @@
     <div style="background:#2B1A78;color:white;">
     <div style="padding:0.625rem 1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <span style="font-size:0.9375rem;font-weight:800;">Eligibility</span>
-      <span style="font-size:11px;color:rgba(255,255,255,0.45);font-family:monospace;">10 fields</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.45);font-family:monospace;">16 fields</span>
       <button class="csv-btn" onclick="exportCsv()" style="margin-left:auto;">Export CSV</button>
     </div>
     <div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">eligibility</code> · API spec: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts/domains/eligibility/eligibility-openapi.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">eligibility-openapi.yaml</code></a> · Annotations: <a href="https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts/domains/eligibility/eligibility-annotations.yaml" style="color:rgba(255,255,255,0.8);text-decoration:none;"><code style="color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.12);border:none;border-radius:3px;padding:0 4px;font-size:10px;">eligibility-annotations.yaml</code></a></div>
@@ -165,16 +166,16 @@
           aria-label="Filter navigation" />
       </div>
       <div id="sidebar-nav">
-        <a href="#sec-determination" class="nav-link">determination <span class="nav-count">1</span></a><a href="#sec-programs" class="nav-link">programs <span class="nav-count">9</span></a>
+        <a href="#sec-Determination" class="nav-link">Determination <span class="nav-count">7</span></a><a href="#sec-Decision" class="nav-link">Decision <span class="nav-count">9</span></a>
       </div>
     </nav>
     <main id="content">
-      <section class="dict-section" id="sec-determination">
-      <h2 class="section-title">determination</h2>
-      <div class="cards-grid"><div class="card content-item" data-path="determination.status"><div class="card-header"><code class="field-path">determination.status</code><span class="type-badge">enum</span></div><div class="card-body"><div class="ann-row"><span class="ann-label ann-label--values">Values</span><span class="val-list"><code>pending</code> <code>in_progress</code> <code>complete</code></span></div><div class="card-ann"><div class="ann-row"><span class="ann-label">Programs</span><span class="badge">SNAP</span><span class="badge">MEDICAID</span><span class="badge">CHIP</span><span class="badge">TANF</span></div></div></div></div></div>
-    </section><section class="dict-section" id="sec-programs">
-      <h2 class="section-title">programs</h2>
-      <div class="cards-grid"><div class="card content-item" data-path="determination.programs[]"><div class="card-header"><code class="field-path">determination.programs[]</code><span class="type-badge">list(ProgramResult)</span></div></div><div class="card content-item" data-path="determination.programs[].id"><div class="card-header"><code class="field-path">determination.programs[].id</code><span class="type-badge">uuid</span></div></div><div class="card content-item" data-path="determination.programs[].determinationId"><div class="card-header"><code class="field-path">determination.programs[].determinationId</code><span class="type-badge">uuid(Determination)</span></div></div><div class="card content-item" data-path="determination.programs[].program"><div class="card-header"><code class="field-path">determination.programs[].program</code><span class="type-badge">enum</span></div><div class="card-body"><div class="ann-row"><span class="ann-label ann-label--values">Values</span><span class="val-list"><code>snap</code> <code>medicaid</code> <code>chip</code> <code>tanf</code></span></div></div></div><div class="card content-item" data-path="determination.programs[].eligible"><div class="card-header"><code class="field-path">determination.programs[].eligible</code><span class="type-badge">boolean</span></div></div><div class="card content-item" data-path="determination.programs[].reason"><div class="card-header"><code class="field-path">determination.programs[].reason</code><span class="type-badge">string</span></div></div><div class="card content-item" data-path="determination.programs[].benefitAmount"><div class="card-header"><code class="field-path">determination.programs[].benefitAmount</code><span class="type-badge">number</span></div></div><div class="card content-item" data-path="determination.programs[].links"><div class="card-header"><code class="field-path">determination.programs[].links</code><span class="type-badge">object</span></div></div><div class="card content-item" data-path="determination.programs[].links.determination"><div class="card-header"><code class="field-path">determination.programs[].links.determination</code><span class="type-badge">string</span></div></div></div>
+      <section class="dict-section" id="sec-Determination">
+      <h2 class="section-title">Determination</h2>
+      <div class="cards-grid"><div class="card content-item" id="field-determination.id" data-path="determination.id"><div class="card-header"><code class="field-path">determination.id</code><span class="type-badge">uuid</span></div><div class="card-body"><div class="card-ann"><div class="ann-row"><span class="ann-label">Patterns</span><a href="../annotations-explorer/patterns.html#entry--read-only-field" class="ann-chip">read-only-field</a><a href="../annotations-explorer/patterns.html#entry--string-format" class="ann-chip">string-format</a></div></div></div></div><div class="card content-item" id="field-determination.applicationId" data-path="determination.applicationId"><div class="card-header"><code class="field-path">determination.applicationId</code><span class="type-badge">uuid(Application)</span></div><div class="card-body"><div class="card-ann"><div class="ann-row"><span class="ann-label">Patterns</span><a href="../annotations-explorer/patterns.html#entry--cross-domain-fk" class="ann-chip">cross-domain-fk</a></div></div></div></div><div class="card content-item" id="field-determination.status" data-path="determination.status"><div class="card-header"><code class="field-path">determination.status</code><span class="type-badge">enum</span></div><div class="card-body"><div class="ann-row"><span class="ann-label ann-label--values">Values</span><span class="val-list"><code>pending</code> <code>in_progress</code> <code>complete</code></span></div><div class="card-ann"><div class="ann-row"><span class="ann-label">Patterns</span><a href="../annotations-explorer/patterns.html#entry--allof-inline-required" class="ann-chip">allof-inline-required</a><a href="../annotations-explorer/patterns.html#entry--x-enum-source" class="ann-chip">x-enum-source</a><a href="../annotations-explorer/patterns.html#entry--read-only-field" class="ann-chip">read-only-field</a></div></div></div></div><div class="card content-item" id="field-determination.expedited" data-path="determination.expedited"><div class="card-header"><code class="field-path">determination.expedited</code><span class="type-badge">boolean</span></div><div class="card-body"><div class="card-ann"><div class="ann-row"><span class="ann-label">Policies</span><a href="../annotations-explorer/policies.html#entry--snap-expedited-processing" class="ann-chip">snap-expedited-processing</a><a href="../annotations-explorer/policies.html#entry--snap-expedited-screening" class="ann-chip">snap-expedited-screening</a></div><div class="ann-row"><span class="ann-label">Patterns</span><a href="../annotations-explorer/patterns.html#entry--ruleset-output-fact" class="ann-chip">ruleset-output-fact</a><a href="../annotations-explorer/patterns.html#entry--read-only-field" class="ann-chip">read-only-field</a></div></div></div></div><div class="card content-item" id="field-determination.determinedAt" data-path="determination.determinedAt"><div class="card-header"><code class="field-path">determination.determinedAt</code><span class="type-badge">datetime</span></div></div><div class="card content-item" id="field-determination.links" data-path="determination.links"><div class="card-header"><code class="field-path">determination.links</code><span class="type-badge">object</span></div></div><div class="card content-item" id="field-determination.links.application" data-path="determination.links.application"><div class="card-header"><code class="field-path">determination.links.application</code><span class="type-badge">string</span></div></div></div>
+    </section><section class="dict-section" id="sec-Decision">
+      <h2 class="section-title">Decision</h2>
+      <div class="cards-grid"><div class="card content-item" id="field-determination.decisions[]" data-path="determination.decisions[]"><div class="card-header"><code class="field-path">determination.decisions[]</code><span class="type-badge">list(Decision)</span></div><div class="card-body"><div class="card-ann"><div class="ann-row"><span class="ann-label">Patterns</span><a href="../annotations-explorer/patterns.html#entry--sub-resource" class="ann-chip">sub-resource</a><a href="../annotations-explorer/patterns.html#entry--paginated-list" class="ann-chip">paginated-list</a></div></div></div></div><div class="card content-item" id="field-determination.decisions[].id" data-path="determination.decisions[].id"><div class="card-header"><code class="field-path">determination.decisions[].id</code><span class="type-badge">uuid</span></div></div><div class="card content-item" id="field-determination.decisions[].determinationId" data-path="determination.decisions[].determinationId"><div class="card-header"><code class="field-path">determination.decisions[].determinationId</code><span class="type-badge">uuid(Determination)</span></div></div><div class="card content-item" id="field-determination.decisions[].program" data-path="determination.decisions[].program"><div class="card-header"><code class="field-path">determination.decisions[].program</code><span class="type-badge">enum</span></div><div class="card-body"><div class="ann-row"><span class="ann-label ann-label--values">Values</span><span class="val-list"><code>snap</code> <code>medicaid</code> <code>chip</code> <code>tanf</code></span></div></div></div><div class="card content-item" id="field-determination.decisions[].eligible" data-path="determination.decisions[].eligible"><div class="card-header"><code class="field-path">determination.decisions[].eligible</code><span class="type-badge">boolean</span></div><div class="card-body"><div class="card-ann"><div class="ann-row"><span class="ann-label">Policies</span><a href="../annotations-explorer/policies.html#entry--snap-notice-of-eligibility" class="ann-chip">snap-notice-of-eligibility</a><a href="../annotations-explorer/policies.html#entry--medicaid-notice-of-eligibility" class="ann-chip">medicaid-notice-of-eligibility</a><a href="../annotations-explorer/policies.html#entry--snap-fair-hearing-rights" class="ann-chip">snap-fair-hearing-rights</a><a href="../annotations-explorer/policies.html#entry--medicaid-determination-documentation" class="ann-chip">medicaid-determination-documentation</a></div></div></div></div><div class="card content-item" id="field-determination.decisions[].reason" data-path="determination.decisions[].reason"><div class="card-header"><code class="field-path">determination.decisions[].reason</code><span class="type-badge">string</span></div></div><div class="card content-item" id="field-determination.decisions[].benefitAmount" data-path="determination.decisions[].benefitAmount"><div class="card-header"><code class="field-path">determination.decisions[].benefitAmount</code><span class="type-badge">number</span></div><div class="card-body"><div class="card-ann"><div class="ann-row"><span class="ann-label">Policies</span><a href="../annotations-explorer/policies.html#entry--snap-benefit-calculation" class="ann-chip">snap-benefit-calculation</a><a href="../annotations-explorer/policies.html#entry--medicaid-cost-sharing" class="ann-chip">medicaid-cost-sharing</a></div><div class="ann-row"><span class="ann-label">Patterns</span><a href="../annotations-explorer/patterns.html#entry--nullable-conditional-field" class="ann-chip">nullable-conditional-field</a></div></div></div></div><div class="card content-item" id="field-determination.decisions[].links" data-path="determination.decisions[].links"><div class="card-header"><code class="field-path">determination.decisions[].links</code><span class="type-badge">object</span></div></div><div class="card content-item" id="field-determination.decisions[].links.determination" data-path="determination.decisions[].links.determination"><div class="card-header"><code class="field-path">determination.decisions[].links.determination</code><span class="type-badge">string</span></div></div></div>
     </section>
     </main>
   </div>
@@ -306,7 +307,33 @@
         }
       });
     })();
+    // Fragment navigation — body has overflow:hidden so the browser cannot scroll to
+    // anchors natively. Read the hash and scroll #content to the target element instead.
+    (function () {
+      function scrollToHash() {
+        const hash = window.location.hash;
+        if (!hash) return;
+        const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+        if (!el) return;
+        const content = document.getElementById('content');
+        if (!content) { el.scrollIntoView(); return; }
+        const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top + content.scrollTop - 16;
+        content.scrollTop = top;
+      }
+      document.addEventListener('DOMContentLoaded', scrollToHash);
+      window.addEventListener('hashchange', scrollToHash);
+    })();
     
+(function() {
+  const hash = window.location.hash;
+  if (!hash) return;
+  const id = decodeURIComponent(hash.slice(1));
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('field-highlight');
+  setTimeout(function() { el.classList.remove('field-highlight'); }, 2000);
+})();
+
 function exportCsv() {
   const rows = [['path', 'type', 'programs', 'policies', 'dataClassification']];
   document.querySelectorAll('.card:not(.hidden)').forEach(card => {

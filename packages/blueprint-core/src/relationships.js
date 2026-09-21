@@ -77,7 +77,7 @@ function resolveExternalDefRef(ref, currentResults) {
     node = node[seg];
   }
 
-  if (!node || !node.properties) return {};
+  if (!node || typeof node !== 'object') return {};
 
   return {
     properties: node.properties,

@@ -24,3 +24,5 @@ Root `blueprint-core` now exports only path constants: `schemasDir`, `baseContra
 `pattern-validator`'s `validateSpec` is exported as `validateApiPatterns` from `./validator` to avoid collision with the OpenAPI validator's `validateSpec`.
 
 Schema navigation utilities (`resolveRef`, `resolveSchemaRefs`, `collectTopLevelProperties`, `getPropertyAtPath`) moved from `./state-machine-validator` to `./state-machines`.
+
+Added `blueprint-core/json-schema` export path with generic JSON Schema path utilities (`getPropertyAtPath`, `getPathsForObject`, and schema ref helpers). The `./openapi` and `./validator` entry points now use `index.js` inside their respective subfolders rather than sibling flat files — no change to public import paths. Schema navigation utilities are re-exported from `./state-machines` for backward compatibility but should be imported from `./json-schema` going forward.

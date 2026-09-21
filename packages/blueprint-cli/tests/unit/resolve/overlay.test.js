@@ -1906,9 +1906,9 @@ test('x-enum-source injection', async (t) => {
     const { results } = applyOverlayWithTargets(yamlFiles, overlay, actionTargets, '/tmp');
 
     const resolved = results.get('eligibility-openapi.yaml');
-    assert.ok(resolved.paths['/eligibility/assess-expedited-snap'], 'endpoint path added with domain prefix');
-    assert.ok(resolved.paths['/eligibility/assess-expedited-snap'].post, 'POST operation added');
-    assert.strictEqual(resolved.paths['/eligibility/assess-expedited-snap'].post.operationId, 'assessExpeditedSnap');
+    assert.ok(resolved.paths['/assess-expedited-snap'], 'endpoint path added');
+    assert.ok(resolved.paths['/assess-expedited-snap'].post, 'POST operation added');
+    assert.strictEqual(resolved.paths['/assess-expedited-snap'].post.operationId, 'assessExpeditedSnap');
     assert.ok(resolved.components.schemas['ExpeditedSnapRequest'], 'request schema added');
     assert.ok(resolved.components.schemas['ExpeditedSnapResponse'], 'response schema added');
     const responseSchema = resolved.components.schemas['ExpeditedSnapResponse'];

@@ -2,6 +2,7 @@ $schema: state-machine-schema.yaml
 version: "1.0"
 domain: intake
 apiSpec: intake-openapi.yaml
+eventsSpec: intake-asyncapi.yaml
 machines:
   - object: Application
     states:
@@ -21,6 +22,10 @@ machines:
         slaClock: stopped
         description: Intake complete; case opened if approved. Terminal.
     initialState: draft
+    timers:
+      - id: review_reminder
+        description: |
+          Fires when an application has been awaiting caseworker review for too long. The callback event (intake.review_reminder) triggers an escalation notice.
     actions:
       - id: submit
         description: Formally submits a draft application, starting the regulatory processing clock.
@@ -67,6 +72,16 @@ machines:
         steps:
           - emit:
               type: ca.intake.application.withdrawn
+    events:
+      - type: ca.intake.review_reminder
+        description: |
+          Escalates an application that has been awaiting caseworker review for too long. Fired by the scheduling service when the review_reminder timer expires.
+        transition:
+          from: submitted
+        steps:
+          - emit:
+              type: ca.intake.application.review-reminder
+              description: Notify supervisors that this application needs immediate attention.
 $defs:
   CloseRequest:
     type: object

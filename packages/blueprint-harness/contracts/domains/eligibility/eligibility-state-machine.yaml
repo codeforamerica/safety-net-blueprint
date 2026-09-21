@@ -12,6 +12,21 @@ machines:
         slaClock: stopped
         description: Determination complete; program results issued. Terminal.
     initialState: pending
+    guards:
+      - id: allProgramsResolved
+        condition: "determination.decisions.all(d, d.status != 'pending')"
+    actions:
+      - id: complete
+        description: Marks the determination as complete once all program results are resolved.
+        transition:
+          from: pending
+          to: completed
+        guards:
+          - conditions: [allProgramsResolved]
+        steps:
+          - emit:
+              type: eligibility.determination.complete
+              description: Signals that all program eligibility results are ready for caseworker review.
     events:
       - type: intake.application.submitted
         description: Initiate an eligibility determination for each program applied for.
@@ -20,6 +35,3 @@ machines:
               path: eligibility/determinations
               method: POST
               description: Create a pending determination for the submitted application.
-          - emit:
-              type: eligibility.determination.complete
-              description: Signals that eligibility results are ready for caseworker review.

@@ -64,7 +64,7 @@ export const zDeterminationList = z.object({
     hasNext: z.optional(z.boolean())
 });
 
-export const zProgramResult = z.object({
+export const zDecision = z.object({
     id: z.uuid().readonly(),
     determinationId: z.uuid(),
     program: z.enum([
@@ -83,7 +83,7 @@ export const zProgramResult = z.object({
     }).readonly())
 });
 
-export const zProgramResultList = z.object({
+export const zDecisionList = z.object({
     items: z.array(z.object({
         id: z.uuid().readonly(),
         determinationId: z.uuid(),
@@ -125,26 +125,28 @@ export const zExpeditedSnapRequest = z.object({
 });
 
 /**
- * Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
+ * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
  *
  */
-export const zExpeditedSnapResponse = z.record(z.string(), z.union([
+export const zExpeditedSnapResponse = z.array(z.union([
     z.object({
+        fact: z.string(),
         state: z.enum(['complete']),
         value: z.unknown()
     }),
     z.object({
+        fact: z.string(),
         state: z.enum(['placeholder']),
         value: z.unknown()
     }),
     z.object({
+        fact: z.string(),
         state: z.enum(['missing']),
-        value: z.null(),
         missing: z.array(z.string())
     }),
     z.object({
+        fact: z.string(),
         state: z.enum(['error']),
-        value: z.null(),
         message: z.string()
     })
 ]));
@@ -171,7 +173,7 @@ export const zDeterminationListWritable = z.object({
     hasNext: z.optional(z.boolean())
 });
 
-export const zProgramResultWritable = z.object({
+export const zDecisionWritable = z.object({
     determinationId: z.uuid(),
     program: z.enum([
         'snap',
@@ -184,7 +186,7 @@ export const zProgramResultWritable = z.object({
     benefitAmount: z.optional(z.number().gte(0).nullable())
 });
 
-export const zProgramResultListWritable = z.object({
+export const zDecisionListWritable = z.object({
     items: z.array(z.object({
         determinationId: z.uuid(),
         program: z.enum([
@@ -209,9 +211,9 @@ export const zProgramResultListWritable = z.object({
 export const zDeterminationIdParam = z.uuid();
 
 /**
- * Unique identifier of the program result.
+ * Unique identifier of the decision.
  */
-export const zProgramResultIdParam = z.uuid();
+export const zDecisionIdParam = z.uuid();
 
 export const zListDeterminationsData = z.object({
     body: z.optional(z.never()),
@@ -344,7 +346,7 @@ export const zUpdateDeterminationResponse = z.object({
     }).readonly())
 });
 
-export const zListProgramResultsData = z.object({
+export const zListDecisionsData = z.object({
     body: z.optional(z.never()),
     path: z.object({
         determinationId: z.uuid()
@@ -356,9 +358,9 @@ export const zListProgramResultsData = z.object({
 });
 
 /**
- * Program-level eligibility results for this determination.
+ * Per-program eligibility decisions for this determination.
  */
-export const zListProgramResultsResponse = z.object({
+export const zListDecisionsResponse = z.object({
     items: z.array(z.object({
         id: z.uuid().readonly(),
         determinationId: z.uuid(),
@@ -383,19 +385,19 @@ export const zListProgramResultsResponse = z.object({
     hasNext: z.optional(z.boolean())
 });
 
-export const zGetProgramResultData = z.object({
+export const zGetDecisionData = z.object({
     body: z.optional(z.never()),
     path: z.object({
         determinationId: z.uuid(),
-        programResultId: z.uuid()
+        decisionId: z.uuid()
     }),
     query: z.optional(z.never())
 });
 
 /**
- * Program result retrieved successfully.
+ * Decision retrieved successfully.
  */
-export const zGetProgramResultResponse = z.object({
+export const zGetDecisionResponse = z.object({
     id: z.uuid().readonly(),
     determinationId: z.uuid(),
     program: z.enum([
@@ -411,6 +413,34 @@ export const zGetProgramResultResponse = z.object({
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
         determination: z.optional(z.string())
+    }).readonly())
+});
+
+export const zCompleteDeterminationData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        determinationId: z.string()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Transition applied successfully.
+ */
+export const zCompleteDeterminationResponse = z.object({
+    id: z.uuid().readonly(),
+    applicationId: z.uuid(),
+    status: z.enum([
+        'pending',
+        'in_progress',
+        'complete'
+    ]),
+    expedited: z.boolean().readonly(),
+    determinedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        application: z.optional(z.string())
     }).readonly())
 });
 
@@ -432,26 +462,28 @@ export const zEvaluateExpeditedSnapData = z.object({
 });
 
 /**
- * Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
+ * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
  *
  */
-export const zEvaluateExpeditedSnapResponse = z.record(z.string(), z.union([
+export const zEvaluateExpeditedSnapResponse = z.array(z.union([
     z.object({
+        fact: z.string(),
         state: z.enum(['complete']),
         value: z.unknown()
     }),
     z.object({
+        fact: z.string(),
         state: z.enum(['placeholder']),
         value: z.unknown()
     }),
     z.object({
+        fact: z.string(),
         state: z.enum(['missing']),
-        value: z.null(),
         missing: z.array(z.string())
     }),
     z.object({
+        fact: z.string(),
         state: z.enum(['error']),
-        value: z.null(),
         message: z.string()
     })
 ]));

@@ -16,8 +16,9 @@ import {
   isSingleResourcePath,
   isActionPath,
   validateForeignKeys,
+  validateOperationRelationships,
   validateSpec
-} from '../../../src/validation/pattern-validator.js';
+} from '../../../src/validator/pattern-validator.js';
 
 test('Pattern Validator Tests', async (t) => {
 
@@ -888,6 +889,79 @@ test('Pattern Validator Tests', async (t) => {
     validateForeignKeys({}, errors);
     assert.strictEqual(errors.length, 0);
     console.log('  ✓ Handles specs without schemas');
+  });
+
+  // validateOperationRelationships
+  await t.test('validateOperationRelationships - no error for valid non-FK annotation', () => {
+    const errors = [];
+    validateOperationRelationships({
+      paths: {
+        '/applications/{applicationId}/evaluate-interview-prompts': {
+          post: {
+            operationId: 'evaluateInterviewPrompts',
+            'x-relationship': { type: 'ruleset', domain: 'intake', id: 'interviewPrompts' },
+            responses: {}
+          }
+        }
+      }
+    }, errors);
+    assert.strictEqual(errors.length, 0);
+    console.log('  ✓ No error for valid operation x-relationship');
+  });
+
+  await t.test('validateOperationRelationships - error when domain is missing', () => {
+    const errors = [];
+    validateOperationRelationships({
+      paths: {
+        '/applications/{applicationId}/evaluate-interview-prompts': {
+          post: {
+            'x-relationship': { type: 'ruleset', id: 'interviewPrompts' },
+            responses: {}
+          }
+        }
+      }
+    }, errors);
+    assert.ok(errors.some(e => e.rule === 'operation-x-relationship-missing-domain'));
+    console.log('  ✓ Error when domain missing on operation x-relationship');
+  });
+
+  await t.test('validateOperationRelationships - error when id is missing', () => {
+    const errors = [];
+    validateOperationRelationships({
+      paths: {
+        '/tasks/{taskId}/claim': {
+          post: {
+            'x-relationship': { type: 'state-machine-action', domain: 'workflow' },
+            responses: {}
+          }
+        }
+      }
+    }, errors);
+    assert.ok(errors.some(e => e.rule === 'operation-x-relationship-missing-id'));
+    console.log('  ✓ Error when id missing on operation x-relationship');
+  });
+
+  await t.test('validateOperationRelationships - ignores FK-type x-relationship on operations', () => {
+    const errors = [];
+    validateOperationRelationships({
+      paths: {
+        '/applications/{applicationId}/summary': {
+          get: {
+            'x-relationship': { type: 'fk', resource: 'Application' },
+            responses: {}
+          }
+        }
+      }
+    }, errors);
+    assert.strictEqual(errors.length, 0);
+    console.log('  ✓ Ignores fk-type x-relationship on operations');
+  });
+
+  await t.test('validateOperationRelationships - no error when no paths', () => {
+    const errors = [];
+    validateOperationRelationships({}, errors);
+    assert.strictEqual(errors.length, 0);
+    console.log('  ✓ Handles specs without paths');
   });
 
 });

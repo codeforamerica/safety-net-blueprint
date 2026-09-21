@@ -4,17 +4,15 @@ import { fileURLToPath } from 'url';
 import { load } from 'js-yaml';
 import { generate, generateOverview, generateEventsPage } from './generate.js';
 import { buildEventIndex } from '@codeforamerica/blueprint-core/state-machines';
+import { buildEndpointIndex } from '@codeforamerica/blueprint-core/openapi';
 import { generateHtml, generateOverviewHtml, generateEventsHtml } from './generate-html.js';
-import { resolvedDir } from '../lib/paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const contentArg = process.argv.find(a => a.startsWith('--content='));
-if (!contentArg) {
-  console.error('Usage: node build.js --content=<path> [--resolved=<path>]');
-  process.exit(1);
-}
-const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
+/**
+ * @param {{ contentDir: string, resolvedDir: string }} opts
+ */
+export function build({ contentDir, resolvedDir }) {
 const outputDir = join(contentDir, 'state-machine-docs');
 const hubHref = relative(outputDir, join(contentDir, 'index.html'));
 mkdirSync(outputDir, { recursive: true });
@@ -38,11 +36,16 @@ const domainFiles = files.filter(f => {
 const allStateMachines = domainFiles.map(f => load(readFileSync(f, 'utf8')));
 const eventIndex = buildEventIndex(allStateMachines);
 
+const openApiFiles = readdirSync(resolvedDir, { recursive: true })
+  .filter(f => typeof f === 'string' && f.endsWith('-openapi.yaml'))
+  .map(f => ({ spec: load(readFileSync(join(resolvedDir, f), 'utf8')) }));
+const endpointIndex = buildEndpointIndex(openApiFiles);
+
 console.log(`Generating state machine docs for ${domainFiles.length} domain(s)...`);
 
 for (const file of domainFiles) {
   generate(file, outputDir, eventIndex, allStateMachines);
-  generateHtml(file, outputDir, eventIndex, allStateMachines, hubHref);
+  generateHtml(file, outputDir, eventIndex, allStateMachines, hubHref, endpointIndex);
 }
 
 generateOverview(allStateMachines, outputDir);
@@ -50,3 +53,18 @@ generateOverviewHtml(allStateMachines, outputDir, eventIndex, hubHref);
 generateEventsPage(eventIndex, allStateMachines, outputDir);
 generateEventsHtml(eventIndex, allStateMachines, outputDir, hubHref);
 console.log('Done.');
+} // end build()
+
+// CLI entry point
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const contentArg  = process.argv.find(a => a.startsWith('--content='));
+  const resolvedArg = process.argv.find(a => a.startsWith('--resolved='));
+  if (!contentArg) {
+    console.error('Usage: node build.js --content=<path> [--resolved=<path>]');
+    process.exit(1);
+  }
+  build({
+    contentDir:  resolve(process.cwd(), contentArg.slice('--content='.length)),
+    resolvedDir: resolvedArg ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length)) : null,
+  });
+}

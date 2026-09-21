@@ -81,7 +81,14 @@
             }
           }
         },
-        "county_code": {
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.\n"
+        },
+        "countyCode": {
           "type": "string",
           "maxLength": 10,
           "description": "County code for routing this application to the correct local office."

@@ -20,7 +20,7 @@ actions:
   # Add a state-specific field to the Application schema.
   - target: "$.components.schemas.ApplicationWritable.properties"
     update:
-      county_code:
+      countyCode:
         type: string
         maxLength: 10
         description: County code for routing this application to the correct local office.

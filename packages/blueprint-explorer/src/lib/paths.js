@@ -8,13 +8,6 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-/** Absolute path to the resolved contracts directory.
- *  Provided via --resolved=<path>; null if not supplied. */
-const resolvedArg = process.argv.find(a => a.startsWith('--resolved='));
-export const resolvedDir = resolvedArg
-  ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length))
-  : null;
-
 const LABEL_MAP = {
   'openapi':       'API spec',
   'asyncapi':      'Async API',
@@ -50,14 +43,15 @@ export function buildSpecLink(repo, relPath) {
  * API spec and state machine first, then remaining files alphabetically.
  * annotations-docs is merged into annotations.
  *
- * @param {string} slug  - domain slug, e.g. 'intake'
+ * @param {string} slug          - domain slug, e.g. 'intake'
+ * @param {string|null} resolvedDir - absolute path to resolved contracts directory
  * @param {{ include?: string[], exclude?: string[] }} [opts]
  *   include — only show these suffixes (e.g. ['openapi', 'state-machine']); if omitted, show all
  *   exclude — suffixes to omit (ignored when include is set)
  * @param {object|null} [repo] - repo config from config.yaml; if provided, pairs include a link href
  */
-export function resolvedSourcePairs(slug, { include, exclude = [] } = {}, repo = null) {
-  if (!existsSync(resolvedDir)) return [];
+export function resolvedSourcePairs(slug, resolvedDir, { include, exclude = [] } = {}, repo = null) {
+  if (!resolvedDir || !existsSync(resolvedDir)) return [];
 
   // Collect all matching relative paths — search recursively since resolved
   // files now live under domains/ subdirectories.

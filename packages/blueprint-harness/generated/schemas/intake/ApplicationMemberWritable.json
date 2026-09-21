@@ -109,6 +109,146 @@
           }
         }
       ]
+    },
+    "notificationPreference": {
+      "description": "How this member prefers to receive benefit notices and updates.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "channel",
+            "address"
+          ],
+          "properties": {
+            "channel": {
+              "type": "string",
+              "enum": [
+                "email"
+              ]
+            },
+            "address": {
+              "type": "string",
+              "format": "email",
+              "description": "Email address for benefit notices."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "channel",
+            "phone"
+          ],
+          "properties": {
+            "channel": {
+              "type": "string",
+              "enum": [
+                "sms"
+              ]
+            },
+            "phone": {
+              "type": "string",
+              "description": "Phone number for SMS benefit notices (E.164 format)."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "channel",
+            "address"
+          ],
+          "properties": {
+            "channel": {
+              "type": "string",
+              "enum": [
+                "mail"
+              ]
+            },
+            "address": {
+              "type": "object",
+              "description": "Mailing or residential address.",
+              "required": [
+                "street",
+                "city",
+                "state",
+                "zip"
+              ],
+              "properties": {
+                "street": {
+                  "type": "string",
+                  "description": "Street address including apartment or unit number."
+                },
+                "city": {
+                  "type": "string",
+                  "description": "City name."
+                },
+                "state": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 2,
+                  "description": "Two-letter US state abbreviation."
+                },
+                "zip": {
+                  "type": "string",
+                  "pattern": "^\\d{5}(-\\d{4})?$",
+                  "description": "ZIP code or ZIP+4."
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "verificationEvidence": {
+      "description": "Identity verification evidence for this member. Accepts anyOf: an electronic data match result, a manual caseworker review record, or both.\n",
+      "anyOf": [
+        {
+          "type": "object",
+          "required": [
+            "source",
+            "matchCode",
+            "verifiedAt"
+          ],
+          "properties": {
+            "source": {
+              "type": "string",
+              "description": "Data source used for the electronic match (e.g., SSA, IRS-IEVS)."
+            },
+            "matchCode": {
+              "type": "string",
+              "description": "Result code returned by the data source."
+            },
+            "verifiedAt": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Timestamp when the electronic verification was completed."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "verifiedBy",
+            "verifiedAt"
+          ],
+          "properties": {
+            "verifiedBy": {
+              "type": "string",
+              "description": "ID of the caseworker who performed the manual verification."
+            },
+            "verifiedAt": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Timestamp when the manual verification was completed."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Optional caseworker notes on the verification outcome."
+            }
+          }
+        }
+      ]
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",

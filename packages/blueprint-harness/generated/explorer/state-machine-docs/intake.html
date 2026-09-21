@@ -28,6 +28,7 @@
     [id]:target { scroll-margin-top: 1rem; }
     tr[id]:target td { animation: target-fade 4s ease forwards; }
     .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
 
     /* Permalink anchors — hidden until parent is hovered */
     .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
@@ -84,29 +85,46 @@
               <th>Action</th><th>Actors</th><th>Transition</th><th>Steps</th>
             </tr></thead>
             <tbody><tr id="action-submit">
-          <td><strong style="color:#2B1A78;">submit</strong><br><span style="font-size:12px;color:#666;">Formally submits a draft application, starting the regulatory processing clock.</span></td>
+          <td><strong style="color:#2B1A78;">submit</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-submit" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Formally submits a draft application, starting the regulatory processing clock.</span></td>
           <td style="white-space:nowrap;"></td>
           <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">draft</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">submitted</span></span></td>
           <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record the submission timestamp (regulatory clock start). <code>sets submittedAt</code></li><li>Emit <a href="../event-catalog/index.html#event-ca.intake.application.submitted" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">ca.intake.application.submitted</a> — Triggers eligibility screening, caseworker task creation, and confirmation notice.</li></ul></td>
         </tr><tr id="action-open">
-          <td><strong style="color:#2B1A78;">open</strong><br><span style="font-size:12px;color:#666;">Moves a submitted application into active caseworker review.</span></td>
+          <td><strong style="color:#2B1A78;">open</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-open" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Moves a submitted application into active caseworker review.</span></td>
           <td style="white-space:nowrap;"></td>
           <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">submitted</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">under_review</span></span></td>
           <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Record when caseworker began review, marking the start of active processing. <code>sets openedAt</code></li></ul></td>
         </tr><tr id="action-close">
-          <td><strong style="color:#2B1A78;">close</strong><br><span style="font-size:12px;color:#666;">Closes the application once intake processing is complete.</span></td>
+          <td><strong style="color:#2B1A78;">close</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-close" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Closes the application once intake processing is complete.</span></td>
           <td style="white-space:nowrap;"></td>
           <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">under_review</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">closed</span></span></td>
           <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-ca.intake.application.closed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">ca.intake.application.closed</a></li></ul></td>
         </tr><tr id="action-withdraw">
-          <td><strong style="color:#2B1A78;">withdraw</strong><br><span style="font-size:12px;color:#666;">Withdraws the application at the household's request.</span></td>
+          <td><strong style="color:#2B1A78;">withdraw</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-withdraw" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Withdraws the application at the household's request.</span></td>
           <td style="white-space:nowrap;"></td>
           <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">draft</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">submitted</span><span style="color:#aaa;font-size:10px;">or</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">under_review</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #E9CCBE;background:#F7EDE8;color:#5a5050;">withdrawn</span></span></td>
           <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-ca.intake.application.withdrawn" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">ca.intake.application.withdrawn</a></li></ul></td>
         </tr></tbody>
           </table>
         </div>
-      
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Event Subscriptions</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table style="table-layout:fixed;">
+            <colgroup>
+              <col style="width:30%">
+              <col style="width:20%">
+              <col style="width:50%">
+            </colgroup>
+            <thead><tr>
+              <th>Event</th><th>Emitted by</th><th>Handler steps</th>
+            </tr></thead>
+            <tbody><tr>
+          <td><code>ca.intake.review_reminder</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-ca.intake.application.review-reminder" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">ca.intake.application.review-reminder</a> — Notify supervisors that this application needs immediate attention.</li></ul></td>
+        </tr></tbody>
+          </table>
+        </div>
     </section></div>
   <script>
     document.querySelectorAll('[data-expand-id]').forEach(btn => {

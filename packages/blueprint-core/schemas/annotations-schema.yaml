@@ -106,7 +106,7 @@ $defs:
       (e.g., intake.application.submitted).
     minProperties: 1
     propertyNames:
-      pattern: "^[a-z][a-zA-Z0-9_]*(\\.[a-z][a-zA-Z0-9_]*){1,}$"
+      pattern: "^[a-z][a-zA-Z0-9_-]*(\\.[a-z][a-zA-Z0-9_-]*){1,}$"
     additionalProperties:
       $ref: "#/$defs/Annotation"
 

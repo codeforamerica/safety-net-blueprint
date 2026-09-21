@@ -259,14 +259,14 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/determinations/00000000-0000-0000-0000-000000000000/programs",
+              "raw": "{{baseUrl}}/determinations/00000000-0000-0000-0000-000000000000/decisions",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "determinations",
                 "00000000-0000-0000-0000-000000000000",
-                "programs"
+                "decisions"
               ],
               "variables": [
                 "determinationId"
@@ -298,19 +298,19 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/determinations/00000000-0000-0000-0000-000000000000/programs/{{programResultId}}",
+              "raw": "{{baseUrl}}/determinations/00000000-0000-0000-0000-000000000000/decisions/{{decisionId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "determinations",
                 "00000000-0000-0000-0000-000000000000",
-                "programs",
-                "{{programResultId}}"
+                "decisions",
+                "{{decisionId}}"
               ],
               "variables": [
                 "determinationId",
-                "programResultId"
+                "decisionId"
               ]
             }
           },
@@ -332,13 +332,53 @@
               }
             }
           ]
+        },
+        {
+          "name": "Complete Determination",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Caller-Id",
+                "value": "{{callerId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/determinations/{{determinationId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "determinations",
+                "{{determinationId}}",
+                "complete"
+              ],
+              "variables": [
+                "determinationId"
+              ]
+            },
+            "description": "Trigger the complete transition"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON with id\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ],
-      "description": "Eligibility API"
-    },
-    {
-      "name": "Eligibility",
-      "item": [],
       "description": "Eligibility API"
     },
     {
@@ -857,11 +897,6 @@
           ]
         }
       ],
-      "description": "Intake API"
-    },
-    {
-      "name": "Intake",
-      "item": [],
       "description": "Intake API"
     }
   ],

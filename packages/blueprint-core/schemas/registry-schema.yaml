@@ -1,0 +1,89 @@
+# JSON Schema for named registry YAML files.
+# Validates *-registry-{type}.yaml files that use the generic registry format.
+#
+# Each registry file defines a named set of reusable, citable items keyed by stable ID.
+# Annotation files reference registry entries by ID using the registry type as the field name
+# (e.g., policies: [snap-processing-clock], patterns: [external-ref-defs-oneOf]).
+#
+# The policies registry (*-registry-policies.yaml) currently uses a legacy format
+# (policies-schema.yaml) and will migrate to this schema in a future version.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/schemas/registry-schema.yaml"
+title: Registry
+description: >
+  Generic schema for named registry files (*-registry-{type}.yaml).
+  Each registry file defines one type of reusable, citable items. Tooling discovers
+  all registry files by glob and builds a per-type index used to validate annotation
+  references and render tooltips.
+
+  Registry types are open — any kebab-case identifier is valid. Common types:
+    policies  — regulatory citations (legacy format; see policies-schema.yaml)
+    patterns  — contract modeling patterns exercised by the harness
+
+  Annotation files reference entries by ID using the type name as the key:
+    patterns: [external-ref-defs-oneOf]
+
+type: object
+required:
+  - version
+  - type
+  - entries
+additionalProperties: false
+
+properties:
+  $schema:
+    type: string
+
+  version:
+    type: string
+    description: Schema version for change tracking.
+
+  domain:
+    type: string
+    description: >
+      The domain that defines and owns this registry (e.g., platform, intake).
+      Used by tooling to show the defining domain in the annotations explorer index.
+
+  type:
+    type: string
+    pattern: "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    description: >
+      Registry type identifier in kebab-case (e.g., policies, patterns, design-patterns).
+      Used by tooling to build a per-type index and to validate annotation references.
+
+  entries:
+    type: object
+    description: >
+      Map of stable entry IDs to entry definitions.
+      IDs must be unique within this file. IDs should be kebab-case and may be
+      prefixed for clarity (e.g., external-ref-defs-oneOf, nullable-field).
+      Renaming an entry ID is a breaking change — deprecate old IDs rather than
+      renaming them.
+    minProperties: 1
+    propertyNames:
+      pattern: "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    additionalProperties:
+      $ref: "#/$defs/Entry"
+
+$defs:
+  Entry:
+    type: object
+    required:
+      - description
+    additionalProperties: true
+    description: >
+      A named, citable item in the registry. The description field is required and
+      serves as the primary human-readable display text. Additional type-specific
+      fields (e.g., citation, citationUrl, programs for policies) are allowed.
+    properties:
+      description:
+        type: string
+        description: >
+          Human-readable explanation of this entry. Used as display text in tooling,
+          design references, and annotation renderers.
+      deprecated:
+        type: boolean
+        description: >
+          When true, tooling should warn when this entry is referenced. Add a
+          deprecation notice to the description explaining what to use instead.

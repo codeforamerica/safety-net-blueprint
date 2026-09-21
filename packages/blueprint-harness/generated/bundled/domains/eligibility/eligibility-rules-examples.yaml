@@ -13,8 +13,6 @@ rulesets:
           policy:
             incomeThreshold: 150
             resourceThreshold: 100
-        outputs:
-          isExpeditedEligible: true
       - description: Income and resources below shelter cost — qualifies on condition 2
         inputs:
           household:
@@ -25,8 +23,6 @@ rulesets:
           policy:
             incomeThreshold: 150
             resourceThreshold: 100
-        outputs:
-          isExpeditedEligible: true
       - description: Migrant farmworker with low resources — qualifies on condition 3
         inputs:
           household:
@@ -37,8 +33,6 @@ rulesets:
           policy:
             incomeThreshold: 150
             resourceThreshold: 100
-        outputs:
-          isExpeditedEligible: true
       - description: Above all thresholds — does not qualify
         inputs:
           household:
@@ -49,5 +43,3 @@ rulesets:
           policy:
             incomeThreshold: 150
             resourceThreshold: 100
-        outputs:
-          isExpeditedEligible: false

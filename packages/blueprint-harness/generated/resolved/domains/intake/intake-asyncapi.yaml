@@ -12,6 +12,11 @@ channels:
     messages:
       ApplicationClosed:
         $ref: "#/components/messages/ApplicationClosedMessage"
+  ca.intake.application.review-reminder:
+    address: ca.intake.application.review-reminder
+    messages:
+      ApplicationReviewReminder:
+        $ref: "#/components/messages/ApplicationReviewReminderMessage"
   ca.intake.application.submitted:
     address: ca.intake.application.submitted
     messages:
@@ -24,6 +29,11 @@ channels:
         $ref: "#/components/messages/ApplicationWithdrawnMessage"
 components:
   messages:
+    ApplicationReviewReminderMessage:
+      name: ca.intake.application.review-reminder
+      summary: Emitted when an application has been awaiting caseworker review for too long.
+      payload:
+        $ref: "#/components/schemas/ApplicationReviewReminderEvent"
     ApplicationClosedMessage:
       name: ca.intake.application.closed
       summary: TODO — describe when this event is emitted and who consumes it.
@@ -40,6 +50,14 @@ components:
       payload:
         $ref: "#/components/schemas/ApplicationWithdrawnEvent"
   schemas:
+    ApplicationReviewReminderEvent:
+      allOf:
+        - $ref: ../../base/schemas/events.yaml#/$defs/Event
+        - type: object
+          properties:
+            type:
+              type: string
+              const: ca.intake.application.review-reminder
     ApplicationClosedEvent:
       allOf:
         - $ref: ../../base/schemas/events.yaml#/$defs/Event

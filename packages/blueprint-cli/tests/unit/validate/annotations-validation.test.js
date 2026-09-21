@@ -1,7 +1,7 @@
 /**
  * Unit tests for validate-annotations.js
  *
- * Tests buildResourceSchemaMap, validateAnnotationPath,
+ * Tests buildDomainSpecMap, validateAnnotationPath,
  * buildStateMachineActionIndex, validateAnnotationOperation,
  * buildPolicyIndex, and validateAnnotationPolicyCitations.
  * Smoke tests run real annotation files against real specs.
@@ -10,7 +10,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  buildResourceSchemaMap,
+  buildDomainSpecMap,
   validateAnnotationPath,
   buildStateMachineActionIndex,
   validateAnnotationOperation,
@@ -24,16 +24,29 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeResourceSchemaMap(schemas = {}) {
-  // schemas: { resourceKey → { properties: [...fieldNames] } }
-  const map = new Map();
-  for (const [resourceKey, { properties }] of Object.entries(schemas)) {
-    const spec = {
-      components: { schemas: { [resourceKey]: { type: 'object', properties: Object.fromEntries(properties.map(p => [p, { type: 'string' }])) } } },
-    };
-    map.set(resourceKey, { spec, schema: spec.components.schemas[resourceKey] });
-  }
-  return map;
+/**
+ * Build a minimal domainSpecMap for testing.
+ * schemas: { PascalCaseSchemaName → { properties: [...fieldNames] } }
+ */
+function makeDomainSpecMap(schemas = {}, domain = 'test') {
+  const spec = {
+    info: { 'x-domain': domain },
+    components: {
+      schemas: Object.fromEntries(
+        Object.entries(schemas).map(([name, { properties, refs }]) => [
+          name,
+          {
+            type: 'object',
+            properties: {
+              ...Object.fromEntries((properties || []).map(p => [p, { type: 'string' }])),
+              ...(refs || {}),
+            },
+          },
+        ])
+      ),
+    },
+  };
+  return new Map([[domain, { spec, filePath: null }]]);
 }
 
 // ---------------------------------------------------------------------------
@@ -41,12 +54,13 @@ function makeResourceSchemaMap(schemas = {}) {
 // ---------------------------------------------------------------------------
 
 describe('validateAnnotationPath', () => {
-  const schemaMap = makeResourceSchemaMap({
-    application: { properties: ['status', 'programsAppliedFor', 'submittedAt', 'householdInfo'] },
+  const domainSpecMap = makeDomainSpecMap({
+    Application: { properties: ['status', 'submittedAt', 'householdInfo'] },
   });
 
   // Nested schema for deeper path tests
   const nestedSpec = {
+    info: { 'x-domain': 'test' },
     components: {
       schemas: {
         HouseholdInfo: {
@@ -58,56 +72,63 @@ describe('validateAnnotationPath', () => {
           properties: {
             status: { type: 'string' },
             programsAppliedFor: { type: 'array', items: { type: 'string' } },
+            members: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  citizenship: {
+                    type: 'object',
+                    properties: { citizenshipStatus: { type: 'string' } },
+                  },
+                },
+              },
+            },
             householdInfo: { $ref: '#/components/schemas/HouseholdInfo' },
           },
         },
       },
     },
   };
-  const nestedMap = new Map([
-    ['application', { spec: nestedSpec, schema: nestedSpec.components.schemas.Application }],
-  ]);
+  const nestedMap = new Map([['test', { spec: nestedSpec, filePath: null }]]);
 
   test('passes for top-level resource annotation (no field path)', () => {
-    assert.equal(validateAnnotationPath('application', schemaMap), null);
+    assert.equal(validateAnnotationPath('application', domainSpecMap, 'test'), null);
   });
 
   test('passes for known top-level field', () => {
-    assert.equal(validateAnnotationPath('application.status', schemaMap), null);
+    assert.equal(validateAnnotationPath('application.status', domainSpecMap, 'test'), null);
   });
 
-  test('passes for array-marker field (strips [])', () => {
-    assert.equal(validateAnnotationPath('application.programsAppliedFor[]', schemaMap), null);
+  test('passes for array-marker field', () => {
+    assert.equal(validateAnnotationPath('application.programsAppliedFor[]', nestedMap, 'test'), null);
   });
 
-  test('errors for unknown resource', () => {
-    const result = validateAnnotationPath('unknown.field', schemaMap);
+  test('errors for unknown schema', () => {
+    const result = validateAnnotationPath('unknown.field', domainSpecMap, 'test');
     assert.ok(result?.includes('not found'));
   });
 
-  test('errors for unknown field on known resource', () => {
-    const result = validateAnnotationPath('application.nonExistent', schemaMap);
+  test('errors for unknown field on known schema', () => {
+    const result = validateAnnotationPath('application.nonExistent', domainSpecMap, 'test');
     assert.ok(result?.includes('does not exist'));
   });
 
   test('passes for nested field path through $ref', () => {
-    assert.equal(validateAnnotationPath('application.householdInfo.utilitiesIncludedInRent', nestedMap), null);
+    assert.equal(validateAnnotationPath('application.householdInfo.utilitiesIncludedInRent', nestedMap, 'test'), null);
   });
 
   test('errors for non-existent nested field path', () => {
-    const result = validateAnnotationPath('application.householdInfo.nonExistent', nestedMap);
+    const result = validateAnnotationPath('application.householdInfo.nonExistent', nestedMap, 'test');
     assert.ok(result?.includes('does not exist'));
   });
 
-  test('handles deeply nested path with multiple [] markers', () => {
-    // application.members[].citizenship.citizenshipStatus → strip [] → application.members.citizenship.citizenshipStatus
-    // In our simple map, members is not defined, so it should error
-    const result = validateAnnotationPath('application.members[].citizenship.citizenshipStatus', schemaMap);
-    assert.ok(result?.includes('does not exist'));
+  test('handles deeply nested path with [] markers', () => {
+    assert.equal(validateAnnotationPath('application.members[].citizenship.citizenshipStatus', nestedMap, 'test'), null);
   });
 
-  test('returns null for empty schema map (no specs loaded)', () => {
-    assert.equal(validateAnnotationPath('application.status', new Map()), null);
+  test('returns null for empty domain spec map (no specs loaded)', () => {
+    assert.equal(validateAnnotationPath('application.status', new Map(), 'test'), null);
   });
 });
 
@@ -117,23 +138,23 @@ describe('validateAnnotationPath', () => {
 
 describe('scenario: field rename — overlay renames programsAppliedFor → programs', () => {
   // Resolved spec after the rename: Application no longer has programsAppliedFor
-  const schemaMap = makeResourceSchemaMap({
-    application: { properties: ['id', 'status', 'programs', 'submittedAt'] },
+  const domainSpecMap = makeDomainSpecMap({
+    Application: { properties: ['id', 'status', 'programs', 'submittedAt'] },
   });
 
   test('catches stale application.programsAppliedFor path (old field name)', () => {
-    const result = validateAnnotationPath('application.programsAppliedFor', schemaMap);
+    const result = validateAnnotationPath('application.programsAppliedFor', domainSpecMap, 'test');
     assert.ok(result?.includes('does not exist'), `Expected error for stale field name but got: ${result}`);
   });
 
   test('passes with application.programs path (updated field name)', () => {
-    assert.equal(validateAnnotationPath('application.programs', schemaMap), null);
+    assert.equal(validateAnnotationPath('application.programs', domainSpecMap, 'test'), null);
   });
 });
 
 describe('scenario: field rename in nested object — overlay renames subfield', () => {
-  // HouseholdInfo.utilitiesIncluded renamed to utilitiesIncludedInRent
   const spec = {
+    info: { 'x-domain': 'test' },
     components: {
       schemas: {
         HouseholdInfo: {
@@ -150,33 +171,30 @@ describe('scenario: field rename in nested object — overlay renames subfield',
       },
     },
   };
-  const schemaMap = new Map([
-    ['application', { spec, schema: spec.components.schemas.Application }],
-  ]);
+  const domainSpecMap = new Map([['test', { spec, filePath: null }]]);
 
   test('catches stale application.householdInfo.utilitiesIncluded (old nested field)', () => {
-    const result = validateAnnotationPath('application.householdInfo.utilitiesIncluded', schemaMap);
+    const result = validateAnnotationPath('application.householdInfo.utilitiesIncluded', domainSpecMap, 'test');
     assert.ok(result?.includes('does not exist'), `Expected error for stale nested field but got: ${result}`);
   });
 
   test('passes with application.householdInfo.utilitiesIncludedInRent (updated nested field)', () => {
-    assert.equal(validateAnnotationPath('application.householdInfo.utilitiesIncludedInRent', schemaMap), null);
+    assert.equal(validateAnnotationPath('application.householdInfo.utilitiesIncludedInRent', domainSpecMap, 'test'), null);
   });
 });
 
-describe('scenario: resource rename — overlay renames application schema → intake-application', () => {
-  // Schema key changed; old key is gone
-  const schemaMap = makeResourceSchemaMap({
-    'intake-application': { properties: ['id', 'status', 'programsAppliedFor'] },
+describe('scenario: schema rename — overlay renames Application → IntakeApplication', () => {
+  const domainSpecMap = makeDomainSpecMap({
+    IntakeApplication: { properties: ['id', 'status', 'programsAppliedFor'] },
   });
 
-  test('catches stale application.status path (old resource key)', () => {
-    const result = validateAnnotationPath('application.status', schemaMap);
-    assert.ok(result?.includes('not found'), `Expected not-found error for stale resource key but got: ${result}`);
+  test('catches stale application.status path (old schema name)', () => {
+    const result = validateAnnotationPath('application.status', domainSpecMap, 'test');
+    assert.ok(result?.includes('not found'), `Expected not-found error for stale schema name but got: ${result}`);
   });
 
-  test('passes with intake-application.status path (updated resource key)', () => {
-    assert.equal(validateAnnotationPath('intake-application.status', schemaMap), null);
+  test('passes with intakeApplication.status path (updated schema name)', () => {
+    assert.equal(validateAnnotationPath('intakeApplication.status', domainSpecMap, 'test'), null);
   });
 });
 
@@ -377,8 +395,8 @@ describe('scenario: event renamed — overlay renames submitted → filed', () =
 
 describe('validateFactKey', () => {
   const graphIndex = new Map([
-    ['snapInterviewProbes', new Set(['incomeInconsistency', 'abawdMembers', 'eligible'])],
-    ['workRequirements', new Set(['exempt', 'hoursRequired'])],
+    ['snapInterviewProbes', { domain: 'intake', facts: new Set(['incomeInconsistency', 'abawdMembers', 'eligible']) }],
+    ['workRequirements', { domain: 'intake', facts: new Set(['exempt', 'hoursRequired']) }],
   ]);
 
   test('passes for a known ruleset and fact', () => {
@@ -413,7 +431,7 @@ describe('validateFactKey', () => {
 
 describe('scenario: fact renamed — overlay renames eligible → qualifies', () => {
   const graphIndex = new Map([
-    ['snapInterviewProbes', new Set(['incomeInconsistency', 'qualifies'])],
+    ['snapInterviewProbes', { domain: 'intake', facts: new Set(['incomeInconsistency', 'qualifies']) }],
   ]);
 
   test('catches stale snapInterviewProbes.eligible after rename', () => {

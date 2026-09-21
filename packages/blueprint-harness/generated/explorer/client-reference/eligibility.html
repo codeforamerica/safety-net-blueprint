@@ -65,6 +65,7 @@
     [id]:target { scroll-margin-top: 1rem; }
     tr[id]:target td { animation: target-fade 4s ease forwards; }
     .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
 
     /* Permalink anchors — hidden until parent is hovered */
     .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
@@ -96,7 +97,7 @@
       <div id="sidebar-nav">
         <div class="nav-section">
       <div class="nav-section-label">Methods</div>
-      <a href="#group-determinations" class="nav-link">Determinations <span class="nav-count">4</span></a><a href="#group-programs" class="nav-link">Programs <span class="nav-count">2</span></a><a href="#group-eligibility" class="nav-link">Eligibility <span class="nav-count">1</span></a>
+      <a href="#group-determinations" class="nav-link">Determinations <span class="nav-count">5</span></a><a href="#group-decisions" class="nav-link">Decisions <span class="nav-count">2</span></a><a href="#group-complete" class="nav-link">Complete <span class="nav-count">1</span></a>
     </div>
     <div class="nav-section">
         <div class="nav-section-label">Constants</div>
@@ -104,20 +105,20 @@
       </div>
     <div class="nav-section">
         <div class="nav-section-label">Types</div>
-        <a href="#type-DeterminationWritable" class="nav-link">DeterminationWritable</a><a href="#type-Determination" class="nav-link">Determination</a><a href="#type-DeterminationCreate" class="nav-link">DeterminationCreate</a><a href="#type-DeterminationUpdate" class="nav-link">DeterminationUpdate</a><a href="#type-DeterminationList" class="nav-link">DeterminationList</a><a href="#type-ProgramResult" class="nav-link">ProgramResult</a><a href="#type-ProgramResultList" class="nav-link">ProgramResultList</a><a href="#type-ExpeditedSnapRequest" class="nav-link">ExpeditedSnapRequest</a><a href="#type-DeterminationWritableWritable" class="nav-link">DeterminationWritableWritable</a><a href="#type-DeterminationWritable2" class="nav-link">DeterminationWritable2</a><a href="#type-DeterminationCreateWritable" class="nav-link">DeterminationCreateWritable</a><a href="#type-DeterminationListWritable" class="nav-link">DeterminationListWritable</a><a href="#type-ProgramResultWritable" class="nav-link">ProgramResultWritable</a><a href="#type-ProgramResultListWritable" class="nav-link">ProgramResultListWritable</a>
+        <a href="#type-DeterminationWritable" class="nav-link">DeterminationWritable</a><a href="#type-Determination" class="nav-link">Determination</a><a href="#type-DeterminationCreate" class="nav-link">DeterminationCreate</a><a href="#type-DeterminationUpdate" class="nav-link">DeterminationUpdate</a><a href="#type-DeterminationList" class="nav-link">DeterminationList</a><a href="#type-Decision" class="nav-link">Decision</a><a href="#type-DecisionList" class="nav-link">DecisionList</a><a href="#type-ExpeditedSnapRequest" class="nav-link">ExpeditedSnapRequest</a><a href="#type-DeterminationWritableWritable" class="nav-link">DeterminationWritableWritable</a><a href="#type-DeterminationWritable2" class="nav-link">DeterminationWritable2</a><a href="#type-DeterminationCreateWritable" class="nav-link">DeterminationCreateWritable</a><a href="#type-DeterminationListWritable" class="nav-link">DeterminationListWritable</a><a href="#type-DecisionWritable" class="nav-link">DecisionWritable</a><a href="#type-DecisionListWritable" class="nav-link">DecisionListWritable</a>
       </div>
       </div>
     </nav>
     <main id="content">
       <section id="group-determinations" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Determinations (4)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Determinations (5)</h2>
         <div id="ep-listDeterminations" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">listDeterminations<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">You can provide a client instance returned by `createClient()` instead of</span>
-      <a href="../api-reference/eligibility.html#op-get-determinations" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/eligibility.html#op-get-determinations" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-listDeterminations" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -162,7 +163,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">createDetermination<span style="color:#aaa;font-weight:400;">()</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Create a determination</span>
-      <a href="../api-reference/eligibility.html#op-post-determinations" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/eligibility.html#op-post-determinations" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-createDetermination" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -185,7 +186,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getDetermination<span style="color:#aaa;font-weight:400;">(determinationId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get a determination</span>
-      <a href="../api-reference/eligibility.html#op-get-determinations-determinationId" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/eligibility.html#op-get-determinations-determinationId" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-getDetermination" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -208,7 +209,7 @@
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">updateDetermination<span style="color:#aaa;font-weight:400;">(determinationId)</span></span>
       <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Update a determination</span>
-      <a href="../api-reference/eligibility.html#op-patch-determinations-determinationId" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
+      <a href="../api-reference/eligibility.html#op-patch-determinations-determinationId" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-updateDetermination" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
@@ -233,20 +234,43 @@
     </div>
     </div>
   </details>
-</div>
-      </section><section id="group-programs" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Programs (2)</h2>
-        <div id="ep-listProgramResults" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+</div><div id="ep-evaluateExpeditedSnap" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">listProgramResults<span style="color:#aaa;font-weight:400;">(determinationId)</span></span>
-      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">List program results</span>
-      <a href="../api-reference/eligibility.html#op-get-determinations-determinationId-programs" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
-      <a href="#ep-listProgramResults" class="permalink" title="Link to this method">#</a>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">evaluateExpeditedSnap<span style="color:#aaa;font-weight:400;">()</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Evaluate expeditedSnap</span>
+      <a href="../api-reference/eligibility.html#op-post-determinations-evaluate-expedited-snap" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
+      <a href="#ep-evaluateExpeditedSnap" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility.listProgramResults({
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility.evaluateExpeditedSnap({ body: { ... } })</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div>
+      </section><section id="group-decisions" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Decisions (2)</h2>
+        <div id="ep-listDecisions" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">listDecisions<span style="color:#aaa;font-weight:400;">(determinationId)</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">List decisions</span>
+      <a href="../api-reference/eligibility.html#op-get-determinations-determinationId-decisions" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
+      <a href="#ep-listDecisions" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility.listDecisions({
   path: { determinationId: string },
   query: { limit?: number, offset?: number },
 })</pre>
@@ -272,18 +296,18 @@
     </div>
     </div>
   </details>
-</div><div id="ep-getProgramResult" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+</div><div id="ep-getDecision" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getProgramResult<span style="color:#aaa;font-weight:400;">(determinationId, programResultId)</span></span>
-      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get a program result</span>
-      <a href="../api-reference/eligibility.html#op-get-determinations-determinationId-programs-programResultId" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
-      <a href="#ep-getProgramResult" class="permalink" title="Link to this method">#</a>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getDecision<span style="color:#aaa;font-weight:400;">(determinationId, decisionId)</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get a decision</span>
+      <a href="../api-reference/eligibility.html#op-get-determinations-determinationId-decisions-decisionId" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
+      <a href="#ep-getDecision" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility.getProgramResult({
-  path: { determinationId: string, programResultId: string },
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility.getDecision({
+  path: { determinationId: string, decisionId: string },
 })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
@@ -294,7 +318,7 @@
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
     </tr><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">programResultId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">decisionId</span></td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
@@ -303,26 +327,26 @@
     </div>
   </details>
 </div>
-      </section><section id="group-eligibility" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Eligibility (1)</h2>
-        <div id="ep-evaluateExpeditedSnap" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+      </section><section id="group-complete" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Complete (1)</h2>
+        <div id="ep-completeDetermination" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">evaluateExpeditedSnap<span style="color:#aaa;font-weight:400;">()</span></span>
-      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Evaluate expeditedSnap</span>
-      <a href="../api-reference/eligibility.html#op-post-eligibility-determinations-evaluate-expedited-snap" style="font-size:10px;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:3px;padding:1px 6px;color:#5650BE;text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>
-      <a href="#ep-evaluateExpeditedSnap" class="permalink" title="Link to this method">#</a>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">completeDetermination<span style="color:#aaa;font-weight:400;">(determinationId)</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Complete determination</span>
+      <a href="../api-reference/eligibility.html#op-post-determinations-determinationId-complete" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
+      <a href="#ep-completeDetermination" class="permalink" title="Link to this method">#</a>
     </summary>
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility.evaluateExpeditedSnap({ body: { ... } })</pre>
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">eligibility.completeDetermination({ path: { determinationId: string } })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
       <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
       <table style="width:100%;border-collapse:collapse;"><tbody><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">determinationId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
     </tr></tbody></table>
     </div>
@@ -425,30 +449,30 @@ eligibility.Annotations.events['event.type']      // event annotations</pre>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
-</div><div id="type-ProgramResult" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+</div><div id="type-Decision" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ProgramResult</code>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">Decision</code>
       <span style="font-size:11px;color:#aaa;">5 fields</span>
-      <a href="#type-ProgramResult" class="permalink" title="Link to this type">#</a>
+      <a href="#type-Decision" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
-      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ProgramResult</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">Decision</span> <span style="color:#666;">{</span></div>
       <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">determinationId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">program</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;snap&quot;, &quot;medicaid&quot;, &quot;chip&quot;, &quot;tanf&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">eligible</span><span style="color:#888;">:</span> <span style="color:#006152;">boolean</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">reason</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">benefitAmount</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
-</div><div id="type-ProgramResultList" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+</div><div id="type-DecisionList" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ProgramResultList</code>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DecisionList</code>
       <span style="font-size:11px;color:#aaa;">5 fields</span>
-      <a href="#type-ProgramResultList" class="permalink" title="Link to this type">#</a>
+      <a href="#type-DecisionList" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
-      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ProgramResultList</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DecisionList</span> <span style="color:#666;">{</span></div>
       <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">items</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">?:</span> <span style="color:#006152;">boolean</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
@@ -523,30 +547,30 @@ eligibility.Annotations.events['event.type']      // event annotations</pre>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
-</div><div id="type-ProgramResultWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+</div><div id="type-DecisionWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ProgramResultWritable</code>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DecisionWritable</code>
       <span style="font-size:11px;color:#aaa;">5 fields</span>
-      <a href="#type-ProgramResultWritable" class="permalink" title="Link to this type">#</a>
+      <a href="#type-DecisionWritable" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
-      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ProgramResultWritable</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DecisionWritable</span> <span style="color:#666;">{</span></div>
       <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">determinationId</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">program</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;snap&quot;, &quot;medicaid&quot;, &quot;chip&quot;, &quot;tanf&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">eligible</span><span style="color:#888;">:</span> <span style="color:#006152;">boolean</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">reason</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">benefitAmount</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
-</div><div id="type-ProgramResultListWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+</div><div id="type-DecisionListWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <code style="font-size:13px;font-weight:700;color:#2B1A78;">ProgramResultListWritable</code>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">DecisionListWritable</code>
       <span style="font-size:11px;color:#aaa;">5 fields</span>
-      <a href="#type-ProgramResultListWritable" class="permalink" title="Link to this type">#</a>
+      <a href="#type-DecisionListWritable" class="permalink" title="Link to this type">#</a>
     </summary>
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
-      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">ProgramResultListWritable</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">DecisionListWritable</span> <span style="color:#666;">{</span></div>
       <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">items</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">?:</span> <span style="color:#006152;">boolean</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
@@ -682,6 +706,22 @@ eligibility.Annotations.events['event.type']      // event annotations</pre>
           });
         }
       });
+    })();
+    // Fragment navigation — body has overflow:hidden so the browser cannot scroll to
+    // anchors natively. Read the hash and scroll #content to the target element instead.
+    (function () {
+      function scrollToHash() {
+        const hash = window.location.hash;
+        if (!hash) return;
+        const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+        if (!el) return;
+        const content = document.getElementById('content');
+        if (!content) { el.scrollIntoView(); return; }
+        const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top + content.scrollTop - 16;
+        content.scrollTop = top;
+      }
+      document.addEventListener('DOMContentLoaded', scrollToHash);
+      window.addEventListener('hashchange', scrollToHash);
     })();
     
   </script>

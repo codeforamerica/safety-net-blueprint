@@ -10,9 +10,13 @@ EvaluationFact:
 EvaluationFactComplete:
   type: object
   required:
+    - fact
     - state
     - value
   properties:
+    fact:
+      type: string
+      description: The fact name.
     state:
       type: string
       enum:
@@ -22,9 +26,13 @@ EvaluationFactComplete:
 EvaluationFactPlaceholder:
   type: object
   required:
+    - fact
     - state
     - value
   properties:
+    fact:
+      type: string
+      description: The fact name.
     state:
       type: string
       enum:
@@ -34,16 +42,17 @@ EvaluationFactPlaceholder:
 EvaluationFactMissing:
   type: object
   required:
+    - fact
     - state
-    - value
     - missing
   properties:
+    fact:
+      type: string
+      description: The fact name.
     state:
       type: string
       enum:
         - missing
-    value:
-      type: "null"
     missing:
       type: array
       description: Input paths required to resolve this fact.
@@ -52,22 +61,23 @@ EvaluationFactMissing:
 EvaluationFactError:
   type: object
   required:
+    - fact
     - state
-    - value
     - message
   properties:
+    fact:
+      type: string
+      description: The fact name.
     state:
       type: string
       enum:
         - error
-    value:
-      type: "null"
     message:
       type: string
       description: The reason evaluation failed.
 EvaluationResult:
-  type: object
+  type: array
   description: |
-    Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
-  additionalProperties:
+    Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
+  items:
     $ref: "#/EvaluationFact"

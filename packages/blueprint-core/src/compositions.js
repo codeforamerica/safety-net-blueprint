@@ -20,7 +20,7 @@ import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import yaml from 'js-yaml';
 import { resolveSchemaRefs, collectTopLevelProperties } from './state-machines.js';
-import { extractPathParams, buildParameterIndex } from './utils.js';
+import { extractPathParams, buildParameterIndex, buildPathEntry } from './openapi/utils.js';
 
 const LIST_QUERY_PARAMS = [
   { $ref: './components/parameters.yaml#/SearchQueryParam' },
@@ -770,16 +770,8 @@ export function generateCompositionOverlay(compositionFile, paramIndex, parentSc
     if (!composition.endpoint?.path) continue;
 
     const endpointPath = composition.endpoint.path;
-    const paramNames = extractPathParams(endpointPath);
     const schemaName = `${toPascalCase(compositionName)}Response`;
     const operationId = `get${toPascalCase(compositionName)}`;
-
-    const parameters = paramNames.map(name => {
-      const ref = paramIndex.get(name);
-      return ref
-        ? { $ref: ref }
-        : { name, in: 'path', required: true, schema: { type: 'string' } };
-    });
 
     const operation = {
       summary: `Get ${compositionName}`,
@@ -798,13 +790,7 @@ export function generateCompositionOverlay(compositionFile, paramIndex, parentSc
       }
     };
 
-    const pathEntry = {};
-    if (parameters.length > 0) {
-      pathEntry.parameters = parameters;
-    }
-    pathEntry.get = operation;
-
-    pathsUpdate[endpointPath] = pathEntry;
+    pathsUpdate[endpointPath] = buildPathEntry(endpointPath, 'get', operation, paramIndex, { type: 'composition', domain, id: compositionName });
 
     const schemaEntry = {
       type: 'object',

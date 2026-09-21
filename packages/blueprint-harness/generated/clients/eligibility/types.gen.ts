@@ -126,17 +126,17 @@ export type DeterminationList = {
     hasNext?: boolean;
 };
 
-export type ProgramResult = {
+export type Decision = {
     /**
      * Unique identifier (server-generated).
      */
     readonly id: string;
     /**
-     * The determination this result belongs to.
+     * The determination this decision belongs to.
      */
     determinationId: string;
     /**
-     * The benefit program this result applies to.
+     * The benefit program this decision applies to.
      */
     program: 'snap' | 'medicaid' | 'chip' | 'tanf';
     /**
@@ -144,7 +144,7 @@ export type ProgramResult = {
      */
     eligible: boolean;
     /**
-     * Explanation of the eligibility determination.
+     * Explanation of the eligibility decision.
      */
     reason?: string;
     /**
@@ -164,18 +164,18 @@ export type ProgramResult = {
     };
 };
 
-export type ProgramResultList = {
+export type DecisionList = {
     items: Array<{
         /**
          * Unique identifier (server-generated).
          */
         readonly id: string;
         /**
-         * The determination this result belongs to.
+         * The determination this decision belongs to.
          */
         determinationId: string;
         /**
-         * The benefit program this result applies to.
+         * The benefit program this decision applies to.
          */
         program: 'snap' | 'medicaid' | 'chip' | 'tanf';
         /**
@@ -183,7 +183,7 @@ export type ProgramResultList = {
          */
         eligible: boolean;
         /**
-         * Explanation of the eligibility determination.
+         * Explanation of the eligibility decision.
          */
         reason?: string;
         /**
@@ -246,38 +246,50 @@ export type ExpeditedSnapRequest = {
 };
 
 /**
- * Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
+ * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
  *
  */
-export type ExpeditedSnapResponse = {
-    [key: string]: {
-        state: 'complete';
-        /**
-         * The computed value.
-         */
-        value: unknown;
-    } | {
-        state: 'placeholder';
-        /**
-         * The computed value, derived using one or more schema defaults.
-         */
-        value: unknown;
-    } | {
-        state: 'missing';
-        value: null;
-        /**
-         * Input paths required to resolve this fact.
-         */
-        missing: Array<string>;
-    } | {
-        state: 'error';
-        value: null;
-        /**
-         * The reason evaluation failed.
-         */
-        message: string;
-    };
-};
+export type ExpeditedSnapResponse = Array<{
+    /**
+     * The fact name.
+     */
+    fact: string;
+    state: 'complete';
+    /**
+     * The computed value.
+     */
+    value: unknown;
+} | {
+    /**
+     * The fact name.
+     */
+    fact: string;
+    state: 'placeholder';
+    /**
+     * The computed value, derived using one or more schema defaults.
+     */
+    value: unknown;
+} | {
+    /**
+     * The fact name.
+     */
+    fact: string;
+    state: 'missing';
+    /**
+     * Input paths required to resolve this fact.
+     */
+    missing: Array<string>;
+} | {
+    /**
+     * The fact name.
+     */
+    fact: string;
+    state: 'error';
+    /**
+     * The reason evaluation failed.
+     */
+    message: string;
+}>;
 
 export type DeterminationWritableWritable = {
     /**
@@ -313,13 +325,13 @@ export type DeterminationListWritable = {
     hasNext?: boolean;
 };
 
-export type ProgramResultWritable = {
+export type DecisionWritable = {
     /**
-     * The determination this result belongs to.
+     * The determination this decision belongs to.
      */
     determinationId: string;
     /**
-     * The benefit program this result applies to.
+     * The benefit program this decision applies to.
      */
     program: 'snap' | 'medicaid' | 'chip' | 'tanf';
     /**
@@ -327,7 +339,7 @@ export type ProgramResultWritable = {
      */
     eligible: boolean;
     /**
-     * Explanation of the eligibility determination.
+     * Explanation of the eligibility decision.
      */
     reason?: string;
     /**
@@ -336,14 +348,14 @@ export type ProgramResultWritable = {
     benefitAmount?: number;
 };
 
-export type ProgramResultListWritable = {
+export type DecisionListWritable = {
     items: Array<{
         /**
-         * The determination this result belongs to.
+         * The determination this decision belongs to.
          */
         determinationId: string;
         /**
-         * The benefit program this result applies to.
+         * The benefit program this decision applies to.
          */
         program: 'snap' | 'medicaid' | 'chip' | 'tanf';
         /**
@@ -351,7 +363,7 @@ export type ProgramResultListWritable = {
          */
         eligible: boolean;
         /**
-         * Explanation of the eligibility determination.
+         * Explanation of the eligibility decision.
          */
         reason?: string;
         /**
@@ -371,9 +383,9 @@ export type ProgramResultListWritable = {
 export type DeterminationIdParam = string;
 
 /**
- * Unique identifier of the program result.
+ * Unique identifier of the decision.
  */
-export type ProgramResultIdParam = string;
+export type DecisionIdParam = string;
 
 export type ListDeterminationsData = {
     body?: never;
@@ -766,7 +778,7 @@ export type UpdateDeterminationResponses = {
 
 export type UpdateDeterminationResponse = UpdateDeterminationResponses[keyof UpdateDeterminationResponses];
 
-export type ListProgramResultsData = {
+export type ListDecisionsData = {
     body?: never;
     path: {
         /**
@@ -784,10 +796,10 @@ export type ListProgramResultsData = {
          */
         offset?: number;
     };
-    url: '/determinations/{determinationId}/programs';
+    url: '/determinations/{determinationId}/decisions';
 };
 
-export type ListProgramResultsErrors = {
+export type ListDecisionsErrors = {
     /**
      * Resource not found
      */
@@ -802,11 +814,11 @@ export type ListProgramResultsErrors = {
     };
 };
 
-export type ListProgramResultsError = ListProgramResultsErrors[keyof ListProgramResultsErrors];
+export type ListDecisionsError = ListDecisionsErrors[keyof ListDecisionsErrors];
 
-export type ListProgramResultsResponses = {
+export type ListDecisionsResponses = {
     /**
-     * Program-level eligibility results for this determination.
+     * Per-program eligibility decisions for this determination.
      */
     200: {
         items: Array<{
@@ -815,11 +827,11 @@ export type ListProgramResultsResponses = {
              */
             readonly id: string;
             /**
-             * The determination this result belongs to.
+             * The determination this decision belongs to.
              */
             determinationId: string;
             /**
-             * The benefit program this result applies to.
+             * The benefit program this decision applies to.
              */
             program: 'snap' | 'medicaid' | 'chip' | 'tanf';
             /**
@@ -827,7 +839,7 @@ export type ListProgramResultsResponses = {
              */
             eligible: boolean;
             /**
-             * Explanation of the eligibility determination.
+             * Explanation of the eligibility decision.
              */
             reason?: string;
             /**
@@ -853,9 +865,9 @@ export type ListProgramResultsResponses = {
     };
 };
 
-export type ListProgramResultsResponse = ListProgramResultsResponses[keyof ListProgramResultsResponses];
+export type ListDecisionsResponse = ListDecisionsResponses[keyof ListDecisionsResponses];
 
-export type GetProgramResultData = {
+export type GetDecisionData = {
     body?: never;
     path: {
         /**
@@ -863,15 +875,15 @@ export type GetProgramResultData = {
          */
         determinationId: string;
         /**
-         * Unique identifier of the program result.
+         * Unique identifier of the decision.
          */
-        programResultId: string;
+        decisionId: string;
     };
     query?: never;
-    url: '/determinations/{determinationId}/programs/{programResultId}';
+    url: '/determinations/{determinationId}/decisions/{decisionId}';
 };
 
-export type GetProgramResultErrors = {
+export type GetDecisionErrors = {
     /**
      * Resource not found
      */
@@ -886,11 +898,11 @@ export type GetProgramResultErrors = {
     };
 };
 
-export type GetProgramResultError = GetProgramResultErrors[keyof GetProgramResultErrors];
+export type GetDecisionError = GetDecisionErrors[keyof GetDecisionErrors];
 
-export type GetProgramResultResponses = {
+export type GetDecisionResponses = {
     /**
-     * Program result retrieved successfully.
+     * Decision retrieved successfully.
      */
     200: {
         /**
@@ -898,11 +910,11 @@ export type GetProgramResultResponses = {
          */
         readonly id: string;
         /**
-         * The determination this result belongs to.
+         * The determination this decision belongs to.
          */
         determinationId: string;
         /**
-         * The benefit program this result applies to.
+         * The benefit program this decision applies to.
          */
         program: 'snap' | 'medicaid' | 'chip' | 'tanf';
         /**
@@ -910,7 +922,7 @@ export type GetProgramResultResponses = {
          */
         eligible: boolean;
         /**
-         * Explanation of the eligibility determination.
+         * Explanation of the eligibility decision.
          */
         reason?: string;
         /**
@@ -931,7 +943,144 @@ export type GetProgramResultResponses = {
     };
 };
 
-export type GetProgramResultResponse = GetProgramResultResponses[keyof GetProgramResultResponses];
+export type GetDecisionResponse = GetDecisionResponses[keyof GetDecisionResponses];
+
+export type CompleteDeterminationData = {
+    body?: never;
+    path: {
+        determinationId: string;
+    };
+    query?: never;
+    url: '/determinations/{determinationId}/complete';
+};
+
+export type CompleteDeterminationErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * A conflict occurred with the current state of the resource.
+     */
+    409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type CompleteDeterminationError = CompleteDeterminationErrors[keyof CompleteDeterminationErrors];
+
+export type CompleteDeterminationResponses = {
+    /**
+     * Transition applied successfully.
+     */
+    200: {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * The intake application this determination is for.
+         */
+        applicationId: string;
+        /**
+         * Current status of the eligibility determination.
+         */
+        status: 'pending' | 'in_progress' | 'complete';
+        /**
+         * Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
+         */
+        readonly expedited: boolean;
+        /**
+         * Timestamp when the determination was finalized. Null until complete.
+         */
+        readonly determinedAt?: string;
+        /**
+         * Timestamp when the determination was created.
+         */
+        readonly createdAt: string;
+        /**
+         * Timestamp when the determination was last updated.
+         */
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Application resource.
+             */
+            application?: string;
+        };
+    };
+};
+
+export type CompleteDeterminationResponse = CompleteDeterminationResponses[keyof CompleteDeterminationResponses];
 
 export type EvaluateExpeditedSnapData = {
     /**
@@ -972,7 +1121,7 @@ export type EvaluateExpeditedSnapData = {
     };
     path?: never;
     query?: never;
-    url: '/eligibility/determinations/evaluate-expedited-snap';
+    url: '/determinations/evaluate-expedited-snap';
 };
 
 export type EvaluateExpeditedSnapErrors = {
@@ -1020,38 +1169,50 @@ export type EvaluateExpeditedSnapError = EvaluateExpeditedSnapErrors[keyof Evalu
 
 export type EvaluateExpeditedSnapResponses = {
     /**
-     * Map of output fact names to their evaluation result. Only output facts are included; intermediate facts are not returned.
+     * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
      *
      */
-    200: {
-        [key: string]: {
-            state: 'complete';
-            /**
-             * The computed value.
-             */
-            value: unknown;
-        } | {
-            state: 'placeholder';
-            /**
-             * The computed value, derived using one or more schema defaults.
-             */
-            value: unknown;
-        } | {
-            state: 'missing';
-            value: null;
-            /**
-             * Input paths required to resolve this fact.
-             */
-            missing: Array<string>;
-        } | {
-            state: 'error';
-            value: null;
-            /**
-             * The reason evaluation failed.
-             */
-            message: string;
-        };
-    };
+    200: Array<{
+        /**
+         * The fact name.
+         */
+        fact: string;
+        state: 'complete';
+        /**
+         * The computed value.
+         */
+        value: unknown;
+    } | {
+        /**
+         * The fact name.
+         */
+        fact: string;
+        state: 'placeholder';
+        /**
+         * The computed value, derived using one or more schema defaults.
+         */
+        value: unknown;
+    } | {
+        /**
+         * The fact name.
+         */
+        fact: string;
+        state: 'missing';
+        /**
+         * Input paths required to resolve this fact.
+         */
+        missing: Array<string>;
+    } | {
+        /**
+         * The fact name.
+         */
+        fact: string;
+        state: 'error';
+        /**
+         * The reason evaluation failed.
+         */
+        message: string;
+    }>;
 };
 
 export type EvaluateExpeditedSnapResponse = EvaluateExpeditedSnapResponses[keyof EvaluateExpeditedSnapResponses];

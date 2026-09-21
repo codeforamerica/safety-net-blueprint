@@ -28,13 +28,14 @@
     [id]:target { scroll-margin-top: 1rem; }
     tr[id]:target td { animation: target-fade 4s ease forwards; }
     .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
 
     /* Permalink anchors — hidden until parent is hovered */
     .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
     tr:hover .permalink,
     .content-item:hover .permalink,
     summary:hover .permalink { opacity: 0.4; }
-    
+    .ann-chip { display:inline-block; font-size:10px; font-weight:600; padding:2px 6px; border-radius:3px; background:#E6EBF9; color:#2B1A78; border:1px solid #C2C0E8; margin-right:4px; margin-bottom:4px; text-decoration:none; } .ann-chip:hover { background:#d4daf5; }
   </style>
 </head>
 <body>
@@ -42,7 +43,9 @@
   <script src="rules-engine.js"></script>
 <div style="max-width:1100px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
 <div style="margin-bottom:1.5rem">
-  <h1 style="font-size:1.25rem;font-weight:800;color:#111827;display:inline">expeditedSnap</h1><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px;background:#E6EBF9;color:#2B1A78;border:1px solid #C2C0E8;margin-left:8px;">eligibility</span>
+  <div style="display:flex;align-items:baseline;gap:0;flex-wrap:wrap;">
+    <h1 style="font-size:1.25rem;font-weight:800;color:#111827;display:inline;margin:0;">expeditedSnap</h1><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px;background:#E6EBF9;color:#2B1A78;border:1px solid #C2C0E8;margin-left:8px;">eligibility</span><a href="../api-reference/eligibility.html#op-post-determinations-evaluate-expedited-snap" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;font-size:11px;border-radius:4px;padding:2px 8px;margin-left:10px;">API endpoint →</a>
+  </div>
   <div style="font-size:12px;color:#6b7280;margin-top:4px;">5 facts &middot; 1 outputs &middot; 6 inputs</div>
 </div>
 
@@ -138,10 +141,11 @@
 
 <script>
 const GRAPH = {"$schema":"https://blueprint.codeforamerica.org/schemas/graph-schema.yaml","domain":"eligibility","ruleset":"expeditedSnap","outputs":["isExpeditedEligible"],"inputs":{"$.household.monthlyGrossIncome":{"type":"number","description":"Total monthly gross income for all household members (dollars)."},"$.household.liquidResources":{"type":"number","description":"Total liquid resources (cash, bank accounts) available to the household (dollars)."},"$.household.monthlyShelterCost":{"type":"number","description":"Monthly shelter cost including rent/mortgage and utilities (dollars)."},"$.household.isMigrantFarmworker":{"type":"boolean","description":"Whether any household member is a migrant or seasonal farmworker."},"$.policy.incomeThreshold":{"type":"number","description":"Monthly gross income threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).","default":150},"$.policy.resourceThreshold":{"type":"number","description":"Liquid resource threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).","default":100}},"facts":{"isLowIncome":{"expression":"household.monthlyGrossIncome < policy.incomeThreshold","type":"boolean","description":"Monthly gross income is below the expedited income threshold."},"hasLowResources":{"expression":"household.liquidResources < policy.resourceThreshold","type":"boolean","description":"Liquid resources are below the expedited resource threshold."},"isCombinedUnderShelter":{"expression":"(household.monthlyGrossIncome + household.liquidResources) < household.monthlyShelterCost","type":"boolean","description":"Combined income and liquid resources are less than monthly shelter cost."},"isMigrantWithLowResources":{"expression":"household.isMigrantFarmworker && household.liquidResources < policy.resourceThreshold","type":"boolean","description":"Household includes a migrant or seasonal farmworker with low liquid resources."},"isExpeditedEligible":{"expression":"(isLowIncome && hasLowResources) || isCombinedUnderShelter || isMigrantWithLowResources","type":"boolean","description":"Household qualifies for expedited processing under any of the three qualifying conditions (7 CFR § 273.2(i)).\n"}},"dependencies":{"isLowIncome":["$.household.monthlyGrossIncome","$.policy.incomeThreshold"],"hasLowResources":["$.household.liquidResources","$.policy.resourceThreshold"],"isCombinedUnderShelter":["$.household.monthlyGrossIncome","$.household.liquidResources","$.household.monthlyShelterCost"],"isMigrantWithLowResources":["$.household.liquidResources","$.household.isMigrantFarmworker","$.policy.resourceThreshold"],"isExpeditedEligible":["isLowIncome","hasLowResources","isCombinedUnderShelter","isMigrantWithLowResources"]}};
-const ANNOTATIONS = {"isExpeditedEligible":{"policies":["snap-expedited-processing"],"programs":["snap"]},"isLowIncome":{"policies":["snap-expedited-screening"],"programs":["snap"]}};
-const POLICIES = {"$schema":"policies-schema.yaml","version":"1.0.0","policies":{"widget-processing-clock":{"citation":"Example citation 1.0","citationUrl":"https://example.gov/rules/1.0","description":"Example processing clock policy used in tests. Widgets must be processed within a defined timeframe.\n"},"widget-eligibility-rule":{"citation":"Example regulation 2.0","description":"Example eligibility rule used in tests.\n"}}};
-const EXAMPLES = [{"description":"Low income and low resources — qualifies on condition 1","inputs":{"household":{"monthlyGrossIncome":120,"liquidResources":75,"monthlyShelterCost":800,"isMigrantFarmworker":false},"policy":{"incomeThreshold":150,"resourceThreshold":100}},"outputs":{"isExpeditedEligible":true}},{"description":"Income and resources below shelter cost — qualifies on condition 2","inputs":{"household":{"monthlyGrossIncome":500,"liquidResources":50,"monthlyShelterCost":650,"isMigrantFarmworker":false},"policy":{"incomeThreshold":150,"resourceThreshold":100}},"outputs":{"isExpeditedEligible":true}},{"description":"Migrant farmworker with low resources — qualifies on condition 3","inputs":{"household":{"monthlyGrossIncome":300,"liquidResources":60,"monthlyShelterCost":1000,"isMigrantFarmworker":true},"policy":{"incomeThreshold":150,"resourceThreshold":100}},"outputs":{"isExpeditedEligible":true}},{"description":"Above all thresholds — does not qualify","inputs":{"household":{"monthlyGrossIncome":2000,"liquidResources":500,"monthlyShelterCost":1200,"isMigrantFarmworker":false},"policy":{"incomeThreshold":150,"resourceThreshold":100}},"outputs":{"isExpeditedEligible":false}}];
+const ANNOTATIONS = {"isExpeditedEligible":{"policies":["snap-expedited-processing"],"patterns":["ruleset-output-fact"]},"isLowIncome":{"policies":["snap-expedited-screening"],"patterns":["ruleset-intermediate-fact"]}};
+const POLICIES = {"$schema":"policies-schema.yaml","version":"1.0.0","domain":"platform","policies":{"snap-application-acceptance":{"citation":"7 CFR § 273.2(c)","description":"SNAP application acceptance requirements — agencies must accept applications on the day of initial contact and must not discourage or delay submission.\n"},"snap-right-to-apply":{"citation":"7 CFR § 273.2(a)","description":"SNAP right-to-apply — any household wishing to participate must be allowed to file an application, and the filing date establishes the benefit month.\n"},"snap-processing-clock":{"citation":"7 CFR § 273.2(g)","description":"SNAP application processing standards — 30-day processing clock from date of filing; expedited service within 7 days for qualifying households.\n"},"medicaid-processing-clock":{"citation":"42 CFR § 435.912","description":"Medicaid application processing standards — 45-day processing clock for most applicants; 90 days for disability-based applicants.\n"},"snap-notice-of-action":{"citation":"7 CFR § 273.13","description":"SNAP notice of adverse action — agencies must provide timely and adequate written notice before reducing, suspending, or terminating benefits.\n"},"snap-notice-of-eligibility":{"citation":"7 CFR § 273.10(g)","description":"SNAP notice of eligibility determination — written notice of approval or denial with reason, rights, and certification period.\n"},"medicaid-notice-of-eligibility":{"citation":"42 CFR § 435.917","description":"Medicaid notice of eligibility determination — written notice of approval or denial with reason, appeal rights, and effective date.\n"},"snap-fair-hearing-rights":{"citation":"7 CFR § 273.15","description":"SNAP fair hearing rights — households have the right to request a fair hearing within 90 days of any adverse action notice.\n"},"snap-interview-toolkit":{"citation":"FNS-1104 (March 2023, revised June 2025)","description":"FNS SNAP Interview Toolkit — six essential interview functions, probe triggers for inconsistency flags, verification requirements, and interview conclusion standards.\n"},"snap-general-work-requirement":{"citation":"7 CFR § 273.7","description":"SNAP general work requirements — able-bodied adults aged 16–59 must register for work, accept suitable employment, and participate in assigned employment and training programs. Exemptions include physical/mental incapacity, caregiving, school enrollment, and participation in other programs.\n"},"snap-abawd-work-requirement":{"citation":"7 CFR § 273.24","description":"SNAP able-bodied adults without dependents (ABAWD) work requirement — individuals aged 18–54 without dependents are limited to 3 months of benefits in any 36-month period unless they meet work, exemption, or waiver criteria.\n"},"snap-student-eligibility":{"citation":"7 CFR § 273.5","description":"SNAP eligibility rules for students enrolled at least half-time in higher education — generally ineligible unless they meet one of the statutory exceptions (employment, work-study, dependent care, TANF participation, etc.).\n"},"snap-expedited-processing":{"citation":"7 CFR § 273.2(i)","description":"SNAP expedited service — households with gross monthly income below $150 and liquid resources below $100 (or migrant/seasonal farmworkers) must receive benefits within 7 days of application.\n"},"snap-expedited-screening":{"citation":"7 CFR § 273.2(i)(1)","description":"SNAP expedited screening criteria — agencies must screen all applications on the day of receipt and identify households entitled to expedited service.\n"},"qualified-alien-eligibility":{"citation":"7 CFR § 273.4","description":"SNAP eligibility for non-citizens — only qualified aliens are eligible; status categories include LPRs, refugees, asylees, and other federally defined categories with varying waiting periods.\n"},"prwora-sponsor-deeming":{"citation":"8 U.S.C. § 1631","description":"PRWORA sponsor income deeming — income and resources of a sponsor who signed an I-864 Affidavit of Support on or after December 19, 1997 are deemed available to the sponsored non-citizen for SNAP purposes.\n"},"snap-household-composition":{"citation":"7 CFR § 273.1","description":"SNAP household composition rules — defines who must be included in a SNAP household, including mandatory household members, separate household rules, and treatment of boarders, roommates, and institutionalized individuals.\n"},"snap-income-verification":{"citation":"7 CFR § 273.2(f)","description":"SNAP income verification requirements — agencies must verify earned and unearned income at application and recertification, including acceptable documentary evidence and collateral contact standards.\n"},"snap-elderly-disabled-deductions":{"citation":"7 CFR § 273.9(d)","description":"SNAP deductions for elderly and disabled households — households with an elderly or disabled member may claim excess medical expense deductions and are exempt from the gross income test.\n"},"snap-benefit-calculation":{"citation":"7 CFR § 273.10","description":"SNAP benefit calculation — net monthly income is used to determine benefit allotment; benefit equals 30% of net income subtracted from the maximum allotment for household size.\n"},"chip-age-eligibility":{"citation":"42 CFR § 457.310","description":"CHIP age eligibility — states must define an upper age limit for CHIP eligibility (up to age 19), and may extend coverage to unborn children and former foster youth up to age 26 under state plan options.\n"},"medicaid-caretaker-relative":{"citation":"42 CFR § 435.110","description":"Medicaid caretaker relative eligibility — states must provide Medicaid to caretaker relatives of dependent children who meet income and resource standards, including parents and other adults who are the primary caregiver.\n"},"medicaid-cost-sharing":{"citation":"42 CFR § 447.50","description":"Medicaid cost sharing — limits on premiums, copayments, and other cost sharing for Medicaid enrollees, including aggregate limits by income level and prohibition on cost sharing for certain populations and services.\n"},"medicaid-determination-documentation":{"citation":"42 CFR § 435.940","description":"Medicaid eligibility verification — agencies must verify eligibility factors through electronic data sources before requesting documentation from applicants; paper documentation may be requested only when electronic verification is unavailable.\n"}}};
+const EXAMPLES = [{"description":"Low income and low resources — qualifies on condition 1","inputs":{"household":{"monthlyGrossIncome":120,"liquidResources":75,"monthlyShelterCost":800,"isMigrantFarmworker":false},"policy":{"incomeThreshold":150,"resourceThreshold":100}}},{"description":"Income and resources below shelter cost — qualifies on condition 2","inputs":{"household":{"monthlyGrossIncome":500,"liquidResources":50,"monthlyShelterCost":650,"isMigrantFarmworker":false},"policy":{"incomeThreshold":150,"resourceThreshold":100}}},{"description":"Migrant farmworker with low resources — qualifies on condition 3","inputs":{"household":{"monthlyGrossIncome":300,"liquidResources":60,"monthlyShelterCost":1000,"isMigrantFarmworker":true},"policy":{"incomeThreshold":150,"resourceThreshold":100}}},{"description":"Above all thresholds — does not qualify","inputs":{"household":{"monthlyGrossIncome":2000,"liquidResources":500,"monthlyShelterCost":1200,"isMigrantFarmworker":false},"policy":{"incomeThreshold":150,"resourceThreshold":100}}}];
 const RULESET_INPUTS = {"household":{"type":"object","description":"Household financial circumstances at the time of application.","properties":{"monthlyGrossIncome":{"type":"number","description":"Total monthly gross income for all household members (dollars)."},"liquidResources":{"type":"number","description":"Total liquid resources (cash, bank accounts) available to the household (dollars)."},"monthlyShelterCost":{"type":"number","description":"Monthly shelter cost including rent/mortgage and utilities (dollars)."},"isMigrantFarmworker":{"type":"boolean","description":"Whether any household member is a migrant or seasonal farmworker."}}},"policy":{"type":"object","properties":{"incomeThreshold":{"type":"number","default":150,"description":"Monthly gross income threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i))."},"resourceThreshold":{"type":"number","default":100,"description":"Liquid resource threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i))."}}}};
+const REGISTRY_FIELDS = new Set(["policies","patterns"]);
 let exampleIndex = 0;
 let isExperimentMode = !EXAMPLES.length; // start unlocked when no examples
 
@@ -282,6 +286,37 @@ function closeDetail() {
   activeNode = null;
 }
 
+// ── Annotation field rendering ────────────────────────────────────────────────
+const ANN_EXPLORER = '../annotations-explorer';
+const ANN_LABEL_STYLE = 'font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;';
+
+function renderAnnotFields(annot) {
+  let html = '';
+  for (const [key, val] of Object.entries(annot)) {
+    const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+    html += '<div style="' + ANN_LABEL_STYLE + '">' + escHtml(label) + '</div>';
+    if (REGISTRY_FIELDS.has(key) && Array.isArray(val)) {
+      const typeSlug = key.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+      html += '<div style="margin-bottom:10px;">' + val.map(id => {
+        const entrySlug = String(id).replace(/[^a-z0-9]/gi, '-').toLowerCase();
+        const href = ANN_EXPLORER + '/' + typeSlug + '.html#entry--' + entrySlug;
+        const tooltip = key === 'policies' ? (POLICIES[id]?.description ?? id) : id;
+        const displayLabel = key === 'policies' ? (POLICIES[id]?.citation ?? id) : id;
+        return '<a href="' + escHtml(href) + '" title="' + escHtml(tooltip) + '" class="ann-chip">' + escHtml(displayLabel) + '</a>';
+      }).join('') + '</div>';
+    } else if (Array.isArray(val) && val.length === 1) {
+      html += '<div style="font-size:11px;color:#374151;margin-bottom:10px;">' + escHtml(String(val[0]).trim()) + '</div>';
+    } else if (Array.isArray(val)) {
+      html += '<ol style="margin:0 0 10px;padding-left:16px;">' + val.map(item =>
+        '<li style="font-size:11px;color:#374151;margin-bottom:6px;line-height:1.5;">' + escHtml(String(item).trim()) + '</li>'
+      ).join('') + '</ol>';
+    } else if (typeof val === 'string') {
+      html += '<div style="font-size:11px;color:#374151;margin-bottom:10px;">' + escHtml(val.trim()) + '</div>';
+    }
+  }
+  return html;
+}
+
 // ── Detail strip ──────────────────────────────────────────────────────────────
 // Full-width strip between graph and columns. Shows on node click, hides on
 // close button or clicking empty graph area.
@@ -339,22 +374,7 @@ function showDetail(nodeName) {
   }
 
   if (annot) {
-    for (const [key, val] of Object.entries(annot)) {
-      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
-      html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">' + escHtml(label) + '</div>';
-      if (key === 'policies' && Array.isArray(val)) {
-        html += '<div style="margin-bottom:10px;">' + val.map(id => {
-          const p = POLICIES[id];
-          return '<span title="' + escHtml(p?.description ?? id) + '" style="display:inline-block;font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;border:1px solid #C2C0E8;margin-right:4px;margin-bottom:4px;">' + escHtml(p?.citation ?? id) + '</span>';
-        }).join('') + '</div>';
-      } else if (Array.isArray(val)) {
-        html += '<ul style="margin:0 0 10px;padding-left:14px;">' + val.map(item =>
-          '<li style="font-size:11px;color:#374151;margin-bottom:4px;">' + escHtml(String(item)) + '</li>'
-        ).join('') + '</ul>';
-      } else if (typeof val === 'string') {
-        html += '<div style="font-size:11px;color:#374151;margin-bottom:10px;">' + escHtml(val.trim()) + '</div>';
-      }
-    }
+    html += renderAnnotFields(annot);
   }
 
   panel.innerHTML = html;
@@ -479,6 +499,29 @@ function escHtml(s) {
 }
 
 runEval();
+
+// ── Hash-based fact navigation ─────────────────────────────────────────────
+// Navigating to #fact-{factName} simulates a click on that node so the full
+// highlight + detail-strip behavior fires, exactly as if the user clicked it.
+function activateFactFromHash() {
+  const hash = window.location.hash;
+  if (!hash.startsWith('#fact-')) return;
+  const factName = decodeURIComponent(hash.slice('#fact-'.length));
+  const svg = document.querySelector('svg');
+  if (!svg) return;
+  let nodeEl = null;
+  svg.querySelectorAll('.sg-node').forEach(el => {
+    if (el.dataset.node === factName) nodeEl = el;
+  });
+  if (nodeEl) {
+    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    setTimeout(() => {
+      document.getElementById('detail-strip')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
+  }
+}
+document.addEventListener('DOMContentLoaded', activateFactFromHash);
+window.addEventListener('hashchange', activateFactFromHash);
 </script></div>
   <script>
     document.querySelectorAll('[data-expand-id]').forEach(btn => {

@@ -20,43 +20,33 @@ import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, rmSync
 import { resolve, dirname, join, basename, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { COLORS } from './lib/theme.js';
-import { esc, titleCase, headerMetaSubtitle } from './lib/html.js';
+import { esc, titleCase, headerMetaSubtitle, apiReferenceLink, apiReferenceHref } from './lib/html.js';
 import { twoColumnPage, singleColumnPage } from './lib/layout.js';
-import { resolvedDir, resolvedSourcePairs } from './lib/paths.js';
+import { resolvedSourcePairs } from './lib/paths.js';
 import { loadConfig } from './lib/config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const clientsArg = process.argv.find(a => a.startsWith('--clients='));
-const contentArg = process.argv.find(a => a.startsWith('--content='));
 
-if (!clientsArg || !contentArg) {
-  console.error('Usage: node client-reference.js --clients=<path> --content=<path> [--resolved=<path>]');
-  process.exit(1);
-}
+// Resolved source files clients are generated from — shown in each page's header metadata.
+// Clients come from OpenAPI only; asyncapi is excluded even where it exists.
+const SOURCE_SUFFIXES = ['openapi', 'state-machine'];
 
-const clientsBase = resolve(process.cwd(), clientsArg.slice('--clients='.length));
-const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
-const generatedClientsDir = clientsBase;
+/**
+ * @param {{ contentDir: string, resolvedDir: string, clientsDir: string }} opts
+ */
+export function build({ contentDir, resolvedDir, clientsDir }) {
+const generatedClientsDir = clientsDir;
 const outputDir = resolve(contentDir, 'client-reference');
 const hubHref = relative(outputDir, join(contentDir, 'index.html'));
 const { name: projectName, repo } = loadConfig(contentDir);
 mkdirSync(outputDir, { recursive: true });
 readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(join(outputDir, f)));
 
-// Resolved source files clients are generated from — shown in each page's header metadata.
-// Clients come from OpenAPI only; asyncapi is excluded even where it exists.
-const SOURCE_SUFFIXES = ['openapi', 'state-machine'];
-mkdirSync(outputDir, { recursive: true });
-
 if (!existsSync(generatedClientsDir)) {
   console.error(`  generated clients dir not found at ${generatedClientsDir} — skipping client-reference build`);
-  process.exit(0);
+  return;
 }
 
-/** Compute the api-reference anchor ID for an endpoint. Must match api-reference/build.js. */
-function endpointId(url, method) {
-  return `op-${method}-${url.replace(/\//g, '-').replace(/[{}]/g, '').replace(/--+/g, '-').replace(/^-|-$/g, '')}`;
-}
 
 // ── Domain list ───────────────────────────────────────────────────────────────
 // Parse generated/index.ts as the authoritative source of exported domains.
@@ -322,7 +312,7 @@ function renderEndpointBlock(ep, apiSlug, knownTypes, id = '', domain = '') {
   const pathParams = ep.parameters.filter(p => p.kind === 'Path');
   const argSummary = pathParams.map(p => esc(p.name)).join(', ');
   const apiRefLink = apiSlug
-    ? `<a href="../api-reference/${apiSlug}.html#${endpointId(ep.url, ep.method.toLowerCase())}" style="font-size:10px;background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:3px;padding:1px 6px;color:${COLORS.midBlue};text-decoration:none;white-space:nowrap;flex-shrink:0;" title="View in API Reference">API ref →</a>`
+    ? apiReferenceLink(apiReferenceHref(apiSlug, ep.method.toLowerCase(), ep.url), 'API ref →', 'flex-shrink:0;', 'View in API Reference')
     : '';
   const sig = buildCallSignature(ep, domain);
   const displayName = domain ? `${domain}.${ep.name}` : ep.name;
@@ -468,7 +458,7 @@ function buildDomainPage(d) {
 
   // Group endpoints by primary resource derived from URL.
   // Clients are generated from OpenAPI, so exclude asyncapi from source metadata.
-  const sourcePairs = resolvedSourcePairs(d.slug, { include: SOURCE_SUFFIXES }, repo);
+  const sourcePairs = resolvedSourcePairs(d.slug, resolvedDir, { include: SOURCE_SUFFIXES }, repo);
 
   const groups = new Map();
   for (const ep of d.endpoints) {
@@ -736,3 +726,20 @@ function buildIndexPage() {
 for (const d of domains) buildDomainPage(d);
 for (const h of helperFiles) buildHelperPage(h);
 buildIndexPage();
+} // end build()
+
+// CLI entry point
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const clientsArg  = process.argv.find(a => a.startsWith('--clients='));
+  const contentArg  = process.argv.find(a => a.startsWith('--content='));
+  const resolvedArg = process.argv.find(a => a.startsWith('--resolved='));
+  if (!clientsArg || !contentArg) {
+    console.error('Usage: node client-reference.js --clients=<path> --content=<path> [--resolved=<path>]');
+    process.exit(1);
+  }
+  build({
+    contentDir:  resolve(process.cwd(), contentArg.slice('--content='.length)),
+    resolvedDir: resolvedArg ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length)) : null,
+    clientsDir:  resolve(process.cwd(), clientsArg.slice('--clients='.length)),
+  });
+}

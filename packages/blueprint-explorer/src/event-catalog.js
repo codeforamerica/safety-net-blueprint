@@ -15,17 +15,14 @@ import { buildEventIndex } from '@codeforamerica/blueprint-core/state-machines';
 import { COLORS, FONT } from './lib/theme.js';
 import { esc as h, titleCase, breadcrumb } from './lib/html.js';
 import { singleColumnPage } from './lib/layout.js';
-import { resolvedDir } from './lib/paths.js';
 import { loadConfig } from './lib/config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const contentArg = process.argv.find(a => a.startsWith('--content='));
-if (!contentArg) {
-  console.error('Usage: node event-catalog.js --content=<path> [--resolved=<path>]');
-  process.exit(1);
-}
-const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
+/**
+ * @param {{ contentDir: string, resolvedDir: string }} opts
+ */
+export function build({ contentDir, resolvedDir }) {
 const outputDir = join(contentDir, 'event-catalog');
 const hubHref = relative(outputDir, join(contentDir, 'index.html'));
 const { name: projectName } = loadConfig(contentDir);
@@ -102,3 +99,18 @@ const html = singleColumnPage({
 
 writeFileSync(join(outputDir, 'index.html'), html, 'utf8');
 console.log('  wrote event-catalog/index.html');
+} // end build()
+
+// CLI entry point
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const contentArg  = process.argv.find(a => a.startsWith('--content='));
+  const resolvedArg = process.argv.find(a => a.startsWith('--resolved='));
+  if (!contentArg) {
+    console.error('Usage: node event-catalog.js --content=<path> [--resolved=<path>]');
+    process.exit(1);
+  }
+  build({
+    contentDir:  resolve(process.cwd(), contentArg.slice('--content='.length)),
+    resolvedDir: resolvedArg ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length)) : null,
+  });
+}

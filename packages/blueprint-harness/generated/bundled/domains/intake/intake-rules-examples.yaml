@@ -19,13 +19,6 @@ rulesets:
                 isNonCitizen: false
           application:
             hasChangedCircumstances: false
-        outputs:
-          incomeInconsistencyPrompt: true
-          workRequirementPrompt: true
-          studentEligibilityPrompt: false
-          immigrationStatusPrompt: false
-          changeVerificationPrompt: false
-          allMembersEmployed: false
       - description: Non-citizen student with changed circumstances
         inputs:
           household:
@@ -38,13 +31,6 @@ rulesets:
                 isNonCitizen: true
           application:
             hasChangedCircumstances: true
-        outputs:
-          incomeInconsistencyPrompt: false
-          workRequirementPrompt: false
-          studentEligibilityPrompt: true
-          immigrationStatusPrompt: true
-          changeVerificationPrompt: true
-          allMembersEmployed: true
       - description: All members employed — no work requirement prompt
         inputs:
           household:
@@ -61,10 +47,3 @@ rulesets:
                 isNonCitizen: false
           application:
             hasChangedCircumstances: false
-        outputs:
-          incomeInconsistencyPrompt: false
-          workRequirementPrompt: false
-          studentEligibilityPrompt: false
-          immigrationStatusPrompt: false
-          changeVerificationPrompt: false
-          allMembersEmployed: true

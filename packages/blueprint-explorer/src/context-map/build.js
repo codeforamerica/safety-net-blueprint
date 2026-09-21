@@ -18,35 +18,45 @@ import yaml from 'js-yaml';
 import { resolveConfig } from './resolve-config.js';
 import { scanGaps } from './scan-gaps.js';
 import { renderContextMap } from './render.js';
-import { resolvedDir } from '../lib/paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const node = process.execPath;
 
-const contentArg = process.argv.find(a => a.startsWith('--content='));
-if (!contentArg) {
-  console.error('Usage: node build.js --content=<path> [--resolved=<path>]');
-  process.exit(1);
+/**
+ * @param {{ contentDir: string, resolvedDir: string }} opts
+ */
+export function build({ contentDir, resolvedDir }) {
+  const mapConfigPath = resolve(contentDir, 'context-map', 'config', 'config.yaml');
+  const mapConfig = yaml.load(readFileSync(mapConfigPath, 'utf8'));
+  const outDir = resolve(contentDir, 'context-map');
+
+  const enrichedConfig = resolveConfig(resolvedDir, contentDir);
+
+  // Render SVG fragments to a temp dir, then build HTML into outDir.
+  // Using a temp dir avoids writing intermediate fragments into the content tree.
+  const fragDir = mkdtempSync(join(tmpdir(), 'context-map-'));
+  try {
+    renderContextMap(enrichedConfig, mapConfig, fragDir);
+    execFileSync(node, [
+      resolve(__dirname, 'build-html.js'),
+      fragDir, outDir, `--config=${mapConfigPath}`, `--content=${contentDir}`,
+    ], { stdio: 'inherit' });
+  } finally {
+    rmSync(fragDir, { recursive: true, force: true });
+  }
+  scanGaps(enrichedConfig, resolvedDir);
 }
-const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
 
-const mapConfigPath = resolve(contentDir, 'context-map', 'config', 'config.yaml');
-const mapConfig = yaml.load(readFileSync(mapConfigPath, 'utf8'));
-const outDir  = resolve(contentDir, 'context-map');
-
-const enrichedConfig = resolveConfig(resolvedDir, contentDir);
-
-// Render SVG fragments to a temp dir, then build HTML into outDir.
-// Using a temp dir avoids writing intermediate fragments into the content tree.
-const fragDir = mkdtempSync(join(tmpdir(), 'context-map-'));
-try {
-  renderContextMap(enrichedConfig, mapConfig, fragDir);
-  execFileSync(node, [
-    resolve(__dirname, 'build-html.js'),
-    fragDir, outDir, `--config=${mapConfigPath}`, `--content=${contentDir}`,
-  ], { stdio: 'inherit' });
-} finally {
-  rmSync(fragDir, { recursive: true, force: true });
+// CLI entry point
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const contentArg  = process.argv.find(a => a.startsWith('--content='));
+  const resolvedArg = process.argv.find(a => a.startsWith('--resolved='));
+  if (!contentArg) {
+    console.error('Usage: node build.js --content=<path> [--resolved=<path>]');
+    process.exit(1);
+  }
+  build({
+    contentDir:  resolve(process.cwd(), contentArg.slice('--content='.length)),
+    resolvedDir: resolvedArg ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length)) : null,
+  });
 }
-const archDir = resolve(__dirname, '..', '..', '..', '..', '..', 'docs', 'architecture', 'domains');
-scanGaps(enrichedConfig, resolvedDir, archDir);
