@@ -20,7 +20,9 @@ import {
   validateFieldsArrays,
   validateSortableConfig,
 } from './compositions.js';
+import { validateSchemas } from './validator/json-schema-validator.js';
 import { buildSchemaIndex, buildCollectionIndex } from './indexes.js';
+import { resolverMap } from './paths.js';
 
 /**
  * Contract types with no validator of their own.
@@ -66,6 +68,10 @@ export function validate(docs) {
     domainSchemas: buildDomainSchemaIndex(docs),
     resourceSchemaIndex: buildResourceSchemaIndex(yamlFiles),
     validRoles: findRoleTypeEnum(docs),
+    // Schema conformance is checked for the whole set at once, because AJV
+    // needs every document registered before any can be validated against a
+    // sibling's $id. Results are indexed so each document collects its own.
+    schemaConformance: schemaConformanceByPath(yamlFiles),
   };
 
   const results = docs.map((doc) => {
@@ -87,6 +93,65 @@ export function validate(docs) {
     results,
     report: formatReport(results),
   };
+}
+
+/**
+ * Check every document declaring a `$schema` against the schema it names.
+ *
+ * Run once for the set: AJV needs all documents registered before any is
+ * validated, so that a document extended by an overlay wins over the base
+ * version of the same `$id`. Core's own bundled validation schemas are added
+ * from the resolver map, which is why that no longer needs to be public.
+ *
+ * @param {{ relativePath: string, spec: object }[]} yamlFiles
+ * @returns {Map<string, { rule: string, message: string, path: string }[]>}
+ */
+function schemaConformanceByPath(yamlFiles) {
+  const byPath = new Map();
+  const { results } = validateSchemas(yamlFiles, { resolverMap });
+
+  for (const result of results) {
+    if (result.valid) continue;
+
+    byPath.set(
+      result.relativePath,
+      (result.errors ?? []).map((error) => ({
+        rule: 'schema-conformance',
+        message: error.instancePath
+          ? `${error.instancePath} ${error.message} (against ${result.schemaRef})`
+          : `${error.message} (against ${result.schemaRef})`,
+        path: error.instancePath || result.relativePath,
+      }))
+    );
+  }
+
+  return byPath;
+}
+
+/**
+ * Fragment refs that point nowhere within their own document.
+ *
+ * Catches a document made internally inconsistent by a rewrite — a `$ref`
+ * moved from `#/$defs/X` to `#/components/schemas/X` without the definition
+ * moving with it. External refs are another document's problem and are left
+ * to the checks that can see it.
+ *
+ * Overlays are exempt: they reference their target spec's components by
+ * design and are not self-contained.
+ *
+ * @param {import('../types.js').Doc} doc
+ * @returns {{ rule: string, message: string, path: string }[]}
+ */
+function brokenFragmentRefs(doc) {
+  if (doc.type === 'overlay') return [];
+
+  return [...doc.refs]
+    .filter(([, ref]) => ref.resolved === false)
+    .map(([literal, ref]) => ({
+      rule: 'unresolved-fragment-ref',
+      message: `$ref "${literal}" does not resolve within this document.`,
+      path: ref.pointer,
+    }));
 }
 
 /**
@@ -161,6 +226,9 @@ function findRoleTypeEnum(docs) {
 function validateDoc(doc, context) {
   const errors = [];
   const warnings = [];
+
+  errors.push(...brokenFragmentRefs(doc));
+  errors.push(...(context.schemaConformance.get(doc.relativePath ?? doc.path) ?? []));
 
   switch (doc.type) {
     case 'openapi': {

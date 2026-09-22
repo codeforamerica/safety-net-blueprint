@@ -76,11 +76,17 @@ function indexRefs(content) {
         const hashIdx = value.indexOf('#');
         const file = hashIdx === 0 ? null : value.slice(0, hashIdx === -1 ? value.length : hashIdx);
         const pointer = hashIdx === -1 ? '' : value.slice(hashIdx + 1);
+        const external = file !== null;
+        // `resolved` is tracked separately from `target` because a pointer can
+        // legitimately address a null node. Collapsing the two would report a
+        // valid reference as broken.
+        const found = external ? undefined : resolvePointer(content, pointer);
         refs.set(value, {
           pointer,
-          external: file !== null,
+          external,
           file,
-          target: file === null ? resolvePointer(content, pointer) : null,
+          resolved: external ? null : found !== undefined,
+          target: found ?? null,
         });
       }
       walk(value);
@@ -96,17 +102,18 @@ function indexRefs(content) {
  *
  * @param {*} root - Document to walk
  * @param {string} pointer - Fragment, e.g. '/components/schemas/Application'
- * @returns {*} The referenced value, or null if the path does not exist
+ * @returns {*} The referenced value, or undefined if the path does not exist
  */
 function resolvePointer(root, pointer) {
   if (!pointer) return root;
+
   let node = root;
-  for (const rawSegment of pointer.split('/').slice(1)) {
+  for (const rawSegment of pointer.split('/').filter(Boolean)) {
     const segment = rawSegment.replace(/~1/g, '/').replace(/~0/g, '~');
-    if (node == null || typeof node !== 'object') return null;
+    if (node === null || typeof node !== 'object') return undefined;
     node = node[segment];
   }
-  return node ?? null;
+  return node;
 }
 
 /**

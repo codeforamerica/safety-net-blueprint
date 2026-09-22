@@ -46,6 +46,7 @@
 import { readFileSync, readdirSync } from 'fs';
 import yaml from 'js-yaml';
 import Ajv2020 from 'ajv/dist/2020.js';
+import addFormats from 'ajv-formats';
 
 // =============================================================================
 // Helpers
@@ -91,6 +92,9 @@ function findFiles(dir, exts) {
  */
 function validateSchemas(specs, { resolverMap = {} } = {}) {
   const ajv = new Ajv2020({ strict: false, allErrors: true });
+  // Without this, every `format: uuid` and `format: uri` in the contracts is
+  // ignored with a warning to stderr — declared and never checked.
+  addFormats(ajv);
 
   // --- Step 1: Pre-load in-memory specs ---
   // Load these first so overlay-extended schemas (e.g. enums.yaml with
@@ -187,37 +191,4 @@ function validateSchemas(specs, { resolverMap = {} } = {}) {
   return { valid, results };
 }
 
-// =============================================================================
-// Disk-based entry point (for standalone CLI use)
-// =============================================================================
-
-/**
- * Load YAML files from a directory tree and validate them.
- *
- * Thin wrapper around validateSchemas for use by the standalone CLI
- * (json-schema.js). Reads files from disk, parses them, and delegates
- * to validateSchemas. Not used by the resolve pipeline (which passes
- * in-memory specs directly).
- *
- * @param {string[]} filePaths - Absolute paths to YAML files to load
- * @param {string} baseDir - Base directory for computing relative paths
- * @param {object} [options] - Same options as validateSchemas
- * @returns {{ valid: boolean, results: Array<ValidationResult> }}
- */
-function validateSchemasFromFiles(filePaths, baseDir, options) {
-  const specs = [];
-  for (const filePath of filePaths) {
-    try {
-      const spec = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA });
-      if (spec && typeof spec === 'object') {
-        const relativePath = filePath.startsWith(baseDir + '/')
-          ? filePath.slice(baseDir.length + 1)
-          : filePath;
-        specs.push({ relativePath, spec });
-      }
-    } catch { /* skip unparseable files */ }
-  }
-  return validateSchemas(specs, options);
-}
-
-export { validateSchemas, validateSchemasFromFiles, findFiles };
+export { validateSchemas };

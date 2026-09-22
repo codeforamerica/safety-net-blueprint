@@ -32,11 +32,11 @@ import yaml from 'js-yaml';
 import { applyOverlay, checkPathExists, parsePath, extractConfig, validateConfig } from '@codeforamerica/blueprint-core/overlay';
 import { discoverRelationships, buildSchemaIndex, resolveRelationships, buildExamplesIndex, resolveExampleRelationships, summarizeResolverDecisions } from '@codeforamerica/blueprint-core/relationships';
 import { bundleSpec, detectType } from '@codeforamerica/blueprint-core/openapi';
-import { baseContractsDir, resolverMap } from '@codeforamerica/blueprint-core';
+import { baseContractsDir, resolverMap, validateSchemas } from '@codeforamerica/blueprint-core';
 import { extractItemEndpointFromSpec, generateOverlay } from './generate-rpc-overlay.js';
 import { generateCompositionOverlays } from '@codeforamerica/blueprint-core/compositions';
 import { generateRulesResults } from '@codeforamerica/blueprint-core/rules';
-import { validateSchemas } from './validate/json-schema-core.js';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -1306,7 +1306,7 @@ async function main() {
   //   - Overlay-extended enums (RoleType, Domain, etc.) are in place
   //   - Canonical $ref URIs are still intact for AJV resolution
   // In-memory specs are loaded into AJV first so overlay-extended schemas win
-  // over the base versions in resolverMap. See validate/json-schema-core.js.
+  // over the base versions in resolverMap.
   {
     const specsForValidation = [...currentResults.entries()]
       .map(([relativePath, spec]) => ({ relativePath, spec }));
