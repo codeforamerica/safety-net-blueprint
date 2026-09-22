@@ -20,9 +20,21 @@ import {
   validateFieldsArrays,
   validateSortableConfig,
 } from './compositions.js';
+import { validateEvents } from './validator/event-validator.js';
+import { validateSlaTypeFields, validateMetricFields } from './validator/field-reference-validator.js';
+import { validateAnnotations } from './validator/annotation-validator.js';
 import { validateSchemas } from './validator/json-schema-validator.js';
 import { stemOf } from './contract-types.js';
-import { buildSchemaIndex, buildCollectionIndex } from './indexes.js';
+import {
+  buildSchemaIndex,
+  buildCollectionIndex,
+  buildChannelIndex,
+  buildCollectionPropertyIndex,
+  buildSpecsByDomain,
+  buildActionIndex,
+  buildGraphIndex,
+  buildRegistryEntryIndex,
+} from './indexes.js';
 import { resolverMap } from './paths.js';
 
 /**
@@ -33,25 +45,20 @@ import { resolverMap } from './paths.js';
  * that a type missing from both places surfaces as a gap instead of passing.
  */
 const SCHEMA_VALIDATED_ONLY = new Set([
-  'components', 'policies', 'registry', 'config', 'overlay', 'overlay-config',
-  'rules-examples',
+  'asyncapi', 'schema', 'components', 'registry', 'config',
+  'overlay', 'overlay-config', 'rules-examples', 'graph',
 ]);
 
 /**
- * Types the CLI still validates in its own scripts, not yet ported here.
+ * Types checked by a tool outside this function.
  *
- * Listed so that migrating `validate.js` onto this function cannot quietly
- * drop coverage: a type here is reported as unchecked rather than passing.
- * Each entry is removed as its validator moves into core.
+ * Mock data is example values, not a contract — the mock server validates it
+ * against the schemas it seeds, which is a different question from whether
+ * the document is well formed. Listed so the check below still refuses to
+ * pass a type nobody validates.
  */
-const AWAITING_PORT = new Map([
-  ['annotations', 'scripts/validate/annotations.js'],
-  ['asyncapi', 'scripts/validate/events.js'],
-  ['schema', 'scripts/validate/schemas.js and json-schema.js'],
-  ['metrics', 'scripts/validate/sla-metrics.js'],
-  ['sla-types', 'scripts/validate/sla-metrics.js'],
-  ['mock-data', 'blueprint-mock-server mock-data-validator'],
-  ['graph', 'scripts/validate/rules.js'],
+const VALIDATED_ELSEWHERE = new Map([
+  ['mock-data', 'blueprint-mock-server validate-mock-data'],
 ]);
 
 /**
@@ -68,9 +75,13 @@ export function validate(docs) {
     spec: doc.content,
   }));
 
+  const schemaIndex = buildSchemaIndex(docs);
+  const collectionIndex = buildCollectionIndex(docs);
+
   const context = {
-    schemaIndex: buildSchemaIndex(docs),
-    collectionIndex: buildCollectionIndex(docs),
+    schemaIndex,
+    collectionIndex,
+    collectionProperties: buildCollectionPropertyIndex(collectionIndex, schemaIndex),
     domainSchemas: buildDomainSchemaIndex(docs),
     resourceSchemaIndex: buildResourceSchemaIndex(yamlFiles),
     validRoles: findRoleTypeEnum(docs),
@@ -78,6 +89,14 @@ export function validate(docs) {
     // needs every document registered before any can be validated against a
     // sibling's $id. Results are indexed so each document collects its own.
     schemaConformance: schemaConformanceByPath(yamlFiles),
+    channels: buildChannelIndex(docs),
+    annotations: {
+      specsByDomain: buildSpecsByDomain(docs),
+      actions: buildActionIndex(docs),
+      channels: buildChannelIndex(docs).all,
+      graphs: buildGraphIndex(docs),
+      registryEntryIds: buildRegistryEntryIndex(docs),
+    },
   };
 
   const results = docs.map((doc) => {
@@ -117,18 +136,35 @@ function schemaConformanceByPath(yamlFiles) {
   const { results } = validateSchemas(yamlFiles, { resolverMap });
 
   for (const result of results) {
+    // The schema could not be compiled, so conformance was not checked. This
+    // happens when a document's refs have been rewritten for output and no
+    // longer resolve — conformance belongs earlier in the pipeline, while
+    // canonical URIs are intact. Reported so it is visible, not as a defect
+    // in the document.
+    if (result.uncheckable) {
+      byPath.set(result.relativePath, {
+        errors: [],
+        warnings: [{
+          rule: 'schema-conformance-unchecked',
+          message: `Not checked against ${result.schemaRef}: ${result.uncheckable}`,
+          path: result.relativePath,
+        }],
+      });
+      continue;
+    }
+
     if (result.valid) continue;
 
-    byPath.set(
-      result.relativePath,
-      (result.errors ?? []).map((error) => ({
+    byPath.set(result.relativePath, {
+      errors: (result.errors ?? []).map((error) => ({
         rule: 'schema-conformance',
         message: error.instancePath
           ? `${error.instancePath} ${error.message} (against ${result.schemaRef})`
           : `${error.message} (against ${result.schemaRef})`,
         path: error.instancePath || result.relativePath,
-      }))
-    );
+      })),
+      warnings: [],
+    });
   }
 
   return byPath;
@@ -234,7 +270,11 @@ function validateDoc(doc, context) {
   const warnings = [];
 
   errors.push(...brokenFragmentRefs(doc));
-  errors.push(...(context.schemaConformance.get(doc.relativePath ?? doc.path) ?? []));
+  const conformance = context.schemaConformance.get(doc.relativePath ?? doc.path);
+  if (conformance) {
+    errors.push(...conformance.errors);
+    warnings.push(...conformance.warnings);
+  }
 
   switch (doc.type) {
     case 'openapi': {
@@ -265,10 +305,23 @@ function validateDoc(doc, context) {
       errors.push(
         ...validateCrossArtifact(doc.path, doc.content, context.schemaIndex, context.collectionIndex)
       );
+      errors.push(...validateEvents(doc, context.channels));
       break;
 
     case 'rules':
       errors.push(...validateRulesDoc(doc.content));
+      break;
+
+    case 'sla-types':
+      errors.push(...validateSlaTypeFields(doc, context.collectionProperties));
+      break;
+
+    case 'metrics':
+      errors.push(...validateMetricFields(doc, context.collectionProperties));
+      break;
+
+    case 'annotations':
+      errors.push(...validateAnnotations(doc, context.annotations));
       break;
 
     case 'compositions': {
@@ -297,14 +350,8 @@ function validateDoc(doc, context) {
       break;
 
     default:
-      if (AWAITING_PORT.has(doc.type)) {
-        warnings.push({
-          rule: 'validator-not-yet-ported',
-          message:
-            `Contract type '${doc.type}' is still checked by ${AWAITING_PORT.get(doc.type)}, ` +
-            'not here. Run that validator too until it moves into core.',
-          path: doc.path,
-        });
+      if (VALIDATED_ELSEWHERE.has(doc.type)) {
+        break; // covered by the tool named above
       } else if (!SCHEMA_VALIDATED_ONLY.has(doc.type)) {
         errors.push({
           rule: 'no-validator',

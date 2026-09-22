@@ -129,6 +129,126 @@ export function buildCollectionIndex(docs) {
 }
 
 /**
+ * Property names available on each collection's resource, keyed `domain/collection`.
+ *
+ * Composed from the two indexes that already exist rather than walking the
+ * specs again: the collection index says which schema a collection returns,
+ * the schema index says what that schema's properties are.
+ *
+ * The key keeps its domain. Collection names are not unique across domains —
+ * `platform/events` is an OpenAPI resource while a workflow metric's
+ * `collection: events` is the runtime event stream — and matching on the bare
+ * name silently checks fields against an unrelated schema.
+ *
+ * @param {Map<string, string|null>} collectionIndex - From buildCollectionIndex
+ * @param {Map<string, { properties: object }>} schemaIndex - From buildSchemaIndex
+ * @returns {Map<string, Set<string>>}
+ */
+export function buildCollectionPropertyIndex(collectionIndex, schemaIndex) {
+  const index = new Map();
+
+  for (const [key, schemaName] of collectionIndex) {
+    if (!schemaName) continue;
+
+    const properties = schemaIndex.get(schemaName)?.properties;
+    if (!properties) continue;
+
+    index.set(key, new Set(properties.keys?.() ?? Object.keys(properties)));
+  }
+
+  return index;
+}
+
+/**
+ * One OpenAPI document per domain, with the path needed to resolve its refs.
+ *
+ * Where a domain has several, the first wins — annotations name a resource,
+ * not a file, so any document declaring the schema answers the question.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {Map<string, { spec: object, filePath: string }>}
+ */
+export function buildSpecsByDomain(docs) {
+  const index = new Map();
+
+  for (const doc of openapiDocs(docs)) {
+    const domain = doc.content?.info?.['x-domain'];
+    if (!domain || index.has(domain)) continue;
+    index.set(domain, { spec: doc.content, filePath: doc.path });
+  }
+
+  return index;
+}
+
+/**
+ * Action keys state machines define, as `{object}.{actionId}`.
+ *
+ * This is the vocabulary an annotation's `operations:` section may name.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {Set<string>}
+ */
+export function buildActionIndex(docs) {
+  const index = new Set();
+
+  for (const doc of docs) {
+    if (doc.type !== 'state-machine') continue;
+
+    for (const machine of doc.model?.machines ?? []) {
+      if (!machine.object) continue;
+      for (const action of machine.actions ?? []) {
+        if (action.id) index.add(`${machine.object.toLowerCase()}.${action.id}`);
+      }
+    }
+  }
+
+  return index;
+}
+
+/**
+ * Facts each compiled ruleset declares, with the domain that owns it.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {Map<string, { domain: string, facts: Set<string> }>}
+ */
+export function buildGraphIndex(docs) {
+  const index = new Map();
+
+  for (const doc of docs) {
+    if (doc.type !== 'graph' || !doc.content?.ruleset) continue;
+    index.set(doc.content.ruleset, {
+      domain: doc.content.domain,
+      facts: new Set(Object.keys(doc.content.facts ?? {})),
+    });
+  }
+
+  return index;
+}
+
+/**
+ * Entry IDs declared by each registry type.
+ *
+ * Keyed by type, because an annotation cites entries using the registry type
+ * as the field name.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {Map<string, Set<string>>}
+ */
+export function buildRegistryEntryIndex(docs) {
+  const index = new Map();
+
+  for (const doc of docs) {
+    if (doc.type !== 'registry' || typeof doc.content?.type !== 'string') continue;
+
+    const ids = index.get(doc.content.type) ?? new Set();
+    for (const id of Object.keys(doc.content.entries ?? {})) ids.add(id);
+    index.set(doc.content.type, ids);
+  }
+
+  return index;
+}
+
+/**
  * Index the event channels each AsyncAPI document declares.
  *
  * `bySpec` is keyed by filename so a state machine's `eventsSpec:` reference

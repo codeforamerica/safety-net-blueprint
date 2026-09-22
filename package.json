@@ -15,8 +15,6 @@
   "scripts": {
     "start": "node packages/blueprint-mock-server/cli/server.js --spec=packages/safety-net-contracts/src",
     "validate": "node packages/blueprint-cli/scripts/validate.js --resolved=packages/generated/contracts",
-    "validate:refs": "node packages/blueprint-cli/scripts/validate/refs.js --spec=packages/generated/contracts",
-    "validate:patterns": "node packages/blueprint-cli/scripts/validate/patterns.js --spec=packages/safety-net-contracts/src",
     "api:new": "node packages/blueprint-cli/scripts/scaffold-api.js",
     "api:update": "node packages/blueprint-cli/scripts/add-api-resource.js",
     "resolve": "node packages/blueprint-cli/scripts/resolve.js --spec=packages/safety-net-contracts/src --overlay=packages/safety-net-contracts/src/overlays --out=packages/generated/contracts",

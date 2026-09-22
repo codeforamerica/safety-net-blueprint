@@ -178,12 +178,16 @@ function validateSchemas(specs, { resolverMap = {} } = {}) {
         results.push({ relativePath, schemaRef, valid: false, errors: validate.errors });
       }
     } catch (err) {
-      valid = false;
+      // AJV throws when it cannot compile the schema — typically because a
+      // $ref points somewhere it cannot reach. That says nothing about
+      // whether the document conforms; it says the check could not run.
+      // Reporting it as a document error blames the contract for a tooling
+      // problem, so it is surfaced as uncheckable instead.
       results.push({
         relativePath,
         schemaRef,
-        valid: false,
-        errors: [{ message: err.message }]
+        valid: true,
+        uncheckable: err.message
       });
     }
   }

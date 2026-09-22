@@ -532,7 +532,7 @@ application.interview.completedAt: { type: datetime }
 application.reviewProgress[]: { type: list(ReviewProgressListResponse) }
 application.reviewProgress[].items[]: { type: list(ReviewProgress) }
 application.reviewProgress[].items[].id: { type: uuid }
-application.reviewProgress[].items[].itemId: { type: uuid }
+application.reviewProgress[].items[].itemId: { type: uuid, relationship: Polymorphic }
 application.reviewProgress[].items[].status: { type: enum, values: [not_started, in_progress, complete, flagged] }
 application.reviewProgress[].items[].notes: { type: object }
 application.reviewProgress[].items[].notes.text: { type: string }
