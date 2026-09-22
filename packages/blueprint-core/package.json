@@ -7,10 +7,14 @@
     "src/",
     "schemas/",
     "base-contracts/",
-    "assets/"
+    "assets/",
+    "types.d.ts"
   ],
   "exports": {
-    ".": "./src/index.js",
+    ".": {
+      "types": "./types.d.ts",
+      "default": "./src/index.js"
+    },
     "./annotations": "./src/annotations.js",
     "./registries": "./src/registries.js",
     "./rules": "./src/rules.js",
