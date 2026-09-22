@@ -13,6 +13,7 @@
 
 import { generateCompositionOverlays } from './compositions.js';
 import { generateRulesResults } from './rules.js';
+import { detectComponentPrefix, rewriteComponentRefs } from './generate/refs.js';
 
 /**
  * @param {import('../types.js').Doc[]} docs
@@ -30,11 +31,38 @@ export function generate(docs) {
   const rules = rulesArtifacts(positioned, inputFiles);
 
   return {
-    overlays: [...compositionOverlays(positioned, inputFiles), ...rules.overlays],
+    // Overlay documents ready to apply. The `domain` each generator reports is
+    // how its target spec is found so refs can be aligned to that spec's
+    // convention; once that is done the pairing has served its purpose and
+    // resolve just applies documents.
+    overlays: alignRefs(
+      [...compositionOverlays(positioned, inputFiles), ...rules.overlays],
+      positioned
+    ),
     // Keyed by output path internally; flattened so both artifact kinds are
     // arrays and a caller iterates them the same way.
     graphs: [...rules.graphs].map(([path, graph]) => ({ path, graph })),
   };
+}
+
+/**
+ * Rewrite each generated overlay's component refs to match the spec it patches.
+ *
+ * A generator emits refs as `./components/…` because it has no idea where its
+ * target sits. The target's own refs say what the prefix should be.
+ *
+ * @param {{ domain: string, overlay: object }[]} generated
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {object[]} Overlay documents
+ */
+function alignRefs(generated, docs) {
+  return generated.map(({ domain, overlay }) => {
+    const wanted = `${domain}-openapi.yaml`;
+    const target = docs.find((doc) => doc.relativePath.endsWith(wanted));
+    if (!target) return overlay;
+
+    return rewriteComponentRefs(overlay, './', detectComponentPrefix(target.content));
+  });
 }
 
 /**
