@@ -25,10 +25,16 @@ export const MANIFEST_FILENAME = '.blueprint-resolved.json';
 /**
  * Read a contract file and build its Doc.
  *
+ * `relativePath` comes from `discover`, which knows the root of the contract
+ * set. Loading a file directly leaves it null, and passes that on honestly —
+ * `generate` needs it to address overlay targets and rejects a document that
+ * does not have one, rather than guessing at a root.
+ *
  * @param {string} path - Absolute path to a .yaml contract file
+ * @param {string} [relativePath] - Position within the contract set
  * @returns {import('../types.js').Doc}
  */
-export function load(path) {
+export function load(path, relativePath = null) {
   const raw = readFileSync(path, 'utf8');
   const content = yaml.load(raw, { schema: yaml.CORE_SCHEMA });
   const type = detectType(basename(path), content);
@@ -36,6 +42,7 @@ export function load(path) {
 
   return {
     path,
+    relativePath,
     type,
     content,
     refs: indexRefs(content),
