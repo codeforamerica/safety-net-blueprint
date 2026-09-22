@@ -52,6 +52,14 @@ naming:
 # =============================================================================
 
 authoring_style:
+  # Usage examples communicate intent faster than long descriptions.
+  examples_over_prose:
+    description: |
+      Add a comment block with a usage example above each type definition that
+      has non-obvious structure or multiple valid forms — directly above the
+      definition it illustrates, not buried inside it. Trim the prose once the
+      example makes the point.
+
   # Do not specify OpenAPI properties that merely restate the default behavior.
   # Omitting defaults keeps specs concise and consistent.
   omit_defaults:

@@ -731,6 +731,15 @@ schema_patterns:
       - resource: External is a reserved value — seed generator skips these fields
       - resource: Polymorphic is a reserved value — no automatic expansion; consumers resolve conditionally by the paired *Type field
 
+  enums_over_open_strings:
+    description: |
+      Use enum for domain values with a known baseline set
+      (e.g. disposition: approved | denied | referred). Do NOT default to an
+      open string "for extensibility" — states that need additional values
+      extend the enum by overlay, which is exactly what the overlay process
+      is for. Applies to event data payloads, request bodies, and responses.
+    examples: [taskType, disposition, serviceType, failureReason, callMode]
+
 # =============================================================================
 # File Structure# =============================================================================
 # API specs are organized flat with x-extensions for classification.
