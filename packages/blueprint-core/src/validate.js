@@ -14,6 +14,12 @@
 import { validateSpec as validateApiPatterns } from './validator/pattern-validator.js';
 import { validateWithinFile, validateCrossArtifact } from './validator/state-machine-validator.js';
 import { validateRulesDoc } from './validator/rules-validator.js';
+import {
+  buildResourceSchemaIndex,
+  validateBindFields,
+  validateFieldsArrays,
+  validateSortableConfig,
+} from './compositions.js';
 import { buildSchemaIndex, buildCollectionIndex } from './indexes.js';
 
 /**
@@ -24,9 +30,24 @@ import { buildSchemaIndex, buildCollectionIndex } from './indexes.js';
  * that a type missing from both places surfaces as a gap instead of passing.
  */
 const SCHEMA_VALIDATED_ONLY = new Set([
-  'asyncapi', 'schema', 'components', 'annotations', 'policies', 'registry',
-  'metrics', 'sla-types', 'compositions', 'config', 'mock-data', 'overlay',
-  'graph', 'rules-examples',
+  'components', 'policies', 'registry', 'config', 'overlay', 'rules-examples',
+]);
+
+/**
+ * Types the CLI still validates in its own scripts, not yet ported here.
+ *
+ * Listed so that migrating `validate.js` onto this function cannot quietly
+ * drop coverage: a type here is reported as unchecked rather than passing.
+ * Each entry is removed as its validator moves into core.
+ */
+const AWAITING_PORT = new Map([
+  ['annotations', 'scripts/validate/annotations.js'],
+  ['asyncapi', 'scripts/validate/events.js'],
+  ['schema', 'scripts/validate/schemas.js and json-schema.js'],
+  ['metrics', 'scripts/validate/sla-metrics.js'],
+  ['sla-types', 'scripts/validate/sla-metrics.js'],
+  ['mock-data', 'blueprint-mock-server mock-data-validator'],
+  ['graph', 'scripts/validate/rules.js'],
 ]);
 
 /**
@@ -34,22 +55,55 @@ const SCHEMA_VALIDATED_ONLY = new Set([
  * @returns {import('../types.js').ValidationResult}
  */
 export function validate(docs) {
+  const yamlFiles = docs.map((doc) => ({
+    relativePath: doc.relativePath ?? doc.path,
+    spec: doc.content,
+  }));
+
   const context = {
     schemaIndex: buildSchemaIndex(docs),
     collectionIndex: buildCollectionIndex(docs),
     domainSchemas: buildDomainSchemaIndex(docs),
+    resourceSchemaIndex: buildResourceSchemaIndex(yamlFiles),
     validRoles: findRoleTypeEnum(docs),
   };
 
   const results = docs.map((doc) => {
     const { errors, warnings } = validateDoc(doc, context);
-    return { path: doc.path, type: doc.type, ok: errors.length === 0, errors, warnings };
+    return {
+      path: doc.path,
+      type: doc.type,
+      ok: errors.length === 0,
+      // Underlying validators predate a common finding shape and some return
+      // only { message, path }. Normalizing here means a caller can rely on
+      // every finding having a rule to group and filter by.
+      errors: errors.map((finding) => normalize(finding, doc)),
+      warnings: warnings.map((finding) => normalize(finding, doc)),
+    };
   });
 
   return {
     ok: results.every((r) => r.ok),
     results,
     report: formatReport(results),
+  };
+}
+
+/**
+ * Give every finding the same shape: { rule, message, path }.
+ *
+ * `rule` falls back to the contract type, so a finding from a validator that
+ * does not name its rules is still groupable rather than showing as undefined.
+ *
+ * @param {{ rule?: string, message: string, path?: string }} finding
+ * @param {import('../types.js').Doc} doc
+ * @returns {{ rule: string, message: string, path: string }}
+ */
+function normalize(finding, doc) {
+  return {
+    rule: finding.rule ?? `${doc.type}-validation`,
+    message: finding.message,
+    path: finding.path ?? (doc.relativePath ?? doc.path),
   };
 }
 
@@ -143,6 +197,21 @@ function validateDoc(doc, context) {
       errors.push(...validateRulesDoc(doc.content));
       break;
 
+    case 'compositions': {
+      // The composition validators take { domain, doc }; domain is the stem of
+      // the relative path, which is how a composition names its target spec.
+      const compositionDoc = {
+        domain: (doc.relativePath ?? doc.path).replace('-compositions.yaml', ''),
+        doc: doc.content,
+      };
+      errors.push(
+        ...validateBindFields(compositionDoc, context.resourceSchemaIndex),
+        ...validateFieldsArrays(compositionDoc, context.resourceSchemaIndex),
+        ...validateSortableConfig(compositionDoc)
+      );
+      break;
+    }
+
     case 'unknown':
       errors.push({
         rule: 'unrecognized-contract-type',
@@ -154,7 +223,15 @@ function validateDoc(doc, context) {
       break;
 
     default:
-      if (!SCHEMA_VALIDATED_ONLY.has(doc.type)) {
+      if (AWAITING_PORT.has(doc.type)) {
+        warnings.push({
+          rule: 'validator-not-yet-ported',
+          message:
+            `Contract type '${doc.type}' is still checked by ${AWAITING_PORT.get(doc.type)}, ` +
+            'not here. Run that validator too until it moves into core.',
+          path: doc.path,
+        });
+      } else if (!SCHEMA_VALIDATED_ONLY.has(doc.type)) {
         errors.push({
           rule: 'no-validator',
           message:

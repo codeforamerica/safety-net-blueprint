@@ -13,4 +13,12 @@
 
 export { discover } from './discover.js';
 export { load } from './load.js';
-export { schemasDir, baseContractsDir, resolverMap } from './paths.js';
+export { generate } from './generate.js';
+export { resolve } from './resolve.js';
+export { validate } from './validate.js';
+export { schemasDir, baseContractsDir } from './paths.js';
+
+// Still exported while consumers migrate; `load` and `validate` resolve
+// canonical URLs internally, so this leaves the surface once the CLI stops
+// passing it back in.
+export { resolverMap } from './paths.js';
