@@ -32,7 +32,7 @@ import yaml from 'js-yaml';
 import { applyOverlay, checkPathExists, parsePath, extractConfig, validateConfig } from '@codeforamerica/blueprint-core/overlay';
 import { discoverRelationships, buildSchemaIndex, resolveRelationships, buildExamplesIndex, resolveExampleRelationships, summarizeResolverDecisions } from '@codeforamerica/blueprint-core/relationships';
 import { bundleSpec, detectType } from '@codeforamerica/blueprint-core/openapi';
-import { baseContractsDir, resolverMap, validateSchemas } from '@codeforamerica/blueprint-core';
+import { baseContractsDir, resolverMap, validateSchemas, discover, load } from '@codeforamerica/blueprint-core';
 import { extractItemEndpointFromSpec, generateOverlay } from './generate-rpc-overlay.js';
 import { generateCompositionOverlays } from '@codeforamerica/blueprint-core/compositions';
 import { generateRulesResults } from '@codeforamerica/blueprint-core/rules';
@@ -1064,14 +1064,25 @@ async function main() {
   console.log(`Spec:   ${specPath}`);
   console.log(`Output: ${outDir}`);
 
-  // Collect base YAML files
+  // Load the contract set. Deprecated specs are kept for consumers still on
+  // them but are not resolved — discover reports every file and leaving them
+  // out is the caller's decision, not core's.
+  const isDeprecated = (doc) => doc.content?.info?.['x-status'] === 'deprecated';
+  const toYamlFile = (doc) => ({
+    relativePath: doc.relativePath,
+    sourcePath: doc.path,
+    spec: doc.content,
+  });
+
   let yamlFiles;
   if (specIsFile) {
-    const content = readFileSync(specPath, 'utf8');
-    const spec = yaml.load(content, { schema: yaml.CORE_SCHEMA });
-    yamlFiles = [{ relativePath: basename(specPath), sourcePath: specPath, spec }];
+    const doc = load(specPath, basename(specPath));
+    yamlFiles = [toYamlFile(doc)];
   } else {
-    yamlFiles = collectYamlFiles(specPath);
+    yamlFiles = discover(specPath)
+      .map((file) => load(file.path, file.relativePath))
+      .filter((doc) => !isDeprecated(doc))
+      .map(toYamlFile);
   }
 
   // Always include blueprint-core base contracts in the output
@@ -1080,12 +1091,12 @@ async function main() {
     console.error('This usually means blueprint-core was installed from an incomplete tarball. Re-install @codeforamerica/blueprint-core.');
     process.exit(1);
   }
-  const baseFiles = collectYamlFiles(baseContractsDir);
-  for (const { relativePath, sourcePath, spec } of baseFiles) {
-    const baseRelPath = `base/${relativePath}`.replace(/\\/g, '/');
-    yamlFiles.push({ relativePath: baseRelPath, sourcePath, spec });
-  }
-  console.log(`Base contracts: ${baseContractsDir} (${baseFiles.length} file(s))`);
+
+  const baseDocs = discover(baseContractsDir)
+    .map((file) => load(file.path, `base/${file.relativePath}`))
+    .filter((doc) => !isDeprecated(doc));
+  yamlFiles.push(...baseDocs.map(toYamlFile));
+  console.log(`Base contracts: ${baseContractsDir} (${baseDocs.length} file(s))`);
 
   let allWarnings = [];
   let currentResults = null;
