@@ -17,6 +17,8 @@
 
 import { applyOverlays } from './resolve/overlays.js';
 import { injectEnumSources } from './resolve/enum-sources.js';
+import { prefixEventTypes } from './resolve/event-prefix.js';
+import { resolveRelationshipAnnotations } from './resolve/relationships.js';
 import { filterEnvironment } from './resolve/environment.js';
 import { substituteVariables } from './resolve/variables.js';
 
@@ -29,9 +31,16 @@ import { substituteVariables } from './resolve/variables.js';
  * @returns {import('../types.js').ResolveResult}
  */
 export function resolve(docs, { overlays = [], envTarget = null, envVariables = {} } = {}) {
+  // Order is load-bearing, not incidental:
+  //   overlays first, so every later pass sees the state's customizations
+  //   enum injection and relationships before filtering, so they are not
+  //     resolving against nodes the environment is about to remove
+  //   variables last, so a substituted value cannot look like an annotation
   const pipeline = [
     (set) => applyOverlays(set, overlays),
     (set) => injectEnumSources(set),
+    (set) => prefixEventTypes(set),
+    (set) => resolveRelationshipAnnotations(set),
     (set) => filterEnvironment(set, envTarget),
     (set) => substituteVariables(set, envVariables),
   ];
