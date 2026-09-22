@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CloseApplicationData, CloseApplicationErrors, CloseApplicationResponses, CreateApplicationData, CreateApplicationErrors, CreateApplicationMemberData, CreateApplicationMemberErrors, CreateApplicationMemberResponses, CreateApplicationResponses, DeleteApplicationData, DeleteApplicationErrors, DeleteApplicationMemberData, DeleteApplicationMemberErrors, DeleteApplicationMemberResponses, DeleteApplicationResponses, EvaluateInterviewPromptsData, EvaluateInterviewPromptsErrors, EvaluateInterviewPromptsResponses, GetApplicationData, GetApplicationErrors, GetApplicationMemberData, GetApplicationMemberErrors, GetApplicationMemberResponses, GetApplicationResponses, GetApplicationSummaryData, GetApplicationSummaryErrors, GetApplicationSummaryResponses, ListApplicationMembersData, ListApplicationMembersErrors, ListApplicationMembersResponses, ListApplicationsData, ListApplicationsErrors, ListApplicationsResponses, OpenApplicationData, OpenApplicationErrors, OpenApplicationResponses, SubmitApplicationData, SubmitApplicationErrors, SubmitApplicationResponses, UpdateApplicationData, UpdateApplicationErrors, UpdateApplicationMemberData, UpdateApplicationMemberErrors, UpdateApplicationMemberResponses, UpdateApplicationResponses, WithdrawApplicationData, WithdrawApplicationErrors, WithdrawApplicationResponses } from './types.gen';
-import { zCloseApplicationData, zCloseApplicationResponse, zCreateApplicationData, zCreateApplicationMemberData, zCreateApplicationMemberResponse, zCreateApplicationResponse, zDeleteApplicationData, zDeleteApplicationMemberData, zDeleteApplicationMemberResponse, zDeleteApplicationResponse, zEvaluateInterviewPromptsData, zEvaluateInterviewPromptsResponse, zGetApplicationData, zGetApplicationMemberData, zGetApplicationMemberResponse, zGetApplicationResponse, zGetApplicationSummaryData, zGetApplicationSummaryResponse, zListApplicationMembersData, zListApplicationMembersResponse, zListApplicationsData, zListApplicationsResponse, zOpenApplicationData, zOpenApplicationResponse, zSubmitApplicationData, zSubmitApplicationResponse, zUpdateApplicationData, zUpdateApplicationMemberData, zUpdateApplicationMemberResponse, zUpdateApplicationResponse, zWithdrawApplicationData, zWithdrawApplicationResponse } from './zod.gen';
+import type { CloseApplicationData, CloseApplicationErrors, CloseApplicationResponses, CreateApplicationData, CreateApplicationErrors, CreateApplicationMemberData, CreateApplicationMemberErrors, CreateApplicationMemberResponses, CreateApplicationResponses, DeleteApplicationData, DeleteApplicationErrors, DeleteApplicationMemberData, DeleteApplicationMemberErrors, DeleteApplicationMemberResponses, DeleteApplicationResponses, EvaluateInterviewPromptsData, EvaluateInterviewPromptsErrors, EvaluateInterviewPromptsResponses, GetApplicationData, GetApplicationErrors, GetApplicationMemberData, GetApplicationMemberErrors, GetApplicationMemberResponses, GetApplicationResponses, GetApplicationReviewContactSectionData, GetApplicationReviewContactSectionErrors, GetApplicationReviewContactSectionResponses, GetApplicationReviewData, GetApplicationReviewDemographicsSectionData, GetApplicationReviewDemographicsSectionErrors, GetApplicationReviewDemographicsSectionResponses, GetApplicationReviewErrors, GetApplicationReviewResponses, GetApplicationSummaryData, GetApplicationSummaryErrors, GetApplicationSummaryResponses, GetReviewProgressByItemData, GetReviewProgressByItemErrors, GetReviewProgressByItemResponses, ListApplicationMembersData, ListApplicationMembersErrors, ListApplicationMembersResponses, ListApplicationsData, ListApplicationsErrors, ListApplicationsResponses, ListReviewProgressBySectionData, ListReviewProgressBySectionErrors, ListReviewProgressBySectionResponses, OpenApplicationData, OpenApplicationErrors, OpenApplicationResponses, ReplaceReviewProgressByItemData, ReplaceReviewProgressByItemErrors, ReplaceReviewProgressByItemResponses, ReplaceReviewProgressBySectionData, ReplaceReviewProgressBySectionErrors, ReplaceReviewProgressBySectionResponses, SubmitApplicationData, SubmitApplicationErrors, SubmitApplicationResponses, UpdateApplicationData, UpdateApplicationErrors, UpdateApplicationMemberData, UpdateApplicationMemberErrors, UpdateApplicationMemberResponses, UpdateApplicationResponses, UpdateReviewProgressByItemData, UpdateReviewProgressByItemErrors, UpdateReviewProgressByItemResponses, UpdateReviewProgressBySectionData, UpdateReviewProgressBySectionErrors, UpdateReviewProgressBySectionResponses, WithdrawApplicationData, WithdrawApplicationErrors, WithdrawApplicationResponses } from './types.gen';
+import { zCloseApplicationData, zCloseApplicationResponse, zCreateApplicationData, zCreateApplicationMemberData, zCreateApplicationMemberResponse, zCreateApplicationResponse, zDeleteApplicationData, zDeleteApplicationMemberData, zDeleteApplicationMemberResponse, zDeleteApplicationResponse, zEvaluateInterviewPromptsData, zEvaluateInterviewPromptsResponse, zGetApplicationData, zGetApplicationMemberData, zGetApplicationMemberResponse, zGetApplicationResponse, zGetApplicationReviewContactSectionData, zGetApplicationReviewContactSectionResponse, zGetApplicationReviewData, zGetApplicationReviewDemographicsSectionData, zGetApplicationReviewDemographicsSectionResponse, zGetApplicationReviewResponse, zGetApplicationSummaryData, zGetApplicationSummaryResponse, zGetReviewProgressByItemData, zGetReviewProgressByItemResponse, zListApplicationMembersData, zListApplicationMembersResponse, zListApplicationsData, zListApplicationsResponse, zListReviewProgressBySectionData, zListReviewProgressBySectionResponse, zOpenApplicationData, zOpenApplicationResponse, zReplaceReviewProgressByItemData, zReplaceReviewProgressByItemResponse, zReplaceReviewProgressBySectionData, zReplaceReviewProgressBySectionResponse, zSubmitApplicationData, zSubmitApplicationResponse, zUpdateApplicationData, zUpdateApplicationMemberData, zUpdateApplicationMemberResponse, zUpdateApplicationResponse, zUpdateReviewProgressByItemData, zUpdateReviewProgressByItemResponse, zUpdateReviewProgressBySectionData, zUpdateReviewProgressBySectionResponse, zWithdrawApplicationData, zWithdrawApplicationResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -208,6 +208,121 @@ export const getApplicationSummary = <ThrowOnError extends boolean = false>(opti
     responseValidator: async (data) => await zGetApplicationSummaryResponse.parseAsync(data),
     url: '/applications/{applicationId}/summary',
     ...options
+});
+
+/**
+ * Get applicationReview
+ */
+export const getApplicationReview = <ThrowOnError extends boolean = false>(options: Options<GetApplicationReviewData, ThrowOnError>) => (options.client ?? client).get<GetApplicationReviewResponses, GetApplicationReviewErrors, ThrowOnError>({
+    requestValidator: async (data) => await zGetApplicationReviewData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zGetApplicationReviewResponse.parseAsync(data),
+    url: '/applications/{applicationId}/review',
+    ...options
+});
+
+/**
+ * Get applicationReview demographics section panel
+ */
+export const getApplicationReviewDemographicsSection = <ThrowOnError extends boolean = false>(options: Options<GetApplicationReviewDemographicsSectionData, ThrowOnError>) => (options.client ?? client).get<GetApplicationReviewDemographicsSectionResponses, GetApplicationReviewDemographicsSectionErrors, ThrowOnError>({
+    requestValidator: async (data) => await zGetApplicationReviewDemographicsSectionData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zGetApplicationReviewDemographicsSectionResponse.parseAsync(data),
+    url: '/applications/{applicationId}/review/demographics',
+    ...options
+});
+
+/**
+ * Get applicationReview contact section panel
+ */
+export const getApplicationReviewContactSection = <ThrowOnError extends boolean = false>(options: Options<GetApplicationReviewContactSectionData, ThrowOnError>) => (options.client ?? client).get<GetApplicationReviewContactSectionResponses, GetApplicationReviewContactSectionErrors, ThrowOnError>({
+    requestValidator: async (data) => await zGetApplicationReviewContactSectionData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zGetApplicationReviewContactSectionResponse.parseAsync(data),
+    url: '/applications/{applicationId}/review/contact',
+    ...options
+});
+
+/**
+ * List ReviewProgress state records for a section
+ */
+export const listReviewProgressBySection = <ThrowOnError extends boolean = false>(options: Options<ListReviewProgressBySectionData, ThrowOnError>) => (options.client ?? client).get<ListReviewProgressBySectionResponses, ListReviewProgressBySectionErrors, ThrowOnError>({
+    requestValidator: async (data) => await zListReviewProgressBySectionData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zListReviewProgressBySectionResponse.parseAsync(data),
+    url: '/applications/{applicationId}/review-progress/{section}',
+    ...options
+});
+
+/**
+ * Update ReviewProgress state for a section
+ */
+export const updateReviewProgressBySection = <ThrowOnError extends boolean = false>(options: Options<UpdateReviewProgressBySectionData, ThrowOnError>) => (options.client ?? client).patch<UpdateReviewProgressBySectionResponses, UpdateReviewProgressBySectionErrors, ThrowOnError>({
+    requestValidator: async (data) => await zUpdateReviewProgressBySectionData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zUpdateReviewProgressBySectionResponse.parseAsync(data),
+    url: '/applications/{applicationId}/review-progress/{section}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Replace ReviewProgress state for a section
+ */
+export const replaceReviewProgressBySection = <ThrowOnError extends boolean = false>(options: Options<ReplaceReviewProgressBySectionData, ThrowOnError>) => (options.client ?? client).put<ReplaceReviewProgressBySectionResponses, ReplaceReviewProgressBySectionErrors, ThrowOnError>({
+    requestValidator: async (data) => await zReplaceReviewProgressBySectionData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zReplaceReviewProgressBySectionResponse.parseAsync(data),
+    url: '/applications/{applicationId}/review-progress/{section}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get ReviewProgress state for a collection item
+ */
+export const getReviewProgressByItem = <ThrowOnError extends boolean = false>(options: Options<GetReviewProgressByItemData, ThrowOnError>) => (options.client ?? client).get<GetReviewProgressByItemResponses, GetReviewProgressByItemErrors, ThrowOnError>({
+    requestValidator: async (data) => await zGetReviewProgressByItemData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zGetReviewProgressByItemResponse.parseAsync(data),
+    url: '/applications/{applicationId}/review-progress/{section}/{itemId}',
+    ...options
+});
+
+/**
+ * Update ReviewProgress state for a collection item
+ */
+export const updateReviewProgressByItem = <ThrowOnError extends boolean = false>(options: Options<UpdateReviewProgressByItemData, ThrowOnError>) => (options.client ?? client).patch<UpdateReviewProgressByItemResponses, UpdateReviewProgressByItemErrors, ThrowOnError>({
+    requestValidator: async (data) => await zUpdateReviewProgressByItemData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zUpdateReviewProgressByItemResponse.parseAsync(data),
+    url: '/applications/{applicationId}/review-progress/{section}/{itemId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Replace ReviewProgress state for a collection item
+ */
+export const replaceReviewProgressByItem = <ThrowOnError extends boolean = false>(options: Options<ReplaceReviewProgressByItemData, ThrowOnError>) => (options.client ?? client).put<ReplaceReviewProgressByItemResponses, ReplaceReviewProgressByItemErrors, ThrowOnError>({
+    requestValidator: async (data) => await zReplaceReviewProgressByItemData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zReplaceReviewProgressByItemResponse.parseAsync(data),
+    url: '/applications/{applicationId}/review-progress/{section}/{itemId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**

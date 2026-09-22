@@ -9,6 +9,8 @@
  * - FK fields (ending in Id, format: uuid) must declare x-relationship
  */
 
+import { RESERVED_RESOURCES } from '../contract-types.js';
+
 // =============================================================================
 // Foreign Key Validation Helpers
 // =============================================================================
@@ -71,7 +73,7 @@ export function validateForeignKeys(spec, errors, sameDomainSchemas = new Set())
   if (!schemas) return;
 
   const localSchemaNames = new Set([...Object.keys(schemas), ...sameDomainSchemas]);
-  const reservedResources = new Set(['External', 'Polymorphic']);
+  const reservedResources = RESERVED_RESOURCES;
 
   for (const [schemaName, schema] of Object.entries(schemas)) {
     for (const { propName, propSchema, propPath } of walkProperties(schema)) {

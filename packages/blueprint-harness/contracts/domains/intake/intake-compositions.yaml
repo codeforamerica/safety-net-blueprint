@@ -18,3 +18,48 @@ compositions:
         resource: application-members
         bind: applicationId
         fields: [id, firstName, lastName, dateOfBirth, relationship, incomeSource]
+
+  # applicationReview — sectionView with a state resource, pared down from the
+  # safety-net composition of the same name. This is the most involved
+  # generation path: a sectionView produces per-section endpoints, and the
+  # state: block produces ReviewProgress, ReviewProgressWritable and
+  # ReviewProgressListResponse plus the framework properties (id, section,
+  # itemId, createdAt, updatedAt).
+  #
+  # Two sections only — one member-scoped, one household-level — which is the
+  # fewest that still exercises both shapes.
+  applicationReview:
+    compositeType: sectionView
+    resource: applications
+    fields: [programsApplied, status]
+    include:
+      members:
+        resource: application-members
+        bind: applicationId
+        fields: [id, firstName, lastName]
+    endpoint:
+      path: /applications/{applicationId}/review
+      parentLink: true
+    sections:
+      # Member-scoped — one review-progress entry per member.
+      demographics:
+        resource: application-members
+        bind: applicationId
+        links: true
+        index:
+          fields: [id, firstName, lastName, dateOfBirth]
+      # Household-level — a single review-progress entry.
+      contact:
+        resource: applications
+        fields: [contactInfo]
+    state:
+      schema:
+        name: ReviewProgress
+        type: object
+        additionalProperties: false
+        properties:
+          status:
+            type: string
+            description: Caseworker review status for this section.
+            enum: [not_started, in_progress, complete, flagged]
+            default: not_started

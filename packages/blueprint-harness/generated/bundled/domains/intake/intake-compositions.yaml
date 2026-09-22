@@ -25,3 +25,50 @@ compositions:
           - dateOfBirth
           - relationship
           - incomeSource
+  applicationReview:
+    compositeType: sectionView
+    resource: applications
+    fields:
+      - programsApplied
+      - status
+    include:
+      members:
+        resource: application-members
+        bind: applicationId
+        fields:
+          - id
+          - firstName
+          - lastName
+    endpoint:
+      path: /applications/{applicationId}/review
+      parentLink: true
+    sections:
+      demographics:
+        resource: application-members
+        bind: applicationId
+        links: true
+        index:
+          fields:
+            - id
+            - firstName
+            - lastName
+            - dateOfBirth
+      contact:
+        resource: applications
+        fields:
+          - contactInfo
+    state:
+      schema:
+        name: ReviewProgress
+        type: object
+        additionalProperties: false
+        properties:
+          status:
+            type: string
+            description: Caseworker review status for this section.
+            enum:
+              - not_started
+              - in_progress
+              - complete
+              - flagged
+            default: not_started

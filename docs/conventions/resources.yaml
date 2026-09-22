@@ -695,8 +695,10 @@ schema_patterns:
         Use resource: External for fields that identify records in systems outside
         the blueprint (e.g., vendor case IDs). The seed generator skips External fields.
         Use resource: Polymorphic for fields that are part of a polymorphic association
-        paired with a *Type discriminator field — where the target schema varies by type
-        and cannot be statically declared (e.g., subjectId + subjectType).
+        paired with a discriminator field — where the target schema varies and cannot be
+        statically declared (e.g., subjectId + subjectType, or itemId + section). The
+        discriminator is commonly named *Type, but any field that selects the target
+        qualifies.
     examples:
       - field: personId
         type: string
@@ -729,7 +731,7 @@ schema_patterns:
       - The schema name is derived by removing 'Id' suffix and capitalizing
       - Works for both top-level properties and nested array items
       - resource: External is a reserved value — seed generator skips these fields
-      - resource: Polymorphic is a reserved value — no automatic expansion; consumers resolve conditionally by the paired *Type field
+      - resource: Polymorphic is a reserved value — no automatic expansion; consumers resolve conditionally by the paired discriminator field
 
   enums_over_open_strings:
     description: |

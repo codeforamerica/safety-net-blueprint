@@ -412,6 +412,221 @@ paths:
         type: composition
         domain: domains/intake/intake
         id: applicationSummary
+  /applications/{applicationId}/review:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+    get:
+      summary: Get applicationReview
+      operationId: getApplicationReview
+      responses:
+        "200":
+          description: applicationReview retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationReviewResponse"
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+      tags:
+        - Applications
+      x-relationship:
+        type: composition
+        domain: domains/intake/intake
+        id: applicationReview
+  /applications/{applicationId}/review/demographics:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+    get:
+      summary: Get applicationReview demographics section panel
+      operationId: getApplicationReviewDemographicsSection
+      parameters:
+        - $ref: ../../base/components/parameters.yaml#/SearchQueryParam
+        - $ref: ../../base/components/parameters.yaml#/LimitParam
+        - $ref: ../../base/components/parameters.yaml#/OffsetParam
+        - $ref: ../../base/components/parameters.yaml#/SortParam
+      responses:
+        "200":
+          description: applicationReview demographics section panel retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationReviewSectionResponse"
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+  /applications/{applicationId}/review/contact:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+    get:
+      summary: Get applicationReview contact section panel
+      operationId: getApplicationReviewContactSection
+      parameters:
+        - $ref: ../../base/components/parameters.yaml#/SearchQueryParam
+        - $ref: ../../base/components/parameters.yaml#/LimitParam
+        - $ref: ../../base/components/parameters.yaml#/OffsetParam
+        - $ref: ../../base/components/parameters.yaml#/SortParam
+      responses:
+        "200":
+          description: applicationReview contact section panel retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationReviewSectionResponse"
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+  /applications/{applicationId}/review-progress/{section}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - name: section
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Section name within the sectionView composition.
+    get:
+      summary: List ReviewProgress state records for a section
+      operationId: listReviewProgressBySection
+      parameters:
+        - $ref: ../../base/components/parameters.yaml#/SearchQueryParam
+        - $ref: ../../base/components/parameters.yaml#/LimitParam
+        - $ref: ../../base/components/parameters.yaml#/OffsetParam
+        - $ref: ../../base/components/parameters.yaml#/SortParam
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewProgressListResponse"
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+    put:
+      summary: Replace ReviewProgress state for a section
+      operationId: replaceReviewProgressBySection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewProgressWritable"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewProgress"
+        "400":
+          $ref: ../../base/components/responses.yaml#/BadRequest
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "422":
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+    patch:
+      summary: Update ReviewProgress state for a section
+      operationId: updateReviewProgressBySection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewProgressWritable"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewProgress"
+        "400":
+          $ref: ../../base/components/responses.yaml#/BadRequest
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "422":
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+  /applications/{applicationId}/review-progress/{section}/{itemId}:
+    parameters:
+      - $ref: "#/components/parameters/ApplicationIdParam"
+      - name: section
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Section name within the sectionView composition.
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Item identifier for collection-backed sections.
+    get:
+      summary: Get ReviewProgress state for a collection item
+      operationId: getReviewProgressByItem
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewProgress"
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+    put:
+      summary: Replace ReviewProgress state for a collection item
+      operationId: replaceReviewProgressByItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewProgressWritable"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewProgress"
+        "400":
+          $ref: ../../base/components/responses.yaml#/BadRequest
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "422":
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
+    patch:
+      summary: Update ReviewProgress state for a collection item
+      operationId: updateReviewProgressByItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewProgressWritable"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewProgress"
+        "400":
+          $ref: ../../base/components/responses.yaml#/BadRequest
+        "404":
+          $ref: ../../base/components/responses.yaml#/NotFound
+        "422":
+          $ref: ../../base/components/responses.yaml#/UnprocessableEntity
+        "500":
+          $ref: ../../base/components/responses.yaml#/InternalError
   /applications/{applicationId}/evaluate-interview-prompts:
     parameters:
       - $ref: "#/components/parameters/ApplicationIdParam"
@@ -581,6 +796,21 @@ components:
                 applicationSummary:
                   type: object
                   description: Link to the applicationSummary composition.
+                  properties:
+                    href:
+                      type: string
+                      format: uri-reference
+                      readOnly: true
+        - type: object
+          properties:
+            _links:
+              type: object
+              readOnly: true
+              description: Generated composition links.
+              properties:
+                applicationReview:
+                  type: object
+                  description: Link to the applicationReview composition.
                   properties:
                     href:
                       type: string
@@ -844,6 +1074,88 @@ components:
     ApplicationSummaryResponse:
       type: object
       description: Generated composition response for applicationSummary.
+    ApplicationReviewResponse:
+      type: object
+      description: Generated composition response for applicationReview.
+    ApplicationReviewSectionResponse:
+      type: object
+      description: Generated section panel response for applicationReview.
+    ApplicationReviewSections:
+      type: string
+      description: Valid section names for the applicationReview sectionView.
+      enum:
+        - demographics
+        - contact
+      x-generated: section-enum
+    ReviewProgressWritable:
+      type: object
+      description: Client-writable fields for the reviewProgress state resource. Framework fields (id, section, itemId, createdAt, updatedAt) are added automatically.
+      properties:
+        status:
+          type: string
+          description: Caseworker review status for this section.
+          enum:
+            - not_started
+            - in_progress
+            - complete
+            - flagged
+          default: not_started
+    ReviewProgress:
+      type: object
+      description: Generated state resource for reviewProgress.
+      allOf:
+        - $ref: "#/components/schemas/ReviewProgressWritable"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            section:
+              type: string
+              readOnly: true
+            itemId:
+              type: string
+              format: uuid
+              nullable: true
+              readOnly: true
+              x-relationship:
+                resource: Polymorphic
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+          required:
+            - id
+            - section
+            - createdAt
+            - updatedAt
+    ReviewProgressListResponse:
+      type: object
+      description: Paginated list of reviewProgress state records.
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewProgress"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasNext:
+          type: boolean
+      required:
+        - items
+        - total
+        - limit
+        - offset
+        - hasNext
     InterviewPromptsRequest:
       type: object
       description: Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.

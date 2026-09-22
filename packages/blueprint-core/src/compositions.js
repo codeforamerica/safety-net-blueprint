@@ -662,7 +662,16 @@ export function generateStateSchemas(stateConfig) {
   const frameworkProperties = {
     id:            { type: 'string', format: 'uuid', readOnly: true },
     section:       { type: 'string', readOnly: true },
-    itemId:        { type: 'string', format: 'uuid', nullable: true, readOnly: true },
+    // Which record this identifies is selected by `section`, so the target
+    // cannot be declared statically. Without the annotation it reads as an
+    // undeclared foreign key and fails pattern validation.
+    itemId: {
+      type: 'string',
+      format: 'uuid',
+      nullable: true,
+      readOnly: true,
+      'x-relationship': { resource: 'Polymorphic' },
+    },
     createdAt:     { type: 'string', format: 'date-time', readOnly: true },
     updatedAt:     { type: 'string', format: 'date-time', readOnly: true },
   };

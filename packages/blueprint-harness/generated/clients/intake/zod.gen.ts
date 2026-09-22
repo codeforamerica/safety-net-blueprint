@@ -164,6 +164,12 @@ export const zApplication = z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationReview: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
 }));
 
 export const zApplicationCreate = z.object({
@@ -355,6 +361,12 @@ export const zApplicationList = z.object({
     })).and(z.object({
         _links: z.optional(z.object({
             applicationSummary: z.optional(z.object({
+                href: z.optional(z.string().readonly())
+            }))
+        }).readonly())
+    })).and(z.object({
+        _links: z.optional(z.object({
+            applicationReview: z.optional(z.object({
                 href: z.optional(z.string().readonly())
             }))
         }).readonly())
@@ -773,6 +785,75 @@ export const zCloseRequest = z.object({
 export const zApplicationSummaryResponse = z.record(z.string(), z.unknown());
 
 /**
+ * Generated composition response for applicationReview.
+ */
+export const zApplicationReviewResponse = z.record(z.string(), z.unknown());
+
+/**
+ * Generated section panel response for applicationReview.
+ */
+export const zApplicationReviewSectionResponse = z.record(z.string(), z.unknown());
+
+/**
+ * Valid section names for the applicationReview sectionView.
+ */
+export const zApplicationReviewSections = z.enum(['demographics', 'contact']);
+
+/**
+ * Client-writable fields for the reviewProgress state resource. Framework fields (id, section, itemId, createdAt, updatedAt) are added automatically.
+ */
+export const zReviewProgressWritable = z.object({
+    status: z.optional(z.enum([
+        'not_started',
+        'in_progress',
+        'complete',
+        'flagged'
+    ]))
+});
+
+/**
+ * Generated state resource for reviewProgress.
+ */
+export const zReviewProgress = z.object({
+    status: z.optional(z.enum([
+        'not_started',
+        'in_progress',
+        'complete',
+        'flagged'
+    ]))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    section: z.string().readonly(),
+    itemId: z.optional(z.uuid().readonly().nullable()),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+}));
+
+/**
+ * Paginated list of reviewProgress state records.
+ */
+export const zReviewProgressListResponse = z.object({
+    items: z.array(z.object({
+        status: z.optional(z.enum([
+            'not_started',
+            'in_progress',
+            'complete',
+            'flagged'
+        ]))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        section: z.string().readonly(),
+        itemId: z.optional(z.uuid().readonly().nullable()),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    }))),
+    total: z.int(),
+    limit: z.int(),
+    offset: z.int(),
+    hasNext: z.boolean()
+});
+
+/**
  * Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
  */
 export const zInterviewPromptsRequest = z.object({
@@ -1181,6 +1262,36 @@ export const zApplicationMemberListWritable = z.object({
 });
 
 /**
+ * Client-writable fields for the reviewProgress state resource. Framework fields (id, section, itemId, createdAt, updatedAt) are added automatically.
+ */
+export const zReviewProgressWritable2 = z.object({
+    status: z.optional(z.enum([
+        'not_started',
+        'in_progress',
+        'complete',
+        'flagged'
+    ]))
+});
+
+/**
+ * Paginated list of reviewProgress state records.
+ */
+export const zReviewProgressListResponseWritable = z.object({
+    items: z.array(z.object({
+        status: z.optional(z.enum([
+            'not_started',
+            'in_progress',
+            'complete',
+            'flagged'
+        ]))
+    })),
+    total: z.int(),
+    limit: z.int(),
+    offset: z.int(),
+    hasNext: z.boolean()
+});
+
+/**
  * Unique identifier of the application.
  */
 export const zApplicationIdParam = z.uuid();
@@ -1331,6 +1442,12 @@ export const zListApplicationsResponse = z.object({
     })).and(z.object({
         _links: z.optional(z.object({
             applicationSummary: z.optional(z.object({
+                href: z.optional(z.string().readonly())
+            }))
+        }).readonly())
+    })).and(z.object({
+        _links: z.optional(z.object({
+            applicationReview: z.optional(z.object({
                 href: z.optional(z.string().readonly())
             }))
         }).readonly())
@@ -1507,6 +1624,12 @@ export const zCreateApplicationResponse = z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationReview: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
 }));
 
 export const zDeleteApplicationData = z.object({
@@ -1657,6 +1780,12 @@ export const zGetApplicationResponse = z.object({
 })).and(z.object({
     _links: z.optional(z.object({
         applicationSummary: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationReview: z.optional(z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
@@ -1827,6 +1956,12 @@ export const zUpdateApplicationResponse = z.object({
 })).and(z.object({
     _links: z.optional(z.object({
         applicationSummary: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationReview: z.optional(z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
@@ -2477,6 +2612,12 @@ export const zSubmitApplicationResponse = z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationReview: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
 }));
 
 export const zOpenApplicationData = z.object({
@@ -2614,6 +2755,12 @@ export const zOpenApplicationResponse = z.object({
 })).and(z.object({
     _links: z.optional(z.object({
         applicationSummary: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationReview: z.optional(z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
@@ -2760,6 +2907,12 @@ export const zCloseApplicationResponse = z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationReview: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
 }));
 
 export const zWithdrawApplicationData = z.object({
@@ -2900,6 +3053,12 @@ export const zWithdrawApplicationResponse = z.object({
             href: z.optional(z.string().readonly())
         }))
     }).readonly())
+})).and(z.object({
+    _links: z.optional(z.object({
+        applicationReview: z.optional(z.object({
+            href: z.optional(z.string().readonly())
+        }))
+    }).readonly())
 }));
 
 export const zGetApplicationSummaryData = z.object({
@@ -2914,6 +3073,259 @@ export const zGetApplicationSummaryData = z.object({
  * Generated composition response for applicationSummary.
  */
 export const zGetApplicationSummaryResponse = z.record(z.string(), z.unknown());
+
+export const zGetApplicationReviewData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Generated composition response for applicationReview.
+ */
+export const zGetApplicationReviewResponse = z.record(z.string(), z.unknown());
+
+export const zGetApplicationReviewDemographicsSectionData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid()
+    }),
+    query: z.optional(z.object({
+        q: z.optional(z.string()),
+        limit: z.optional(z.int().gte(1).lte(100)).default(25),
+        offset: z.optional(z.int().gte(0)).default(0),
+        sort: z.optional(z.string())
+    }))
+});
+
+/**
+ * Generated section panel response for applicationReview.
+ */
+export const zGetApplicationReviewDemographicsSectionResponse = z.record(z.string(), z.unknown());
+
+export const zGetApplicationReviewContactSectionData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid()
+    }),
+    query: z.optional(z.object({
+        q: z.optional(z.string()),
+        limit: z.optional(z.int().gte(1).lte(100)).default(25),
+        offset: z.optional(z.int().gte(0)).default(0),
+        sort: z.optional(z.string())
+    }))
+});
+
+/**
+ * Generated section panel response for applicationReview.
+ */
+export const zGetApplicationReviewContactSectionResponse = z.record(z.string(), z.unknown());
+
+export const zListReviewProgressBySectionData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid(),
+        section: z.string()
+    }),
+    query: z.optional(z.object({
+        q: z.optional(z.string()),
+        limit: z.optional(z.int().gte(1).lte(100)).default(25),
+        offset: z.optional(z.int().gte(0)).default(0),
+        sort: z.optional(z.string())
+    }))
+});
+
+/**
+ * Paginated list of reviewProgress state records.
+ */
+export const zListReviewProgressBySectionResponse = z.object({
+    items: z.array(z.object({
+        status: z.optional(z.enum([
+            'not_started',
+            'in_progress',
+            'complete',
+            'flagged'
+        ]))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        section: z.string().readonly(),
+        itemId: z.optional(z.uuid().readonly().nullable()),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    }))),
+    total: z.int(),
+    limit: z.int(),
+    offset: z.int(),
+    hasNext: z.boolean()
+});
+
+export const zUpdateReviewProgressBySectionData = z.object({
+    body: z.object({
+        status: z.optional(z.enum([
+            'not_started',
+            'in_progress',
+            'complete',
+            'flagged'
+        ]))
+    }),
+    path: z.object({
+        applicationId: z.uuid(),
+        section: z.string()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Generated state resource for reviewProgress.
+ */
+export const zUpdateReviewProgressBySectionResponse = z.object({
+    status: z.optional(z.enum([
+        'not_started',
+        'in_progress',
+        'complete',
+        'flagged'
+    ]))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    section: z.string().readonly(),
+    itemId: z.optional(z.uuid().readonly().nullable()),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+}));
+
+export const zReplaceReviewProgressBySectionData = z.object({
+    body: z.object({
+        status: z.optional(z.enum([
+            'not_started',
+            'in_progress',
+            'complete',
+            'flagged'
+        ]))
+    }),
+    path: z.object({
+        applicationId: z.uuid(),
+        section: z.string()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Generated state resource for reviewProgress.
+ */
+export const zReplaceReviewProgressBySectionResponse = z.object({
+    status: z.optional(z.enum([
+        'not_started',
+        'in_progress',
+        'complete',
+        'flagged'
+    ]))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    section: z.string().readonly(),
+    itemId: z.optional(z.uuid().readonly().nullable()),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+}));
+
+export const zGetReviewProgressByItemData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        applicationId: z.uuid(),
+        section: z.string(),
+        itemId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Generated state resource for reviewProgress.
+ */
+export const zGetReviewProgressByItemResponse = z.object({
+    status: z.optional(z.enum([
+        'not_started',
+        'in_progress',
+        'complete',
+        'flagged'
+    ]))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    section: z.string().readonly(),
+    itemId: z.optional(z.uuid().readonly().nullable()),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+}));
+
+export const zUpdateReviewProgressByItemData = z.object({
+    body: z.object({
+        status: z.optional(z.enum([
+            'not_started',
+            'in_progress',
+            'complete',
+            'flagged'
+        ]))
+    }),
+    path: z.object({
+        applicationId: z.uuid(),
+        section: z.string(),
+        itemId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Generated state resource for reviewProgress.
+ */
+export const zUpdateReviewProgressByItemResponse = z.object({
+    status: z.optional(z.enum([
+        'not_started',
+        'in_progress',
+        'complete',
+        'flagged'
+    ]))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    section: z.string().readonly(),
+    itemId: z.optional(z.uuid().readonly().nullable()),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+}));
+
+export const zReplaceReviewProgressByItemData = z.object({
+    body: z.object({
+        status: z.optional(z.enum([
+            'not_started',
+            'in_progress',
+            'complete',
+            'flagged'
+        ]))
+    }),
+    path: z.object({
+        applicationId: z.uuid(),
+        section: z.string(),
+        itemId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * Generated state resource for reviewProgress.
+ */
+export const zReplaceReviewProgressByItemResponse = z.object({
+    status: z.optional(z.enum([
+        'not_started',
+        'in_progress',
+        'complete',
+        'flagged'
+    ]))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    section: z.string().readonly(),
+    itemId: z.optional(z.uuid().readonly().nullable()),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+}));
 
 export const zEvaluateInterviewPromptsData = z.object({
     body: z.object({

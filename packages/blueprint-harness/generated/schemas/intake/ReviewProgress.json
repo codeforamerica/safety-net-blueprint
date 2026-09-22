@@ -1,0 +1,61 @@
+{
+  "type": "object",
+  "description": "Generated state resource for reviewProgress.",
+  "allOf": [
+    {
+      "type": "object",
+      "description": "Client-writable fields for the reviewProgress state resource. Framework fields (id, section, itemId, createdAt, updatedAt) are added automatically.",
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "Caseworker review status for this section.",
+          "enum": [
+            "not_started",
+            "in_progress",
+            "complete",
+            "flagged"
+          ],
+          "default": "not_started"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "readOnly": true
+        },
+        "section": {
+          "type": "string",
+          "readOnly": true
+        },
+        "itemId": {
+          "type": "string",
+          "format": "uuid",
+          "nullable": true,
+          "readOnly": true
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        }
+      },
+      "required": [
+        "id",
+        "section",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/ReviewProgress"
+}

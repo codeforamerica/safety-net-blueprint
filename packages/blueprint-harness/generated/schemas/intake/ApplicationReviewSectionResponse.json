@@ -1,0 +1,6 @@
+{
+  "type": "object",
+  "description": "Generated section panel response for applicationReview.",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/ApplicationReviewSectionResponse"
+}

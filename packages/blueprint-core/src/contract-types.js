@@ -40,6 +40,24 @@ export const CONTRACT_TYPES = {
   components:       {},
 };
 
+/**
+ * `x-relationship.resource` values that name no resource.
+ *
+ * `External` identifies a record in a system outside the blueprint;
+ * `Polymorphic` identifies one whose type is selected by a sibling
+ * discriminator field. Neither can be resolved to a schema, so both stay
+ * scalar foreign keys — there is nothing to expand or link to.
+ */
+export const RESERVED_RESOURCES = new Set(['External', 'Polymorphic']);
+
+/**
+ * @param {string} [resource] - An x-relationship resource value
+ * @returns {boolean} True when the value names no resolvable schema
+ */
+export function isReservedResource(resource) {
+  return RESERVED_RESOURCES.has(resource);
+}
+
 const BY_SCHEMA = new Map(
   Object.entries(CONTRACT_TYPES)
     .filter(([, def]) => def.schema)

@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "description": "Client-writable fields for the reviewProgress state resource. Framework fields (id, section, itemId, createdAt, updatedAt) are added automatically.",
+  "properties": {
+    "status": {
+      "type": "string",
+      "description": "Caseworker review status for this section.",
+      "enum": [
+        "not_started",
+        "in_progress",
+        "complete",
+        "flagged"
+      ],
+      "default": "not_started"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/ReviewProgressWritable"
+}

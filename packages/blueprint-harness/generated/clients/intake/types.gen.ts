@@ -328,6 +328,18 @@ export type Application = {
             readonly href?: string;
         };
     };
+} & {
+    /**
+     * Generated composition links.
+     */
+    readonly _links?: {
+        /**
+         * Link to the applicationReview composition.
+         */
+        applicationReview?: {
+            readonly href?: string;
+        };
+    };
 };
 
 export type ApplicationCreate = {
@@ -716,6 +728,18 @@ export type ApplicationList = {
              * Link to the applicationSummary composition.
              */
             applicationSummary?: {
+                readonly href?: string;
+            };
+        };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationReview composition.
+             */
+            applicationReview?: {
                 readonly href?: string;
             };
         };
@@ -1523,6 +1547,81 @@ export type ApplicationSummaryResponse = {
 };
 
 /**
+ * Generated composition response for applicationReview.
+ */
+export type ApplicationReviewResponse = {
+    [key: string]: unknown;
+};
+
+/**
+ * Generated section panel response for applicationReview.
+ */
+export type ApplicationReviewSectionResponse = {
+    [key: string]: unknown;
+};
+
+/**
+ * Valid section names for the applicationReview sectionView.
+ */
+export const ApplicationReviewSections = { DEMOGRAPHICS: 'demographics', CONTACT: 'contact' } as const;
+
+/**
+ * Valid section names for the applicationReview sectionView.
+ */
+export type ApplicationReviewSections = typeof ApplicationReviewSections[keyof typeof ApplicationReviewSections];
+
+/**
+ * Client-writable fields for the reviewProgress state resource. Framework fields (id, section, itemId, createdAt, updatedAt) are added automatically.
+ */
+export type ReviewProgressWritable = {
+    /**
+     * Caseworker review status for this section.
+     */
+    status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
+};
+
+/**
+ * Generated state resource for reviewProgress.
+ */
+export type ReviewProgress = {
+    /**
+     * Caseworker review status for this section.
+     */
+    status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
+} & {
+    readonly id: string;
+    readonly section: string;
+    readonly itemId?: string;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+};
+
+/**
+ * Paginated list of reviewProgress state records.
+ */
+export type ReviewProgressListResponse = {
+    /**
+     * Generated state resource for reviewProgress.
+     */
+    items: Array<{
+        /**
+         * Caseworker review status for this section.
+         */
+        status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
+    } & {
+        readonly id: string;
+        readonly section: string;
+        readonly itemId?: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+    }>;
+    total: number;
+    limit: number;
+    offset: number;
+    hasNext: boolean;
+};
+
+/**
  * Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
  */
 export type InterviewPromptsRequest = {
@@ -2304,6 +2403,32 @@ export type ApplicationMemberListWritable = {
 };
 
 /**
+ * Client-writable fields for the reviewProgress state resource. Framework fields (id, section, itemId, createdAt, updatedAt) are added automatically.
+ */
+export type ReviewProgressWritable2 = {
+    /**
+     * Caseworker review status for this section.
+     */
+    status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
+};
+
+/**
+ * Paginated list of reviewProgress state records.
+ */
+export type ReviewProgressListResponseWritable = {
+    items: Array<{
+        /**
+         * Caseworker review status for this section.
+         */
+        status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
+    }>;
+    total: number;
+    limit: number;
+    offset: number;
+    hasNext: boolean;
+};
+
+/**
  * Unique identifier of the application.
  */
 export type ApplicationIdParam = string;
@@ -2728,6 +2853,18 @@ export type ListApplicationsResponses = {
                     readonly href?: string;
                 };
             };
+        } & {
+            /**
+             * Generated composition links.
+             */
+            readonly _links?: {
+                /**
+                 * Link to the applicationReview composition.
+                 */
+                applicationReview?: {
+                    readonly href?: string;
+                };
+            };
         }>;
         /**
          * Total number of matching applications.
@@ -3105,6 +3242,18 @@ export type CreateApplicationResponses = {
                 readonly href?: string;
             };
         };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationReview composition.
+             */
+            applicationReview?: {
+                readonly href?: string;
+            };
+        };
     };
 };
 
@@ -3439,6 +3588,18 @@ export type GetApplicationResponses = {
              * Link to the applicationSummary composition.
              */
             applicationSummary?: {
+                readonly href?: string;
+            };
+        };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationReview composition.
+             */
+            applicationReview?: {
                 readonly href?: string;
             };
         };
@@ -3810,6 +3971,18 @@ export type UpdateApplicationResponses = {
              * Link to the applicationSummary composition.
              */
             applicationSummary?: {
+                readonly href?: string;
+            };
+        };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationReview composition.
+             */
+            applicationReview?: {
                 readonly href?: string;
             };
         };
@@ -5368,6 +5541,18 @@ export type SubmitApplicationResponses = {
                 readonly href?: string;
             };
         };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationReview composition.
+             */
+            applicationReview?: {
+                readonly href?: string;
+            };
+        };
     };
 };
 
@@ -5725,6 +5910,18 @@ export type OpenApplicationResponses = {
              * Link to the applicationSummary composition.
              */
             applicationSummary?: {
+                readonly href?: string;
+            };
+        };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationReview composition.
+             */
+            applicationReview?: {
                 readonly href?: string;
             };
         };
@@ -6097,6 +6294,18 @@ export type CloseApplicationResponses = {
                 readonly href?: string;
             };
         };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationReview composition.
+             */
+            applicationReview?: {
+                readonly href?: string;
+            };
+        };
     };
 };
 
@@ -6457,6 +6666,18 @@ export type WithdrawApplicationResponses = {
                 readonly href?: string;
             };
         };
+    } & {
+        /**
+         * Generated composition links.
+         */
+        readonly _links?: {
+            /**
+             * Link to the applicationReview composition.
+             */
+            applicationReview?: {
+                readonly href?: string;
+            };
+        };
     };
 };
 
@@ -6527,6 +6748,1225 @@ export type GetApplicationSummaryResponses = {
 };
 
 export type GetApplicationSummaryResponse = GetApplicationSummaryResponses[keyof GetApplicationSummaryResponses];
+
+export type GetApplicationReviewData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/review';
+};
+
+export type GetApplicationReviewErrors = {
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type GetApplicationReviewError = GetApplicationReviewErrors[keyof GetApplicationReviewErrors];
+
+export type GetApplicationReviewResponses = {
+    /**
+     * Generated composition response for applicationReview.
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type GetApplicationReviewResponse = GetApplicationReviewResponses[keyof GetApplicationReviewResponses];
+
+export type GetApplicationReviewDemographicsSectionData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+    };
+    query?: {
+        /**
+         * Search query using field:value syntax. Multiple conditions separated by
+         * spaces are ANDed together.
+         *
+         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+         * Most HTTP clients handle this automatically. Examples in this documentation
+         * show human-readable syntax for clarity.
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `term` | Full-text exact match | `john` |
+         * | `*term*` | Full-text contains | `*john*` |
+         * | `term*` | Full-text starts with | `john*` |
+         * | `*term` | Full-text ends with | `*smith` |
+         * | `field:value` | Exact match on field | `status:approved` |
+         * | `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+         * | `field:value*` | Starts with | `name:john*` |
+         * | `field:*value` | Ends with | `email:*@example.com` |
+         * | `field:"value"` | Quoted value (for spaces) | `name:"john doe"` |
+         * | `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
+         * | `field:>value` | Greater than | `income:>1000` |
+         * | `field:>=value` | Greater than or equal | `income:>=1000` |
+         * | `field:<value` | Less than | `income:<5000` |
+         * | `field:<=value` | Less than or equal | `income:<=5000` |
+         * | `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
+         * | `-field:value` | Exclude / negate | `-status:denied` |
+         * | `field:*` | Field exists (not null) | `email:*` |
+         * | `-field:*` | Field does not exist | `-deletedAt:*` |
+         *
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * - `applicant.state:CA` — nested field filter
+         *
+         * ## URL Encoding Reference
+         *
+         * When manually constructing URLs, encode these characters:
+         *
+         * | Character | Encoded |
+         * |-----------|---------|
+         * | (space) | `%20` or `+` |
+         * | `"` | `%22` |
+         * | `:` | `%3A` |
+         * | `>` | `%3E` |
+         * | `<` | `%3C` |
+         * | `,` | `%2C` |
+         *
+         * **Example:**
+         * ```
+         * Human-readable: q=status:approved income:>=1000
+         * URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000
+         * ```
+         *
+         */
+        q?: string;
+        /**
+         * Maximum number of items to return (1-100).
+         */
+        limit?: number;
+        /**
+         * Number of items to skip before collecting results.
+         */
+        offset?: number;
+        /**
+         * Comma-separated list of fields to sort the response by. Prefix a field
+         * with `-` for descending order. The first field is the primary sort;
+         * subsequent fields are tie-breakers in declaration order.
+         *
+         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+         * Most HTTP clients handle this automatically. Examples below show
+         * human-readable syntax for clarity.
+         *
+         * Which fields a given list endpoint allows is declared in the operation's
+         * `x-sortable.fields` extension. Sending a field name not present in that
+         * list returns `400 FIELD_NOT_SORTABLE`. Sending a field name that doesn't
+         * exist on the resource schema returns `400 INVALID_SORT_FIELD`. When this
+         * parameter is omitted, the operation's `x-sortable.default` (if declared)
+         * is applied; otherwise no client-driven sort is applied. A configured
+         * tie-breaker (default `id`) is always appended for stable pagination.
+         *
+         * See `api-patterns.yaml#sorting` for the full convention and
+         * `docs/architecture/x-extensions.md` for the extension shape.
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `fieldName` | Ascending | `sort=createdAt` |
+         * | `-fieldName` | Descending | `sort=-createdAt` |
+         * | `field1,field2` | Multi-field | `sort=status,-priority` |
+         * | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
+         *
+         * ## Examples
+         *
+         * - `sort=createdAt` — oldest first
+         * - `sort=-createdAt` — newest first
+         * - `sort=-priority,dueDate` — highest priority first, then oldest due date
+         * - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+         *
+         */
+        sort?: string;
+    };
+    url: '/applications/{applicationId}/review/demographics';
+};
+
+export type GetApplicationReviewDemographicsSectionErrors = {
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type GetApplicationReviewDemographicsSectionError = GetApplicationReviewDemographicsSectionErrors[keyof GetApplicationReviewDemographicsSectionErrors];
+
+export type GetApplicationReviewDemographicsSectionResponses = {
+    /**
+     * Generated section panel response for applicationReview.
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type GetApplicationReviewDemographicsSectionResponse = GetApplicationReviewDemographicsSectionResponses[keyof GetApplicationReviewDemographicsSectionResponses];
+
+export type GetApplicationReviewContactSectionData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+    };
+    query?: {
+        /**
+         * Search query using field:value syntax. Multiple conditions separated by
+         * spaces are ANDed together.
+         *
+         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+         * Most HTTP clients handle this automatically. Examples in this documentation
+         * show human-readable syntax for clarity.
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `term` | Full-text exact match | `john` |
+         * | `*term*` | Full-text contains | `*john*` |
+         * | `term*` | Full-text starts with | `john*` |
+         * | `*term` | Full-text ends with | `*smith` |
+         * | `field:value` | Exact match on field | `status:approved` |
+         * | `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+         * | `field:value*` | Starts with | `name:john*` |
+         * | `field:*value` | Ends with | `email:*@example.com` |
+         * | `field:"value"` | Quoted value (for spaces) | `name:"john doe"` |
+         * | `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
+         * | `field:>value` | Greater than | `income:>1000` |
+         * | `field:>=value` | Greater than or equal | `income:>=1000` |
+         * | `field:<value` | Less than | `income:<5000` |
+         * | `field:<=value` | Less than or equal | `income:<=5000` |
+         * | `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
+         * | `-field:value` | Exclude / negate | `-status:denied` |
+         * | `field:*` | Field exists (not null) | `email:*` |
+         * | `-field:*` | Field does not exist | `-deletedAt:*` |
+         *
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * - `applicant.state:CA` — nested field filter
+         *
+         * ## URL Encoding Reference
+         *
+         * When manually constructing URLs, encode these characters:
+         *
+         * | Character | Encoded |
+         * |-----------|---------|
+         * | (space) | `%20` or `+` |
+         * | `"` | `%22` |
+         * | `:` | `%3A` |
+         * | `>` | `%3E` |
+         * | `<` | `%3C` |
+         * | `,` | `%2C` |
+         *
+         * **Example:**
+         * ```
+         * Human-readable: q=status:approved income:>=1000
+         * URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000
+         * ```
+         *
+         */
+        q?: string;
+        /**
+         * Maximum number of items to return (1-100).
+         */
+        limit?: number;
+        /**
+         * Number of items to skip before collecting results.
+         */
+        offset?: number;
+        /**
+         * Comma-separated list of fields to sort the response by. Prefix a field
+         * with `-` for descending order. The first field is the primary sort;
+         * subsequent fields are tie-breakers in declaration order.
+         *
+         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+         * Most HTTP clients handle this automatically. Examples below show
+         * human-readable syntax for clarity.
+         *
+         * Which fields a given list endpoint allows is declared in the operation's
+         * `x-sortable.fields` extension. Sending a field name not present in that
+         * list returns `400 FIELD_NOT_SORTABLE`. Sending a field name that doesn't
+         * exist on the resource schema returns `400 INVALID_SORT_FIELD`. When this
+         * parameter is omitted, the operation's `x-sortable.default` (if declared)
+         * is applied; otherwise no client-driven sort is applied. A configured
+         * tie-breaker (default `id`) is always appended for stable pagination.
+         *
+         * See `api-patterns.yaml#sorting` for the full convention and
+         * `docs/architecture/x-extensions.md` for the extension shape.
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `fieldName` | Ascending | `sort=createdAt` |
+         * | `-fieldName` | Descending | `sort=-createdAt` |
+         * | `field1,field2` | Multi-field | `sort=status,-priority` |
+         * | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
+         *
+         * ## Examples
+         *
+         * - `sort=createdAt` — oldest first
+         * - `sort=-createdAt` — newest first
+         * - `sort=-priority,dueDate` — highest priority first, then oldest due date
+         * - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+         *
+         */
+        sort?: string;
+    };
+    url: '/applications/{applicationId}/review/contact';
+};
+
+export type GetApplicationReviewContactSectionErrors = {
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type GetApplicationReviewContactSectionError = GetApplicationReviewContactSectionErrors[keyof GetApplicationReviewContactSectionErrors];
+
+export type GetApplicationReviewContactSectionResponses = {
+    /**
+     * Generated section panel response for applicationReview.
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type GetApplicationReviewContactSectionResponse = GetApplicationReviewContactSectionResponses[keyof GetApplicationReviewContactSectionResponses];
+
+export type ListReviewProgressBySectionData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+        /**
+         * Section name within the sectionView composition.
+         */
+        section: string;
+    };
+    query?: {
+        /**
+         * Search query using field:value syntax. Multiple conditions separated by
+         * spaces are ANDed together.
+         *
+         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+         * Most HTTP clients handle this automatically. Examples in this documentation
+         * show human-readable syntax for clarity.
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `term` | Full-text exact match | `john` |
+         * | `*term*` | Full-text contains | `*john*` |
+         * | `term*` | Full-text starts with | `john*` |
+         * | `*term` | Full-text ends with | `*smith` |
+         * | `field:value` | Exact match on field | `status:approved` |
+         * | `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+         * | `field:value*` | Starts with | `name:john*` |
+         * | `field:*value` | Ends with | `email:*@example.com` |
+         * | `field:"value"` | Quoted value (for spaces) | `name:"john doe"` |
+         * | `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
+         * | `field:>value` | Greater than | `income:>1000` |
+         * | `field:>=value` | Greater than or equal | `income:>=1000` |
+         * | `field:<value` | Less than | `income:<5000` |
+         * | `field:<=value` | Less than or equal | `income:<=5000` |
+         * | `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
+         * | `-field:value` | Exclude / negate | `-status:denied` |
+         * | `field:*` | Field exists (not null) | `email:*` |
+         * | `-field:*` | Field does not exist | `-deletedAt:*` |
+         *
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * - `applicant.state:CA` — nested field filter
+         *
+         * ## URL Encoding Reference
+         *
+         * When manually constructing URLs, encode these characters:
+         *
+         * | Character | Encoded |
+         * |-----------|---------|
+         * | (space) | `%20` or `+` |
+         * | `"` | `%22` |
+         * | `:` | `%3A` |
+         * | `>` | `%3E` |
+         * | `<` | `%3C` |
+         * | `,` | `%2C` |
+         *
+         * **Example:**
+         * ```
+         * Human-readable: q=status:approved income:>=1000
+         * URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000
+         * ```
+         *
+         */
+        q?: string;
+        /**
+         * Maximum number of items to return (1-100).
+         */
+        limit?: number;
+        /**
+         * Number of items to skip before collecting results.
+         */
+        offset?: number;
+        /**
+         * Comma-separated list of fields to sort the response by. Prefix a field
+         * with `-` for descending order. The first field is the primary sort;
+         * subsequent fields are tie-breakers in declaration order.
+         *
+         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+         * Most HTTP clients handle this automatically. Examples below show
+         * human-readable syntax for clarity.
+         *
+         * Which fields a given list endpoint allows is declared in the operation's
+         * `x-sortable.fields` extension. Sending a field name not present in that
+         * list returns `400 FIELD_NOT_SORTABLE`. Sending a field name that doesn't
+         * exist on the resource schema returns `400 INVALID_SORT_FIELD`. When this
+         * parameter is omitted, the operation's `x-sortable.default` (if declared)
+         * is applied; otherwise no client-driven sort is applied. A configured
+         * tie-breaker (default `id`) is always appended for stable pagination.
+         *
+         * See `api-patterns.yaml#sorting` for the full convention and
+         * `docs/architecture/x-extensions.md` for the extension shape.
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `fieldName` | Ascending | `sort=createdAt` |
+         * | `-fieldName` | Descending | `sort=-createdAt` |
+         * | `field1,field2` | Multi-field | `sort=status,-priority` |
+         * | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
+         *
+         * ## Examples
+         *
+         * - `sort=createdAt` — oldest first
+         * - `sort=-createdAt` — newest first
+         * - `sort=-priority,dueDate` — highest priority first, then oldest due date
+         * - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+         *
+         */
+        sort?: string;
+    };
+    url: '/applications/{applicationId}/review-progress/{section}';
+};
+
+export type ListReviewProgressBySectionErrors = {
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type ListReviewProgressBySectionError = ListReviewProgressBySectionErrors[keyof ListReviewProgressBySectionErrors];
+
+export type ListReviewProgressBySectionResponses = {
+    /**
+     * Paginated list of reviewProgress state records.
+     */
+    200: {
+        /**
+         * Generated state resource for reviewProgress.
+         */
+        items: Array<{
+            /**
+             * Caseworker review status for this section.
+             */
+            status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
+        } & {
+            readonly id: string;
+            readonly section: string;
+            readonly itemId?: string;
+            readonly createdAt: string;
+            readonly updatedAt: string;
+        }>;
+        total: number;
+        limit: number;
+        offset: number;
+        hasNext: boolean;
+    };
+};
+
+export type ListReviewProgressBySectionResponse = ListReviewProgressBySectionResponses[keyof ListReviewProgressBySectionResponses];
+
+export type UpdateReviewProgressBySectionData = {
+    /**
+     * Client-writable fields for the reviewProgress state resource. Framework fields (id, section, itemId, createdAt, updatedAt) are added automatically.
+     */
+    body: {
+        /**
+         * Caseworker review status for this section.
+         */
+        status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
+    };
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+        /**
+         * Section name within the sectionView composition.
+         */
+        section: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/review-progress/{section}';
+};
+
+export type UpdateReviewProgressBySectionErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The request was well-formed but contained semantic errors.
+     */
+    422: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type UpdateReviewProgressBySectionError = UpdateReviewProgressBySectionErrors[keyof UpdateReviewProgressBySectionErrors];
+
+export type UpdateReviewProgressBySectionResponses = {
+    /**
+     * Generated state resource for reviewProgress.
+     */
+    200: {
+        /**
+         * Caseworker review status for this section.
+         */
+        status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
+    } & {
+        readonly id: string;
+        readonly section: string;
+        readonly itemId?: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+    };
+};
+
+export type UpdateReviewProgressBySectionResponse = UpdateReviewProgressBySectionResponses[keyof UpdateReviewProgressBySectionResponses];
+
+export type ReplaceReviewProgressBySectionData = {
+    /**
+     * Client-writable fields for the reviewProgress state resource. Framework fields (id, section, itemId, createdAt, updatedAt) are added automatically.
+     */
+    body: {
+        /**
+         * Caseworker review status for this section.
+         */
+        status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
+    };
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+        /**
+         * Section name within the sectionView composition.
+         */
+        section: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/review-progress/{section}';
+};
+
+export type ReplaceReviewProgressBySectionErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The request was well-formed but contained semantic errors.
+     */
+    422: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type ReplaceReviewProgressBySectionError = ReplaceReviewProgressBySectionErrors[keyof ReplaceReviewProgressBySectionErrors];
+
+export type ReplaceReviewProgressBySectionResponses = {
+    /**
+     * Generated state resource for reviewProgress.
+     */
+    200: {
+        /**
+         * Caseworker review status for this section.
+         */
+        status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
+    } & {
+        readonly id: string;
+        readonly section: string;
+        readonly itemId?: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+    };
+};
+
+export type ReplaceReviewProgressBySectionResponse = ReplaceReviewProgressBySectionResponses[keyof ReplaceReviewProgressBySectionResponses];
+
+export type GetReviewProgressByItemData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+        /**
+         * Section name within the sectionView composition.
+         */
+        section: string;
+        /**
+         * Item identifier for collection-backed sections.
+         */
+        itemId: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/review-progress/{section}/{itemId}';
+};
+
+export type GetReviewProgressByItemErrors = {
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type GetReviewProgressByItemError = GetReviewProgressByItemErrors[keyof GetReviewProgressByItemErrors];
+
+export type GetReviewProgressByItemResponses = {
+    /**
+     * Generated state resource for reviewProgress.
+     */
+    200: {
+        /**
+         * Caseworker review status for this section.
+         */
+        status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
+    } & {
+        readonly id: string;
+        readonly section: string;
+        readonly itemId?: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+    };
+};
+
+export type GetReviewProgressByItemResponse = GetReviewProgressByItemResponses[keyof GetReviewProgressByItemResponses];
+
+export type UpdateReviewProgressByItemData = {
+    /**
+     * Client-writable fields for the reviewProgress state resource. Framework fields (id, section, itemId, createdAt, updatedAt) are added automatically.
+     */
+    body: {
+        /**
+         * Caseworker review status for this section.
+         */
+        status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
+    };
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+        /**
+         * Section name within the sectionView composition.
+         */
+        section: string;
+        /**
+         * Item identifier for collection-backed sections.
+         */
+        itemId: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/review-progress/{section}/{itemId}';
+};
+
+export type UpdateReviewProgressByItemErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The request was well-formed but contained semantic errors.
+     */
+    422: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type UpdateReviewProgressByItemError = UpdateReviewProgressByItemErrors[keyof UpdateReviewProgressByItemErrors];
+
+export type UpdateReviewProgressByItemResponses = {
+    /**
+     * Generated state resource for reviewProgress.
+     */
+    200: {
+        /**
+         * Caseworker review status for this section.
+         */
+        status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
+    } & {
+        readonly id: string;
+        readonly section: string;
+        readonly itemId?: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+    };
+};
+
+export type UpdateReviewProgressByItemResponse = UpdateReviewProgressByItemResponses[keyof UpdateReviewProgressByItemResponses];
+
+export type ReplaceReviewProgressByItemData = {
+    /**
+     * Client-writable fields for the reviewProgress state resource. Framework fields (id, section, itemId, createdAt, updatedAt) are added automatically.
+     */
+    body: {
+        /**
+         * Caseworker review status for this section.
+         */
+        status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
+    };
+    path: {
+        /**
+         * Unique identifier of the application.
+         */
+        applicationId: string;
+        /**
+         * Section name within the sectionView composition.
+         */
+        section: string;
+        /**
+         * Item identifier for collection-backed sections.
+         */
+        itemId: string;
+    };
+    query?: never;
+    url: '/applications/{applicationId}/review-progress/{section}/{itemId}';
+};
+
+export type ReplaceReviewProgressByItemErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The request was well-formed but contained semantic errors.
+     */
+    422: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type ReplaceReviewProgressByItemError = ReplaceReviewProgressByItemErrors[keyof ReplaceReviewProgressByItemErrors];
+
+export type ReplaceReviewProgressByItemResponses = {
+    /**
+     * Generated state resource for reviewProgress.
+     */
+    200: {
+        /**
+         * Caseworker review status for this section.
+         */
+        status?: 'not_started' | 'in_progress' | 'complete' | 'flagged';
+    } & {
+        readonly id: string;
+        readonly section: string;
+        readonly itemId?: string;
+        readonly createdAt: string;
+        readonly updatedAt: string;
+    };
+};
+
+export type ReplaceReviewProgressByItemResponse = ReplaceReviewProgressByItemResponses[keyof ReplaceReviewProgressByItemResponses];
 
 export type EvaluateInterviewPromptsData = {
     /**

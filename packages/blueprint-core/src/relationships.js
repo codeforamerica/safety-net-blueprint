@@ -34,6 +34,8 @@
  *   `isBackReference`/`resolveRelationships` for the implementation.
  */
 
+import { isReservedResource } from './contract-types.js';
+
 // =============================================================================
 // Discovery
 // =============================================================================
@@ -779,9 +781,14 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
   // expanded objects. Applying expand to request schemas breaks writes.
   const requestSchemaNames = collectRequestSchemaNames(spec);
 
-  // Warn about unknown resource references
+  // Warn about unknown resource references. Reserved values name no schema by
+  // definition, so looking for one and reporting it missing is noise.
   for (const { schemaName, propertyName, relationship } of relationships) {
-    if (relationship.resource && !schemaIndex.has(relationship.resource)) {
+    if (
+      relationship.resource &&
+      !isReservedResource(relationship.resource) &&
+      !schemaIndex.has(relationship.resource)
+    ) {
       warnings.push(
         `${schemaName}.${propertyName}: resource "${relationship.resource}" not found in any loaded spec`
       );
@@ -825,6 +832,12 @@ function resolveRelationships(spec, globalStyle = 'links-only', schemaIndex = ne
 
       // No style configured — annotation is metadata only; leave FK field as-is.
       if (effectiveStyle == null) continue;
+
+      // A reserved resource names no schema, so there is nothing to expand or
+      // link to. Applying a style would replace a usable scalar FK with an
+      // empty object. The annotation stays as metadata and the field is left
+      // alone, which is what the convention has always said these mean.
+      if (isReservedResource(field.relationship.resource)) continue;
 
       // Request schemas send flat FKs to the server. Expand (and links-only)
       // are response-only transforms — applying them to a request body breaks

@@ -520,6 +520,29 @@
                 }
               }
             }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_links": {
+                "type": "object",
+                "readOnly": true,
+                "description": "Generated composition links.",
+                "properties": {
+                  "applicationReview": {
+                    "type": "object",
+                    "description": "Link to the applicationReview composition.",
+                    "properties": {
+                      "href": {
+                        "type": "string",
+                        "format": "uri-reference",
+                        "readOnly": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         ]
       }

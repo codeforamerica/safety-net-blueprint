@@ -36,3 +36,16 @@ application.members[].relationship: { type: enum, values: [self, spouse, child, 
 application.members[].verificationEvidence: { type: string }
 application.members[].links: { type: object }
 application.members[].links.application: { type: string }
+
+# ── ReviewProgressListResponse ──────────────────────────────────────────────────
+
+application.reviewProgress[]: { type: list(ReviewProgressListResponse) }
+application.reviewProgress[].items[]: { type: list(ReviewProgress) }
+application.reviewProgress[].items[].id: { type: uuid }
+application.reviewProgress[].items[].itemId: { type: uuid, relationship: Polymorphic }
+application.reviewProgress[].items[].status: { type: enum, values: [not_started, in_progress, complete, flagged] }
+application.reviewProgress[].items[].section: { type: string }
+application.reviewProgress[].total: { type: integer }
+application.reviewProgress[].limit: { type: integer }
+application.reviewProgress[].offset: { type: integer }
+application.reviewProgress[].hasNext: { type: boolean }
