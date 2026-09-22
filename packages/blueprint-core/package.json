@@ -12,7 +12,7 @@
   "exports": {
     ".": "./src/index.js",
     "./annotations": "./src/annotations.js",
-    "./policies": "./src/policies.js",
+    "./registries": "./src/registries.js",
     "./rules": "./src/rules.js",
     "./relationships": "./src/relationships.js",
     "./compositions": "./src/compositions.js",

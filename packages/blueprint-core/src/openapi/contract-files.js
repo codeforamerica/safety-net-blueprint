@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join, relative, resolve, dirname, basename } from 'path';
 import yaml from 'js-yaml';
+import { typeFromSchema, typeFromFilename } from '../contract-types.js';
 
 /**
  * Detect the contract file type from parsed document content and/or filename.
@@ -21,45 +22,26 @@ export function detectType(filename, doc) {
     // before the blueprint table so these are typed by what they declare
     // rather than falling through to the filename.
     if (typeof schema === 'string' && schema.includes('json-schema.org')) return 'schema';
-    if (schema) {
-      const base = schema.split('/').pop();
-      if (base === 'rules-schema.yaml')          return 'rules';
-      if (base === 'rules-examples-schema.yaml') return 'rules-examples';
-      if (base === 'graph-schema.yaml')          return 'graph';
-      if (base === 'state-machine-schema.yaml') return 'state-machine';
-      if (base === 'annotations-schema.yaml')  return 'annotations';
-      if (base === 'policies-schema.yaml')     return 'policies';
-      if (base === 'registry-schema.yaml')     return 'registry';
-      if (base === 'sla-types-schema.yaml')    return 'sla-types';
-      if (base === 'metrics-schema.yaml')      return 'metrics';
-      if (base === 'compositions-schema.yaml') return 'compositions';
-    }
-    if (doc.openapi)   return 'openapi';
-    if (doc.asyncapi)  return 'asyncapi';
+
+    const bySchema = typeFromSchema(schema);
+    if (bySchema) return bySchema;
+
+    // Version fields are how these three declare themselves; an overlay names
+    // the Overlay Specification version the same way OpenAPI and AsyncAPI do,
+    // and is not required to carry a -overlay.yaml suffix.
+    if (doc.openapi) return 'openapi';
+    if (doc.asyncapi) return 'asyncapi';
+    if (doc.overlay && Array.isArray(doc.actions)) return 'overlay';
+    if (doc.overlay && doc.config) return 'overlay-config';
   }
 
-  // Filename fallback
-  if (filename.endsWith('-openapi.yaml'))          return 'openapi';
-  if (filename.endsWith('-asyncapi.yaml'))         return 'asyncapi';
-  if (filename.endsWith('-state-machine.yaml'))    return 'state-machine';
-  if (filename.endsWith('-rules.yaml'))            return 'rules';
-  if (filename.endsWith('-rules-examples.yaml'))  return 'rules-examples';
-  if (filename.endsWith('-graph.yaml'))            return 'graph';
-  if (filename.endsWith('-schema.yaml'))           return 'schema';
-  if (filename.endsWith('-mock-data.yaml'))        return 'mock-data';
-  if (filename.endsWith('-metrics.yaml'))          return 'metrics';
-  if (filename.endsWith('-compositions.yaml'))     return 'compositions';
-  if (filename.endsWith('-annotations-docs.yaml')) return 'annotations';
-  if (filename.endsWith('-annotations.yaml'))      return 'annotations';
-  if (filename.endsWith('-policies.yaml'))         return 'policies';
-  if (filename.endsWith('-sla-types.yaml'))        return 'sla-types';
-  if (filename.endsWith('-config.yaml'))           return 'config';
-  if (filename.endsWith('-overlay.yaml'))          return 'overlay';
+  const byFilename = typeFromFilename(filename);
+  if (byFilename) return byFilename;
+
   // OpenAPI component libraries carry no version field or $schema — they are
   // bare maps of component objects. Checked last, so it only ever reclassifies
   // what would otherwise be 'unknown'. One type covers all of them; callers
-  // wanting a specific library match on the filename, which is what
-  // distinguishes parameters.yaml from responses.yaml.
+  // wanting a specific library match on the shape of the objects inside.
   if (isComponentLibrary(doc)) return 'components';
   return 'unknown';
 }

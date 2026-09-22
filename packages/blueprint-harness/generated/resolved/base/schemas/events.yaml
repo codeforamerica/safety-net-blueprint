@@ -1,3 +1,4 @@
+$schema: https://json-schema.org/draft/2020-12/schema
 $id: https://blueprint.codeforamerica.org/base/schemas/events.yaml
 $defs:
   EventRef:

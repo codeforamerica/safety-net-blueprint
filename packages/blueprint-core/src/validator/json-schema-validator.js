@@ -110,7 +110,7 @@ function validateSchemas(specs, { resolverMap = {} } = {}) {
 
   // --- Step 2: Pre-load blueprint-core schemas via resolverMap ---
   // Adds validation schemas (state-machine-schema.yaml, annotations-schema.yaml,
-  // policies-schema.yaml, etc.) that live in blueprint-core and are not included
+  // registry-schema.yaml, etc.) that live in blueprint-core and are not included
   // in the in-memory specs. Skips any $id already registered in step 1.
   for (const localDir of Object.values(resolverMap)) {
     for (const file of findFiles(localDir.replace(/\/$/, ''), ['.yaml', '.yml'])) {

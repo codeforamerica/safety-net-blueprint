@@ -43,14 +43,18 @@ if (!graphFiles.length) {
   process.exit(0);
 }
 
-// ── Load policies (domain-agnostic, keyed by policy id) ───────────────────────
+// ── Load registries, keyed by type then entry id ──────────────────────────────
+// Any registry type is picked up; nothing here names one.
 
-const policies = {};
-const policyFiles = readdirSync(resolvedDir, { recursive: true })
-  .filter(f => typeof f === 'string' && f.endsWith('policies.yaml'))
+const registries = {};
+const registryFiles = readdirSync(resolvedDir, { recursive: true })
+  .filter(f => typeof f === 'string' && (f.endsWith('.yaml') || f.endsWith('.yml')))
   .map(f => join(resolvedDir, f));
-for (const pf of policyFiles) {
-  Object.assign(policies, load(readFileSync(pf, 'utf8')) ?? {});
+for (const rf of registryFiles) {
+  let doc;
+  try { doc = load(readFileSync(rf, 'utf8')); } catch { continue; }
+  if (!doc?.type || typeof doc.entries !== 'object') continue;
+  registries[doc.type] = { ...(registries[doc.type] ?? {}), ...doc.entries };
 }
 
 // ── Load ruleset input schemas (for placeholder detection) ────────────────────
@@ -144,7 +148,7 @@ for (const graphFile of graphFiles) {
   const rulesetInputs = rulesetInputsByDomainRuleset[domain]?.[rulesetName] ?? {};
   const slug = `${domain}-${rulesetName}`;
   const endpointInfo = endpointIndex.get(`ruleset:${domain}:${rulesetName}`);
-  const html = generateRulesetHtml(graph, annotations, policies, examples, rulesetInputs, { hubHref, outputDir, endpointInfo, registryTypes });
+  const html = generateRulesetHtml(graph, annotations, registries, examples, rulesetInputs, { hubHref, outputDir, endpointInfo, registryTypes });
   writeFileSync(join(outputDir, `${slug}.html`), html);
   allRulesets.push({ domain, rulesetName, slug });
   console.log(`  ✓ ${domain}/${rulesetName}`);

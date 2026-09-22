@@ -253,7 +253,7 @@ function legendHtml() {
 
 // ── Per-ruleset page ──────────────────────────────────────────────────────────
 
-export function generateRulesetHtml(graph, annotations, policies, examples, rulesetInputs, opts) {
+export function generateRulesetHtml(graph, annotations, registries, examples, rulesetInputs, opts) {
   const { hubHref, endpointInfo, registryTypes = new Set() } = opts;
   const rulesetName = graph.ruleset;
   const domainBadge = `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px;background:#E6EBF9;color:#2B1A78;border:1px solid #C2C0E8;margin-left:8px;">${esc(graph.domain)}</span>`;
@@ -272,7 +272,7 @@ export function generateRulesetHtml(graph, annotations, policies, examples, rule
   // Serialize graph + annotations + examples + ruleset inputs schema for inline JS
   const graphJson = JSON.stringify(graph);
   const annotJson = JSON.stringify(annotations);
-  const policiesJson = JSON.stringify(policies);
+  const registriesJson = JSON.stringify(registries);
   const examplesJson = JSON.stringify(examples);
   const rulesetInputsJson = JSON.stringify(rulesetInputs);
   const registryFieldsJson = JSON.stringify([...registryTypes]);
@@ -295,7 +295,7 @@ ${bottomHtml}
 <script>
 const GRAPH = ${graphJson};
 const ANNOTATIONS = ${annotJson};
-const POLICIES = ${policiesJson};
+const REGISTRIES = ${registriesJson};
 const EXAMPLES = ${examplesJson};
 const RULESET_INPUTS = ${rulesetInputsJson};
 const REGISTRY_FIELDS = new Set(${registryFieldsJson});
@@ -443,6 +443,17 @@ function closeDetail() {
 const ANN_EXPLORER = '../annotations-explorer';
 const ANN_LABEL_STYLE = 'font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;';
 
+// A registry entry declares only description; everything else it carries is
+// type-specific. Showing the description plus whatever else is there keeps the
+// tooltip useful without the renderer knowing any registry type or field name.
+function registryTooltip(entry, id) {
+  if (!entry) return id;
+  const extras = Object.entries(entry)
+    .filter(([k]) => k !== 'description' && k !== 'deprecated')
+    .map(([k, v]) => k + ': ' + (Array.isArray(v) ? v.join(', ') : v));
+  return [entry.description, ...extras].filter(Boolean).join('\\n');
+}
+
 function renderAnnotFields(annot) {
   let html = '';
   for (const [key, val] of Object.entries(annot)) {
@@ -453,9 +464,12 @@ function renderAnnotFields(annot) {
       html += '<div style="margin-bottom:10px;">' + val.map(id => {
         const entrySlug = String(id).replace(/[^a-z0-9]/gi, '-').toLowerCase();
         const href = ANN_EXPLORER + '/' + typeSlug + '.html#entry--' + entrySlug;
-        const tooltip = key === 'policies' ? (POLICIES[id]?.description ?? id) : id;
-        const displayLabel = key === 'policies' ? (POLICIES[id]?.citation ?? id) : id;
-        return '<a href="' + escHtml(href) + '" title="' + escHtml(tooltip) + '" class="ann-chip">' + escHtml(displayLabel) + '</a>';
+        // Registry entries render the same way whatever their type: the ID is
+        // the name, and the tooltip is the description followed by whatever
+        // other fields the entry happens to carry. Naming a type or a field
+        // here would put domain knowledge back into the tooling.
+        return '<a href="' + escHtml(href) + '" title="' + escHtml(registryTooltip(REGISTRIES[key]?.[id], id)) +
+               '" class="ann-chip">' + escHtml(id) + '</a>';
       }).join('') + '</div>';
     } else if (Array.isArray(val) && val.length === 1) {
       html += '<div style="font-size:11px;color:#374151;margin-bottom:10px;">' + escHtml(String(val[0]).trim()) + '</div>';

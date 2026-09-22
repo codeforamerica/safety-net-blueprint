@@ -14,6 +14,7 @@
 import { generateCompositionOverlays } from './compositions.js';
 import { generateRulesResults } from './rules.js';
 import { detectComponentPrefix, rewriteComponentRefs } from './generate/refs.js';
+import { stemOf, siblingPath } from './contract-types.js';
 
 /**
  * @param {import('../types.js').Doc[]} docs
@@ -56,9 +57,9 @@ export function generate(docs) {
  * @returns {object[]} Overlay documents
  */
 function alignRefs(generated, docs) {
-  return generated.map(({ domain, overlay }) => {
-    const wanted = `${domain}-openapi.yaml`;
-    const target = docs.find((doc) => doc.relativePath.endsWith(wanted));
+  return generated.map(({ domain: stem, overlay }) => {
+    const wanted = siblingPath(stem, 'openapi');
+    const target = wanted && docs.find((doc) => doc.relativePath === wanted);
     if (!target) return overlay;
 
     return rewriteComponentRefs(overlay, './', detectComponentPrefix(target.content));
@@ -104,7 +105,7 @@ function compositionOverlays(docs, inputFiles) {
       filePath: doc.path,
       // The stem of the relative path, which is how the generated overlay
       // addresses the sibling OpenAPI spec it patches.
-      domain: doc.relativePath.replace('-compositions.yaml', ''),
+      domain: stemOf(doc.relativePath, 'compositions'),
       doc: doc.content,
     }));
 

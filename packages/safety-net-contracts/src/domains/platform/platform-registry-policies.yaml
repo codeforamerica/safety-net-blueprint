@@ -1,7 +1,10 @@
-$schema: policies-schema.yaml
+$schema: registry-schema.yaml
 version: "1.0"
 
-policies:
+domain: platform
+type: policies
+
+entries:
 
   # ── Household composition ─────────────────────────────────────────────────────
 

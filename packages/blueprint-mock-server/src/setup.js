@@ -15,7 +15,8 @@ import { discoverCompositions } from '@codeforamerica/blueprint-core/composition
 import { discoverRules } from '@codeforamerica/blueprint-core/rules';
 import { insertResource } from './database-manager.js';
 import { registerConfigManaged } from './config-registry.js';
-import { loadPolicies } from '@codeforamerica/blueprint-core/policies';
+import { discover, load } from '@codeforamerica/blueprint-core';
+import { registryEntries } from '@codeforamerica/blueprint-core/registries';
 /**
  * Perform setup: load specs and seed databases
  * @param {Object} options - Setup options
@@ -137,7 +138,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   }
 
   // Seed platform policy registry into the mock database
-  const policies = loadPolicies(specsDir);
+  const policies = registryEntries(discover(specsDir).map(e => load(e.path, e.relativePath)), 'policies');
   const policyEntries = Object.entries(policies);
   for (const [id, policy] of policyEntries) {
     insertResource('registry-policies', { id, ...policy, source: 'system' });

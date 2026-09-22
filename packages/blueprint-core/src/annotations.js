@@ -22,7 +22,7 @@ import yaml from 'js-yaml';
  * @returns {Set<string>}
  */
 export function registryAnnotationTypes(fileMap) {
-  const types = new Set(['policies']); // policies files are a distinct type but always annotation-linkable
+  const types = new Set();
   for (const { content, type } of fileMap.values()) {
     if (type === 'registry' && content?.type) types.add(content.type);
   }

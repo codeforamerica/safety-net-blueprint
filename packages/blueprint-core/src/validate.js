@@ -21,6 +21,7 @@ import {
   validateSortableConfig,
 } from './compositions.js';
 import { validateSchemas } from './validator/json-schema-validator.js';
+import { stemOf } from './contract-types.js';
 import { buildSchemaIndex, buildCollectionIndex } from './indexes.js';
 import { resolverMap } from './paths.js';
 
@@ -32,7 +33,8 @@ import { resolverMap } from './paths.js';
  * that a type missing from both places surfaces as a gap instead of passing.
  */
 const SCHEMA_VALIDATED_ONLY = new Set([
-  'components', 'policies', 'registry', 'config', 'overlay', 'rules-examples',
+  'components', 'policies', 'registry', 'config', 'overlay', 'overlay-config',
+  'rules-examples',
 ]);
 
 /**
@@ -57,8 +59,12 @@ const AWAITING_PORT = new Map([
  * @returns {import('../types.js').ValidationResult}
  */
 export function validate(docs) {
+  // filePath is what lets an external $ref be resolved relative to the document
+  // that declares it. Without it a schema composed via allOf of a sibling file
+  // looks like it has no properties at all.
   const yamlFiles = docs.map((doc) => ({
     relativePath: doc.relativePath ?? doc.path,
+    filePath: doc.path,
     spec: doc.content,
   }));
 
@@ -269,7 +275,7 @@ function validateDoc(doc, context) {
       // The composition validators take { domain, doc }; domain is the stem of
       // the relative path, which is how a composition names its target spec.
       const compositionDoc = {
-        domain: (doc.relativePath ?? doc.path).replace('-compositions.yaml', ''),
+        domain: stemOf(doc.relativePath ?? doc.path, 'compositions'),
         doc: doc.content,
       };
       errors.push(

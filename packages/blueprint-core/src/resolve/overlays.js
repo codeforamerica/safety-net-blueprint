@@ -10,14 +10,7 @@
 import { applyOverlay } from '../overlay/overlay-resolver.js';
 import { resolveActionTargets } from './targets.js';
 
-/**
- * Contract types whose content is authored as lists that a state extends.
- * Replacing one of these wholesale is almost always a mistake, so it is
- * reported.
- */
-const LIST_AUTHORED_TYPES = new Set([
-  'state-machine', 'rules', 'compositions', 'metrics', 'sla-types', 'annotations', 'policies',
-]);
+import { isAuthored } from '../contract-types.js';
 
 /**
  * @param {import('../../types.js').Doc[]} docs
@@ -67,7 +60,7 @@ function applyOne(docs, overlay) {
     current = current.map((doc) => {
       if (!targets.includes(doc)) return doc;
 
-      if (Array.isArray(action.update) && LIST_AUTHORED_TYPES.has(doc.type)) {
+      if (Array.isArray(action.update) && isAuthored(doc.type)) {
         warnings.push(
           `"update:" on "${action.target}" in ${doc.relativePath ?? doc.path} replaces all ` +
           `baseline entries. Use "append:" to add items without removing baseline content. ` +

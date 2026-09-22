@@ -17,7 +17,8 @@ import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { loadAnnotations } from '@codeforamerica/blueprint-core/annotations';
-import { loadPolicies } from '@codeforamerica/blueprint-core/policies';
+import { discover, load } from '@codeforamerica/blueprint-core';
+import { registryEntries } from '@codeforamerica/blueprint-core/registries';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -47,7 +48,7 @@ export function resolveConfig(contractsDir, contentDir) {
     }
   }
 
-  const policies = existsSync(contractsDir) ? loadPolicies(contractsDir) : {};
+  const policies = existsSync(contractsDir) ? registryEntries(discover(contractsDir).map(e => load(e.path, e.relativePath)), 'policies') : {};
 
   return {
     ...config,

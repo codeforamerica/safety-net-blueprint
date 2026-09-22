@@ -129,6 +129,31 @@ export function buildCollectionIndex(docs) {
 }
 
 /**
+ * Index the event channels each AsyncAPI document declares.
+ *
+ * `bySpec` is keyed by filename so a state machine's `eventsSpec:` reference
+ * resolves to its own domain's catalog; `all` is every channel in the set, for
+ * subscriptions, which may cross domains.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {{ bySpec: Map<string, Set<string>>, all: Set<string> }}
+ */
+export function buildChannelIndex(docs) {
+  const bySpec = new Map();
+  const all = new Set();
+
+  for (const doc of docs) {
+    if (doc.type !== 'asyncapi') continue;
+
+    const channels = new Set(Object.keys(doc.content?.channels ?? {}));
+    bySpec.set((doc.relativePath ?? doc.path).split('/').pop(), channels);
+    for (const channel of channels) all.add(channel);
+  }
+
+  return { bySpec, all };
+}
+
+/**
  * Name of the schema a GET returns, whether returned directly or as list items.
  *
  * @param {object} getOp - The `get` operation of a path item

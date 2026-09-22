@@ -1,7 +1,8 @@
-$schema: policies-schema.yaml
+$schema: registry-schema.yaml
 version: 1.0.0
 domain: platform
-policies:
+type: policies
+entries:
   snap-application-acceptance:
     citation: 7 CFR § 273.2(c)
     description: |

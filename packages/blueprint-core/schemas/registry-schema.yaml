@@ -4,9 +4,6 @@
 # Each registry file defines a named set of reusable, citable items keyed by stable ID.
 # Annotation files reference registry entries by ID using the registry type as the field name
 # (e.g., policies: [snap-processing-clock], patterns: [external-ref-defs-oneOf]).
-#
-# The policies registry (*-registry-policies.yaml) currently uses a legacy format
-# (policies-schema.yaml) and will migrate to this schema in a future version.
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/schemas/registry-schema.yaml"
@@ -18,7 +15,7 @@ description: >
   references and render tooltips.
 
   Registry types are open — any kebab-case identifier is valid. Common types:
-    policies  — regulatory citations (legacy format; see policies-schema.yaml)
+    policies  — regulatory citations
     patterns  — contract modeling patterns exercised by the harness
 
   Annotation files reference entries by ID using the type name as the key:

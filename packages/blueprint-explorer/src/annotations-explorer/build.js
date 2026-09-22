@@ -51,18 +51,13 @@ function loadRegistries(resolvedDir) {
     const schema = String(doc.$schema ?? '').split('/').pop();
     const domain = doc.domain ?? null;
 
-    if (schema === 'registry-schema.yaml') {
-      const type = doc.type;
-      if (!type || typeof doc.entries !== 'object') continue;
-      if (!registries.has(type)) registries.set(type, { entries: new Map(), domain });
-      for (const [id, entry] of Object.entries(doc.entries ?? {})) {
-        registries.get(type).entries.set(id, entry ?? {});
-      }
-    } else if (schema === 'policies-schema.yaml') {
-      if (!registries.has('policies')) registries.set('policies', { entries: new Map(), domain });
-      for (const [id, entry] of Object.entries(doc.policies ?? {})) {
-        registries.get('policies').entries.set(id, entry ?? {});
-      }
+    if (schema !== 'registry-schema.yaml') continue;
+
+    const type = doc.type;
+    if (!type || typeof doc.entries !== 'object') continue;
+    if (!registries.has(type)) registries.set(type, { entries: new Map(), domain });
+    for (const [id, entry] of Object.entries(doc.entries ?? {})) {
+      registries.get(type).entries.set(id, entry ?? {});
     }
   }
 
