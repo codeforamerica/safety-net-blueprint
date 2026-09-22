@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "description": "Static documentation generator for Blueprint framework projects — contract reference, state machine diagrams, event catalog, and data dictionaries",
   "type": "module",
-  "exports": "./index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
   "files": [
-    "index.js",
     "src/",
     "build.js",
     "schemas/",

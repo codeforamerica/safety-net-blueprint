@@ -43,14 +43,22 @@ readdirSync(outDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(resolve
 // Resolved source files this tool reads — shown in each page's header metadata.
 const SOURCE_SUFFIXES = ['openapi', 'state-machine'];
 
-// Shared parameters from the resolved components — covers SearchQueryParam, LimitParam, etc.
-const sharedParams = [...contractFiles.values()].find(e => e.type === 'parameters')?.content ?? {};
+// Every component library merged, then partitioned by what OpenAPI says each
+// object is. Matching on shape rather than on a filename or a per-file type
+// means libraries can be added, renamed or split without touching this.
+const allComponents = Object.assign(
+  {},
+  ...[...contractFiles.values()].filter(e => e.type === 'components').map(e => e.content)
+);
+const componentsWhere = (predicate) =>
+  Object.fromEntries(Object.entries(allComponents).filter(([, v]) => predicate(v)));
 
+// Parameter Objects — covers SearchQueryParam, LimitParam, etc.
+const sharedParams = componentsWhere(v => v?.in && v?.name);
 
-// Shared responses (BadRequest, NotFound, etc.) from the resolved components.
-// Filter to only response objects (have `description`) — excludes the Error schema entry.
-const rawSharedResponses = [...contractFiles.values()].find(e => e.type === 'responses')?.content ?? {};
-const sharedResponses = Object.fromEntries(Object.entries(rawSharedResponses).filter(([, v]) => v?.description && !v?.type));
+// Response Objects. `description` without `type` distinguishes them from the
+// schema entries that share these files.
+const sharedResponses = componentsWhere(v => v?.description && !v?.type);
 
 // ── Load + dereference all OpenAPI specs ──────────────────────────────────
 

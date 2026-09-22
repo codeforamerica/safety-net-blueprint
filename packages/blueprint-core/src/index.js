@@ -1,12 +1,16 @@
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+/**
+ * Blueprint core — the contract pipeline.
+ *
+ *   discover(dir, type?)  find contract files on disk
+ *   load(path)            parse one file into a Doc
+ *   generate(docs)        derive overlays and graphs from blueprint contracts
+ *   resolve(docs, opts)   apply overlays, substitute variables, resolve relationships
+ *   validate(docs)        check contracts against their schemas
+ *
+ * Only `discover` touches the filesystem for input; only the caller writes
+ * output. Everything between operates on documents already in memory.
+ */
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-export const schemasDir = join(__dirname, '../schemas');
-export const baseContractsDir = join(__dirname, '../base-contracts');
-
-export const resolverMap = {
-  'https://blueprint.codeforamerica.org/schemas/': schemasDir + '/',
-  'https://blueprint.codeforamerica.org/base/': baseContractsDir + '/',
-};
+export { discover } from './discover.js';
+export { load } from './load.js';
+export { schemasDir, baseContractsDir, resolverMap } from './paths.js';

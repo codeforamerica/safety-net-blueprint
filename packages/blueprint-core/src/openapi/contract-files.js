@@ -17,6 +17,10 @@ import yaml from 'js-yaml';
 export function detectType(filename, doc) {
   if (doc && typeof doc === 'object') {
     const schema = doc.$schema;
+    // A JSON Schema document names a json-schema.org meta-schema. Checked
+    // before the blueprint table so these are typed by what they declare
+    // rather than falling through to the filename.
+    if (typeof schema === 'string' && schema.includes('json-schema.org')) return 'schema';
     if (schema) {
       const base = schema.split('/').pop();
       if (base === 'rules-schema.yaml')          return 'rules';
@@ -51,10 +55,38 @@ export function detectType(filename, doc) {
   if (filename.endsWith('-sla-types.yaml'))        return 'sla-types';
   if (filename.endsWith('-config.yaml'))           return 'config';
   if (filename.endsWith('-overlay.yaml'))          return 'overlay';
-  if (filename === 'parameters.yaml')              return 'parameters';
-  if (filename === 'responses.yaml')               return 'responses';
-  if (filename === 'pagination.yaml')              return 'pagination';
+  // OpenAPI component libraries carry no version field or $schema — they are
+  // bare maps of component objects. Checked last, so it only ever reclassifies
+  // what would otherwise be 'unknown'. One type covers all of them; callers
+  // wanting a specific library match on the filename, which is what
+  // distinguishes parameters.yaml from responses.yaml.
+  if (isComponentLibrary(doc)) return 'components';
   return 'unknown';
+}
+
+/**
+ * Whether a document is a bare map of OpenAPI component objects.
+ *
+ * A component library has no document-level marker at all — no version field,
+ * no $schema, no $id — and every top-level key is a component name mapping to
+ * an object. Rather than guess at which keys a component carries (Parameter,
+ * Response, Schema and Example objects share almost nothing), this checks only
+ * that shape. It runs last, so it can only reclassify documents that would
+ * otherwise be 'unknown'.
+ *
+ * @param {object} [doc] - parsed YAML content
+ * @returns {boolean}
+ */
+function isComponentLibrary(doc) {
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc)) return false;
+  if (doc.$schema || doc.$id || doc.openapi || doc.asyncapi) return false;
+
+  const values = Object.values(doc);
+  if (values.length === 0) return false;
+
+  return values.every(
+    (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
+  );
 }
 
 /**

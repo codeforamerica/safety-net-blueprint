@@ -43,27 +43,59 @@ test('loadContractFiles', async (t) => {
     }
   });
 
-  await t.test('detects parameters type for exactly parameters.yaml', () => {
+  // Parameter, response and schema libraries are all OpenAPI component
+  // libraries and share one type. Consumers wanting a particular kind match on
+  // the shape of the objects inside, not on the filename.
+  await t.test('detects components type for a parameter library', () => {
     const dir = createTmpDir();
     try {
       writeFileSync(join(dir, 'parameters.yaml'), yaml.dump({ LimitParam: { name: 'limit', in: 'query' } }));
       const result = loadContractFiles(dir);
       const entries = [...result.values()];
       assert.strictEqual(entries.length, 1);
-      assert.strictEqual(entries[0].type, 'parameters');
+      assert.strictEqual(entries[0].type, 'components');
     } finally {
       rmSync(dir, { recursive: true });
     }
   });
 
-  await t.test('detects responses type for exactly responses.yaml', () => {
+  await t.test('detects components type for a response library', () => {
     const dir = createTmpDir();
     try {
       writeFileSync(join(dir, 'responses.yaml'), yaml.dump({ BadRequest: { description: 'Bad request' } }));
       const result = loadContractFiles(dir);
       const entries = [...result.values()];
       assert.strictEqual(entries.length, 1);
-      assert.strictEqual(entries[0].type, 'responses');
+      assert.strictEqual(entries[0].type, 'components');
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
+  await t.test('detects schema type from a json-schema.org $schema', () => {
+    const dir = createTmpDir();
+    try {
+      writeFileSync(
+        join(dir, 'enums.yaml'),
+        yaml.dump({
+          $schema: 'https://json-schema.org/draft/2020-12/schema',
+          $id: 'https://blueprint.codeforamerica.org/base/schemas/enums.yaml',
+          $defs: { Domain: { enum: ['intake'] } },
+        })
+      );
+      const entries = [...loadContractFiles(dir).values()];
+      assert.strictEqual(entries[0].type, 'schema');
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
+  await t.test('leaves a document with no recognizable shape unknown', () => {
+    const dir = createTmpDir();
+    try {
+      writeFileSync(join(dir, 'notes.yaml'), yaml.dump({ title: 'a string', count: 3 }));
+      const entries = [...loadContractFiles(dir).values()];
+      assert.strictEqual(entries[0].type, 'unknown');
     } finally {
       rmSync(dir, { recursive: true });
     }

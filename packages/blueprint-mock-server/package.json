@@ -5,12 +5,11 @@
   "type": "module",
   "files": [
     "src/",
-    "cli/",
-    "tests/test-utils.js"
+    "cli/"
   ],
   "exports": {
-    ".": "./cli/server.js",
-    "./test-utils": "./tests/test-utils.js"
+    ".": "./src/index.js",
+    "./test-utils": "./src/test-utils.js"
   },
   "bin": {
     "blueprint-mock": "cli/server.js",

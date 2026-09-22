@@ -146,7 +146,8 @@ const resolveScript = resolve(__dirname, '..', '..', 'blueprint-cli', 'scripts',
 async function resolveContracts() {
   console.log('Resolving contracts...');
   await new Promise((res, rej) => {
-    const proc = spawn('node', [resolveScript, `--spec=${rawContractsDir}`, `--overlay=${join(rawContractsDir, 'overlays')}`, `--out=${contractsDir}`], { stdio: 'inherit', shell: false });
+    const overlayDir = join(rawContractsDir, 'src', 'overlays');
+    const proc = spawn('node', [resolveScript, `--spec=${rawContractsDir}`, `--overlay=${overlayDir}`, `--out=${contractsDir}`], { stdio: 'inherit', shell: false });
     proc.on('close', code => code === 0 ? res() : rej(new Error(`resolve failed with exit code ${code}`)));
     proc.on('error', rej);
   });
