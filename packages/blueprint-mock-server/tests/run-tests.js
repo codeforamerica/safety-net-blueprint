@@ -11,7 +11,7 @@
 
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
-import { dirname, join, resolve } from 'path';
+import { dirname, join, resolve, sep } from 'path';
 import { readdirSync, existsSync } from 'fs';
 import { startMockServer, stopServer, isServerRunning } from '../cli/server.js';
 import { setupFunctional, startFunctionalServer, stopFunctionalServer } from './functional/setup.js';
@@ -50,6 +50,23 @@ const functionalTestFiles = existsSync(functionalDir)
   : [];
 
 const args = process.argv.slice(2);
+
+// `--list` prints every test file this runner would execute, one per line, and
+// exits. It is how tests/check-test-discovery.js verifies that nothing on disk
+// is missed: the runner answers for itself rather than the check duplicating
+// the discovery above and drifting from it.
+if (args.includes('--list')) {
+  for (const file of [
+    ...unitTestFiles,
+    ...integrationTestFiles,
+    ...postmanTestFiles,
+    ...functionalTestFiles,
+  ]) {
+    console.log(file.split(sep).join('/'));
+  }
+  process.exit(0);
+}
+
 const contractsArg    = args.find(a => a.startsWith('--contracts='));
 const rawContractsArg = args.find(a => a.startsWith('--raw-contracts='));
 const seedArg         = args.find(a => a.startsWith('--seed='));

@@ -67,6 +67,17 @@ step "Checking vendored dependencies"
 node packages/blueprint-rules-engine/scripts/check-vendor.js
 pass "Vendor check complete"
 
+# Runs before the suites, not after: a test script that matches nothing still
+# exits 0, so "all tests passed" means nothing until every test file on disk is
+# known to be reachable.
+step "Checking test discovery"
+if node tests/check-test-discovery.js 2>&1; then
+  pass "Every test file is reachable"
+else
+  fail "Test files exist that no test script runs"
+fi
+bail_if_failed
+
 step "Running all tests"
 if npm test --workspace=packages/blueprint-core \
             --workspace=packages/blueprint-cli \

@@ -18,8 +18,8 @@
   },
   "scripts": {
     "test": "node --test",
-    "test:unit": "node --test tests/unit",
-    "test:integration": "node --test tests/integration"
+    "test:unit": "node --test \"tests/unit/**/*.test.js\"",
+    "test:integration": "node --test \"tests/integration/**/*.test.js\""
   },
   "engines": {
     "node": ">=22.11.0"
