@@ -120,9 +120,18 @@ export function deriveAllCollectionNames(api) {
  * `ApplicationMember`. Only the longest match is right, or a record gets
  * seeded into its parent collection as well.
  *
- * Private to the seeder. The Postman builder in blueprint-core does the same
- * matching over its own inputs; the two converge once the server reads
- * resolved contracts and both can work from a document set.
+ * Private to the seeder. blueprint-core matches the same way in
+ * generate(docs, 'examples'), and the two are kept honest by the collection
+ * naming parity test: both depend on a collection name round-tripping to the
+ * schema its examples are keyed by, and that convention is now asserted in
+ * one place.
+ *
+ * They are not one function because core groups by the collections an OpenAPI
+ * document declares, while the seeder is handed its collections by the caller
+ * — the reseed endpoint and the unit tests seed without a spec directory at
+ * all. Collapsing them needs either a matcher on core's entry point or a
+ * seeder rewritten to be document-driven; neither is worth ~15 lines of pure
+ * matching that a test now pins.
  *
  * @param {Record<string, unknown>} examples - Every example in the pool
  * @param {string} collection - The collection to select for

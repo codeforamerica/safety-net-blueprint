@@ -70,15 +70,53 @@ export function examplesForCollection(examples, collection, collections) {
 /**
  * Collection names an API declares, from its non-parameter path segments.
  *
+ * A sub-collection takes its parent in the singular: `/applications/{id}/
+ * members` is `application-members`, not `applications-members`. That is not
+ * a style choice. A collection name is the kebab-case plural of the schema
+ * the collection holds, and the matching below depends on converting one to
+ * the other — `application-members` gives `ApplicationMember`, which is a
+ * real schema and the prefix its example keys carry.
+ * `applications-members` would give `ApplicationsMember`, which exists
+ * nowhere, and every example would fail to match in silence.
+ *
+ * A singular last segment is a singleton sub-resource and is kept as it is;
+ * the path already says so, and pluralizing it would name a collection that
+ * does not exist.
+ *
+ * This mirrors deriveCollectionName in blueprint-mock-server, which names the
+ * databases. The two must agree: the records grouped here are the records
+ * seeded there.
+ *
  * @param {object} spec
  * @returns {string[]}
  */
 function collectionsOf(spec) {
   const names = new Set();
+
   for (const path of Object.keys(spec?.paths ?? {})) {
     const segments = path.split('/').filter(Boolean).filter((s) => !s.startsWith('{'));
-    if (segments.length > 0) names.add(segments.join('-'));
+    if (segments.length === 0) continue;
+
+    const last = segments[segments.length - 1];
+
+    // A top-level singleton is pluralized: the collection holding it is named
+    // for the resource, and `/application` holds applications.
+    if (segments.length === 1) {
+      names.add(last.endsWith('s') ? last : `${last}s`);
+      continue;
+    }
+
+    // Singular last segment — a singleton sub-resource, named as written.
+    if (!last.endsWith('s')) {
+      names.add(last);
+      continue;
+    }
+
+    const parent = segments[segments.length - 2];
+    const parentSingular = parent.endsWith('s') ? parent.slice(0, -1) : parent;
+    names.add(`${parentSingular}-${last}`);
   }
+
   return [...names];
 }
 
