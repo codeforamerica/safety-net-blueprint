@@ -686,7 +686,7 @@ components:
     ApplicationWritable:
       type: object
       properties:
-        programsApplied:
+        programsAppliedFor:
           type: array
           items:
             type: string
@@ -724,7 +724,7 @@ components:
       required:
         - id
         - status
-        - programsApplied
+        - programsAppliedFor
         - referenceId
         - createdAt
         - updatedAt
@@ -834,7 +834,7 @@ components:
         - $ref: "#/components/schemas/ApplicationWritable"
         - type: object
           required:
-            - programsApplied
+            - programsAppliedFor
             - channel
     ApplicationUpdate:
       allOf:

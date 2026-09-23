@@ -288,7 +288,7 @@ components:
     ApplicationWritable:
       type: object
       properties:
-        programsApplied:
+        programsAppliedFor:
           type: array
           items:
             type: string
@@ -317,7 +317,7 @@ components:
     Application:
       description: A benefit application record, including server-managed fields.
       unevaluatedProperties: false
-      required: [id, status, programsApplied, referenceId, createdAt, updatedAt]
+      required: [id, status, programsAppliedFor, referenceId, createdAt, updatedAt]
       allOf:
         - $ref: '#/components/schemas/ApplicationWritable'
         - type: object
@@ -393,7 +393,7 @@ components:
       allOf:
         - $ref: '#/components/schemas/ApplicationWritable'
         - type: object
-          required: [programsApplied, channel]
+          required: [programsAppliedFor, channel]
 
     ApplicationUpdate:
       allOf:

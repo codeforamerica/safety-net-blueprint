@@ -247,14 +247,14 @@ paths:
                       required:
                         - id
                         - status
-                        - programsApplied
+                        - programsAppliedFor
                         - referenceId
                         - createdAt
                         - updatedAt
                       allOf:
                         - type: object
                           properties:
-                            programsApplied:
+                            programsAppliedFor:
                               type: array
                               items:
                                 type: string
@@ -738,7 +738,7 @@ paths:
               allOf:
                 - type: object
                   properties:
-                    programsApplied:
+                    programsAppliedFor:
                       type: array
                       items:
                         type: string
@@ -810,7 +810,7 @@ paths:
                       description: County code for routing this application to the correct local office.
                 - type: object
                   required:
-                    - programsApplied
+                    - programsAppliedFor
                     - channel
       responses:
         "201":
@@ -829,14 +829,14 @@ paths:
                 required:
                   - id
                   - status
-                  - programsApplied
+                  - programsAppliedFor
                   - referenceId
                   - createdAt
                   - updatedAt
                 allOf:
                   - type: object
                     properties:
-                      programsApplied:
+                      programsAppliedFor:
                         type: array
                         items:
                           type: string
@@ -1326,14 +1326,14 @@ paths:
                 required:
                   - id
                   - status
-                  - programsApplied
+                  - programsAppliedFor
                   - referenceId
                   - createdAt
                   - updatedAt
                 allOf:
                   - type: object
                     properties:
-                      programsApplied:
+                      programsAppliedFor:
                         type: array
                         items:
                           type: string
@@ -1801,7 +1801,7 @@ paths:
               allOf:
                 - type: object
                   properties:
-                    programsApplied:
+                    programsAppliedFor:
                       type: array
                       items:
                         type: string
@@ -1884,14 +1884,14 @@ paths:
                 required:
                   - id
                   - status
-                  - programsApplied
+                  - programsAppliedFor
                   - referenceId
                   - createdAt
                   - updatedAt
                 allOf:
                   - type: object
                     properties:
-                      programsApplied:
+                      programsAppliedFor:
                         type: array
                         items:
                           type: string
@@ -4135,14 +4135,14 @@ paths:
                 required:
                   - id
                   - status
-                  - programsApplied
+                  - programsAppliedFor
                   - referenceId
                   - createdAt
                   - updatedAt
                 allOf:
                   - type: object
                     properties:
-                      programsApplied:
+                      programsAppliedFor:
                         type: array
                         items:
                           type: string
@@ -4699,14 +4699,14 @@ paths:
                 required:
                   - id
                   - status
-                  - programsApplied
+                  - programsAppliedFor
                   - referenceId
                   - createdAt
                   - updatedAt
                 allOf:
                   - type: object
                     properties:
-                      programsApplied:
+                      programsAppliedFor:
                         type: array
                         items:
                           type: string
@@ -5281,14 +5281,14 @@ paths:
                 required:
                   - id
                   - status
-                  - programsApplied
+                  - programsAppliedFor
                   - referenceId
                   - createdAt
                   - updatedAt
                 allOf:
                   - type: object
                     properties:
-                      programsApplied:
+                      programsAppliedFor:
                         type: array
                         items:
                           type: string
@@ -5845,14 +5845,14 @@ paths:
                 required:
                   - id
                   - status
-                  - programsApplied
+                  - programsAppliedFor
                   - referenceId
                   - createdAt
                   - updatedAt
                 allOf:
                   - type: object
                     properties:
-                      programsApplied:
+                      programsAppliedFor:
                         type: array
                         items:
                           type: string
@@ -8302,7 +8302,7 @@ components:
     ApplicationWritable:
       type: object
       properties:
-        programsApplied:
+        programsAppliedFor:
           type: array
           items:
             type: string
@@ -8378,14 +8378,14 @@ components:
       required:
         - id
         - status
-        - programsApplied
+        - programsAppliedFor
         - referenceId
         - createdAt
         - updatedAt
       allOf:
         - type: object
           properties:
-            programsApplied:
+            programsAppliedFor:
               type: array
               items:
                 type: string
@@ -8826,7 +8826,7 @@ components:
       allOf:
         - type: object
           properties:
-            programsApplied:
+            programsAppliedFor:
               type: array
               items:
                 type: string
@@ -8898,13 +8898,13 @@ components:
               description: County code for routing this application to the correct local office.
         - type: object
           required:
-            - programsApplied
+            - programsAppliedFor
             - channel
     ApplicationUpdate:
       allOf:
         - type: object
           properties:
-            programsApplied:
+            programsAppliedFor:
               type: array
               items:
                 type: string
@@ -8993,14 +8993,14 @@ components:
             required:
               - id
               - status
-              - programsApplied
+              - programsAppliedFor
               - referenceId
               - createdAt
               - updatedAt
             allOf:
               - type: object
                 properties:
-                  programsApplied:
+                  programsAppliedFor:
                     type: array
                     items:
                       type: string

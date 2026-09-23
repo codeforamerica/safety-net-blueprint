@@ -9,7 +9,7 @@ compositions:
   # before running eligibility determination rules.
   applicationSummary:
     resource: applications
-    fields: [id, referenceId, status, programsApplied, channel, submittedAt]
+    fields: [id, referenceId, status, programsAppliedFor, channel, submittedAt]
     endpoint:
       path: /applications/{applicationId}/summary
       parentLink: true
@@ -31,7 +31,7 @@ compositions:
   applicationReview:
     compositeType: sectionView
     resource: applications
-    fields: [programsApplied, status]
+    fields: [programsAppliedFor, status]
     include:
       members:
         resource: application-members

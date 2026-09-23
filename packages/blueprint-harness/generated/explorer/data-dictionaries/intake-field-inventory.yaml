@@ -4,7 +4,7 @@
 # ── Application ─────────────────────────────────────────────────────────────────
 
 application.id: { type: uuid }
-application.programsApplied[]: { type: enum, values: [snap, medicaid, chip, tanf] }
+application.programsAppliedFor[]: { type: enum, values: [snap, medicaid, chip, tanf] }
 application.channel: { type: enum, values: [online, phone, in_person, mail] }
 application.address: { type: object }
 application.address.street: { type: string }

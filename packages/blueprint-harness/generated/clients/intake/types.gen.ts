@@ -8,7 +8,7 @@ export type ApplicationWritable = {
     /**
      * Benefit programs the household is applying for.
      */
-    programsApplied?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+    programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
     /**
      * Channel through which the application was submitted.
      */
@@ -71,7 +71,7 @@ export type Application = {
     /**
      * Benefit programs the household is applying for.
      */
-    programsApplied: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+    programsAppliedFor: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
     /**
      * Channel through which the application was submitted.
      */
@@ -371,7 +371,7 @@ export type ApplicationCreate = {
     /**
      * Benefit programs the household is applying for.
      */
-    programsApplied?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+    programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
     /**
      * Channel through which the application was submitted.
      */
@@ -433,7 +433,7 @@ export type ApplicationUpdate = {
     /**
      * Benefit programs the household is applying for.
      */
-    programsApplied?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+    programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
     /**
      * Channel through which the application was submitted.
      */
@@ -499,7 +499,7 @@ export type ApplicationList = {
         /**
          * Benefit programs the household is applying for.
          */
-        programsApplied: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+        programsAppliedFor: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
         /**
          * Channel through which the application was submitted.
          */
@@ -1773,7 +1773,7 @@ export type ApplicationWritable2 = {
     /**
      * Benefit programs the household is applying for.
      */
-    programsApplied: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+    programsAppliedFor: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
     /**
      * Channel through which the application was submitted.
      */
@@ -1968,7 +1968,7 @@ export type ApplicationListWritable = {
         /**
          * Benefit programs the household is applying for.
          */
-        programsApplied: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+        programsAppliedFor: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
         /**
          * Channel through which the application was submitted.
          */
@@ -2646,7 +2646,7 @@ export type ListApplicationsResponses = {
             /**
              * Benefit programs the household is applying for.
              */
-            programsApplied: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+            programsAppliedFor: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
             /**
              * Channel through which the application was submitted.
              */
@@ -2967,7 +2967,7 @@ export type CreateApplicationData = {
         /**
          * Benefit programs the household is applying for.
          */
-        programsApplied?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+        programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
         /**
          * Channel through which the application was submitted.
          */
@@ -3060,7 +3060,7 @@ export type CreateApplicationResponses = {
         /**
          * Benefit programs the household is applying for.
          */
-        programsApplied: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+        programsAppliedFor: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
         /**
          * Channel through which the application was submitted.
          */
@@ -3434,7 +3434,7 @@ export type GetApplicationResponses = {
         /**
          * Benefit programs the household is applying for.
          */
-        programsApplied: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+        programsAppliedFor: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
         /**
          * Channel through which the application was submitted.
          */
@@ -3738,7 +3738,7 @@ export type UpdateApplicationData = {
         /**
          * Benefit programs the household is applying for.
          */
-        programsApplied?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+        programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
         /**
          * Channel through which the application was submitted.
          */
@@ -3842,7 +3842,7 @@ export type UpdateApplicationResponses = {
         /**
          * Benefit programs the household is applying for.
          */
-        programsApplied: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+        programsAppliedFor: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
         /**
          * Channel through which the application was submitted.
          */
@@ -5434,7 +5434,7 @@ export type SubmitApplicationResponses = {
         /**
          * Benefit programs the household is applying for.
          */
-        programsApplied: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+        programsAppliedFor: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
         /**
          * Channel through which the application was submitted.
          */
@@ -5831,7 +5831,7 @@ export type OpenApplicationResponses = {
         /**
          * Benefit programs the household is applying for.
          */
-        programsApplied: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+        programsAppliedFor: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
         /**
          * Channel through which the application was submitted.
          */
@@ -6237,7 +6237,7 @@ export type CloseApplicationResponses = {
         /**
          * Benefit programs the household is applying for.
          */
-        programsApplied: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+        programsAppliedFor: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
         /**
          * Channel through which the application was submitted.
          */
@@ -6634,7 +6634,7 @@ export type WithdrawApplicationResponses = {
         /**
          * Benefit programs the household is applying for.
          */
-        programsApplied: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+        programsAppliedFor: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
         /**
          * Channel through which the application was submitted.
          */

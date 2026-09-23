@@ -4,7 +4,7 @@
   "required": [
     "id",
     "status",
-    "programsApplied",
+    "programsAppliedFor",
     "referenceId",
     "createdAt",
     "updatedAt"
@@ -13,7 +13,7 @@
     {
       "type": "object",
       "properties": {
-        "programsApplied": {
+        "programsAppliedFor": {
           "type": "array",
           "items": {
             "type": "string",

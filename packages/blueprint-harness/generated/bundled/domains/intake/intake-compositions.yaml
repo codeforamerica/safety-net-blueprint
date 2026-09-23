@@ -8,7 +8,7 @@ compositions:
       - id
       - referenceId
       - status
-      - programsApplied
+      - programsAppliedFor
       - channel
       - submittedAt
     endpoint:
@@ -29,7 +29,7 @@ compositions:
     compositeType: sectionView
     resource: applications
     fields:
-      - programsApplied
+      - programsAppliedFor
       - status
     include:
       members:

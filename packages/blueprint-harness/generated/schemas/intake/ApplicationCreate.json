@@ -3,7 +3,7 @@
     {
       "type": "object",
       "properties": {
-        "programsApplied": {
+        "programsAppliedFor": {
           "type": "array",
           "items": {
             "type": "string",
@@ -98,7 +98,7 @@
     {
       "type": "object",
       "required": [
-        "programsApplied",
+        "programsAppliedFor",
         "channel"
       ]
     }

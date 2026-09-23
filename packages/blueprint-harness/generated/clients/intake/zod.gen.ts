@@ -3,7 +3,7 @@
 import { z } from 'zod';
 
 export const zApplicationWritable = z.object({
-    programsApplied: z.optional(z.array(z.enum([
+    programsAppliedFor: z.optional(z.array(z.enum([
         'snap',
         'medicaid',
         'chip',
@@ -38,7 +38,7 @@ export const zApplicationWritable = z.object({
  * A benefit application record, including server-managed fields.
  */
 export const zApplication = z.object({
-    programsApplied: z.array(z.enum([
+    programsAppliedFor: z.array(z.enum([
         'snap',
         'medicaid',
         'chip',
@@ -185,7 +185,7 @@ export const zApplication = z.object({
 }));
 
 export const zApplicationCreate = z.object({
-    programsApplied: z.optional(z.array(z.enum([
+    programsAppliedFor: z.optional(z.array(z.enum([
         'snap',
         'medicaid',
         'chip',
@@ -217,7 +217,7 @@ export const zApplicationCreate = z.object({
 }).and(z.record(z.string(), z.unknown()));
 
 export const zApplicationUpdate = z.object({
-    programsApplied: z.optional(z.array(z.enum([
+    programsAppliedFor: z.optional(z.array(z.enum([
         'snap',
         'medicaid',
         'chip',
@@ -250,7 +250,7 @@ export const zApplicationUpdate = z.object({
 
 export const zApplicationList = z.object({
     items: z.array(z.object({
-        programsApplied: z.array(z.enum([
+        programsAppliedFor: z.array(z.enum([
             'snap',
             'medicaid',
             'chip',
@@ -927,7 +927,7 @@ export const zInterviewPromptsResponse = z.array(z.union([
  * A benefit application record, including server-managed fields.
  */
 export const zApplicationWritable2 = z.object({
-    programsApplied: z.array(z.enum([
+    programsAppliedFor: z.array(z.enum([
         'snap',
         'medicaid',
         'chip',
@@ -1030,7 +1030,7 @@ export const zApplicationWritable2 = z.object({
 
 export const zApplicationListWritable = z.object({
     items: z.array(z.object({
-        programsApplied: z.array(z.enum([
+        programsAppliedFor: z.array(z.enum([
             'snap',
             'medicaid',
             'chip',
@@ -1343,7 +1343,7 @@ export const zListApplicationsData = z.object({
  */
 export const zListApplicationsResponse = z.object({
     items: z.array(z.object({
-        programsApplied: z.array(z.enum([
+        programsAppliedFor: z.array(z.enum([
             'snap',
             'medicaid',
             'chip',
@@ -1496,7 +1496,7 @@ export const zListApplicationsResponse = z.object({
 
 export const zCreateApplicationData = z.object({
     body: z.object({
-        programsApplied: z.optional(z.array(z.enum([
+        programsAppliedFor: z.optional(z.array(z.enum([
             'snap',
             'medicaid',
             'chip',
@@ -1534,7 +1534,7 @@ export const zCreateApplicationData = z.object({
  * A benefit application record, including server-managed fields.
  */
 export const zCreateApplicationResponse = z.object({
-    programsApplied: z.array(z.enum([
+    programsAppliedFor: z.array(z.enum([
         'snap',
         'medicaid',
         'chip',
@@ -1705,7 +1705,7 @@ export const zGetApplicationData = z.object({
  * A benefit application record, including server-managed fields.
  */
 export const zGetApplicationResponse = z.object({
-    programsApplied: z.array(z.enum([
+    programsAppliedFor: z.array(z.enum([
         'snap',
         'medicaid',
         'chip',
@@ -1853,7 +1853,7 @@ export const zGetApplicationResponse = z.object({
 
 export const zUpdateApplicationData = z.object({
     body: z.object({
-        programsApplied: z.optional(z.array(z.enum([
+        programsAppliedFor: z.optional(z.array(z.enum([
             'snap',
             'medicaid',
             'chip',
@@ -1893,7 +1893,7 @@ export const zUpdateApplicationData = z.object({
  * A benefit application record, including server-managed fields.
  */
 export const zUpdateApplicationResponse = z.object({
-    programsApplied: z.array(z.enum([
+    programsAppliedFor: z.array(z.enum([
         'snap',
         'medicaid',
         'chip',
@@ -2558,7 +2558,7 @@ export const zSubmitApplicationData = z.object({
  * A benefit application record, including server-managed fields.
  */
 export const zSubmitApplicationResponse = z.object({
-    programsApplied: z.array(z.enum([
+    programsAppliedFor: z.array(z.enum([
         'snap',
         'medicaid',
         'chip',
@@ -2716,7 +2716,7 @@ export const zOpenApplicationData = z.object({
  * A benefit application record, including server-managed fields.
  */
 export const zOpenApplicationResponse = z.object({
-    programsApplied: z.array(z.enum([
+    programsAppliedFor: z.array(z.enum([
         'snap',
         'medicaid',
         'chip',
@@ -2877,7 +2877,7 @@ export const zCloseApplicationData = z.object({
  * A benefit application record, including server-managed fields.
  */
 export const zCloseApplicationResponse = z.object({
-    programsApplied: z.array(z.enum([
+    programsAppliedFor: z.array(z.enum([
         'snap',
         'medicaid',
         'chip',
@@ -3035,7 +3035,7 @@ export const zWithdrawApplicationData = z.object({
  * A benefit application record, including server-managed fields.
  */
 export const zWithdrawApplicationResponse = z.object({
-    programsApplied: z.array(z.enum([
+    programsAppliedFor: z.array(z.enum([
         'snap',
         'medicaid',
         'chip',

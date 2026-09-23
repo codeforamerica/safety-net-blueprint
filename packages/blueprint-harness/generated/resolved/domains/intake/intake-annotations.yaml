@@ -21,7 +21,7 @@ schema:
     patterns:
       - x-enum-source
       - read-only-field
-  application.programsApplied[]:
+  application.programsAppliedFor[]:
     patterns:
       - array-of-enum
   application.submittedAt:

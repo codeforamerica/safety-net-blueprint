@@ -3,7 +3,7 @@
     {
       "type": "object",
       "properties": {
-        "programsApplied": {
+        "programsAppliedFor": {
           "type": "array",
           "items": {
             "type": "string",

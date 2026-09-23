@@ -29,7 +29,7 @@ export const Annotations = {
         "read-only-field"
       ]
     },
-    "application.programsApplied[]": {
+    "application.programsAppliedFor[]": {
       "patterns": [
         "array-of-enum"
       ]
