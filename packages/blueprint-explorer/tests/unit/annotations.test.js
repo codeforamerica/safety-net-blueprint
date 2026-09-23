@@ -1,3 +1,10 @@
+/**
+ * Unit tests for loadAnnotations.
+ *
+ * Moved here with the code: annotations merging is the explorer's concern,
+ * not part of the contract pipeline.
+ */
+
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { writeFileSync, mkdirSync, rmSync } from 'fs';
@@ -5,7 +12,6 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import yaml from 'js-yaml';
 import { loadAnnotations } from '../../src/annotations.js';
-import { registryEntries, registryTypes } from '../../src/registries.js';
 
 function createTmpDir() {
   const dir = join(tmpdir(), `annotations-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -163,56 +169,3 @@ test('loadAnnotations', async (t) => {
 
 // Registries are generic: core knows the format, not which types exist.
 // 'policies' is used here only because it is a realistic type name.
-test('registryEntries', async (t) => {
-  const registry = (type, entries) => ({
-    path: `/tmp/platform-registry-${type}.yaml`,
-    relativePath: `platform-registry-${type}.yaml`,
-    type: 'registry',
-    content: { $schema: 'registry-schema.yaml', version: '1.0', type, entries },
-  });
-
-  await t.test('returns empty object when no registry of that type exists', () => {
-    assert.deepStrictEqual(registryEntries([], 'policies'), {});
-  });
-
-  await t.test('returns entries, preserving type-specific fields', () => {
-    const docs = [registry('policies', {
-      'snap-processing-clock': {
-        citation: '7 CFR § 273.2(g)(1)',
-        description: 'Processing deadline.',
-        programs: ['snap'],
-      },
-    })];
-
-    const result = registryEntries(docs, 'policies');
-    assert.strictEqual(result['snap-processing-clock'].citation, '7 CFR § 273.2(g)(1)');
-    assert.deepStrictEqual(result['snap-processing-clock'].programs, ['snap']);
-  });
-
-  await t.test('merges registries of the same type, later overriding earlier', () => {
-    const docs = [
-      registry('policies', { 'policy-a': { description: 'A.' }, shared: { description: 'baseline.' } }),
-      registry('policies', { 'policy-b': { description: 'B.' }, shared: { description: 'state override.' } }),
-    ];
-
-    const result = registryEntries(docs, 'policies');
-    assert.ok(result['policy-a']);
-    assert.ok(result['policy-b']);
-    assert.strictEqual(result.shared.description, 'state override.');
-  });
-
-  await t.test('ignores registries of other types', () => {
-    const docs = [
-      registry('policies', { 'policy-a': { description: 'A.' } }),
-      registry('patterns', { 'pattern-a': { description: 'P.' } }),
-    ];
-
-    assert.deepStrictEqual(Object.keys(registryEntries(docs, 'policies')), ['policy-a']);
-    assert.deepStrictEqual(Object.keys(registryEntries(docs, 'patterns')), ['pattern-a']);
-  });
-
-  await t.test('reports every declared type without knowing them in advance', () => {
-    const docs = [registry('policies', { a: { description: 'A.' } }), registry('design-patterns', { b: { description: 'B.' } })];
-    assert.deepStrictEqual(registryTypes(docs), new Set(['policies', 'design-patterns']));
-  });
-});

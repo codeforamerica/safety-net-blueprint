@@ -16,7 +16,7 @@ import {
   checkPathExists,
   rootExists,
   applyOverlay
-} from '@codeforamerica/blueprint-core/overlay';
+} from '../../../src/overlay.js';
 
 test('Overlay Resolver Tests', async (t) => {
 

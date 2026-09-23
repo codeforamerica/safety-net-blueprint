@@ -37,7 +37,8 @@ import { join, dirname, basename, resolve as resolvePath } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import yaml from 'js-yaml';
-import { bundleSpec, loadContractFiles } from '@codeforamerica/blueprint-core/openapi';
+import { discover, load } from '@codeforamerica/blueprint-core';
+import { bundleSpec } from './lib/bundle.js';
 import { schemasDir } from '@codeforamerica/blueprint-core';
 import { collectNamedEnumDefs } from './collect-named-enum-defs.js';
 
@@ -463,7 +464,7 @@ async function main() {
 
   // Build file map once for the whole resolved contracts directory.
   // Used by collectNamedEnumDefs to resolve external $refs without re-reading from disk.
-  const fileMap = loadContractFiles(specsDir);
+  const docs = discover(specsDir).map(load);
 
   const domains = [];
 
@@ -511,7 +512,7 @@ async function main() {
     // schemas — we append the exports ourselves so consumers can iterate values at runtime.
     const typesGenPath = join(domainOutputDir, 'types.gen.ts');
     if (existsSync(typesGenPath)) {
-      const namedEnums = collectNamedEnumDefs(resolvePath(specPath), fileMap);
+      const namedEnums = collectNamedEnumDefs(resolvePath(specPath), docs);
       if (namedEnums.length > 0) {
         patchTypesGenForNamedEnums(typesGenPath, namedEnums);
         // Also patch the domain index.ts barrel — hey-api generates type-only re-exports

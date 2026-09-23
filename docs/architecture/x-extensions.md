@@ -104,7 +104,7 @@ Valid values: `case-management`, `client-management`, `communication`, `data-exc
 
 **File type:** Any spec node — `paths`, operations, schemas, or any other YAML node.
 
-Tags a spec section so the resolve pipeline includes it only in specific environments. When resolving with `--env=<name>`, nodes whose `x-environments` list does not include the target environment are removed. The `x-environments` key is stripped from nodes that are kept.
+Tags a spec section so the resolve pipeline includes it only in specific environments. When resolving with `--env-target=<name>`, nodes whose `x-environments` list does not include the target environment are removed. The `x-environments` key is stripped from nodes that are kept.
 
 ```yaml
 paths:

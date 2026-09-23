@@ -1,25 +1,15 @@
 /**
- * OpenAPI specification loader and parser
- * Discovers and loads all API specifications from the openapi directory
+ * The mock server's runtime view of an OpenAPI spec.
+ *
+ * Discovery and parsing are blueprint-core's `discover` and `load`; what is
+ * here is the shape the server itself needs — server base path, endpoint
+ * list, schemas, error responses, pagination defaults. That is a runtime
+ * concern, not a contract one, which is why it lives with the server.
  */
 
-import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join, basename } from 'path';
-import yaml from 'js-yaml';
+import { basename } from 'path';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-import pluralize from 'pluralize';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-/**
- * Load and parse a YAML file
- */
-function loadYaml(filePath) {
-  const content = readFileSync(filePath, 'utf8');
-  return yaml.load(content, { schema: yaml.CORE_SCHEMA });
-}
+import { discover } from '@codeforamerica/blueprint-core';
 
 /**
  * Discover all API specification files in the given specs directory.
@@ -32,39 +22,14 @@ export function discoverApiSpecs({ specsDir } = {}) {
     throw new Error('specsDir is required — pass --spec <path> to specify the specs file or directory');
   }
 
-  return walkForPattern(specsDir, '-openapi.yaml')
-    .filter(fullPath => {
-      try {
-        const content = readFileSync(fullPath, 'utf8');
-        if (content.includes('x-status: deprecated')) return false;
-      } catch {
-        // If we can't read the file, include it and let validation handle it
-      }
-      return true;
-    })
-    .map(fullPath => ({
-      name: basename(fullPath, '-openapi.yaml'),
-      specPath: fullPath
+  // discover() identifies type from content rather than filename, so a spec
+  // without the -openapi.yaml suffix is still found, and it already skips
+  // deprecated documents.
+  return discover(specsDir, 'openapi')
+    .map((file) => ({
+      name: basename(file.path, '-openapi.yaml'),
+      specPath: file.path,
     }));
-}
-
-/**
- * Recursively find all files in dir whose basename ends with suffix.
- * Skips node_modules and hidden directories.
- */
-function walkForPattern(dir, suffix) {
-  const results = [];
-  for (const entry of readdirSync(dir)) {
-    if (entry.startsWith('.') || entry === 'node_modules') continue;
-    const fullPath = join(dir, entry);
-    const stat = statSync(fullPath);
-    if (stat.isDirectory()) {
-      results.push(...walkForPattern(fullPath, suffix));
-    } else if (stat.isFile() && entry.endsWith(suffix)) {
-      results.push(fullPath);
-    }
-  }
-  return results;
 }
 
 /**
@@ -215,47 +180,7 @@ export function extractMetadata(spec, resourceName) {
   return metadata;
 }
 
-/**
- * Convert a kebab-case collection name to its PascalCase singular schema prefix.
- * Used to match example keys to collections (e.g., "queues" → "Queue",
- * "task-audit-events" → "TaskAuditEvent").
- * @param {string} collectionName - Database collection name
- * @returns {string} PascalCase schema prefix
- */
-export function collectionToSchemaPrefix(collectionName) {
-  const segments = collectionName.split('-');
-  return segments.map((seg, i) => {
-    // only the trailing segment is the plural noun, the earlier ones qualify it
-    const s = i === segments.length - 1 ? pluralize.singular(seg) : seg;
-    return s.charAt(0).toUpperCase() + s.slice(1);
-  }).join('');
-}
 
-/**
- * Extract individual resources from an examples object.
- * Filters out list examples, payload examples, and non-object entries.
- * Returns resources sorted by key name for consistent ordering.
- * @param {Object} examples - Examples object from YAML (key → value)
- * @returns {Array<{key: string, name: string, data: Object}>} Sorted array of resources
- */
-export function extractIndividualResources(examples) {
-  const resources = [];
-
-  for (const [key, value] of Object.entries(examples)) {
-    if (!value || typeof value !== 'object') continue;
-    if (value.items && Array.isArray(value.items)) continue;
-
-    const lowerKey = key.toLowerCase();
-    if (lowerKey.includes('payload') || lowerKey.includes('create') || lowerKey.includes('update')) continue;
-
-    if (value.id) {
-      resources.push({ key, name: key, data: value });
-    }
-  }
-
-  resources.sort((a, b) => a.key.localeCompare(b.key));
-  return resources;
-}
 
 /**
  * Load all API specifications

@@ -30,7 +30,7 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import yaml from 'js-yaml';
-import { compileRuleset } from '@codeforamerica/blueprint-core/rules';
+import { generate } from '@codeforamerica/blueprint-core';
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 
 function parseArgs() {
@@ -78,6 +78,30 @@ function evaluateGraph(graph, inputs) {
   return evaluate(graph, inputs);
 }
 
+/**
+ * The compiled graph for one ruleset.
+ *
+ * Compilation is `generate`'s job; it returns a graph per ruleset with the
+ * name it came from, so there is nothing to compile here.
+ *
+ * @param {object} rulesDoc - Parsed rules contract
+ * @param {string} rulesetName
+ * @returns {object}
+ */
+function graphFor(rulesDoc, rulesetName) {
+  const graphs = generate([
+    { path: 'rules.yaml', relativePath: 'rules.yaml', type: 'rules', content: rulesDoc,
+      refs: () => new Map(), model: () => null, domain: rulesDoc.domain ?? null,
+      resolved: false, provenance: null },
+  ]);
+  const found = graphs.find((g) => g.ruleset === rulesetName);
+  if (!found) {
+    console.error(`Error: Ruleset "${rulesetName}" produced no graph`);
+    process.exit(1);
+  }
+  return found.graph;
+}
+
 function evaluateRules(doc, inputs, rulesetName) {
   const rulesets = doc.rulesets ?? {};
   const name = rulesetName ?? Object.keys(rulesets)[0];
@@ -86,8 +110,7 @@ function evaluateRules(doc, inputs, rulesetName) {
     console.error(`Error: Ruleset "${name}" not found`);
     process.exit(1);
   }
-  const graph = compileRuleset(doc.domain ?? 'unknown', name, ruleset);
-  return evaluate(graph, inputs);
+  return evaluate(graphFor(doc, name), inputs);
 }
 
 function evaluateExamples(doc, specPath) {
@@ -103,7 +126,7 @@ function evaluateExamples(doc, specPath) {
       console.error(`Error: Ruleset "${rulesetName}" not found in companion rules file`);
       process.exit(1);
     }
-    const graph = compileRuleset(rulesDoc.domain ?? 'unknown', rulesetName, ruleset);
+    const graph = graphFor(rulesDoc, rulesetName);
     const examples = rulesetExamples.examples ?? [];
     result[rulesetName] = examples.map(example => evaluate(graph, example.inputs ?? {}));
   }

@@ -37,7 +37,7 @@ export function buildSchemaIndex(specsDir) {
 
     for (const [name, rawSchema] of Object.entries(spec?.components?.schemas || {})) {
       if (!index.has(name)) {
-        const schema = resolveSchemaRefs(rawSchema, { spec, specFilePath: filePath });
+        const schema = resolveSchemaRefs(rawSchema, { spec, specFilePath: filePath, setRoot: specsDir });
         index.set(name, { spec, schema, properties: collectTopLevelProperties(spec, schema) });
       }
     }
@@ -52,7 +52,7 @@ export function buildSchemaIndex(specsDir) {
  * Key format: 'domain/resource' or 'domain/resource/sub-resource'
  * (non-param path segments joined, prefixed by x-domain)
  */
-export function buildEndpointIndex(specsDir) {
+export function buildCollectionSchemaIndex(specsDir) {
   const index = new Map();
   let files;
   try { files = readdirSync(specsDir, { recursive: true }).filter(f => typeof f === 'string'); } catch { return index; }
@@ -502,7 +502,7 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
  * @param {string} filePath - Path to the file (for error messages)
  * @param {object} doc - Parsed YAML document
  * @param {Map} schemaIndex - From buildSchemaIndex()
- * @param {Map} endpointIndex - From buildEndpointIndex()
+ * @param {Map} endpointIndex - From buildCollectionSchemaIndex()
  * @returns {Array<{rule, message, path}>}
  */
 export function validateCrossArtifact(filePath, doc, schemaIndex, endpointIndex, exceptions = {}) {

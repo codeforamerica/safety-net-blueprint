@@ -5,10 +5,10 @@
 import { readFileSync, readdirSync, statSync } from 'fs';
 import yaml from 'js-yaml';
 import { insertResource, clearAll } from './database-manager.js';
-import { collectionToSchemaPrefix, extractIndividualResources } from '@codeforamerica/blueprint-core/openapi';
 import { deriveCollectionName as deriveCollectionNameFromPath } from './collection-utils.js';
 import { join } from 'path';
 import { resolveTimeTokens } from './time-tokens.js';
+import pluralize from 'pluralize';
 
 /**
  * Recursively find all *-mock-data.yaml files under rootDir.
@@ -98,40 +98,6 @@ export function deriveAllCollectionNames(api) {
 }
 
 /**
- * Extract resources from examples that belong to a specific collection.
- *
- * Uses longest-prefix matching to disambiguate keys when collection schema
- * prefixes share a common prefix. For example, both "applications"
- * (prefix "Application") and "application-members" (prefix
- * "ApplicationMember") match the key "ApplicationMemberExample1" via
- * startsWith — but only "ApplicationMember" is the longest match, so the
- * key is correctly assigned to application-members and not applications.
- *
- * @param {Object} examples - All examples from the YAML file
- * @param {string} collectionName - Target collection name
- * @param {string[]} allCollections - All collection names for this API (used for disambiguation)
- * @returns {Array} Array of resource objects for this collection
- */
-function extractResourcesForCollection(examples, collectionName, allCollections) {
-  const targetPrefix = collectionToSchemaPrefix(collectionName);
-  const allPrefixes = allCollections.map(collectionToSchemaPrefix);
-  const filtered = {};
-  for (const [key, value] of Object.entries(examples)) {
-    if (!key.startsWith(targetPrefix)) continue;
-    // Find the longest schema prefix that matches this key. If a more specific
-    // collection (e.g. "ApplicationMember") also matches, skip this key for the
-    // less specific one (e.g. "Application") so records aren't double-assigned.
-    const longestMatch = allPrefixes
-      .filter((p) => key.startsWith(p))
-      .sort((a, b) => b.length - a.length)[0];
-    if (longestMatch === targetPrefix) {
-      filtered[key] = value;
-    }
-  }
-  return extractIndividualResources(filtered);
-}
-
-/**
  * Seed all databases for all discovered APIs.
  *
  * Recursively discovers all *-mock-data.yaml files under seedDir, merges them
@@ -146,6 +112,59 @@ function extractResourcesForCollection(examples, collectionName, allCollections)
  *   When null, seeding is skipped and all collections start empty.
  * @returns {Object} Summary of seeded data
  */
+/**
+ * The example records belonging to one collection.
+ *
+ * Example keys are named after their schema, and schema prefixes nest:
+ * `ApplicationMemberExample1` starts with both `Application` and
+ * `ApplicationMember`. Only the longest match is right, or a record gets
+ * seeded into its parent collection as well.
+ *
+ * Private to the seeder. The Postman builder in blueprint-core does the same
+ * matching over its own inputs; the two converge once the server reads
+ * resolved contracts and both can work from a document set.
+ *
+ * @param {Record<string, unknown>} examples - Every example in the pool
+ * @param {string} collection - The collection to select for
+ * @param {string[]} collections - All collections, for disambiguation
+ * @returns {Array<{ key: string, name: string, data: object }>}
+ */
+function examplesForCollection(examples, collection, collections) {
+  const target = schemaPrefixOf(collection);
+  const prefixes = collections.map(schemaPrefixOf);
+
+  const matched = [];
+  for (const [key, value] of Object.entries(examples)) {
+    if (!key.startsWith(target)) continue;
+    if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+
+    const longest = prefixes
+      .filter((prefix) => key.startsWith(prefix))
+      .sort((a, b) => b.length - a.length)[0];
+
+    if (longest === target) matched.push({ key, name: key, data: value });
+  }
+
+  return matched.sort((a, b) => a.key.localeCompare(b.key));
+}
+
+/**
+ * `task-audit-events` → `TaskAuditEvent`. Only the trailing segment is the
+ * plural noun; earlier ones qualify it.
+ *
+ * @param {string} collection
+ * @returns {string}
+ */
+function schemaPrefixOf(collection) {
+  const segments = collection.split('-');
+  return segments
+    .map((segment, i) => {
+      const s = i === segments.length - 1 ? pluralize.singular(segment) : segment;
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    })
+    .join('');
+}
+
 export function seedAllDatabases(apiSpecs, specsDir, seedDir) {
   // Clear all collections first
   for (const api of apiSpecs) {
@@ -186,7 +205,7 @@ export function seedAllDatabases(apiSpecs, specsDir, seedDir) {
 
   for (const collectionName of allCollections) {
     try {
-      const resources = extractResourcesForCollection(allExamples, collectionName, allCollections);
+      const resources = examplesForCollection(allExamples, collectionName, allCollections);
 
       if (resources.length === 0) {
         summary[collectionName] = 0;

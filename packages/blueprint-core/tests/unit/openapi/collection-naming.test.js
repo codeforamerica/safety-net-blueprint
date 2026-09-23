@@ -1,5 +1,5 @@
 /**
- * Unit test for collectionToSchemaPrefix in the OpenAPI loader.
+ * Unit test for collectionToSchemaPrefix — collection name to schema prefix.
  *
  * The function turns a kebab-case collection name into its PascalCase singular
  * schema prefix. Singularizing the final segment is the tricky part: it has to
@@ -9,7 +9,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { collectionToSchemaPrefix } from '../../../src/openapi/openapi-loader.js';
+import { collectionToSchemaPrefix } from '../../../src/openapi/utils.js';
 
 test('collectionToSchemaPrefix', async (t) => {
   await t.test('singularizes ordinary plural collections', () => {

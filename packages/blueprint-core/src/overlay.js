@@ -6,7 +6,7 @@
  *   - overlay/overlay-resolver.js: apply OpenAPI Overlay Specification actions
  */
 
-export { CONFIG_SCHEMA, extractConfig, overlayConfig, validateConfig, getConfigDefaults } from './overlay/config.js';
+export { CONFIG_SCHEMA, extractConfig, validateConfig, getConfigDefaults } from './overlay/config.js';
 
 export {
   parsePath,

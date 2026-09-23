@@ -26,7 +26,7 @@
  */
 
 import { readFileSync, existsSync } from 'fs';
-import { basename, dirname, join, parse as parsePath } from 'path';
+import { basename, dirname, join, resolve as resolvePath, parse as parsePath } from 'path';
 import yaml from 'js-yaml';
 import { detectType } from './openapi/contract-files.js';
 
@@ -35,16 +35,20 @@ export const MANIFEST_FILENAME = '.blueprint-resolved.json';
 /**
  * Read a contract file and build its Doc.
  *
- * `relativePath` comes from `discover`, which knows the root of the contract
- * set. Loading a file directly leaves it null, and passes that on honestly —
- * `generate` needs it to address overlay targets and rejects a document that
- * does not have one, rather than guessing at a root.
+ * Takes what `discover` returned rather than its parts: `path`, `relativePath`
+ * and `domain` are one thing — the file's identity within the set — so
+ * `discover(dir).map(load)` carries all of it through. A bare path is accepted
+ * for a file that belongs to no set; `relativePath` is then null, and
+ * `generate` rejects such a document rather than guessing at a root.
  *
- * @param {string} path - Absolute path to a .yaml contract file
- * @param {string} [relativePath] - Position within the contract set
+ * @param {import('../types.js').DiscoveredFile|string} file - What `discover`
+ *   returned, or a bare path for a file that belongs to no set
  * @returns {import('../types.js').Doc}
  */
-export function load(path, relativePath = null) {
+export function load(file) {
+  const { path, relativePath = null, domain = null } =
+    typeof file === 'string' ? { path: file } : file;
+
   const raw = readFileSync(path, 'utf8');
   const content = yaml.load(raw, { schema: yaml.CORE_SCHEMA });
   const type = detectType(basename(path), content);
@@ -53,13 +57,78 @@ export function load(path, relativePath = null) {
   return {
     path,
     relativePath,
+    // discover() resolves this against the whole set, which is the only way
+    // the path-segment and filename fallbacks can work. Loading a file alone
+    // still gets the two answers the content itself provides.
+    domain: domain ?? content?.info?.['x-domain'] ?? content?.domain ?? null,
     type,
     content,
     refs() { return indexRefs(this.content); },
+    externalRefs(docs) { return externalRefs(this, docs); },
+    resolveRef(ref, docs) { return resolveRef(ref, docs); },
     model() { return buildModel(this.type, this.content); },
     resolved: provenance !== null,
     provenance,
   };
+}
+
+/**
+ * The sibling documents this document's external $refs point at.
+ *
+ * Keyed by the ref's file part exactly as written, since that is what a
+ * caller has in hand when it meets the ref. Canonical https:// refs are
+ * skipped — they are rewritten to relative paths at write time, and before
+ * that they resolve through the schema registry, not the file tree.
+ *
+ * @param {import('../types.js').Doc} doc
+ * @param {import('../types.js').Doc[]} docs - The set to resolve against
+ * @returns {Map<string, object>} Ref file part to that document's content
+ */
+function externalRefs(doc, docs) {
+  const byPath = new Map(docs.map((d) => [resolvePath(d.path), d.content]));
+  const dir = dirname(resolvePath(doc.path));
+  const found = new Map();
+
+  for (const ref of doc.refs().values()) {
+    if (!ref.external || !ref.file) continue;
+    if (ref.file.startsWith('http://') || ref.file.startsWith('https://')) continue;
+
+    const content = byPath.get(resolvePath(dir, ref.file));
+    if (content) found.set(ref.file, content);
+  }
+
+  return found;
+}
+
+/**
+ * Follow one external $ref to the schema it names.
+ *
+ * The file part is matched against relative paths within the set. A ref
+ * written from a subdirectory may lead with `../` segments that the set's
+ * own paths do not have, so those are stripped and retried.
+ *
+ * @param {string} ref - An external $ref, e.g. `../schemas/intake.yaml#/$defs/Member`
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {object} The referenced schema, or an empty object if unresolvable
+ */
+function resolveRef(ref, docs) {
+  const hashIdx = ref.indexOf('#');
+  if (hashIdx === -1) return {};
+
+  const anchor = ref.slice(hashIdx + 1);
+  const wanted = ref.slice(0, hashIdx).replace(/^\.\//, '');
+
+  const byRelative = new Map(docs.map((d) => [d.relativePath, d.content]));
+  const content =
+    byRelative.get(wanted) ?? byRelative.get(wanted.replace(/^(\.\.\/)+/, ''));
+  if (!content) return {};
+
+  let node = content;
+  for (const segment of anchor.split('/').filter(Boolean)) {
+    if (node === null || typeof node !== 'object') return {};
+    node = node[segment];
+  }
+  return node ?? {};
 }
 
 /**
@@ -95,6 +164,10 @@ function indexRefs(content) {
           pointer,
           external,
           file,
+          // The last fragment segment, which is the schema name across every
+          // ref form: #/components/schemas/Foo, #/$defs/Foo, and external
+          // refs ending in either.
+          name: pointer.split('/').filter(Boolean).pop() ?? null,
           resolved: external ? null : found !== undefined,
           target: found ?? null,
         });

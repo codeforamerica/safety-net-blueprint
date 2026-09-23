@@ -3,8 +3,8 @@ import { dirname, join, resolve, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { load } from 'js-yaml';
 import { generate, generateOverview, generateEventsPage } from './generate.js';
-import { buildEventIndex } from '@codeforamerica/blueprint-core/state-machines';
-import { buildEndpointIndex } from '@codeforamerica/blueprint-core/openapi';
+import { buildEventIndex } from '../contract-nav.js';
+import { discover, extract, load as loadDoc } from '@codeforamerica/blueprint-core';
 import { generateHtml, generateOverviewHtml, generateEventsHtml } from './generate-html.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -36,10 +36,7 @@ const domainFiles = files.filter(f => {
 const allStateMachines = domainFiles.map(f => load(readFileSync(f, 'utf8')));
 const eventIndex = buildEventIndex(allStateMachines);
 
-const openApiFiles = readdirSync(resolvedDir, { recursive: true })
-  .filter(f => typeof f === 'string' && f.endsWith('-openapi.yaml'))
-  .map(f => ({ spec: load(readFileSync(join(resolvedDir, f), 'utf8')) }));
-const endpointIndex = buildEndpointIndex(openApiFiles);
+const endpointIndex = extract(discover(resolvedDir, 'openapi').map(loadDoc), 'relationships');
 
 console.log(`Generating state machine docs for ${domainFiles.length} domain(s)...`);
 

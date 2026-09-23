@@ -18,7 +18,6 @@
  * @module fact-graph
  */
 
-import { compileRuleset } from '@codeforamerica/blueprint-core/rules';
 import { matchesType, EvalResult, Graph } from './evaluator.js';
 import {
   FactDictionaryFactory,
@@ -507,14 +506,13 @@ export function toFactGraph(graph) {
  * @param {string} [rulesetName] - which ruleset to translate; defaults to first
  * @returns {string} FactGraph XML string
  */
-export function toFactGraphXml(rulesDoc, rulesetName) {
-  const rulesets = rulesDoc?.rulesets ?? {};
-  const name = rulesetName ?? Object.keys(rulesets)[0];
-  const ruleset = rulesets[name];
-  if (!ruleset) throw new Error(`Ruleset "${name}" not found`);
-
-  const domain = rulesDoc.domain ?? 'unknown';
-  const graph = compileRuleset(domain, name, ruleset);
+export function toFactGraphXml(graph) {
+  if (!graph?.facts || !graph?.outputs) {
+    throw new TypeError(
+      'toFactGraphXml expects a compiled graph (facts, outputs). To compile a ' +
+      'rules contract, use build(docs, \'graph\') from @codeforamerica/blueprint-core.'
+    );
+  }
   return toFactGraph(graph);
 }
 
@@ -792,21 +790,15 @@ export function evaluateWithFactGraph(graph, inputs) {
  * Node-only — the FactGraph engine is not browser-compatible.
  * For browser use, import { toGraph } from './evaluator.js' instead.
  *
- * @param {Object} rulesDocOrGraph - rules doc or compiled graph
- * @param {string} [rulesetName]   - which ruleset to use (defaults to first)
+ * @param {Object} graph - A compiled graph: facts, outputs, dependencies
  * @returns {Graph}
  */
-export function toGraphWithFactGraph(rulesDocOrGraph, rulesetName) {
-  // Already compiled
-  if (rulesDocOrGraph.facts && rulesDocOrGraph.outputs) {
-    return new FactGraphGraph(rulesDocOrGraph);
+export function toGraphWithFactGraph(graph) {
+  if (!graph?.facts || !graph?.outputs) {
+    throw new TypeError(
+      'toGraphWithFactGraph expects a compiled graph (facts, outputs). To ' +
+      'compile a rules contract, use build(docs, \'graph\') from @codeforamerica/blueprint-core.'
+    );
   }
-  // Rules doc — compile first
-  const rulesets = rulesDocOrGraph.rulesets ?? {};
-  const name = rulesetName ?? Object.keys(rulesets)[0];
-  const ruleset = rulesets[name];
-  if (!ruleset) throw new Error(`Ruleset "${name}" not found`);
-  const domain = rulesDocOrGraph.domain ?? 'unknown';
-  const compiled = compileRuleset(domain, name, ruleset);
-  return new FactGraphGraph(compiled);
+  return new FactGraphGraph(graph);
 }

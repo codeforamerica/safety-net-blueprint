@@ -12,9 +12,9 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, rmSync, mkdirSync
 import { resolve, dirname, sep, relative, join } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { loadAnnotations } from '@codeforamerica/blueprint-core/annotations';
-import { loadContractFiles } from '@codeforamerica/blueprint-core/openapi';
-import { findSpecRelativePaths } from '@codeforamerica/blueprint-core/json-schema';
+import { loadAnnotations } from '../annotations.js';
+import { contractFileMap } from '../contract-files.js';
+import { findSpecRelativePaths } from '../contract-nav.js';
 import { COLORS } from '../lib/theme.js';
 import { esc as h, titleCase, breadcrumb, headerMetaSubtitle, HEADER_CODE_STYLE, annotationChips } from '../lib/html.js';
 import { twoColumnPage, singleColumnPage } from '../lib/layout.js';
@@ -436,7 +436,7 @@ function main() {
     return;
   }
 
-  const fileMap = loadContractFiles(resolvedDir);
+  const fileMap = contractFileMap(resolvedDir);
 
   // Index openapi files by x-domain for version lookup
   const openApiByDomain = new Map();

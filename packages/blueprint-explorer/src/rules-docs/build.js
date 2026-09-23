@@ -15,8 +15,9 @@ import { dirname, join, resolve, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { load } from 'js-yaml';
-import { buildEndpointIndex, loadContractFiles } from '@codeforamerica/blueprint-core/openapi';
-import { registryAnnotationTypes } from '@codeforamerica/blueprint-core/annotations';
+import { discover, extract, load as loadDoc } from '@codeforamerica/blueprint-core';
+import { contractFileMap } from '../contract-files.js';
+import { registryAnnotationTypes } from '../annotations.js';
 import { generateRulesetHtml, generateIndexHtml } from './generate-html.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -112,11 +113,8 @@ for (const af of annotationFiles) {
 
 // ── Build endpoint index and registry types ───────────────────────────────────
 
-const openApiFiles = readdirSync(resolvedDir, { recursive: true })
-  .filter(f => typeof f === 'string' && f.endsWith('-openapi.yaml'))
-  .map(f => ({ spec: load(readFileSync(join(resolvedDir, f), 'utf8')) }));
-const endpointIndex = buildEndpointIndex(openApiFiles);
-const registryTypes = registryAnnotationTypes(loadContractFiles(resolvedDir));
+const endpointIndex = extract(discover(resolvedDir, 'openapi').map(loadDoc), 'relationships');
+const registryTypes = registryAnnotationTypes(contractFileMap(resolvedDir));
 
 // ── Copy browser bundle ───────────────────────────────────────────────────────
 

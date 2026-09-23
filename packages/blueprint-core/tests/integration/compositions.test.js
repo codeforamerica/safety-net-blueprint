@@ -13,7 +13,7 @@ import {
   discoverCompositions,
   buildResourceSchemaIndex,
   validateBindFields,
-} from '@codeforamerica/blueprint-core/compositions';
+} from '../../src/compositions.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

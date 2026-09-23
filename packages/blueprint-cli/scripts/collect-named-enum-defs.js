@@ -6,33 +6,30 @@
  * inlined as anonymous union types. This module collects those enums so the client generator
  * can append explicit const exports, making them iterable at runtime.
  *
- * Uses loadContractFiles + loadExternalRefs from blueprint-core so any valid relative path
+ * Resolves refs through the loaded contract set so any valid relative path
  * pattern is handled correctly, regardless of directory depth.
  */
 
-import { loadExternalRefs } from '@codeforamerica/blueprint-core/openapi';
-import { readFileSync } from 'fs';
+import { load } from '@codeforamerica/blueprint-core';
 import { resolve as resolvePath } from 'path';
-import yaml from 'js-yaml';
 
 /**
  * Collect named string enum $defs from external schema files referenced by a spec.
  *
  * @param {string} specPath - Absolute path to the OpenAPI spec file
- * @param {Map<string, {content: object, type: string, relativePath: string}>} fileMap
- *   The map returned by loadContractFiles for the resolved contracts directory.
- *   Used to resolve external $ref paths without re-reading from disk.
+ * @param {import('@codeforamerica/blueprint-core').Doc[]} docs - The contract
+ *   set, used to resolve the spec's external $refs without re-reading disk.
  * @returns {{ name: string, values: string[] }[]}
  */
-export function collectNamedEnumDefs(specPath, fileMap) {
-  let rawSpec;
+export function collectNamedEnumDefs(specPath, docs) {
+  let doc;
   try {
-    rawSpec = yaml.load(readFileSync(resolvePath(specPath), 'utf8'), { schema: yaml.CORE_SCHEMA });
+    doc = load({ path: resolvePath(specPath) });
   } catch {
     return [];
   }
 
-  const externalRefs = loadExternalRefs(specPath, rawSpec, fileMap);
+  const externalRefs = doc.externalRefs(docs);
 
   const seen = new Set();
   const namedEnums = [];

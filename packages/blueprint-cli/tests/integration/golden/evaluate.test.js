@@ -13,10 +13,34 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
-import { compileRuleset } from '@codeforamerica/blueprint-core/rules';
+import { generate } from '@codeforamerica/blueprint-core';
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 
 import { contractsDir } from '../../paths.js';
+
+/**
+ * Compile one ruleset through `generate`, the way the pipeline does.
+ *
+ * Kept local to the test rather than importing a compiler: compiling is a
+ * build step core performs, not something consumers call.
+ */
+function graphFor(rulesDoc, rulesetName) {
+  const name = rulesetName ?? Object.keys(rulesDoc.rulesets ?? {})[0];
+  const graphs = generate([{
+    path: 'rules.yaml',
+    relativePath: 'rules.yaml',
+    type: 'rules',
+    domain: rulesDoc.domain ?? null,
+    content: rulesDoc,
+    refs: () => new Map(),
+    model: () => null,
+    resolved: false,
+    provenance: null,
+  }], 'graph');
+  const found = graphs.find(({ graph }) => graph.ruleset === name);
+  if (!found) throw new Error(`Ruleset "${name}" produced no graph`);
+  return found.graph;
+}
 
 function loadExamplesAndRules(domain, rulesetName) {
   const examplesPath = join(contractsDir, `domains/${domain}/${domain}-rules-examples.yaml`);
@@ -24,7 +48,7 @@ function loadExamplesAndRules(domain, rulesetName) {
   const examplesDoc  = yaml.load(readFileSync(examplesPath, 'utf8'));
   const rulesDoc     = yaml.load(readFileSync(rulesPath, 'utf8'));
   const ruleset      = rulesDoc.rulesets[rulesetName];
-  const graph        = compileRuleset(domain, rulesetName, ruleset);
+  const graph        = graphFor(rulesDoc, rulesetName);
   const examples     = examplesDoc.rulesets[rulesetName].examples;
   return { graph, examples };
 }

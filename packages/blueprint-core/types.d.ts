@@ -1,7 +1,7 @@
 /**
  * The contract pipeline.
  *
- *   discover → load → generate → resolve → validate
+ *   discover → load → resolve → validate, with generate() alongside
  *
  * Only `discover` reads a directory, and nothing here writes: the caller
  * decides where output goes. Everything between operates on documents
@@ -47,6 +47,12 @@ export interface DiscoveredFile {
    */
   relativePath: string;
   type: ContractType;
+  /**
+   * Which domain the file belongs to: `info.x-domain`, then a top-level
+   * `domain`, then a path segment or filename prefix naming a known domain.
+   * Null when none of those identify one.
+   */
+  domain: string | null;
 }
 
 /** One `$ref` occurrence and what it points at. */
@@ -57,6 +63,8 @@ export interface RefEntry {
   external: boolean;
   /** The file part, or null for a same-document ref. */
   file: string | null;
+  /** The schema name: the last segment of the fragment. */
+  name: string | null;
   /**
    * Whether the pointer resolves within this document. Null for external
    * refs, which cannot be checked from one document alone. Tracked apart
@@ -92,9 +100,18 @@ export interface Doc {
   /** Null when loaded outside a set; `generate` rejects such a document. */
   relativePath: string | null;
   type: ContractType;
+  /** Same derivation as `DiscoveredFile`; falls back to what the content states. */
+  domain: string | null;
   content: Record<string, unknown>;
   /** Every `$ref` in the document, keyed by the literal ref string. */
   refs(): Map<string, RefEntry>;
+  /**
+   * The sibling documents this one's external `$ref`s point at, keyed by the
+   * ref's file part as written. Canonical `https://` refs are skipped.
+   */
+  externalRefs(docs: Doc[]): Map<string, Record<string, unknown>>;
+  /** Follow one external `$ref` to the schema it names, within the set. */
+  resolveRef(ref: string, docs: Doc[]): Record<string, unknown>;
   /**
    * Normalized view of blueprint-authored types, null for documents whose
    * shape an external standard already defines — OpenAPI, AsyncAPI, JSON
@@ -135,6 +152,17 @@ export interface StateMachineModel {
   procedures: Array<{ id?: string; steps: StepNode[]; [field: string]: unknown }>;
 }
 
+/** A compiled decision graph. Names the contract it came from. */
+export interface Graph {
+  $schema: string;
+  domain: string;
+  ruleset: string;
+  outputs: string[];
+  inputs: Record<string, unknown>;
+  facts: Record<string, unknown>;
+  dependencies: Record<string, string[]>;
+}
+
 /** An OpenAPI Overlay document. */
 export interface Overlay {
   overlay?: string;
@@ -146,14 +174,6 @@ export interface Overlay {
     files?: string | string[];
     [operation: string]: unknown;
   }>;
-}
-
-/** What the contract types that project into OpenAPI produce. */
-export interface Artifacts {
-  /** Overlays ready to apply, with refs already aligned to their targets. */
-  overlays: Overlay[];
-  /** Rules dependency graphs, by the path each should be written to. */
-  graphs: Array<{ path: string; graph: Record<string, unknown> }>;
 }
 
 export interface ResolveOptions {
@@ -209,19 +229,31 @@ export function discover(dir: string, type?: ContractType): DiscoveredFile[];
 /**
  * Read one contract file.
  *
- * `relativePath` comes from `discover`, which knows where the set begins.
- * Loading a file directly leaves it null and says so rather than guessing.
+ * Takes what `discover` returned, so `discover(dir).map(load)` keeps the
+ * file's position and domain. A bare path is accepted for a file in no set;
+ * `relativePath` is then null and `generate` will refuse the document.
  */
-export function load(path: string, relativePath?: string | null): Doc;
+export function load(file: DiscoveredFile | string): Doc;
 
 /**
- * Derive the overlays and graphs that compositions and rules project into
- * OpenAPI. Builds them; `resolve` applies them.
+ * Generate an artifact from a contract set.
+ *
+ * `overlay` produces the OpenAPI Overlays that compositions, rulesets and
+ * state machine actions project into their sibling specs; `resolve` applies
+ * them. `graph` produces one compiled decision graph per ruleset, with where
+ * each should be written.
  *
  * @throws If a composition or rules document has no `relativePath`, since an
  *   overlay addresses its target by relative path.
+ * @throws If `type` is not a known artifact kind.
  */
-export function generate(docs: Doc[]): Artifacts;
+export function generate(docs: Doc[], type: 'overlay'): Overlay[];
+export function generate(docs: Doc[], type: 'graph'): Array<{ path: string; graph: Graph }>;
+export function generate(
+  docs: Doc[],
+  type: 'postman',
+  options?: { baseUrl?: string; collectionId?: string | null }
+): Record<string, unknown>;
 
 /** Apply overlays, inject enums, filter by environment, substitute variables. */
 export function resolve(docs: Doc[], options?: ResolveOptions): ResolveResult;
@@ -234,3 +266,36 @@ export const schemasDir: string;
 
 /** Directory of the bundled base contracts. */
 export const baseContractsDir: string;
+
+// ---------------------------------------------------------------------------
+// Reads over an already-loaded document set.
+//
+// Not pipeline stages. Each is here only because core uses it internally and
+// at least two other packages need the same answer, so it can neither move
+// out nor be dropped. Candidates for removal.
+// ---------------------------------------------------------------------------
+
+
+/**
+ * Read out a fact the documents already state.
+ *
+ * The counterpart to `generate`. `relationships` indexes endpoints by the
+ * contract artifact that generated them, keyed `{type}:{domain}:{id}` from
+ * each operation's `x-relationship`; plain `fk` relationships are
+ * field-level, not endpoint-level, and are skipped.
+ */
+export function extract(
+  docs: Doc[],
+  type: 'relationships'
+): Map<string, { path: string; method: string }>;
+
+/** The schema name a `$ref` ends in, whatever its form. */
+export function extractRefName(ref: string): string | null;
+
+/** The sibling documents a spec's external `$ref`s point at. */
+export function loadExternalRefs(
+  specAbsPath: string,
+  rawSpec: object,
+  fileMap: Map<string, { content: object }>
+): Map<string, object>;
+

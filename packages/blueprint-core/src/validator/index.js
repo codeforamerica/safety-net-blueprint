@@ -1,20 +1,15 @@
 /**
- * Contract validation utilities.
+ * Contract validation utilities, used by `validate`.
  *
- * Combines all type-specific validators:
- *   - OpenAPI structural validation (validateSpec, validateAll)
  *   - API pattern validation (validateApiPatterns)
- *   - Example data validation (validateExamples)
  *   - State machine validation (validateWithinFile, validateCrossArtifact)
  *   - Rules doc validation (validateRulesDoc)
  *   - General contract dispatch (validateContract)
  *
- * Note: schema navigation utilities (resolveRef, resolveSchemaRefs,
- * collectTopLevelProperties, getPropertyAtPath) live in @codeforamerica/blueprint-core/json-schema.
+ * The OpenAPI structural validators and example-data validation moved to
+ * blueprint-mock-server: they gate whether the server will serve a spec,
+ * which is a runtime question, not a contract one.
  */
-
-// OpenAPI structural validation
-export { validateSpec, validateAll, formatResults, getValidationStatus } from './openapi-validator.js';
 
 // API pattern validation — validateSpec is aliased to avoid collision with the OpenAPI one
 export {
@@ -34,15 +29,12 @@ export {
   SORTABLE_FIELD_REGEX,
 } from './pattern-validator.js';
 
-// Example data validation
-export { deriveSchemaName, validateExamples } from './example-validator.js';
-
 // State machine validation
 export {
   VALID_ACTOR_ROLES,
   SYSTEM_VARIABLES,
   buildSchemaIndex,
-  buildEndpointIndex,
+  buildCollectionSchemaIndex,
   extractFieldRefs,
   extractEnumComparisons,
   collectContextBindings,

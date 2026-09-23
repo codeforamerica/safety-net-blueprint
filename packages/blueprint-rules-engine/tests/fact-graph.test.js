@@ -2,7 +2,7 @@
  * FactGraph translator and parity tests.
  *
  * Tests cover:
- *   - Graph compilation from rules YAML (compileRuleset via toFactGraphXml)
+ *   - Graph compilation from rules YAML (via generate, then toFactGraphXml)
  *   - XML generation from ruleset declarations (toFactGraphXml)
  *   - CEL evaluator vs FactGraph parity: same inputs should produce matching results
  *   - Collection operations: filter, all(), exists(), has()
@@ -41,7 +41,53 @@ import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { toFactGraphXml, toGraphWithFactGraph } from '../src/fact-graph.js';
 import { toGraph } from '../src/evaluator.js';
-import { compileRuleset } from '@codeforamerica/blueprint-core/rules';
+import { generate } from '@codeforamerica/blueprint-core';
+
+/**
+ * Compile one ruleset through `generate`, the way the pipeline does.
+ *
+ * Kept local to the test rather than importing a compiler: compiling is a
+ * build step core performs, not something consumers call.
+ */
+function graphFor(rulesDoc, rulesetName) {
+  const name = rulesetName ?? Object.keys(rulesDoc.rulesets ?? {})[0];
+  const graphs = generate([{
+    path: 'rules.yaml',
+    relativePath: 'rules.yaml',
+    type: 'rules',
+    domain: rulesDoc.domain ?? null,
+    content: rulesDoc,
+    refs: () => new Map(),
+    model: () => null,
+    resolved: false,
+    provenance: null,
+  }], 'graph');
+  const found = graphs.find(({ graph }) => graph.ruleset === name);
+  if (!found) throw new Error(`Ruleset "${name}" produced no graph`);
+  return found.graph;
+}
+
+/**
+ * Compile a rules contract into the graph the engine evaluates.
+ *
+ * The engine itself takes graphs only — compiling is a build step that
+ * belongs to blueprint-core. Tests do it here so the fixtures can stay as
+ * readable rules YAML rather than checked-in compiled graphs.
+ *
+ * @param {object} rulesDoc
+ * @param {string} [rulesetName] - Defaults to the document's only ruleset
+ * @returns {{ graph: object, inputs: object }}
+ */
+function compile(rulesDoc, rulesetName) {
+  const rulesets = rulesDoc?.rulesets ?? {};
+  const name = rulesetName ?? Object.keys(rulesets)[0];
+  const ruleset = rulesets[name];
+  if (!ruleset) throw new Error(`Ruleset "${name}" not found`);
+  return {
+    graph: graphFor(rulesDoc, name),
+    inputs: ruleset.inputs,
+  };
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -57,22 +103,24 @@ function loadText(path) {
 
 // ── Graph compilation ──────────────────────────────────────────────────────────
 
-describe('compileRuleset — snap interview probes', () => {
+describe('graph compilation — snap interview probes', () => {
   const rulesDoc = loadYaml(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-rules.yaml'));
+  const { graph, inputs: rulesetInputs } = compile(rulesDoc);
   const expected = loadYaml(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-graph.yaml'));
 
   it('compiled graph matches golden graph fixture', () => {
-    const graph = compileRuleset('eligibility', 'snapInterviewProbes', rulesDoc.rulesets.snapInterviewProbes);
+    const graph = graphFor(rulesDoc, 'snapInterviewProbes');
     assert.deepStrictEqual(graph, expected);
   });
 });
 
-describe('compileRuleset — collection ops', () => {
+describe('graph compilation — collection ops', () => {
   const rulesDoc = loadYaml(join(__dirname, 'fixtures/collection-ops/collection-ops-rules.yaml'));
+  const { graph, inputs: rulesetInputs } = compile(rulesDoc);
   const expected = loadYaml(join(__dirname, 'fixtures/collection-ops/collection-ops-graph.yaml'));
 
   it('compiled graph matches golden graph fixture', () => {
-    const graph = compileRuleset('eligibility', 'collectionOps', rulesDoc.rulesets.collectionOps);
+    const graph = graphFor(rulesDoc, 'collectionOps');
     assert.deepStrictEqual(graph, expected);
   });
 });
@@ -81,20 +129,22 @@ describe('compileRuleset — collection ops', () => {
 
 describe('toFactGraphXml — snap interview probes', () => {
   const rulesDoc = loadYaml(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-rules.yaml'));
+  const { graph, inputs: rulesetInputs } = compile(rulesDoc);
   const expectedXml = loadText(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-fact-graph.xml'));
 
   it('generated XML matches golden fact-graph fixture', () => {
-    const xml = toFactGraphXml(rulesDoc).trim();
+    const xml = toFactGraphXml(graph).trim();
     assert.strictEqual(xml, expectedXml);
   });
 });
 
 describe('toFactGraphXml — collection ops (all/exists/has)', () => {
   const rulesDoc = loadYaml(join(__dirname, 'fixtures/collection-ops/collection-ops-rules.yaml'));
+  const { graph, inputs: rulesetInputs } = compile(rulesDoc);
   const expectedXml = loadText(join(__dirname, 'fixtures/collection-ops/collection-ops-fact-graph.xml'));
 
   it('generated XML matches golden fact-graph fixture', () => {
-    const xml = toFactGraphXml(rulesDoc).trim();
+    const xml = toFactGraphXml(graph).trim();
     assert.strictEqual(xml, expectedXml);
   });
 });
@@ -106,6 +156,7 @@ describe('toFactGraphXml — collection ops (all/exists/has)', () => {
 
 describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () => {
   const rulesDoc  = loadYaml(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-rules.yaml'));
+  const { graph, inputs: rulesetInputs } = compile(rulesDoc);
   const examples  = loadYaml(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-rules-examples.yaml'));
   const scenarios = examples.rulesets.snapInterviewProbes.examples;
 
@@ -136,7 +187,7 @@ describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () 
 
   it('scenario 01: no probes — all facts complete and agree', () => {
     assertOutputParity(
-      toGraph(rulesDoc).evaluate(scenarios[0].inputs),
+      toGraph(graph, rulesetInputs).evaluate(scenarios[0].inputs),
       toGraphWithFactGraph(rulesDoc).evaluate(scenarios[0].inputs),
       'scenario 01'
     );
@@ -144,7 +195,7 @@ describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () 
 
   it('scenario 02: multiple probes — complete/missing/errors agree', () => {
     assertOutputParity(
-      toGraph(rulesDoc).evaluate(scenarios[1].inputs),
+      toGraph(graph, rulesetInputs).evaluate(scenarios[1].inputs),
       toGraphWithFactGraph(rulesDoc).evaluate(scenarios[1].inputs),
       'scenario 02'
     );
@@ -152,7 +203,7 @@ describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () 
 
   it('scenario 03: partial inputs — incomeInconsistency missing in both', () => {
     assertOutputParity(
-      toGraph(rulesDoc).evaluate(scenarios[2].inputs),
+      toGraph(graph, rulesetInputs).evaluate(scenarios[2].inputs),
       toGraphWithFactGraph(rulesDoc).evaluate(scenarios[2].inputs),
       'scenario 03'
     );
@@ -160,7 +211,7 @@ describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () 
 
   it('scenario 04: wrong-type scalar — incomeInconsistency errors, member facts complete in both', () => {
     assertOutputParity(
-      toGraph(rulesDoc).evaluate(scenarios[3].inputs),
+      toGraph(graph, rulesetInputs).evaluate(scenarios[3].inputs),
       toGraphWithFactGraph(rulesDoc).evaluate(scenarios[3].inputs),
       'scenario 04'
     );
@@ -170,7 +221,7 @@ describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () 
     // CEL patches null members → [] and evaluates exists() as false (complete).
     // FactGraph leaves the collection unseeded and returns Placeholder for exists() facts.
     // Only assert agreement on facts that do agree.
-    const cel = toGraph(rulesDoc).evaluate(scenarios[4].inputs).filter('output');
+    const cel = toGraph(graph, rulesetInputs).evaluate(scenarios[4].inputs).filter('output');
     const fg  = toGraphWithFactGraph(rulesDoc).evaluate(scenarios[4].inputs).filter('output');
 
     // Both agree: no errors, no missing
@@ -188,7 +239,7 @@ describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () 
 
   it('scenario 06: wrong-type sub-field — member facts error, scalar fact complete in both', () => {
     assertOutputParity(
-      toGraph(rulesDoc).evaluate(scenarios[5].inputs),
+      toGraph(graph, rulesetInputs).evaluate(scenarios[5].inputs),
       toGraphWithFactGraph(rulesDoc).evaluate(scenarios[5].inputs),
       'scenario 06'
     );
@@ -199,12 +250,13 @@ describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () 
 
 describe('evaluator — collection ops (all/exists/has)', () => {
   const rulesDoc = loadYaml(join(__dirname, 'fixtures/collection-ops/collection-ops-rules.yaml'));
+  const { graph, inputs: rulesetInputs } = compile(rulesDoc);
   const scenariosDir = join(__dirname, 'fixtures/collection-ops/scenarios');
 
   it('scenario 01: filter uses policy defaults → placeholder; all/exists/has are complete', () => {
     const { inputs } = loadJson(join(scenariosDir, '01-mixed-ages-inputs.json'));
     const expected = loadJson(join(scenariosDir, '01-mixed-ages-outputs.json'));
-    const result = toGraph(rulesDoc).evaluate(inputs).filter('output');
+    const result = toGraph(graph, rulesetInputs).evaluate(inputs).filter('output');
     assert.deepStrictEqual(result.collect('complete'),    expected.complete);
     assert.deepStrictEqual(result.collect('placeholder'), expected.placeholder);
     assert.deepStrictEqual(result.collect('missing'),     expected.missing);
@@ -214,7 +266,7 @@ describe('evaluator — collection ops (all/exists/has)', () => {
   it('scenario 02: all facts are complete when policy is explicitly provided', () => {
     const { inputs } = loadJson(join(scenariosDir, '02-with-policy-inputs.json'));
     const expected = loadJson(join(scenariosDir, '02-with-policy-outputs.json'));
-    const result = toGraph(rulesDoc).evaluate(inputs).filter('output');
+    const result = toGraph(graph, rulesetInputs).evaluate(inputs).filter('output');
     assert.deepStrictEqual(result.collect('complete'),    expected.complete);
     assert.deepStrictEqual(result.collect('placeholder'), expected.placeholder);
     assert.deepStrictEqual(result.collect('missing'),     expected.missing);

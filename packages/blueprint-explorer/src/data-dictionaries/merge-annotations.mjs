@@ -20,7 +20,7 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { resolve, dirname, basename } from 'path';
 import yaml from 'js-yaml';
-import { findSpecRelativePaths } from '@codeforamerica/blueprint-core/json-schema';
+import { findSpecRelativePaths } from '../contract-nav.js';
 
 const __filename = fileURLToPath(import.meta.url);
 

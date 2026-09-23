@@ -5,12 +5,12 @@ import yaml from 'js-yaml';
 /**
  * Load and merge annotation files for a domain.
  *
- * Accepts either a directory path (legacy) or a fileMap returned by loadContractFiles.
+ * Accepts either a directory path (legacy) or a fileMap returned by contractFileMap.
  * When a fileMap is provided, annotation files are identified by their `domain` field
  * rather than by filename, so directory structure does not matter.
  *
  * @param {string} domain - Domain name (e.g. 'intake')
- * @param {string|Map} dirOrFileMap - Directory path or fileMap from loadContractFiles
+ * @param {string|Map} dirOrFileMap - Directory path or fileMap from contractFileMap
  * @returns {{ schema: Record<string, object>, operations: Record<string, object>, events: Record<string, object>, facts: Record<string, object> }}
  */
 /**
@@ -18,7 +18,7 @@ import yaml from 'js-yaml';
  * These fields contain entry IDs that can be linked to the annotations explorer.
  * Fields NOT in this set contain free-form text (e.g. interviewQuestions, reason).
  *
- * @param {Map} fileMap - fileMap returned by loadContractFiles
+ * @param {Map} fileMap - fileMap returned by contractFileMap
  * @returns {Set<string>}
  */
 export function registryAnnotationTypes(fileMap) {
@@ -32,7 +32,7 @@ export function registryAnnotationTypes(fileMap) {
 /**
  * Load and merge annotation files for a domain.
  *
- * Accepts either a directory path (legacy) or a fileMap returned by loadContractFiles.
+ * Accepts either a directory path (legacy) or a fileMap returned by contractFileMap.
  * When a fileMap is provided, annotation files are identified by their `domain` field
  * rather than by filename, so directory structure does not matter.
  *
@@ -40,7 +40,7 @@ export function registryAnnotationTypes(fileMap) {
  * annotation field names backed by a registry or policy file (e.g. 'programs', 'policies').
  *
  * @param {string} domain - Domain name (e.g. 'intake')
- * @param {string|Map} dirOrFileMap - Directory path or fileMap from loadContractFiles
+ * @param {string|Map} dirOrFileMap - Directory path or fileMap from contractFileMap
  * @returns {{ schema, operations, events, facts, registryTypes: Set<string> }}
  */
 export function loadAnnotations(domain, dirOrFileMap) {

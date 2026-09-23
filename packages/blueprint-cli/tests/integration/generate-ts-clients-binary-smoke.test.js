@@ -13,7 +13,8 @@ import { join, dirname, resolve as resolvePath } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'url';
 import { exec, resolveOpenApiTsBin, collectNamedEnumDefs, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums } from '../../scripts/generate-ts-clients.js';
-import { bundleSpec, loadContractFiles } from '@codeforamerica/blueprint-core/openapi';
+import { discover, load } from '@codeforamerica/blueprint-core';
+import { bundleSpec } from '../../scripts/lib/bundle.js';
 import yaml from 'js-yaml';
 import { spawnSync } from 'node:child_process';
 
@@ -253,7 +254,7 @@ components:
 `);
 
       // Collect and patch
-      const namedEnums = collectNamedEnumDefs(resolvePath(specPath), loadContractFiles(workDir));
+      const namedEnums = collectNamedEnumDefs(resolvePath(specPath), discover(workDir).map(load));
 
       // Should find the two string enum $defs, not the object $def.
       // Names use the $def name directly (no file-stem prefix).
@@ -333,7 +334,7 @@ components:
       await exec('node', [resolveOpenApiTsBin(), '-f', configPath]);
 
       const typesGenPath = join(outPath, 'types.gen.ts');
-      const namedEnums = collectNamedEnumDefs(resolvePath(specPath), loadContractFiles(workDir));
+      const namedEnums = collectNamedEnumDefs(resolvePath(specPath), discover(workDir).map(load));
       if (namedEnums.length > 0) patchTypesGenForNamedEnums(typesGenPath, namedEnums);
 
       const content = readFileSync(typesGenPath, 'utf8');

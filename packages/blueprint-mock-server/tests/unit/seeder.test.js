@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { seedAllDatabases, deriveAllCollectionNames } from '../../src/seeder.js';
-import { loadAllSpecs } from '@codeforamerica/blueprint-core/openapi';
+import { loadAllSpecs } from '../../src/spec-loader.js';
 import { count, findAll, clearAll, insertResource } from '../../src/database-manager.js';
 import { join } from 'path';
 

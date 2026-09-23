@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join, relative, resolve, dirname, basename } from 'path';
 import yaml from 'js-yaml';
-import { typeFromSchema, typeFromFilename } from '../contract-types.js';
+import { typeFromSchema, typeFromFilename, extractDomain } from '../contract-types.js';
 
 /**
  * Detect the contract file type from parsed document content and/or filename.
@@ -71,38 +71,6 @@ function isComponentLibrary(doc) {
   );
 }
 
-/**
- * Extract a domain value from a file entry using layered heuristics.
- *
- * Priority:
- *   1. content.info['x-domain']  — explicit annotation on openapi/asyncapi specs
- *   2. content.domain            — top-level field on annotations files
- *   3. A path segment matching a known domain value
- *   4. The filename prefix before the first '-' if it matches a known domain value
- *   5. null
- *
- * @param {string} filename
- * @param {string} relativePath - Forward-slash relative path from the root dir
- * @param {object} content - Parsed YAML content
- * @param {Set<string>} knownDomains - Valid domain values from the resolved Domain enum
- * @returns {string|null}
- */
-function extractDomain(filename, relativePath, content, knownDomains) {
-  if (content?.info?.['x-domain']) return content.info['x-domain'];
-  if (content?.domain) return content.domain;
-
-  for (const segment of relativePath.split('/').slice(0, -1)) {
-    if (knownDomains.has(segment)) return segment;
-  }
-
-  const dashIdx = filename.indexOf('-');
-  if (dashIdx > 0) {
-    const prefix = filename.slice(0, dashIdx);
-    if (knownDomains.has(prefix)) return prefix;
-  }
-
-  return null;
-}
 
 /**
  * Recursively walk a directory, loading all .yaml files.
@@ -167,39 +135,13 @@ export function loadContractFiles(dir) {
 }
 
 /**
- * Collect all external $ref file parts from a YAML object tree.
- * A ref is external if it does not start with '#'.
- * The file part is everything before the '#' fragment separator.
- *
- * @param {*} node - YAML object to walk
- * @param {Set<string>} refs - Accumulator set
- */
-function collectExternalRefFiles(node, refs) {
-  if (!node || typeof node !== 'object') return;
-  if (Array.isArray(node)) {
-    for (const item of node) collectExternalRefFiles(item, refs);
-    return;
-  }
-  for (const [key, value] of Object.entries(node)) {
-    if (key === '$ref' && typeof value === 'string' && !value.startsWith('#')) {
-      // Extract file part (before any '#' fragment)
-      const hashIdx = value.indexOf('#');
-      const filePart = hashIdx === -1 ? value : value.slice(0, hashIdx);
-      if (filePart) refs.add(filePart);
-    } else {
-      collectExternalRefFiles(value, refs);
-    }
-  }
-}
-
-/**
  * Load the content of all external $ref files referenced by a spec,
  * using the already-loaded fileMap to avoid re-reading from disk.
  *
  * @param {string} specAbsPath - Absolute path to the spec file (used to resolve relative refs)
  * @param {*} rawSpec - The parsed (raw) spec object to scan for $refs
  * @param {Map<string, {content: object, type: string, relativePath: string}>} fileMap
- *   The map returned by loadContractFiles
+ *   The map returned by contractFileMap
  * @returns {Map<string, object>} Map from ref file part to parsed content
  */
 export function loadExternalRefs(specAbsPath, rawSpec, fileMap) {
@@ -221,4 +163,29 @@ export function loadExternalRefs(specAbsPath, rawSpec, fileMap) {
   }
 
   return result;
+}
+
+/**
+ * Collect all external $ref file parts from a YAML object tree.
+ * A ref is external if it does not start with '#'. The file part is
+ * everything before the '#' fragment separator.
+ *
+ * @param {*} node - YAML object to walk
+ * @param {Set<string>} refs - Accumulator set
+ */
+function collectExternalRefFiles(node, refs) {
+  if (!node || typeof node !== 'object') return;
+  if (Array.isArray(node)) {
+    for (const item of node) collectExternalRefFiles(item, refs);
+    return;
+  }
+  for (const [key, value] of Object.entries(node)) {
+    if (key === '$ref' && typeof value === 'string' && !value.startsWith('#')) {
+      const hashIdx = value.indexOf('#');
+      const filePart = hashIdx === -1 ? value : value.slice(0, hashIdx);
+      if (filePart) refs.add(filePart);
+    } else {
+      collectExternalRefFiles(value, refs);
+    }
+  }
 }

@@ -37,6 +37,7 @@
     "@bufbuild/cel": "^0.6.1"
   },
   "devDependencies": {
+    "@codeforamerica/blueprint-core": "^0.1.1",
     "esbuild": "^0.28.2"
   }
 }

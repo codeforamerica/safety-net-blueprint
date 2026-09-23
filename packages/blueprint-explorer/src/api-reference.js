@@ -22,9 +22,8 @@ import { esc, titleCase, breadcrumb, statusBadge, methodBadge, typeBadge, nextEi
 import { inlineMd, renderMarkdown } from './lib/markdown.js';
 import { twoColumnPage, singleColumnPage } from './lib/layout.js';
 import { resolvedSourcePairs } from './lib/paths.js';
-import { resolveExternalDefRef } from '@codeforamerica/blueprint-core/relationships';
-import { loadContractFiles, loadExternalRefs, extractRefName } from '@codeforamerica/blueprint-core/openapi';
-import { findSpecRelativePaths } from '@codeforamerica/blueprint-core/json-schema';
+import { discover, load } from '@codeforamerica/blueprint-core';
+import { findSpecRelativePaths } from './contract-nav.js';
 import { loadConfig } from './lib/config.js';
 
 const __dirname  = dirname(fileURLToPath(import.meta.url));
@@ -32,8 +31,35 @@ const __dirname  = dirname(fileURLToPath(import.meta.url));
 /**
  * @param {{ contentDir: string, resolvedDir: string }} opts
  */
+/**
+ * Follow an external `$defs` ref to the schema it names.
+ *
+ * `fileMap` is what `doc.externalRefs(docs)` returned — the sibling
+ * documents this spec points at, keyed by the ref's file part as written.
+ *
+ * @param {string} ref
+ * @param {Map<string, object>} fileMap
+ * @returns {object|null}
+ */
+function resolveDefRef(ref, fileMap) {
+  if (typeof ref !== 'string') return null;
+  const hashIdx = ref.indexOf('#');
+  if (hashIdx === -1) return null;
+
+  const file = ref.slice(0, hashIdx);
+  const content = fileMap.get(file) ?? fileMap.get(file.replace(/^\.\//, ''));
+  if (!content) return null;
+
+  let node = content;
+  for (const segment of ref.slice(hashIdx + 1).split('/').filter(Boolean)) {
+    if (node === null || typeof node !== 'object') return null;
+    node = node[segment];
+  }
+  return node ?? null;
+}
+
 export async function build({ contentDir, resolvedDir }) {
-const contractFiles = loadContractFiles(resolvedDir);
+const docs = discover(resolvedDir).map(load);
 const outDir = resolve(contentDir, 'api-reference');
 const hubHref = relative(outDir, join(contentDir, 'index.html'));
 const { name: projectName, repo } = loadConfig(contentDir);
@@ -48,7 +74,7 @@ const SOURCE_SUFFIXES = ['openapi', 'state-machine'];
 // means libraries can be added, renamed or split without touching this.
 const allComponents = Object.assign(
   {},
-  ...[...contractFiles.values()].filter(e => e.type === 'components').map(e => e.content)
+  ...docs.filter((d) => d.type === 'components').map((d) => d.content)
 );
 const componentsWhere = (predicate) =>
   Object.fromEntries(Object.entries(allComponents).filter(([, v]) => predicate(v)));
@@ -64,17 +90,20 @@ const sharedResponses = componentsWhere(v => v?.description && !v?.type);
 
 const specs = (
   await Promise.all(
-    [...contractFiles.entries()]
-      .filter(([, e]) => e.type === 'openapi')
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(async ([absPath, entry]) => {
+    docs
+      .filter((d) => d.type === 'openapi')
+      .sort((a, b) => a.path.localeCompare(b.path))
+      .map(async (doc) => {
+        const absPath = doc.path;
         const slug = basename(absPath).replace('-openapi.yaml', '');
         try {
-          const raw  = entry.content;
+          const raw  = doc.content;
           const spec = await $RefParser.dereference(absPath);
           if (!spec?.info || !spec?.paths) return null;
-          const fileMap = loadExternalRefs(absPath, raw, contractFiles);
-          return { slug, spec, raw, fileMap };
+          // The Doc answers for its own refs; the set is the pool it
+          // resolves them against.
+          const fileMap = doc.externalRefs(docs);
+          return { slug, spec, raw, fileMap, doc };
         } catch {
           return null;
         }
@@ -93,7 +122,7 @@ const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options'
 const relIndex = new Map(); // "method:path" → { type, domain, id }
 
 try {
-  for (const entry of contractFiles.values()) {
+  for (const entry of docs) {
     if (entry.type !== 'openapi') continue;
     for (const [path, pathItem] of Object.entries(entry.content?.paths ?? {})) {
       for (const method of HTTP_METHODS) {
@@ -170,7 +199,7 @@ function getRawProps(rawSchema, fileMap = null) {
   if (Array.isArray(rawSchema.allOf)) {
     return Object.assign({}, ...rawSchema.allOf.map(s => {
       if (typeof s?.['$ref'] === 'string' && !s['$ref'].startsWith('#') && fileMap) {
-        const { sourceSchema } = resolveExternalDefRef(s['$ref'], fileMap);
+        const sourceSchema = resolveDefRef(s['$ref'], fileMap);
         return getRawProps(sourceSchema, fileMap);
       }
       return getRawProps(s, fileMap);
@@ -186,7 +215,7 @@ function getRawProps(rawSchema, fileMap = null) {
 function namedPropRef(rawProp) {
   if (!rawProp || typeof rawProp !== 'object') return null;
 
-  const extractRef = extractRefName;
+  const extractRef = (ref) => (typeof ref === 'string' ? ref.split('#').pop().split('/').filter(Boolean).pop() ?? null : null);
 
   // Direct object ref
   const directName = extractRef(rawProp['$ref']);
@@ -258,7 +287,7 @@ function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fil
         const rawEntry = rawAllOf[i];
         let entryRaw = null;
         if (rawEntry?.['$ref'] && !rawEntry['$ref'].startsWith('#') && fileMap) {
-          entryRaw = resolveExternalDefRef(rawEntry['$ref'], fileMap)?.sourceSchema ?? null;
+          entryRaw = resolveDefRef(rawEntry['$ref'], fileMap) ?? null;
         } else if (rawEntry && !rawEntry['$ref']) {
           entryRaw = rawEntry;
         }

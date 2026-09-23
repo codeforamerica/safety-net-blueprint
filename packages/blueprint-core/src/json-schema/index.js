@@ -11,5 +11,4 @@ export {
   collectTopLevelProperties,
   getPropertyAtPath,
   getPathsForObject,
-  findSpecRelativePaths,
 } from './paths.js';

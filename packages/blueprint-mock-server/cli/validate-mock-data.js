@@ -4,7 +4,7 @@
  */
 
 import { resolve } from 'path';
-import { loadAllSpecs } from '@codeforamerica/blueprint-core/openapi';
+import { loadAllSpecs } from '../src/spec-loader.js';
 import { validateMockData } from '../src/mock-data-validator.js';
 
 async function main() {

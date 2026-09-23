@@ -40,6 +40,68 @@ export const CONTRACT_TYPES = {
 };
 
 /**
+ * Whether a document has been retired.
+ *
+ * A deprecated spec stays in the tree for reference but is not resolved,
+ * validated or served. Stated once because three callers were each testing
+ * `info['x-status']` themselves and a fourth would have made it four.
+ *
+ * @param {object} content - Parsed document content
+ * @returns {boolean}
+ */
+export function isDeprecated(content) {
+  return content?.info?.['x-status'] === 'deprecated';
+}
+
+/**
+ * Extract a domain value from a file entry using layered heuristics.
+ *
+ * Priority:
+ *   1. content.info['x-domain']  — explicit annotation on openapi/asyncapi specs
+ *   2. content.domain            — top-level field on annotations files
+ *   3. A path segment matching a known domain value
+ *   4. The filename prefix before the first '-' if it matches a known domain value
+ *   5. null
+ *
+ * @param {string} filename
+ * @param {string} relativePath - Forward-slash relative path from the root dir
+ * @param {object} content - Parsed YAML content
+ * @param {Set<string>} knownDomains - Valid domain values from the resolved Domain enum
+ * @returns {string|null}
+ */
+export function extractDomain(filename, relativePath, content, knownDomains) {
+  if (content?.info?.['x-domain']) return content.info['x-domain'];
+  if (content?.domain) return content.domain;
+
+  for (const segment of relativePath.split('/').slice(0, -1)) {
+    if (knownDomains.has(segment)) return segment;
+  }
+
+  const dashIdx = filename.indexOf('-');
+  if (dashIdx > 0) {
+    const prefix = filename.slice(0, dashIdx);
+    if (knownDomains.has(prefix)) return prefix;
+  }
+
+  return null;
+}
+
+/**
+ * The directory a document's contract set is rooted at.
+ *
+ * `path` ends with `relativePath` by construction — discover() supplies both
+ * — so the root is whatever remains. Null for a document loaded on its own,
+ * which has no set to be bounded by.
+ *
+ * @param {import('../types.js').Doc} doc
+ * @returns {string|null}
+ */
+export function setRootOf(doc) {
+  if (!doc?.relativePath) return null;
+  return doc.path.slice(0, doc.path.length - doc.relativePath.length);
+}
+
+/**
  * `x-relationship.resource` values that name no resource.
  *
  * `External` identifies a record in a system outside the blueprint;

@@ -3,6 +3,8 @@
  * Not exported from the package public API.
  */
 
+import pluralize from 'pluralize';
+
 /**
  * Extract the schema name from any $ref string.
  *
@@ -65,34 +67,6 @@ export function buildParameterIndex(yamlFiles) {
 const ENDPOINT_INDEX_METHODS = ['get', 'post', 'put', 'patch', 'delete'];
 
 /**
- * Build an index of generated endpoints from their x-relationship annotations.
- * Maps "${type}:${domain}:${id}" → { path, method } for all non-FK operation
- * relationships injected by the resolve pipeline.
- *
- * Used by explorer tools to build bidirectional links between API endpoints
- * and the contract artifacts that generated them.
- *
- * @param {Array<{ spec: Object }>} yamlFiles
- * @returns {Map<string, { path: string, method: string }>}
- */
-export function buildEndpointIndex(yamlFiles) {
-  const index = new Map();
-  for (const { spec } of yamlFiles) {
-    for (const [path, pathItem] of Object.entries(spec?.paths ?? {})) {
-      for (const method of ENDPOINT_INDEX_METHODS) {
-        const op = pathItem?.[method];
-        const rel = op?.['x-relationship'];
-        if (!rel?.type || rel.type === 'fk') continue;
-        if (!rel.domain || !rel.id) continue;
-        const key = `${rel.type}:${rel.domain}:${rel.id}`;
-        if (!index.has(key)) index.set(key, { path, method });
-      }
-    }
-  }
-  return index;
-}
-
-/**
  * Infer an OpenAPI tag from an endpoint path.
  * Uses the first static (non-parameter) path segment, title-cased.
  *
@@ -137,4 +111,46 @@ export function buildPathEntry(path, method, operation, paramIndex = new Map(), 
   if (parameters.length > 0) entry.parameters = parameters;
   entry[method] = op;
   return entry;
+}
+
+/**
+ * Convert a kebab-case collection name to its PascalCase singular schema prefix.
+ * Used to match example keys to collections (e.g., "queues" → "Queue",
+ * "task-audit-events" → "TaskAuditEvent").
+ * @param {string} collectionName - Database collection name
+ * @returns {string} PascalCase schema prefix
+ */
+export function collectionToSchemaPrefix(collectionName) {
+  const segments = collectionName.split('-');
+  return segments.map((seg, i) => {
+    // only the trailing segment is the plural noun, the earlier ones qualify it
+    const s = i === segments.length - 1 ? pluralize.singular(seg) : seg;
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }).join('');
+}
+
+/**
+ * Extract individual resources from an examples object.
+ * Filters out list examples, payload examples, and non-object entries.
+ * Returns resources sorted by key name for consistent ordering.
+ * @param {Object} examples - Examples object from YAML (key → value)
+ * @returns {Array<{key: string, name: string, data: Object}>} Sorted array of resources
+ */
+export function extractIndividualResources(examples) {
+  const resources = [];
+
+  for (const [key, value] of Object.entries(examples)) {
+    if (!value || typeof value !== 'object') continue;
+    if (value.items && Array.isArray(value.items)) continue;
+
+    const lowerKey = key.toLowerCase();
+    if (lowerKey.includes('payload') || lowerKey.includes('create') || lowerKey.includes('update')) continue;
+
+    if (value.id) {
+      resources.push({ key, name: key, data: value });
+    }
+  }
+
+  resources.sort((a, b) => a.key.localeCompare(b.key));
+  return resources;
 }

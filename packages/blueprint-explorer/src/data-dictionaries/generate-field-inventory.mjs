@@ -27,7 +27,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join, resolve, relative, basename, sep } from 'path';
 import yaml from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-import { loadContractFiles } from '@codeforamerica/blueprint-core/openapi';
+import { contractFileMap } from '../contract-files.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -548,11 +548,11 @@ export async function generate({ specDir, outDir, domain: domainFilter = null })
 
   let specEntries;
   if (sDirStat.isFile()) {
-    const fileMap = loadContractFiles(dirname(sDir));
+    const fileMap = contractFileMap(dirname(sDir));
     const entry = fileMap.get(sDir);
     specEntries = [[sDir, entry?.domain ?? null]];
   } else {
-    const fileMap = loadContractFiles(sDir);
+    const fileMap = contractFileMap(sDir);
     let entries = [...fileMap.entries()]
       .filter(([absPath, e]) => e.type === 'openapi' && !absPath.endsWith('-openapi-examples.yaml'));
     if (domainFilter) entries = entries.filter(([, e]) => e.domain === domainFilter);

@@ -6,9 +6,10 @@
  */
 
 import { readdirSync, readFileSync, existsSync } from 'fs';
-import { join, relative } from 'path';
+import { join, relative, basename } from 'path';
 import yaml from 'js-yaml';
 import { detectType } from './openapi/contract-files.js';
+import { isDeprecated, extractDomain } from './contract-types.js';
 
 /**
  * Walk a directory tree for contract files, reporting each file's type.
@@ -22,9 +23,18 @@ import { detectType } from './openapi/contract-files.js';
  * parse are skipped rather than throwing — a malformed file is not a contract,
  * and `validate` is where parse failures should surface.
  *
+ * Deprecated documents are skipped too. They stay in the tree for reference
+ * but are not resolved, validated or served, and every caller was filtering
+ * them out immediately after discovering them.
+ *
  * @param {string} dir - Absolute path to the directory to walk
+ * `domain` is derived here rather than in `load` because the last fallback —
+ * a path segment naming a known domain — needs the `Domain` enum, which is
+ * declared by some schema file elsewhere in the set. Discovery is the only
+ * step that sees the whole tree.
+ *
  * @param {string} [type] - Optional contract type to filter by (e.g. 'rules')
- * @returns {{ path: string, relativePath: string, type: string }[]}
+ * @returns {{ path: string, relativePath: string, type: string, domain: string|null }[]}
  *   Always this shape, filtered or not
  */
 export function discover(dir, type) {
@@ -55,14 +65,33 @@ export function discover(dir, type) {
       } catch {
         continue;
       }
+      if (isDeprecated(content)) continue;
+
       found.push({
         path: absPath,
         relativePath: relative(dir, absPath).replace(/\\/g, '/'),
         type: detectType(entry.name, content),
+        content,
       });
     }
   }
 
   walk(dir);
-  return type ? found.filter((f) => f.type === type) : found;
+
+  // The Domain enum, wherever in the set it is declared. Collected after the
+  // walk because a file may name a domain declared by a schema found later.
+  const knownDomains = new Set();
+  for (const file of found) {
+    if (file.type === 'schema' && Array.isArray(file.content?.$defs?.Domain?.enum)) {
+      for (const d of file.content.$defs.Domain.enum) knownDomains.add(d);
+      break;
+    }
+  }
+
+  const complete = found.map(({ content, ...file }) => ({
+    ...file,
+    domain: extractDomain(basename(file.path), file.relativePath, content, knownDomains),
+  }));
+
+  return type ? complete.filter((f) => f.type === type) : complete;
 }

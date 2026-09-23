@@ -15,9 +15,33 @@ import {
   applySteps,
   initRulesIndex,
 } from '../../src/state-machine-engine.js';
-import { compileRuleset } from '@codeforamerica/blueprint-core/rules';
+import { generate } from '@codeforamerica/blueprint-core';
 import { insertResource, clearAll } from '../../src/database-manager.js';
 import { ROLES } from '../roles.js';
+
+/**
+ * Compile one ruleset through `generate`, the way the pipeline does.
+ *
+ * Kept local to the test rather than importing a compiler: compiling is a
+ * build step core performs, not something consumers call.
+ */
+function graphFor(rulesDoc, rulesetName) {
+  const name = rulesetName ?? Object.keys(rulesDoc.rulesets ?? {})[0];
+  const graphs = generate([{
+    path: 'rules.yaml',
+    relativePath: 'rules.yaml',
+    type: 'rules',
+    domain: rulesDoc.domain ?? null,
+    content: rulesDoc,
+    refs: () => new Map(),
+    model: () => null,
+    resolved: false,
+    provenance: null,
+  }], 'graph');
+  const found = graphs.find(({ graph }) => graph.ruleset === name);
+  if (!found) throw new Error(`Ruleset "${name}" produced no graph`);
+  return found.graph;
+}
 
 // =============================================================================
 // resolveValue
@@ -680,7 +704,7 @@ const _simpleRuleset = {
   facts: [{ path: 'eligible', type: 'boolean', expression: 'person.age >= 18' }],
   outputs: { eligible: { type: 'boolean' } },
 };
-const _simpleGraph = compileRuleset('test', 'simple', _simpleRuleset);
+const _simpleGraph = graphFor({ domain: 'test', rulesets: { simple: _simpleRuleset } }, 'simple');
 initRulesIndex({ simple: _simpleGraph });
 
 test('applySteps — evaluate: string bind stores nodes map in context.entities', () => {

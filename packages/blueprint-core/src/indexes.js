@@ -10,10 +10,12 @@
  * returning the resolved schema) and two unrelated `buildEndpointIndex`
  * implementations that happened to share a name. The schema pair is merged
  * here; the endpoint pair is separated into the two distinct things it always
- * was — relationship links and collection lookups.
+ * was — `buildRelationshipIndex` for artifact-to-endpoint links and
+ * `buildCollectionIndex` for collection lookups.
  */
 
 import { resolveSchemaRefs, collectTopLevelProperties } from './json-schema/index.js';
+import { setRootOf } from './contract-types.js';
 
 const ENDPOINT_METHODS = ['get', 'post', 'put', 'patch', 'delete'];
 
@@ -39,7 +41,9 @@ export function buildSchemaIndex(docs) {
 
     for (const [name, rawSchema] of Object.entries(schemas)) {
       if (index.has(name)) continue;
-      const schema = resolveSchemaRefs(rawSchema, { spec: doc.content, specFilePath: doc.path });
+      const schema = resolveSchemaRefs(rawSchema, {
+        spec: doc.content, specFilePath: doc.path, setRoot: setRootOf(doc),
+      });
       index.set(name, {
         spec: doc.content,
         specFile: doc.path,
@@ -166,7 +170,7 @@ export function buildCollectionPropertyIndex(collectionIndex, schemaIndex) {
  * not a file, so any document declaring the schema answers the question.
  *
  * @param {import('../types.js').Doc[]} docs
- * @returns {Map<string, { spec: object, filePath: string }>}
+ * @returns {Map<string, { spec: object, filePath: string, setRoot: string|null }>}
  */
 export function buildSpecsByDomain(docs) {
   const index = new Map();
@@ -174,7 +178,7 @@ export function buildSpecsByDomain(docs) {
   for (const doc of openapiDocs(docs)) {
     const domain = doc.content?.info?.['x-domain'];
     if (!domain || index.has(domain)) continue;
-    index.set(domain, { spec: doc.content, filePath: doc.path });
+    index.set(domain, { spec: doc.content, filePath: doc.path, setRoot: setRootOf(doc) });
   }
 
   return index;

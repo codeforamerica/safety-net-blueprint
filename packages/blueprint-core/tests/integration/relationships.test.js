@@ -8,7 +8,7 @@ import assert from 'node:assert';
 import {
   buildSchemaIndex,
   resolveRelationships,
-} from '@codeforamerica/blueprint-core/relationships';
+} from '../../src/relationships.js';
 
 // Fixture spec: a "widgets" API with forward and back references
 function buildFixtureSpecs() {

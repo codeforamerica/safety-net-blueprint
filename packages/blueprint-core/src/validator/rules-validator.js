@@ -16,7 +16,7 @@
 
 import { existsSync } from 'fs';
 import { compileRuleset } from '../rules.js';
-import { resolverMap } from '../index.js';
+import { resolverMap } from '../paths.js';
 
 // ── Full dependency scan ──────────────────────────────────────────────────────
 

@@ -11,8 +11,9 @@
  */
 
 import { readFileSync } from 'fs';
+import { basename } from 'path';
 import yaml from 'js-yaml';
-import { loadAllSpecs } from '@codeforamerica/blueprint-core/openapi';
+import { discover, load } from '@codeforamerica/blueprint-core';
 import { BASE_URL, fetch, resetServer } from '@codeforamerica/blueprint-mock-server/test-utils';
 import { ROLES } from '../roles.js';
 
@@ -408,7 +409,13 @@ async function runTests() {
   // Discover APIs
   // =========================================================================
   console.log('\n🔍 Discovering APIs...');
-  const apis = await loadAllSpecs({ specsDir: contractsDir });
+  const apis = discover(contractsDir, 'openapi')
+    .map(load)
+    .map((doc) => ({
+      name: basename(doc.path, '-openapi.yaml'),
+      // The first collection path, which is what the CRUD tests exercise.
+      baseResource: Object.keys(doc.content?.paths ?? {}).find((p) => !p.includes('{')) ?? null,
+    }));
 
   if (apis.length === 0) {
     console.log('  ⚠️  No APIs found');

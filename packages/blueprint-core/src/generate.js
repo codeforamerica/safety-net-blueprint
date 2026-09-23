@@ -1,55 +1,102 @@
 /**
- * Derive artifacts from the contract types that project into OpenAPI.
+ * Generate an artifact from a contract set.
  *
- * Compositions and rules describe something at a higher level than an API —
- * a view over resources, a decision graph — and each produces an OpenAPI
- * Overlay that adds the endpoints and schemas implementing it. Generate builds
- * those overlays; `resolve` applies them. Nothing is written here.
+ * `discover`, `load`, `resolve` and `validate` act on contracts. `generate`
+ * produces something else *from* them, and the second argument says what:
+ *
+ *   overlay   OpenAPI Overlays that add the endpoints and schemas a
+ *             composition, ruleset or state machine action implies
+ *   graph     compiled decision graphs, one per ruleset
+ *   postman   a Postman collection exercising every endpoint
+ *   examples  the contract set's example records, grouped by collection
  *
  * Takes the whole document set because an overlay targets a sibling spec by
- * relative path, and because rules compile against the schemas other documents
- * declare.
+ * relative path, and rules compile against schemas other documents declare.
+ * Nothing is written here — the caller decides where artifacts go.
  */
 
 import { generateCompositionOverlays } from './compositions.js';
 import { generateRulesResults } from './rules.js';
 import { detectComponentPrefix, rewriteComponentRefs } from './generate/refs.js';
 import { generateRpcOverlays } from './generate/rpc.js';
+import { buildPostman } from './generate/postman.js';
+import { buildExamples } from './generate/examples.js';
 import { basename } from 'path';
 import { stemOf, siblingPath } from './contract-types.js';
 
+/** What `generate` knows how to produce. */
+const BUILDERS = {
+  overlay: buildOverlays,
+  graph: buildGraphs,
+  postman: buildPostman,
+  examples: buildExamples,
+};
+
 /**
  * @param {import('../types.js').Doc[]} docs
- * @returns {import('../types.js').Artifacts}
+ * @param {'overlay'|'graph'|'postman'|'examples'} type - Which artifact to build
+ * @param {object} [options] - Passed to the builder that needs them
+ * @returns {*} Whatever that artifact is
  */
-export function generate(docs) {
+export function generate(docs, type, options) {
+  const builder = BUILDERS[type];
+  if (!builder) {
+    throw new Error(
+      `generate: unknown artifact type "${type}". Known types: ${Object.keys(BUILDERS).join(', ')}.`
+    );
+  }
+
   const positioned = docs.filter((doc) => doc.relativePath !== null);
   assertPositioned(docs, positioned);
 
-  const inputFiles = positioned.map((doc) => ({
-    relativePath: doc.relativePath,
-    spec: doc.content,
-  }));
+  return builder(positioned, options);
+}
 
-  const rules = rulesArtifacts(positioned, inputFiles);
+/**
+ * Overlays ready for `resolve` to apply.
+ *
+ * The `domain` each generator reports is how its target spec is found, so
+ * refs can be aligned to that spec's convention. Once that is done the
+ * pairing has served its purpose and resolve just applies documents.
+ *
+ * @param {import('../types.js').Doc[]} positioned
+ * @returns {import('../types.js').Overlay[]}
+ */
+function buildOverlays(positioned) {
+
+  const inputFiles = specsOf(positioned);
 
   // RPC overlays align their own refs, because finding the target spec is
   // part of generating them — the state machine names it in apiSpec:.
   const rpc = generateRpcOverlays(positioned).map((entry) => entry.overlay);
+  const rules = rulesArtifacts(positioned, inputFiles);
 
-  return {
-    // Overlay documents ready to apply. The `domain` each generator reports is
-    // how its target spec is found so refs can be aligned to that spec's
-    // convention; once that is done the pairing has served its purpose and
-    // resolve just applies documents.
-    overlays: [
-      ...rpc,
-      ...alignRefs([...compositionOverlays(positioned, inputFiles), ...rules.overlays], positioned),
-    ],
-    // Keyed by output path internally; flattened so both artifact kinds are
-    // arrays and a caller iterates them the same way.
-    graphs: [...rules.graphs].map(([path, graph]) => ({ path, graph })),
-  };
+  return [
+    ...rpc,
+    ...alignRefs([...compositionOverlays(positioned, inputFiles), ...rules.overlays], positioned),
+  ];
+}
+
+/**
+ * Compiled decision graphs, with where each should be written.
+ *
+ * Each graph records its own `domain` and `ruleset`, so only the write
+ * location is added here.
+ *
+ * @param {import('../types.js').Doc[]} positioned
+ * @returns {{ path: string, graph: object }[]}
+ */
+function buildGraphs(positioned) {
+  const { graphs } = rulesArtifacts(positioned, specsOf(positioned));
+  return [...graphs].map(([path, graph]) => ({ path, graph }));
+}
+
+/**
+ * @param {import('../types.js').Doc[]} positioned
+ * @returns {{ relativePath: string, spec: object }[]}
+ */
+function specsOf(positioned) {
+  return positioned.map((doc) => ({ relativePath: doc.relativePath, spec: doc.content }));
 }
 
 /**

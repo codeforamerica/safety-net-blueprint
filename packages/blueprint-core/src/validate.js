@@ -24,7 +24,7 @@ import { validateEvents } from './validator/event-validator.js';
 import { validateSlaTypeFields, validateMetricFields } from './validator/field-reference-validator.js';
 import { validateAnnotations } from './validator/annotation-validator.js';
 import { validateSchemas } from './validator/json-schema-validator.js';
-import { stemOf } from './contract-types.js';
+import { stemOf, setRootOf, isDeprecated } from './contract-types.js';
 import {
   buildSchemaIndex,
   buildCollectionIndex,
@@ -72,6 +72,7 @@ export function validate(docs) {
   const yamlFiles = docs.map((doc) => ({
     relativePath: doc.relativePath ?? doc.path,
     filePath: doc.path,
+    setRoot: setRootOf(doc),
     spec: doc.content,
   }));
 
@@ -280,7 +281,7 @@ function validateDoc(doc, context) {
     case 'openapi': {
       // A deprecated spec is kept for consumers still on it and is not held to
       // current pattern rules.
-      if (doc.content?.info?.['x-status'] === 'deprecated') break;
+      if (isDeprecated(doc.content)) break;
 
       const domain = doc.content?.info?.['x-domain'];
       const sameDomainSchemas = context.domainSchemas.get(domain) ?? new Set();

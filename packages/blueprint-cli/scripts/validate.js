@@ -54,7 +54,7 @@ function main() {
   console.log('='.repeat(70));
   console.log(`\n  Contracts: ${resolvedDir}\n`);
 
-  const docs = discover(resolvedDir).map((file) => load(file.path, file.relativePath));
+  const docs = discover(resolvedDir).map(load);
 
   if (docs.length === 0) {
     console.error('No contract documents found.');

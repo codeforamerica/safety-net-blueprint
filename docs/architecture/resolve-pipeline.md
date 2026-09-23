@@ -202,10 +202,10 @@ paths:
 
 ```bash
 # Production: /debug/health is removed
-blueprint-resolve --spec=... --overlay=... --out=./resolved --env=production
+blueprint-resolve --spec=... --overlay=... --out=./resolved --env-target=production
 
 # Development: /debug/health is kept, x-environments is stripped
-blueprint-resolve --spec=... --overlay=... --out=./resolved --env=development
+blueprint-resolve --spec=... --overlay=... --out=./resolved --env-target=development
 ```
 
 Without `--env`, all sections are included as-is. See [x-environments](../x-extensions.md#x-environments) for the full extension reference.
@@ -224,7 +224,7 @@ servers:
 # .env file
 API_BASE_URL=https://api.example.gov
 
-blueprint-resolve --spec=... --overlay=... --out=./resolved --env-file=.env
+blueprint-resolve --spec=... --overlay=... --out=./resolved --env-variables=.env
 ```
 
 Environment variables (`process.env`) take precedence over `.env` file values. Unresolved placeholders produce warnings but don't fail the build.

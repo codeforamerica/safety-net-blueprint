@@ -59,29 +59,3 @@ export function collectEmitSteps(steps) {
   return emits;
 }
 
-/**
- * Build a cross-domain event index from an array of parsed state machine objects.
- *
- * @param {Array<{ domain: string, machines: Array }>} allStateMachines
- * @returns {{ emitters: Record<string, { domain, object }>, subscribers: Record<string, Array<{ domain, object }>> }}
- */
-export function buildEventIndex(allStateMachines) {
-  const emitters = {};
-  const subscribers = {};
-
-  for (const sm of allStateMachines) {
-    for (const machine of sm.machines) {
-      for (const op of (machine.actions || [])) {
-        for (const eventType of collectEmitSteps(getSteps(op))) {
-          emitters[eventType] = { domain: sm.domain, object: machine.object };
-        }
-      }
-      for (const sub of machine.events || []) {
-        if (!subscribers[sub.type]) subscribers[sub.type] = [];
-        subscribers[sub.type].push({ domain: sm.domain, object: machine.object });
-      }
-    }
-  }
-
-  return { emitters, subscribers };
-}

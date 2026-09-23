@@ -83,12 +83,12 @@ function schemaPathError(key, specsByDomain, domain) {
   if (!found) return `Schema "${base}" is not declared in any OpenAPI document.`;
   if (!fieldPath) return null; // annotating the resource itself
 
-  const { spec, filePath, schemaName } = found;
-  const schema = resolveSchemaRefs(spec.components.schemas[schemaName], { spec, specFilePath: filePath });
+  const { spec, filePath, setRoot, schemaName } = found;
+  const schema = resolveSchemaRefs(spec.components.schemas[schemaName], { spec, specFilePath: filePath, setRoot });
 
   if (getPropertyAtPath(spec, schema, fieldPath)) return null;
 
-  return walkPath(spec, filePath, schema, fieldPath)
+  return walkPath(spec, filePath, setRoot, schema, fieldPath)
     ? null
     : `Path "${key}" does not exist on schema "${base}".`;
 }
@@ -129,12 +129,13 @@ function findSchema(specsByDomain, candidates, domain) {
  *
  * @param {object} spec
  * @param {string} filePath
+ * @param {string|null} setRoot - Contract-set root bounding $ref following
  * @param {object} schema
  * @param {string} fieldPath
  * @returns {boolean}
  */
-function walkPath(spec, filePath, schema, fieldPath) {
-  const subResources = buildSubResourceMap(spec, filePath);
+function walkPath(spec, filePath, setRoot, schema, fieldPath) {
+  const subResources = buildSubResourceMap(spec, filePath, setRoot);
   let current = schema;
 
   for (const segment of fieldPath.replace(/\[\]/g, '').split('.').filter(Boolean)) {
@@ -173,16 +174,17 @@ function walkPath(spec, filePath, schema, fieldPath) {
  *
  * @param {object} spec
  * @param {string} filePath
+ * @param {string|null} setRoot - Contract-set root bounding $ref following
  * @returns {Map<string, object>}
  */
-function buildSubResourceMap(spec, filePath) {
+function buildSubResourceMap(spec, filePath, setRoot) {
   const map = new Map();
   const schemas = spec?.components?.schemas ?? {};
 
   const schemaFor = (ref) => {
     const name = typeof ref === 'string' ? ref.match(/^#\/components\/schemas\/(.+)$/)?.[1] : null;
     const raw = name ? schemas[name] : null;
-    return raw ? resolveSchemaRefs(raw, { spec, specFilePath: filePath }) : null;
+    return raw ? resolveSchemaRefs(raw, { spec, specFilePath: filePath, setRoot }) : null;
   };
 
   const camel = (s) => s.replace(/-([a-z])/g, (_, c) => c.toUpperCase());

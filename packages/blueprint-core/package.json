@@ -1,7 +1,7 @@
 {
   "name": "@codeforamerica/blueprint-core",
   "version": "0.1.1",
-  "description": "Blueprint framework core — contract resolution and validation",
+  "description": "Blueprint framework core \u2014 contract resolution and validation",
   "type": "module",
   "files": [
     "src/",
@@ -14,17 +14,7 @@
     ".": {
       "types": "./types.d.ts",
       "default": "./src/index.js"
-    },
-    "./annotations": "./src/annotations.js",
-    "./registries": "./src/registries.js",
-    "./rules": "./src/rules.js",
-    "./relationships": "./src/relationships.js",
-    "./compositions": "./src/compositions.js",
-    "./state-machines": "./src/state-machines.js",
-    "./overlay": "./src/overlay.js",
-    "./openapi": "./src/openapi/index.js",
-    "./validator": "./src/validator/index.js",
-    "./json-schema": "./src/json-schema/index.js"
+    }
   },
   "scripts": {
     "test": "node --test",

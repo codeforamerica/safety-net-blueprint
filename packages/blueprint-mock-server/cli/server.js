@@ -122,6 +122,7 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
     let allConfigs = [];
     let allCompositions = [];
     let allRulesFiles = [];
+    let allGraphs = [];
     let allPolicies = {};
     for (const specsDir of specDirs) {
       const result = await performSetup({ specsDir, seedDir, verbose: true });
@@ -132,6 +133,7 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
       allConfigs = allConfigs.concat(result.configs || []);
       allCompositions = allCompositions.concat(result.compositions || []);
       allRulesFiles = allRulesFiles.concat(result.rulesFiles || []);
+      allGraphs = allGraphs.concat(result.graphs || []);
       Object.assign(allPolicies, result.policies || {});
     }
 
@@ -300,8 +302,8 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
     // Register rules evaluation routes and initialize the state machine rules index
     if (allRulesFiles.length > 0) {
       console.log('\nRegistering rules evaluation routes...');
-      registerRulesRoutes(app, allRulesFiles, apiSpecs);
-      initRulesIndex(buildRulesIndex(allRulesFiles));
+      registerRulesRoutes(app, allRulesFiles, apiSpecs, allGraphs);
+      initRulesIndex(buildRulesIndex(allGraphs));
     }
 
     const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics, resolvedUploadsDir);

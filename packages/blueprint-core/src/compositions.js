@@ -157,7 +157,7 @@ export function collectSchemaProperties(schema, specsByFile = new Map()) {
 export function buildResourceSchemaIndex(yamlFiles) {
   const index = new Map();
 
-  for (const { spec, filePath } of yamlFiles) {
+  for (const { spec, filePath, setRoot } of yamlFiles) {
     if (!spec || !spec.paths) continue;
 
     const schemas = spec.components?.schemas || {};
@@ -187,7 +187,7 @@ export function buildResourceSchemaIndex(yamlFiles) {
       const rawSchema = schemas[match[1]];
       if (!rawSchema) continue;
 
-      const context = filePath ? { spec, specFilePath: filePath } : { spec };
+      const context = filePath ? { spec, specFilePath: filePath, setRoot } : { spec };
       const schema = resolveSchemaRefs(rawSchema, context);
       const propMap = collectTopLevelProperties(spec, schema);
       if (propMap.size > 0) {

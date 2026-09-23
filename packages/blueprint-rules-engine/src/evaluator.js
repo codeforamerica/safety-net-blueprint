@@ -24,7 +24,6 @@
  * @module evaluator
  */
 
-import { compileRuleset } from '@codeforamerica/blueprint-core/rules';
 import { evaluateCEL } from './cel.js';
 
 // ── Type checking ─────────────────────────────────────────────────────────────
@@ -348,15 +347,25 @@ export class Graph {
   }
 }
 
-export function toGraph(rulesDocOrGraph, rulesetName) {
-  if (rulesDocOrGraph.facts && rulesDocOrGraph.outputs) {
-    return new Graph(rulesDocOrGraph);
+/**
+ * Wrap a compiled decision graph for evaluation.
+ *
+ * Takes a graph, not a rules contract. Compiling a contract into a graph is
+ * blueprint-core's `generate`, which is a build-time step — this engine is
+ * the runtime, and keeping the two apart is what lets it run without the
+ * contract tooling installed.
+ *
+ * @param {object} graph - A compiled graph: facts, outputs, dependencies
+ * @param {object} [inputs] - The ruleset's declared inputs, for type checking
+ * @returns {Graph}
+ */
+export function toGraph(graph, inputs) {
+  if (!graph?.facts || !graph?.outputs) {
+    throw new TypeError(
+      'toGraph expects a compiled graph (facts, outputs). To compile a rules ' +
+      'contract, use build(docs, \'graph\') from @codeforamerica/blueprint-core ' +
+      'the graph it produces.'
+    );
   }
-  const rulesets = rulesDocOrGraph.rulesets ?? {};
-  const name = rulesetName ?? Object.keys(rulesets)[0];
-  const ruleset = rulesets[name];
-  if (!ruleset) throw new Error(`Ruleset "${name}" not found`);
-  const domain = rulesDocOrGraph.domain ?? 'unknown';
-  const compiled = compileRuleset(domain, name, ruleset);
-  return new Graph(compiled, ruleset.inputs);
+  return new Graph(graph, inputs);
 }

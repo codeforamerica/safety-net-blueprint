@@ -16,7 +16,7 @@ import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'fs'
 import { join, relative, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { detectType } from '@codeforamerica/blueprint-core/openapi';
+import { discover, load } from '@codeforamerica/blueprint-core';
 import { twoColumnPage, singleColumnPage } from '../lib/layout.js';
 import { esc, usageChip, dataDictFieldHref, stateMachineDocsHref, rulesDocsHref, eventCatalogHref } from '../lib/html.js';
 import { COLORS } from '../lib/theme.js';
@@ -26,14 +26,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const ANNOTATION_METADATA_FIELDS = new Set(['$schema', 'version', 'domain']);
 
-// ── File discovery ─────────────────────────────────────────────────────────────
-
-function walkYaml(dir) {
-  return readdirSync(dir, { recursive: true })
-    .filter(f => typeof f === 'string' && f.endsWith('.yaml'))
-    .map(f => join(dir, f));
-}
-
 // ── Registry loading ───────────────────────────────────────────────────────────
 
 /**
@@ -42,17 +34,11 @@ function walkYaml(dir) {
 function loadRegistries(resolvedDir) {
   const registries = new Map();
 
-  for (const filePath of walkYaml(resolvedDir)) {
-    let doc;
-    try { doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); }
-    catch { continue; }
+  for (const file of discover(resolvedDir, 'registry')) {
+    const doc = load(file).content;
     if (!doc || typeof doc !== 'object') continue;
 
-    const schema = String(doc.$schema ?? '').split('/').pop();
-    const domain = doc.domain ?? null;
-
-    if (schema !== 'registry-schema.yaml') continue;
-
+    const domain = file.domain;
     const type = doc.type;
     if (!type || typeof doc.entries !== 'object') continue;
     if (!registries.has(type)) registries.set(type, { entries: new Map(), domain });
@@ -93,15 +79,11 @@ function scanAnnotations(resolvedDir) {
     data.get(domain).push({ section, key, value });
   }
 
-  for (const filePath of walkYaml(resolvedDir)) {
-    const file = basename(filePath);
-    let doc;
-    try { doc = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.CORE_SCHEMA }); }
-    catch { continue; }
+  for (const file of discover(resolvedDir, 'annotations')) {
+    const doc = load(file).content;
     if (!doc || typeof doc !== 'object') continue;
-    if (detectType(file, doc) !== 'annotations') continue;
 
-    const domain = doc.domain ?? file.split('-')[0];
+    const domain = file.domain;
 
     for (const [sectionName, section] of Object.entries(doc)) {
       if (ANNOTATION_METADATA_FIELDS.has(sectionName)) continue;

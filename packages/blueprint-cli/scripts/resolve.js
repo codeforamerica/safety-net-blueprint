@@ -21,17 +21,15 @@
  *   --spec       Path to base spec file or directory (required)
  *   --overlay    Path to overlay file or directory (optional; omit to copy base specs unchanged)
  *   --out        Output directory for resolved specs (required)
- *   --env        Target environment for x-environments filtering (optional)
- *   --env-file   Path to env file with key=value pairs for placeholder substitution (optional)
+ *   --env-target     Environment to filter x-environments down to (optional)
+ *   --env-variables  Path to a file of key=value pairs for ${VAR} substitution (optional)
  */
 
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, cpSync, rmSync, realpathSync, statSync } from 'fs';
 import { join, dirname, relative, resolve, basename } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { applyOverlay, checkPathExists, parsePath, extractConfig, validateConfig } from '@codeforamerica/blueprint-core/overlay';
-import { discoverRelationships, buildSchemaIndex, resolveRelationships, buildExamplesIndex, resolveExampleRelationships, summarizeResolverDecisions } from '@codeforamerica/blueprint-core/relationships';
-import { bundleSpec, detectType } from '@codeforamerica/blueprint-core/openapi';
+import { bundleSpec } from './lib/bundle.js';
 import {
   baseContractsDir,
   discover,
@@ -40,8 +38,6 @@ import {
   resolve as coreResolve,
   validate,
 } from '@codeforamerica/blueprint-core';
-import { generateCompositionOverlays } from '@codeforamerica/blueprint-core/compositions';
-import { generateRulesResults } from '@codeforamerica/blueprint-core/rules';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -57,8 +53,8 @@ function parseArgs() {
     spec: null,
     overlay: null,
     out: null,
-    env: null,
-    envFile: null,
+    envTarget: null,
+    envVariables: null,
     bundle: false,
     reconcileExamples: false,
     resolve: false,
@@ -81,10 +77,10 @@ function parseArgs() {
       options.overlay = arg.split('=')[1];
     } else if (arg.startsWith('--out=')) {
       options.out = arg.split('=')[1];
-    } else if (arg.startsWith('--env=')) {
-      options.env = arg.split('=')[1];
-    } else if (arg.startsWith('--env-file=')) {
-      options.envFile = arg.split('=')[1];
+    } else if (arg.startsWith('--env-target=')) {
+      options.envTarget = arg.split('=')[1];
+    } else if (arg.startsWith('--env-variables=')) {
+      options.envVariables = arg.split('=')[1];
     } else {
       console.error(`Error: Unknown argument: ${arg}`);
       process.exit(1);
@@ -109,15 +105,15 @@ Flags:
   --out=<dir>        Output directory for resolved specs (default: resolved)
   --bundle           Inline all external $refs to produce self-contained specs
   --resolve          Run relationship resolution even without an overlay
-  --env=<env>        Target environment for x-environments filtering (optional)
-  --env-file=<file>  Path to env file for \${VAR} placeholder substitution (optional)
+  --env-target=<env>      Environment to filter x-environments down to (optional)
+  --env-variables=<file>  File of key=value pairs for \${VAR} substitution (optional)
   --verbose          Print a per-schema relationship-resolution summary
   -h, --help         Show this help message
 
 Without --overlay, base specs are copied to --out unchanged (unless --resolve is specified).
 With --bundle, all external $ref references are dereferenced inline.
-With --env, nodes whose x-environments array doesn't include the target env are removed.
-With --env-file, \${VAR} placeholders in string values are substituted (process.env overrides file values).
+With --env-target, nodes whose x-environments array doesn't include it are removed.
+With --env-variables, \${VAR} placeholders are substituted (process.env overrides file values).
 
 Examples:
   npm run resolve
@@ -131,107 +127,6 @@ Examples:
 // =============================================================================
 // Event Type Prefix Injection
 // =============================================================================
-
-/**
- * Prepend a state-specific prefix to all event type strings in a state machine spec.
- * Updates emit.type in steps and type in events[] entries.
- */
-function injectEventPrefixInStateMachine(spec, prefix) {
-  const copy = JSON.parse(JSON.stringify(spec));
-  if (!Array.isArray(copy.machines)) return copy;
-
-  for (const machine of copy.machines) {
-    if (Array.isArray(machine.events)) {
-      for (const evt of machine.events) {
-        if (typeof evt.type === 'string') evt.type = prefix + evt.type;
-      }
-    }
-    prefixEmitStepsInItems(machine.actions || [], prefix);
-    prefixEmitStepsInItems(machine.events || [], prefix);
-    prefixEmitStepsInItems(machine.procedures || [], prefix);
-  }
-  return copy;
-}
-
-function prefixEmitStepsInItems(items, prefix) {
-  for (const item of items) {
-    prefixEmitInSteps(item.steps || [], prefix);
-    if (item.then) prefixEmitInSteps(item.then, prefix);
-    if (item.do) prefixEmitInSteps(item.do, prefix);
-  }
-}
-
-function prefixEmitInSteps(steps, prefix) {
-  for (const step of steps) {
-    if (step.emit && typeof step.emit.type === 'string') {
-      step.emit.type = prefix + step.emit.type;
-    }
-    if (step.then) prefixEmitInSteps(step.then, prefix);
-    if (step.else) prefixEmitInSteps(step.else, prefix);
-    if (step.do) prefixEmitInSteps(step.do, prefix);
-    if (step.forEach?.do) prefixEmitInSteps(step.forEach.do, prefix);
-    if (step.match && typeof step.match === 'object') {
-      for (const matchBranch of Object.values(step.match)) {
-        if (Array.isArray(matchBranch)) prefixEmitInSteps(matchBranch, prefix);
-      }
-    }
-  }
-}
-
-/**
- * Prepend a state-specific prefix to all event type strings in an AsyncAPI spec.
- * Updates channel addresses, message names, and payload type consts.
- */
-function injectEventPrefixInAsyncApi(spec, prefix) {
-  const copy = JSON.parse(JSON.stringify(spec));
-
-  if (copy.channels && typeof copy.channels === 'object') {
-    const updatedChannels = {};
-    for (const [addr, channel] of Object.entries(copy.channels)) {
-      const newAddr = prefix + addr;
-      if (typeof channel.address === 'string') channel.address = prefix + channel.address;
-      updatedChannels[newAddr] = channel;
-    }
-    copy.channels = updatedChannels;
-  }
-
-  if (copy.components?.messages && typeof copy.components.messages === 'object') {
-    for (const msg of Object.values(copy.components.messages)) {
-      if (typeof msg.name === 'string') msg.name = prefix + msg.name;
-    }
-  }
-
-  if (copy.components?.schemas && typeof copy.components.schemas === 'object') {
-    for (const schema of Object.values(copy.components.schemas)) {
-      if (Array.isArray(schema.allOf)) {
-        for (const allOfItem of schema.allOf) {
-          const typeConst = allOfItem?.properties?.type?.const;
-          if (typeof typeConst === 'string') {
-            allOfItem.properties.type.const = prefix + typeConst;
-          }
-        }
-      }
-    }
-  }
-
-  return copy;
-}
-
-/**
- * Prepend a state-specific prefix to all event type keys in an annotations spec.
- * Updates keys under the top-level events: section.
- */
-function injectEventPrefixInAnnotations(spec, prefix) {
-  const copy = JSON.parse(JSON.stringify(spec));
-  if (copy.events && typeof copy.events === 'object') {
-    const updatedEvents = {};
-    for (const [key, value] of Object.entries(copy.events)) {
-      updatedEvents[prefix + key] = value;
-    }
-    copy.events = updatedEvents;
-  }
-  return copy;
-}
 
 // =============================================================================
 // File Collection
@@ -301,154 +196,6 @@ function discoverOverlayFiles(overlaysDir) {
 // Overlay Resolution
 // =============================================================================
 
-/**
- * Extract version number from a spec filename.
- * No suffix = version 1, -v2 suffix = version 2, etc.
- */
-function getVersionFromFilename(relativePath) {
-  const basename = relativePath.replace(/\.yaml$/, '').split('/').pop();
-  const match = basename.match(/-v(\d+)$/);
-  return match ? parseInt(match[1], 10) : 1;
-}
-
-/**
- * For each action, find which files contain the full target path
- */
-function analyzeTargetLocations(overlay, yamlFiles) {
-  const actionFileMap = new Map();
-
-  if (!overlay.actions || !Array.isArray(overlay.actions)) {
-    return actionFileMap;
-  }
-
-  for (let i = 0; i < overlay.actions.length; i++) {
-    const action = overlay.actions[i];
-    const { target } = action;
-
-    if (!target) continue;
-
-    // For `add` actions the target key does not exist yet — check the parent
-    // path instead. The parent must exist for addAtPath to succeed.
-    let checkTarget = target;
-    if (action.add !== undefined) {
-      const tokens = parsePath(target);
-      if (tokens.length > 1) {
-        const parentTokens = tokens.slice(0, -1);
-        checkTarget = '$.' + parentTokens.map(t =>
-          t.type === 'filter' ? `[?(@.${t.field} == '${t.value}')]` : t.value
-        ).join('.');
-      }
-    }
-
-    // Find all files where the full target path exists, with metadata
-    const matchingFiles = [];
-    for (const { relativePath, spec } of yamlFiles) {
-      const pathCheck = checkPathExists(spec, checkTarget);
-      if (pathCheck.fullPathExists) {
-        matchingFiles.push({
-          relativePath,
-          schemaId: spec.$id || null,  // canonical URI for matching file: https://... values
-          apiId: spec.info?.['x-api-id'] || null,
-          version: getVersionFromFilename(relativePath)
-        });
-      }
-    }
-
-    actionFileMap.set(i, {
-      action,
-      matchingFiles,
-      explicitFile: action.file,
-      explicitFiles: action.files
-    });
-  }
-
-  return actionFileMap;
-}
-
-/**
- * Determine which files each action should apply to, generating warnings as needed.
- * Supports disambiguation via:
- *   - file/files: explicit file paths
- *   - target-api: match spec's info.x-api-id
- *   - target-version: match filename version suffix (no suffix = 1, -v2 = 2)
- */
-function resolveActionTargets(actionFileMap) {
-  const warnings = [];
-  const actionTargets = new Map();
-
-  for (const [actionIndex, info] of actionFileMap) {
-    const { action, matchingFiles, explicitFile, explicitFiles } = info;
-    const actionDesc = action.description || action.target;
-    const targetApi = action['target-api'];
-    const targetVersion = action['target-version'];
-
-    // Handle explicit file/files specification.
-    // file: accepts either a relative path (matched against relativePath) or a
-    // canonical schema URI starting with https:// (matched against spec.$id).
-    // Canonical URIs are preferred for JSON Schema files — they are stable and
-    // self-documenting, avoiding the need to know internal path conventions like
-    // the base/ prefix used for blueprint-core base-contracts files.
-    if (explicitFile || explicitFiles) {
-      // Normalize: files: accepts a string or array; file: is a legacy string alias.
-      const raw = explicitFiles ?? explicitFile;
-      const specifiedFiles = Array.isArray(raw) ? raw : [raw];
-      const validFiles = specifiedFiles.filter(f => {
-        if (f.startsWith('https://')) {
-          return matchingFiles.some(m => m.schemaId === f);
-        }
-        return matchingFiles.some(m => m.relativePath === f);
-      });
-      const invalidFiles = specifiedFiles.filter(f => !validFiles.includes(f));
-
-      if (invalidFiles.length > 0) {
-        warnings.push(`Target ${action.target} does not exist in specified file(s): ${invalidFiles.join(', ')} (action: "${actionDesc}")`);
-      }
-
-      // Return relative paths for valid files (pipeline works with relative paths internally)
-      const resolvedPaths = validFiles.map(f => {
-        if (f.startsWith('https://')) {
-          return matchingFiles.find(m => m.schemaId === f)?.relativePath;
-        }
-        return f;
-      }).filter(Boolean);
-
-      actionTargets.set(actionIndex, resolvedPaths);
-      continue;
-    }
-
-    // Apply target-api and target-version filters
-    let filtered = matchingFiles;
-
-    if (targetApi) {
-      filtered = filtered.filter(m => m.apiId === targetApi);
-    }
-
-    if (targetVersion !== undefined && targetVersion !== null) {
-      const ver = parseInt(targetVersion, 10);
-      filtered = filtered.filter(m => m.version === ver);
-    }
-
-    const filteredPaths = filtered.map(m => m.relativePath);
-
-    // Auto-resolve based on filtered matches
-    if (filteredPaths.length === 0) {
-      if (matchingFiles.length === 0) {
-        warnings.push(`Target ${action.target} does not exist in any file (action: "${actionDesc}")`);
-      } else {
-        warnings.push(`Target ${action.target} matched ${matchingFiles.length} file(s) but none passed target-api/target-version filters (action: "${actionDesc}")`);
-      }
-      actionTargets.set(actionIndex, []);
-    } else if (filteredPaths.length === 1) {
-      actionTargets.set(actionIndex, filteredPaths);
-    } else {
-      warnings.push(`Target ${action.target} exists in multiple files (${filteredPaths.join(', ')}). Use file, target-api, or target-version to disambiguate (action: "${actionDesc}")`);
-      actionTargets.set(actionIndex, []);
-    }
-  }
-
-  return { actionTargets, warnings };
-}
-
 // =============================================================================
 // File Type Predicates
 // =============================================================================
@@ -461,145 +208,9 @@ function resolveActionTargets(actionFileMap) {
 // Filename-based checks remain only where no parsed spec is available (e.g.,
 // the pre-parse quick check at startup to decide whether generators will run).
 
-function isStateMachine(spec) {
-  return typeof spec?.['$schema'] === 'string' && spec['$schema'].endsWith('state-machine-schema.yaml');
-}
-
-function isSlaTypes(spec) {
-  return typeof spec?.['$schema'] === 'string' && spec['$schema'].endsWith('sla-types-schema.yaml');
-}
-
-function isCompositions(spec) {
-  return typeof spec?.['$schema'] === 'string' && spec['$schema'].endsWith('compositions-schema.yaml');
-}
-
-function isMetrics(spec) {
-  return typeof spec?.['$schema'] === 'string' && spec['$schema'].endsWith('metrics-schema.yaml');
-}
-
-function isRules(spec) {
-  return typeof spec?.['$schema'] === 'string' && spec['$schema'].endsWith('rules-schema.yaml');
-}
-
-function isGraph(spec) {
-  return typeof spec?.['$schema'] === 'string' && spec['$schema'].endsWith('graph-schema.yaml');
-}
-
-function isOpenApi(spec) {
-  return typeof spec?.openapi === 'string';
-}
-
-function isAsyncApi(spec) {
-  return typeof spec?.asyncapi === 'string';
-}
-
-/** True for behavioral spec types where update: on arrays may accidentally replace baseline entries. */
-function isBehavioralYaml(spec) {
-  return isStateMachine(spec) || isSlaTypes(spec) || isMetrics(spec) || isRules(spec);
-}
-
-/**
- * Apply overlay actions to files based on resolved targets.
- * Returns { results, warnings }.
- */
-function applyOverlayWithTargets(yamlFiles, overlay, actionTargets, overlayDir) {
-  const results = new Map();
-  const warnings = [];
-
-  // Initialize results with original specs
-  for (const { relativePath, spec } of yamlFiles) {
-    results.set(relativePath, JSON.parse(JSON.stringify(spec)));
-  }
-
-  if (!overlay.actions || !Array.isArray(overlay.actions)) {
-    return { results, warnings };
-  }
-
-  // Apply each action to its target files
-  for (let i = 0; i < overlay.actions.length; i++) {
-    const action = overlay.actions[i];
-    const targetFiles = actionTargets.get(i) || [];
-
-    for (const relativePath of targetFiles) {
-      const spec = results.get(relativePath);
-      if (!spec) continue;
-
-      // Warn when update: is used with an array value on a behavioral YAML —
-      // this replaces all baseline entries. append: is usually the right choice.
-      if (action.update !== undefined && Array.isArray(action.update) &&
-          isBehavioralYaml(spec)) {
-        warnings.push(
-          `"update:" on "${action.target}" in ${relativePath} replaces all baseline entries. ` +
-          `Use "append:" to add items without removing baseline content. ` +
-          `(action: "${action.description || action.target}")`
-        );
-      }
-
-      const singleOverlay = { actions: [action] };
-      const { result } = applyOverlay(spec, singleOverlay, { overlayDir, silent: true });
-      results.set(relativePath, result);
-
-      if (action.description) {
-        console.log(`  - Applied: ${action.description} -> ${relativePath}`);
-      }
-    }
-  }
-
-  return { results, warnings };
-}
-
 // =============================================================================
 // Environment Filtering
 // =============================================================================
-
-/**
- * Recursively filter a spec tree by x-environments.
- * Removes nodes whose x-environments array doesn't include the target env.
- * Strips x-environments from surviving nodes.
- * Returns the filtered tree (or null if the root node itself should be removed).
- */
-function filterByEnvironment(node, targetEnv) {
-  if (node === null || node === undefined || typeof node !== 'object') {
-    return node;
-  }
-
-  if (Array.isArray(node)) {
-    return node
-      .filter(item => {
-        if (item && typeof item === 'object' && !Array.isArray(item) && item['x-environments']) {
-          return item['x-environments'].includes(targetEnv);
-        }
-        return true;
-      })
-      .map(item => filterByEnvironment(item, targetEnv));
-  }
-
-  // Check if this node should be removed
-  if (node['x-environments']) {
-    if (!node['x-environments'].includes(targetEnv)) {
-      return null;
-    }
-  }
-
-  // Recurse into object properties
-  const result = {};
-  for (const [key, value] of Object.entries(node)) {
-    if (key === 'x-environments') continue; // Strip from surviving nodes
-
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      const filtered = filterByEnvironment(value, targetEnv);
-      if (filtered !== null) {
-        result[key] = filtered;
-      }
-    } else if (Array.isArray(value)) {
-      result[key] = filterByEnvironment(value, targetEnv);
-    } else {
-      result[key] = value;
-    }
-  }
-
-  return result;
-}
 
 // =============================================================================
 // Placeholder Substitution
@@ -630,102 +241,9 @@ function parseEnvFile(filePath) {
   return vars;
 }
 
-/**
- * Recursively substitute ${VAR} placeholders in all string values.
- * Returns { result, warnings } where warnings lists unresolved variables.
- */
-function substitutePlaceholders(node, vars, warnings = []) {
-  if (typeof node === 'string') {
-    const substituted = node.replace(/\$\{([^}]+)\}/g, (match, varName) => {
-      if (varName in vars) {
-        return vars[varName];
-      }
-      if (!warnings.includes(varName)) {
-        warnings.push(varName);
-      }
-      return match; // Leave unresolved placeholder as-is
-    });
-    return substituted;
-  }
-
-  if (node === null || node === undefined || typeof node !== 'object') {
-    return node;
-  }
-
-  if (Array.isArray(node)) {
-    return node.map(item => substitutePlaceholders(item, vars, warnings));
-  }
-
-  const result = {};
-  for (const [key, value] of Object.entries(node)) {
-    result[key] = substitutePlaceholders(value, vars, warnings);
-  }
-  return result;
-}
-
 // =============================================================================
-// RPC Overlay Auto-Generation
+// Canonical URI rewriting
 // =============================================================================
-
-/**
- * Detect the $ref prefix used for external component references in a spec.
- * Walks the spec tree looking for $ref strings containing 'components/',
- * then extracts whatever precedes 'components/' (e.g., './' or '../../contracts/').
- * Returns './' as the default if no external component refs are found.
- */
-function detectComponentPrefix(spec) {
-  function findRefPrefix(node) {
-    if (node === null || node === undefined || typeof node !== 'object') return null;
-    if (Array.isArray(node)) {
-      for (const item of node) {
-        const found = findRefPrefix(item);
-        if (found !== null) return found;
-      }
-      return null;
-    }
-
-    for (const [key, value] of Object.entries(node)) {
-      if (key === '$ref' && typeof value === 'string') {
-        // Match external file refs like ./components/ or ../../contracts/components/
-        // Skip internal refs (#/components/...)
-        const match = value.match(/^(?!#)(.*?)components\//);
-        if (match) return match[1];
-      }
-      if (typeof value === 'object') {
-        const found = findRefPrefix(value);
-        if (found !== null) return found;
-      }
-    }
-    return null;
-  }
-
-  return findRefPrefix(spec) || './';
-}
-
-/**
- * Rewrite $ref paths in an overlay, replacing one prefix with another.
- * Used to align generated overlay refs with the target spec's conventions.
- */
-function rewriteOverlayRefs(overlay, fromPrefix, toPrefix) {
-  if (fromPrefix === toPrefix) return overlay;
-
-  function walk(node) {
-    if (node === null || node === undefined || typeof node !== 'object') return node;
-    if (Array.isArray(node)) return node.map(walk);
-
-    const result = {};
-    for (const [key, value] of Object.entries(node)) {
-      if (key === '$ref' && typeof value === 'string' && value.startsWith(fromPrefix + 'components/')) {
-        result[key] = toPrefix + value.substring(fromPrefix.length);
-      } else {
-        result[key] = (typeof value === 'object') ? walk(value) : value;
-      }
-    }
-    return result;
-  }
-
-  return walk(overlay);
-}
 
 const BLUEPRINT_BASE_URI = 'https://blueprint.codeforamerica.org/base/';
 
@@ -764,160 +282,6 @@ function rewriteBaseRefs(spec, specRelativePath) {
 // =============================================================================
 // x-enum-source Injection
 // =============================================================================
-
-/**
- * Build an index of enum values from behavioral YAML files in currentResults.
- * Reads post-overlay versions so state customizations are included.
- *
- * Returns a flat index:
- *   { 'slaTypes': ['id1', ...], 'states': ['id1', ...], 'states:Task': [...], ... }
- *
- * 'states' is the union of all machine states (used by the string form of x-enum-source).
- * 'states:<MachineName>' keys are used by the object form when machine: is specified.
- */
-function buildEnumSourceIndex(currentResults) {
-  const index = {};
-
-  for (const [relativePath, spec] of currentResults) {
-    if (!spec || typeof spec !== 'object') continue;
-
-    if (isSlaTypes(spec) && Array.isArray(spec.slaTypes)) {
-      index['slaTypes'] = spec.slaTypes.map(t => t.id).filter(Boolean);
-    }
-
-    if (isStateMachine(spec)) {
-      if (Array.isArray(spec.states)) {
-        // Legacy / test format: top-level states array
-        index['states'] = spec.states.map(s => s.id).filter(Boolean);
-      } else if (Array.isArray(spec.machines)) {
-        // Standard format: machines[].states — flatten all for string form,
-        // also index per machine for the object form with machine:
-        const allStates = [];
-        for (const machine of spec.machines) {
-          if (Array.isArray(machine.states)) {
-            const ids = machine.states.map(s => s.id).filter(Boolean);
-            allStates.push(...ids);
-            if (machine.object) {
-              index[`states:${machine.object}`] = ids;
-            }
-          }
-        }
-        index['states'] = allStates;
-      }
-    }
-  }
-
-  return index;
-}
-
-/**
- * Recursively find all x-enum-source annotations in a spec object.
- *
- * Supports two forms:
- *   String: x-enum-source: "states[].id"
- *   Object: x-enum-source: { source: "states[].id", machine: "Application" }
- *
- * Recurses into both objects and arrays (needed for allOf, oneOf, anyOf entries).
- *
- * Returns [{ path, source, machine, node }] where node is a direct reference to
- * the annotated field object — used by applyEnumSourceInjections for direct mutation.
- */
-function findEnumSources(node, path = '', findings = []) {
-  if (!node || typeof node !== 'object') return findings;
-
-  if (Array.isArray(node)) {
-    for (let i = 0; i < node.length; i++) {
-      findEnumSources(node[i], `${path}[${i}]`, findings);
-    }
-    return findings;
-  }
-
-  const xes = node['x-enum-source'];
-  if (xes) {
-    if (typeof xes === 'string') {
-      findings.push({ path, source: xes, machine: null, node });
-    } else if (typeof xes === 'object' && typeof xes.source === 'string') {
-      findings.push({ path, source: xes.source, machine: xes.machine || null, node });
-    }
-  }
-
-  for (const [key, value] of Object.entries(node)) {
-    if (key === 'x-enum-source') continue;
-    if (value && typeof value === 'object') {
-      const childPath = path ? `${path}.${key}` : key;
-      findEnumSources(value, childPath, findings);
-    }
-  }
-
-  return findings;
-}
-
-/**
- * Parse x-enum-source syntax: "slaTypes[].id" → { collection: 'slaTypes', field: 'id' }
- */
-function parseEnumSource(source) {
-  const match = source.match(/^(\w+)\[\]\.(\w+)$/);
-  if (!match) return null;
-  return { collection: match[1], field: match[2] };
-}
-
-/**
- * Scan currentResults for x-enum-source annotations, inject enum values from
- * behavioral YAMLs, and strip the annotation from the resolved output.
- * Reads behavioral YAMLs from currentResults (post-overlay) so state
- * customizations are reflected.
- *
- * Mutates field nodes directly (no overlay pass) so that annotations inside
- * allOf/oneOf/anyOf arrays are reached correctly.
- *
- * Returns warnings for unresolvable sources.
- */
-function applyEnumSourceInjections(currentResults) {
-  const warnings = [];
-  const enumIndex = buildEnumSourceIndex(currentResults);
-
-  if (Object.keys(enumIndex).length === 0) return warnings;
-
-  for (const [relativePath, spec] of currentResults) {
-    if (!spec || typeof spec !== 'object') continue;
-
-    const findings = findEnumSources(spec);
-    if (findings.length === 0) continue;
-
-    let injected = 0;
-
-    for (const { path, source, machine, node } of findings) {
-      const parsed = parseEnumSource(source);
-      if (!parsed) {
-        warnings.push(`x-enum-source: invalid syntax "${source}" at ${relativePath}#${path}`);
-        continue;
-      }
-
-      // When machine: is specified, look up per-machine index key (e.g. 'states:Application').
-      // Fall back to flat collection key for string form or when machine is omitted.
-      const indexKey = (parsed.collection === 'states' && machine)
-        ? `states:${machine}`
-        : parsed.collection;
-      const enumValues = enumIndex[indexKey];
-      if (!enumValues || enumValues.length === 0) {
-        const qualifier = machine ? ` (machine: ${machine})` : '';
-        warnings.push(`x-enum-source: no values found for "${parsed.collection}"${qualifier} (${relativePath}#${path})`);
-        continue;
-      }
-
-      // Directly mutate the field node — works at any nesting depth including inside allOf arrays
-      node.enum = enumValues;
-      delete node['x-enum-source'];
-      injected++;
-    }
-
-    if (injected > 0) {
-      console.log(`  \u2713 Auto-generated: enum injection (${injected} field(s) in ${relativePath})`);
-    }
-  }
-
-  return warnings;
-}
 
 // =============================================================================
 // Output
@@ -1005,7 +369,7 @@ async function main() {
   const hasCompositions = !specIsFile && readdirSync(specPath, { recursive: true }).filter(f => typeof f === 'string').some(f => f.endsWith('-compositions.yaml'));
   const hasRules = !specIsFile && readdirSync(specPath, { recursive: true }).filter(f => typeof f === 'string').some(f => f.endsWith('-rules.yaml'));
 
-  if (!options.overlay && !options.env && !options.envFile && !options.bundle && !options.reconcileExamples && !options.resolve && !hasStateMachines && !hasCompositions && !hasRules) {
+  if (!options.overlay && !options.envTarget && !options.envVariables && !options.bundle && !options.reconcileExamples && !options.resolve && !hasStateMachines && !hasCompositions && !hasRules) {
     // No processing needed - copy base specs as-is
     console.log('No flags specified, copying base specs unchanged');
     if (specIsFile) {
@@ -1023,15 +387,14 @@ async function main() {
   // Load the contract set. Deprecated specs are kept for consumers still on
   // them but are not resolved — discover reports every file and leaving them
   // out is the caller's decision, not core's.
-  const isDeprecated = (doc) => doc.content?.info?.['x-status'] === 'deprecated';
 
   let docs;
   if (specIsFile) {
-    docs = [load(specPath, basename(specPath))];
+    docs = [load({ path: specPath, relativePath: basename(specPath) })];
   } else {
     docs = discover(specPath)
-      .map((file) => load(file.path, file.relativePath))
-      .filter((doc) => !isDeprecated(doc));
+      .map(load)
+
   }
 
   // Always include blueprint-core base contracts in the output
@@ -1042,8 +405,8 @@ async function main() {
   }
 
   const baseDocs = discover(baseContractsDir)
-    .map((file) => load(file.path, `base/${file.relativePath}`))
-    .filter((doc) => !isDeprecated(doc));
+    .map((file) => load({ ...file, relativePath: `base/${file.relativePath}` }))
+
   docs.push(...baseDocs);
   console.log(`Base contracts: ${baseContractsDir} (${baseDocs.length} file(s))`);
 
@@ -1052,7 +415,6 @@ async function main() {
   // Everything from here to the write is the core pipeline. The CLI's job is
   // to find the inputs, decide the output location, and report — not to
   // reimplement contract transformation.
-  let overlayConfig = null;
   const authoredOverlays = [];
 
   if (options.overlay) {
@@ -1066,29 +428,21 @@ async function main() {
     const overlayIsFile = statSync(overlayInput).isFile();
     const overlayFiles = overlayIsFile ? [overlayInput] : discoverOverlayFiles(overlayInput);
 
-    const { config, errors: configErrors } = extractConfig(overlayFiles);
-    overlayConfig = config;
-    allWarnings = allWarnings.concat(configErrors);
-
-    if (config) {
-      const { errors, warnings } = validateConfig(config);
-      allWarnings = allWarnings.concat(errors, warnings);
-    }
-
     for (const file of overlayFiles) {
-      const doc = load(file, relative(overlayIsFile ? dirname(overlayInput) : overlayInput, file));
+      const doc = load({ path: file, relativePath: relative(overlayIsFile ? dirname(overlayInput) : overlayInput, file) });
       if (Array.isArray(doc.content?.actions)) authoredOverlays.push(doc.content);
     }
 
     console.log(`Overlay: ${overlayInput} (${authoredOverlays.length} document(s))`);
   }
 
-  const { overlays: generatedOverlays, graphs } = generate(docs);
+  const generatedOverlays = generate(docs, 'overlay');
+  const graphs = generate(docs, 'graph');
 
   const resolved = coreResolve(docs, {
     overlays: [...authoredOverlays, ...generatedOverlays],
-    envTarget: options.env,
-    envVariables: options.envFile ? readEnvVariables(options.envFile) : {},
+    envTarget: options.envTarget,
+    envVariables: options.envVariables ? readEnvVariables(options.envVariables) : {},
   });
 
   allWarnings = allWarnings.concat(resolved.warnings);
@@ -1201,26 +555,13 @@ async function main() {
   }
 }
 
-// Export for testing
+// Exported for testing. Only what remains the CLI's own concern: finding
+// files, reading an env file, and rewriting canonical URIs to relative paths
+// at write time. Everything else moved to blueprint-core and is tested there.
 export {
   discoverOverlayFiles,
-  analyzeTargetLocations,
-  resolveActionTargets,
-  getVersionFromFilename,
-  filterByEnvironment,
   parseEnvFile,
-  substitutePlaceholders,
-  applyOverlayWithTargets,
-  detectComponentPrefix,
-  rewriteOverlayRefs,
   rewriteBaseRefs,
-  buildEnumSourceIndex,
-  findEnumSources,
-  parseEnumSource,
-  applyEnumSourceInjections,
-  injectEventPrefixInStateMachine,
-  injectEventPrefixInAsyncApi,
-  injectEventPrefixInAnnotations,
 };
 
 // Run main when executed directly

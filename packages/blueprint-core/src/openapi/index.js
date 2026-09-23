@@ -1,23 +1,19 @@
 /**
- * OpenAPI and contract file loading utilities.
+ * OpenAPI and contract file utilities.
  *
  * Combines:
- *   - openapi-loader.js: discover, load, and parse OpenAPI specs
- *   - bundle.js: inline all external $refs into a single spec object
  *   - contract-files.js: walk contract directories and detect file types
+ *
+ * Spec discovery and loading are `discover` and `load` on the package entry.
+ * The mock server's runtime view of a spec — server base path, endpoint list,
+ * pagination defaults — moved to blueprint-mock-server, which is the only
+ * thing that wanted it.
  */
 
+export { detectType, loadContractFiles } from './contract-files.js';
+
 export {
-  discoverApiSpecs,
-  loadSpec,
-  loadAllSpecs,
-  extractMetadata,
-  collectionToSchemaPrefix,
-  extractIndividualResources,
-} from './openapi-loader.js';
-
-export { bundleSpec } from './bundle.js';
-
-export { detectType, loadContractFiles, loadExternalRefs } from './contract-files.js';
-
-export { extractPathParams, buildParameterIndex, inferTagFromPath, buildPathEntry, buildEndpointIndex, extractRefName } from './utils.js';
+  extractPathParams, buildParameterIndex, inferTagFromPath, buildPathEntry,
+  extractRefName,
+  collectionToSchemaPrefix, extractIndividualResources,
+} from './utils.js';
