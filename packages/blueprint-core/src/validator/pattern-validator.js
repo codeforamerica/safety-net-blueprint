@@ -10,6 +10,75 @@
  */
 
 import { RESERVED_RESOURCES } from '../contract-types.js';
+import { EXTENSION_LOCATIONS, LOCATION_LABELS } from '../extensions.js';
+
+const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options'];
+
+/**
+ * Report any blueprint extension written where it will not be read.
+ *
+ * Checks the four contexts a misplacement can be positively identified in —
+ * the document root, info, an operation, and a schema property. Anywhere the
+ * context cannot be determined is left alone rather than guessed at, so a
+ * deeply nested composition never produces a false positive.
+ *
+ * @param {object} spec - Parsed OpenAPI document
+ * @param {Array} errors - Array to push findings to
+ */
+export function validateExtensionPlacement(spec, errors) {
+  if (!spec || typeof spec !== 'object') return;
+
+  const report = (extension, found, where) => {
+    const allowed = EXTENSION_LOCATIONS[extension];
+    if (!allowed || allowed.includes(found)) return;
+
+    errors.push({
+      path: where,
+      rule: 'extension-misplaced',
+      message:
+        `"${extension}" is written at ${LOCATION_LABELS[found]}, where nothing reads it. ` +
+        `It belongs at ${allowed.map((l) => LOCATION_LABELS[l]).join(' or ')}. ` +
+        `The document is still valid OpenAPI, so the annotation is silently ignored.`,
+      severity: 'error',
+    });
+  };
+
+  const check = (node, found, where) => {
+    if (!node || typeof node !== 'object') return;
+    for (const key of Object.keys(node)) {
+      if (key in EXTENSION_LOCATIONS) report(key, found, where);
+    }
+  };
+
+  check(spec, 'root', '/');
+  check(spec.info, 'info', 'info');
+
+  for (const [path, pathItem] of Object.entries(spec.paths ?? {})) {
+    if (!pathItem || typeof pathItem !== 'object') continue;
+    for (const method of HTTP_METHODS) {
+      if (pathItem[method]) check(pathItem[method], 'operation', `${path} ${method.toUpperCase()}`);
+    }
+  }
+
+  const seen = new Set();
+  const checkSchema = (schema, where) => {
+    if (!schema || typeof schema !== 'object' || seen.has(schema)) return;
+    seen.add(schema);
+
+    for (const [name, property] of Object.entries(schema.properties ?? {})) {
+      check(property, 'schema-property', `${where}/${name}`);
+      checkSchema(property, `${where}/${name}`);
+    }
+    if (schema.items) checkSchema(schema.items, `${where}[]`);
+    for (const combinator of ['allOf', 'oneOf', 'anyOf']) {
+      (schema[combinator] ?? []).forEach((sub) => checkSchema(sub, where));
+    }
+  };
+
+  for (const [name, schema] of Object.entries(spec.components?.schemas ?? {})) {
+    checkSchema(schema, `components/schemas/${name}`);
+  }
+}
 
 // =============================================================================
 // Foreign Key Validation Helpers
@@ -773,6 +842,10 @@ export function validateSpec(spec, specName, sameDomainSchemas = new Set()) {
 
   // Validate operation-level x-relationship annotations
   validateOperationRelationships(spec, errors);
+
+  // Runs before the paths guard below: a misplaced extension at the document
+  // root or in info is worth reporting whether or not the spec has paths.
+  validateExtensionPlacement(spec, errors);
 
   if (!spec.paths) {
     return errors.map(e => ({ ...e, spec: specName }));

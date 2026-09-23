@@ -54,6 +54,18 @@ x_data_classification:
 # State machine, rules, metrics, and SLA type YAML files are collectively called
 # "behavioral artifacts". They follow these conventions:
 
+# The `location` given for each extension below is enforced, not advisory.
+# A specification extension is legal anywhere in OpenAPI, so one written in the
+# wrong place parses cleanly and is then silently ignored — `x-status:
+# deprecated` at the document root leaves the API live everywhere. `validate`
+# reports that as an error (rule: extension-misplaced).
+#
+# The enforced list lives in EXTENSION_LOCATIONS in blueprint-core
+# (src/extensions.js) rather than being read from this file, which is not part
+# of the published package. Change it there when adding an extension here.
+# Extensions absent from that list are never flagged, so states remain free to
+# define their own.
+
 x_extensions:
 
   x-domain:
