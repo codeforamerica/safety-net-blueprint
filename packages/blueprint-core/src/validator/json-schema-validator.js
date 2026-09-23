@@ -44,9 +44,42 @@
  */
 
 import { readFileSync, readdirSync } from 'fs';
+import { dirname, join } from 'path';
 import yaml from 'js-yaml';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
+
+/** Compare paths one way, whatever the platform wrote them as. */
+function normalizePath(path) {
+  return path.split('\\').join('/');
+}
+
+/**
+ * Every `$ref` in a document that points at another file by relative path.
+ *
+ * Fragment-only refs resolve within the document and absolute URLs are
+ * already addressable, so neither needs an alias.
+ *
+ * @param {object} spec - Parsed document
+ * @returns {Set<string>}
+ */
+function relativeRefsIn(spec) {
+  const refs = new Set();
+
+  (function walk(node) {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) return node.forEach(walk);
+
+    for (const [key, value] of Object.entries(node)) {
+      if (key === '$ref' && typeof value === 'string') {
+        if (!value.startsWith('#') && !/^[a-z][a-z0-9+.-]*:/i.test(value)) refs.add(value);
+      }
+      walk(value);
+    }
+  })(spec);
+
+  return refs;
+}
 
 // =============================================================================
 // Helpers
@@ -120,6 +153,42 @@ function validateSchemas(specs, { resolverMap = {} } = {}) {
           ajv.addSchema(schema);
         }
       } catch { /* skip unparseable files */ }
+    }
+  }
+
+  // --- Step 2b: Alias schemas under the URIs their siblings' refs compute ---
+  //
+  // Written contracts carry an absolute `$id` but relative `$ref`s: resolve
+  // rewrites canonical blueprint URLs to real paths so file-following tools
+  // can read the output. A validator does not follow paths — it resolves a
+  // relative ref against the document's own `$id`, so `../../base/schemas/
+  // auth.yaml` from `.../safety-net/domains/data-exchange/x-schema.yaml`
+  // becomes `.../safety-net/base/schemas/auth.yaml`, a URI nothing registered.
+  //
+  // The schema then fails to compile and the document is reported unchecked
+  // rather than wrong — conformance silently not run. Registering each
+  // referenced document under the URI its referrer actually computes closes
+  // that, without touching what gets written.
+  const byRelativePath = new Map(
+    specs.filter((s) => s.relativePath).map((s) => [normalizePath(s.relativePath), s.spec])
+  );
+
+  for (const { relativePath, spec } of specs) {
+    if (!relativePath || typeof spec?.$id !== 'string') continue;
+
+    for (const ref of relativeRefsIn(spec)) {
+      const [filePart] = ref.split('#');
+      if (!filePart) continue;
+
+      const target = byRelativePath.get(
+        normalizePath(join(dirname(relativePath), filePart))
+      );
+      if (!target) continue;
+
+      try {
+        const uri = new URL(filePart, spec.$id).href;
+        if (!ajv.getSchema(uri)) ajv.addSchema(target, uri);
+      } catch { /* $id is not a URL, or the ref escapes it — leave it alone */ }
     }
   }
 
