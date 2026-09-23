@@ -93,8 +93,8 @@ function graphFor(rulesDoc, rulesetName) {
     { path: 'rules.yaml', relativePath: 'rules.yaml', type: 'rules', content: rulesDoc,
       refs: () => new Map(), model: () => null, domain: rulesDoc.domain ?? null,
       resolved: false, provenance: null },
-  ]);
-  const found = graphs.find((g) => g.ruleset === rulesetName);
+  ], 'graph');
+  const found = graphs.find((g) => g.graph.ruleset === rulesetName);
   if (!found) {
     console.error(`Error: Ruleset "${rulesetName}" produced no graph`);
     process.exit(1);

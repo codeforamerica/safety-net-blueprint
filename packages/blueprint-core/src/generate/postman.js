@@ -34,7 +34,9 @@ let contracts = new Map();
 export function buildPostman(docs, { baseUrl = 'http://localhost:1080', collectionId = null } = {}) {
   contracts = new Map(docs.map((doc) => [basename(doc.path), doc.content]));
 
-  const apiSpecs = docs.filter((doc) => doc.type === 'openapi').map(apiMetadataOf);
+  const apiSpecs = docs
+    .filter((doc) => doc.type === 'openapi')
+    .map((doc) => apiMetadataOf(doc, docs));
 
   return assembleCollection(apiSpecs, { baseUrl, collectionId });
 }
@@ -47,12 +49,26 @@ export function buildPostman(docs, { baseUrl = 'http://localhost:1080', collecti
  * template reads: parameters to fill, a request schema to build a body from,
  * a response schema to assert against.
  *
+ * Parameters are almost always `$ref`s into a shared component library, so
+ * they are followed here: a request template needs the parameter's name and
+ * enum to fill it in, and `{ $ref }` carries neither.
+ *
  * @param {import('../../types.js').Doc} doc - An OpenAPI document
+ * @param {import('../../types.js').Doc[]} docs - The set, for following refs
  * @returns {{ name: string, title: string, endpoints: object[] }}
  */
-function apiMetadataOf(doc) {
+function apiMetadataOf(doc, docs) {
   const spec = doc.content ?? {};
   const name = basename(doc.path, '-openapi.yaml');
+  const refs = doc.refs();
+
+  const deref = (param) => {
+    if (!param?.$ref) return param;
+    const entry = refs.get(param.$ref);
+    if (entry && !entry.external && entry.target) return entry.target;
+    const external = doc.resolveRef(param.$ref, docs);
+    return external && Object.keys(external).length ? external : param;
+  };
 
   const localhost = spec.servers?.find((s) => s.url?.includes('localhost'));
   let base = '';
@@ -78,7 +94,7 @@ function apiMetadataOf(doc) {
         method: method.toUpperCase(),
         operationId: operation.operationId,
         summary: operation.summary,
-        parameters: [...pathParameters, ...(operation.parameters ?? [])],
+        parameters: [...pathParameters, ...(operation.parameters ?? [])].map(deref),
         sortable: operation['x-sortable'],
         requestSchema: operation.requestBody?.content?.['application/json']?.schema ?? null,
         responseSchema: operation.responses?.[success]?.content?.['application/json']?.schema ?? null,

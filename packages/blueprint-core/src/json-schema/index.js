@@ -10,5 +10,4 @@ export {
   resolveSchemaRefs,
   collectTopLevelProperties,
   getPropertyAtPath,
-  getPathsForObject,
 } from './paths.js';

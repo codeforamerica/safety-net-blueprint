@@ -8,8 +8,8 @@
  *   resolve(docs, opts)   apply overlays, substitute variables, resolve relationships
  *   validate(docs)        check contracts against their schemas
  *
- * Alongside them, a few reads over an already-loaded set that both core and
- * its consumers need — example matching, ref and endpoint lookups.
+ * Alongside them, `schemasDir` and `baseContractsDir` — the directories this
+ * package ships.
  *
  * Only `discover` touches the filesystem for input; only the caller writes
  * output. Everything between operates on documents already in memory.

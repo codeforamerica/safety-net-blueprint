@@ -31,7 +31,7 @@ import {
   collectTopLevelProperties,
   getPropertyAtPath,
   resolveRef,
-} from '../../../src/state-machines.js';
+} from '../../../src/json-schema/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

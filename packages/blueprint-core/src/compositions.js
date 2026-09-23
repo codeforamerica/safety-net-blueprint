@@ -19,7 +19,7 @@
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import yaml from 'js-yaml';
-import { resolveSchemaRefs, collectTopLevelProperties } from './state-machines.js';
+import { resolveSchemaRefs, collectTopLevelProperties } from './json-schema/index.js';
 import { extractPathParams, buildParameterIndex, buildPathEntry } from './openapi/utils.js';
 
 const LIST_QUERY_PARAMS = [

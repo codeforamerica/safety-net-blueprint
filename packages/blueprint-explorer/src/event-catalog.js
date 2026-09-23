@@ -12,6 +12,7 @@ import { dirname, join, resolve, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { load } from 'js-yaml';
 import { buildEventIndex } from './contract-nav.js';
+import { discover, load as loadDoc } from '@codeforamerica/blueprint-core';
 import { COLORS, FONT } from './lib/theme.js';
 import { esc as h, titleCase, breadcrumb } from './lib/html.js';
 import { singleColumnPage } from './lib/layout.js';
@@ -31,13 +32,9 @@ readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(join
 
 // ── Load state machines ───────────────────────────────────────────────────────
 
-const files = readdirSync(resolvedDir, { recursive: true })
-  .filter(f => typeof f === 'string' && f.endsWith('-state-machine.yaml'))
-  .map(f => join(resolvedDir, f));
-
-const allStateMachines = files
-  .map(f => load(readFileSync(f, 'utf8')))
-  .filter(sm => sm.domain && Array.isArray(sm.machines));
+const allStateMachines = discover(resolvedDir, 'state-machine')
+  .map(loadDoc)
+  .filter((doc) => doc.content?.domain && Array.isArray(doc.content.machines));
 
 const eventIndex = buildEventIndex(allStateMachines);
 

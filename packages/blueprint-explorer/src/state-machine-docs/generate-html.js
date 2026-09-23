@@ -6,12 +6,12 @@
  * Called by build.js alongside the existing markdown generator.
  */
 
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { load } from 'js-yaml';
+import { writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
 import { COLORS } from '../lib/theme.js';
 import { titleCase, breadcrumb, apiReferenceLink, apiReferenceHref } from '../lib/html.js';
 import { singleColumnPage } from '../lib/layout.js';
+import { branchSteps, matchCases, forEachBody } from './walk.js';
 
 // Semantic state coloring
 function stateColor(stateId) {
@@ -76,18 +76,6 @@ function getActors(guards) {
   return entry?.actors || [];
 }
 
-function getSteps(node) {
-  return node?.steps || node?.then || [];
-}
-
-function getMatchBranches(step) {
-  return step?.when || step?.on || {};
-}
-
-function getForEachBody(forEach) {
-  return forEach?.do || forEach?.then || [];
-}
-
 function stripRpcPrefix(desc) {
   if (!desc) return null;
   return desc.replace(/^(POST|GET|PATCH|PUT|DELETE)\s+\S+\s+[—\-–]+\s*/i, '').trim();
@@ -135,46 +123,54 @@ function renderStepsHtml(steps, sm, machine, eventIndex, allStateMachines) {
 }
 
 function collectStepHtml(steps, sm, machine, eventIndex, allStateMachines) {
+  const recurse = (inner) => collectStepHtml(inner, sm, machine, eventIndex, allStateMachines);
+
   return (steps || []).map(step => {
-    if (step.set) {
-      const desc = step.set.description?.trim().replace(/\n\s*/g, ' ') || '';
-      return `<li>${desc ? `${desc} ` : ''}<code>sets ${step.set.field}</code></li>`;
-    }
-    if (step.emit) {
-      const canonical = step.emit.type;
-      const raw = step.emit.description?.trim().replace(/\n\s*/g, ' ') || '';
-      const desc = stripEmitPrefix(raw) || raw;
-      return `<li>Emit <a href="../event-catalog/index.html#event-${canonical}" style="font-family:monospace;font-size:12px;background:${COLORS.sandMid};padding:1px 5px;border-radius:3px;border:1px solid ${COLORS.sandDark};color:${COLORS.midBlue};text-decoration:none;">${canonical}</a>${desc ? ` — ${desc}` : ''}</li>`;
-    }
-    if (step.call) {
-      if (typeof step.call === 'string') {
-        const proc = allProcedures(machine, sm).find(p => p.id === step.call);
-        return `<li>${proc?.description?.trim().replace(/\n\s*/g, ' ') || step.call}</li>`;
+    const raw = step.description?.trim().replace(/\n\s*/g, ' ') || '';
+
+    switch (step.kind) {
+      case 'set':
+        return `<li>${raw ? `${raw} ` : ''}<code>sets ${step.field}</code></li>`;
+
+      case 'emit': {
+        const desc = stripEmitPrefix(raw) || raw;
+        return `<li>Emit <a href="../event-catalog/index.html#event-${step.type}" style="font-family:monospace;font-size:12px;background:${COLORS.sandMid};padding:1px 5px;border-radius:3px;border:1px solid ${COLORS.sandDark};color:${COLORS.midBlue};text-decoration:none;">${step.type}</a>${desc ? ` — ${desc}` : ''}</li>`;
       }
-      const desc = step.description?.trim().replace(/\n\s*/g, ' ')
-        || step.call.description?.trim().replace(/\n\s*/g, ' ')
-        || JSON.stringify(step.call);
-      return `<li>${desc}</li>`;
+
+      case 'call': {
+        if (step.procedure) {
+          const proc = allProcedures(machine, sm).find(p => p.id === step.procedure);
+          return `<li>${proc?.description?.trim().replace(/\n\s*/g, ' ') || step.procedure}</li>`;
+        }
+        const desc = raw
+          || step.request?.description?.trim().replace(/\n\s*/g, ' ')
+          || JSON.stringify(step.request);
+        return `<li>${desc}</li>`;
+      }
+
+      case 'if': {
+        const thenHtml = recurse(branchSteps(step, 'then'));
+        const otherwise = branchSteps(step, 'else');
+        const elseHtml = otherwise.length ? recurse(otherwise) : '';
+        return `<li>If <code>${humanizeCondition(step.condition)}</code>:<ul style="margin:2px 0 0 14px;">${thenHtml}</ul>` +
+          (elseHtml ? `<br>Else:<ul style="margin:2px 0 0 14px;">${elseHtml}</ul>` : '') + '</li>';
+      }
+
+      case 'match': {
+        const branches = matchCases(step).map(([value, caseSteps]) =>
+          `<li>When <code>${value}</code>:<ul style="margin:2px 0 0 14px;">${recurse(caseSteps)}</ul></li>`
+        ).join('');
+        return `<li>Match on <code>${humanizeCondition(step.on)}</code>:<ul style="margin:2px 0 0 14px;">${branches}</ul></li>`;
+      }
+
+      case 'forEach': {
+        const collection = step.in ? ` <code>${step.in}</code>` : '';
+        return `<li>For each${collection}:<ul style="margin:2px 0 0 14px;">${recurse(forEachBody(step))}</ul></li>`;
+      }
+
+      default:
+        return '';
     }
-    if (step.if !== undefined) {
-      const thenHtml = collectStepHtml(getSteps(step), sm, machine, eventIndex, allStateMachines);
-      const elseHtml = step.else?.length ? collectStepHtml(step.else, sm, machine, eventIndex, allStateMachines) : '';
-      return `<li>If <code>${humanizeCondition(step.if)}</code>:<ul style="margin:2px 0 0 14px;">${thenHtml}</ul>` +
-        (elseHtml ? `<br>Else:<ul style="margin:2px 0 0 14px;">${elseHtml}</ul>` : '') + '</li>';
-    }
-    if (step.match !== undefined) {
-      const branches = Object.entries(getMatchBranches(step)).map(([key, branchSteps]) => {
-        const inner = collectStepHtml(branchSteps || [], sm, machine, eventIndex, allStateMachines);
-        return `<li>When <code>${key}</code>:<ul style="margin:2px 0 0 14px;">${inner}</ul></li>`;
-      }).join('');
-      return `<li>Match on <code>${humanizeCondition(step.match)}</code>:<ul style="margin:2px 0 0 14px;">${branches}</ul></li>`;
-    }
-    if (step.forEach) {
-      const collection = step.forEach.in ? ` <code>${step.forEach.in}</code>` : '';
-      const inner = collectStepHtml(getForEachBody(step.forEach), sm, machine, eventIndex, allStateMachines);
-      return `<li>For each${collection}:<ul style="margin:2px 0 0 14px;">${inner}</ul></li>`;
-    }
-    return '';
   }).join('');
 }
 
@@ -226,8 +222,19 @@ export function generateOverviewHtml(allStateMachines, outputDir, eventIndex, hu
 
 // ── Domain detail page ────────────────────────────────────────────────────────
 
-export function generateHtml(inputPath, outputDir, eventIndex, allStateMachines, hubHref = '../index.html', endpointIndex = null) {
-  const sm = load(readFileSync(inputPath, 'utf8'));
+/**
+ * Write one domain's HTML page.
+ *
+ * @param {ReturnType<import('./walk.js').stateMachineView>} sm - The domain to render
+ * @param {string} outputDir
+ * @param {object} eventIndex - From buildEventIndex
+ * @param {ReturnType<import('./walk.js').stateMachineView>[]} allStateMachines -
+ *   Every domain, for the nav and cross-domain links
+ * @param {string} hubHref
+ * @param {Map<string, {path: string, method: string}>} [endpointIndex] - From
+ *   `extract(docs, 'relationships')`
+ */
+export function generateHtml(sm, outputDir, eventIndex, allStateMachines, hubHref = '../index.html', endpointIndex = null) {
   mkdirSync(outputDir, { recursive: true });
   const allDomains = allStateMachines.map(s => s.domain);
 
@@ -267,7 +274,7 @@ export function generateHtml(inputPath, outputDir, eventIndex, allStateMachines,
         const transition = op.transition?.to
           ? `<span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;">${froms.length ? froms.map(f => stateBadge(f)).join('<span style="color:#aaa;font-size:10px;">or</span>') + '<span style="color:#aaa;padding:0 2px;">→</span>' : ''}${stateBadge(op.transition.to)}</span>`
           : op.transition ? '<span style="color:#999;font-size:11px;">no state change</span>' : '';
-        const steps = renderStepsHtml(getSteps(op), sm, machine, eventIndex, allStateMachines);
+        const steps = renderStepsHtml(op.steps, sm, machine, eventIndex, allStateMachines);
         let apiLinkHtml = '';
         const endpointInfo = endpointIndex?.get(`state-machine-action:${sm.domain}:${op.id}`);
         if (endpointInfo) {
@@ -299,7 +306,7 @@ export function generateHtml(inputPath, outputDir, eventIndex, allStateMachines,
         const emitterLink = emitter
           ? `<a href="${emitter.domain}.html">${titleCase(emitter.domain)}/${emitter.object}</a>`
           : '<span style="color:#999;font-size:11px;">unknown</span>';
-        const steps = renderStepsHtml(getSteps(sub), sm, machine, eventIndex, allStateMachines);
+        const steps = renderStepsHtml(sub.steps, sm, machine, eventIndex, allStateMachines);
         return `<tr>
           <td><code>${sub.type}</code></td>
           <td>${emitterLink}</td>
@@ -330,7 +337,6 @@ export function generateHtml(inputPath, outputDir, eventIndex, allStateMachines,
     </section>`;
   }).join('');
 
-  const smFile = path.basename(inputPath);
   const body = `
     <div style="margin-bottom:2rem;">
       <h1 style="font-size:1.5rem;font-weight:800;color:${COLORS.darkBlue};margin-bottom:0.375rem;">${titleCase(sm.domain)} State Machine</h1>

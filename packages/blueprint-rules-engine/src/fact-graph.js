@@ -510,7 +510,7 @@ export function toFactGraphXml(graph) {
   if (!graph?.facts || !graph?.outputs) {
     throw new TypeError(
       'toFactGraphXml expects a compiled graph (facts, outputs). To compile a ' +
-      'rules contract, use build(docs, \'graph\') from @codeforamerica/blueprint-core.'
+      'rules contract, use generate(docs, \'graph\') from @codeforamerica/blueprint-core.'
     );
   }
   return toFactGraph(graph);
@@ -797,7 +797,7 @@ export function toGraphWithFactGraph(graph) {
   if (!graph?.facts || !graph?.outputs) {
     throw new TypeError(
       'toGraphWithFactGraph expects a compiled graph (facts, outputs). To ' +
-      'compile a rules contract, use build(docs, \'graph\') from @codeforamerica/blueprint-core.'
+      'compile a rules contract, use generate(docs, \'graph\') from @codeforamerica/blueprint-core.'
     );
   }
   return new FactGraphGraph(graph);

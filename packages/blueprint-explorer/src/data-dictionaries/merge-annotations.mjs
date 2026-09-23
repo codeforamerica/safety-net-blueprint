@@ -20,6 +20,7 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { resolve, dirname, basename } from 'path';
 import yaml from 'js-yaml';
+import { load as loadDoc } from '@codeforamerica/blueprint-core';
 import { findSpecRelativePaths } from '../contract-nav.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -58,13 +59,13 @@ if (!inputArg) {
  * where that schema appears as array items. If a schema appears in multiple
  * places, the annotation is applied to all of them.
  *
- * When a spec is provided, schema-relative resolution uses the OpenAPI spec
- * directly via findSpecRelativePaths. Without a spec, annotation keys are
- * matched against the input inventory as-is.
+ * When a spec is provided, schema-relative resolution uses the OpenAPI
+ * document directly via findSpecRelativePaths. Without one, annotation keys
+ * are matched against the input inventory as-is.
  *
  * @param {Record<string, object>} input  - Flat map (field inventory or crosswalk).
  * @param {{ path: string, layer: Record<string, object> }[]} layers - Ordered annotation layers.
- * @param {{ spec?: object|null }} [opts]
+ * @param {{ spec?: import('@codeforamerica/blueprint-core').Doc|null }} [opts]
  * @returns {Record<string, object>} - Input entries with `annotations` block merged in.
  */
 export function mergeAnnotations(input, layers, { spec = null } = {}) {
@@ -136,7 +137,7 @@ if (process.argv[1] === __filename) {
       console.error(`Spec file not found: ${specPath}`);
       process.exit(1);
     }
-    spec = yaml.load(readFileSync(specPath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA }) ?? null;
+    spec = loadDoc(specPath);
   }
 
   const layers = [];

@@ -105,7 +105,7 @@ function bestMatch(entries, fieldPath) {
   return best;
 }
 
-function buildAnnotationResolver(mergedSchema, spec = null) {
+function buildAnnotationResolver(mergedSchema, doc = null) {
   const rawAll = mergedSchema ?? {};
 
   // Expand any schema-relative annotation keys (e.g. "applicationMember.dob")
@@ -113,7 +113,7 @@ function buildAnnotationResolver(mergedSchema, spec = null) {
   // they match the field inventory paths produced by generate-field-inventory.
   const all = {};
   for (const [key, value] of Object.entries(rawAll)) {
-    const resolvedKeys = spec ? findSpecRelativePaths(spec, key) : [key];
+    const resolvedKeys = doc ? findSpecRelativePaths(doc, key) : [key];
     for (const resolved of resolvedKeys) {
       all[resolved] = value;
     }
@@ -440,9 +440,8 @@ function main() {
 
   // Index openapi files by x-domain for version lookup
   const openApiByDomain = new Map();
-  for (const { content, type } of fileMap.values()) {
-    const domain = content?.info?.['x-domain'];
-    if (type === 'openapi' && domain) openApiByDomain.set(domain, content);
+  for (const doc of fileMap.values()) {
+    if (doc.type === 'openapi' && doc.domain) openApiByDomain.set(doc.domain, doc);
   }
 
   const domains = [];
@@ -460,7 +459,7 @@ function main() {
     const sections = parseDataModel(dataModelPath);
     const { registryTypes } = ann;
 
-    const version = domainSpec?.info?.version ?? null;
+    const version = domainSpec?.content?.info?.version ?? null;
 
     domains.push({ domain, sections, version, resolveAnn, allowedAnnotations, registryTypes });
   }

@@ -7,15 +7,26 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import yaml from 'js-yaml';
 import { buildEventIndex } from '../../src/contract-nav.js';
-import { discover, load } from '@codeforamerica/blueprint-core';
+import { load } from '@codeforamerica/blueprint-core';
 
 test('buildEventIndex', async (t) => {
-  const intakeSM = {
+  // buildEventIndex walks `model()`, so its input has to be a real Doc — the
+  // normalized step tree is what makes an emit nested in a branch reachable.
+  const dir = mkdtempSync(join(tmpdir(), 'contract-nav-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+
+  const stateMachine = (content) => {
+    const file = join(dir, `${content.domain}-state-machine.yaml`);
+    writeFileSync(file, yaml.dump(content));
+    return load(file);
+  };
+
+  const intakeSM = stateMachine({
     domain: 'intake',
     machines: [{
       object: 'Application',
@@ -25,16 +36,16 @@ test('buildEventIndex', async (t) => {
       }],
       events: [],
     }],
-  };
+  });
 
-  const eligibilitySM = {
+  const eligibilitySM = stateMachine({
     domain: 'eligibility',
     machines: [{
       object: 'Determination',
       actions: [],
       events: [{ type: 'intake.application.submitted' }],
     }],
-  };
+  });
 
   await t.test('indexes emitters from action emit steps', () => {
     const { emitters } = buildEventIndex([intakeSM]);
@@ -70,14 +81,14 @@ test('buildEventIndex', async (t) => {
   });
 
   await t.test('multiple subscribers for same event', () => {
-    const workflowSM = {
+    const workflowSM = stateMachine({
       domain: 'workflow',
       machines: [{
         object: 'Task',
         actions: [],
         events: [{ type: 'intake.application.submitted' }],
       }],
-    };
+    });
     const { subscribers } = buildEventIndex([eligibilitySM, workflowSM]);
     assert.strictEqual(subscribers['intake.application.submitted'].length, 2);
   });

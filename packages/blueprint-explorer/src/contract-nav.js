@@ -7,26 +7,107 @@
  *
  *   buildEventIndex        who emits and who subscribes to each event type
  *   findSpecRelativePaths  where a field sits relative to its root schema
+ *
+ * Both take Docs. Following a `$ref` is the Doc's own job — `refs()` already
+ * indexes every reference in the document and resolves the local ones to the
+ * node they point at, so nothing here reimplements a pointer walk.
  */
 
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import yaml from 'js-yaml';
+import { emittedTypes, stateMachineView } from './state-machine-docs/walk.js';
 
 /**
- * Build a cross-domain event index from an array of parsed state machine objects.
+ * `doc.refs()` rebuilds its index from `content` on every call — that is what
+ * keeps it honest across resolve passes. Enumerating paths asks for the same
+ * index once per property, so it is cached per Doc here. A Doc is replaced,
+ * never mutated, so a stale entry cannot outlive the content it describes.
  *
- * @param {Array<{ domain: string, machines: Array }>} allStateMachines
+ * @type {WeakMap<object, Map<string, object>>}
+ */
+const refIndexes = new WeakMap();
+
+function refsFor(doc) {
+  let refs = refIndexes.get(doc);
+  if (!refs) {
+    refs = doc.refs();
+    refIndexes.set(doc, refs);
+  }
+  return refs;
+}
+
+/**
+ * A schema node with any local `$ref` followed.
+ *
+ * @param {import('@codeforamerica/blueprint-core').Doc} doc
+ * @param {object} schema
+ * @returns {object} The node itself when it is not a ref, or when the ref
+ *   points outside this document
+ */
+function resolveNode(doc, schema) {
+  if (!schema?.$ref) return schema;
+  return refsFor(doc).get(schema.$ref)?.target ?? schema;
+}
+
+/**
+ * Every property declared by a schema, including those it composes in.
+ *
+ * @param {import('@codeforamerica/blueprint-core').Doc} doc
+ * @param {object} schema
+ * @returns {Record<string, object>}
+ */
+function collectProps(doc, schema) {
+  const props = {};
+  if (!schema) return props;
+
+  for (const combinator of ['allOf', 'oneOf', 'anyOf']) {
+    for (const sub of (schema[combinator] || [])) {
+      Object.assign(props, collectProps(doc, resolveNode(doc, sub)));
+    }
+  }
+
+  if (schema.properties) Object.assign(props, schema.properties);
+  return props;
+}
+
+/**
+ * Enumerate every reachable path within an object schema.
+ *
+ * Array items are denoted with `[]` (e.g. `members[].dateOfBirth`). Circular
+ * references are detected with a WeakSet and skipped.
+ *
+ * @param {import('@codeforamerica/blueprint-core').Doc} doc - The document the
+ *   schema belongs to, for following its refs
+ * @param {object} schema
+ * @param {string} prefix - Path prefix to prepend, e.g. `application`
+ * @returns {{ path: string, schema: object }[]}
+ */
+function getPathsForObject(doc, schema, prefix = '') {
+  const results = [];
+  walkObject(doc, schema, prefix, results, new WeakSet());
+  return results;
+}
+
+/**
+ * Build a cross-domain event index from state machine documents.
+ *
+ * Takes Docs rather than parsed YAML so it can walk `model()`, where an
+ * emit nested inside a branch is reachable by plain recursion.
+ *
+ * @param {import('@codeforamerica/blueprint-core').Doc[]} stateMachines
  * @returns {{ emitters: Record<string, { domain, object }>, subscribers: Record<string, Array<{ domain, object }>> }}
  */
-export function buildEventIndex(allStateMachines) {
+export function buildEventIndex(stateMachines) {
   const emitters = {};
   const subscribers = {};
 
-  for (const sm of allStateMachines) {
+  for (const doc of stateMachines) {
+    const sm = stateMachineView(doc);
+
     for (const machine of sm.machines) {
       for (const op of (machine.actions || [])) {
-        for (const eventType of collectEmitSteps(getSteps(op))) {
+        for (const eventType of emittedTypes(op.steps)) {
           emitters[eventType] = { domain: sm.domain, object: machine.object };
         }
       }
@@ -60,12 +141,12 @@ const SCHEMA_SUFFIXES = ['List', 'Create', 'Update', 'Writable'];
  * Returns an array of spec-relative paths. Returns [key] unchanged when no
  * schema-relative expansion is found (unresolvable or already spec-relative).
  *
- * @param {object} spec - OpenAPI spec document.
+ * @param {import('@codeforamerica/blueprint-core').Doc} doc - The OpenAPI document.
  * @param {string} key  - Annotation key, spec-relative path, or PascalCase schema name.
  * @returns {string[]}
  */
-export function findSpecRelativePaths(spec, key) {
-  const schemas = spec?.components?.schemas ?? {};
+export function findSpecRelativePaths(doc, key) {
+  const schemas = doc?.content?.components?.schemas ?? {};
 
   const dot = key.indexOf('.');
   const firstSegment = dot === -1 ? key : key.slice(0, dot);
@@ -101,7 +182,7 @@ export function findSpecRelativePaths(spec, key) {
   const arrayPaths = [];
   for (const [rootName, rootSchema] of Object.entries(schemas)) {
     const rootPrefix = rootName.charAt(0).toLowerCase() + rootName.slice(1);
-    for (const { path, schema: pathSchema } of getPathsForObject(spec, rootSchema, rootPrefix)) {
+    for (const { path, schema: pathSchema } of getPathsForObject(doc, rootSchema, rootPrefix)) {
       if (path.endsWith('[]') && itemsMatchesSchema(pathSchema.items)) {
         arrayPaths.push(path);
       }
@@ -134,16 +215,16 @@ export function findSpecRelativePaths(spec, key) {
   return [restPath ? `${rootPath}.${restPath}` : rootPath];
 }
 
-function walkObject(spec, schema, prefix, results, visited) {
+function walkObject(doc, schema, prefix, results, visited) {
   if (!schema || typeof schema !== 'object') return;
-  const resolved = resolveNode(spec, schema);
+  const resolved = resolveNode(doc, schema);
   if (!resolved || visited.has(resolved)) return;
   visited.add(resolved);
 
-  const props = collectProps(spec, resolved);
+  const props = collectProps(doc, resolved);
 
   for (const [name, propSchema] of Object.entries(props)) {
-    const propResolved = resolveNode(spec, propSchema);
+    const propResolved = resolveNode(doc, propSchema);
     if (!propResolved) continue;
 
     const path = prefix ? `${prefix}.${name}` : name;
@@ -151,15 +232,15 @@ function walkObject(spec, schema, prefix, results, visited) {
     if (propResolved.type === 'array') {
       const arrayPath = `${path}[]`;
       results.push({ path: arrayPath, schema: propResolved });
-      const items = resolveNode(spec, propResolved.items);
+      const items = resolveNode(doc, propResolved.items);
       if (items && typeof items === 'object' && !visited.has(items)) {
-        walkObject(spec, items, arrayPath, results, visited);
+        walkObject(doc, items, arrayPath, results, visited);
       }
     } else {
       results.push({ path, schema: propResolved });
-      const nestedProps = collectProps(spec, propResolved);
+      const nestedProps = collectProps(doc, propResolved);
       if (Object.keys(nestedProps).length > 0) {
-        walkObject(spec, propResolved, path, results, visited);
+        walkObject(doc, propResolved, path, results, visited);
       }
     }
   }

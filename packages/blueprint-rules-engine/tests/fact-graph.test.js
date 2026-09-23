@@ -188,7 +188,7 @@ describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () 
   it('scenario 01: no probes — all facts complete and agree', () => {
     assertOutputParity(
       toGraph(graph, rulesetInputs).evaluate(scenarios[0].inputs),
-      toGraphWithFactGraph(rulesDoc).evaluate(scenarios[0].inputs),
+      toGraphWithFactGraph(graph).evaluate(scenarios[0].inputs),
       'scenario 01'
     );
   });
@@ -196,7 +196,7 @@ describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () 
   it('scenario 02: multiple probes — complete/missing/errors agree', () => {
     assertOutputParity(
       toGraph(graph, rulesetInputs).evaluate(scenarios[1].inputs),
-      toGraphWithFactGraph(rulesDoc).evaluate(scenarios[1].inputs),
+      toGraphWithFactGraph(graph).evaluate(scenarios[1].inputs),
       'scenario 02'
     );
   });
@@ -204,7 +204,7 @@ describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () 
   it('scenario 03: partial inputs — incomeInconsistency missing in both', () => {
     assertOutputParity(
       toGraph(graph, rulesetInputs).evaluate(scenarios[2].inputs),
-      toGraphWithFactGraph(rulesDoc).evaluate(scenarios[2].inputs),
+      toGraphWithFactGraph(graph).evaluate(scenarios[2].inputs),
       'scenario 03'
     );
   });
@@ -212,7 +212,7 @@ describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () 
   it('scenario 04: wrong-type scalar — incomeInconsistency errors, member facts complete in both', () => {
     assertOutputParity(
       toGraph(graph, rulesetInputs).evaluate(scenarios[3].inputs),
-      toGraphWithFactGraph(rulesDoc).evaluate(scenarios[3].inputs),
+      toGraphWithFactGraph(graph).evaluate(scenarios[3].inputs),
       'scenario 04'
     );
   });
@@ -222,7 +222,7 @@ describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () 
     // FactGraph leaves the collection unseeded and returns Placeholder for exists() facts.
     // Only assert agreement on facts that do agree.
     const cel = toGraph(graph, rulesetInputs).evaluate(scenarios[4].inputs).filter('output');
-    const fg  = toGraphWithFactGraph(rulesDoc).evaluate(scenarios[4].inputs).filter('output');
+    const fg  = toGraphWithFactGraph(graph).evaluate(scenarios[4].inputs).filter('output');
 
     // Both agree: no errors, no missing
     assert.deepStrictEqual(cel.collect('error'),   {}, 'scenario 05: CEL errors');
@@ -240,7 +240,7 @@ describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () 
   it('scenario 06: wrong-type sub-field — member facts error, scalar fact complete in both', () => {
     assertOutputParity(
       toGraph(graph, rulesetInputs).evaluate(scenarios[5].inputs),
-      toGraphWithFactGraph(rulesDoc).evaluate(scenarios[5].inputs),
+      toGraphWithFactGraph(graph).evaluate(scenarios[5].inputs),
       'scenario 06'
     );
   });

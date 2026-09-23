@@ -363,7 +363,7 @@ export function toGraph(graph, inputs) {
   if (!graph?.facts || !graph?.outputs) {
     throw new TypeError(
       'toGraph expects a compiled graph (facts, outputs). To compile a rules ' +
-      'contract, use build(docs, \'graph\') from @codeforamerica/blueprint-core ' +
+      'contract, use generate(docs, \'graph\') from @codeforamerica/blueprint-core ' +
       'the graph it produces.'
     );
   }

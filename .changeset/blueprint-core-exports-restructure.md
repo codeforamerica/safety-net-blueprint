@@ -8,17 +8,21 @@
 
 Collapse blueprint-core to a single entry point.
 
-The package exported 17 subpaths. It now exports one, `.`, and everything
-reachable through it describes the contract pipeline:
+The package exported 17 subpaths. It now exports one, `.`, carrying eight
+names — six pipeline stages and the two directories the package ships:
 
 ```js
-discover(dir, type?)                    find contract files
-load(file)                              parse one into a Doc
-generate(docs)                          derive overlays and graphs
+discover(dir, type?)        find contract files, with their type and domain
+load(file)                  parse one into a Doc
+generate(docs, type, opts?) derive 'overlay' | 'graph' | 'postman' | 'examples'
+extract(docs, type, opts?)  read out a stated fact: 'relationships'
 resolve(docs, { overlays, envTarget, envVariables })
 validate(docs)
 schemasDir, baseContractsDir
 ```
+
+`generate` makes what did not exist; `extract` surfaces what the documents
+already state. Both dispatch on a type string, as `discover(dir, type)` does.
 
 **Breaking.** Every subpath import must become an import from the package
 root — `@codeforamerica/blueprint-core/openapi`, `/rules`, `/validator`,
@@ -39,7 +43,9 @@ value in the `Domain` enum. The last two need the whole set, which is why
 
 `Doc.refs` and `Doc.model` are now methods. As fields they were computed once
 at load and went stale the moment a resolve pass rewrote `content`, which had
-`validate` checking pre-resolution documents.
+`validate` checking pre-resolution documents. `refs()` entries also carry
+`name`, the schema name a reference points at, which replaces the former
+`extractRefName` export.
 
 **Moved out of core, to the package that wanted them:**
 
@@ -52,9 +58,9 @@ at load and went stale the moment a resolve pass rewrote `content`, which had
 
 **blueprint-rules-engine no longer depends on blueprint-core.** `toGraph`,
 `toGraphWithFactGraph` and `toFactGraphXml` take a compiled graph; they no
-longer accept a rules contract and compile it. Compile with `generate` (or
-`compileRuleset`) and pass the graph. The browser bundle drops the stub that
-existed only to keep core out of it.
+longer accept a rules contract and compile it. Compile with
+`generate(docs, 'graph')` and pass the graph. The browser bundle drops the
+stub that existed only to keep core out of it.
 
 Also fixed along the way:
 
@@ -67,12 +73,10 @@ Also fixed along the way:
 - Resolve separates writing from succeeding: schema conformance still blocks
   the write, because it can only run before refs are rewritten, but every
   other failure writes the artifacts, reports, and exits non-zero.
-
-Eleven further names remain on the entry point — `registryEntries`,
-`registryTypes`, `compileRuleset`, `generateStateSchemas`,
-`collectionToSchemaPrefix`, `extractIndividualResources`, `buildEndpointIndex`,
-`extractRefName`, `loadExternalRefs`, `resolveExternalDefRef` and `detectType`.
-Each is there only because core uses it internally *and* two or more other
-packages need the same answer, so it can neither move out nor be dropped.
-They are reads over a loaded document set, not pipeline stages, and are
-candidates for removal.
+- State machine step walking had drifted into three copies of the same
+  accessors. `Doc.model()` normalizes the authored shape — `then`/`else` on
+  if, `when` on match, `do` on forEach — into uniform `{ kind, ...fields,
+  children }` nodes, and the copies are gone. This fixed a silent defect: the
+  old helper looked for a `forEach` body under `forEach.do` rather than the
+  sibling `do`, so every loop body rendered empty in the generated state
+  machine documentation.

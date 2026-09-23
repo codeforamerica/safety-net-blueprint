@@ -951,6 +951,51 @@
           ]
         },
         {
+          "name": "Submit Application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Caller-Id",
+                "value": "{{callerId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/applications/{{applicationId}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "{{applicationId}}",
+                "submit"
+              ],
+              "variables": [
+                "applicationId"
+              ]
+            },
+            "description": "Trigger the submit transition"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON with id\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Open Application",
           "request": {
             "method": "POST",
@@ -1001,11 +1046,6 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
                 "key": "X-Caller-Id",
                 "value": "{{callerId}}",
                 "type": "text"
@@ -1024,15 +1064,6 @@
               "variables": [
                 "applicationId"
               ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"outcome\": \"example outcome\",\n  \"notes\": \"example notes\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
             },
             "description": "Trigger the close transition"
           },
@@ -1055,7 +1086,7 @@
           ]
         },
         {
-          "name": "Withdraw Application",
+          "name": "Withdraw Application (409 Conflict)",
           "request": {
             "method": "POST",
             "header": [
@@ -1086,13 +1117,8 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response is JSON with id\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('id');",
+                  "pm.test(\"Status code is 409 (transition not valid from current state)\", function () {",
+                  "    pm.response.to.have.status(409);",
                   "});"
                 ]
               }
@@ -1107,6 +1133,16 @@
     {
       "key": "baseUrl",
       "value": "http://localhost:1080",
+      "type": "string"
+    },
+    {
+      "key": "callerId",
+      "value": "postman-test-user",
+      "type": "string"
+    },
+    {
+      "key": "callerId",
+      "value": "postman-test-user",
       "type": "string"
     }
   ]

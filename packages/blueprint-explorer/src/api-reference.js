@@ -600,7 +600,7 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
 
 // ── Request body ──────────────────────────────────────────────────────────
 
-function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', spec = null) {
+function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', doc = null) {
   if (!reqBody) return '';
   const content    = reqBody.content ?? {};
   const mediaType  = content['application/json'] ?? Object.values(content)[0] ?? {};
@@ -611,7 +611,7 @@ function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = nul
   let bodyContent;
   if (refName) {
     const rawSchema = rawSchemas?.[refName] ?? null;
-    const rootPrefix = spec ? (findSpecRelativePaths(spec, refName)[0] ?? domainSlug) : domainSlug;
+    const rootPrefix = doc ? (findSpecRelativePaths(doc, refName)[0] ?? domainSlug) : domainSlug;
     bodyContent = `<details style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">
       <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
         <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
@@ -633,7 +633,7 @@ function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = nul
 
 // ── Response section ──────────────────────────────────────────────────────
 
-function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', spec = null) {
+function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', doc = null) {
   if (!responses || !Object.keys(responses).length) return '';
 
   const entries = Object.entries(responses).map(([status, resp]) => {
@@ -664,7 +664,7 @@ function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMa
       </details>`;
     } else if (schemaRefName) {
       const rawSchema = rawSchemas?.[schemaRefName] ?? null;
-      const rootPrefix = spec ? (findSpecRelativePaths(spec, schemaRefName)[0] ?? domainSlug) : domainSlug;
+      const rootPrefix = doc ? (findSpecRelativePaths(doc, schemaRefName)[0] ?? domainSlug) : domainSlug;
       schemaHtml = `<details style="border-top:1px solid #f0f0f0;">
         <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
           <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
@@ -693,7 +693,7 @@ function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMa
 
 // ── Endpoint block ────────────────────────────────────────────────────────
 
-function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map(), rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', spec = null) {
+function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map(), rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', doc = null) {
   const id       = `op-${method}-${path.replace(/\//g, '-').replace(/[{}]/g, '').replace(/--+/g, '-').replace(/^-|-$/g, '')}`;
   const params   = op.parameters ?? [];
   const descHtml = op.description
@@ -734,8 +734,8 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
     <div style="padding:12px 16px;">
       ${descHtml}
       ${renderParams(params, paramNameByKey, rawOp?.parameters ?? [])}
-      ${renderRequestBody(op.requestBody, rawOp?.requestBody, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, spec)}
-      ${renderResponses(op.responses, rawOp?.responses ?? {}, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, spec)}
+      ${renderRequestBody(op.requestBody, rawOp?.requestBody, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, doc)}
+      ${renderResponses(op.responses, rawOp?.responses ?? {}, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, doc)}
     </div>
   </details>
 </div>`;
@@ -743,7 +743,7 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
 
 // ── Domain page ───────────────────────────────────────────────────────────
 
-function buildDomainPage({ slug, spec, raw, fileMap = new Map() }) {
+function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
   const dataDictHref = `../data-dictionaries/${slug}.html`;
   const metaSubtitle = headerMetaSubtitle(slug, resolvedSourcePairs(slug, resolvedDir, { include: SOURCE_SUFFIXES }, repo));
 
@@ -841,7 +841,7 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map() }) {
   // Main content sections — nav links point to tag sections; endpoint cards are content-items within
   const sections = [...byTag.entries()].map(([tag, ops]) => {
     const tagDesc = tagMap.get(tag) ?? '';
-    const endpoints = ops.map(({ path, method, op, rawOp }) => renderEndpoint(path, method, op, rawOp, paramNameByKey, rawSchemas, fileMap, dataDictHref, null, slug, spec)).join('');
+    const endpoints = ops.map(({ path, method, op, rawOp }) => renderEndpoint(path, method, op, rawOp, paramNameByKey, rawSchemas, fileMap, dataDictHref, null, slug, doc)).join('');
     return `<section id="${sectionId(tag)}" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
         <h2 style="font-size:1rem;font-weight:800;color:${COLORS.darkBlue};margin-bottom:0.25rem;">${esc(tag)}</h2>

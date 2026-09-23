@@ -1,9 +1,7 @@
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { load } from 'js-yaml';
+import { writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
 import { titleCase } from '../lib/html.js';
-import { collectEmitSteps, getSteps, getMatchBranches, getForEachBody } from '@codeforamerica/blueprint-core';
-import { buildEventIndex } from '../contract-nav.js';
+import { branchSteps, matchCases, forEachBody } from './walk.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -169,47 +167,50 @@ export function generateOverview(stateMachines, outputDir) {
 
 function collectTransitionStepLines(steps, sm, machine, eventIndex, allStateMachines, indent) {
   const lines = [];
+  const recurse = (inner, deeper) =>
+    collectTransitionStepLines(inner, sm, machine, eventIndex, allStateMachines, deeper);
+
   for (const step of steps || []) {
-    if (step.set) {
-      const desc = step.set.description?.trim().replace(/\n\s*/g, ' ') || '';
-      const fieldNote = `sets \`${step.set.field}\``;
-      lines.push(`${indent}- ${desc ? `${desc} (${fieldNote})` : fieldNote}`);
-    } else if (step.emit) {
-      const rawDesc = step.emit.description?.trim().replace(/\n\s*/g, ' ') || '';
-      const desc = stripEmitPrefix(rawDesc) || rawDesc;
-      const canonical = step.emit.type;
-      const subs = eventIndex?.subscribers[canonical] || [];
+    const description = step.description?.trim().replace(/\n\s*/g, ' ') || '';
+
+    if (step.kind === 'set') {
+      const fieldNote = `sets \`${step.field}\``;
+      lines.push(`${indent}- ${description ? `${description} (${fieldNote})` : fieldNote}`);
+    } else if (step.kind === 'emit') {
+      const desc = stripEmitPrefix(description) || description;
+      const subs = eventIndex?.subscribers[step.type] || [];
       const subLinks = subs.map(s => machineLink(s.domain, s.object, allStateMachines)).join(', ');
-      lines.push(`${indent}- Emit: \`${canonical}\`${desc ? ` — ${desc}` : ''}`);
+      lines.push(`${indent}- Emit: \`${step.type}\`${desc ? ` — ${desc}` : ''}`);
       if (subLinks) lines.push(`${indent}  - Subscribed by: ${subLinks}`);
-    } else if (step.call) {
-      if (typeof step.call === 'string') {
-        const proc = allProcedures(machine, sm).find(p => p.id === step.call);
+    } else if (step.kind === 'call') {
+      if (step.procedure) {
+        const proc = allProcedures(machine, sm).find(p => p.id === step.procedure);
         const desc = proc?.description?.trim().replace(/\n\s*/g, ' ');
-        lines.push(`${indent}- ${desc || step.call}`);
-      } else if (typeof step.call === 'object') {
-        const desc = step.description?.trim().replace(/\n\s*/g, ' ')
-          || step.call.description?.trim().replace(/\n\s*/g, ' ')
-          || renderInvokeCompact(step.call);
+        lines.push(`${indent}- ${desc || step.procedure}`);
+      } else if (step.request) {
+        const desc = description
+          || step.request.description?.trim().replace(/\n\s*/g, ' ')
+          || renderInvokeCompact(step.request);
         lines.push(`${indent}- ${desc}`);
       }
-    } else if (step.if !== undefined) {
-      lines.push(`${indent}- If \`${humanizeCondition(step.if)}\`:`);
-      lines.push(...collectTransitionStepLines(getSteps(step), sm, machine, eventIndex, allStateMachines, indent + '  '));
-      if (step.else?.length) {
+    } else if (step.kind === 'if') {
+      lines.push(`${indent}- If \`${humanizeCondition(step.condition)}\`:`);
+      lines.push(...recurse(branchSteps(step, 'then'), indent + '  '));
+      const otherwise = branchSteps(step, 'else');
+      if (otherwise.length) {
         lines.push(`${indent}- Else:`);
-        lines.push(...collectTransitionStepLines(step.else, sm, machine, eventIndex, allStateMachines, indent + '  '));
+        lines.push(...recurse(otherwise, indent + '  '));
       }
-    } else if (step.match !== undefined) {
-      lines.push(`${indent}- Match on \`${humanizeCondition(step.match)}\`:`);
-      for (const [key, branchSteps] of Object.entries(getMatchBranches(step))) {
-        lines.push(`${indent}  - When \`${key}\`:`);
-        lines.push(...collectTransitionStepLines(branchSteps, sm, machine, eventIndex, allStateMachines, indent + '    '));
+    } else if (step.kind === 'match') {
+      lines.push(`${indent}- Match on \`${humanizeCondition(step.on)}\`:`);
+      for (const [value, caseSteps] of matchCases(step)) {
+        lines.push(`${indent}  - When \`${value}\`:`);
+        lines.push(...recurse(caseSteps, indent + '    '));
       }
-    } else if (step.forEach) {
-      const collection = step.forEach.in ? ` \`${step.forEach.in}\`` : '';
+    } else if (step.kind === 'forEach') {
+      const collection = step.in ? ` \`${step.in}\`` : '';
       lines.push(`${indent}- For each${collection}:`);
-      lines.push(...collectTransitionStepLines(getForEachBody(step.forEach), sm, machine, eventIndex, allStateMachines, indent + '  '));
+      lines.push(...recurse(forEachBody(step), indent + '  '));
     }
   }
   return lines;
@@ -244,7 +245,7 @@ function renderOpLine(op, sm, machine, eventIndex, allStateMachines) {
   }
 
   lines.push(...collectTransitionStepLines(
-    getSteps(op), sm, machine, eventIndex, allStateMachines, '  '
+    op.steps, sm, machine, eventIndex, allStateMachines, '  '
   ));
 
   return lines.join('\n');
@@ -253,59 +254,61 @@ function renderOpLine(op, sm, machine, eventIndex, allStateMachines) {
 // ── Event subscription rendering ──────────────────────────────────────────────
 
 function appendStepLines(out, step, machine, sm, indent, allMachines) {
-  if (step.call) {
-    if (typeof step.call === 'string') {
-      const proc = allProcedures(machine, sm).find(p => p.id === step.call);
-      const desc = proc?.description?.trim().replace(/\n\s*/g, ' ');
-      out.push(`${indent}- ${desc || step.call}`);
-    } else if (typeof step.call === 'object') {
-      const desc = step.description?.trim().replace(/\n\s*/g, ' ')
-        || step.call.description?.trim().replace(/\n\s*/g, ' ')
-        || renderInvokeCompact(step.call);
-      out.push(`${indent}- ${desc}`);
+  const raw = step.description?.trim().replace(/\n\s*/g, ' ');
+  const deeper = indent + '  ';
+
+  switch (step.kind) {
+    case 'call': {
+      if (step.procedure) {
+        const proc = allProcedures(machine, sm).find(p => p.id === step.procedure);
+        const desc = proc?.description?.trim().replace(/\n\s*/g, ' ');
+        out.push(`${indent}- ${desc || step.procedure}`);
+      } else if (step.request) {
+        const desc = raw
+          || step.request.description?.trim().replace(/\n\s*/g, ' ')
+          || renderInvokeCompact(step.request);
+        out.push(`${indent}- ${desc}`);
+      }
+      return;
     }
-    return;
-  }
 
-  if (step.if !== undefined) {
-    out.push(`${indent}- If \`${humanizeCondition(step.if)}\`:`);
-    for (const s of getSteps(step)) appendStepLines(out, s, machine, sm, indent + '  ', allMachines);
-    if (step.else?.length) {
-      out.push(`${indent}- Else:`);
-      for (const s of step.else) appendStepLines(out, s, machine, sm, indent + '  ', allMachines);
+    case 'if': {
+      out.push(`${indent}- If \`${humanizeCondition(step.condition)}\`:`);
+      for (const s of branchSteps(step, 'then')) appendStepLines(out, s, machine, sm, deeper, allMachines);
+      const otherwise = branchSteps(step, 'else');
+      if (otherwise.length) {
+        out.push(`${indent}- Else:`);
+        for (const s of otherwise) appendStepLines(out, s, machine, sm, deeper, allMachines);
+      }
+      return;
     }
-    return;
-  }
 
-  if (step.match !== undefined) {
-    out.push(`${indent}- Match on \`${humanizeCondition(step.match)}\`:`);
-    for (const [key, branchSteps] of Object.entries(getMatchBranches(step))) {
-      out.push(`${indent}  - When \`${key}\`:`);
-      for (const s of (branchSteps || [])) appendStepLines(out, s, machine, sm, indent + '    ', allMachines);
+    case 'match': {
+      out.push(`${indent}- Match on \`${humanizeCondition(step.on)}\`:`);
+      for (const [value, caseSteps] of matchCases(step)) {
+        out.push(`${indent}  - When \`${value}\`:`);
+        for (const s of caseSteps) appendStepLines(out, s, machine, sm, indent + '    ', allMachines);
+      }
+      return;
     }
-    return;
-  }
 
-  if (step.forEach) {
-    const collection = step.forEach.in ? ` \`${step.forEach.in}\`` : '';
-    out.push(`${indent}- For each${collection}:`);
-    for (const s of getForEachBody(step.forEach)) appendStepLines(out, s, machine, sm, indent + '  ', allMachines);
-    return;
-  }
+    case 'forEach': {
+      const collection = step.in ? ` \`${step.in}\`` : '';
+      out.push(`${indent}- For each${collection}:`);
+      for (const s of forEachBody(step)) appendStepLines(out, s, machine, sm, deeper, allMachines);
+      return;
+    }
 
-  if (step.set) {
-    const raw = step.set.description?.trim().replace(/\n\s*/g, ' ');
-    const desc = raw ? `${raw} (sets \`${step.set.field}\`)` : `sets \`${step.set.field}\``;
-    out.push(`${indent}- ${desc}`);
-    return;
-  }
+    case 'set': {
+      out.push(`${indent}- ${raw ? `${raw} (sets \`${step.field}\`)` : `sets \`${step.field}\``}`);
+      return;
+    }
 
-  if (step.emit) {
-    const canonical = step.emit.type;
-    const raw = step.emit.description?.trim().replace(/\n\s*/g, ' ');
-    const desc = raw ? stripEmitPrefix(raw) || raw : null;
-    out.push(`${indent}- Emits \`${canonical}\`${desc ? ` — ${desc}` : ''}`);
-    return;
+    case 'emit': {
+      const desc = raw ? stripEmitPrefix(raw) || raw : null;
+      out.push(`${indent}- Emits \`${step.type}\`${desc ? ` — ${desc}` : ''}`);
+      return;
+    }
   }
 }
 
@@ -330,7 +333,7 @@ function renderEventSubLine(sub, sm, machine, eventIndex, allStateMachines) {
   if (sub.context?.length) {
     lines.push(`  - Look up: ${formatContextLookups(sub.context)}`);
   }
-  for (const step of getSteps(sub)) {
+  for (const step of sub.steps ?? []) {
     appendStepLines(lines, step, machine, sm, '  ', allStateMachines);
   }
   return lines.join('\n');
@@ -338,14 +341,22 @@ function renderEventSubLine(sub, sm, machine, eventIndex, allStateMachines) {
 
 // ── Detail page ───────────────────────────────────────────────────────────────
 
-export function generate(inputPath, outputDir, eventIndex, allStateMachines) {
-  const sm = load(readFileSync(inputPath, 'utf8'));
+/**
+ * Write one domain's markdown page.
+ *
+ * @param {ReturnType<import('./walk.js').stateMachineView>} sm - The domain to render
+ * @param {string} outputDir
+ * @param {object} eventIndex - From buildEventIndex
+ * @param {ReturnType<import('./walk.js').stateMachineView>[]} allStateMachines -
+ *   Every domain, for cross-domain links
+ */
+export function generate(sm, outputDir, eventIndex, allStateMachines) {
   mkdirSync(outputDir, { recursive: true });
 
   const lines = [];
   lines.push(`# ${titleCase(sm.domain)} State Machine`);
   lines.push('');
-  const smFile = path.basename(inputPath);
+  const smFile = path.basename(sm.path);
   const contractsRel = '../../../contracts';
   lines.push(`Domain: \`${sm.domain}\` | API spec: [${sm.apiSpec}](${contractsRel}/${sm.apiSpec}) | State machine: [${smFile}](${contractsRel}/${smFile})`);
   lines.push('');
