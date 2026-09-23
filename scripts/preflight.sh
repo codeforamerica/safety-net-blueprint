@@ -133,7 +133,7 @@ fi
 bail_if_failed
 
 step "Running safety-net-contracts tests"
-if node packages/safety-net-contracts/tests/run-tests.js --all --contracts=packages/generated/contracts --seed=packages/safety-net-contracts/tests/integration/seed --clients=packages/generated/clients --stop 2>&1; then
+if node packages/safety-net-contracts/tests/run-tests.js --all --contracts=packages/generated/contracts --seed=packages/generated/contracts --clients=packages/generated/clients --stop 2>&1; then
   pass "Tests passed"
 else
   fail "Tests failed"

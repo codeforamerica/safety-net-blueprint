@@ -75,7 +75,7 @@ npx newman run packages/generated/postman --env-var baseUrl=http://localhost:108
 
 - **New unit test** — create a `*.test.js` file in `packages/blueprint-mock-server/tests/unit/` or `packages/blueprint-cli/tests/`
 - **New integration test** — add to the appropriate section in `packages/blueprint-mock-server/tests/integration/integration.test.js`
-- **New fixture data** — add records to `packages/blueprint-mock-server/tests/integration/seed/`; use the established ID namespace for the resource type
+- **New fixture data** — add records to `packages/safety-net-contracts/src/domains/<domain>/<domain>-mock-data.yaml`; use the established ID namespace for the resource type
 
 See the [Testing Guide](../guides/testing.md) for detailed instructions on each.
 

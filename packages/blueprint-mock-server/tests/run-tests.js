@@ -165,9 +165,8 @@ async function resolveContracts() {
   await new Promise((res, rej) => {
     // --raw-contracts names a contract set, the same as --contracts. Callers
     // point it at src/ rather than the package root, which is the root
-    // `npm run resolve` uses: the package root would sweep
-    // tests/integration/seed/*-mock-data.yaml into the set, where they are
-    // validated as contracts and fail.
+    // `npm run resolve` uses: the package root would sweep the package's
+    // tests/ into the set, where they are validated as contracts and fail.
     const specDir = rawContractsDir;
     const overlayDir = join(specDir, 'overlays');
     const proc = spawn('node', [resolveScript, `--spec=${specDir}`, `--overlay=${overlayDir}`, `--out=${contractsDir}`], { stdio: 'inherit', shell: false });
