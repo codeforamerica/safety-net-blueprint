@@ -165,7 +165,7 @@
         </tr><tr>
           <td><code>eligibility.determination.created</code></td>
           <td><span style="color:#999;font-size:11px;">unknown</span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>For each:<ul style="margin:2px 0 0 14px;"></ul></li></ul></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>For each:<ul style="margin:2px 0 0 14px;"><li>For each <code>$member.programsAppliedFor</code>:<ul style="margin:2px 0 0 14px;"><li>{"POST":"eligibility/determinations/decisions","body":{"determinationId":"$this.subject","applicationId":"$this.data.applicationId","memberId":"$member.id","program":"$program","status":"pending"}}</li></ul></li></ul></li></ul></td>
         </tr><tr>
           <td><code>eligibility.application.decision_completed</code></td>
           <td><a href="eligibility.html">Eligibility/Decision</a></td>

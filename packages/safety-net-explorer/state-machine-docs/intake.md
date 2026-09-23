@@ -72,6 +72,8 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Satisfy the Verification and record the uploaded document version as evidence; trigger only fires when metadata.intake.verificationId resolves to a known Verification
 - **`eligibility.determination.created`**
   - For each:
+    - For each `$member.programsAppliedFor`:
+      - `POST eligibility/determinations/decisions`
 - **`eligibility.application.decision_completed`**
   - Look up: member (from `event.data.memberId`)
   - Write eligibility outcome to ApplicationMember.programDeterminations. Informational write-back only — does not trigger application close. Medicaid RTE results may arrive before intake closes; SNAP results typically arrive after.
