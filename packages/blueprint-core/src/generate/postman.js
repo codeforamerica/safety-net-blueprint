@@ -34,14 +34,59 @@ let contracts = new Map();
 export function buildPostman(docs, { baseUrl = 'http://localhost:1080', collectionId = null } = {}) {
   contracts = new Map(docs.map((doc) => [basename(doc.path), doc.content]));
 
-  const apiSpecs = docs
-    .filter((doc) => doc.type === 'openapi')
-    .map((doc) => ({
-      name: basename(doc.path, '-openapi.yaml'),
-      title: doc.content?.info?.title ?? basename(doc.path, '-openapi.yaml'),
-    }));
+  const apiSpecs = docs.filter((doc) => doc.type === 'openapi').map(apiMetadataOf);
 
   return assembleCollection(apiSpecs, { baseUrl, collectionId });
+}
+
+/**
+ * What the request builders need from one spec.
+ *
+ * Paths are prefixed with the server's base path, because that is the URL a
+ * request actually goes to. The rest is the operation detail each request
+ * template reads: parameters to fill, a request schema to build a body from,
+ * a response schema to assert against.
+ *
+ * @param {import('../../types.js').Doc} doc - An OpenAPI document
+ * @returns {{ name: string, title: string, endpoints: object[] }}
+ */
+function apiMetadataOf(doc) {
+  const spec = doc.content ?? {};
+  const name = basename(doc.path, '-openapi.yaml');
+
+  const localhost = spec.servers?.find((s) => s.url?.includes('localhost'));
+  let base = '';
+  if (localhost) {
+    try {
+      base = new URL(localhost.url).pathname.replace(/\/$/, '');
+    } catch {
+      // A malformed server URL just means no base path.
+    }
+  }
+
+  const endpoints = [];
+  for (const [path, pathItem] of Object.entries(spec.paths ?? {})) {
+    const pathParameters = pathItem?.parameters ?? [];
+
+    for (const method of ['get', 'post', 'put', 'patch', 'delete']) {
+      const operation = pathItem?.[method];
+      if (!operation) continue;
+
+      const success = method === 'post' ? '201' : '200';
+      endpoints.push({
+        path: base && !path.startsWith(base) ? `${base}${path}` : path,
+        method: method.toUpperCase(),
+        operationId: operation.operationId,
+        summary: operation.summary,
+        parameters: [...pathParameters, ...(operation.parameters ?? [])],
+        sortable: operation['x-sortable'],
+        requestSchema: operation.requestBody?.content?.['application/json']?.schema ?? null,
+        responseSchema: operation.responses?.[success]?.content?.['application/json']?.schema ?? null,
+      });
+    }
+  }
+
+  return { name, title: spec.info?.title ?? name, endpoints };
 }
 
 /**
