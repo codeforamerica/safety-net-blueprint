@@ -66,14 +66,6 @@ function loadFile(path) {
   }
 }
 
-function detectType(doc) {
-  const schema = doc.$schema ?? '';
-  if (schema.includes('graph-schema')) return 'graph';
-  if (schema.includes('rules-examples-schema')) return 'examples';
-  if (schema.includes('rules-schema')) return 'rules';
-  return null;
-}
-
 function evaluateGraph(graph, inputs) {
   return evaluate(graph, inputs);
 }
@@ -152,10 +144,19 @@ function main() {
     process.exit(1);
   }
 
-  const doc = loadFile(options.spec);
-  const type = detectType(doc);
+  // Identifying a contract from its $schema is core's job, and `load` has
+  // already done it — reading doc.type is the same answer the rest of the
+  // pipeline works from, rather than a second table of schema names here.
+  const specPath = resolve(options.spec);
+  let type, doc;
+  try {
+    ({ type, content: doc } = load({ path: specPath, relativePath: basename(specPath) }));
+  } catch (err) {
+    console.error(`Error: Could not read ${options.spec}: ${err.message}`);
+    process.exit(1);
+  }
 
-  if (!type) {
+  if (!['graph', 'rules', 'rules-examples'].includes(type)) {
     console.error(`Error: ${options.spec} is not a recognized blueprint contract file (no $schema field)`);
     process.exit(1);
   }
@@ -175,10 +176,10 @@ function main() {
   if (type === 'graph') {
     result = evaluateGraph(doc, inputs);
   } else if (type === 'rules') {
-    result = evaluateRules(doc, resolve(options.spec), inputs, options.ruleset);
+    result = evaluateRules(doc, specPath, inputs, options.ruleset);
   } else {
     // examples — batch mode
-    result = evaluateExamples(doc, resolve(options.spec));
+    result = evaluateExamples(doc, specPath);
   }
 
   console.log(JSON.stringify(result, null, 2));

@@ -35,7 +35,7 @@ test('Database Seeder Tests', async (t) => {
         { path: '/client-management/persons/{personId}' },
       ],
     };
-    const summary = seedAllDatabases([api], '', seedDir);
+    const summary = seedAllDatabases([api], fixtureSpecDir, seedDir);
 
     assert.ok(typeof summary === 'object', 'Should return summary object');
     const seededCount = summary['persons'] ?? 0;
@@ -61,7 +61,7 @@ test('Database Seeder Tests', async (t) => {
         { path: '/client-management/persons/{personId}' },
       ],
     };
-    seedAllDatabases([api], '', seedDir);
+    seedAllDatabases([api], fixtureSpecDir, seedDir);
     const records = findAll('persons', {});
 
     if (records.length > 0) {
@@ -84,7 +84,7 @@ test('Database Seeder Tests', async (t) => {
         { path: '/client-management/persons/{personId}' },
       ],
     };
-    seedAllDatabases([api], '', seedDir);
+    seedAllDatabases([api], fixtureSpecDir, seedDir);
     const records = findAll('persons', {});
 
     if (records.length > 1) {
@@ -105,7 +105,7 @@ test('Database Seeder Tests', async (t) => {
       serverBasePath: '/client-management',
       endpoints: [{ path: '/client-management/persons' }],
     };
-    seedAllDatabases([api], '', null);
+    seedAllDatabases([api], fixtureSpecDir, null);
 
     assert.strictEqual(count('persons'), 0, 'Should be empty with no seedDir');
     console.log('  ✓ Empty databases with null seedDir');
@@ -124,7 +124,7 @@ test('Database Seeder Tests', async (t) => {
       serverBasePath: '/client-management',
       endpoints: [{ path: '/client-management/persons' }],
     };
-    seedAllDatabases([api], '', emptyDir);
+    seedAllDatabases([api], fixtureSpecDir, emptyDir);
 
     assert.strictEqual(count('persons'), 0, 'Should be empty when no seed files found');
     console.log('  ✓ Empty databases when no mock-data files present');
@@ -248,7 +248,7 @@ test('Database Seeder Tests', async (t) => {
       'Sentinel should be present before reseed'
     );
 
-    seedAllDatabases([fixtureApi], '', seedDir);
+    seedAllDatabases([fixtureApi], fixtureSpecDir, seedDir);
 
     assert.strictEqual(
       findAll(target, { id: sentinelId }).total, 0,
@@ -301,8 +301,21 @@ test('Database Seeder Tests', async (t) => {
     const yaml = (await import('js-yaml')).default;
     writeFileSync(pathJoin(tmpSeedDir, 'intake-mock-data.yaml'), yaml.dump(examples));
 
+    // The seeder groups by the collections a spec declares, so the temp set
+    // carries the spec these records belong to as well as the records.
+    writeFileSync(pathJoin(tmpSeedDir, 'intake-openapi.yaml'), yaml.dump({
+      openapi: '3.1.0',
+      info: { title: 'Intake', version: '1.0.0', 'x-domain': 'intake' },
+      paths: {
+        '/applications': { get: {}, post: {} },
+        '/applications/{applicationId}': { get: {} },
+        '/applications/{applicationId}/members': { get: {}, post: {} },
+        '/applications/{applicationId}/members/{memberId}': { get: {} },
+      },
+    }));
+
     const { seedAllDatabases: seed } = await import('../../src/seeder.js');
-    seed([api], '', tmpSeedDir);
+    seed([api], tmpSeedDir, tmpSeedDir);
 
     const appsInApplications = findAll('applications', {}).total;
     const membersInApplications = findAll('applications', { id: 'c0000001-0000-4000-8000-000000000001' }).total;
