@@ -3,57 +3,71 @@
  */
 
 import { discover, generate, load } from '@codeforamerica/blueprint-core';
+import { deriveCollectionName } from './collection-utils.js';
 import { insertResource, clearAll } from './database-manager.js';
-import { deriveCollectionName as deriveCollectionNameFromPath } from './collection-utils.js';
 import { resolveTimeTokens } from './time-tokens.js';
 
 /**
- * Derive the collection name from an API's baseResource path.
- * Example: "/tasks" → "tasks", "/persons" → "persons"
- * Falls back to api.name for APIs without a baseResource.
- * @param {Object} api - API metadata object
- * @returns {string} Collection name
+ * The schema a list response holds, by name.
+ *
+ * A list wraps its records in `allOf` alongside the shared pagination
+ * schema, so the items are not always a direct property.
+ *
+ * @param {object} listSchema - The list schema, as authored
+ * @returns {string|null}
  */
-function deriveCollectionName(api) {
-  if (api.baseResource) {
-    const basePath = api.serverBasePath || '';
-    const resourcePath = basePath && api.baseResource.startsWith(basePath)
-      ? api.baseResource.slice(basePath.length)
-      : api.baseResource;
-    return resourcePath.split('/')[1];
+function itemSchemaName(listSchema) {
+  if (!listSchema || typeof listSchema !== 'object') return null;
+
+  for (const candidate of [listSchema, ...(listSchema.allOf ?? [])]) {
+    const ref = candidate?.properties?.items?.items?.$ref;
+    if (ref) return ref.split('/').pop();
   }
-  return api.name;
+
+  return null;
 }
 
 /**
- * Derive all unique collection names from an API's endpoints.
+ * Which schema each collection holds, from the contracts.
  *
- * Uses the path-based `deriveCollectionName` from collection-utils.js (the
- * same helper the route generator uses) so sub-resource paths map to their
- * proper sub-collection names rather than collapsing to the top-level
- * segment. Examples:
- *   /applications                                       → "applications"
- *   /applications/{id}/members                          → "application-members"
- *   /applications/{id}/members/{memberId}/incomes       → "member-incomes"
- *   /applications/{id}/household-info                   → "household-infos"
+ * A collection endpoint's list response names the schema its records are, so
+ * this is read rather than inferred. `/registry/policies` is collection
+ * `registry-policies` and holds `Policy` — no naming convention connects
+ * those two, and guessing one is how records went unvalidated.
  *
- * Without this, an API whose paths are all under `/applications/...` would
- * yield only `applications`, leaving every sub-collection the route handlers
- * actually query (`application-members`, `member-incomes`, etc.) empty.
- *
- * @param {Object} api - API metadata object
- * @returns {string[]} Array of collection names
+ * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
+ * @returns {Map<string, string>} Collection name to schema name
  */
-export function deriveAllCollectionNames(api) {
-  const names = new Set();
-  const basePath = api.serverBasePath || '';
-  for (const endpoint of api.endpoints || []) {
-    const name = deriveCollectionNameFromPath(endpoint.path, basePath);
-    if (name) names.add(name);
+function collectionSchemas(docs) {
+  const byCollection = new Map();
+
+  for (const doc of docs.filter((d) => d.type === 'openapi')) {
+    const spec = doc.content ?? {};
+    const server = (spec.servers ?? []).find((s) => s.url?.includes('localhost'));
+    let basePath = '';
+    if (server) {
+      try { basePath = new URL(server.url).pathname.replace(/\/$/, ''); } catch { /* no base path */ }
+    }
+
+    for (const [path, item] of Object.entries(spec.paths ?? {})) {
+      // Skip item endpoints, not every path with a parameter: a
+      // sub-collection carries its parent's parameter in the middle.
+      if (path.endsWith('}') || !item?.get) continue;
+
+      const collection = deriveCollectionName(`${basePath}${path}`, basePath);
+      if (!collection || byCollection.get(collection)) continue;
+
+      const listRef = item.get.responses?.['200']?.content?.['application/json']?.schema?.$ref;
+      const listName = listRef?.split('/').pop();
+
+      // Every collection is recorded even when no schema can be found for it,
+      // because the set is also what gets cleared on boot. A collection left
+      // out here would keep stale rows from the previous run.
+      byCollection.set(collection, itemSchemaName(spec.components?.schemas?.[listName]));
+    }
   }
-  // Fallback for APIs with no endpoints
-  if (names.size === 0) names.add(deriveCollectionName(api));
-  return [...names];
+
+  return byCollection;
 }
 
 /**
@@ -75,51 +89,44 @@ export function deriveAllCollectionNames(api) {
  *   When null, seeding is skipped and all collections start empty.
  * @returns {Object} Summary of seeded data
  */
-export function seedAllDatabases(apiSpecs, specsDir, seedDir) {
-  // Clear all collections first
-  for (const api of apiSpecs) {
-    for (const name of deriveAllCollectionNames(api)) {
-      clearAll(name);
-    }
-  }
+export function seedAllDatabases(specsDir, seedDir) {
+  // Core groups the records by the schema each one exemplifies — a fact the
+  // documents state. Which collection holds a given schema is this server's
+  // business, and the contract answers it: a collection endpoint's list
+  // response names the schema its records are. So the naming rule lives here
+  // only, in collection-utils, where routing needs it regardless.
+  const specDirs = Array.isArray(specsDir) ? specsDir : [specsDir].filter(Boolean);
+  const docs = [
+    ...specDirs.flatMap((dir) => discover(dir)),
+    ...(seedDir ? discover(seedDir) : []),
+  ].map(load);
+
+  const bySchema = generate(docs, 'examples');
+  const schemaOf = collectionSchemas(docs);
+  const collections = [...schemaOf.keys()];
+  const byCollection = Object.fromEntries(
+    collections.map((name) => [name, bySchema[schemaOf.get(name)] ?? []])
+  );
+
+  for (const name of collections) clearAll(name);
 
   if (!seedDir) {
     console.log('\nNo --seed directory specified; databases will be empty.');
-    const summary = {};
-    for (const api of apiSpecs) {
-      for (const name of deriveAllCollectionNames(api)) summary[name] = 0;
-    }
-    return summary;
+    return Object.fromEntries(collections.map((name) => [name, 0]));
   }
 
   console.log(`\nSeeding databases from ${seedDir}...`);
 
-  // Collect all collection names across all APIs for disambiguation
-  const allCollections = [...new Set(apiSpecs.flatMap(api => deriveAllCollectionNames(api)))];
-
-  // Grouping records by collection is core's job — the same call the rest of
-  // the pipeline makes. It derives the collections from the specs and pools
-  // the mock data itself, so both directories go in together.
-  const specDirs = Array.isArray(specsDir) ? specsDir : [specsDir].filter(Boolean);
-  const byCollection = generate(
-    [...specDirs.flatMap((dir) => discover(dir)), ...discover(seedDir)].map(load),
-    'examples'
-  );
-
-  if (Object.values(byCollection).every((records) => records.length === 0)) {
+  if (collections.every((name) => byCollection[name].length === 0)) {
     console.log('  No *-mock-data.yaml files found; databases will be empty.');
-    const summary = {};
-    for (const api of apiSpecs) {
-      for (const name of deriveAllCollectionNames(api)) summary[name] = 0;
-    }
-    return summary;
+    return Object.fromEntries(collections.map((name) => [name, 0]));
   }
 
   const summary = {};
   const now = new Date();
   const baseTimestamp = new Date('2024-01-01T00:00:00Z').getTime();
 
-  for (const collectionName of allCollections) {
+  for (const collectionName of collections) {
     try {
       const resources = byCollection[collectionName] ?? [];
 

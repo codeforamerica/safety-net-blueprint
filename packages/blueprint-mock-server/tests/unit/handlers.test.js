@@ -40,7 +40,7 @@ test('CRUD Handler Tests', async (t) => {
       { path: '/client-management/persons/{personId}' },
     ],
   };
-  seedAllDatabases([clientManagementApi], fixtureSpecDir, seedDir);
+  seedAllDatabases(fixtureSpecDir, seedDir);
   
   await t.test('LIST - returns all resources', () => {
     const results = findAll('persons', {});

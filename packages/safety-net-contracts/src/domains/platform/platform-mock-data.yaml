@@ -1,7 +1,7 @@
 # Example data for this domain, seeded into the mock server.
 # Validated against the schemas its collections hold.
 
-RegistryPolicyExample1:
+PolicyExample1:
   id: snap-household-composition
   citation: "7 CFR \xA7 273.1"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.1
@@ -9,7 +9,7 @@ RegistryPolicyExample1:
     for SNAP.
   programs:
   - snap
-RegistryPolicyExample2:
+PolicyExample2:
   id: snap-processing-clock
   citation: "7 CFR \xA7 273.2(i)(1)"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
@@ -17,7 +17,7 @@ RegistryPolicyExample2:
     of application.
   programs:
   - snap
-RegistryPolicyExample3:
+PolicyExample3:
   id: medicaid-authorized-representative
   citation: "42 CFR \xA7 435.923"
   citationUrl: https://www.ecfr.gov/current/title-42/section-435.923
@@ -26,7 +26,7 @@ RegistryPolicyExample3:
     member and authorized representative roles.
   programs:
   - medicaid
-RegistryPolicyExample4:
+PolicyExample4:
   id: snap-application-acceptance
   citation: "7 CFR \xA7 273.2(g)"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
@@ -34,7 +34,7 @@ RegistryPolicyExample4:
     application filing date and starts the processing clock.
   programs:
   - snap
-RegistryPolicyExample5:
+PolicyExample5:
   id: snap-application-date-stamp
   citation: "7 CFR \xA7 273.2(c)(1)"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
@@ -42,7 +42,7 @@ RegistryPolicyExample5:
     the filing date used for timeliness determinations.
   programs:
   - snap
-RegistryPolicyExample6:
+PolicyExample6:
   id: snap-right-to-apply
   citation: "7 CFR \xA7 273.2(a)"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
@@ -50,7 +50,7 @@ RegistryPolicyExample6:
     not screen out applicants before accepting an application.
   programs:
   - snap
-RegistryPolicyExample7:
+PolicyExample7:
   id: snap-processing-clock
   citation: "7 CFR \xA7 273.2(i)(1)"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
@@ -58,7 +58,7 @@ RegistryPolicyExample7:
     of application.
   programs:
   - snap
-RegistryPolicyExample8:
+PolicyExample8:
   id: snap-expedited-processing
   citation: "7 CFR \xA7 273.2(i)(3)(i)"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
@@ -67,7 +67,7 @@ RegistryPolicyExample8:
     or mortgage and utilities.
   programs:
   - snap
-RegistryPolicyExample9:
+PolicyExample9:
   id: medicaid-processing-clock
   citation: "42 CFR \xA7 435.912"
   citationUrl: https://www.ecfr.gov/current/title-42/section-435.912
@@ -75,7 +75,7 @@ RegistryPolicyExample9:
     days for applicants who require a disability determination.
   programs:
   - medicaid
-RegistryPolicyExample10:
+PolicyExample10:
   id: snap-interview-requirement
   citation: "7 CFR \xA7 273.2(e)"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
@@ -83,7 +83,7 @@ RegistryPolicyExample10:
     be conducted by a qualified eligibility worker.
   programs:
   - snap
-RegistryPolicyExample11:
+PolicyExample11:
   id: snap-identity-verification
   citation: "7 CFR \xA7 273.2(f)(1)(vi)"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
@@ -91,7 +91,7 @@ RegistryPolicyExample11:
     a collateral contact or documentary evidence.
   programs:
   - snap
-RegistryPolicyExample12:
+PolicyExample12:
   id: snap-residency-verification
   citation: "7 CFR \xA7 273.2(f)(1)(iii)"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
@@ -99,7 +99,7 @@ RegistryPolicyExample12:
     and those with no fixed address are eligible.
   programs:
   - snap
-RegistryPolicyExample13:
+PolicyExample13:
   id: snap-income-verification
   citation: "7 CFR \xA7 272.8"
   citationUrl: https://www.ecfr.gov/current/title-7/section-272.8
@@ -107,7 +107,7 @@ RegistryPolicyExample13:
     on applicant statements. Electronic verification reduces documentation burden on applicants.
   programs:
   - snap
-RegistryPolicyExample14:
+PolicyExample14:
   id: snap-ssa-identity-check
   citation: "42 U.S.C. \xA7 1320b-7"
   citationUrl: https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title42-section1320b-7
@@ -115,7 +115,7 @@ RegistryPolicyExample14:
     is the electronic source for this check.
   programs:
   - snap
-RegistryPolicyExample15:
+PolicyExample15:
   id: snap-citizenship-eligibility
   citation: "7 CFR \xA7 273.4"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.4
@@ -123,7 +123,7 @@ RegistryPolicyExample15:
     status for all applicants.
   programs:
   - snap
-RegistryPolicyExample16:
+PolicyExample16:
   id: qualified-alien-eligibility
   citation: "8 U.S.C. \xA7 1611"
   citationUrl: https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title8-section1611
@@ -132,7 +132,7 @@ RegistryPolicyExample16:
   programs:
   - snap
   - medicaid
-RegistryPolicyExample17:
+PolicyExample17:
   id: medicaid-citizenship-electronic-check
   citation: "42 CFR \xA7 435.956(b)"
   citationUrl: https://www.ecfr.gov/current/title-42/section-435.956
@@ -140,7 +140,7 @@ RegistryPolicyExample17:
     citizenship check satisfies this requirement.
   programs:
   - medicaid
-RegistryPolicyExample18:
+PolicyExample18:
   id: medicaid-immigration-electronic-check
   citation: "42 CFR \xA7 435.956(c)"
   citationUrl: https://www.ecfr.gov/current/title-42/section-435.956
@@ -148,7 +148,7 @@ RegistryPolicyExample18:
     FDSH VLP satisfies this requirement.
   programs:
   - medicaid
-RegistryPolicyExample19:
+PolicyExample19:
   id: medicaid-ex-parte-renewal
   citation: "42 CFR \xA7 435.916"
   citationUrl: https://www.ecfr.gov/current/title-42/section-435.916
@@ -156,7 +156,7 @@ RegistryPolicyExample19:
     If electronic data is sufficient, no contact with the beneficiary is required.
   programs:
   - medicaid
-RegistryPolicyExample20:
+PolicyExample20:
   id: medicaid-ex-parte-determination
   citation: "42 CFR \xA7 435.911"
   citationUrl: https://www.ecfr.gov/current/title-42/section-435.911
@@ -164,7 +164,7 @@ RegistryPolicyExample20:
     from the applicant when data is sufficient to establish eligibility.
   programs:
   - medicaid
-RegistryPolicyExample21:
+PolicyExample21:
   id: medicaid-data-sharing
   citation: "42 CFR \xA7 435.948"
   citationUrl: https://www.ecfr.gov/current/title-42/section-435.948
@@ -172,7 +172,7 @@ RegistryPolicyExample21:
     requesting documentation from applicants.
   programs:
   - medicaid
-RegistryPolicyExample22:
+PolicyExample22:
   id: snap-gross-income-test
   citation: "7 CFR \xA7 273.9(a)"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.9
@@ -180,14 +180,14 @@ RegistryPolicyExample22:
     gross income test before the net income test is applied.
   programs:
   - snap
-RegistryPolicyExample23:
+PolicyExample23:
   id: snap-net-income-test
   citation: "7 CFR \xA7 273.9(b)"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.9
   description: Household net income after allowable deductions must be at or below 100% of the federal poverty level.
   programs:
   - snap
-RegistryPolicyExample24:
+PolicyExample24:
   id: snap-resource-limit
   citation: "7 CFR \xA7 273.8"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.8
@@ -195,7 +195,7 @@ RegistryPolicyExample24:
     member have a limit of $4,250.
   programs:
   - snap
-RegistryPolicyExample25:
+PolicyExample25:
   id: snap-benefit-calculation
   citation: "7 CFR \xA7 273.10"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.10
@@ -203,7 +203,7 @@ RegistryPolicyExample25:
     size. The result determines the monthly benefit amount.
   programs:
   - snap
-RegistryPolicyExample26:
+PolicyExample26:
   id: medicaid-concurrent-application
   citation: "42 CFR \xA7 435.406"
   citationUrl: https://www.ecfr.gov/current/title-42/section-435.406
@@ -211,7 +211,7 @@ RegistryPolicyExample26:
     separate applications for programs administered by the same agency.
   programs:
   - medicaid
-RegistryPolicyExample27:
+PolicyExample27:
   id: snap-notice-of-action
   citation: "7 CFR \xA7 273.13"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.13
@@ -219,7 +219,7 @@ RegistryPolicyExample27:
     before an adverse action takes effect, stating the reason and the right to a fair hearing.
   programs:
   - snap
-RegistryPolicyExample28:
+PolicyExample28:
   id: snap-fair-hearing-rights
   citation: "7 CFR \xA7 273.15(a)"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.15
@@ -227,7 +227,7 @@ RegistryPolicyExample28:
     delays, denials, reductions, and terminations.
   programs:
   - snap
-RegistryPolicyExample29:
+PolicyExample29:
   id: snap-supervisor-review
   citation: "7 CFR \xA7 273.15"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.15
@@ -235,7 +235,7 @@ RegistryPolicyExample29:
     prerequisite for escalated cases prior to formal hearing proceedings.
   programs:
   - snap
-RegistryPolicyExample30:
+PolicyExample30:
   id: snap-verification-requirements
   citation: "7 CFR \xA7 273.2(f)"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
@@ -244,7 +244,7 @@ RegistryPolicyExample30:
     in this section.
   programs:
   - snap
-RegistryPolicyExample31:
+PolicyExample31:
   id: medicaid-electronic-verification-first
   citation: "42 CFR \xA7 435.940"
   citationUrl: https://www.ecfr.gov/current/title-42/section-435.940
@@ -253,7 +253,7 @@ RegistryPolicyExample31:
     when an electronic check returns inconclusive.
   programs:
   - medicaid
-RegistryPolicyExample32:
+PolicyExample32:
   id: snap-notice-of-eligibility
   citation: "7 CFR \xA7 273.2(h)"
   citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
@@ -262,7 +262,7 @@ RegistryPolicyExample32:
     if denied.
   programs:
   - snap
-RegistryPolicyExample33:
+PolicyExample33:
   id: medicaid-notice-of-eligibility
   citation: "42 CFR \xA7 435.917"
   citationUrl: https://www.ecfr.gov/current/title-42/section-435.917
@@ -271,7 +271,7 @@ RegistryPolicyExample33:
     to appeal.
   programs:
   - medicaid
-RegistryPolicyExample34:
+PolicyExample34:
   id: medicaid-determination-documentation
   citation: "42 CFR \xA7 431.17(b)(1)"
   citationUrl: https://www.ecfr.gov/current/title-42/section-431.17

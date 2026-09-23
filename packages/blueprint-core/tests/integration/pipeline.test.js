@@ -182,9 +182,9 @@ describe('generate', () => {
     assert.ok(graph.inputs['$.household.income']);
   });
 
-  test('examples group by the collection they belong to', () => {
+  test('examples group by the schema each record exemplifies', () => {
     const grouped = generate(docs, 'examples');
-    assert.deepEqual(grouped['applications'].map((r) => r.data.id).sort(), ['a1', 'a2']);
+    assert.deepEqual(grouped['Application'].map((r) => r.data.id).sort(), ['a1', 'a2']);
   });
 
   test('a state machine action projects an RPC overlay onto its spec', () => {

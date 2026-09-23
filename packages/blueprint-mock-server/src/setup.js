@@ -118,7 +118,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   }
 
   // Seed databases from example files
-  const summary = seedAllDatabases(apiSpecs, specsDir, seedDir);
+  const summary = seedAllDatabases(specsDir, seedDir);
 
   // Seed config-managed resources (after seedAllDatabases, which clears collections first)
   const configs = discoverConfigs(specsDir);

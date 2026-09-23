@@ -7,8 +7,6 @@ import { join } from 'path';
 import { readdirSync, statSync } from 'fs';
 import yaml from 'js-yaml';
 import { discover, generate, load } from '@codeforamerica/blueprint-core';
-import { deriveCollectionName } from './collection-utils.js';
-import { getItemSchema } from './handlers/expand-utils.js';
 import { validateAgainstSchema } from './example-validator.js';
 
 /**
@@ -32,50 +30,20 @@ function findMockDataFiles(rootDir) {
   return results;
 }
 
-/**
- * The schema each collection actually holds, according to the contract.
- *
- * Derived from the collection endpoint's list response rather than from the
- * example key's name. Deriving a schema name from the key looks right and is
- * not: `/registry/policies` is collection `registry-policies`, whose records
- * are keyed `RegistryPolicyExample1`, but the schema is `Policy`. A key-based
- * lookup finds nothing there and skips validation in silence — those two
- * records went unchecked for exactly that reason.
- *
- * @param {Array} apiSpecs - API metadata from loadAllSpecs
- * @returns {Map<string, object>} Collection name to the schema its records must satisfy
- */
-function schemaByCollection(apiSpecs) {
-  const byCollection = new Map();
-
-  for (const api of apiSpecs) {
-    for (const endpoint of api.endpoints ?? []) {
-      if (endpoint.method !== 'GET' || endpoint.path.includes('{')) continue;
-
-      const collection = deriveCollectionName(endpoint.path, api.serverBasePath || '');
-      if (!collection || byCollection.has(collection)) continue;
-
-      const schema = getItemSchema(endpoint.responseSchema, api.schemas);
-      if (schema) byCollection.set(collection, schema);
-    }
-  }
-
-  return byCollection;
-}
-
 export function validateMockData(specsDir, apiSpecs) {
   const errors = [];
-  const bySchema = schemaByCollection(apiSpecs);
 
-  // Which collection each record belongs to is core's answer — the same
-  // grouping the seeder uses, so the validator checks a record against the
-  // schema of the collection it will actually be seeded into.
+  const allSchemas = {};
+  for (const api of apiSpecs) Object.assign(allSchemas, api.schemas ?? {});
+
+  // Core groups each record under the schema it exemplifies, so the schema to
+  // check against is the one it was grouped under. Deriving a schema name
+  // from the key looked right and was not: records keyed RegistryPolicy* are
+  // `Policy`, so the lookup found nothing and skipped validation in silence.
   const docs = discover(specsDir).map(load);
-  const grouped = generate(docs, 'examples');
-
-  const collectionOf = new Map();
-  for (const [collection, records] of Object.entries(grouped)) {
-    for (const record of records) collectionOf.set(record.key, collection);
+  const schemaOf = new Map();
+  for (const [schema, records] of Object.entries(generate(docs, 'examples'))) {
+    for (const record of records) schemaOf.set(record.key, schema);
   }
 
   for (const { apiName, filePath } of findMockDataFiles(specsDir)) {
@@ -90,22 +58,22 @@ export function validateMockData(specsDir, apiSpecs) {
     for (const [key, value] of Object.entries(examples)) {
       if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
 
-      // Belonging to no collection is the dangerous case: the record is
-      // seeded nowhere and validated against nothing, and nothing says so. A
-      // platform event sat in the workflow seed file keyed DomainEventExample1
-      // while the schema is Event, and was silently dropped for years.
-      const collection = collectionOf.get(key);
-      if (!collection) {
+      // Matching no schema is the dangerous case: the record conforms to
+      // nothing, is seeded nowhere, and nothing says so. A platform event
+      // keyed DomainEventExample1 survived that way while the schema is
+      // `Event`.
+      const schemaName = schemaOf.get(key);
+      if (!schemaName) {
         errors.push({
           api: apiName,
           key,
-          message: 'belongs to no collection in the contract set, so it is seeded nowhere. '
+          message: 'matches no schema in the contract set, so it is seeded nowhere. '
             + 'Name the key after the schema it is an example of.',
         });
         continue;
       }
 
-      const schema = bySchema.get(collection);
+      const schema = allSchemas[schemaName];
       if (!schema) continue;
 
       for (const { instancePath, message } of validateAgainstSchema(value, schema)) {

@@ -207,13 +207,17 @@ describe('generate', () => {
     }
   });
 
-  test('examples groups records by the collection they belong to', () => {
-    // Prefixes nest: ApplicationMember1 must not also land in applications.
+  test('examples group by the schema each record exemplifies', () => {
+    // Prefixes nest: ApplicationMember1 must not also land under Application.
+    // Grouping is by schema, not by collection — naming a collection is the
+    // mock server's business, and core holding that rule too is what let the
+    // two drift.
     const dir = contractsIn({
       'intake-openapi.yaml': {
         ...openapi(),
         paths: { '/applications': { get: {} }, '/application-members': { get: {} } },
         components: {
+          schemas: { Application: { type: 'object' }, ApplicationMember: { type: 'object' } },
           examples: {
             Application1: { value: { id: 'a1' } },
             ApplicationMember1: { value: { id: 'm1' } },
@@ -223,8 +227,8 @@ describe('generate', () => {
     });
     try {
       const grouped = generate(discover(dir).map(load), 'examples');
-      assert.deepEqual(grouped['applications'].map((r) => r.data.id), ['a1']);
-      assert.deepEqual(grouped['application-members'].map((r) => r.data.id), ['m1']);
+      assert.deepEqual(grouped['Application'].map((r) => r.data.id), ['a1']);
+      assert.deepEqual(grouped['ApplicationMember'].map((r) => r.data.id), ['m1']);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -51,7 +51,7 @@ test('Mock Data Validator Tests', async (t) => {
     return { dir, apiSpecs: await loadAllSpecs({ specsDir: dir }) };
   }
 
-  await t.test('validateMockData - reports a key that belongs to no collection', async () => {
+  await t.test('validateMockData - reports a key that matches no schema', async () => {
     // The failure this exists for: a platform event sat in the workflow seed
     // file keyed DomainEventExample1 while the schema is Event. It matched no
     // collection, was seeded nowhere, and nothing said so.
@@ -62,13 +62,13 @@ test('Mock Data Validator Tests', async (t) => {
 
     assert.strictEqual(errors.length, 1, 'the orphaned key must be reported');
     assert.strictEqual(errors[0].key, 'DomainEventExample1');
-    assert.match(errors[0].message, /belongs to no collection/);
+    assert.match(errors[0].message, /matches no schema/);
   });
 
-  await t.test('validateMockData - validates against the schema the collection holds', async () => {
-    // Not against a schema named after the key. `/registry/policies` is
-    // collection `registry-policies`, keyed RegistryPolicyExample1, schema
-    // `Policy` — a key-derived lookup finds nothing and skips silently.
+  await t.test('validateMockData - validates against the schema the record is grouped under', async () => {
+    // Not against a schema guessed from the key. Records keyed
+    // RegistryPolicyExample1 are `Policy`, so a key-derived lookup finds
+    // nothing and skips validation in silence.
     const { dir, apiSpecs } = await contractSet({
       EventExample1: { id: 'e1', bogusField: 1 },
     });

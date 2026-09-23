@@ -1,15 +1,19 @@
 /**
- * Group a contract set's example data by the collection it belongs to.
+ * Group a contract set's example data by the schema each record exemplifies.
  *
- * Example keys are named after their schema — `ApplicationMemberExample1` —
- * so assigning one to a collection means matching the schema prefix that
- * collection implies. Prefixes nest, which is the whole difficulty:
+ * An example key names its schema — `ApplicationMemberExample1` is an
+ * `ApplicationMember` — so grouping is a prefix match against the schemas the
+ * document declares. Prefixes nest, which is the whole difficulty:
  * `ApplicationMemberExample1` starts with both `Application` and
  * `ApplicationMember`, and only the longer one is right.
  *
- * Both the mock server's seeder and the Postman builder need this, and had
- * drifted — the seeder matched longest-prefix, Postman took the first match
- * and so assigned nested records to their parent as well.
+ * Keyed by schema rather than by collection deliberately. A collection is the
+ * mock server's name for a database, and naming one is a rule that server
+ * owns and needs at runtime for routing anyway. Labelling output that way
+ * would require the rule here too — and it did, and the two drifted: the
+ * seeder matched longest-prefix while Postman took the first match and
+ * assigned nested records to their parent as well. A schema is something the
+ * document declares, so nothing has to agree about anything.
  */
 
 import { basename } from 'path';
@@ -18,29 +22,56 @@ import { collectionToSchemaPrefix, extractIndividualResources } from '../openapi
 /**
  * @param {import('../../types.js').Doc[]} docs
  * @returns {Record<string, Array<{ key: string, name: string, data: object }>>}
- *   Collection name to its individual resource examples
+ *   Schema name to its individual resource examples
  */
 export function buildExamples(docs) {
-  const byCollection = {};
+  const bySchema = {};
 
   for (const doc of docs.filter((d) => d.type === 'openapi')) {
     const name = basename(doc.path, '-openapi.yaml');
-    const collections = collectionsOf(doc.content);
+    const schemas = Object.keys(doc.content?.components?.schemas ?? {});
     const examples = examplesOf(docs, name, doc.content);
 
-    for (const collection of collections) {
-      byCollection[collection] = examplesForCollection(examples, collection, collections);
+    for (const schema of schemas) {
+      const records = examplesForSchema(examples, schema, schemas);
+      if (records.length || !(schema in bySchema)) bySchema[schema] = records;
     }
   }
 
-  return byCollection;
+  return bySchema;
+}
+
+/**
+ * The examples of one schema.
+ *
+ * @param {Record<string, unknown>} examples - Every example for the API
+ * @param {string} schema - The schema to select for
+ * @param {string[]} schemas - Every schema on the API, for disambiguation
+ * @returns {Array<{ key: string, name: string, data: object }>}
+ */
+export function examplesForSchema(examples, schema, schemas) {
+  const filtered = {};
+
+  for (const [key, value] of Object.entries(examples)) {
+    if (!key.startsWith(schema)) continue;
+
+    // The longest matching name wins. Without this a record of
+    // `ApplicationMember` is handed to `Application` as well.
+    const longest = schemas
+      .filter((name) => key.startsWith(name))
+      .sort((a, b) => b.length - a.length)[0];
+
+    if (longest === schema) filtered[key] = value;
+  }
+
+  return extractIndividualResources(filtered);
 }
 
 /**
  * The examples belonging to one collection.
  *
- * Exported for the Postman builder, which asks per endpoint rather than
- * taking the whole grouping.
+ * Kept for the Postman builder, which works in collections and asks per
+ * endpoint rather than taking the whole grouping.
  *
  * @param {Record<string, unknown>} examples - Every example for the API
  * @param {string} collection - The collection to select for
@@ -48,76 +79,11 @@ export function buildExamples(docs) {
  * @returns {Array<{ key: string, name: string, data: object }>}
  */
 export function examplesForCollection(examples, collection, collections) {
-  const target = collectionToSchemaPrefix(collection);
-  const prefixes = collections.map(collectionToSchemaPrefix);
-
-  const filtered = {};
-  for (const [key, value] of Object.entries(examples)) {
-    if (!key.startsWith(target)) continue;
-
-    // The longest matching prefix wins. Without this a record belonging to
-    // `application-members` is also handed to `applications`.
-    const longest = prefixes
-      .filter((prefix) => key.startsWith(prefix))
-      .sort((a, b) => b.length - a.length)[0];
-
-    if (longest === target) filtered[key] = value;
-  }
-
-  return extractIndividualResources(filtered);
-}
-
-/**
- * Collection names an API declares, from its non-parameter path segments.
- *
- * A sub-collection takes its parent in the singular: `/applications/{id}/
- * members` is `application-members`, not `applications-members`. That is not
- * a style choice. A collection name is the kebab-case plural of the schema
- * the collection holds, and the matching below depends on converting one to
- * the other — `application-members` gives `ApplicationMember`, which is a
- * real schema and the prefix its example keys carry.
- * `applications-members` would give `ApplicationsMember`, which exists
- * nowhere, and every example would fail to match in silence.
- *
- * A singular last segment is a singleton sub-resource and is kept as it is;
- * the path already says so, and pluralizing it would name a collection that
- * does not exist.
- *
- * This mirrors deriveCollectionName in blueprint-mock-server, which names the
- * databases. The two must agree: the records grouped here are the records
- * seeded there.
- *
- * @param {object} spec
- * @returns {string[]}
- */
-function collectionsOf(spec) {
-  const names = new Set();
-
-  for (const path of Object.keys(spec?.paths ?? {})) {
-    const segments = path.split('/').filter(Boolean).filter((s) => !s.startsWith('{'));
-    if (segments.length === 0) continue;
-
-    const last = segments[segments.length - 1];
-
-    // A top-level singleton is pluralized: the collection holding it is named
-    // for the resource, and `/application` holds applications.
-    if (segments.length === 1) {
-      names.add(last.endsWith('s') ? last : `${last}s`);
-      continue;
-    }
-
-    // Singular last segment — a singleton sub-resource, named as written.
-    if (!last.endsWith('s')) {
-      names.add(last);
-      continue;
-    }
-
-    const parent = segments[segments.length - 2];
-    const parentSingular = parent.endsWith('s') ? parent.slice(0, -1) : parent;
-    names.add(`${parentSingular}-${last}`);
-  }
-
-  return [...names];
+  return examplesForSchema(
+    examples,
+    collectionToSchemaPrefix(collection),
+    collections.map(collectionToSchemaPrefix)
+  );
 }
 
 /**

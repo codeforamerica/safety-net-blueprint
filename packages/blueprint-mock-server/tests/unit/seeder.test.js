@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { seedAllDatabases, deriveAllCollectionNames } from '../../src/seeder.js';
+import { seedAllDatabases } from '../../src/seeder.js';
 import { loadAllSpecs } from '../../src/spec-loader.js';
 import { count, findAll, clearAll, insertResource } from '../../src/database-manager.js';
 import { join } from 'path';
@@ -35,7 +35,7 @@ test('Database Seeder Tests', async (t) => {
         { path: '/client-management/persons/{personId}' },
       ],
     };
-    const summary = seedAllDatabases([api], fixtureSpecDir, seedDir);
+    const summary = seedAllDatabases(fixtureSpecDir, seedDir);
 
     assert.ok(typeof summary === 'object', 'Should return summary object');
     const seededCount = summary['persons'] ?? 0;
@@ -61,7 +61,7 @@ test('Database Seeder Tests', async (t) => {
         { path: '/client-management/persons/{personId}' },
       ],
     };
-    seedAllDatabases([api], fixtureSpecDir, seedDir);
+    seedAllDatabases(fixtureSpecDir, seedDir);
     const records = findAll('persons', {});
 
     if (records.length > 0) {
@@ -84,7 +84,7 @@ test('Database Seeder Tests', async (t) => {
         { path: '/client-management/persons/{personId}' },
       ],
     };
-    seedAllDatabases([api], fixtureSpecDir, seedDir);
+    seedAllDatabases(fixtureSpecDir, seedDir);
     const records = findAll('persons', {});
 
     if (records.length > 1) {
@@ -105,7 +105,7 @@ test('Database Seeder Tests', async (t) => {
       serverBasePath: '/client-management',
       endpoints: [{ path: '/client-management/persons' }],
     };
-    seedAllDatabases([api], fixtureSpecDir, null);
+    seedAllDatabases(fixtureSpecDir, null);
 
     assert.strictEqual(count('persons'), 0, 'Should be empty with no seedDir');
     console.log('  ✓ Empty databases with null seedDir');
@@ -124,7 +124,7 @@ test('Database Seeder Tests', async (t) => {
       serverBasePath: '/client-management',
       endpoints: [{ path: '/client-management/persons' }],
     };
-    seedAllDatabases([api], fixtureSpecDir, emptyDir);
+    seedAllDatabases(fixtureSpecDir, emptyDir);
 
     assert.strictEqual(count('persons'), 0, 'Should be empty when no seed files found');
     console.log('  ✓ Empty databases when no mock-data files present');
@@ -134,7 +134,7 @@ test('Database Seeder Tests', async (t) => {
     cleanup();
 
     const apiSpecs = await loadAllSpecs({ specsDir: fixtureSpecDir });
-    const summary = seedAllDatabases(apiSpecs, fixtureSpecDir, seedDir);
+    const summary = seedAllDatabases(fixtureSpecDir, seedDir);
 
     assert.ok(typeof summary === 'object', 'Should return summary object');
     assert.ok(Object.keys(summary).length >= apiSpecs.length,
@@ -148,113 +148,59 @@ test('Database Seeder Tests', async (t) => {
     }
   });
 
-  await t.test('deriveAllCollectionNames - top-level paths return top-level collection names', () => {
-    const api = {
-      name: 'persons',
-      serverBasePath: '/client-management',
-      endpoints: [
-        { path: '/client-management/persons' },
-        { path: '/client-management/persons/{personId}' },
-      ],
-    };
-    const names = deriveAllCollectionNames(api);
-    assert.deepStrictEqual(names.sort(), ['persons']);
-  });
-
-  await t.test('deriveAllCollectionNames - sub-resource paths return sub-collection names', () => {
-    // The regression case: pre-fix, deriveAllCollectionNames returned only
-    // `['applications']` for an intake-shaped API because it took the first
-    // path segment. After the fix it should return the proper sub-collection
-    // names (`application-members`, `member-incomes`, etc.) — the same names
-    // the route generator uses when handlers call findAll().
-    const api = {
-      name: 'intake',
-      serverBasePath: '/intake',
-      endpoints: [
-        { path: '/intake/applications' },
-        { path: '/intake/applications/{applicationId}' },
-        { path: '/intake/applications/{applicationId}/members' },
-        { path: '/intake/applications/{applicationId}/members/{memberId}' },
-        { path: '/intake/applications/{applicationId}/members/{memberId}/incomes' },
-        { path: '/intake/applications/{applicationId}/members/{memberId}/expenses' },
-        { path: '/intake/applications/{applicationId}/verifications' },
-        { path: '/intake/applications/{applicationId}/household-info' },
-      ],
-    };
-    const names = deriveAllCollectionNames(api);
-    assert.deepStrictEqual(
-      names.sort(),
-      [
-        'application-members',
-        'application-verifications',
-        'applications',
-        'household-info',
-        'member-expenses',
-        'member-incomes',
-      ]
-    );
-  });
-
-  await t.test('deriveAllCollectionNames - deduplicates collection names across endpoints', () => {
-    // Multiple endpoints on the same collection (GET list + GET item +
-    // POST + DELETE) should collapse to a single entry per collection.
-    const api = {
-      name: 'intake',
-      serverBasePath: '/intake',
-      endpoints: [
-        { path: '/intake/applications' },
-        { path: '/intake/applications' },
-        { path: '/intake/applications/{applicationId}' },
-        { path: '/intake/applications/{applicationId}/members' },
-        { path: '/intake/applications/{applicationId}/members/{memberId}' },
-      ],
-    };
-    const names = deriveAllCollectionNames(api);
-    assert.deepStrictEqual(names.sort(), ['application-members', 'applications']);
-  });
-
   await t.test('seedAllDatabases - clears sub-collections at boot (not just top-level)', async () => {
-    // Before the discovery fix, only top-level collections were cleared on
-    // boot because deriveAllCollectionNames returned only the first path
-    // segment. Stale sub-collection rows from a previous run could leak into
-    // the next boot. Now that sub-collections are discovered, they should
-    // also be cleared. Guard against regression.
-    const fixtureApi = {
-      name: 'widgets',
-      serverBasePath: '/widgets',
-      baseResource: '/widgets',
-      endpoints: [
-        { path: '/widgets' },
-        { path: '/widgets/{widgetId}' },
-        { path: '/widgets/{widgetId}/parts' },
-        { path: '/widgets/{widgetId}/parts/{partId}' },
-      ],
-    };
-    const subCollections = deriveAllCollectionNames(fixtureApi)
-      .filter((name) => name !== 'widgets');
+    // Stale sub-collection rows from a previous run must not leak into the
+    // next boot. Previously only top-level collections were cleared, because
+    // the server worked the list out from the first path segment. It now
+    // clears whatever core says the contracts declare, sub-collections
+    // included.
+    const { mkdtempSync, writeFileSync, rmSync } = await import('fs');
+    const { tmpdir } = await import('os');
+    const yaml = (await import('js-yaml')).default;
 
-    assert.ok(subCollections.length > 0, 'fixture API should have sub-collections');
+    const dir = mkdtempSync(join(tmpdir(), 'snb-clear-'));
+    try {
+      const list = (name) => ({
+        get: { responses: { 200: { description: 'ok', content: { 'application/json': {
+          schema: { $ref: `#/components/schemas/${name}List` } } } } } },
+      });
+      writeFileSync(join(dir, 'widgets-openapi.yaml'), yaml.dump({
+        openapi: '3.1.0',
+        info: { title: 'Widgets', version: '1.0.0', 'x-domain': 'widgets' },
+        paths: {
+          '/widgets': list('Widget'),
+          '/widgets/{widgetId}': { get: {} },
+          '/widgets/{widgetId}/parts': list('WidgetPart'),
+        },
+        components: { schemas: {
+          Widget: { type: 'object' },
+          WidgetPart: { type: 'object' },
+          WidgetList: { type: 'object', properties: { items: { type: 'array',
+            items: { $ref: '#/components/schemas/Widget' } } } },
+          WidgetPartList: { type: 'object', properties: { items: { type: 'array',
+            items: { $ref: '#/components/schemas/WidgetPart' } } } },
+        } },
+      }));
 
-    const sentinelId = '00000000-dead-beef-0000-000000000001';
-    const target = subCollections[0];
-    insertResource(target, {
-      id: sentinelId,
-      widgetId: '00000000-0000-0000-0000-000000000000',
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
-    });
-    assert.strictEqual(
-      findAll(target, { id: sentinelId }).total, 1,
-      'Sentinel should be present before reseed'
-    );
+      const target = 'widget-parts';
+      const sentinelId = '00000000-dead-beef-0000-000000000001';
+      insertResource(target, {
+        id: sentinelId,
+        widgetId: '00000000-0000-0000-0000-000000000000',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      });
+      assert.strictEqual(findAll(target, { id: sentinelId }).total, 1,
+        'Sentinel should be present before reseed');
 
-    seedAllDatabases([fixtureApi], fixtureSpecDir, seedDir);
+      seedAllDatabases(dir, dir);
 
-    assert.strictEqual(
-      findAll(target, { id: sentinelId }).total, 0,
-      `Sub-collection "${target}" should be cleared at boot`
-    );
-    console.log(`  ✓ Sub-collection "${target}" cleared on reseed`);
+      assert.strictEqual(findAll(target, { id: sentinelId }).total, 0,
+        `Sub-collection "${target}" should be cleared at boot`);
+      console.log(`  ✓ Sub-collection "${target}" cleared on reseed`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   await t.test('seedAllDatabases - does not assign sub-collection records to the parent collection when prefixes overlap', async () => {
@@ -303,15 +249,27 @@ test('Database Seeder Tests', async (t) => {
 
     // The seeder groups by the collections a spec declares, so the temp set
     // carries the spec these records belong to as well as the records.
+    const list = (name) => ({
+      get: { responses: { 200: { description: 'ok', content: { 'application/json': {
+        schema: { $ref: `#/components/schemas/${name}List` } } } } } },
+    });
     writeFileSync(pathJoin(tmpSeedDir, 'intake-openapi.yaml'), yaml.dump({
       openapi: '3.1.0',
       info: { title: 'Intake', version: '1.0.0', 'x-domain': 'intake' },
       paths: {
-        '/applications': { get: {}, post: {} },
+        '/applications': list('Application'),
         '/applications/{applicationId}': { get: {} },
-        '/applications/{applicationId}/members': { get: {}, post: {} },
+        '/applications/{applicationId}/members': list('ApplicationMember'),
         '/applications/{applicationId}/members/{memberId}': { get: {} },
       },
+      components: { schemas: {
+        Application: { type: 'object' },
+        ApplicationMember: { type: 'object' },
+        ApplicationList: { type: 'object', properties: { items: { type: 'array',
+          items: { $ref: '#/components/schemas/Application' } } } },
+        ApplicationMemberList: { type: 'object', properties: { items: { type: 'array',
+          items: { $ref: '#/components/schemas/ApplicationMember' } } } },
+      } },
     }));
 
     const { seedAllDatabases: seed } = await import('../../src/seeder.js');
@@ -349,25 +307,16 @@ test('Database Seeder Tests', async (t) => {
       },
     }));
 
-    // Use the fixture spec dir so API discovery works, but a custom seed dir
-    // that only has a widgets entry — confirming seeds come from seedDir.
-    const apiSpecs = await loadAllSpecs({ specsDir: fixtureSpecDir });
+    // The fixture spec dir names the collections; the custom seed dir supplies
+    // the records — confirming seeds come from seedDir, not from specsDir.
     const { seedAllDatabases: seed } = await import('../../src/seeder.js');
-    seed(apiSpecs, fixtureSpecDir, tmpSeedDir);
+    seed(fixtureSpecDir, tmpSeedDir);
 
     const found = findAll('widgets', { id: 'f0000001-0000-4000-8000-000000000001' });
     assert.strictEqual(found.total, 1, 'record from custom seedDir should be present in widgets');
     console.log('  ✓ seedDir correctly overrides specsDir for seed loading');
 
     clearAll('widgets');
-  });
-
-  await t.test('deriveAllCollectionNames - falls back to api object for APIs with no endpoints', () => {
-    // The seeder-local deriveCollectionName(api) reads api.baseResource or
-    // api.name. Endpoints absent → fallback path.
-    const api = { name: 'tasks', baseResource: '/tasks', serverBasePath: '', endpoints: [] };
-    const names = deriveAllCollectionNames(api);
-    assert.deepStrictEqual(names, ['tasks']);
   });
 
 });

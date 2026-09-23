@@ -265,7 +265,7 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
     // Reseed endpoint — re-inserts seed data without clearing anything else.
     // Useful after a reset when tests need baseline data present.
     app.post('/mock/reseed', (req, res) => {
-      seedAllDatabases(apiSpecs, specDirs, seedDir);
+      seedAllDatabases(specDirs, seedDir);
       res.status(204).end();
     });
     console.log('  POST   /mock/reseed - Re-seed all collections from seed files');
