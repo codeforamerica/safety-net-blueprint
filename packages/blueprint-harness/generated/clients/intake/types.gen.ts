@@ -158,6 +158,31 @@ export type Application = {
      */
     slaTypeCode?: 'snap_standard' | 'medicaid_standard';
     /**
+     * Engine-managed SLA tracking entries. Populated on create and updated on every transition. Read by the sla_breach_rate metric.
+     *
+     */
+    readonly slaInfo?: Array<{
+        /**
+         * Identifies which SLA type applies. Valid values are injected at resolve time from the domain's *-sla-types.yaml.
+         *
+         */
+        slaTypeCode: 'snap_standard' | 'medicaid_standard';
+        /**
+         * Engine-managed SLA clock status. active — clock is running. warning — clock is running but warningThresholdPercent has elapsed. paused — clock is paused (e.g., awaiting client response). breached — deadline has passed without completion. completed — SLA was satisfied before the deadline.
+         *
+         */
+        status: 'active' | 'warning' | 'paused' | 'breached' | 'completed';
+        /**
+         * When the SLA clock started. Engine-managed.
+         */
+        readonly clockStartedAt: string;
+        /**
+         * Computed deadline. Recalculated after a resume to exclude accumulated paused duration. Engine-managed.
+         *
+         */
+        readonly deadline: string;
+    }>;
+    /**
      * A household member on a benefit application.
      */
     members?: Array<{
@@ -560,6 +585,31 @@ export type ApplicationList = {
          * SLA type governing the processing deadline for this application.
          */
         slaTypeCode?: 'snap_standard' | 'medicaid_standard';
+        /**
+         * Engine-managed SLA tracking entries. Populated on create and updated on every transition. Read by the sla_breach_rate metric.
+         *
+         */
+        readonly slaInfo?: Array<{
+            /**
+             * Identifies which SLA type applies. Valid values are injected at resolve time from the domain's *-sla-types.yaml.
+             *
+             */
+            slaTypeCode: 'snap_standard' | 'medicaid_standard';
+            /**
+             * Engine-managed SLA clock status. active — clock is running. warning — clock is running but warningThresholdPercent has elapsed. paused — clock is paused (e.g., awaiting client response). breached — deadline has passed without completion. completed — SLA was satisfied before the deadline.
+             *
+             */
+            status: 'active' | 'warning' | 'paused' | 'breached' | 'completed';
+            /**
+             * When the SLA clock started. Engine-managed.
+             */
+            readonly clockStartedAt: string;
+            /**
+             * Computed deadline. Recalculated after a resume to exclude accumulated paused duration. Engine-managed.
+             *
+             */
+            readonly deadline: string;
+        }>;
         /**
          * A household member on a benefit application.
          */
@@ -2683,6 +2733,31 @@ export type ListApplicationsResponses = {
              */
             slaTypeCode?: 'snap_standard' | 'medicaid_standard';
             /**
+             * Engine-managed SLA tracking entries. Populated on create and updated on every transition. Read by the sla_breach_rate metric.
+             *
+             */
+            readonly slaInfo?: Array<{
+                /**
+                 * Identifies which SLA type applies. Valid values are injected at resolve time from the domain's *-sla-types.yaml.
+                 *
+                 */
+                slaTypeCode: 'snap_standard' | 'medicaid_standard';
+                /**
+                 * Engine-managed SLA clock status. active — clock is running. warning — clock is running but warningThresholdPercent has elapsed. paused — clock is paused (e.g., awaiting client response). breached — deadline has passed without completion. completed — SLA was satisfied before the deadline.
+                 *
+                 */
+                status: 'active' | 'warning' | 'paused' | 'breached' | 'completed';
+                /**
+                 * When the SLA clock started. Engine-managed.
+                 */
+                readonly clockStartedAt: string;
+                /**
+                 * Computed deadline. Recalculated after a resume to exclude accumulated paused duration. Engine-managed.
+                 *
+                 */
+                readonly deadline: string;
+            }>;
+            /**
              * A household member on a benefit application.
              */
             members?: Array<{
@@ -3072,6 +3147,31 @@ export type CreateApplicationResponses = {
          */
         slaTypeCode?: 'snap_standard' | 'medicaid_standard';
         /**
+         * Engine-managed SLA tracking entries. Populated on create and updated on every transition. Read by the sla_breach_rate metric.
+         *
+         */
+        readonly slaInfo?: Array<{
+            /**
+             * Identifies which SLA type applies. Valid values are injected at resolve time from the domain's *-sla-types.yaml.
+             *
+             */
+            slaTypeCode: 'snap_standard' | 'medicaid_standard';
+            /**
+             * Engine-managed SLA clock status. active — clock is running. warning — clock is running but warningThresholdPercent has elapsed. paused — clock is paused (e.g., awaiting client response). breached — deadline has passed without completion. completed — SLA was satisfied before the deadline.
+             *
+             */
+            status: 'active' | 'warning' | 'paused' | 'breached' | 'completed';
+            /**
+             * When the SLA clock started. Engine-managed.
+             */
+            readonly clockStartedAt: string;
+            /**
+             * Computed deadline. Recalculated after a resume to exclude accumulated paused duration. Engine-managed.
+             *
+             */
+            readonly deadline: string;
+        }>;
+        /**
          * A household member on a benefit application.
          */
         members?: Array<{
@@ -3420,6 +3520,31 @@ export type GetApplicationResponses = {
          * SLA type governing the processing deadline for this application.
          */
         slaTypeCode?: 'snap_standard' | 'medicaid_standard';
+        /**
+         * Engine-managed SLA tracking entries. Populated on create and updated on every transition. Read by the sla_breach_rate metric.
+         *
+         */
+        readonly slaInfo?: Array<{
+            /**
+             * Identifies which SLA type applies. Valid values are injected at resolve time from the domain's *-sla-types.yaml.
+             *
+             */
+            slaTypeCode: 'snap_standard' | 'medicaid_standard';
+            /**
+             * Engine-managed SLA clock status. active — clock is running. warning — clock is running but warningThresholdPercent has elapsed. paused — clock is paused (e.g., awaiting client response). breached — deadline has passed without completion. completed — SLA was satisfied before the deadline.
+             *
+             */
+            status: 'active' | 'warning' | 'paused' | 'breached' | 'completed';
+            /**
+             * When the SLA clock started. Engine-managed.
+             */
+            readonly clockStartedAt: string;
+            /**
+             * Computed deadline. Recalculated after a resume to exclude accumulated paused duration. Engine-managed.
+             *
+             */
+            readonly deadline: string;
+        }>;
         /**
          * A household member on a benefit application.
          */
@@ -3803,6 +3928,31 @@ export type UpdateApplicationResponses = {
          * SLA type governing the processing deadline for this application.
          */
         slaTypeCode?: 'snap_standard' | 'medicaid_standard';
+        /**
+         * Engine-managed SLA tracking entries. Populated on create and updated on every transition. Read by the sla_breach_rate metric.
+         *
+         */
+        readonly slaInfo?: Array<{
+            /**
+             * Identifies which SLA type applies. Valid values are injected at resolve time from the domain's *-sla-types.yaml.
+             *
+             */
+            slaTypeCode: 'snap_standard' | 'medicaid_standard';
+            /**
+             * Engine-managed SLA clock status. active — clock is running. warning — clock is running but warningThresholdPercent has elapsed. paused — clock is paused (e.g., awaiting client response). breached — deadline has passed without completion. completed — SLA was satisfied before the deadline.
+             *
+             */
+            status: 'active' | 'warning' | 'paused' | 'breached' | 'completed';
+            /**
+             * When the SLA clock started. Engine-managed.
+             */
+            readonly clockStartedAt: string;
+            /**
+             * Computed deadline. Recalculated after a resume to exclude accumulated paused duration. Engine-managed.
+             *
+             */
+            readonly deadline: string;
+        }>;
         /**
          * A household member on a benefit application.
          */
@@ -5371,6 +5521,31 @@ export type SubmitApplicationResponses = {
          */
         slaTypeCode?: 'snap_standard' | 'medicaid_standard';
         /**
+         * Engine-managed SLA tracking entries. Populated on create and updated on every transition. Read by the sla_breach_rate metric.
+         *
+         */
+        readonly slaInfo?: Array<{
+            /**
+             * Identifies which SLA type applies. Valid values are injected at resolve time from the domain's *-sla-types.yaml.
+             *
+             */
+            slaTypeCode: 'snap_standard' | 'medicaid_standard';
+            /**
+             * Engine-managed SLA clock status. active — clock is running. warning — clock is running but warningThresholdPercent has elapsed. paused — clock is paused (e.g., awaiting client response). breached — deadline has passed without completion. completed — SLA was satisfied before the deadline.
+             *
+             */
+            status: 'active' | 'warning' | 'paused' | 'breached' | 'completed';
+            /**
+             * When the SLA clock started. Engine-managed.
+             */
+            readonly clockStartedAt: string;
+            /**
+             * Computed deadline. Recalculated after a resume to exclude accumulated paused duration. Engine-managed.
+             *
+             */
+            readonly deadline: string;
+        }>;
+        /**
          * A household member on a benefit application.
          */
         members?: Array<{
@@ -5742,6 +5917,31 @@ export type OpenApplicationResponses = {
          * SLA type governing the processing deadline for this application.
          */
         slaTypeCode?: 'snap_standard' | 'medicaid_standard';
+        /**
+         * Engine-managed SLA tracking entries. Populated on create and updated on every transition. Read by the sla_breach_rate metric.
+         *
+         */
+        readonly slaInfo?: Array<{
+            /**
+             * Identifies which SLA type applies. Valid values are injected at resolve time from the domain's *-sla-types.yaml.
+             *
+             */
+            slaTypeCode: 'snap_standard' | 'medicaid_standard';
+            /**
+             * Engine-managed SLA clock status. active — clock is running. warning — clock is running but warningThresholdPercent has elapsed. paused — clock is paused (e.g., awaiting client response). breached — deadline has passed without completion. completed — SLA was satisfied before the deadline.
+             *
+             */
+            status: 'active' | 'warning' | 'paused' | 'breached' | 'completed';
+            /**
+             * When the SLA clock started. Engine-managed.
+             */
+            readonly clockStartedAt: string;
+            /**
+             * Computed deadline. Recalculated after a resume to exclude accumulated paused duration. Engine-managed.
+             *
+             */
+            readonly deadline: string;
+        }>;
         /**
          * A household member on a benefit application.
          */
@@ -6124,6 +6324,31 @@ export type CloseApplicationResponses = {
          */
         slaTypeCode?: 'snap_standard' | 'medicaid_standard';
         /**
+         * Engine-managed SLA tracking entries. Populated on create and updated on every transition. Read by the sla_breach_rate metric.
+         *
+         */
+        readonly slaInfo?: Array<{
+            /**
+             * Identifies which SLA type applies. Valid values are injected at resolve time from the domain's *-sla-types.yaml.
+             *
+             */
+            slaTypeCode: 'snap_standard' | 'medicaid_standard';
+            /**
+             * Engine-managed SLA clock status. active — clock is running. warning — clock is running but warningThresholdPercent has elapsed. paused — clock is paused (e.g., awaiting client response). breached — deadline has passed without completion. completed — SLA was satisfied before the deadline.
+             *
+             */
+            status: 'active' | 'warning' | 'paused' | 'breached' | 'completed';
+            /**
+             * When the SLA clock started. Engine-managed.
+             */
+            readonly clockStartedAt: string;
+            /**
+             * Computed deadline. Recalculated after a resume to exclude accumulated paused duration. Engine-managed.
+             *
+             */
+            readonly deadline: string;
+        }>;
+        /**
          * A household member on a benefit application.
          */
         members?: Array<{
@@ -6495,6 +6720,31 @@ export type WithdrawApplicationResponses = {
          * SLA type governing the processing deadline for this application.
          */
         slaTypeCode?: 'snap_standard' | 'medicaid_standard';
+        /**
+         * Engine-managed SLA tracking entries. Populated on create and updated on every transition. Read by the sla_breach_rate metric.
+         *
+         */
+        readonly slaInfo?: Array<{
+            /**
+             * Identifies which SLA type applies. Valid values are injected at resolve time from the domain's *-sla-types.yaml.
+             *
+             */
+            slaTypeCode: 'snap_standard' | 'medicaid_standard';
+            /**
+             * Engine-managed SLA clock status. active — clock is running. warning — clock is running but warningThresholdPercent has elapsed. paused — clock is paused (e.g., awaiting client response). breached — deadline has passed without completion. completed — SLA was satisfied before the deadline.
+             *
+             */
+            status: 'active' | 'warning' | 'paused' | 'breached' | 'completed';
+            /**
+             * When the SLA clock started. Engine-managed.
+             */
+            readonly clockStartedAt: string;
+            /**
+             * Computed deadline. Recalculated after a resume to exclude accumulated paused duration. Engine-managed.
+             *
+             */
+            readonly deadline: string;
+        }>;
         /**
          * A household member on a benefit application.
          */

@@ -11,8 +11,10 @@
  *                 domains is the point of an event bus.
  *
  * Timer callbacks are exempt. They are derived from `timers:` declarations as
- * `{domain}.{timerId}` and are internal scheduling infrastructure, deliberately
- * absent from domain catalogs.
+ * `{domain}.{timerId}` and are deliberately absent from domain catalogs — the
+ * timer declaration names the event and `TimerCallbackEvent` in base-contracts
+ * gives its payload, so a channel would be a second place to state the same
+ * thing.
  */
 
 /**
@@ -22,7 +24,7 @@
  */
 export function validateEvents(doc, channels) {
   const errors = [];
-  const machines = doc.model?.machines ?? [];
+  const machines = doc.model()?.machines ?? [];
   const eventsSpec = doc.content?.eventsSpec;
   const declared = eventsSpec ? channels.bySpec.get(eventsSpec) : null;
 
@@ -53,7 +55,7 @@ export function validateEvents(doc, channels) {
 
   const timerCallbacks = timerCallbackTypes(doc);
   for (const { type, path } of subscribedTypes(machines)) {
-    if (timerCallbacks.has(type)) continue;
+    if (isTimerCallback(type, timerCallbacks)) continue;
     if (!channels.all.has(type)) {
       errors.push({
         rule: 'subscription-type-undeclared',
@@ -127,6 +129,27 @@ function* subscribedTypes(machines) {
 }
 
 /**
+ * Whether a subscription is one of this document's own timer callbacks.
+ *
+ * A callback type is the domain-qualified timer id, and a state may put its
+ * whole event vocabulary behind a bus namespace — `x-event-type-prefix`
+ * rewrites the subscription to `ca.intake.review_reminder` while leaving
+ * `domain` and the timer id alone, so the reconstructed name is a suffix of
+ * the real one rather than equal to it. Anchored on the separator, so a
+ * namespace is accepted but `xintake.review_reminder` is not.
+ *
+ * @param {string} type - Subscription type from the resolved document
+ * @param {Set<string>} callbacks - Domain-qualified callback names
+ * @returns {boolean}
+ */
+function isTimerCallback(type, callbacks) {
+  for (const callback of callbacks) {
+    if (type === callback || type.endsWith(`.${callback}`)) return true;
+  }
+  return false;
+}
+
+/**
  * Timer callback types a document declares, as `{domain}.{timerId}`.
  *
  * @param {import('../../types.js').Doc} doc
@@ -137,7 +160,7 @@ function timerCallbackTypes(doc) {
   if (!domain) return new Set();
 
   return new Set(
-    (doc.model?.machines ?? [])
+    (doc.model()?.machines ?? [])
       .flatMap((machine) => machine.timers ?? [])
       .map((timer) => timer.id)
       .filter(Boolean)

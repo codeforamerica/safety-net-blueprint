@@ -82,6 +82,12 @@ paths:
       responses:
         '201':
           description: Application created successfully.
+          headers:
+            Location:
+              description: URL of the newly created application resource.
+              schema:
+                type: string
+                format: uri
           content:
             application/json:
               schema:
@@ -359,6 +365,14 @@ components:
               # x-enum-source — populated at resolve time from intake-sla-types.yaml.
               x-enum-source: "slaTypes[].id"
               description: SLA type governing the processing deadline for this application.
+            slaInfo:
+              type: array
+              readOnly: true
+              items:
+                $ref: 'https://blueprint.codeforamerica.org/base/components/sla.yaml#/SlaInfo'
+              description: >
+                Engine-managed SLA tracking entries. Populated on create and updated
+                on every transition. Read by the sla_breach_rate metric.
             members:
               type: array
               items:

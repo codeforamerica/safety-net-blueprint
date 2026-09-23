@@ -14,14 +14,12 @@
  *   annotations     the keys of the events section
  */
 
-const CONFIG_KEY = 'x-event-type-prefix';
-
 /**
  * @param {import('../../types.js').Doc[]} docs
+ * @param {string|null} [prefix] - From overlay config `x-event-type-prefix`
  * @returns {{ docs: object[], warnings: string[], applied: string[] }}
  */
-export function prefixEventTypes(docs) {
-  const prefix = configuredPrefix(docs);
+export function prefixEventTypes(docs, prefix = null) {
   if (!prefix) return { docs, warnings: [], applied: [] };
 
   const applied = [];
@@ -35,15 +33,6 @@ export function prefixEventTypes(docs) {
   });
 
   return { docs: prefixed, warnings: [], applied };
-}
-
-/**
- * @param {import('../../types.js').Doc[]} docs
- * @returns {string|null}
- */
-function configuredPrefix(docs) {
-  const config = docs.find((doc) => doc.type === 'overlay-config');
-  return config?.content?.config?.[CONFIG_KEY] ?? null;
 }
 
 /**
@@ -88,19 +77,25 @@ function prefixStateMachine(content, prefix) {
     return next;
   });
 
-  const prefixHolders = (holders, alsoType) => (holders ?? []).map((holder) => ({
+  const prefixHolders = (holders, alsoType) => holders.map((holder) => ({
     ...holder,
     ...(alsoType && holder.type ? { type: prefix + holder.type } : {}),
-    steps: prefixSteps(holder.steps),
+    ...(holder.steps ? { steps: prefixSteps(holder.steps) } : {}),
   }));
+
+  // Only rewrite sections the document actually has. Mapping over `?? []` and
+  // assigning the result would add `procedures: []` to a machine that declares
+  // none, so resolved output would carry keys nobody wrote.
+  const prefixSection = (machine, key, alsoType) =>
+    Array.isArray(machine[key]) ? { [key]: prefixHolders(machine[key], alsoType) } : {};
 
   return {
     ...content,
     machines: content.machines.map((machine) => ({
       ...machine,
-      actions: prefixHolders(machine.actions, false),
-      events: prefixHolders(machine.events, true),
-      procedures: prefixHolders(machine.procedures, false),
+      ...prefixSection(machine, 'actions', false),
+      ...prefixSection(machine, 'events', true),
+      ...prefixSection(machine, 'procedures', false),
     })),
   };
 }

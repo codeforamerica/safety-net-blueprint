@@ -30,10 +30,11 @@ const EXAMPLES_SUFFIX = '-openapi-examples.yaml';
 
 /**
  * @param {import('../../types.js').Doc[]} docs
+ * @param {string|null} [style] - From overlay config `x-relationship.style`;
+ *   null leaves the annotations in place as metadata
  * @returns {{ docs: object[], warnings: string[], applied: string[] }}
  */
-export function resolveRelationshipAnnotations(docs) {
-  const style = relationshipStyle(docs);
+export function resolveRelationshipAnnotations(docs, style = null) {
   const specsByPath = new Map(docs.map((doc) => [doc.relativePath ?? doc.path, doc.content]));
   const schemaIndex = buildSchemaIndex(specsByPath);
 
@@ -96,20 +97,6 @@ function reconcileExamples(docs, renames, links, warnings, applied) {
     warnings,
     applied,
   };
-}
-
-/**
- * The style a state configured, or null to leave annotations as metadata.
- *
- * Read from the overlay configuration document in the set rather than passed
- * in, so the pass takes no option the documents do not already carry.
- *
- * @param {import('../../types.js').Doc[]} docs
- * @returns {string|null}
- */
-function relationshipStyle(docs) {
-  const config = docs.find((doc) => doc.type === 'overlay-config');
-  return config?.content?.config?.['x-relationship']?.style ?? null;
 }
 
 /**

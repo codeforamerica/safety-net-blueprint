@@ -13,9 +13,44 @@
 // Ref resolution
 // =============================================================================
 
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join, dirname, resolve, relative, isAbsolute } from 'path';
 import yaml from 'js-yaml';
+
+/** Package root per directory, so the walk up happens once per location. */
+const packageRoots = new Map();
+
+/**
+ * The package a file belongs to, as the nearest ancestor holding a package.json.
+ *
+ * This bounds `$ref` following: a document may reference its siblings but not
+ * reach outside the package that ships it. Derived from the referring file
+ * rather than `process.cwd()`, which is wherever the command happened to be
+ * run from — resolving the same contracts from a workspace directory silently
+ * dropped every cross-file ref and reported hundreds of missing fields.
+ *
+ * @param {string} filePath - Absolute path to the referring document
+ * @returns {string|null} Absolute package root, or null if none found
+ */
+function packageRootOf(filePath) {
+  let dir = dirname(resolve(filePath));
+
+  if (packageRoots.has(dir)) return packageRoots.get(dir);
+
+  const start = dir;
+  let root = null;
+
+  for (let parent = dir; ; parent = dirname(parent)) {
+    if (existsSync(join(parent, 'package.json'))) {
+      root = parent;
+      break;
+    }
+    if (parent === dirname(parent)) break;  // filesystem root
+  }
+
+  packageRoots.set(start, root);
+  return root;
+}
 
 /**
  * Resolve an internal $ref (e.g. '#/components/schemas/Foo') within a spec document.
@@ -61,8 +96,9 @@ export function resolveSchemaRefs(schema, { spec = null, specFilePath = null } =
         const [filePart, jsonPointer] = schema.$ref.split('#');
         const fullPath = join(dirname(specFilePath), filePart);
         const resolvedFull = resolve(fullPath);
-        const projectRoot = resolve(process.cwd());
-        const refRel = relative(projectRoot, resolvedFull);
+        const packageRoot = packageRootOf(specFilePath);
+        if (!packageRoot) return schema;
+        const refRel = relative(packageRoot, resolvedFull);
         if (refRel.startsWith('..') || isAbsolute(refRel)) return schema;
         try {
           const externalDoc = yaml.load(readFileSync(resolvedFull, 'utf8'), { schema: yaml.DEFAULT_SCHEMA });

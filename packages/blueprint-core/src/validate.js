@@ -46,7 +46,7 @@ import { resolverMap } from './paths.js';
  */
 const SCHEMA_VALIDATED_ONLY = new Set([
   'asyncapi', 'schema', 'components', 'registry', 'config',
-  'overlay', 'overlay-config', 'rules-examples', 'graph',
+  'overlay', 'rules-examples', 'graph',
 ]);
 
 /**
@@ -187,7 +187,7 @@ function schemaConformanceByPath(yamlFiles) {
 function brokenFragmentRefs(doc) {
   if (doc.type === 'overlay') return [];
 
-  return [...doc.refs]
+  return [...doc.refs()]
     .filter(([, ref]) => ref.resolved === false)
     .map(([literal, ref]) => ({
       rule: 'unresolved-fragment-ref',

@@ -80,6 +80,12 @@ paths:
       responses:
         "201":
           description: Application created successfully.
+          headers:
+            Location:
+              description: URL of the newly created application resource.
+              schema:
+                type: string
+                format: uri
           content:
             application/json:
               schema:
@@ -771,6 +777,13 @@ components:
               enum:
                 - snap_standard
                 - medicaid_standard
+            slaInfo:
+              type: array
+              readOnly: true
+              items:
+                $ref: ../../base/components/sla.yaml#/SlaInfo
+              description: |
+                Engine-managed SLA tracking entries. Populated on create and updated on every transition. Read by the sla_breach_rate metric.
             members:
               type: array
               items:

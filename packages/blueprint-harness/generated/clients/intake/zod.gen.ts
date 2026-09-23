@@ -81,6 +81,18 @@ export const zApplication = z.object({
     submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+    slaInfo: z.optional(z.array(z.object({
+        slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
+        status: z.enum([
+            'active',
+            'warning',
+            'paused',
+            'breached',
+            'completed'
+        ]),
+        clockStartedAt: z.iso.datetime({ offset: true }).readonly(),
+        deadline: z.iso.datetime({ offset: true }).readonly()
+    })).readonly()),
     members: z.optional(z.array(z.object({
         firstName: z.string(),
         lastName: z.string(),
@@ -281,6 +293,18 @@ export const zApplicationList = z.object({
         submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
         openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
         slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+        slaInfo: z.optional(z.array(z.object({
+            slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
+            status: z.enum([
+                'active',
+                'warning',
+                'paused',
+                'breached',
+                'completed'
+            ]),
+            clockStartedAt: z.iso.datetime({ offset: true }).readonly(),
+            deadline: z.iso.datetime({ offset: true }).readonly()
+        })).readonly()),
         members: z.optional(z.array(z.object({
             firstName: z.string(),
             lastName: z.string(),
@@ -1362,6 +1386,18 @@ export const zListApplicationsResponse = z.object({
         submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
         openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
         slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+        slaInfo: z.optional(z.array(z.object({
+            slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
+            status: z.enum([
+                'active',
+                'warning',
+                'paused',
+                'breached',
+                'completed'
+            ]),
+            clockStartedAt: z.iso.datetime({ offset: true }).readonly(),
+            deadline: z.iso.datetime({ offset: true }).readonly()
+        })).readonly()),
         members: z.optional(z.array(z.object({
             firstName: z.string(),
             lastName: z.string(),
@@ -1541,6 +1577,18 @@ export const zCreateApplicationResponse = z.object({
     submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+    slaInfo: z.optional(z.array(z.object({
+        slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
+        status: z.enum([
+            'active',
+            'warning',
+            'paused',
+            'breached',
+            'completed'
+        ]),
+        clockStartedAt: z.iso.datetime({ offset: true }).readonly(),
+        deadline: z.iso.datetime({ offset: true }).readonly()
+    })).readonly()),
     members: z.optional(z.array(z.object({
         firstName: z.string(),
         lastName: z.string(),
@@ -1700,6 +1748,18 @@ export const zGetApplicationResponse = z.object({
     submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+    slaInfo: z.optional(z.array(z.object({
+        slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
+        status: z.enum([
+            'active',
+            'warning',
+            'paused',
+            'breached',
+            'completed'
+        ]),
+        clockStartedAt: z.iso.datetime({ offset: true }).readonly(),
+        deadline: z.iso.datetime({ offset: true }).readonly()
+    })).readonly()),
     members: z.optional(z.array(z.object({
         firstName: z.string(),
         lastName: z.string(),
@@ -1876,6 +1936,18 @@ export const zUpdateApplicationResponse = z.object({
     submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+    slaInfo: z.optional(z.array(z.object({
+        slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
+        status: z.enum([
+            'active',
+            'warning',
+            'paused',
+            'breached',
+            'completed'
+        ]),
+        clockStartedAt: z.iso.datetime({ offset: true }).readonly(),
+        deadline: z.iso.datetime({ offset: true }).readonly()
+    })).readonly()),
     members: z.optional(z.array(z.object({
         firstName: z.string(),
         lastName: z.string(),
@@ -2529,6 +2601,18 @@ export const zSubmitApplicationResponse = z.object({
     submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+    slaInfo: z.optional(z.array(z.object({
+        slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
+        status: z.enum([
+            'active',
+            'warning',
+            'paused',
+            'breached',
+            'completed'
+        ]),
+        clockStartedAt: z.iso.datetime({ offset: true }).readonly(),
+        deadline: z.iso.datetime({ offset: true }).readonly()
+    })).readonly()),
     members: z.optional(z.array(z.object({
         firstName: z.string(),
         lastName: z.string(),
@@ -2675,6 +2759,18 @@ export const zOpenApplicationResponse = z.object({
     submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+    slaInfo: z.optional(z.array(z.object({
+        slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
+        status: z.enum([
+            'active',
+            'warning',
+            'paused',
+            'breached',
+            'completed'
+        ]),
+        clockStartedAt: z.iso.datetime({ offset: true }).readonly(),
+        deadline: z.iso.datetime({ offset: true }).readonly()
+    })).readonly()),
     members: z.optional(z.array(z.object({
         firstName: z.string(),
         lastName: z.string(),
@@ -2824,6 +2920,18 @@ export const zCloseApplicationResponse = z.object({
     submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+    slaInfo: z.optional(z.array(z.object({
+        slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
+        status: z.enum([
+            'active',
+            'warning',
+            'paused',
+            'breached',
+            'completed'
+        ]),
+        clockStartedAt: z.iso.datetime({ offset: true }).readonly(),
+        deadline: z.iso.datetime({ offset: true }).readonly()
+    })).readonly()),
     members: z.optional(z.array(z.object({
         firstName: z.string(),
         lastName: z.string(),
@@ -2970,6 +3078,18 @@ export const zWithdrawApplicationResponse = z.object({
     submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
+    slaInfo: z.optional(z.array(z.object({
+        slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
+        status: z.enum([
+            'active',
+            'warning',
+            'paused',
+            'breached',
+            'completed'
+        ]),
+        clockStartedAt: z.iso.datetime({ offset: true }).readonly(),
+        deadline: z.iso.datetime({ offset: true }).readonly()
+    })).readonly()),
     members: z.optional(z.array(z.object({
         firstName: z.string(),
         lastName: z.string(),

@@ -32,11 +32,10 @@ export const CONTRACT_TYPES = {
   schema:           { suffix: '-schema.yaml' },
   'mock-data':      { suffix: '-mock-data.yaml' },
   config:           { suffix: '-config.yaml' },
+  // Carries `actions:` to apply, a `config:` block of cross-cutting settings,
+  // or both. One type: which of the two an overlay happens to declare is a
+  // property of the document, not a different kind of document.
   overlay:          { suffix: '-overlay.yaml' },
-  // A state's overlay configuration — which overlays apply and with what
-  // settings. Declares `overlay:` like an action overlay but carries `config:`
-  // instead of `actions:`, and is consumed by overlay/config.js.
-  'overlay-config': {},
   components:       {},
 };
 

@@ -2,13 +2,23 @@
  * Parse one contract file into a Doc.
  *
  * A Doc keeps the parsed document in its native shape under `content` — what
- * was read is what gets written back. Derived views live alongside it:
+ * was read is what gets written back. Two derived views hang off it, both
+ * methods rather than fields:
  *
- *   refs   an index of every $ref in the document
- *   model  a normalized view of blueprint-authored types, null otherwise
+ *   refs()   an index of every $ref in the document
+ *   model()  a normalized view of blueprint-authored types, null otherwise
  *
- * `content` is the source of truth; `model` is derived and must be treated as
- * read-only. To change a state machine, edit `content` and load again.
+ * They are computed from `this.content` on every call, which is what makes
+ * them safe. A resolve pass produces its next document with `{...doc, content}`,
+ * and spread copies these methods but not any value they had already produced
+ * — so the derived view always reflects the content it is asked about. Stored
+ * as fields they went stale the moment a pass rewrote `content`, and validate
+ * silently checked pre-resolution documents.
+ *
+ * For the same reason these must stay object-literal methods. Spread copies
+ * own enumerable properties only, so a class prototype method would vanish on
+ * the first pass, and an arrow closing over `content` would capture the value
+ * at load time and never update.
  *
  * Standards-defined documents (OpenAPI, AsyncAPI, JSON Schema) are left in
  * their standard shape — every downstream tool already speaks it, and a
@@ -45,8 +55,8 @@ export function load(path, relativePath = null) {
     relativePath,
     type,
     content,
-    refs: indexRefs(content),
-    model: buildModel(type, content),
+    refs() { return indexRefs(this.content); },
+    model() { return buildModel(this.type, this.content); },
     resolved: provenance !== null,
     provenance,
   };

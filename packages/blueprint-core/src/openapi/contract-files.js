@@ -31,8 +31,8 @@ export function detectType(filename, doc) {
     // and is not required to carry a -overlay.yaml suffix.
     if (doc.openapi) return 'openapi';
     if (doc.asyncapi) return 'asyncapi';
-    if (doc.overlay && Array.isArray(doc.actions)) return 'overlay';
-    if (doc.overlay && doc.config) return 'overlay-config';
+    // Carrying `actions:`, `config:` or both — all of them are overlays.
+    if (doc.overlay) return 'overlay';
   }
 
   const byFilename = typeFromFilename(filename);

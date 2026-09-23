@@ -14,6 +14,8 @@
 import { generateCompositionOverlays } from './compositions.js';
 import { generateRulesResults } from './rules.js';
 import { detectComponentPrefix, rewriteComponentRefs } from './generate/refs.js';
+import { generateRpcOverlays } from './generate/rpc.js';
+import { basename } from 'path';
 import { stemOf, siblingPath } from './contract-types.js';
 
 /**
@@ -31,15 +33,19 @@ export function generate(docs) {
 
   const rules = rulesArtifacts(positioned, inputFiles);
 
+  // RPC overlays align their own refs, because finding the target spec is
+  // part of generating them — the state machine names it in apiSpec:.
+  const rpc = generateRpcOverlays(positioned).map((entry) => entry.overlay);
+
   return {
     // Overlay documents ready to apply. The `domain` each generator reports is
     // how its target spec is found so refs can be aligned to that spec's
     // convention; once that is done the pairing has served its purpose and
     // resolve just applies documents.
-    overlays: alignRefs(
-      [...compositionOverlays(positioned, inputFiles), ...rules.overlays],
-      positioned
-    ),
+    overlays: [
+      ...rpc,
+      ...alignRefs([...compositionOverlays(positioned, inputFiles), ...rules.overlays], positioned),
+    ],
     // Keyed by output path internally; flattened so both artifact kinds are
     // arrays and a caller iterates them the same way.
     graphs: [...rules.graphs].map(([path, graph]) => ({ path, graph })),
@@ -47,10 +53,17 @@ export function generate(docs) {
 }
 
 /**
- * Rewrite each generated overlay's component refs to match the spec it patches.
+ * Point each generated overlay at the document it actually patches.
  *
- * A generator emits refs as `./components/…` because it has no idea where its
- * target sits. The target's own refs say what the prefix should be.
+ * A generator names its target by filename, and derives that filename from
+ * whatever it knows — compositions from the stem of their own path, rules
+ * from the declared `domain:`. Only the first happens to be a full relative
+ * path. Overlay targeting matches `file:` against the exact relativePath, so
+ * a bare filename resolves to nothing and the overlay silently applies
+ * nowhere.
+ *
+ * Both are rewritten to the target's real path, and refs are aligned to the
+ * prefix that target uses, since a generator has no idea where it sits.
  *
  * @param {{ domain: string, overlay: object }[]} generated
  * @param {import('../types.js').Doc[]} docs
@@ -58,9 +71,17 @@ export function generate(docs) {
  */
 function alignRefs(generated, docs) {
   return generated.map(({ domain: stem, overlay }) => {
-    const wanted = siblingPath(stem, 'openapi');
-    const target = wanted && docs.find((doc) => doc.relativePath === wanted);
+    const target =
+      docs.find((doc) => doc.relativePath === siblingPath(stem, 'openapi')) ??
+      docs.find((doc) => basename(doc.relativePath ?? '') === basename(siblingPath(stem, 'openapi') ?? ''));
+
     if (!target) return overlay;
+
+    for (const action of overlay.actions ?? []) {
+      if (typeof action.file === 'string' && basename(action.file) === basename(target.relativePath)) {
+        action.file = target.relativePath;
+      }
+    }
 
     return rewriteComponentRefs(overlay, './', detectComponentPrefix(target.content));
   });

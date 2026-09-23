@@ -34,7 +34,6 @@ export type ContractType =
   | 'mock-data'
   | 'config'
   | 'overlay'
-  | 'overlay-config'
   | 'unknown';
 
 /** A contract file found on disk, with its position in the set. */
@@ -83,8 +82,10 @@ export interface Provenance {
  * A loaded contract document.
  *
  * `content` is the document in its native shape — what was parsed is what
- * gets written back — and is the source of truth. `model` is a derived,
- * read-only view; to change a document, change `content` and load again.
+ * gets written back — and is the source of truth. `refs()` and `model()` are
+ * derived views, computed per call from the current `content`, so a document
+ * produced by a resolve pass reports its own state rather than the one it
+ * was loaded with. To change a document, change `content`.
  */
 export interface Doc {
   path: string;
@@ -93,14 +94,14 @@ export interface Doc {
   type: ContractType;
   content: Record<string, unknown>;
   /** Every `$ref` in the document, keyed by the literal ref string. */
-  refs: Map<string, RefEntry>;
+  refs(): Map<string, RefEntry>;
   /**
    * Normalized view of blueprint-authored types, null for documents whose
    * shape an external standard already defines — OpenAPI, AsyncAPI, JSON
    * Schema. A parallel representation of those would only need converting
    * back for the tools that already speak them.
    */
-  model: StateMachineModel | null;
+  model(): StateMachineModel | null;
   /** True when a resolve manifest governs this document's location. */
   resolved: boolean;
   provenance: Provenance | null;

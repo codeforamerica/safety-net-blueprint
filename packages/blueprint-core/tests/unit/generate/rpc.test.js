@@ -11,13 +11,11 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import yaml from 'js-yaml';
 import {
-  discoverStateMachines,
-  extractItemEndpoint,
   generateOverlay,
   buildOperationId,
   rewriteLocalDefsRefs,
   hoistDefs
-} from '../../../scripts/generate-rpc-overlay.js';
+} from '../../../src/generate/rpc.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -108,106 +106,6 @@ test('buildOperationId — creates correct operation ID', () => {
   assert.strictEqual(buildOperationId('claim', 'Task'), 'claimTask');
   assert.strictEqual(buildOperationId('complete', 'Task'), 'completeTask');
   assert.strictEqual(buildOperationId('release', 'Task'), 'releaseTask');
-});
-
-// =============================================================================
-// discoverStateMachines
-// =============================================================================
-
-test('discoverStateMachines — finds state machine files', () => {
-  const tmpDir = createTempDir();
-  try {
-    writeFileSync(join(tmpDir, 'workflow-state-machine.yaml'),
-      yaml.dump(sampleStateMachine), 'utf8');
-
-    const results = discoverStateMachines(tmpDir);
-    assert.strictEqual(results.length, 1);
-    assert.strictEqual(results[0].stateMachine.domain, 'workflow');
-  } finally {
-    removeTempDir(tmpDir);
-  }
-});
-
-test('discoverStateMachines — returns empty for no matches', () => {
-  const tmpDir = createTempDir();
-  try {
-    writeFileSync(join(tmpDir, 'not-a-state-machine.yaml'), 'foo: bar', 'utf8');
-    const results = discoverStateMachines(tmpDir);
-    assert.strictEqual(results.length, 0);
-  } finally {
-    removeTempDir(tmpDir);
-  }
-});
-
-// =============================================================================
-// extractItemEndpoint
-// =============================================================================
-
-test('extractItemEndpoint — extracts path and params from API spec', () => {
-  const tmpDir = createTempDir();
-  try {
-    const spec = {
-      openapi: '3.1.0',
-      info: { title: 'Test', version: '1.0.0' },
-      paths: {
-        '/test/items': {
-          get: { summary: 'List items', tags: ['Items'] }
-        },
-        '/test/items/{itemId}': {
-          parameters: [{ $ref: '#/components/parameters/ItemIdParam' }],
-          get: {
-            summary: 'Get item',
-            tags: ['Items'],
-            responses: {
-              '200': {
-                description: 'OK',
-                content: {
-                  'application/json': {
-                    schema: { $ref: '#/components/schemas/Item' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    };
-    writeFileSync(join(tmpDir, 'test-openapi.yaml'), yaml.dump(spec), 'utf8');
-
-    const result = extractItemEndpoint(tmpDir, 'test-openapi.yaml');
-    assert.ok(result);
-    assert.strictEqual(result.itemPath, '/test/items/{itemId}');
-    assert.strictEqual(result.paramRefs.length, 1);
-    assert.strictEqual(result.paramRefs[0].$ref, '#/components/parameters/ItemIdParam');
-    assert.strictEqual(result.tag, 'Items');
-    assert.strictEqual(result.schemaRef, '#/components/schemas/Item');
-  } finally {
-    removeTempDir(tmpDir);
-  }
-});
-
-test('extractItemEndpoint — returns null for missing file', () => {
-  const result = extractItemEndpoint('/nonexistent', 'missing.yaml');
-  assert.strictEqual(result, null);
-});
-
-test('extractItemEndpoint — returns null for spec without item paths', () => {
-  const tmpDir = createTempDir();
-  try {
-    const spec = {
-      openapi: '3.1.0',
-      info: { title: 'Test', version: '1.0.0' },
-      paths: {
-        '/test/items': { get: { summary: 'List items' } }
-      }
-    };
-    writeFileSync(join(tmpDir, 'test-openapi.yaml'), yaml.dump(spec), 'utf8');
-
-    const result = extractItemEndpoint(tmpDir, 'test-openapi.yaml');
-    assert.strictEqual(result, null);
-  } finally {
-    removeTempDir(tmpDir);
-  }
 });
 
 // =============================================================================

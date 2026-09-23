@@ -2,6 +2,7 @@ $schema: state-machine-schema.yaml
 version: "1.0"
 domain: eligibility
 apiSpec: eligibility-openapi.yaml
+eventsSpec: eligibility-asyncapi.yaml
 machines:
   - object: Determination
     states:

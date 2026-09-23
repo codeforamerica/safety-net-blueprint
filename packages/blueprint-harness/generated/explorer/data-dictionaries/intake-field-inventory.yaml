@@ -23,6 +23,11 @@ application.status: { type: enum, values: [draft, submitted, under_review, withd
 application.submittedAt: { type: datetime }
 application.openedAt: { type: datetime }
 application.slaTypeCode: { type: enum, values: [snap_standard, medicaid_standard] }
+application.slaInfo[]: { type: list }
+application.slaInfo[].slaTypeCode: { type: enum, values: [snap_standard, medicaid_standard] }
+application.slaInfo[].status: { type: enum, values: [active, warning, paused, breached, completed] }
+application.slaInfo[].clockStartedAt: { type: datetime }
+application.slaInfo[].deadline: { type: datetime }
 
 # ── ApplicationMember ───────────────────────────────────────────────────────────
 

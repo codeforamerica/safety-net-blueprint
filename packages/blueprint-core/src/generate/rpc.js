@@ -1,94 +1,24 @@
-#!/usr/bin/env node
 /**
- * RPC Overlay Generator
+ * Derive RPC endpoints from state machine transitions.
  *
- * Reads state machine contracts and generates OpenAPI overlay files
- * that add RPC (transition) endpoints to the base REST spec.
+ * A state machine action — `claim`, `escalate` — is an operation on the
+ * resource, but the REST spec only describes the resource itself. This
+ * projects each action into an endpoint on the item path, so the transitions
+ * a state machine declares are part of the API it describes rather than
+ * something a client has to know out of band.
  *
- * Usage:
- *   node scripts/generate-rpc-overlay.js --spec=.
- *   npm run generate:rpc-overlay
+ * Produces an overlay, like the composition and rules generators; `resolve`
+ * applies it.
  */
 
-import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'fs';
-import { join, resolve, basename } from 'path';
-import { fileURLToPath } from 'url';
-import { realpathSync } from 'fs';
-import yaml from 'js-yaml';
-import { buildParameterIndex, buildPathEntry, extractRefName } from '@codeforamerica/blueprint-core/openapi';
+import { basename } from 'path';
+import { buildParameterIndex, buildPathEntry, extractRefName } from '../openapi/utils.js';
+import { detectComponentPrefix, rewriteComponentRefs } from './refs.js';
 
 // =============================================================================
 // Argument Parsing
 // =============================================================================
 
-function parseArgs() {
-  const args = process.argv.slice(2);
-  const options = { specsDir: null, help: false };
-
-  for (let i = 0; i < args.length; i++) {
-    if (args[i].startsWith('--spec=')) {
-      options.specsDir = args[i].split('=')[1];
-    } else if (args[i] === '--spec') {
-      options.specsDir = args[++i];
-    } else if (args[i] === '--help' || args[i] === '-h') {
-      options.help = true;
-    } else {
-      console.error(`Error: Unknown argument: ${args[i]}`);
-      process.exit(1);
-    }
-  }
-
-  return options;
-}
-
-// =============================================================================
-// State Machine Discovery
-// =============================================================================
-
-/**
- * Discover state machine YAML files in the specs directory.
- * @param {string} specsDir - Path to the specs directory
- * @returns {Array<{ filePath: string, stateMachine: Object }>}
- */
-export function discoverStateMachines(specsDir) {
-  let files;
-  try {
-    files = readdirSync(specsDir, { recursive: true });
-  } catch {
-    return [];
-  }
-
-  const results = [];
-  for (const file of files) {
-    if (!file.endsWith('-state-machine.yaml')) continue;
-
-    const filePath = join(specsDir, file);
-    try {
-      const content = readFileSync(filePath, 'utf8');
-      const stateMachine = yaml.load(content);
-      if (!stateMachine || !stateMachine.domain) continue;
-      // New format: object lives inside machines[]; old format: top-level object
-      const hasMachines = Array.isArray(stateMachine.machines) && stateMachine.machines.length > 0;
-      if (!stateMachine.object && !hasMachines) continue;
-      results.push({ filePath, stateMachine });
-    } catch {
-      continue;
-    }
-  }
-
-  return results;
-}
-
-// =============================================================================
-// API Spec Reading
-// =============================================================================
-
-/**
- * Extract the item endpoint path and parameter refs from a loaded API spec.
- * @param {Object} spec - Loaded API spec object
- * @param {string} [objectName] - State machine object name (e.g., "Task") to match the correct resource in multi-resource specs
- * @returns {{ itemPath: string, paramRefs: Array, tag: string, schemaRef: string } | null}
- */
 export function extractItemEndpointFromSpec(spec, objectName) {
   const paths = spec?.paths || {};
 
@@ -135,43 +65,6 @@ export function extractItemEndpointFromSpec(spec, objectName) {
  * @param {string} apiSpecFile - Filename of the API spec (e.g., "workflow-openapi.yaml")
  * @param {string} [objectName] - State machine object name (e.g., "Task") to match the correct resource in multi-resource specs
  * @returns {{ itemPath: string, paramRefs: Array, tag: string } | null}
- */
-export function extractItemEndpoint(specsDir, apiSpecFile, objectName) {
-  // Search recursively for a file matching the basename of apiSpecFile,
-  // since specs may live in nested subdirectories (e.g. domains/intake/intake-openapi.yaml)
-  const target = basename(apiSpecFile);
-  let relativePath = apiSpecFile;
-  let specPath;
-  try {
-    const allFiles = readdirSync(specsDir, { recursive: true });
-    const match = allFiles.find(f => basename(f) === target);
-    if (!match) return null;
-    relativePath = match;
-    specPath = join(specsDir, match);
-  } catch {
-    return null;
-  }
-  let spec;
-  try {
-    spec = yaml.load(readFileSync(specPath, 'utf8'));
-  } catch {
-    return null;
-  }
-  const result = extractItemEndpointFromSpec(spec, objectName);
-  if (!result) return null;
-  return { ...result, relativePath, spec };
-}
-
-// =============================================================================
-// Overlay Generation
-// =============================================================================
-
-/**
- * Build an operation ID from trigger name and object name.
- * E.g., ("claim", "Task") → "claimTask"
- * @param {string} trigger - Transition trigger name
- * @param {string} objectName - Object name (e.g., "Task")
- * @returns {string}
  */
 export function buildOperationId(trigger, objectName) {
   return `${trigger}${objectName}`;
@@ -368,63 +261,56 @@ export function generateOverlay(stateMachine, endpointInfo) {
 // Main
 // =============================================================================
 
-function main() {
-  const options = parseArgs();
+/**
+ * RPC overlays for every state machine that targets a spec in the set.
+ *
+ * A state machine names its API spec by filename in `apiSpec:`. The item
+ * endpoint it attaches to comes from that spec, and the overlay's `file:`
+ * references are rewritten from that bare filename to the document's actual
+ * relative path, since that is what overlay targeting matches on.
+ *
+ * @param {import('../../types.js').Doc[]} docs
+ * @returns {{ domain: string, overlay: object, actionCount: number }[]}
+ */
+export function generateRpcOverlays(docs) {
+  const overlays = [];
 
-  if (options.help) {
-    console.log('Usage: node scripts/generate-rpc-overlay.js --spec=<dir>');
-    console.log('');
-    console.log('Options:');
-    console.log('  --spec=<dir>   Directory containing spec and state machine files');
-    console.log('  --help, -h     Show this help message');
-    process.exit(0);
-  }
+  for (const doc of docs) {
+    if (doc.type !== 'state-machine') continue;
 
-  const specsDir = resolve(options.specsDir || '.');
+    const stateMachine = doc.content;
+    const hasObject = stateMachine?.object || stateMachine?.machines?.length > 0;
+    if (!stateMachine?.domain || !hasObject || !stateMachine.apiSpec) continue;
 
-  console.log('Generating RPC overlays...');
-  console.log(`  Specs directory: ${specsDir}`);
+    const target = docs.find(
+      (candidate) => basename(candidate.relativePath ?? candidate.path) === basename(stateMachine.apiSpec)
+    );
+    if (!target) continue;
 
-  const machines = discoverStateMachines(specsDir);
-
-  if (machines.length === 0) {
-    console.log('  No state machine contracts found.');
-    return;
-  }
-
-  const outDir = join(specsDir, 'overlays');
-  mkdirSync(outDir, { recursive: true });
-
-  for (const { stateMachine } of machines) {
-    const apiSpecFile = stateMachine.apiSpec;
-    if (!apiSpecFile) {
-      console.warn(`  Skipping ${stateMachine.domain}: no apiSpec field`);
-      continue;
-    }
-
-    const endpointInfo = extractItemEndpoint(specsDir, apiSpecFile, stateMachine.object);
-    if (!endpointInfo) {
-      console.warn(`  Skipping ${stateMachine.domain}: could not find item endpoint in ${apiSpecFile}`);
-      continue;
-    }
+    // A single-machine spec names its object at the top level; a multi-machine
+    // spec puts it on each entry, so fall back to the first to find the path.
+    const objectName = stateMachine.object ?? stateMachine.machines?.[0]?.object;
+    const endpointInfo = extractItemEndpointFromSpec(target.content, objectName);
+    if (!endpointInfo) continue;
 
     const overlay = generateOverlay(stateMachine, endpointInfo);
-    const overlayYaml = yaml.dump(overlay, { lineWidth: 120, noRefs: true, quotingType: '"' });
-    const outPath = join(outDir, `${stateMachine.domain}-rpc.yaml`);
-    writeFileSync(outPath, overlayYaml, 'utf8');
 
-    const actionCount = (stateMachine.machines || []).flatMap(m => m.actions || []).length;
-    console.log(`  ✓ ${stateMachine.domain}-rpc.yaml (${actionCount} action(s))`);
+    for (const action of overlay.actions ?? []) {
+      if (typeof action.file === 'string' && basename(action.file) === basename(stateMachine.apiSpec)) {
+        action.file = target.relativePath ?? target.path;
+      }
+    }
+
+    overlays.push({
+      domain: stateMachine.domain,
+      overlay: rewriteComponentRefs(overlay, './', detectComponentPrefix(target.content)),
+      actionCount: (stateMachine.machines ?? []).flatMap((m) => m.actions ?? []).length,
+    });
   }
 
-  console.log('✓ RPC overlay generation complete');
+  return overlays;
 }
 
-// Export for testing
-export { parseArgs, buildRequestBody, rewriteLocalDefsRefs, hoistDefs };
-
-// Run main when executed directly
-const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(resolve(process.argv[1]));
-if (isDirectRun) {
-  main();
-}
+// Exported for unit tests. Not part of the package's public surface — these
+// are steps within overlay generation, not operations a consumer performs.
+export { buildRequestBody, rewriteLocalDefsRefs, hoistDefs };

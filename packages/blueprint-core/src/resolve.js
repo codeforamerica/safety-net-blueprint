@@ -21,6 +21,7 @@ import { prefixEventTypes } from './resolve/event-prefix.js';
 import { resolveRelationshipAnnotations } from './resolve/relationships.js';
 import { filterEnvironment } from './resolve/environment.js';
 import { substituteVariables } from './resolve/variables.js';
+import { overlayConfig } from './overlay/config.js';
 
 /**
  * @param {import('../types.js').Doc[]} docs
@@ -31,6 +32,11 @@ import { substituteVariables } from './resolve/variables.js';
  * @returns {import('../types.js').ResolveResult}
  */
 export function resolve(docs, { overlays = [], envTarget = null, envVariables = {} } = {}) {
+  // Cross-cutting settings a state declares in the `config:` block of its
+  // overlays. Read here rather than in each pass: the overlays are an argument
+  // to resolve, not documents in the set, so a pass cannot reach them.
+  const { config, errors: configErrors } = overlayConfig(overlays);
+
   // Order is load-bearing, not incidental:
   //   overlays first, so every later pass sees the state's customizations
   //   enum injection and relationships before filtering, so they are not
@@ -39,13 +45,13 @@ export function resolve(docs, { overlays = [], envTarget = null, envVariables = 
   const pipeline = [
     (set) => applyOverlays(set, overlays),
     (set) => injectEnumSources(set),
-    (set) => prefixEventTypes(set),
-    (set) => resolveRelationshipAnnotations(set),
+    (set) => prefixEventTypes(set, config?.['x-event-type-prefix'] ?? null),
+    (set) => resolveRelationshipAnnotations(set, config?.['x-relationship']?.style ?? null),
     (set) => filterEnvironment(set, envTarget),
     (set) => substituteVariables(set, envVariables),
   ];
 
-  const warnings = [];
+  const warnings = [...configErrors];
   const applied = [];
 
   const resolved = pipeline.reduce((set, pass) => {

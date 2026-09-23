@@ -194,7 +194,7 @@ export function buildActionIndex(docs) {
   for (const doc of docs) {
     if (doc.type !== 'state-machine') continue;
 
-    for (const machine of doc.model?.machines ?? []) {
+    for (const machine of doc.model()?.machines ?? []) {
       if (!machine.object) continue;
       for (const action of machine.actions ?? []) {
         if (action.id) index.add(`${machine.object.toLowerCase()}.${action.id}`);

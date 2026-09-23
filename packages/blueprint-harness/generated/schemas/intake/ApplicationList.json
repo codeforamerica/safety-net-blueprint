@@ -171,6 +171,56 @@
                   "medicaid_standard"
                 ]
               },
+              "slaInfo": {
+                "type": "array",
+                "readOnly": true,
+                "items": {
+                  "type": "object",
+                  "description": "Engine-managed SLA tracking entry. Returned in resource responses. All fields except slaTypeCode are populated and managed by the engine.\n",
+                  "additionalProperties": false,
+                  "required": [
+                    "slaTypeCode",
+                    "status",
+                    "clockStartedAt",
+                    "deadline"
+                  ],
+                  "properties": {
+                    "slaTypeCode": {
+                      "type": "string",
+                      "description": "Identifies which SLA type applies. Valid values are injected at resolve time from the domain's *-sla-types.yaml.\n",
+                      "enum": [
+                        "snap_standard",
+                        "medicaid_standard"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "warning",
+                        "paused",
+                        "breached",
+                        "completed"
+                      ],
+                      "description": "Engine-managed SLA clock status. active — clock is running. warning — clock is running but warningThresholdPercent has elapsed. paused — clock is paused (e.g., awaiting client response). breached — deadline has passed without completion. completed — SLA was satisfied before the deadline.\n",
+                      "readOnly": true
+                    },
+                    "clockStartedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When the SLA clock started. Engine-managed.",
+                      "readOnly": true
+                    },
+                    "deadline": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "Computed deadline. Recalculated after a resume to exclude accumulated paused duration. Engine-managed.\n",
+                      "readOnly": true
+                    }
+                  }
+                },
+                "description": "Engine-managed SLA tracking entries. Populated on create and updated on every transition. Read by the sla_breach_rate metric.\n"
+              },
               "members": {
                 "type": "array",
                 "items": {
