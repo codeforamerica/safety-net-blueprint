@@ -35,16 +35,3 @@ TaskExample1:
   priority: 3
   createdAt: "2024-01-01T00:00:00Z"
   updatedAt: "2024-01-01T00:00:00Z"
-
-# DomainEvent fixtures
-DomainEventExample1:
-  id: "0000000a-0000-4000-8000-000000000001"
-  domain: workflow
-  resource: task
-  action: created
-  resourceId: "00000009-0000-4000-8000-000000000001"
-  performedById: "00000002-0000-4000-8000-000000000001"
-  occurredAt: "2024-01-01T00:00:00Z"
-  data: {}
-  createdAt: "2024-01-01T00:00:00Z"
-  updatedAt: "2024-01-01T00:00:00Z"

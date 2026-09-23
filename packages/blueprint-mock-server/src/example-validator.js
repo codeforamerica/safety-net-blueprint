@@ -27,6 +27,25 @@ export function deriveSchemaName(key) {
 }
 
 /**
+ * Validate one value against one schema.
+ *
+ * The caller decides which schema applies. Deriving it from the example's
+ * key cannot be relied on — a collection's records are keyed after the
+ * collection, which is not always the schema name.
+ *
+ * @param {object} value - The example record
+ * @param {object} schema - Schema it must satisfy
+ * @returns {Array<{instancePath: string, message: string}>}
+ */
+export function validateAgainstSchema(value, schema) {
+  if (ajv.validate(schema, value)) return [];
+  return (ajv.errors || []).map((err) => ({
+    instancePath: err.instancePath || '',
+    message: err.message,
+  }));
+}
+
+/**
  * Validate a flat map of example values against schemas.
  *
  * @param {Object} flatExamples - Plain { key: dataObject } map
