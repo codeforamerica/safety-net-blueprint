@@ -33,8 +33,6 @@ export {
 export {
   VALID_ACTOR_ROLES,
   SYSTEM_VARIABLES,
-  buildSchemaIndex,
-  buildCollectionSchemaIndex,
   extractFieldRefs,
   extractEnumComparisons,
   collectContextBindings,

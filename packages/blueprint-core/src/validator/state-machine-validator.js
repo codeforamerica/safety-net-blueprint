@@ -8,7 +8,7 @@
  * Both return an array of { rule, message, path } error objects.
  */
 
-import { readFileSync, readdirSync } from 'fs';
+import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import yaml from 'js-yaml';
 import { resolveSchemaRefs, resolveRef, collectTopLevelProperties, getPropertyAtPath } from '../json-schema/index.js';
@@ -19,93 +19,6 @@ export const VALID_ACTOR_ROLES = new Set(['readonly', 'readwrite', 'admin', 'sys
 
 // Variables whose schema is provided by the runtime, not declared in context
 export const SYSTEM_VARIABLES = new Set(['this', 'caller', 'now', 'request', 'params', 'push', 'merge']);
-
-/**
- * Build a schema index from all *-openapi.yaml files in a directory.
- * Returns: Map<schemaName, { spec, schema, properties }>
- */
-export function buildSchemaIndex(specsDir) {
-  const index = new Map();
-  let files;
-  try { files = readdirSync(specsDir, { recursive: true }).filter(f => typeof f === 'string'); } catch { return index; }
-
-  for (const file of files) {
-    if (!file.endsWith('-openapi.yaml')) continue;
-    const filePath = join(specsDir, file);
-    let spec;
-    try { spec = yaml.load(readFileSync(filePath, 'utf8'), { schema: yaml.DEFAULT_SCHEMA }); } catch { continue; }
-
-    for (const [name, rawSchema] of Object.entries(spec?.components?.schemas || {})) {
-      if (!index.has(name)) {
-        const schema = resolveSchemaRefs(rawSchema, { spec, specFilePath: filePath, setRoot: specsDir });
-        index.set(name, { spec, schema, properties: collectTopLevelProperties(spec, schema) });
-      }
-    }
-  }
-  return index;
-}
-
-/**
- * Build an endpoint index from all *-openapi.yaml files in a directory.
- * Returns: Map<'domain/collection', schemaName | null>
- *
- * Key format: 'domain/resource' or 'domain/resource/sub-resource'
- * (non-param path segments joined, prefixed by x-domain)
- */
-export function buildCollectionSchemaIndex(specsDir) {
-  const index = new Map();
-  let files;
-  try { files = readdirSync(specsDir, { recursive: true }).filter(f => typeof f === 'string'); } catch { return index; }
-
-  for (const file of files) {
-    if (!file.endsWith('-openapi.yaml')) continue;
-    let spec;
-    try { spec = yaml.load(readFileSync(join(specsDir, file), 'utf8'), { schema: yaml.DEFAULT_SCHEMA }); } catch { continue; }
-
-    const domain = spec?.info?.['x-domain'];
-    if (!domain || !spec.paths) continue;
-
-    for (const [path, pathItem] of Object.entries(spec.paths)) {
-      const segments = path.split('/').filter(Boolean);
-      const nonParamSegs = segments.filter(s => !s.startsWith('{'));
-      if (nonParamSegs.length === 0) continue;
-
-      const endsWithParam = path.endsWith('}');
-
-      // Resolve the schema name for this endpoint.
-      const getOp = pathItem.get;
-      const schemaRef = getOp?.responses?.['200']?.content?.['application/json']?.schema;
-      let schemaName = null;
-      if (schemaRef?.$ref) {
-        const m = schemaRef.$ref.match(/^#\/components\/schemas\/(.+)$/);
-        if (m) schemaName = m[1];
-      }
-      if (!schemaName) {
-        const itemsRef = getOp?.responses?.['200']?.content?.['application/json']?.schema?.properties?.items?.$ref;
-        if (itemsRef) {
-          const m = itemsRef.match(/^#\/components\/schemas\/(.+)$/);
-          if (m) schemaName = m[1];
-        }
-      }
-
-      const key = `${domain}/${nonParamSegs.join('/')}`;
-      if (!endsWithParam && index.has(key)) continue;
-      index.set(key, schemaName);
-
-      // For nested item endpoints (e.g. /applications/{id}/members/{id}), also register
-      // a shorthand key using the parent collection (singularized) + child collection:
-      // "intake/application-members". This matches the state machine convention.
-      if (endsWithParam && nonParamSegs.length >= 2) {
-        const parent = nonParamSegs[nonParamSegs.length - 2];
-        const child = nonParamSegs[nonParamSegs.length - 1];
-        const parentSingular = parent.endsWith('s') ? parent.slice(0, -1) : parent;
-        const shorthand = `${domain}/${parentSingular}-${child}`;
-        if (!index.has(shorthand)) index.set(shorthand, schemaName);
-      }
-    }
-  }
-  return index;
-}
 
 // =============================================================================
 // String pattern extraction
@@ -501,8 +414,8 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
  * Validate cross-artifact field references in a state machine document.
  * @param {string} filePath - Path to the file (for error messages)
  * @param {object} doc - Parsed YAML document
- * @param {Map} schemaIndex - From buildSchemaIndex()
- * @param {Map} endpointIndex - From buildCollectionSchemaIndex()
+ * @param {Map} schemaIndex - From buildSchemaIndex() in indexes.js
+ * @param {Map} endpointIndex - From buildCollectionIndex()
  * @returns {Array<{rule, message, path}>}
  */
 export function validateCrossArtifact(filePath, doc, schemaIndex, endpointIndex, exceptions = {}) {
