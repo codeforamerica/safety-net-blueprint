@@ -19,7 +19,7 @@
 #       type: number
 #       description: Monthly gross income
 #     $.household.members[]:
-#       type: object
+#       type: array
 #       description: Array of household members
 #     $.household.members[].age:
 #       type: integer
@@ -116,6 +116,19 @@ properties:
     minProperties: 1
     additionalProperties:
       $ref: "#/$defs/Node"
+    # A path ending in '[]' is a collection, and its type must say so. The
+    # evaluator decides whether a null collection becomes an empty one by
+    # reading this field, so a wrong value changes evaluation rather than
+    # failing: the fact resolves 'missing' instead of 'placeholder', silently.
+    patternProperties:
+      "\\[\\]$":
+        allOf:
+          - $ref: "#/$defs/Node"
+          - type: object
+            required: [type]
+            properties:
+              type:
+                const: array
     propertyNames:
       pattern: "^\\$\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?(\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?)*$"
 
