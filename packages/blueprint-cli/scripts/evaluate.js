@@ -28,9 +28,9 @@
  */
 
 import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { resolve, basename } from 'path';
 import yaml from 'js-yaml';
-import { generate } from '@codeforamerica/blueprint-core';
+import { generate, load } from '@codeforamerica/blueprint-core';
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 
 function parseArgs() {
@@ -84,16 +84,17 @@ function evaluateGraph(graph, inputs) {
  * Compilation is `generate`'s job; it returns a graph per ruleset with the
  * name it came from, so there is nothing to compile here.
  *
- * @param {object} rulesDoc - Parsed rules contract
+ * `generate` addresses documents by their position in a contract set and
+ * refuses one that has none, so the file is loaded as what it is: a set of
+ * one, sitting at its own basename.
+ *
+ * @param {string} rulesPath - Path to the rules contract
  * @param {string} rulesetName
  * @returns {object}
  */
-function graphFor(rulesDoc, rulesetName) {
-  const graphs = generate([
-    { path: 'rules.yaml', relativePath: 'rules.yaml', type: 'rules', content: rulesDoc,
-      refs: () => new Map(), model: () => null, domain: rulesDoc.domain ?? null,
-      resolved: false, provenance: null },
-  ], 'graph');
+function graphFor(rulesPath, rulesetName) {
+  const doc = load({ path: resolve(rulesPath), relativePath: basename(rulesPath) });
+  const graphs = generate([doc], 'graph');
   const found = graphs.find((g) => g.graph.ruleset === rulesetName);
   if (!found) {
     console.error(`Error: Ruleset "${rulesetName}" produced no graph`);
@@ -102,7 +103,7 @@ function graphFor(rulesDoc, rulesetName) {
   return found.graph;
 }
 
-function evaluateRules(doc, inputs, rulesetName) {
+function evaluateRules(doc, specPath, inputs, rulesetName) {
   const rulesets = doc.rulesets ?? {};
   const name = rulesetName ?? Object.keys(rulesets)[0];
   const ruleset = rulesets[name];
@@ -110,7 +111,7 @@ function evaluateRules(doc, inputs, rulesetName) {
     console.error(`Error: Ruleset "${name}" not found`);
     process.exit(1);
   }
-  return evaluate(graphFor(doc, name), inputs);
+  return evaluate(graphFor(specPath, name), inputs);
 }
 
 function evaluateExamples(doc, specPath) {
@@ -126,7 +127,7 @@ function evaluateExamples(doc, specPath) {
       console.error(`Error: Ruleset "${rulesetName}" not found in companion rules file`);
       process.exit(1);
     }
-    const graph = graphFor(rulesDoc, rulesetName);
+    const graph = graphFor(companionPath, rulesetName);
     const examples = rulesetExamples.examples ?? [];
     result[rulesetName] = examples.map(example => evaluate(graph, example.inputs ?? {}));
   }
@@ -174,7 +175,7 @@ function main() {
   if (type === 'graph') {
     result = evaluateGraph(doc, inputs);
   } else if (type === 'rules') {
-    result = evaluateRules(doc, inputs, options.ruleset);
+    result = evaluateRules(doc, resolve(options.spec), inputs, options.ruleset);
   } else {
     // examples — batch mode
     result = evaluateExamples(doc, resolve(options.spec));

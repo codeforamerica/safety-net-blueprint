@@ -961,11 +961,17 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, slaType
  * @returns {Array<{ method: string, path: string, description: string }>}
  */
 /**
- * Compile all rulesets across all rules files into a flat index.
- * Returns { rulesetName: compiledGraph } for use by the state machine engine.
+ * Index compiled decision graphs by the ruleset each came from.
+ *
+ * Takes the graphs themselves, which is what setup.js produces from
+ * `generate(docs, 'graph')`. A compiled graph names its own ruleset, so
+ * nothing needs to carry it alongside.
+ *
+ * @param {Array<Object>} graphs - Compiled graphs
+ * @returns {Record<string, Object>} Ruleset name to its graph
  */
 export function buildRulesIndex(graphs = []) {
-  return Object.fromEntries(graphs.map(({ ruleset, graph }) => [ruleset, graph]));
+  return Object.fromEntries(graphs.map((graph) => [graph.ruleset, graph]));
 }
 
 export function registerRulesRoutes(app, rulesFiles = [], apiSpecs = [], graphs = []) {

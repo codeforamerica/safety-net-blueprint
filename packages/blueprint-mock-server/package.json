@@ -23,10 +23,10 @@
     "validate:mock-data": "node cli/validate-mock-data.js --spec=../safety-net-contracts",
     "setup": "node cli/setup.js --spec=../safety-net-contracts",
     "reset": "node cli/reset.js --spec=../safety-net-contracts",
-    "test": "node tests/run-tests.js --all --contracts=../generated/contracts --raw-contracts=../safety-net-contracts --stop",
+    "test": "node tests/run-tests.js --all --contracts=../generated/contracts --raw-contracts=../safety-net-contracts/src --stop",
     "test:unit": "node tests/run-tests.js --unit --fixtures=tests/fixtures --seed=tests/fixtures",
     "test:functional": "node tests/run-tests.js --functional",
-    "test:integration": "node tests/run-tests.js --integration --contracts=../generated/contracts --raw-contracts=../safety-net-contracts --stop"
+    "test:integration": "node tests/run-tests.js --integration --contracts=../generated/contracts --raw-contracts=../safety-net-contracts/src --stop"
   },
   "engines": {
     "node": ">=22.11.0"

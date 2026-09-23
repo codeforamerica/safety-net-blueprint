@@ -8,6 +8,18 @@ import http from 'http';
 import { URL } from 'url';
 import { startMockServer, stopServer, isServerRunning } from '../cli/server.js';
 
+/**
+ * The server's own view of a contract set: every API with its endpoints and
+ * the base path each is mounted under.
+ *
+ * Re-exported for integration suites in other packages, which need to know
+ * where a collection actually lives before they can request it. They used to
+ * get this from blueprint-core, which no longer loads OpenAPI documents —
+ * this is the same loader the server itself runs, so a test cannot disagree
+ * with the routes that exist.
+ */
+export { loadAllSpecs } from './spec-loader.js';
+
 export const BASE_URL = 'http://localhost:1080';
 // Event types are short-form (no org prefix). The x-event-type-prefix overlay config
 // adds org prefixes at resolve time for state deployments.

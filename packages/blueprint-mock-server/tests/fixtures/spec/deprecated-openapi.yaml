@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Deprecated API
   version: 1.0.0
-x-status: deprecated
+  x-status: deprecated
 servers:
   - url: /
 paths: {}

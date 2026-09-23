@@ -36,12 +36,26 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import { toFactGraphXml, toGraphWithFactGraph } from '../src/fact-graph.js';
 import { toGraph } from '../src/evaluator.js';
-import { generate } from '@codeforamerica/blueprint-core';
+import { generate, load } from '@codeforamerica/blueprint-core';
+
+/**
+ * A rules fixture, loaded the way the pipeline loads a contract.
+ *
+ * `generate` addresses documents by their position in a contract set and
+ * refuses one that has none, so each fixture is loaded as a set of one
+ * sitting at its own basename.
+ *
+ * @param {string} path - Absolute path to a *-rules.yaml fixture
+ * @returns {import('@codeforamerica/blueprint-core').Doc}
+ */
+function rulesContract(path) {
+  return load({ path, relativePath: basename(path) });
+}
 
 /**
  * Compile one ruleset through `generate`, the way the pipeline does.
@@ -49,20 +63,9 @@ import { generate } from '@codeforamerica/blueprint-core';
  * Kept local to the test rather than importing a compiler: compiling is a
  * build step core performs, not something consumers call.
  */
-function graphFor(rulesDoc, rulesetName) {
-  const name = rulesetName ?? Object.keys(rulesDoc.rulesets ?? {})[0];
-  const graphs = generate([{
-    path: 'rules.yaml',
-    relativePath: 'rules.yaml',
-    type: 'rules',
-    domain: rulesDoc.domain ?? null,
-    content: rulesDoc,
-    refs: () => new Map(),
-    model: () => null,
-    resolved: false,
-    provenance: null,
-  }], 'graph');
-  const found = graphs.find(({ graph }) => graph.ruleset === name);
+function graphFor(doc, rulesetName) {
+  const name = rulesetName ?? Object.keys(doc.content.rulesets ?? {})[0];
+  const found = generate([doc], 'graph').find(({ graph }) => graph.ruleset === name);
   if (!found) throw new Error(`Ruleset "${name}" produced no graph`);
   return found.graph;
 }
@@ -74,17 +77,17 @@ function graphFor(rulesDoc, rulesetName) {
  * belongs to blueprint-core. Tests do it here so the fixtures can stay as
  * readable rules YAML rather than checked-in compiled graphs.
  *
- * @param {object} rulesDoc
+ * @param {import('@codeforamerica/blueprint-core').Doc} doc
  * @param {string} [rulesetName] - Defaults to the document's only ruleset
  * @returns {{ graph: object, inputs: object }}
  */
-function compile(rulesDoc, rulesetName) {
-  const rulesets = rulesDoc?.rulesets ?? {};
+function compile(doc, rulesetName) {
+  const rulesets = doc.content?.rulesets ?? {};
   const name = rulesetName ?? Object.keys(rulesets)[0];
   const ruleset = rulesets[name];
   if (!ruleset) throw new Error(`Ruleset "${name}" not found`);
   return {
-    graph: graphFor(rulesDoc, name),
+    graph: graphFor(doc, name),
     inputs: ruleset.inputs,
   };
 }
@@ -104,7 +107,7 @@ function loadText(path) {
 // ── Graph compilation ──────────────────────────────────────────────────────────
 
 describe('graph compilation — snap interview probes', () => {
-  const rulesDoc = loadYaml(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-rules.yaml'));
+  const rulesDoc = rulesContract(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-rules.yaml'));
   const { graph, inputs: rulesetInputs } = compile(rulesDoc);
   const expected = loadYaml(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-graph.yaml'));
 
@@ -115,7 +118,7 @@ describe('graph compilation — snap interview probes', () => {
 });
 
 describe('graph compilation — collection ops', () => {
-  const rulesDoc = loadYaml(join(__dirname, 'fixtures/collection-ops/collection-ops-rules.yaml'));
+  const rulesDoc = rulesContract(join(__dirname, 'fixtures/collection-ops/collection-ops-rules.yaml'));
   const { graph, inputs: rulesetInputs } = compile(rulesDoc);
   const expected = loadYaml(join(__dirname, 'fixtures/collection-ops/collection-ops-graph.yaml'));
 
@@ -128,7 +131,7 @@ describe('graph compilation — collection ops', () => {
 // ── XML generation ─────────────────────────────────────────────────────────────
 
 describe('toFactGraphXml — snap interview probes', () => {
-  const rulesDoc = loadYaml(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-rules.yaml'));
+  const rulesDoc = rulesContract(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-rules.yaml'));
   const { graph, inputs: rulesetInputs } = compile(rulesDoc);
   const expectedXml = loadText(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-fact-graph.xml'));
 
@@ -139,7 +142,7 @@ describe('toFactGraphXml — snap interview probes', () => {
 });
 
 describe('toFactGraphXml — collection ops (all/exists/has)', () => {
-  const rulesDoc = loadYaml(join(__dirname, 'fixtures/collection-ops/collection-ops-rules.yaml'));
+  const rulesDoc = rulesContract(join(__dirname, 'fixtures/collection-ops/collection-ops-rules.yaml'));
   const { graph, inputs: rulesetInputs } = compile(rulesDoc);
   const expectedXml = loadText(join(__dirname, 'fixtures/collection-ops/collection-ops-fact-graph.xml'));
 
@@ -155,7 +158,7 @@ describe('toFactGraphXml — collection ops (all/exists/has)', () => {
 // state and value for each output fact.
 
 describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () => {
-  const rulesDoc  = loadYaml(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-rules.yaml'));
+  const rulesDoc  = rulesContract(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-rules.yaml'));
   const { graph, inputs: rulesetInputs } = compile(rulesDoc);
   const examples  = loadYaml(join(__dirname, 'fixtures/snap-interview-probes/snap-interview-probes-rules-examples.yaml'));
   const scenarios = examples.rulesets.snapInterviewProbes.examples;
@@ -249,7 +252,7 @@ describe('CEL evaluator vs FactGraph — scenarios 01–06 (output parity)', () 
 // ── collection-ops fixture tests ───────────────────────────────────────────────
 
 describe('evaluator — collection ops (all/exists/has)', () => {
-  const rulesDoc = loadYaml(join(__dirname, 'fixtures/collection-ops/collection-ops-rules.yaml'));
+  const rulesDoc = rulesContract(join(__dirname, 'fixtures/collection-ops/collection-ops-rules.yaml'));
   const { graph, inputs: rulesetInputs } = compile(rulesDoc);
   const scenariosDir = join(__dirname, 'fixtures/collection-ops/scenarios');
 

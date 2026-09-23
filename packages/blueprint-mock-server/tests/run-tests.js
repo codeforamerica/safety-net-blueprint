@@ -163,10 +163,12 @@ const resolveScript = resolve(__dirname, '..', '..', 'blueprint-cli', 'scripts',
 async function resolveContracts() {
   console.log('Resolving contracts...');
   await new Promise((res, rej) => {
-    // The contract set is src/, the same root `npm run resolve` uses. Passing
-    // the package root instead sweeps tests/integration/seed/*-mock-data.yaml
-    // into the set, where they are validated as contracts and fail.
-    const specDir = join(rawContractsDir, 'src');
+    // --raw-contracts names a contract set, the same as --contracts. Callers
+    // point it at src/ rather than the package root, which is the root
+    // `npm run resolve` uses: the package root would sweep
+    // tests/integration/seed/*-mock-data.yaml into the set, where they are
+    // validated as contracts and fail.
+    const specDir = rawContractsDir;
     const overlayDir = join(specDir, 'overlays');
     const proc = spawn('node', [resolveScript, `--spec=${specDir}`, `--overlay=${overlayDir}`, `--out=${contractsDir}`], { stdio: 'inherit', shell: false });
     proc.on('close', code => code === 0 ? res() : rej(new Error(`resolve failed with exit code ${code}`)));

@@ -5,7 +5,36 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { join, basename } from 'node:path';
+import { tmpdir } from 'node:os';
+import yaml from 'js-yaml';
+import { generate, load } from '@codeforamerica/blueprint-core';
 import { registerRoutes, registerAllRoutes, registerRulesRoutes } from '../../src/route-generator.js';
+
+/**
+ * Compile a rules contract the way the server does at startup.
+ *
+ * `registerRulesRoutes` evaluates compiled graphs and skips any ruleset it has
+ * no graph for, so a test that passes only the contract registers nothing.
+ * setup.js builds them with `generate(docs, 'graph')`; these go through the
+ * same call rather than hand-rolling a Doc, so the test cannot pass while the
+ * real path is broken.
+ *
+ * @param {object} rulesDoc - Parsed rules contract
+ * @returns {object[]} Compiled graphs
+ */
+function graphsFor(rulesDoc) {
+  const dir = mkdtempSync(join(tmpdir(), 'rules-routes-'));
+  try {
+    const path = join(dir, `${rulesDoc.domain}-rules.yaml`);
+    writeFileSync(path, yaml.dump(rulesDoc));
+    const doc = load({ path, relativePath: basename(path) });
+    return generate([doc], 'graph').map(({ graph }) => graph);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
 
 // Mock Express app to capture registered routes
 function createMockApp() {
@@ -626,14 +655,14 @@ test('registerRulesRoutes', async (t) => {
 
   await t.test('skips rulesets without an endpoint declaration', () => {
     const app = createMockApp();
-    registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }]);
+    registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
     // Only snapEligibility has endpoint; noEndpointRuleset is skipped
     assert.strictEqual(app.getRoutes().length, 1);
   });
 
   await t.test('falls back to /domain prefix when no apiSpec found', () => {
     const app = createMockApp();
-    registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }]);
+    registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
     const routes = app.getRoutes();
     assert.strictEqual(routes.length, 1);
     assert.strictEqual(routes[0].method, 'POST');
@@ -643,14 +672,14 @@ test('registerRulesRoutes', async (t) => {
   await t.test('uses serverBasePath from apiSpec when available', () => {
     const app = createMockApp();
     const apiSpecs = [{ name: 'eligibility', serverBasePath: '/eligibility' }];
-    registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }], apiSpecs);
+    registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }], apiSpecs, graphsFor(minimalRulesDoc));
     const routes = app.getRoutes();
     assert.strictEqual(routes[0].path, '/eligibility/assess-snap-eligibility');
   });
 
   await t.test('handler returns evaluate result as JSON for complete inputs', async () => {
     const app = createMockApp();
-    registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }]);
+    registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
     const handler = app.getRoutes()[0].handler;
 
     let responseBody;
@@ -683,7 +712,7 @@ test('registerRulesRoutes', async (t) => {
         },
       },
     };
-    registerRulesRoutes(app, [{ domain: 'eligibility', doc: brokenDoc }]);
+    registerRulesRoutes(app, [{ domain: 'eligibility', doc: brokenDoc }], [], graphsFor(brokenDoc));
     const handler = app.getRoutes()[0].handler;
 
     let statusCode = 200;
@@ -702,7 +731,7 @@ test('registerRulesRoutes', async (t) => {
 
   await t.test('returns registered endpoint descriptors', () => {
     const app = createMockApp();
-    const result = registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }]);
+    const result = registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
     assert.strictEqual(result.length, 1);
     assert.strictEqual(result[0].method, 'POST');
     assert.ok(result[0].path.includes('assess-snap-eligibility'));
