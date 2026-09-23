@@ -81,8 +81,12 @@ function parseSpecDirs() {
   const specDirs = args
     .filter(a => a.startsWith('--spec='))
     .map(a => resolve(a.split('=')[1]));
+  // No default. The previous fallback pointed at packages/contracts, which was
+  // renamed long ago, so omitting --spec failed later and obscurely with an
+  // empty contract set rather than saying what was missing.
   if (specDirs.length === 0) {
-    specDirs.push(resolve(import.meta.dirname, '..', '..', 'contracts'));
+    console.error('Error: --spec=<dir> is required (a directory of resolved contracts)');
+    process.exit(1);
   }
 
   const seedArg = args.find(a => a.startsWith('--seed='));
