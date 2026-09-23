@@ -20,7 +20,7 @@ import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import yaml from 'js-yaml';
 import { resolveSchemaRefs, collectTopLevelProperties } from './json-schema/index.js';
-import { extractPathParams, buildParameterIndex, buildPathEntry } from './openapi/utils.js';
+import { extractPathParams, buildParameterIndex, buildPathEntry, toPascalCase } from './openapi/utils.js';
 
 const LIST_QUERY_PARAMS = [
   { $ref: './components/parameters.yaml#/SearchQueryParam' },
@@ -386,10 +386,6 @@ export function validateSortableConfig(compositionDoc) {
 /**
  * Capitalise the first letter of a string.
  */
-function toPascalCase(name) {
-  return name.charAt(0).toUpperCase() + name.slice(1);
-}
-
 /**
  * Convert a PascalCase string to kebab-case.
  * "ReviewProgress" → "review-progress"

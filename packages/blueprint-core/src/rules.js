@@ -20,7 +20,7 @@
  */
 
 import { loadContractFiles } from './openapi/contract-files.js';
-import { buildParameterIndex, buildPathEntry } from './openapi/utils.js';
+import { buildParameterIndex, buildPathEntry, toPascalCase } from './openapi/utils.js';
 
 // ── Discovery ─────────────────────────────────────────────────────────────────
 
@@ -368,10 +368,6 @@ export function generateRulesResults(rulesFiles, yamlFiles = []) {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function toPascalCase(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
 
 function toCamelCase(str) {
   return str.split('-').map((s, i) => i === 0 ? s : toPascalCase(s)).join('');

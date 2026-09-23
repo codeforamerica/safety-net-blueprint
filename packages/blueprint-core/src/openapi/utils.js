@@ -114,6 +114,19 @@ export function buildPathEntry(path, method, operation, paramIndex = new Map(), 
 }
 
 /**
+ * Capitalize the first character.
+ *
+ * The rules and compositions generators both build schema and operation names
+ * from contract identifiers, and each carried its own copy of this.
+ *
+ * @param {string} name
+ * @returns {string}
+ */
+export function toPascalCase(name) {
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+/**
  * Convert a kebab-case collection name to its PascalCase singular schema prefix.
  * Used to match example keys to collections (e.g., "queues" → "Queue",
  * "task-audit-events" → "TaskAuditEvent").
