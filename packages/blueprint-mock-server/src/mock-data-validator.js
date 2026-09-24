@@ -6,7 +6,8 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { readdirSync, statSync } from 'fs';
 import yaml from 'js-yaml';
-import { validateExamples } from '@codeforamerica/blueprint-core/example-validator';
+import { discover, generate, load } from '@codeforamerica/blueprint-core';
+import { validateAgainstSchema } from './example-validator.js';
 
 /**
  * Recursively find all *-mock-data.yaml files under rootDir.
@@ -29,21 +30,23 @@ function findMockDataFiles(rootDir) {
   return results;
 }
 
-/**
- * Validate all *-mock-data.yaml files found under specsDir against schemas in apiSpecs.
- * @param {string} specsDir - Root directory to recurse for mock data files
- * @param {Array} apiSpecs - Array of API metadata objects (from loadAllSpecs)
- * @returns {Array<{api: string, key: string|null, message: string}>} Validation errors
- */
 export function validateMockData(specsDir, apiSpecs) {
   const errors = [];
-  const specsByName = Object.fromEntries(apiSpecs.map(s => [s.name, s]));
-  const mockFiles = findMockDataFiles(specsDir);
 
-  for (const { apiName, filePath } of mockFiles) {
-    const api = specsByName[apiName];
-    if (!api) continue;
+  const allSchemas = {};
+  for (const api of apiSpecs) Object.assign(allSchemas, api.schemas ?? {});
 
+  // Core groups each record under the schema it exemplifies, so the schema to
+  // check against is the one it was grouped under. Deriving a schema name
+  // from the key looked right and was not: records keyed RegistryPolicy* are
+  // `Policy`, so the lookup found nothing and skipped validation in silence.
+  const docs = discover(specsDir).map(load);
+  const schemaOf = new Map();
+  for (const [schema, records] of Object.entries(generate(docs, 'examples'))) {
+    for (const record of records) schemaOf.set(record.key, schema);
+  }
+
+  for (const { apiName, filePath } of findMockDataFiles(specsDir)) {
     let examples;
     try {
       examples = yaml.load(readFileSync(filePath, 'utf8')) || {};
@@ -52,9 +55,30 @@ export function validateMockData(specsDir, apiSpecs) {
       continue;
     }
 
-    for (const { key, instancePath, message } of validateExamples(examples, api.schemas)) {
-      const path = instancePath || '/';
-      errors.push({ api: apiName, key, message: `${path}: ${message}` });
+    for (const [key, value] of Object.entries(examples)) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+
+      // Matching no schema is the dangerous case: the record conforms to
+      // nothing, is seeded nowhere, and nothing says so. A platform event
+      // keyed DomainEventExample1 survived that way while the schema is
+      // `Event`.
+      const schemaName = schemaOf.get(key);
+      if (!schemaName) {
+        errors.push({
+          api: apiName,
+          key,
+          message: 'matches no schema in the contract set, so it is seeded nowhere. '
+            + 'Name the key after the schema it is an example of.',
+        });
+        continue;
+      }
+
+      const schema = allSchemas[schemaName];
+      if (!schema) continue;
+
+      for (const { instancePath, message } of validateAgainstSchema(value, schema)) {
+        errors.push({ api: apiName, key, message: `${instancePath || '/'}: ${message}` });
+      }
     }
   }
 

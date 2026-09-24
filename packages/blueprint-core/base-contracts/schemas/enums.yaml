@@ -11,6 +11,16 @@ $defs:
     enum:
       - platform
 
+  MetricCollection:
+    type: string
+    description: >
+      Data collection a metric queries. Used in MetricSource.collection for
+      count, ratio, and duration metrics. The base value covers the audit event
+      log; domain packages extend this enum via overlay to add their primary
+      resource collections.
+    enum:
+      - events   # audit log — queries transition history (action, timestamp, etc.)
+
   Frequency:
     type: string
     description: >

@@ -16,8 +16,8 @@ import { readFileSync, readdirSync, existsSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { loadAnnotations } from '@codeforamerica/blueprint-core/annotations';
-import { loadPolicies } from '@codeforamerica/blueprint-core/policies';
+import { loadAnnotations } from '../annotations.js';
+import { discover, load } from '@codeforamerica/blueprint-core';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -47,7 +47,7 @@ export function resolveConfig(contractsDir, contentDir) {
     }
   }
 
-  const policies = existsSync(contractsDir) ? loadPolicies(contractsDir) : {};
+  const policies = existsSync(contractsDir) ? registryEntries(discover(contractsDir).map(load), 'policies') : {};
 
   return {
     ...config,
@@ -131,4 +131,24 @@ function resolveAnnotationRef(ref, annotations, policies) {
   }
 
   return [];
+}
+
+/**
+ * Merge every registry of one type into a map of ID to entry.
+ *
+ * Later documents override earlier ones per ID, which is how a state replaces
+ * a baseline entry. `registry` is a contract type, so `discover` has already
+ * tagged these; all that is left is the merge.
+ *
+ * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
+ * @param {string} type - Registry type, e.g. 'policies'
+ * @returns {Record<string, object>}
+ */
+function registryEntries(docs, type) {
+  const merged = {};
+  for (const doc of docs) {
+    if (doc.type !== 'registry' || doc.content?.type !== type) continue;
+    Object.assign(merged, doc.content.entries ?? {});
+  }
+  return merged;
 }

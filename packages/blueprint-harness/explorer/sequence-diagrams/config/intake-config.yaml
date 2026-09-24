@@ -1,0 +1,5 @@
+domain: intake
+
+events:
+  intake.application.submitted:
+    label: Initiate eligibility determination for each applied-for program

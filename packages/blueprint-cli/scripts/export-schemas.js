@@ -73,18 +73,15 @@ function discoverSpecs(specsDir) {
   const specs = [];
 
   try {
-    const entries = readdirSync(specsDir);
+    const entries = readdirSync(specsDir, { recursive: true });
 
     for (const entry of entries) {
+      if (!entry.endsWith('-openapi.yaml')) continue;
       const fullPath = join(specsDir, entry);
-      const stat = statSync(fullPath);
-
-      if (stat.isFile() && entry.endsWith('-openapi.yaml')) {
-        specs.push({
-          path: fullPath,
-          fileSlug: basename(entry, '-openapi.yaml'),
-        });
-      }
+      specs.push({
+        path: fullPath,
+        fileSlug: basename(entry, '-openapi.yaml'),
+      });
     }
   } catch (err) {
     console.error(`Error reading specs directory: ${err.message}`);

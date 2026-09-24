@@ -5,8 +5,6 @@
  * Consolidated explorer build. Resolves config + contracts annotations once
  * and passes the enriched config to all sub-tools that depend on it.
  *
- * If packages/generated is missing or empty, the resolve step runs automatically.
- *
  * Usage:
  *   node build.js                              # build everything
  *   node build.js --only=context-map
@@ -28,14 +26,22 @@
  *   --clients   Path to the generated clients directory (output of clients:generate).
  */
 
-import { readdirSync, rmSync, existsSync } from 'fs';
-import { resolve, dirname, basename } from 'path';
+import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { execFileSync } from 'child_process';
 import { loadConfig } from './src/lib/config.js';
 
+import { build as buildAnnotationsExplorer } from './src/annotations-explorer/build.js';
+import { build as buildContextMap }       from './src/context-map/build.js';
+import { build as buildSequenceDiagrams } from './src/sequence-diagrams/index.js';
+import { build as buildDataDictionaries } from './src/data-dictionaries/build.js';
+import { build as buildStateMachineDocs } from './src/state-machine-docs/build.js';
+import { build as buildRulesDocs }        from './src/rules-docs/build.js';
+import { build as buildEventCatalog }     from './src/event-catalog.js';
+import { build as buildApiReference }     from './src/api-reference.js';
+import { build as buildClientReference }  from './src/client-reference.js';
+import { build as buildHub }              from './src/hub.js';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const node = process.execPath;
 
 const args        = process.argv.slice(2);
 const onlyArg     = args.find(a => a.startsWith('--only='));
@@ -50,80 +56,67 @@ if (!contentArg || !resolvedArg) {
 }
 
 const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
+const resolvedDir = resolve(process.cwd(), resolvedArg.slice('--resolved='.length));
+const clientsDir  = clientsArg ? resolve(process.cwd(), clientsArg.slice('--clients='.length)) : null;
 
 // Validate config early — fails fast before any tools run.
 loadConfig(contentDir);
 
-const resolvedDir = resolve(process.cwd(), resolvedArg.slice('--resolved='.length));
-
-// Args forwarded to all subprocesses that respect them.
-const fwdContent  = [`--content=${contentDir}`];
-const fwdResolved = [resolvedArg];
-const fwdClients  = clientsArg  ? [clientsArg]  : [];
-
 const doBuild = tool => !only || only === tool;
 
-const buildContextMap  = doBuild('context-map');
-const buildSeqDiagrams = doBuild('sequence-diagrams');
+// ── Annotations explorer ──────────────────────────────────────────────────────
+
+if (doBuild('annotations-explorer')) {
+  buildAnnotationsExplorer({ contentDir, resolvedDir });
+}
 
 // ── Context map ───────────────────────────────────────────────────────────────
 
-if (buildContextMap) {
-  execFileSync(node, [
-    resolve(__dirname, 'src', 'context-map', 'build.js'),
-    ...fwdContent, ...fwdResolved,
-  ], { stdio: 'inherit' });
+if (doBuild('context-map')) {
+  buildContextMap({ contentDir, resolvedDir });
 }
 
 // ── Sequence diagrams ─────────────────────────────────────────────────────────
 
-if (buildSeqDiagrams) {
-  const seqSrcDir    = resolve(__dirname, 'src', 'sequence-diagrams');
-  const seqConfigDir = resolve(contentDir, 'sequence-diagrams', 'config');
-  const seqOutDir    = resolve(contentDir, 'sequence-diagrams');
-  execFileSync(node, [resolve(seqSrcDir, 'validate-config.js'), `--config-dir=${seqConfigDir}`, ...fwdResolved], { stdio: 'inherit' });
-  execFileSync(node, [resolve(seqSrcDir, 'render-action-flow.js'), seqOutDir, `--config-dir=${seqConfigDir}`, ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
-  execFileSync(node, [resolve(seqSrcDir, 'build-phases-html.js'), seqOutDir, seqOutDir, `--config-dir=${seqConfigDir}`, ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
+if (doBuild('sequence-diagrams')) {
+  buildSequenceDiagrams({ contentDir, resolvedDir });
 }
 
-// ── Data dictionaries (reads contracts directly — subprocess) ─────────────────
+// ── Data dictionaries ─────────────────────────────────────────────────────────
 
 if (doBuild('data-dictionaries')) {
-  // Clean stale field inventories before regenerating — build.js reads these,
-  // so they must be cleaned before the generator runs, not inside build.js itself.
-  const ddOutDir = resolve(contentDir, 'data-dictionaries');
-  try {
-    readdirSync(ddOutDir)
-      .filter(f => f.endsWith('-field-inventory.yaml'))
-      .forEach(f => rmSync(resolve(ddOutDir, f)));
-  } catch { /* dir may not exist yet */ }
-
-  const generateDataModel = resolve(__dirname, 'src', 'data-dictionaries', 'generate-field-inventory.mjs');
-  execFileSync(node, [generateDataModel, `--spec=${resolvedDir}`, `--out=${ddOutDir}`], { stdio: 'inherit' });
-  execFileSync(node, [resolve(__dirname, 'src', 'data-dictionaries', 'build.js'), ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
+  await buildDataDictionaries({ contentDir, resolvedDir });
 }
 
-// ── State machine docs (reads contracts directly — subprocess) ────────────────
+// ── State machine docs ────────────────────────────────────────────────────────
 
 if (doBuild('state-machine-docs')) {
-  execFileSync(node, [resolve(__dirname, 'src', 'state-machine-docs', 'build.js'), ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
+  buildStateMachineDocs({ contentDir, resolvedDir });
 }
+
+// ── Rules docs ────────────────────────────────────────────────────────────────
+
+if (doBuild('rules-docs')) {
+  buildRulesDocs({ contentDir, resolvedDir });
+}
+
+// ── Event catalog ─────────────────────────────────────────────────────────────
 
 if (doBuild('event-catalog')) {
-  execFileSync(node, [resolve(__dirname, 'src', 'event-catalog.js'), ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
+  buildEventCatalog({ contentDir, resolvedDir });
 }
+
+// ── API reference ─────────────────────────────────────────────────────────────
 
 if (doBuild('api-reference')) {
-  execFileSync(node, [resolve(__dirname, 'src', 'api-reference.js'), ...fwdContent, ...fwdResolved], { stdio: 'inherit' });
+  await buildApiReference({ contentDir, resolvedDir });
 }
 
-if (doBuild('client-reference')) {
-  execFileSync(node, [resolve(__dirname, 'src', 'client-reference.js'), ...fwdContent, ...fwdResolved, ...fwdClients], { stdio: 'inherit' });
-}
+// ── Client reference ──────────────────────────────────────────────────────────
 
-if (doBuild('authored')) {
-  execFileSync(node, [resolve(__dirname, 'src', 'authored.js'), ...fwdContent], { stdio: 'inherit' });
+if (doBuild('client-reference') && clientsDir) {
+  buildClientReference({ contentDir, resolvedDir, clientsDir });
 }
 
 // Hub is always rebuilt last so it can scan all tool output directories
-execFileSync(node, [resolve(__dirname, 'src', 'hub.js'), ...fwdContent], { stdio: 'inherit' });
+buildHub({ contentDir });

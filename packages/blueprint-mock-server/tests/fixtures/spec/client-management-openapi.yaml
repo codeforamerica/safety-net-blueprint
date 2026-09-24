@@ -1,0 +1,86 @@
+openapi: 3.1.0
+info:
+  title: Client Management API
+  version: 1.0.0
+  x-domain: client-management
+  # The seeder groups records by the collections a spec declares, so the
+  # persons fixtures in client-management-mock-data.yaml need a spec that
+  # declares /persons. Without one the unit tests would seed a collection no
+  # contract mentions, which the server itself can never do.
+servers:
+  - url: http://localhost:1080/client-management
+paths:
+  /persons:
+    get:
+      operationId: listPersons
+      responses:
+        "200":
+          description: A paginated list of persons.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonList"
+    post:
+      operationId: createPerson
+      responses:
+        "201":
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+  /persons/{personId}:
+    parameters:
+      - name: personId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getPerson
+      responses:
+        "200":
+          description: One person.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Person"
+components:
+  schemas:
+    Person:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: object
+          properties:
+            firstName:
+              type: string
+            lastName:
+              type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, createdAt, updatedAt]
+    PersonList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Person"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasNext:
+          type: boolean
+      required: [items, total, limit, offset, hasNext]

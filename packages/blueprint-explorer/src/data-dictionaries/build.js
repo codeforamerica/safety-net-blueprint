@@ -12,37 +12,43 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, rmSync, mkdirSync
 import { resolve, dirname, sep, relative, join } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { loadAnnotations } from '@codeforamerica/blueprint-core/annotations';
-import { loadContractFiles } from '@codeforamerica/blueprint-core';
-import { loadPolicies } from '@codeforamerica/blueprint-core/policies';
+import { loadAnnotations } from '../annotations.js';
+import { contractFileMap } from '../contract-files.js';
+import { findSpecRelativePaths } from '../contract-nav.js';
 import { COLORS } from '../lib/theme.js';
-import { esc as h, titleCase, breadcrumb, headerMetaSubtitle, HEADER_CODE_STYLE } from '../lib/html.js';
+import { esc as h, titleCase, breadcrumb, headerMetaSubtitle, HEADER_CODE_STYLE, annotationChips } from '../lib/html.js';
 import { twoColumnPage, singleColumnPage } from '../lib/layout.js';
-import { resolvedDir, resolvedSourcePairs } from '../lib/paths.js';
+import { resolvedSourcePairs } from '../lib/paths.js';
 import { loadConfig } from '../lib/config.js';
+import { generate as generateFieldInventory } from './generate-field-inventory.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-
-const contentArg = process.argv.find(a => a.startsWith('--content='));
-if (!contentArg) {
-  console.error('Usage: node build.js --content=<path> [--resolved=<path>]');
-  process.exit(1);
-}
-const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
-const outputDir = resolve(contentDir, 'data-dictionaries');
-const hubHref = relative(outputDir, join(contentDir, 'index.html'));
-const { name: projectName, repo } = loadConfig(contentDir);
-const PROJECT_ROOT  = resolve(__dirname, '../../..');
-mkdirSync(outputDir, { recursive: true });
-readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(resolve(outputDir, f)));
+const PROJECT_ROOT = resolve(__dirname, '../../..');
 
 // Resolved source files this tool reads — shown in each page's header metadata.
 const SOURCE_SUFFIXES = ['openapi', 'annotations'];
 
-// ── Policy registry ───────────────────────────────────────────────────────────
+/**
+ * @param {{ contentDir: string, resolvedDir: string }} opts
+ */
+export async function build({ contentDir, resolvedDir }) {
+const outputDir = resolve(contentDir, 'data-dictionaries');
+const hubHref = relative(outputDir, join(contentDir, 'index.html'));
+const { name: projectName, repo } = loadConfig(contentDir);
+mkdirSync(outputDir, { recursive: true });
 
-let POLICIES = {};
-try { POLICIES = loadPolicies(resolvedDir); } catch { /* run without policy data if file is missing */ }
+// Clean stale field inventories before regenerating.
+readdirSync(outputDir)
+  .filter(f => f.endsWith('-field-inventory.yaml'))
+  .forEach(f => rmSync(resolve(outputDir, f)));
+
+// Generate field inventories from resolved OpenAPI specs.
+await generateFieldInventory({ specDir: resolvedDir, outDir: outputDir });
+
+// Clean stale HTML pages.
+readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(resolve(outputDir, f)));
+
+// ── Policy registry ───────────────────────────────────────────────────────────
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -99,8 +105,19 @@ function bestMatch(entries, fieldPath) {
   return best;
 }
 
-function buildAnnotationResolver(mergedSchema) {
-  const all = mergedSchema ?? {};
+function buildAnnotationResolver(mergedSchema, doc = null) {
+  const rawAll = mergedSchema ?? {};
+
+  // Expand any schema-relative annotation keys (e.g. "applicationMember.dob")
+  // to their spec-relative equivalents (e.g. "application.members[].dob") so
+  // they match the field inventory paths produced by generate-field-inventory.
+  const all = {};
+  for (const [key, value] of Object.entries(rawAll)) {
+    const resolvedKeys = doc ? findSpecRelativePaths(doc, key) : [key];
+    for (const resolved of resolvedKeys) {
+      all[resolved] = value;
+    }
+  }
 
   function inheritedValue(fieldPath, key) {
     let path = fieldPath;
@@ -144,37 +161,39 @@ function badge(text) {
   return `<span class="badge">${h(text.toUpperCase())}</span>`;
 }
 
-function renderFieldCard(path, meta, ann) {
+function renderFieldCard(path, meta, ann, allowedAnnotations, registryTypes = new Set()) {
   const type = displayType(meta);
   const typeBadge = type ? `<span class="type-badge">${h(type)}</span>` : '';
   const relBadge = (meta?.relationship && meta?.type !== 'uuid') ? `<span class="rel-badge">→ ${h(String(meta.relationship))}</span>` : '';
 
+  const show = allowedAnnotations
+    ? (field) => allowedAnnotations.includes(field)
+    : () => true;
+
+  // Known annotation fields to skip (metadata, not display fields)
+  const SKIP_ANN_FIELDS = new Set(['$schema', 'version', 'domain']);
+
   let annHtml = '';
   if (ann) {
-    const programs = ann.programs ?? [];
-    const policies = ann.policies ?? [];
-    const dc = ann.dataClassification ?? [];
-    const reason   = (ann.reason   ?? '').replace(/\s+/g, ' ').trim();
-    const modeling = (ann.modeling ?? '').replace(/\s+/g, ' ').trim();
     const parts = [];
-    if (reason)          parts.push(`<p class="ann-reason"><span class="ann-label">Reason</span>${h(reason)}</p>`);
-    if (modeling)        parts.push(`<p class="ann-modeling"><span class="ann-label">Modeling</span>${h(modeling)}</p>`);
-    if (dc.length)       parts.push(`<div class="ann-row"><span class="ann-label">Classification</span>${dc.map(badge).join('')}</div>`);
-    if (programs.length) parts.push(`<div class="ann-row"><span class="ann-label">Programs</span>${programs.map(badge).join('')}</div>`);
-    if (policies.length) {
-      const policyItems = policies.map(id => {
-        const pol = POLICIES[id];
-        if (!pol) return `<div class="policy-item"><code class="policy-id">${h(id)}</code></div>`;
-        const citationHtml = pol.citationUrl
-          ? `<a class="policy-citation" href="${pol.citationUrl}" target="_blank" rel="noopener">${h(pol.citation)}</a>`
-          : pol.citation ? `<span class="policy-citation">${h(pol.citation)}</span>` : '';
-        const desc = (pol.description ?? '').replace(/\s+/g, ' ').trim();
-        return `<div class="policy-item">` +
-          `<div class="policy-item-head"><code class="policy-id">${h(id)}</code>${citationHtml}</div>` +
-          (desc ? `<p class="policy-desc">${h(desc)}</p>` : '') +
-          `</div>`;
-      }).join('');
-      parts.push(`<div class="ann-row ann-row--col"><span class="ann-label">Policies</span><div class="policy-list">${policyItems}</div></div>`);
+    for (const [field, value] of Object.entries(ann)) {
+      if (SKIP_ANN_FIELDS.has(field)) continue;
+      if (!show(field)) continue;
+      const label = field.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+      if (Array.isArray(value) && value.length > 0) {
+        if (registryTypes.has(field)) {
+          const items = annotationChips(field, value, '../annotations-explorer');
+          parts.push(`<div class="ann-row"><span class="ann-label">${h(label)}</span>${items}</div>`);
+        } else if (value.length === 1) {
+          parts.push(`<p class="ann-reason"><span class="ann-label">${h(label)}</span>${h(String(value[0]).replace(/\s+/g, ' ').trim())}</p>`);
+        } else {
+          const items = value.map(v => `<li>${h(String(v).replace(/\s+/g, ' ').trim())}</li>`).join('');
+          parts.push(`<div class="ann-row ann-row--col"><span class="ann-label">${h(label)}</span><ul class="ann-list">${items}</ul></div>`);
+        }
+      } else if (typeof value === 'string' && value.trim()) {
+        const text = value.replace(/\s+/g, ' ').trim();
+        parts.push(`<p class="ann-reason"><span class="ann-label">${h(label)}</span>${h(text)}</p>`);
+      }
     }
     if (parts.length) annHtml = `<div class="card-ann">${parts.join('')}</div>`;
   }
@@ -193,7 +212,7 @@ function renderFieldCard(path, meta, ann) {
     ? `<div class="card-body">${appliesHtml}${valHtml}${annHtml}</div>`
     : '';
 
-  return `<div class="card content-item" data-path="${h(path)}">` +
+  return `<div class="card content-item" id="field-${h(path)}" data-path="${h(path)}">` +
     `<div class="card-header"><code class="field-path">${h(path)}</code>${typeBadge}${relBadge}</div>` +
     bodyHtml +
     `</div>`;
@@ -263,14 +282,14 @@ const FIELD_CSS = `
   background: var(--sand-light); color: #6b4c3b; border: 1px solid var(--sand);
 }
 .badge { font-size: 0.65rem; font-weight: 600; border-radius: 3px; padding: 0.1rem 0.35rem; letter-spacing: 0.03em; background: #e8e8e8; color: #444; }
+.ann-chip { text-decoration: none; background: var(--lb-light); color: var(--blue-mid); border: 1px solid var(--blue-light); }
+.ann-chip:hover { background: var(--blue-light); }
 .val-list code { font-size: 0.72rem; background: #f0f0f0; border-radius: 3px; padding: 0.05rem 0.3rem; color: #444; }
-.policy-list { display: flex; flex-direction: column; gap: 0.4rem; }
-.policy-item { font-size: 0.75rem; }
-.policy-item-head { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.15rem; }
-.policy-id { font-size: 0.72rem; background: #f0f0f0; border-radius: 3px; padding: 0.05rem 0.3rem; color: #444; }
-.policy-citation { font-size: 0.7rem; color: var(--blue-mid); text-decoration: none; }
-.policy-citation:hover { text-decoration: underline; }
-.policy-desc { font-size: 0.75rem; color: #555; line-height: 1.45; margin: 0; }
+@keyframes field-highlight {
+  0%   { background: #fef9c3; border-left-color: #ca8a04; }
+  100% { background: #fff;    border-left-color: var(--blue-mid); }
+}
+.card.field-highlight { animation: field-highlight 1.8s ease-out; }
 `;
 
 const INDEX_CSS = `
@@ -293,6 +312,16 @@ const INDEX_CSS = `
 // Layout.js handles nav filtering and item-level search via .content-item class.
 
 const DOMAIN_JS = `
+(function() {
+  const hash = window.location.hash;
+  if (!hash) return;
+  const id = decodeURIComponent(hash.slice(1));
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('field-highlight');
+  setTimeout(function() { el.classList.remove('field-highlight'); }, 2000);
+})();
+
 function exportCsv() {
   const rows = [['path', 'type', 'programs', 'policies', 'dataClassification']];
   document.querySelectorAll('.card:not(.hidden)').forEach(card => {
@@ -345,7 +374,7 @@ function buildIndexPage(domains) {
   });
 }
 
-function buildDomainPage(domain, sections, resolveAnn) {
+function buildDomainPage(domain, sections, resolveAnn, allowedAnnotations, registryTypes = new Set()) {
   const label = domainLabel(domain);
   const totalFields = sections.reduce((n, s) => n + s.fields.length, 0);
 
@@ -354,11 +383,12 @@ function buildDomainPage(domain, sections, resolveAnn) {
     return `<a href="#${h(id)}" class="nav-link">${h(s.name)} <span class="nav-count">${s.fields.length}</span></a>`;
   }).join('');
 
-  const metaSubtitle = headerMetaSubtitle(domain, resolvedSourcePairs(domain, { include: SOURCE_SUFFIXES }, repo));
+  const metaSubtitle = headerMetaSubtitle(domain, resolvedSourcePairs(domain, resolvedDir, { include: SOURCE_SUFFIXES }, repo));
 
   const mainHtml = sections.map(s => {
     const id = `sec-${s.name}`;
-    const cards = s.fields.map(f => renderFieldCard(f.path, f.meta, resolveAnn(f.path))).join('');
+    const cards = s.fields.map(f => renderFieldCard(f.path, f.meta, resolveAnn(f.path), allowedAnnotations, registryTypes)).join('');
+
     return `<section class="dict-section" id="${h(id)}">
       <h2 class="section-title">${h(s.name)}</h2>
       <div class="cards-grid">${cards}</div>
@@ -394,6 +424,9 @@ function buildDomainPage(domain, sections, resolveAnn) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 function main() {
+  const config = loadConfig(contentDir);
+  const allowedAnnotations = config.annotations ?? null;
+
   const dataModelFiles = readdirSync(outputDir)
     .filter(f => f.endsWith('-field-inventory.yaml'))
     .sort();
@@ -403,13 +436,12 @@ function main() {
     return;
   }
 
-  const fileMap = loadContractFiles(resolvedDir);
+  const fileMap = contractFileMap(resolvedDir);
 
   // Index openapi files by x-domain for version lookup
   const openApiByDomain = new Map();
-  for (const { content, type } of fileMap.values()) {
-    const domain = content?.info?.['x-domain'];
-    if (type === 'openapi' && domain) openApiByDomain.set(domain, content);
+  for (const doc of fileMap.values()) {
+    if (doc.type === 'openapi' && doc.domain) openApiByDomain.set(doc.domain, doc);
   }
 
   const domains = [];
@@ -420,14 +452,16 @@ function main() {
 
     console.log(`  Processing ${domain}...`);
 
-    let ann = { schema: {} };
+    let ann = { schema: {}, registryTypes: new Set() };
     try { ann = loadAnnotations(domain, fileMap); } catch { /* run without annotations if missing */ }
-    const resolveAnn = buildAnnotationResolver(ann.schema);
+    const domainSpec = openApiByDomain.get(domain) ?? null;
+    const resolveAnn = buildAnnotationResolver(ann.schema, domainSpec);
     const sections = parseDataModel(dataModelPath);
+    const { registryTypes } = ann;
 
-    const version = openApiByDomain.get(domain)?.info?.version ?? null;
+    const version = domainSpec?.content?.info?.version ?? null;
 
-    domains.push({ domain, sections, version, resolveAnn });
+    domains.push({ domain, sections, version, resolveAnn, allowedAnnotations, registryTypes });
   }
 
   for (const legacy of ['data-explorer.html', 'data-dictionary.html']) {
@@ -442,7 +476,7 @@ function main() {
   console.log(`  Written: index.html`);
 
   for (const d of domains) {
-    const pageHtml = buildDomainPage(d.domain, d.sections, d.resolveAnn);
+    const pageHtml = buildDomainPage(d.domain, d.sections, d.resolveAnn, d.allowedAnnotations, d.registryTypes);
     writeFileSync(resolve(outputDir, `${d.domain}.html`), pageHtml, 'utf8');
     console.log(`  Written: ${d.domain}.html`);
   }
@@ -451,3 +485,18 @@ function main() {
 }
 
 main();
+} // end build()
+
+// CLI entry point
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const contentArg  = process.argv.find(a => a.startsWith('--content='));
+  const resolvedArg = process.argv.find(a => a.startsWith('--resolved='));
+  if (!contentArg) {
+    console.error('Usage: node build.js --content=<path> [--resolved=<path>]');
+    process.exit(1);
+  }
+  build({
+    contentDir:  resolve(process.cwd(), contentArg.slice('--content='.length)),
+    resolvedDir: resolvedArg ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length)) : null,
+  }).catch(e => { console.error(e); process.exit(1); });
+}

@@ -1,0 +1,45 @@
+{
+  "type": "object",
+  "description": "Input data for expeditedSnap evaluation. All fields are optional — partial inputs trigger partial evaluation.",
+  "properties": {
+    "household": {
+      "type": "object",
+      "description": "Household financial circumstances at the time of application.",
+      "properties": {
+        "monthlyGrossIncome": {
+          "type": "number",
+          "description": "Total monthly gross income for all household members (dollars)."
+        },
+        "liquidResources": {
+          "type": "number",
+          "description": "Total liquid resources (cash, bank accounts) available to the household (dollars)."
+        },
+        "monthlyShelterCost": {
+          "type": "number",
+          "description": "Monthly shelter cost including rent/mortgage and utilities (dollars)."
+        },
+        "isMigrantFarmworker": {
+          "type": "boolean",
+          "description": "Whether any household member is a migrant or seasonal farmworker."
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "incomeThreshold": {
+          "type": "number",
+          "default": 150,
+          "description": "Monthly gross income threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i))."
+        },
+        "resourceThreshold": {
+          "type": "number",
+          "default": 100,
+          "description": "Liquid resource threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i))."
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/ExpeditedSnapRequest"
+}

@@ -1,0 +1,72 @@
+$schema: "https://blueprint.codeforamerica.org/schemas/rules-schema.yaml"
+domain: eligibility
+rulesets:
+
+  # Determines whether a household qualifies for expedited SNAP processing.
+  # Expedited processing must begin within 7 days of application filing (7 CFR § 273.2(i)).
+  # Three qualifying conditions:
+  #   1. Monthly gross income below $150 and liquid resources below $100
+  #   2. Combined income and liquid resources less than monthly shelter cost
+  #   3. Migrant or seasonal farmworker household with liquid resources below $100
+  expeditedSnap:
+    endpoint:
+      path: /determinations/evaluate-expedited-snap
+    inputs:
+      household:
+        type: object
+        description: Household financial circumstances at the time of application.
+        properties:
+          monthlyGrossIncome:
+            type: number
+            description: Total monthly gross income for all household members (dollars).
+          liquidResources:
+            type: number
+            description: Total liquid resources (cash, bank accounts) available to the household (dollars).
+          monthlyShelterCost:
+            type: number
+            description: Monthly shelter cost including rent/mortgage and utilities (dollars).
+          isMigrantFarmworker:
+            type: boolean
+            description: Whether any household member is a migrant or seasonal farmworker.
+      policy:
+        type: object
+        properties:
+          incomeThreshold:
+            type: number
+            default: 150
+            description: Monthly gross income threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
+          resourceThreshold:
+            type: number
+            default: 100
+            description: Liquid resource threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
+    facts:
+      - path: isLowIncome
+        type: boolean
+        description: Monthly gross income is below the expedited income threshold.
+        expression: "household.monthlyGrossIncome < policy.incomeThreshold"
+
+      - path: hasLowResources
+        type: boolean
+        description: Liquid resources are below the expedited resource threshold.
+        expression: "household.liquidResources < policy.resourceThreshold"
+
+      - path: isCombinedUnderShelter
+        type: boolean
+        description: Combined income and liquid resources are less than monthly shelter cost.
+        expression: "(household.monthlyGrossIncome + household.liquidResources) < household.monthlyShelterCost"
+
+      - path: isMigrantWithLowResources
+        type: boolean
+        description: Household includes a migrant or seasonal farmworker with low liquid resources.
+        expression: "household.isMigrantFarmworker && household.liquidResources < policy.resourceThreshold"
+
+      - path: isExpeditedEligible
+        type: boolean
+        description: >
+          Household qualifies for expedited processing under any of the three
+          qualifying conditions (7 CFR § 273.2(i)).
+        expression: "(isLowIncome && hasLowResources) || isCombinedUnderShelter || isMigrantWithLowResources"
+
+    outputs:
+      isExpeditedEligible:
+        type: boolean

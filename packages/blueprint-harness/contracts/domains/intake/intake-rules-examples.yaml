@@ -1,0 +1,52 @@
+$schema: "https://blueprint.codeforamerica.org/schemas/rules-examples-schema.yaml"
+domain: intake
+
+rulesets:
+  interviewPrompts:
+    examples:
+      - description: Income gap and unemployed members — multiple prompts triggered
+        inputs:
+          household:
+            monthlyIncome: 800
+            monthlyExpenses: 1200
+            members:
+              - age: 35
+                isEmployed: false
+                isStudent: false
+                isNonCitizen: false
+              - age: 8
+                isEmployed: false
+                isStudent: false
+                isNonCitizen: false
+          application:
+            hasChangedCircumstances: false
+
+      - description: Non-citizen student with changed circumstances
+        inputs:
+          household:
+            monthlyIncome: 1500
+            monthlyExpenses: 1400
+            members:
+              - age: 22
+                isEmployed: true
+                isStudent: true
+                isNonCitizen: true
+          application:
+            hasChangedCircumstances: true
+
+      - description: All members employed — no work requirement prompt
+        inputs:
+          household:
+            monthlyIncome: 3000
+            monthlyExpenses: 2500
+            members:
+              - age: 40
+                isEmployed: true
+                isStudent: false
+                isNonCitizen: false
+              - age: 38
+                isEmployed: true
+                isStudent: false
+                isNonCitizen: false
+          application:
+            hasChangedCircumstances: false

@@ -15,6 +15,9 @@ required:
 additionalProperties: false
 
 properties:
+  $schema:
+    type: string
+
   version:
     type: string
     description: Schema version for change tracking.
@@ -96,10 +99,7 @@ $defs:
       - collection
     properties:
       collection:
-        type: string
-        enum:
-          - tasks    # task records — queries current state (status, slaInfo, etc.)
-          - events   # audit log — queries transition history (action, timestamp, etc.)
+        $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/MetricCollection"
         description: Which collection to query.
       filter:
         description: >

@@ -70,7 +70,13 @@ for (const f of readdirSync(configDir).filter(f => f.endsWith('-config.yaml'))) 
 }
 
 function eventLabel(domain, evtType, fallback) {
-  return diagramConfig.get(domain)?.events?.[evtType]?.label ?? fallback;
+  const evts = diagramConfig.get(domain)?.events;
+  if (!evts) return fallback;
+  if (evts[evtType]) return evts[evtType].label;
+  // Config authors write against source contracts (no jurisdiction prefix),
+  // so also try without the leading prefix the resolver may have added.
+  const unprefixed = evtType.replace(/^[a-z]{2,3}\./, '');
+  return evts[unprefixed]?.label ?? fallback;
 }
 
 function matchBranchLabel(domain, procId, branchKey) {

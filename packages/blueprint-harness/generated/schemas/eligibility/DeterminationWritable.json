@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "properties": {
+    "applicationId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The intake application this determination is for."
+    },
+    "links": {
+      "type": "object",
+      "readOnly": true,
+      "description": "Related resource links.",
+      "properties": {
+        "application": {
+          "type": "string",
+          "format": "uri-reference",
+          "description": "Link to the related Application resource."
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/DeterminationWritable"
+}

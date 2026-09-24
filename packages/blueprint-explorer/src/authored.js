@@ -21,35 +21,48 @@ import { fileURLToPath } from 'url';
 import { loadConfig } from './lib/config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const authoredDir = resolve(__dirname, '..', 'authored');
 
-const contentArg = process.argv.find(a => a.startsWith('--content='));
-if (!contentArg) {
-  console.error('Usage: node authored.js --content=<path>');
-  process.exit(1);
-}
-const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
+/**
+ * @param {{ contentDir: string, authoredDir?: string }} opts
+ */
+export function build({ contentDir, authoredDir }) {
+  // Default authored source is the package's own authored/ directory.
+  const srcDir = authoredDir ?? resolve(__dirname, '..', 'authored');
 
-const { name: projectName, repo } = loadConfig(contentDir);
-const repoUrl    = repo?.url    ?? '';
-const repoBranch = repo?.branch ?? 'main';
+  const { name: projectName, repo } = loadConfig(contentDir);
+  const repoUrl    = repo?.url    ?? '';
+  const repoBranch = repo?.branch ?? 'main';
 
-const outDir = join(contentDir, 'authored');
-rmSync(outDir, { recursive: true, force: true });
-mkdirSync(outDir, { recursive: true });
+  const outDir = join(contentDir, 'authored');
+  rmSync(outDir, { recursive: true, force: true });
+  mkdirSync(outDir, { recursive: true });
 
-for (const file of readdirSync(authoredDir)) {
-  const src = join(authoredDir, file);
-  const dst = join(outDir, file);
-  if (file.endsWith('.html')) {
-    const content = readFileSync(src, 'utf8')
-      .replaceAll('{{project_name}}', projectName)
-      .replaceAll('{{repo_url}}',     repoUrl)
-      .replaceAll('{{repo_branch}}',  repoBranch);
-    writeFileSync(dst, content, 'utf8');
-  } else {
-    // Non-HTML files (CSS, images, etc.) copied as-is
-    writeFileSync(dst, readFileSync(src));
+  for (const file of readdirSync(srcDir)) {
+    const src = join(srcDir, file);
+    const dst = join(outDir, file);
+    if (file.endsWith('.html')) {
+      const content = readFileSync(src, 'utf8')
+        .replaceAll('{{project_name}}', projectName)
+        .replaceAll('{{repo_url}}',     repoUrl)
+        .replaceAll('{{repo_branch}}',  repoBranch);
+      writeFileSync(dst, content, 'utf8');
+    } else {
+      writeFileSync(dst, readFileSync(src));
+    }
   }
+  console.log('  wrote authored/');
 }
-console.log('  wrote authored/');
+
+// CLI entry point
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const contentArg  = process.argv.find(a => a.startsWith('--content='));
+  const authoredArg = process.argv.find(a => a.startsWith('--authored='));
+  if (!contentArg) {
+    console.error('Usage: node authored.js --content=<path> [--authored=<source-dir>]');
+    process.exit(1);
+  }
+  build({
+    contentDir:  resolve(process.cwd(), contentArg.slice('--content='.length)),
+    authoredDir: authoredArg ? resolve(process.cwd(), authoredArg.slice('--authored='.length)) : undefined,
+  });
+}

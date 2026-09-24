@@ -37,7 +37,7 @@ const PACKAGES = [
   },
   {
     workspace: 'packages/blueprint-mock-server',
-    required: ['cli/server.js', 'src/route-generator.js', 'test-utils.js', 'README.md'],
+    required: ['cli/server.js', 'src/route-generator.js', 'src/test-utils.js', 'README.md'],
   },
   {
     workspace: 'packages/safety-net-contracts',

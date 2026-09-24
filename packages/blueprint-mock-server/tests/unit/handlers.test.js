@@ -5,6 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
+import { join } from 'path';
 import { seedAllDatabases } from '../../src/seeder.js';
 import {
   findAll,
@@ -16,9 +17,14 @@ import {
   clearAll,
   insertResource
 } from '../../src/database-manager.js';
+const fixturesArg = process.argv.find(a => a.startsWith('--fixtures='));
 const seedArg = process.argv.find(a => a.startsWith('--seed='));
+if (!fixturesArg) { console.error('--fixtures= is required'); process.exit(1); }
 if (!seedArg) { console.error('--seed= is required'); process.exit(1); }
 const seedDir = seedArg.slice('--seed='.length);
+// The seeder groups records by the collections the specs declare, so it needs
+// the fixture spec directory as well as the seed data.
+const fixtureSpecDir = join(fixturesArg.slice('--fixtures='.length), 'spec');
 
 const cleanup = () => { clearAll('persons'); };
 
@@ -34,7 +40,7 @@ test('CRUD Handler Tests', async (t) => {
       { path: '/client-management/persons/{personId}' },
     ],
   };
-  seedAllDatabases([clientManagementApi], '', seedDir);
+  seedAllDatabases(fixtureSpecDir, seedDir);
   
   await t.test('LIST - returns all resources', () => {
     const results = findAll('persons', {});

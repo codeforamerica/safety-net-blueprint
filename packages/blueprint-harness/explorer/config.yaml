@@ -1,0 +1,64 @@
+name: "Blueprint Harness"
+repo:
+  url: "https://github.com/codeforamerica/safety-net-blueprint"
+  branch: main
+  spec_path: packages/blueprint-harness/contracts
+
+cross_cutting:
+  - Authentication & Authorization
+  - Audit & History
+
+actors:
+  - id: applicant
+    label: Applicant
+  - id: caseworker
+    label: Caseworker
+
+domains:
+  - id: intake
+    label: Intake
+    status: partial
+    description: Application intake and eligibility screening
+    entities: [Application]
+  - id: eligibility
+    label: Eligibility
+    status: partial
+    description: Eligibility determination and benefit calculation
+    entities: [Determination]
+  - id: platform
+    label: Platform
+    status: partial
+    description: Cross-cutting platform services and policies
+
+events:
+  - name: intake.application.submitted
+    publisher: intake
+    status: implemented
+    subscribers: [eligibility]
+  - name: intake.application.withdrawn
+    publisher: intake
+    status: implemented
+    subscribers: []
+  - name: intake.application.closed
+    publisher: intake
+    status: implemented
+    subscribers: []
+  - name: eligibility.determination.complete
+    publisher: eligibility
+    status: implemented
+    subscribers: []
+
+flows:
+  - id: submit_application
+    label: Submit Application
+    domain: intake
+    participants: [applicant, intake, eligibility]
+    steps:
+      - from: applicant
+        to: intake
+        label: "POST /intake/applications/{id}/submit"
+      - self: intake
+        label: Start regulatory clock
+      - event: intake.application.submitted
+        from: intake
+        to: eligibility

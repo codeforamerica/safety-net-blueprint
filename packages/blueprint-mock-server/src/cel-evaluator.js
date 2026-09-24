@@ -19,6 +19,26 @@
  * @param {Object} context - Flat map of variable names to values available in the expression
  * @returns {*} Evaluated result; undefined on error
  */
+/** A JavaScript identifier, and nothing that could close the parameter list. */
+const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+
+/**
+ * The context entries safe to bind as parameters of a generated function.
+ *
+ * A context key becomes a parameter name, and some callers build the context
+ * by spreading a stored record — so a record saved with a crafted property
+ * name would otherwise inject into the parameter list. Anything that is not a
+ * plain identifier is dropped, which makes the expression fail to resolve
+ * rather than run.
+ *
+ * @param {Object} context
+ * @returns {{ names: string[], values: unknown[] }}
+ */
+export function bindableContext(context = {}) {
+  const names = Object.keys(context).filter((key) => IDENTIFIER.test(key));
+  return { names, values: names.map((name) => context[name]) };
+}
+
 export function evaluateCEL(expr, context = {}) {
   if (!expr || typeof expr !== 'string') return undefined;
   try {
@@ -32,8 +52,10 @@ export function evaluateCEL(expr, context = {}) {
       .replace(/\.all\((\w+),\s*([^)]+(?:\([^)]*\))*[^)]*)\)/g, '.every($1 => ($2))')
       .replace(/\.exists\((\w+),\s*([^)]+(?:\([^)]*\)[^)]*)*)\)/g, '.some($1 => ($2))');
 
-    const fn = new Function(...Object.keys(context), `return (${jsExpr});`);
-    return fn(...Object.values(context));
+    const { names, values } = bindableContext(context);
+
+    const fn = new Function(...names, `return (${jsExpr});`);
+    return fn(...values);
   } catch (e) {
     console.warn(`CEL evaluation error for "${expr}": ${e.message}`);
     return undefined;

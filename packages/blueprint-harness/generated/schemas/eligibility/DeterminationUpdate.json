@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "minProperties": 1,
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "in_progress",
+        "complete"
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/DeterminationUpdate"
+}

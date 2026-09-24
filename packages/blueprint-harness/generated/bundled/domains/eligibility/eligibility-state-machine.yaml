@@ -1,0 +1,39 @@
+$schema: state-machine-schema.yaml
+version: "1.0"
+domain: eligibility
+apiSpec: eligibility-openapi.yaml
+eventsSpec: eligibility-asyncapi.yaml
+machines:
+  - object: Determination
+    states:
+      - id: pending
+        slaClock: running
+        description: Determination initiated; eligibility rules evaluation in progress.
+      - id: completed
+        slaClock: stopped
+        description: Determination complete; program results issued. Terminal.
+    initialState: pending
+    guards:
+      - id: allProgramsResolved
+        condition: determination.decisions.all(d, d.status != 'pending')
+    actions:
+      - id: complete
+        description: Marks the determination as complete once all program results are resolved.
+        transition:
+          from: pending
+          to: completed
+        guards:
+          - conditions:
+              - allProgramsResolved
+        steps:
+          - emit:
+              type: ca.eligibility.determination.complete
+              description: Signals that all program eligibility results are ready for caseworker review.
+    events:
+      - type: ca.intake.application.submitted
+        description: Initiate an eligibility determination for each program applied for.
+        steps:
+          - call:
+              path: eligibility/determinations
+              method: POST
+              description: Create a pending determination for the submitted application.

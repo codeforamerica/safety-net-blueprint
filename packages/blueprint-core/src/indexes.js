@@ -1,0 +1,298 @@
+/**
+ * Cross-document indexes.
+ *
+ * Every index is built once over the whole document set and passed to the
+ * passes that need it. All three take docs — nothing here reads from disk,
+ * because the caller has already loaded what it wants examined.
+ *
+ * These were previously three functions under two names: two different
+ * `buildSchemaIndex` implementations (one returning where a schema lives, one
+ * returning the resolved schema) and two unrelated `buildEndpointIndex`
+ * implementations that happened to share a name. The schema pair is merged
+ * here; the endpoint pair is separated into the two distinct things it always
+ * was — `buildRelationshipIndex` for artifact-to-endpoint links and
+ * `buildCollectionIndex` for collection lookups.
+ */
+
+import { resolveSchemaRefs, collectTopLevelProperties } from './json-schema/index.js';
+import { setRootOf } from './contract-types.js';
+
+const ENDPOINT_METHODS = ['get', 'post', 'put', 'patch', 'delete'];
+
+/** @param {import('../types.js').Doc[]} docs */
+const openapiDocs = (docs) => docs.filter((d) => d.type === 'openapi');
+
+/**
+ * Index every schema in the document set by name.
+ *
+ * Carries both what earlier callers needed: `spec`/`specFile` to say where a
+ * schema is declared, and `schema`/`properties` for the resolved form. First
+ * declaration of a name wins, matching the previous behaviour.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {Map<string, { spec: object, specFile: string, schema: object, properties: object }>}
+ */
+export function buildSchemaIndex(docs) {
+  const index = new Map();
+
+  for (const doc of openapiDocs(docs)) {
+    const schemas = doc.content?.components?.schemas;
+    if (!schemas) continue;
+
+    for (const [name, rawSchema] of Object.entries(schemas)) {
+      if (index.has(name)) continue;
+      const schema = resolveSchemaRefs(rawSchema, {
+        spec: doc.content, specFilePath: doc.path, setRoot: setRootOf(doc),
+      });
+      index.set(name, {
+        spec: doc.content,
+        specFile: doc.path,
+        schema,
+        properties: collectTopLevelProperties(doc.content, schema),
+      });
+    }
+  }
+
+  return index;
+}
+
+/**
+ * Index endpoints by the contract artifact they were generated from.
+ *
+ * Keyed `{type}:{domain}:{id}` from each operation's `x-relationship`, so the
+ * explorer can link an artifact back to the endpoint it produced. Plain `fk`
+ * relationships are field-level, not endpoint-level, and are skipped.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {Map<string, { path: string, method: string }>}
+ */
+export function buildRelationshipIndex(docs) {
+  const index = new Map();
+
+  for (const doc of openapiDocs(docs)) {
+    for (const [path, pathItem] of Object.entries(doc.content?.paths ?? {})) {
+      for (const method of ENDPOINT_METHODS) {
+        const rel = pathItem?.[method]?.['x-relationship'];
+        if (!rel?.type || rel.type === 'fk') continue;
+        if (!rel.domain || !rel.id) continue;
+
+        const key = `${rel.type}:${rel.domain}:${rel.id}`;
+        if (!index.has(key)) index.set(key, { path, method });
+      }
+    }
+  }
+
+  return index;
+}
+
+/**
+ * Index collection paths to the schema their GET returns.
+ *
+ * Keyed `domain/collection` — the non-parameter path segments joined and
+ * prefixed by `x-domain` — so a state machine's `call:` target can be checked
+ * against a real endpoint. Nested item endpoints also register the shorthand
+ * the state machine convention uses: `intake/application-members` for
+ * `/applications/{id}/members/{id}`.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {Map<string, string|null>} Collection key → response schema name
+ */
+export function buildCollectionIndex(docs) {
+  const index = new Map();
+
+  for (const doc of openapiDocs(docs)) {
+    const domain = doc.content?.info?.['x-domain'];
+    if (!domain || !doc.content.paths) continue;
+
+    for (const [path, pathItem] of Object.entries(doc.content.paths)) {
+      const nonParamSegs = path.split('/').filter(Boolean).filter((s) => !s.startsWith('{'));
+      if (nonParamSegs.length === 0) continue;
+
+      const endsWithParam = path.endsWith('}');
+      const schemaName = responseSchemaName(pathItem.get);
+
+      // The item endpoint (/things/{id}) and the collection endpoint (/things)
+      // share a key. The item wins, because it returns the resource schema
+      // itself rather than a list wrapper, and that is what field references
+      // like $thing.id resolve against.
+      const key = `${domain}/${nonParamSegs.join('/')}`;
+      if (!endsWithParam && index.has(key)) continue;
+      index.set(key, schemaName);
+
+      if (endsWithParam && nonParamSegs.length >= 2) {
+        const parent = nonParamSegs.at(-2);
+        const child = nonParamSegs.at(-1);
+        const parentSingular = parent.endsWith('s') ? parent.slice(0, -1) : parent;
+        const shorthand = `${domain}/${parentSingular}-${child}`;
+        if (!index.has(shorthand)) index.set(shorthand, schemaName);
+      }
+    }
+  }
+
+  return index;
+}
+
+/**
+ * Property names available on each collection's resource, keyed `domain/collection`.
+ *
+ * Composed from the two indexes that already exist rather than walking the
+ * specs again: the collection index says which schema a collection returns,
+ * the schema index says what that schema's properties are.
+ *
+ * The key keeps its domain. Collection names are not unique across domains —
+ * `platform/events` is an OpenAPI resource while a workflow metric's
+ * `collection: events` is the runtime event stream — and matching on the bare
+ * name silently checks fields against an unrelated schema.
+ *
+ * @param {Map<string, string|null>} collectionIndex - From buildCollectionIndex
+ * @param {Map<string, { properties: object }>} schemaIndex - From buildSchemaIndex
+ * @returns {Map<string, Set<string>>}
+ */
+export function buildCollectionPropertyIndex(collectionIndex, schemaIndex) {
+  const index = new Map();
+
+  for (const [key, schemaName] of collectionIndex) {
+    if (!schemaName) continue;
+
+    const properties = schemaIndex.get(schemaName)?.properties;
+    if (!properties) continue;
+
+    index.set(key, new Set(properties.keys?.() ?? Object.keys(properties)));
+  }
+
+  return index;
+}
+
+/**
+ * One OpenAPI document per domain, with the path needed to resolve its refs.
+ *
+ * Where a domain has several, the first wins — annotations name a resource,
+ * not a file, so any document declaring the schema answers the question.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {Map<string, { spec: object, filePath: string, setRoot: string|null }>}
+ */
+export function buildSpecsByDomain(docs) {
+  const index = new Map();
+
+  for (const doc of openapiDocs(docs)) {
+    const domain = doc.content?.info?.['x-domain'];
+    if (!domain || index.has(domain)) continue;
+    index.set(domain, { spec: doc.content, filePath: doc.path, setRoot: setRootOf(doc) });
+  }
+
+  return index;
+}
+
+/**
+ * Action keys state machines define, as `{object}.{actionId}`.
+ *
+ * This is the vocabulary an annotation's `operations:` section may name.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {Set<string>}
+ */
+export function buildActionIndex(docs) {
+  const index = new Set();
+
+  for (const doc of docs) {
+    if (doc.type !== 'state-machine') continue;
+
+    for (const machine of doc.model()?.machines ?? []) {
+      if (!machine.object) continue;
+      for (const action of machine.actions ?? []) {
+        if (action.id) index.add(`${machine.object.toLowerCase()}.${action.id}`);
+      }
+    }
+  }
+
+  return index;
+}
+
+/**
+ * Facts each compiled ruleset declares, with the domain that owns it.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {Map<string, { domain: string, facts: Set<string> }>}
+ */
+export function buildGraphIndex(docs) {
+  const index = new Map();
+
+  for (const doc of docs) {
+    if (doc.type !== 'graph' || !doc.content?.ruleset) continue;
+    index.set(doc.content.ruleset, {
+      domain: doc.content.domain,
+      facts: new Set(Object.keys(doc.content.facts ?? {})),
+    });
+  }
+
+  return index;
+}
+
+/**
+ * Entry IDs declared by each registry type.
+ *
+ * Keyed by type, because an annotation cites entries using the registry type
+ * as the field name.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {Map<string, Set<string>>}
+ */
+export function buildRegistryEntryIndex(docs) {
+  const index = new Map();
+
+  for (const doc of docs) {
+    if (doc.type !== 'registry' || typeof doc.content?.type !== 'string') continue;
+
+    const ids = index.get(doc.content.type) ?? new Set();
+    for (const id of Object.keys(doc.content.entries ?? {})) ids.add(id);
+    index.set(doc.content.type, ids);
+  }
+
+  return index;
+}
+
+/**
+ * Index the event channels each AsyncAPI document declares.
+ *
+ * `bySpec` is keyed by filename so a state machine's `eventsSpec:` reference
+ * resolves to its own domain's catalog; `all` is every channel in the set, for
+ * subscriptions, which may cross domains.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {{ bySpec: Map<string, Set<string>>, all: Set<string> }}
+ */
+export function buildChannelIndex(docs) {
+  const bySpec = new Map();
+  const all = new Set();
+
+  for (const doc of docs) {
+    if (doc.type !== 'asyncapi') continue;
+
+    const channels = new Set(Object.keys(doc.content?.channels ?? {}));
+    bySpec.set((doc.relativePath ?? doc.path).split('/').pop(), channels);
+    for (const channel of channels) all.add(channel);
+  }
+
+  return { bySpec, all };
+}
+
+/**
+ * Name of the schema a GET returns, whether returned directly or as list items.
+ *
+ * @param {object} getOp - The `get` operation of a path item
+ * @returns {string|null}
+ */
+function responseSchemaName(getOp) {
+  const schema = getOp?.responses?.['200']?.content?.['application/json']?.schema;
+  return schemaNameFromRef(schema?.$ref) ?? schemaNameFromRef(schema?.properties?.items?.$ref);
+}
+
+/**
+ * @param {string|undefined} ref
+ * @returns {string|null}
+ */
+function schemaNameFromRef(ref) {
+  const match = typeof ref === 'string' ? ref.match(/^#\/components\/schemas\/(.+)$/) : null;
+  return match ? match[1] : null;
+}

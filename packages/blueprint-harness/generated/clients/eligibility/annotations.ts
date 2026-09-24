@@ -1,0 +1,114 @@
+export const Annotations = {
+  "schema": {
+    "determination": {
+      "patterns": [
+        "polymorphic-base",
+        "paginated-list"
+      ]
+    },
+    "determination.id": {
+      "patterns": [
+        "read-only-field",
+        "string-format"
+      ]
+    },
+    "determination.applicationId": {
+      "patterns": [
+        "cross-domain-fk"
+      ]
+    },
+    "determination.expedited": {
+      "policies": [
+        "snap-expedited-processing",
+        "snap-expedited-screening"
+      ],
+      "patterns": [
+        "ruleset-output-fact",
+        "read-only-field"
+      ]
+    },
+    "determination.status": {
+      "patterns": [
+        "allof-inline-required",
+        "x-enum-source",
+        "read-only-field"
+      ]
+    },
+    "determination.createdAt": {
+      "patterns": [
+        "read-only-field",
+        "string-format"
+      ]
+    },
+    "determination.updatedAt": {
+      "patterns": [
+        "read-only-field",
+        "string-format"
+      ]
+    },
+    "determination.decisions[]": {
+      "patterns": [
+        "sub-resource",
+        "paginated-list"
+      ]
+    },
+    "determination.decisions[].eligible": {
+      "policies": [
+        "snap-notice-of-eligibility",
+        "medicaid-notice-of-eligibility",
+        "snap-fair-hearing-rights",
+        "medicaid-determination-documentation"
+      ]
+    },
+    "determination.decisions[].benefitAmount": {
+      "policies": [
+        "snap-benefit-calculation",
+        "medicaid-cost-sharing"
+      ],
+      "patterns": [
+        "nullable-conditional-field"
+      ]
+    }
+  },
+  "operations": {
+    "determination.complete": {
+      "patterns": [
+        "state-machine-guard"
+      ]
+    }
+  },
+  "events": {
+    "ca.intake.application.submitted": {
+      "patterns": [
+        "state-machine-subscription"
+      ]
+    },
+    "ca.eligibility.determination.complete": {
+      "policies": [
+        "snap-notice-of-eligibility",
+        "medicaid-notice-of-eligibility"
+      ],
+      "patterns": [
+        "cross-domain-event"
+      ]
+    }
+  },
+  "facts": {
+    "expeditedSnap.isExpeditedEligible": {
+      "policies": [
+        "snap-expedited-processing"
+      ],
+      "patterns": [
+        "ruleset-output-fact"
+      ]
+    },
+    "expeditedSnap.isLowIncome": {
+      "policies": [
+        "snap-expedited-screening"
+      ],
+      "patterns": [
+        "ruleset-intermediate-fact"
+      ]
+    }
+  }
+} as const;

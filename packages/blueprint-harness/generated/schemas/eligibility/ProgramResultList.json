@@ -1,0 +1,103 @@
+{
+  "type": "object",
+  "required": [
+    "items",
+    "total",
+    "limit",
+    "offset"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "determinationId",
+          "program",
+          "eligible",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true,
+            "description": "Unique identifier (server-generated)."
+          },
+          "determinationId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The determination this result belongs to."
+          },
+          "program": {
+            "type": "string",
+            "enum": [
+              "snap",
+              "medicaid",
+              "chip",
+              "tanf"
+            ],
+            "description": "The benefit program this result applies to."
+          },
+          "eligible": {
+            "type": "boolean",
+            "description": "Whether the household is eligible for this program."
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Explanation of the eligibility determination."
+          },
+          "benefitAmount": {
+            "type": "number",
+            "minimum": 0,
+            "nullable": true,
+            "description": "Estimated monthly benefit amount if eligible (dollars)."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "links": {
+            "type": "object",
+            "readOnly": true,
+            "description": "Related resource links.",
+            "properties": {
+              "determination": {
+                "type": "string",
+                "format": "uri-reference",
+                "description": "Link to the related Determination resource."
+              }
+            }
+          }
+        }
+      }
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "hasNext": {
+      "type": "boolean"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/ProgramResultList"
+}

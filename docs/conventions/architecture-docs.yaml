@@ -1,0 +1,84 @@
+# Architecture Document Conventions — Domain and Cross-Cutting Docs
+# Part of the blueprint conventions. See conventions/ for the full set.
+#
+# Governs docs/architecture/domains/*.md and docs/architecture/cross-cutting/*.md.
+# One document per domain, named {domain}.md.
+#
+# The test for what belongs: does a reader need this to understand how the
+# domain works, why a choice was made, or how to extend it via overlay?
+
+version: "1.0"
+
+architecture_docs:
+
+  # Sections in document order. Omit optional sections that do not apply
+  # rather than writing a placeholder.
+  structure:
+    - section: Overview
+      contains: What the domain owns, what it produces, where its boundary sits, and the primary object and lifecycle it governs. One paragraph.
+    - section: What happens during {domain activity}
+      contains: Numbered process steps in plain language. CFR citations where applicable.
+    - section: Regulatory requirements
+      contains: Processing clocks (program, deadline, citation) and program-specific rules that shape the design.
+      optional: true
+    - section: Entity model
+      contains: One subsection per entity — what it is, key fields in blueprint terms.
+    - section: "{Domain object} lifecycle"
+      contains: States table (state, description, SLA clock) plus key transitions.
+    - section: SLA and deadline management
+      contains: SLA types table (type, starts when, pauses when, deadline).
+      optional: true  # only when the domain has time-based requirements
+    - section: Domain events
+      contains: Event catalog table (event, why it's needed, trigger, primary consumers).
+    - section: Contract artifacts
+      contains: Table mapping artifact type to file name.
+    - section: Key design decisions
+      contains: Quick-reference table (number, linked title, one-line summary), then one subsection per decision.
+    - section: Customization
+      contains: Baseline constraints table, then one subsection per configurable area.
+    - section: Out of scope
+      contains: Adjacent concerns a reader might assume the domain owns, and where they actually live.
+    - section: Capability coverage
+      contains: Standard platform capabilities and the blueprint's status for each, grouped by area.
+    - section: References
+      contains: Regulatory citations, standards, related documents.
+
+  # Each decision gets its own subsection under "Key design decisions".
+  decision_sections:
+    required_fields:
+      status: "Decided: B — include the letter of the chosen option."
+      whats_being_decided: One sentence naming the problem or constraint forcing the decision, then what is being chosen. Not "whether to use X or Y".
+      considerations: 2-4 bullets. Vendor comparisons and regulatory factors go here and nowhere else.
+      options: Lettered A, B, C. Two or three realistic alternatives. The chosen one gets a checkmark.
+    optional_fields:
+      background: Context a reader needs before the options make sense. Omit for straightforward decisions.
+      decision: Prose summary when the chosen option has nuance the checkmark does not capture.
+      known_gap: A limitation of the chosen approach that implementers should know about, and how to address it.
+      deferred: Items punted to a later issue. Reference the issue number.
+      customization: Pointer to the Customization subsection, when a rejected option is one a state might still pursue.
+
+  # Elements that must not be overlaid away. Cast a wide net: include anything
+  # whose removal would break regulatory compliance, records management, audit,
+  # cross-domain coordination, or the retention system.
+  baseline_constraints:
+    columns: [element, reason, decision]
+    reason_rule: Cite the specific regulation (e.g. HIPAA 45 CFR 164.312) or name the structural dependency. Never "important for compliance".
+
+  # Compared against JSM, ServiceNow, IBM Curam, Salesforce Government Cloud.
+  capability_coverage:
+    columns: [capability, industry_standard, blueprint_status]
+    statuses:
+      planned: On the roadmap with a tracking issue.
+      partial: Some coverage exists.
+      not_in_scope: A deliberate decision that this is not a baseline concern. Requires a reason — either a domain attribution or an explicit design rationale.
+      adapter_layer: Intentionally delegated to the state adapter.
+      gap: Major platforms have it, the blueprint does not, no decision made yet.
+
+  writing_rules:
+    rationale_placement: Rationale and vendor comparisons belong only in decision sections. Elsewhere, link to the decision instead of restating it.
+    process_sections: No implementation details in process sections — no event names, field names, or domain names. Write "a caseworker task is created", not "the workflow domain creates a task when application.submitted fires".
+    explain_why: Every field, state, and process step states why it exists — regulatory requirement (cite it), architectural reasoning (name the problem it solves), or industry pattern (name who else does it this way). Vague purpose statements like "supports document management" are not reasons.
+    plain_language: Write for a policy analyst, not a software engineer. Avoid jargon ("signed URL", "polymorphic discriminator", "async quarantine"). If they would not follow a sentence, rewrite it.
+    cross_cutting: A decision that applies across domains belongs in a cross-cutting document, not a domain document. If a decision says "this applies blueprint-wide", move it out and leave a one-line pointer.
+    cross_linking: Link, never duplicate. The test — if a reader changes a decision, can they find every place referencing it by following links?
+    mock_server: The mock server is development tooling, not architecture. No sections, decisions, or capability rows about it.

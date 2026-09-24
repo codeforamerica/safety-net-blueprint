@@ -3,18 +3,17 @@
  * Handles loading specs and seeding databases
  */
 
-import { loadAllSpecs, discoverApiSpecs } from '@codeforamerica/blueprint-core/loader';
+import { loadAllSpecs, discoverApiSpecs } from './spec-loader.js';
 import { seedAllDatabases } from './seeder.js';
 import { validateMockData } from './mock-data-validator.js';
-import { validateAll, getValidationStatus } from '@codeforamerica/blueprint-core/validation';
+import { validateAll, getValidationStatus } from './spec-validator.js';
 import { discoverStateMachines } from './state-machine-loader.js';
 import { discoverSlaTypes } from './sla-loader.js';
 import { discoverMetrics } from './metrics-loader.js';
 import { discoverConfigs } from './config-loader.js';
-import { discoverCompositions } from '@codeforamerica/blueprint-core/compositions';
 import { insertResource } from './database-manager.js';
 import { registerConfigManaged } from './config-registry.js';
-import { loadPolicies } from '@codeforamerica/blueprint-core/policies';
+import { discover, generate, load } from '@codeforamerica/blueprint-core';
 /**
  * Perform setup: load specs and seed databases
  * @param {Object} options - Setup options
@@ -93,10 +92,22 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   }
 
   // Discover composition definitions
-  const compositions = discoverCompositions(specsDir);
+  const compositions = contractsOfType(specsDir, 'compositions', 'compositions');
   if (verbose && compositions.length > 0) {
     console.log(`\n✓ Discovered ${compositions.length} composition file(s):`);
     compositions.forEach(c => console.log(`  - ${c.domain} (${Object.keys(c.doc.compositions || {}).length} composition(s))`));
+  }
+
+  // Discover rules files. Their decision graphs are compiled by generate —
+  // the same build step the resolve pipeline runs — so the server evaluates
+  // exactly what the pipeline would have written.
+  const rulesFiles = contractsOfType(specsDir, 'rules', 'rulesets');
+  const graphs = rulesFiles.length > 0
+    ? generate(discover(specsDir).map(load), 'graph').map(({ graph }) => graph)
+    : [];
+  if (verbose && rulesFiles.length > 0) {
+    console.log(`\n✓ Discovered ${rulesFiles.length} rules file(s):`);
+    rulesFiles.forEach(r => console.log(`  - ${r.domain} (${Object.keys(r.doc.rulesets || {}).length} ruleset(s))`));
   }
 
   // Discover metric definition contracts
@@ -107,7 +118,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   }
 
   // Seed databases from example files
-  const summary = seedAllDatabases(apiSpecs, specsDir, seedDir);
+  const summary = seedAllDatabases(specsDir, seedDir);
 
   // Seed config-managed resources (after seedAllDatabases, which clears collections first)
   const configs = discoverConfigs(specsDir);
@@ -129,7 +140,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   }
 
   // Seed platform policy registry into the mock database
-  const policies = loadPolicies(specsDir);
+  const policies = registryEntries(discover(specsDir).map(load), 'policies');
   const policyEntries = Object.entries(policies);
   for (const [id, policy] of policyEntries) {
     insertResource('registry-policies', { id, ...policy, source: 'system' });
@@ -163,7 +174,26 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     }
   }
 
-  return { apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, policies, summary };
+  return { apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, policies, summary };
+}
+
+/**
+ * Contract documents of one type, in the shape the server's loaders expect.
+ *
+ * Replaces core's discoverRules/discoverCompositions: `discover` already
+ * knows the type from the document's own $schema, so the only thing left is
+ * to skip documents that declare none of the section the caller wants.
+ *
+ * @param {string} specsDir
+ * @param {string} type - Contract type to discover
+ * @param {string} section - Top-level key a usable document must declare
+ * @returns {{ filePath: string, domain: string, doc: object }[]}
+ */
+function contractsOfType(specsDir, type, section) {
+  return discover(specsDir, type)
+    .map(load)
+    .filter((doc) => doc.content?.[section])
+    .map((doc) => ({ filePath: doc.path, domain: doc.content.domain, doc: doc.content }));
 }
 
 /**
@@ -180,3 +210,22 @@ export function displaySetupSummary(summary) {
   }
 }
 
+/**
+ * Merge every registry of one type into a map of ID to entry.
+ *
+ * Later documents override earlier ones per ID, which is how a state replaces
+ * a baseline entry. `registry` is a contract type, so `discover` has already
+ * tagged these; all that is left is the merge.
+ *
+ * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
+ * @param {string} type - Registry type, e.g. 'policies'
+ * @returns {Record<string, object>}
+ */
+function registryEntries(docs, type) {
+  const merged = {};
+  for (const doc of docs) {
+    if (doc.type !== 'registry' || doc.content?.type !== type) continue;
+    Object.assign(merged, doc.content.entries ?? {});
+  }
+  return merged;
+}

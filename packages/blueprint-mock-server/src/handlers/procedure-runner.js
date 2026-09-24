@@ -9,6 +9,7 @@ import { deriveCollectionName, resolveDotPath } from '../collection-utils.js';
 import { applySteps, resolveValue } from '../state-machine-engine.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
+import { bindableContext } from '../cel-evaluator.js';
 
 
 /**
@@ -223,9 +224,9 @@ function resolveWithArgValue(val, context) {
 
   if (val.includes('$') || val.startsWith('"') || val.includes(' + ')) {
     try {
-      const ctx = buildEvalCtx(context);
-      const fn = new Function(...Object.keys(ctx), `return (${val});`);
-      return fn(...Object.values(ctx));
+      const { names, values } = bindableContext(buildEvalCtx(context));
+      const fn = new Function(...names, `return (${val});`);
+      return fn(...values);
     } catch (e) {
       console.warn(`resolveWithArgValue: expression "${val}" failed — ${e.message}`);
     }

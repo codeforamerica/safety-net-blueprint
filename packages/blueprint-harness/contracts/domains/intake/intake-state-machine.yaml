@@ -1,0 +1,99 @@
+$schema: state-machine-schema.yaml
+version: "1.0"
+domain: intake
+apiSpec: intake-openapi.yaml
+eventsSpec: intake-asyncapi.yaml
+machines:
+  - object: Application
+    states:
+      - id: draft
+        slaClock: stopped
+        description: Created but not yet filed; regulatory clock has not started.
+      - id: submitted
+        slaClock: running
+        description: Formally filed; regulatory clock starts (7 CFR § 273.2(g)).
+      - id: under_review
+        slaClock: running
+        description: Caseworker is actively reviewing; clock running toward processing deadline.
+      - id: withdrawn
+        slaClock: stopped
+        description: Household withdrew the application. Terminal.
+      - id: closed
+        slaClock: stopped
+        description: Intake complete; case opened if approved. Terminal.
+    initialState: draft
+    timers:
+      - id: review_reminder
+        description: >
+          Fires when an application has been awaiting caseworker review for too long.
+          The callback event (intake.review_reminder) triggers an escalation notice.
+    actions:
+      - id: submit
+        description: Formally submits a draft application, starting the regulatory processing clock.
+        transition:
+          from: draft
+          to: submitted
+        steps:
+          - set:
+              field: submittedAt
+              value: $now
+              description: Record the submission timestamp (regulatory clock start).
+          - emit:
+              type: intake.application.submitted
+              description: Triggers eligibility screening, caseworker task creation, and confirmation notice.
+
+      - id: open
+        description: Moves a submitted application into active caseworker review.
+        transition:
+          from: submitted
+          to: under_review
+        steps:
+          - set:
+              field: openedAt
+              value: $now
+              description: Record when caseworker began review, marking the start of active processing.
+
+      - id: close
+        description: Closes the application once intake processing is complete.
+        schema:
+          request:
+            $ref: '#/$defs/CloseRequest'
+        transition:
+          from: under_review
+          to: closed
+        steps:
+          - emit:
+              type: intake.application.closed
+
+      - id: withdraw
+        description: Withdraws the application at the household's request.
+        transition:
+          from: [draft, submitted, under_review]
+          to: withdrawn
+        steps:
+          - emit:
+              type: intake.application.withdrawn
+    events:
+      - type: intake.review_reminder
+        description: >
+          Escalates an application that has been awaiting caseworker review for too long.
+          Fired by the scheduling service when the review_reminder timer expires.
+        transition:
+          from: submitted
+        steps:
+          - emit:
+              type: intake.application.review-reminder
+              description: Notify supervisors that this application needs immediate attention.
+
+$defs:
+  CloseRequest:
+    type: object
+    required: [outcome]
+    properties:
+      outcome:
+        type: string
+        enum: [approved, denied]
+        description: Whether the application was approved or denied at close.
+      notes:
+        type: string
+        description: Optional caseworker notes on the closure decision.

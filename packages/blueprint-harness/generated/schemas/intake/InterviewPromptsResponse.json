@@ -1,0 +1,112 @@
+{
+  "allOf": [
+    {
+      "type": "array",
+      "description": "Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.\n",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "fact",
+              "state",
+              "value"
+            ],
+            "properties": {
+              "fact": {
+                "type": "string",
+                "description": "The fact name."
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "complete"
+                ]
+              },
+              "value": {
+                "description": "The computed value."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "fact",
+              "state",
+              "value"
+            ],
+            "properties": {
+              "fact": {
+                "type": "string",
+                "description": "The fact name."
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "placeholder"
+                ]
+              },
+              "value": {
+                "description": "The computed value, derived using one or more schema defaults."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "fact",
+              "state",
+              "missing"
+            ],
+            "properties": {
+              "fact": {
+                "type": "string",
+                "description": "The fact name."
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "missing"
+                ]
+              },
+              "missing": {
+                "type": "array",
+                "description": "Input paths required to resolve this fact.",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "fact",
+              "state",
+              "message"
+            ],
+            "properties": {
+              "fact": {
+                "type": "string",
+                "description": "The fact name."
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "description": "The reason evaluation failed."
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "description": "Evaluation result for interviewPrompts.",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/InterviewPromptsResponse"
+}

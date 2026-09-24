@@ -1,0 +1,25 @@
+{
+  "complete": {
+    "allEmployed": false,
+    "anyNonCitizen": true,
+    "hasMemberName": true
+  },
+  "placeholder": {
+    "adultsFilter": [
+      {
+        "name": "Alice",
+        "age": 22,
+        "employed": true,
+        "citizenshipStatus": "citizen"
+      },
+      {
+        "name": "Carol",
+        "age": 30,
+        "employed": false,
+        "citizenshipStatus": "citizen"
+      }
+    ]
+  },
+  "missing": {},
+  "errors": {}
+}

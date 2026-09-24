@@ -1,0 +1,97 @@
+{
+  "type": "object",
+  "properties": {
+    "programsAppliedFor": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "snap",
+          "medicaid",
+          "chip",
+          "tanf"
+        ]
+      },
+      "description": "Benefit programs the household is applying for."
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "online",
+        "phone",
+        "in_person",
+        "mail"
+      ],
+      "description": "Channel through which the application was submitted."
+    },
+    "address": {
+      "type": "object",
+      "description": "Mailing or residential address.",
+      "required": [
+        "street",
+        "city",
+        "state",
+        "zip"
+      ],
+      "properties": {
+        "street": {
+          "type": "string",
+          "description": "Street address including apartment or unit number."
+        },
+        "city": {
+          "type": "string",
+          "description": "City name."
+        },
+        "state": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 2,
+          "description": "Two-letter US state abbreviation."
+        },
+        "zip": {
+          "type": "string",
+          "pattern": "^\\d{5}(-\\d{4})?$",
+          "description": "ZIP code or ZIP+4."
+        }
+      }
+    },
+    "contactInfo": {
+      "type": "object",
+      "description": "Contact details for the primary applicant.",
+      "properties": {
+        "phone": {
+          "type": "string",
+          "description": "Primary phone number."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address."
+        },
+        "preferredContact": {
+          "type": "string",
+          "enum": [
+            "phone",
+            "email",
+            "mail"
+          ],
+          "description": "Applicant's preferred method of contact."
+        }
+      }
+    },
+    "labels": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.\n"
+    },
+    "countyCode": {
+      "type": "string",
+      "maxLength": 10,
+      "description": "County code for routing this application to the correct local office."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/ApplicationWritable"
+}

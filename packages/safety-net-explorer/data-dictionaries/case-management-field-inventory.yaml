@@ -1,10 +1,11 @@
 # case-management field inventory
 # Do not edit — regenerate with: node generate-field-inventory.mjs --domain=case-management
 
-# ── case ────────────────────────────────────────────────────────────────────────
+# ── Case ────────────────────────────────────────────────────────────────────────
 
 case.primaryApplicantId: { type: uuid, relationship: Person }
 case.assignedToId: { type: uuid, relationship: User }
+case.id: { type: uuid }
 case.status: { type: enum, values: [active, closed] }
 case.effectiveStartDate: { type: date }
 case.effectiveEndDate: { type: date }

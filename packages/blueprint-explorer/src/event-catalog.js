@@ -11,21 +11,19 @@ import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'fs'
 import { dirname, join, resolve, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { load } from 'js-yaml';
-import { buildEventIndex } from '@codeforamerica/blueprint-core';
+import { buildEventIndex } from './contract-nav.js';
+import { discover, load as loadDoc } from '@codeforamerica/blueprint-core';
 import { COLORS, FONT } from './lib/theme.js';
 import { esc as h, titleCase, breadcrumb } from './lib/html.js';
 import { singleColumnPage } from './lib/layout.js';
-import { resolvedDir } from './lib/paths.js';
 import { loadConfig } from './lib/config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const contentArg = process.argv.find(a => a.startsWith('--content='));
-if (!contentArg) {
-  console.error('Usage: node event-catalog.js --content=<path> [--resolved=<path>]');
-  process.exit(1);
-}
-const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
+/**
+ * @param {{ contentDir: string, resolvedDir: string }} opts
+ */
+export function build({ contentDir, resolvedDir }) {
 const outputDir = join(contentDir, 'event-catalog');
 const hubHref = relative(outputDir, join(contentDir, 'index.html'));
 const { name: projectName } = loadConfig(contentDir);
@@ -34,13 +32,9 @@ readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(join
 
 // ── Load state machines ───────────────────────────────────────────────────────
 
-const files = readdirSync(resolvedDir, { recursive: true })
-  .filter(f => typeof f === 'string' && f.endsWith('-state-machine.yaml'))
-  .map(f => join(resolvedDir, f));
-
-const allStateMachines = files
-  .map(f => load(readFileSync(f, 'utf8')))
-  .filter(sm => sm.domain && Array.isArray(sm.machines));
+const allStateMachines = discover(resolvedDir, 'state-machine')
+  .map(loadDoc)
+  .filter((doc) => doc.content?.domain && Array.isArray(doc.content.machines));
 
 const eventIndex = buildEventIndex(allStateMachines);
 
@@ -102,3 +96,18 @@ const html = singleColumnPage({
 
 writeFileSync(join(outputDir, 'index.html'), html, 'utf8');
 console.log('  wrote event-catalog/index.html');
+} // end build()
+
+// CLI entry point
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const contentArg  = process.argv.find(a => a.startsWith('--content='));
+  const resolvedArg = process.argv.find(a => a.startsWith('--resolved='));
+  if (!contentArg) {
+    console.error('Usage: node event-catalog.js --content=<path> [--resolved=<path>]');
+    process.exit(1);
+  }
+  build({
+    contentDir:  resolve(process.cwd(), contentArg.slice('--content='.length)),
+    resolvedDir: resolvedArg ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length)) : null,
+  });
+}

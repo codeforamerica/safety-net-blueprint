@@ -37,8 +37,9 @@ import { join, dirname, basename, resolve as resolvePath } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import yaml from 'js-yaml';
-import { bundleSpec } from '@codeforamerica/blueprint-core/bundle';
-import { loadContractFiles } from '@codeforamerica/blueprint-core';
+import { discover, load } from '@codeforamerica/blueprint-core';
+import { bundleSpec } from './lib/bundle.js';
+import { schemasDir } from '@codeforamerica/blueprint-core';
 import { collectNamedEnumDefs } from './collect-named-enum-defs.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -268,12 +269,20 @@ async function generateAnnotationsAndPolicies(specsDir, outputDir, annotationDom
     domainMap.get(domain).push({ file: f, data });
   }
 
+  // Derive annotation section names from the schema $defs: entries named
+  // {Section}AnnotationMap define the valid sections. Strip the suffix and
+  // lowercase the first letter to get the section key (e.g. OperationsAnnotationMap → operations).
+  const annotationsSchema = yaml.load(readFileSync(join(schemasDir, 'annotations-schema.yaml'), 'utf8'));
+  const annotationSections = Object.keys(annotationsSchema.$defs || {})
+    .filter(k => k.endsWith('AnnotationMap') && k !== 'Annotation')
+    .map(k => { const s = k.replace(/AnnotationMap$/, ''); return s[0].toLowerCase() + s.slice(1); });
+
   for (const [domain, entries] of domainMap) {
-    const merged = { schema: {}, operations: {}, events: {} };
+    const merged = Object.fromEntries(annotationSections.map(s => [s, {}]));
     for (const { data } of entries) {
-      Object.assign(merged.schema, data.schema || {});
-      Object.assign(merged.operations, data.operations || {});
-      Object.assign(merged.events, data.events || {});
+      for (const section of annotationSections) {
+        Object.assign(merged[section], data[section] || {});
+      }
     }
 
     // Write per-domain annotations.ts — `Annotations` is part of the domain namespace.
@@ -455,7 +464,7 @@ async function main() {
 
   // Build file map once for the whole resolved contracts directory.
   // Used by collectNamedEnumDefs to resolve external $refs without re-reading from disk.
-  const fileMap = loadContractFiles(specsDir);
+  const docs = discover(specsDir).map(load);
 
   const domains = [];
 
@@ -503,7 +512,7 @@ async function main() {
     // schemas — we append the exports ourselves so consumers can iterate values at runtime.
     const typesGenPath = join(domainOutputDir, 'types.gen.ts');
     if (existsSync(typesGenPath)) {
-      const namedEnums = collectNamedEnumDefs(resolvePath(specPath), fileMap);
+      const namedEnums = collectNamedEnumDefs(resolvePath(specPath), docs);
       if (namedEnums.length > 0) {
         patchTypesGenForNamedEnums(typesGenPath, namedEnums);
         // Also patch the domain index.ts barrel — hey-api generates type-only re-exports
@@ -542,6 +551,10 @@ async function main() {
   console.log('\nGenerating annotation exports...');
   const annotationDomains = [];
   await generateAnnotationsAndPolicies(specsDir, outputDir, annotationDomains);
+
+  // Generate rules clients from compiled graph files
+  console.log('\nGenerating rules clients...');
+  generateRules(specsDir, outputDir);
 
   // Create index.ts that re-exports all domains and search helpers.
   // Annotations are part of each domain namespace (intake.Annotations) — no root-level re-export needed.
@@ -684,8 +697,150 @@ function patchDomainBarrelForAnnotations(domainIndexPath) {
   writeFileSync(domainIndexPath, existing.trimEnd() + `\nexport { Annotations } from './annotations.js';\n`);
 }
 
+// ── Rules client generation ──────────────────────────────────────────────────
+
+/**
+ * Convert a graph input type string to its TypeScript equivalent.
+ */
+function schemaTypeToTs(type) {
+  if (type === 'integer' || type === 'number') return 'number';
+  if (type === 'boolean') return 'boolean';
+  if (type === 'string') return 'string';
+  if (type === 'array') return 'unknown[]';
+  return 'unknown';
+}
+
+/**
+ * Reconstruct a nested TypeScript object type from flat graph input paths.
+ * e.g. { '$.notice.status': { type: 'string' }, '$.notice.daysSinceCreated': { type: 'integer' } }
+ *   → { notice?: { status?: string; daysSinceCreated?: number; }; }
+ */
+function buildInputType(graphInputs) {
+  // Group by top-level namespace, then by nested path
+  const namespaces = {};
+  for (const [path, spec] of Object.entries(graphInputs ?? {})) {
+    // Strip '$.' prefix and '[]' array markers for type reconstruction
+    const clean = path.slice(2).replace(/\[\](\.[a-zA-Z])/g, '$1').replace(/\[\]$/, '');
+    const parts = clean.split('.');
+    const ns = parts[0];
+    if (!namespaces[ns]) namespaces[ns] = {};
+    if (parts.length === 2) {
+      namespaces[ns][parts[1]] = schemaTypeToTs(spec.type);
+    }
+    // Skip deeper nesting (array sub-fields) for now — they show up as collection-level deps
+  }
+
+  const lines = [];
+  for (const [ns, fields] of Object.entries(namespaces)) {
+    const fieldLines = Object.entries(fields).map(([f, t]) => `    ${f}?: ${t};`).join('\n');
+    lines.push(`  ${ns}?: {\n${fieldLines}\n  };`);
+  }
+  return `{\n${lines.join('\n')}\n}`;
+}
+
+/**
+ * Build a TypeScript result type from graph outputs, using FactNode<T> for each fact.
+ */
+function buildResultType(graph) {
+  const lines = [];
+  for (const factName of graph.outputs ?? []) {
+    const fact = graph.facts?.[factName];
+    const tsType = fact?.type ? schemaTypeToTs(fact.type) : 'unknown';
+    lines.push(`  ${factName}: FactNode<${tsType}>;`);
+  }
+  lines.push(`  nodes: Record<string, FactNode<unknown>>;`);
+  return `{\n${lines.join('\n')}\n}`;
+}
+
+/**
+ * Generate rules.ts and rules-types.gen.ts for all graph files found in specsDir,
+ * grouped by domain. Patches the domain index.ts barrel if it exists.
+ *
+ * @param {string} specsDir  - directory containing compiled *-graph.yaml files
+ * @param {string} outputDir - directory containing generated domain client folders
+ */
+function generateRules(specsDir, outputDir) {
+  const graphFiles = readdirSync(specsDir, { recursive: true })
+    .filter(f => (typeof f === 'string' ? f : f.toString()).endsWith('-graph.yaml'));
+
+  // Group graphs by domain
+  const byDomain = new Map();
+  for (const file of graphFiles) {
+    const content = yaml.load(readFileSync(join(specsDir, file), 'utf8'));
+    if (!content?.domain || !content?.ruleset) continue;
+    if (!byDomain.has(content.domain)) byDomain.set(content.domain, []);
+    byDomain.get(content.domain).push(content);
+  }
+
+  for (const [domain, graphs] of byDomain) {
+    const domainDir = join(outputDir, domain);
+    if (!existsSync(domainDir)) continue;
+
+    const pascal = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+    // Collect all type names across rulesets for barrel patching
+    const allTypeNames = [];
+
+    // Build rules-types.gen.ts
+    const typeLines = [`import type { FactNode } from '@codeforamerica/blueprint-rules-engine';`];
+    for (const graph of graphs) {
+      const p = pascal(graph.ruleset);
+      const inputsType = buildInputType(graph.inputs);
+      const resultType = buildResultType(graph);
+      typeLines.push(`\nexport type ${p}Inputs = ${inputsType};\n`);
+      typeLines.push(`export type ${p}Result = ${resultType};\n`);
+      allTypeNames.push(`${p}Inputs`, `${p}Result`);
+    }
+    writeFileSync(join(domainDir, 'rules-types.gen.ts'), typeLines.join('\n'));
+
+    // Build rules.ts
+    const typeImports = allTypeNames.join(', ');
+    const ruleEntries = graphs.map(graph => {
+      const p = pascal(graph.ruleset);
+      const graphJson = JSON.stringify(graph);
+      const outputProps = (graph.outputs ?? []).map(factName => {
+        const fact = graph.facts?.[factName];
+        const tsType = fact?.type ? schemaTypeToTs(fact.type) : 'unknown';
+        return `      ${factName}: nodes['${factName}'] as FactNode<${tsType}>`;
+      }).join(',\n');
+      return [
+        `  ${graph.ruleset}: { evaluate: (inputs: ${p}Inputs): ${p}Result => {`,
+        `    const nodes = evaluate(${graphJson}, inputs);`,
+        `    return {\n${outputProps},\n      nodes,\n    };`,
+        `  } }`,
+      ].join('\n');
+    });
+    const rulesContent = [
+      `import { evaluate } from '@codeforamerica/blueprint-rules-engine';`,
+      `import type { FactNode } from '@codeforamerica/blueprint-rules-engine';`,
+      `import type { ${typeImports} } from './rules-types.gen.js';`,
+      ``,
+      `export const Rules = {`,
+      ruleEntries.join(',\n'),
+      `};`,
+      ``,
+    ].join('\n');
+    writeFileSync(join(domainDir, 'rules.ts'), rulesContent);
+
+    // Patch domain barrel if it exists
+    const indexPath = join(domainDir, 'index.ts');
+    if (existsSync(indexPath)) {
+      const existing = readFileSync(indexPath, 'utf8');
+      const additions = [
+        `export { Rules } from './rules.js'`,
+        `export type { ${allTypeNames.join(', ')} } from './rules-types.gen.js'`,
+      ].filter(line => !existing.includes(line));
+      if (additions.length > 0) {
+        writeFileSync(indexPath, existing.trimEnd() + '\n' + additions.map(l => l + ';\n').join(''));
+      }
+    }
+
+    console.log(`  ✓ Generated ${domain}/rules.ts and ${domain}/rules-types.gen.ts`);
+  }
+}
+
 // Export for testing
-export { parseArgs, createOpenApiTsConfig, exec, resolveOpenApiTsBin, domainToAnnotationExportName, generateAnnotationsAndPolicies, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums, patchDomainBarrelForAnnotations };
+export { parseArgs, createOpenApiTsConfig, exec, resolveOpenApiTsBin, domainToAnnotationExportName, generateAnnotationsAndPolicies, generateRules, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums, patchDomainBarrelForAnnotations };
 export { collectNamedEnumDefs } from './collect-named-enum-defs.js';
 
 // Run main function only if this is the entry point

@@ -1,0 +1,24 @@
+$schema: sla-types-schema.yaml
+version: "1.0"
+domain: intake
+slaTypes:
+  - id: snap_standard
+    name: SNAP Standard Processing
+    duration:
+      amount: 30
+      unit: days
+    warningThresholdPercent: 80
+    pauseWhen:
+      in:
+        - var: status
+        - - withdrawn
+  - id: medicaid_standard
+    name: Medicaid Standard Processing
+    duration:
+      amount: 45
+      unit: days
+    warningThresholdPercent: 80
+    pauseWhen:
+      in:
+        - var: status
+        - - withdrawn

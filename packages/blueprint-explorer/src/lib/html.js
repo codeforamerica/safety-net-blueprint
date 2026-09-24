@@ -113,6 +113,112 @@ export function headerMetaSubtitle(domain, pairs, trailingHtml = '') {
   return `<div style="padding:0.2rem 1.25rem 0.45rem;font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">Domain: <code style="${c}">${esc(domain)}</code> · ${pairsHtml}${trailing}</div>`;
 }
 
+// ── Cross-artifact URL helpers ─────────────────────────────────────────────────
+// One function per artifact type. Call sites pass a relative base so each page
+// can resolve links from its own output location.
+
+/** Compute the anchor ID for an API endpoint. */
+export function apiEndpointSlug(method, path) {
+  return `op-${method.toLowerCase()}-${path.replace(/\//g, '-').replace(/[{}]/g, '').replace(/--+/g, '-').replace(/^-|-$/g, '')}`;
+}
+
+/** URL to an annotations-explorer entry. */
+export function annotationsExplorerHref(field, entryId, base = '../annotations-explorer') {
+  const typeSlug = field.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  const entrySlug = String(entryId).replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  return `${base}/${typeSlug}.html#entry--${entrySlug}`;
+}
+
+/** URL to a data-dictionary field entry. */
+export function dataDictFieldHref(domain, fieldPath, base = '../data-dictionaries') {
+  return `${base}/${domain}.html#field-${encodeURIComponent(fieldPath)}`;
+}
+
+/** URL to an API reference endpoint. */
+export function apiReferenceHref(domain, method, path, base = '../api-reference') {
+  return `${base}/${domain}.html#${apiEndpointSlug(method, path)}`;
+}
+
+/** URL to a state-machine-docs action. */
+export function stateMachineDocsHref(domain, actionId, base = '../state-machine-docs') {
+  return `${base}/${domain}.html#action-${actionId}`;
+}
+
+/** URL to a rules-docs ruleset page, optionally anchored to a fact. */
+export function rulesDocsHref(domain, ruleset, factName = null, base = '../rules-docs') {
+  return `${base}/${domain}-${ruleset}.html${factName ? `#fact-${factName}` : ''}`;
+}
+
+/** URL to an event-catalog entry. */
+export function eventCatalogHref(eventKey, base = '../event-catalog') {
+  return `${base}/index.html#event-${eventKey}`;
+}
+
+// ── Cross-artifact link renderers ──────────────────────────────────────────────
+// One function per link style. Styling is preserved exactly as-is per artifact.
+// Pass an href from the URL helpers above; optionally pass extraStyle for
+// caller-specific layout adjustments (margin, flex-shrink, font-size overrides).
+
+const _relBadge = `font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;`;
+
+/** Monospace field-name link with underline on hover (API reference → data dictionary). */
+export function fieldNameLink(name, href) {
+  return `<a href="${esc(href)}" style="font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.text};text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(name)}</a>`;
+}
+
+/** Purple badge link to a state machine action. */
+export function stateMachineLink(href, title = '', extraStyle = '') {
+  const titleAttr = title ? ` title="${esc(title)}"` : '';
+  return `<a href="${esc(href)}"${titleAttr} style="${_relBadge}background:#f0ecff;border-color:#d4c5f5;color:#6b4fa8;${extraStyle}">State machine →</a>`;
+}
+
+/** Blue badge link to a rules-docs page. */
+export function rulesLink(href, title = '', extraStyle = '') {
+  const titleAttr = title ? ` title="${esc(title)}"` : '';
+  return `<a href="${esc(href)}"${titleAttr} style="${_relBadge}background:#f0f7ff;border-color:#bfdbfe;color:#1d4ed8;${extraStyle}">Rules →</a>`;
+}
+
+/** Blue badge link to an API reference page. */
+export function apiReferenceLink(href, label = 'API ref →', extraStyle = '', title = '') {
+  const titleAttr = title ? ` title="${esc(title)}"` : '';
+  return `<a href="${esc(href)}"${titleAttr} style="${_relBadge}background:${COLORS.paleBlue};border-color:${COLORS.lightBlue};color:${COLORS.midBlue};${extraStyle}">${esc(label)}</a>`;
+}
+
+/**
+ * Render a section+key usage chip linking to the artifact page where that annotation is used.
+ * Used in the annotations explorer to show where each annotation entry appears.
+ *
+ * @param {string} section - annotation section (e.g. 'schema', 'operations', 'facts', 'events')
+ * @param {string} key     - annotation key (e.g. 'application.submittedAt')
+ * @param {string|null} href - link target, or null for an unlinked chip
+ */
+export function usageChip(section, key, href) {
+  const inner =
+    `<span style="padding:1px 5px;background:#e8ecf5;color:${COLORS.midBlue};font-size:10px;font-weight:600;border-right:1px solid ${COLORS.sandDark};">${esc(section)}</span>` +
+    `<code style="padding:1px 6px;background:#f8f9fc;font-size:11px;">${esc(key)}</code>`;
+  const chipStyle = `display:inline-flex;align-items:center;gap:0;border:1px solid ${COLORS.sandDark};border-radius:4px;overflow:hidden;text-decoration:none;color:inherit;`;
+  if (href) {
+    return `<a href="${esc(href)}" style="${chipStyle}" onmouseover="this.style.borderColor='${COLORS.midBlue}'" onmouseout="this.style.borderColor='${COLORS.sandDark}'">${inner}</a>`;
+  }
+  return `<span style="${chipStyle}">${inner}</span>`;
+}
+
+/**
+ * Render an array of annotation entry IDs as linked chips pointing to the annotations explorer.
+ * Consuming pages must define CSS for the 'ann-chip' class.
+ *
+ * @param {string} field - annotation field name (e.g. 'programs', 'policies')
+ * @param {string[]} values - array of entry IDs
+ * @param {string} explorerBase - relative URL to the annotations-explorer directory
+ * @param {function} [labelFn] - optional label transform, defaults to identity
+ */
+export function annotationChips(field, values, explorerBase, labelFn = v => String(v)) {
+  return values.map(v => {
+    const href = annotationsExplorerHref(field, String(v), explorerBase);
+    return `<a href="${esc(href)}" class="ann-chip">${esc(labelFn(v))}</a>`;
+  }).join('');
+}
+
 /** Render a status badge for lifecycle phase status values. */
 export function statusBadge(status) {
   const base = `font-size:9px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;padding:1px 6px;border-radius:100px;flex-shrink:0;`;

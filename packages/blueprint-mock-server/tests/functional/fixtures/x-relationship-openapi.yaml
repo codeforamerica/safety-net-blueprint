@@ -560,6 +560,10 @@ components:
           type: string
           format: uuid
           description: ID of the owner this parent belongs to.
+          # resource without style — declares the relationship without the
+          # read-side expansion, which Parent.ownerId sets.
+          x-relationship:
+            resource: Owner
         description:
           type: string
           maxLength: 1000
@@ -660,6 +664,10 @@ components:
           type: string
           format: uuid
           description: ID of the parent this child belongs to.
+          # resource without style — Child.parentId sets links-only on the read
+          # schema, which does not rename the field.
+          x-relationship:
+            resource: Parent
         note:
           type: string
           maxLength: 1000

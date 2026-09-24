@@ -27,7 +27,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join, resolve, relative, basename, sep } from 'path';
 import yaml from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-import { loadContractFiles } from '@codeforamerica/blueprint-core';
+import { contractFileMap } from '../contract-files.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -35,85 +35,7 @@ const __dirname = dirname(__filename);
 const PROJECT_ROOT = resolve(__dirname, '../../..');
 const RESOLVE_SCRIPT = resolve(__dirname, '../../../blueprint-cli/scripts/resolve.js');
 
-// ─── CLI ─────────────────────────────────────────────────────────────────────
-
-const cliArgs = Object.fromEntries(
-  process.argv.slice(2)
-    .filter(a => a.startsWith('--'))
-    .map(a => {
-      const eq = a.indexOf('=');
-      return eq >= 0 ? [a.slice(2, eq), a.slice(eq + 1)] : [a.slice(2), true];
-    })
-);
-
-const { domain, spec: specArg, out: outArg } = cliArgs;
-
-if (!specArg || !outArg) {
-  console.error('Usage: node generate-field-inventory.mjs --spec=<file-or-folder> --out=<file-or-folder> [--domain=<domain>]');
-  process.exit(1);
-}
-
-// ─── Input/output resolution ──────────────────────────────────────────────────
-
-// Top-level search directory — used by resolveSpecPaths and processSpec.
-const searchDir = resolve(specArg);
-
-// If --spec was provided and points to a non-empty directory of resolved specs,
-// use them directly without running the internal resolve pipeline.
-// If --spec is absent or the directory is empty, resolve from CONTRACTS_DIR first.
-const searchDirStat = statSync(searchDir, { throwIfNoEntry: false });
-const specDirIsPreResolved = specArg &&
-  searchDirStat?.isDirectory() &&
-  readdirSync(searchDir, { recursive: true }).some(f => typeof f === 'string' && f.endsWith('-openapi.yaml'));
-
-/**
- * Resolve the list of [specPath, domain] pairs to process.
- * Uses loadContractFiles so domain is derived consistently for all file types.
- */
-function resolveSpecPaths() {
-  const stat = specArg ? statSync(searchDir, { throwIfNoEntry: false }) : null;
-
-  if (specArg && !stat) {
-    console.error(`Spec path not found: ${searchDir}`);
-    process.exit(1);
-  }
-
-  // Single file — read its domain from the fileMap
-  if (stat?.isFile()) {
-    const fileMap = loadContractFiles(dirname(searchDir));
-    const entry = fileMap.get(searchDir);
-    return [[searchDir, entry?.domain ?? null]];
-  }
-
-  const fileMap = loadContractFiles(searchDir);
-  let entries = [...fileMap.entries()]
-    .filter(([absPath, e]) => e.type === 'openapi' && !absPath.endsWith('-openapi-examples.yaml'));
-
-  if (domain) {
-    entries = entries.filter(([, e]) => e.domain === domain);
-  }
-
-  if (entries.length === 0) {
-    const hint = domain ? ` matching domain "${domain}"` : '';
-    console.error(`No openapi files found${hint} in ${searchDir}`);
-    process.exit(1);
-  }
-
-  return entries.map(([absPath, e]) => [absPath, e.domain]);
-}
-
-/**
- * Resolve the output file path for a given domain.
- * If --out ends with .yaml/.yml, use it as-is (explicit file).
- * If --out is a directory path, derive the filename from the domain.
- * If --out is omitted, write to the default output/ dir.
- */
-function resolveOutputPath(fileDomain) {
-  const filename = `${fileDomain}-field-inventory.yaml`;
-  const outPath = resolve(outArg);
-  if (outPath.endsWith('.yaml') || outPath.endsWith('.yml')) return outPath;
-  return join(outPath, filename);
-}
+// ─── Schema helpers ───────────────────────────────────────────────────────────
 
 // ─── Schema helpers ───────────────────────────────────────────────────────────
 
@@ -217,7 +139,7 @@ function walkDiscriminatedOneOf(schema, prefix, entries, visited) {
  *   - Standard audit timestamps (createdAt, updatedAt) — universal REST convention
  */
 function isInfraField(name) {
-  return name === 'createdAt' || name === 'updatedAt';
+  return name === 'createdAt' || name === 'updatedAt' || name === '_links';
 }
 
 function walkSchema(schema, prefix, entries, visited) {
@@ -387,7 +309,13 @@ function requestBodySchemaName(rawOp) {
 
 // ─── Per-spec processing ──────────────────────────────────────────────────────
 
-async function processSpec(specPath, outputPath) {
+async function processSpec(specPath, outputPath, ctx = {}) {
+  const {
+    specDirIsPreResolved: _specDirIsPreResolved = specDirIsPreResolved,
+    searchDir: _searchDir = searchDir,
+    searchDirStat: _searchDirStat = searchDirStat,
+  } = ctx;
+
   const specFilename = basename(specPath);
   const resolvedSpecPath = resolve(specPath);
 
@@ -397,7 +325,7 @@ async function processSpec(specPath, outputPath) {
   let specContent;
   let tempDir = null;
 
-  if (specDirIsPreResolved) {
+  if (_specDirIsPreResolved) {
     // Specs are already resolved — use them directly. $RefParser resolves all
     // $refs (including cross-package refs like ../../../blueprint-core/...) from
     // the real filesystem via the original spec path as base URL.
@@ -406,7 +334,7 @@ async function processSpec(specPath, outputPath) {
   } else {
     // No pre-resolved spec dir — run the resolve pipeline on CONTRACTS_DIR first.
     // specDir is the full root so shared components/ and schemas/ are available.
-    const specDir = searchDirStat?.isFile() ? dirname(searchDir) : searchDir;
+    const specDir = _searchDirStat?.isFile() ? dirname(_searchDir) : _searchDir;
     tempDir = mkdtempSync(join(tmpdir(), 'field-inventory-'));
     const resolvedSpecDir = join(tempDir, 'resolved');
     const result = spawnSync(process.execPath, [RESOLVE_SCRIPT, `--spec=${specDir}`, `--out=${resolvedSpecDir}`], {
@@ -470,6 +398,7 @@ async function processSpec(specPath, outputPath) {
       collection: match[1],
       prefix: match[2].replace(/Id$/, ''), // e.g. 'applicationId' → 'application'
       writableSchemaName: schemaName,
+      readableSchemaName: responseSchemaName(methods.get),
     });
   }
 
@@ -478,7 +407,7 @@ async function processSpec(specPath, outputPath) {
     return;
   }
 
-  for (const { collection: rootCollection, prefix: rootPrefix, writableSchemaName: rootWritableSchemaName } of roots) {
+  for (const { collection: rootCollection, prefix: rootPrefix, writableSchemaName: rootWritableSchemaName, readableSchemaName: rootReadableSchemaName } of roots) {
     console.log(`  Root resource: ${rootCollection} (prefix: ${rootPrefix}, writable schema: ${rootWritableSchemaName})`);
 
     // ── Scan sub-resource paths in spec order ───────────────────────────────
@@ -517,12 +446,25 @@ async function processSpec(specPath, outputPath) {
     }
 
     // ── Root resource fields ──────────────────────────────────────────────
-    const rootWritable = schemas[rootWritableSchemaName];
-    if (rootWritable) {
+    // Prefer the GET response schema (superset: includes read-only fields like id,
+    // status, timestamps) over the writable schema (PATCH body only).
+    const rootSchema = schemas[rootReadableSchemaName] ?? schemas[rootWritableSchemaName];
+    if (rootSchema) {
       const rawEntries = new Map();
-      walkSchema(rootWritable, rootPrefix, rawEntries, new WeakSet());
+      walkSchema(rootSchema, rootPrefix, rawEntries, new WeakSet());
+
+      // Remove sub-resource fields — those are emitted as their own sections.
+      const subPrefixes = resourceOrder.map(r => {
+        const camel = r.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+        return `${rootPrefix}.${camel}[]`;
+      });
+      for (const key of rawEntries.keys()) {
+        if (subPrefixes.some(p => key === p || key.startsWith(`${p}.`))) rawEntries.delete(key);
+      }
+
       const entries = hoistIds(rawEntries);
-      if (entries.size > 0) sections.push({ title: rootPrefix, entries });
+      const rootTitle = rootReadableSchemaName ?? (rootPrefix.charAt(0).toUpperCase() + rootPrefix.slice(1));
+      if (entries.size > 0) sections.push({ title: rootTitle, entries });
     }
 
     // ── Sub-resources (collections and singletons) ────────────────────────
@@ -539,7 +481,7 @@ async function processSpec(specPath, outputPath) {
       const entries = new Map();
       if (info.isCollection) entries.set(prefix, { type: `list(${info.schemaName})` });
       for (const [k, v] of hoisted) entries.set(k, v);
-      if (entries.size > 0) sections.push({ title: resource, entries });
+      if (entries.size > 0) sections.push({ title: info.schemaName, entries });
     }
   }
 
@@ -593,18 +535,56 @@ async function processSpec(specPath, outputPath) {
   console.log(`  Generated ${outputPath}`);
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Exported API ─────────────────────────────────────────────────────────────
 
-async function main() {
-  const specEntries = resolveSpecPaths();
+export async function generate({ specDir, outDir, domain: domainFilter = null }) {
+  const sDir = resolve(specDir);
+  const sDirStat = statSync(sDir, { throwIfNoEntry: false });
+  const sPreResolved = sDirStat?.isDirectory() &&
+    readdirSync(sDir, { recursive: true }).some(f => typeof f === 'string' && f.endsWith('-openapi.yaml'));
+  const ctx = { specDirIsPreResolved: sPreResolved, searchDir: sDir, searchDirStat: sDirStat };
+
+  if (!sDirStat) throw new Error(`Spec path not found: ${sDir}`);
+
+  let specEntries;
+  if (sDirStat.isFile()) {
+    const fileMap = contractFileMap(dirname(sDir));
+    const entry = fileMap.get(sDir);
+    specEntries = [[sDir, entry?.domain ?? null]];
+  } else {
+    const fileMap = contractFileMap(sDir);
+    let entries = [...fileMap.entries()]
+      .filter(([absPath, e]) => e.type === 'openapi' && !absPath.endsWith('-openapi-examples.yaml'));
+    if (domainFilter) entries = entries.filter(([, e]) => e.domain === domainFilter);
+    if (entries.length === 0) throw new Error(`No openapi files found in ${sDir}`);
+    specEntries = entries.map(([absPath, e]) => [absPath, e.domain]);
+  }
 
   for (const [specPath, fileDomain] of specEntries) {
-    const outputPath = resolveOutputPath(fileDomain ?? basename(specPath).replace(/-openapi\.ya?ml$/, ''));
-    await processSpec(specPath, outputPath);
+    const outPath = resolve(outDir);
+    const outputPath = outPath.endsWith('.yaml') || outPath.endsWith('.yml')
+      ? outPath
+      : join(outPath, `${fileDomain ?? basename(specPath).replace(/-openapi\.ya?ml$/, '')}-field-inventory.yaml`);
+    await processSpec(specPath, outputPath, ctx);
   }
 }
 
-main().catch(err => {
-  console.error(err.message);
-  process.exit(1);
-});
+// ─── CLI entry point ──────────────────────────────────────────────────────────
+
+if (process.argv[1] === __filename) {
+  const cliArgs = Object.fromEntries(
+    process.argv.slice(2)
+      .filter(a => a.startsWith('--'))
+      .map(a => {
+        const eq = a.indexOf('=');
+        return eq >= 0 ? [a.slice(2, eq), a.slice(eq + 1)] : [a.slice(2), true];
+      })
+  );
+  const { domain, spec: specArg, out: outArg } = cliArgs;
+  if (!specArg || !outArg) {
+    console.error('Usage: node generate-field-inventory.mjs --spec=<file-or-folder> --out=<file-or-folder> [--domain=<domain>]');
+    process.exit(1);
+  }
+  generate({ specDir: specArg, outDir: outArg, domain: domain || null })
+    .catch(err => { console.error(err.message); process.exit(1); });
+}

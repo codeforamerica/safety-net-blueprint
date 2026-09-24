@@ -1,0 +1,77 @@
+$schema: metrics-schema.yaml
+version: "1.0"
+domain: intake
+metrics:
+  - id: applications_submitted
+    name: Applications Submitted
+    description: Number of applications formally submitted within the period.
+    aggregate: count
+    source:
+      collection: events
+      filter:
+        "==":
+          - var: type
+          - intake.application.submitted
+  - id: application_processing_time
+    name: Application Processing Time
+    description: Median time from submission to closure.
+    aggregate: duration
+    from:
+      collection: events
+      filter:
+        "==":
+          - var: type
+          - intake.application.submitted
+    to:
+      collection: events
+      filter:
+        "==":
+          - var: type
+          - intake.application.closed
+    pairBy: resourceId
+    targets:
+      - stat: p50
+        operator: <
+        amount: 25
+        unit: days
+  - id: withdrawal_rate
+    name: Withdrawal Rate
+    description: Ratio of withdrawn applications to total submitted applications.
+    aggregate: ratio
+    source:
+      collection: applications
+      filter:
+        "==":
+          - var: status
+          - withdrawn
+    total:
+      collection: applications
+      filter:
+        in:
+          - var: status
+          - - submitted
+            - under_review
+            - withdrawn
+            - closed
+    targets:
+      - stat: ratio
+        operator: <
+        amount: 15
+        unit: percent
+  - id: sla_breach_rate
+    name: SLA Breach Rate
+    description: Ratio of applications that exceeded their processing deadline to total closed applications.
+    aggregate: ratio
+    source:
+      collection: applications
+      filter:
+        in:
+          - breached
+          - var: slaInfo.*.status
+    total:
+      collection: applications
+    targets:
+      - stat: ratio
+        operator: <
+        amount: 5
+        unit: percent

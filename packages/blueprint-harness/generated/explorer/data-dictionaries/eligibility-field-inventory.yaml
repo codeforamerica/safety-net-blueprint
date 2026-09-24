@@ -1,0 +1,24 @@
+# eligibility field inventory
+# Do not edit — regenerate with: node generate-field-inventory.mjs --domain=eligibility
+
+# ── Determination ───────────────────────────────────────────────────────────────
+
+determination.id: { type: uuid }
+determination.applicationId: { type: uuid, relationship: Application }
+determination.status: { type: enum, values: [pending, in_progress, complete] }
+determination.expedited: { type: boolean }
+determination.determinedAt: { type: datetime }
+determination.links: { type: object }
+determination.links.application: { type: string }
+
+# ── Decision ────────────────────────────────────────────────────────────────────
+
+determination.decisions[]: { type: list(Decision) }
+determination.decisions[].id: { type: uuid }
+determination.decisions[].determinationId: { type: uuid, relationship: Determination }
+determination.decisions[].program: { type: enum, values: [snap, medicaid, chip, tanf] }
+determination.decisions[].eligible: { type: boolean }
+determination.decisions[].reason: { type: string }
+determination.decisions[].benefitAmount: { type: number }
+determination.decisions[].links: { type: object }
+determination.decisions[].links.determination: { type: string }

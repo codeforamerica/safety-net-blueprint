@@ -426,7 +426,7 @@ test('SORTABLE_FIELD_REGEX matches pattern-validator literal', async (t) => {
   await t.test('the two regex literals are character-identical', () => {
     const validatorPath = join(
       __dirname, '..', '..', '..', '..',
-      'packages', 'blueprint-core', 'src', 'validation', 'pattern-validator.js'
+      'packages', 'blueprint-core', 'src', 'validator', 'pattern-validator.js'
     );
     const src = readFileSync(validatorPath, 'utf8');
     // Capture the exact source from `export const SORTABLE_FIELD_REGEX = /.../;`
