@@ -1,6 +1,6 @@
 {
   "name": "@codeforamerica/blueprint-safety-net-explorer",
-  "version": "1.2.0",
+  "version": "0.1.0",
   "description": "Explorer hub, diagrams, and reference outputs for the Safety Net Blueprint",
   "type": "module",
   "files": [

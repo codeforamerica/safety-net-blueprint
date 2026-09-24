@@ -1,11 +1,12 @@
 ---
-"@codeforamerica/blueprint-core": major
+"@codeforamerica/blueprint-core": minor
 "@codeforamerica/blueprint-cli": minor
 "@codeforamerica/blueprint-mock-server": minor
 "@codeforamerica/blueprint-explorer": minor
 ---
 
-Collapse blueprint-core to a single entry point.
+**Breaking:** `blueprint-core` is now imported from one entry point instead of
+seventeen subpaths, and every subpath import must be rewritten.
 
 The package exported 17 subpaths. It now exports one, `.`, carrying eight
 names — six pipeline stages and the two directories the package ships:
@@ -23,8 +24,7 @@ schemasDir, baseContractsDir
 `generate` makes what did not exist; `extract` surfaces what the documents
 already state. Both dispatch on a type string, as `discover(dir, type)` does.
 
-**Breaking.** Every subpath import must become an import from the package
-root — `@codeforamerica/blueprint-core/openapi`, `/rules`, `/validator`,
+These subpaths no longer resolve: `@codeforamerica/blueprint-core/openapi`, `/rules`, `/validator`,
 `/overlay`, `/relationships`, `/compositions`, `/state-machines`,
 `/json-schema`, `/registries` and `/annotations` no longer resolve.
 

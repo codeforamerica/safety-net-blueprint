@@ -3,7 +3,7 @@
 "@codeforamerica/blueprint-safety-net-contracts": patch
 ---
 
-Added `registry-schema.yaml`, a generic schema for named registry files (`*-registry-{type}.yaml`). Registries define reusable, citable items keyed by stable ID; annotation files reference entries by ID using the registry type as the field name (e.g. `patterns: [external-ref-defs-oneOf]`).
+Named registry files (`*-registry-{type}.yaml`) can now be authored against `registry-schema.yaml`. A registry defines reusable, citable items keyed by stable ID, and annotation files reference entries by ID using the registry type as the field name (e.g. `patterns: [external-ref-defs-oneOf]`).
 
 `detectType` now returns `'policies'` for policy registry files, matched by `$schema: policies-schema.yaml` or the `-policies.yaml` filename suffix. Previously these returned `'unknown'` and were skipped by every consumer.
 

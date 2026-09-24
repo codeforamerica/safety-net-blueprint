@@ -4,6 +4,12 @@
 "@codeforamerica/blueprint-explorer": patch
 ---
 
-Annotation schema keys now use spec-relative paths (`application.members[].dateOfBirth`) rather than schema-relative paths (`member.dateOfBirth`). This aligns annotation key format with the data dictionary and field inventory, enabling direct lookup without path translation.
+**Breaking:** Annotation files must now key fields by spec-relative path
+(`application.members[].dateOfBirth`) rather than schema-relative path
+(`member.dateOfBirth`). The first segment is the camelCase schema name — for
+example `application`, `verification`, `applicationWritable` — followed by the
+dot-bracket field path.
 
-**Breaking:** `validateAnnotationPath` signature changed from `(pathKey, resourceSchemaMap)` to `(pathKey, domainSpecMap, annotationDomain)`. Replace `buildResourceSchemaMap` with `buildDomainSpecMap` at call sites. Annotation files must use spec-relative paths — the first segment is the camelCase schema name (e.g. `application`, `verification`, `applicationWritable`), followed by the dot-bracket field path.
+This aligns annotation keys with the data dictionary and the field inventory,
+so a field can be looked up directly in any of them without translating
+between path forms.
