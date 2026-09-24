@@ -760,6 +760,72 @@ function seedGraph(fgGraph, graphInputs, inputs) {
   return { uuidToItem, failedPaths };
 }
 
+// ── Unresolved inputs, from the Explanation tree ──────────────────────────────
+
+/**
+ * The input paths FactGraph could not reach for a fact — its answer to the
+ * same question our `missing` list answers.
+ *
+ * FactGraph exposes this as `graph.explainAndSolve(path)`, built on
+ * `Explanation.solves`. That returns `[]` for every derived fact: `solves`
+ * recurses through `children__sci_List()`, which prunes at nodes marked
+ * complete, and every `Dependency` on the route to a writable is marked
+ * complete even when the writable beneath it is not. The tree itself is
+ * intact, so this walks the raw `childList` instead and collects the
+ * writables `solves` never reaches.
+ *
+ * **Scalars only.** An unseeded collection produces no `Writable` node at
+ * all, so a fact blocked on `$.household.members[]` yields an empty list
+ * here while our evaluator names the collection. Callers must not read an
+ * empty result as "nothing missing".
+ */
+function unresolvedWritables(explanation, out = []) {
+  if (!explanation) return out;
+
+  const kind = explanation.constructor?.name ?? '';
+  if (kind.includes('Explanation$Writable')) {
+    const complete = explanation['Lgov_irs_factgraph_Explanation$Writable__f_complete'];
+    const path = explanation['Lgov_irs_factgraph_Explanation$Writable__f_path'];
+    if (complete === false) out.push(path?.toString__T?.() ?? String(path));
+    return out;
+  }
+
+  const childListKey = Object.keys(explanation).find((k) => k.endsWith('__f_childList'));
+  if (!childListKey) return out;
+
+  for (const group of consToArray(explanation[childListKey])) {
+    for (const child of consToArray(group)) unresolvedWritables(child, out);
+  }
+  return out;
+}
+
+/** Walk a Scala cons list without calling `head` on Nil, which throws. */
+function consToArray(list) {
+  const out = [];
+  let cell = list;
+  while (cell && Object.prototype.hasOwnProperty.call(cell, 'sci_$colon$colon__f_head')) {
+    out.push(cell['sci_$colon$colon__f_head']);
+    cell = cell['sci_$colon$colon__f_next'];
+  }
+  return out;
+}
+
+/**
+ * Invert `toFgPath` using the graph's own declared inputs.
+ *
+ * `/household_age` cannot be split back reliably — the underscore may be a
+ * separator or part of a name. Running the forward mapping over every
+ * declared input and inverting it is exact, and a FactGraph path with no
+ * entry is left as-is rather than guessed at.
+ */
+function fgPathToJsonPath(graphInputs) {
+  const byFgPath = new Map();
+  for (const jsonPath of Object.keys(graphInputs ?? {})) {
+    byFgPath.set(toFgPath(jsonPath), jsonPath);
+  }
+  return (fgPath) => byFgPath.get(fgPath) ?? fgPath;
+}
+
 // ── Result extraction ─────────────────────────────────────────────────────────
 
 const COMPLETE_KEY   = 'Lgov_irs_factgraph_monads_Result$Complete__f_v';
@@ -814,6 +880,7 @@ function evaluateCompiledWithFactGraph(graph, inputs) {
   const outputSet = new Set(graph.outputs);
   const untranslated = new Map();
   const xml = toFactGraph(graph, untranslated);
+  const toJsonPath = fgPathToJsonPath(graph.inputs);
 
   const dict = FactDictionaryFactory.importFromXml(xml);
   const fgGraph = GraphFactory.apply(dict);
@@ -835,7 +902,8 @@ function evaluateCompiledWithFactGraph(graph, inputs) {
       const result = fgGraph.get(fgFactPath);
       const extracted = extractResult(result, uuidToItem);
       if (extracted.state === 'incomplete') {
-        nodes[factName] = { type, state: 'missing', value: null, missing: [] };
+        const missing = unresolvedWritables(fgGraph.explain(fgFactPath)).map(toJsonPath);
+        nodes[factName] = { type, state: 'missing', value: null, missing };
       } else {
         nodes[factName] = { type, state: extracted.state, value: extracted.value };
       }

@@ -18,41 +18,21 @@
  *   *-graph.yaml      — expected compiled graph (compared via deep equal after YAML parse)
  *   *-fact-graph.xml  — expected FactGraph XML (compared as trimmed strings)
  *
- * Parity rule:
- *   FactGraph is the reference implementation. Where the two disagree on the
- *   state or value of a fact, this engine is wrong and gets fixed. Every
- *   scenario asserts full parity across every output fact.
+ * What these assert:
+ *   That the translator produces the XML we expect, and that running the same
+ *   graph through both engines produces the same nodes. Disagreement is a
+ *   signal to investigate — usually a defect here, occasionally something the
+ *   other engine cannot represent. Neither engine is the authority; the
+ *   contract is, and it lives in tests/conformance/.
  *
- *   Two earlier entries here claimed scenarios 04 and 05 diverged by design.
- *   Neither survived being measured. Scenario 05 was a genuine defect —
- *   placeholder did not travel from an intermediate fact to the outputs
- *   computed from it — and the note describing CEL's behavior contradicted
- *   the evaluator's own source in the same commit. Scenario 04 claimed
- *   FactGraph throws on a wrong-type scalar; it does not get the chance,
- *   because seedGraph type-checks before seeding. Both are fixed and both now
- *   assert full parity.
+ *   Where the two engines differ, and why, is recorded in CONFORMANCE.md —
+ *   not here and not in the contract docs, so there is one place to read it.
  *
- * Deliberate differences, and why:
- *   A difference is only allowed here when it is in how a result reaches the
- *   caller, never in what the result is.
- *
- *   1. A wrong-type input produces an `error` node rather than a thrown
- *      exception. seedGraph records the bad path and findAffectedFacts marks
- *      its dependents. An exception would discard the correctly computed
- *      results of every unaffected fact in the graph, which is strictly less
- *      information for no semantic gain.
- *
- * Not yet settled — do not treat as a deliberate difference:
- *   `missing` nodes carry the list of input paths still unreached, and this
- *   engine computes that list itself. FactGraph models the same thing:
- *   Explanation.solves is a List[List[Path]] of the writable paths that would
- *   resolve a fact, surfaced as graph.explainAndSolve(path). On a writable it
- *   works — explainAndSolve('/household_age') returns [['/household_age']] —
- *   but on our translated derived facts it returns [], so the two cannot be
- *   compared today and this file does not assert on `missing` contents.
- *   Whether that is a gap in how we emit <Derived> or in how solves
- *   aggregates is unknown. Until someone finds out, this is an unverified
- *   area, not a considered choice.
+ * Coverage limit on `missing`:
+ *   Only scalar paths are compared. An unseeded collection produces no
+ *   Writable node in the Explanation tree, so a fact blocked on one has
+ *   nothing on the other side to compare against. See unresolvedWritables()
+ *   in tools/fact-graph.js.
  */
 
 import { describe, it } from 'node:test';
@@ -218,6 +198,17 @@ function assertOutputParity(celResult, fgResult, label) {
     assert.strictEqual(cel[fact].state, fg[fact].state, `${label}: ${fact} state`);
     if (cel[fact].state === 'complete' || cel[fact].state === 'placeholder') {
       assert.deepStrictEqual(cel[fact].value, fg[fact].value, `${label}: ${fact} value`);
+    }
+    if (cel[fact].state === 'missing') {
+      // Scalars only — see the coverage limit in the header. A collection
+      // path has no Writable in the Explanation tree, so FactGraph cannot
+      // report it and comparing it would fail for the wrong reason.
+      const scalars = (paths) => (paths ?? []).filter((p) => !p.includes('[]')).sort();
+      assert.deepStrictEqual(
+        scalars(cel[fact].missing),
+        scalars(fg[fact].missing),
+        `${label}: ${fact} missing (scalar paths)`
+      );
     }
   }
 }

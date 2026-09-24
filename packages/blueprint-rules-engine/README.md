@@ -137,6 +137,29 @@ The bundle is regenerated from source by `npm run build:browser`, and `prepare` 
 before publish. `dist/browser.js` is committed, and preflight fails if it has drifted from
 `src/`.
 
+## Known limitation: decimal precision
+
+CEL has no exact decimal type, so `type: number` is evaluated in binary
+floating point — `0.1 + 0.2` is `0.30000000000000004`. This only changes an
+answer on exact-equality comparisons and long accumulation chains, not on
+ordinary threshold tests.
+
+For exactness today, declare money as `type: integer` in cents. Tracked in
+[#445](https://github.com/codeforamerica/safety-net-blueprint/issues/445).
+
+## Conformance
+
+This package is a reference implementation, not a mandated engine. The
+behaviour any engine must reproduce — the four states, what makes an input
+missing rather than empty, how a bad input propagates — is written as data in
+[`tests/conformance/cases.json`](tests/conformance/cases.json): a graph, inputs,
+and the nodes expected for each. `tests/conformance.test.js` is one runner over
+it; an engine in another language needs its own.
+
+[**CONFORMANCE.md**](CONFORMANCE.md) records what happened when engines were run
+against that corpus — which cases each one satisfies, where they differ, and
+what an engine could not express at all.
+
 ## Related packages
 
 - [`@codeforamerica/blueprint-core`](https://www.npmjs.com/package/@codeforamerica/blueprint-core) — compiles rulesets into graphs and resolves contracts

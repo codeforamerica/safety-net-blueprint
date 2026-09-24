@@ -1,0 +1,634 @@
+{
+  "description": "The evaluation contract every Blueprint rules engine must satisfy. These are not tests of one implementation: they state what any engine evaluating a Blueprint graph has to produce, and blueprint-rules-engine happens to be the first. docs/architecture/rules-contracts.md says the reference implementation is replaceable; a replacement can only demonstrate that against something executable, and this is it.",
+  "whyData": "A second engine will not be written in JavaScript and cannot run this package's test suite. The corpus is the artifact; tests/conformance.test.js is one runner over it, thin on purpose. An engine in another language writes its own runner against this same file.",
+  "scope": "Kept separate from this package's other tests, which cover its own implementation choices and may change freely. These may not, without it being a contract change.",
+  "howToRead": {
+    "case": "Each case names a graph from `graphs`, the inputs to evaluate it against, and the nodes the engine must produce, keyed by fact name.",
+    "partial": "Only the fields an expectation lists are asserted. A case can pin a state without committing to a value, need not name every fact, and adding a field to the node shape later does not invalidate the corpus.",
+    "missing": "Compared as a set. The order of paths is not part of the contract.",
+    "messageIncludes": "A substring check. Exact error wording is not part of the contract; naming the offending path or type is.",
+    "note": "Explains what the case is pinning and why it matters."
+  },
+  "graphs": {
+    "eligibility": {
+      "$schema": "https://blueprint.codeforamerica.org/schemas/graph-schema.yaml",
+      "domain": "eligibility",
+      "ruleset": "conformance",
+      "outputs": [
+        "eligible"
+      ],
+      "inputs": {
+        "$.household.members[]": {
+          "type": "array"
+        },
+        "$.household.members[].age": {
+          "type": "integer"
+        },
+        "$.household.income": {
+          "type": "integer"
+        },
+        "$.policy.limit": {
+          "type": "integer",
+          "default": 1500
+        },
+        "$.policy.minAge": {
+          "type": "integer",
+          "default": 18
+        }
+      },
+      "facts": {
+        "hasAdult": {
+          "expression": "household.members.exists(m, m.age >= policy.minAge)"
+        },
+        "withinLimit": {
+          "expression": "household.income <= policy.limit"
+        },
+        "eligible": {
+          "expression": "hasAdult && withinLimit"
+        }
+      },
+      "dependencies": {
+        "hasAdult": [
+          "$.household.members[]",
+          "$.policy.minAge"
+        ],
+        "withinLimit": [
+          "$.household.income",
+          "$.policy.limit"
+        ],
+        "eligible": [
+          "hasAdult",
+          "withinLimit"
+        ]
+      }
+    },
+    "numeric": {
+      "outputs": [
+        "tripled",
+        "quartered",
+        "scaled"
+      ],
+      "inputs": {
+        "$.m.count": {
+          "type": "integer"
+        },
+        "$.m.rate": {
+          "type": "number"
+        }
+      },
+      "facts": {
+        "tripled": {
+          "expression": "m.count * 3"
+        },
+        "quartered": {
+          "expression": "m.count / 4"
+        },
+        "scaled": {
+          "expression": "m.rate * 1.5"
+        }
+      },
+      "dependencies": {
+        "tripled": [
+          "$.m.count"
+        ],
+        "quartered": [
+          "$.m.count"
+        ],
+        "scaled": [
+          "$.m.rate"
+        ]
+      }
+    },
+    "collection": {
+      "outputs": [
+        "anyOld",
+        "anyNamed"
+      ],
+      "inputs": {
+        "$.h.people[]": {
+          "type": "array"
+        },
+        "$.h.people[].age": {
+          "type": "integer"
+        },
+        "$.h.people[].name": {
+          "type": "string"
+        }
+      },
+      "facts": {
+        "anyOld": {
+          "expression": "h.people.exists(p, p.age > 60)"
+        },
+        "anyNamed": {
+          "expression": "h.people.exists(p, has(p.name))"
+        }
+      },
+      "dependencies": {
+        "anyOld": [
+          "$.h.people[]"
+        ],
+        "anyNamed": [
+          "$.h.people[]"
+        ]
+      }
+    },
+    "operators": {
+      "outputs": [
+        "isOdd",
+        "remainder",
+        "band",
+        "inSet"
+      ],
+      "inputs": {
+        "$.h.n": {
+          "type": "integer"
+        },
+        "$.h.flag": {
+          "type": "boolean"
+        }
+      },
+      "facts": {
+        "isOdd": {
+          "expression": "h.n % 2 == 1"
+        },
+        "remainder": {
+          "expression": "h.n % 4"
+        },
+        "band": {
+          "expression": "h.flag ? \"high\" : \"low\""
+        },
+        "inSet": {
+          "expression": "h.n in [1, 3, 5]"
+        }
+      },
+      "dependencies": {
+        "isOdd": [
+          "$.h.n"
+        ],
+        "remainder": [
+          "$.h.n"
+        ],
+        "band": [
+          "$.h.flag"
+        ],
+        "inSet": [
+          "$.h.n"
+        ]
+      }
+    }
+  },
+  "cases": [
+    {
+      "name": "every input supplied — complete, and outputs are distinguished from intermediates",
+      "graph": "eligibility",
+      "inputs": {
+        "household": {
+          "members": [
+            {
+              "age": 30
+            }
+          ],
+          "income": 100
+        },
+        "policy": {
+          "limit": 2000,
+          "minAge": 18
+        }
+      },
+      "expect": {
+        "hasAdult": {
+          "type": "intermediate",
+          "state": "complete",
+          "value": true
+        },
+        "withinLimit": {
+          "type": "intermediate",
+          "state": "complete",
+          "value": true
+        },
+        "eligible": {
+          "type": "output",
+          "state": "complete",
+          "value": true
+        }
+      }
+    },
+    {
+      "name": "a declared default is used — placeholder, and it travels to dependents",
+      "graph": "eligibility",
+      "note": "Neither policy value is supplied, so both facts read a default and the output computed from them is a placeholder too.",
+      "inputs": {
+        "household": {
+          "members": [
+            {
+              "age": 30
+            }
+          ],
+          "income": 100
+        }
+      },
+      "expect": {
+        "hasAdult": {
+          "state": "placeholder",
+          "value": true
+        },
+        "withinLimit": {
+          "state": "placeholder",
+          "value": true
+        },
+        "eligible": {
+          "state": "placeholder",
+          "value": true
+        }
+      }
+    },
+    {
+      "name": "defaults apply per field, not per namespace",
+      "graph": "eligibility",
+      "note": "policy.limit is supplied and policy.minAge is not. Supplying part of a namespace must not suppress defaults for the rest of it — withinLimit is complete while hasAdult is a placeholder.",
+      "inputs": {
+        "household": {
+          "members": [
+            {
+              "age": 30
+            }
+          ],
+          "income": 100
+        },
+        "policy": {
+          "limit": 2000
+        }
+      },
+      "expect": {
+        "withinLimit": {
+          "state": "complete",
+          "value": true
+        },
+        "hasAdult": {
+          "state": "placeholder",
+          "value": true
+        },
+        "eligible": {
+          "state": "placeholder",
+          "value": true
+        }
+      }
+    },
+    {
+      "name": "an unreachable input — missing, naming the path",
+      "graph": "eligibility",
+      "inputs": {
+        "household": {
+          "members": [
+            {
+              "age": 30
+            }
+          ]
+        },
+        "policy": {
+          "limit": 2000,
+          "minAge": 18
+        }
+      },
+      "expect": {
+        "withinLimit": {
+          "state": "missing",
+          "value": null,
+          "missing": [
+            "$.household.income"
+          ]
+        },
+        "hasAdult": {
+          "state": "complete",
+          "value": true
+        }
+      }
+    },
+    {
+      "name": "missing accumulates the paths from every unresolved dependency",
+      "graph": "eligibility",
+      "inputs": {},
+      "expect": {
+        "eligible": {
+          "state": "missing",
+          "value": null,
+          "missing": [
+            "$.household.income",
+            "$.household.members[]"
+          ]
+        }
+      },
+      "note": "An output blocked on several unresolved inputs must name all of them, so a caller can ask once rather than discovering them one at a time. A path with a declared default is not missing — it resolves to the default — so it must not appear here."
+    },
+    {
+      "name": "an absent collection is missing, and names itself",
+      "graph": "eligibility",
+      "inputs": {
+        "household": {
+          "income": 100
+        },
+        "policy": {
+          "limit": 2000,
+          "minAge": 18
+        }
+      },
+      "expect": {
+        "hasAdult": {
+          "state": "missing",
+          "value": null,
+          "missing": [
+            "$.household.members[]"
+          ]
+        }
+      },
+      "note": "Absent means not-yet-asked and must remain a question: a progressive interview has nothing to ask for if an uncollected list silently reads as empty."
+    },
+    {
+      "name": "a null collection is an answer: empty, and placeholder",
+      "graph": "eligibility",
+      "note": "Null means asked-and-none. The fact resolves rather than blocking.",
+      "inputs": {
+        "household": {
+          "members": null,
+          "income": 100
+        },
+        "policy": {
+          "limit": 2000,
+          "minAge": 18
+        }
+      },
+      "expect": {
+        "hasAdult": {
+          "state": "placeholder",
+          "value": false
+        }
+      }
+    },
+    {
+      "name": "an empty array is a complete answer",
+      "graph": "eligibility",
+      "inputs": {
+        "household": {
+          "members": [],
+          "income": 100
+        },
+        "policy": {
+          "limit": 2000,
+          "minAge": 18
+        }
+      },
+      "expect": {
+        "hasAdult": {
+          "state": "complete",
+          "value": false
+        },
+        "eligible": {
+          "state": "complete",
+          "value": false
+        }
+      }
+    },
+    {
+      "name": "a wrong-type input errors its dependents and leaves the rest intact",
+      "graph": "eligibility",
+      "inputs": {
+        "household": {
+          "members": [
+            {
+              "age": 30
+            }
+          ],
+          "income": "not-a-number"
+        },
+        "policy": {
+          "limit": 2000,
+          "minAge": 18
+        }
+      },
+      "expect": {
+        "withinLimit": {
+          "state": "error",
+          "value": null,
+          "messageIncludes": "expected integer"
+        },
+        "eligible": {
+          "state": "error",
+          "value": null
+        },
+        "hasAdult": {
+          "state": "complete",
+          "value": true
+        }
+      },
+      "note": "A bad input must not discard the facts that did resolve. Reporting it as a node keeps the rest of the evaluation usable."
+    },
+    {
+      "name": "an integer input is an integer to the expression",
+      "graph": "numeric",
+      "note": "A graph declaring type: integer must be evaluated with integer semantics. An engine passing the value as a floating-point number cannot multiply it by an integer literal.",
+      "inputs": {
+        "m": {
+          "count": 7,
+          "rate": 2.5
+        }
+      },
+      "expect": {
+        "tripled": {
+          "state": "complete",
+          "value": 21
+        }
+      }
+    },
+    {
+      "name": "division between integers truncates",
+      "graph": "numeric",
+      "note": "7 / 4 is 1, not 1.75. The declaration says integer. A fact wanting real division converts explicitly.",
+      "inputs": {
+        "m": {
+          "count": 7,
+          "rate": 2.5
+        }
+      },
+      "expect": {
+        "quartered": {
+          "state": "complete",
+          "value": 1
+        }
+      }
+    },
+    {
+      "name": "a number input keeps fractional semantics",
+      "graph": "numeric",
+      "inputs": {
+        "m": {
+          "count": 7,
+          "rate": 2.5
+        }
+      },
+      "expect": {
+        "scaled": {
+          "state": "complete",
+          "value": 3.75
+        }
+      }
+    },
+    {
+      "name": "a wrong-type sub-field errors every fact reading the collection",
+      "graph": "collection",
+      "note": "One bad item taints the collection rather than being skipped: a rule cannot give a trustworthy answer over data it could not read.",
+      "inputs": {
+        "h": {
+          "people": [
+            {
+              "age": "seventy",
+              "name": "A"
+            }
+          ]
+        }
+      },
+      "expect": {
+        "anyOld": {
+          "state": "error",
+          "value": null,
+          "messageIncludes": "$.h.people[]"
+        },
+        "anyNamed": {
+          "state": "error",
+          "value": null
+        }
+      }
+    },
+    {
+      "name": "collection sub-fields read normally when well-typed",
+      "graph": "collection",
+      "inputs": {
+        "h": {
+          "people": [
+            {
+              "age": 70,
+              "name": "A"
+            }
+          ]
+        }
+      },
+      "expect": {
+        "anyOld": {
+          "state": "complete",
+          "value": true
+        },
+        "anyNamed": {
+          "state": "complete",
+          "value": true
+        }
+      }
+    },
+    {
+      "name": "an absent collection blocks every fact that reads it",
+      "graph": "collection",
+      "inputs": {
+        "h": {}
+      },
+      "expect": {
+        "anyOld": {
+          "state": "missing",
+          "missing": [
+            "$.h.people[]"
+          ]
+        },
+        "anyNamed": {
+          "state": "missing",
+          "missing": [
+            "$.h.people[]"
+          ]
+        }
+      },
+      "note": "Same rule as the eligibility case: absent is a question, not an empty answer."
+    },
+    {
+      "name": "modulo",
+      "graph": "operators",
+      "note": "CEL defines % on integers. A conforming engine must support it.",
+      "inputs": {
+        "h": {
+          "n": 7,
+          "flag": true
+        }
+      },
+      "expect": {
+        "isOdd": {
+          "state": "complete",
+          "value": true
+        },
+        "remainder": {
+          "state": "complete",
+          "value": 3
+        }
+      }
+    },
+    {
+      "name": "conditional expression returns either branch",
+      "graph": "operators",
+      "note": "A ternary may return any type, not only a boolean.",
+      "inputs": {
+        "h": {
+          "n": 7,
+          "flag": true
+        }
+      },
+      "expect": {
+        "band": {
+          "state": "complete",
+          "value": "high"
+        }
+      }
+    },
+    {
+      "name": "conditional expression takes the false branch",
+      "graph": "operators",
+      "inputs": {
+        "h": {
+          "n": 7,
+          "flag": false
+        }
+      },
+      "expect": {
+        "band": {
+          "state": "complete",
+          "value": "low"
+        }
+      }
+    },
+    {
+      "name": "membership against a list literal",
+      "graph": "operators",
+      "inputs": {
+        "h": {
+          "n": 3,
+          "flag": true
+        }
+      },
+      "expect": {
+        "inSet": {
+          "state": "complete",
+          "value": true
+        }
+      }
+    },
+    {
+      "name": "membership against a list literal — absent",
+      "graph": "operators",
+      "inputs": {
+        "h": {
+          "n": 7,
+          "flag": true
+        }
+      },
+      "expect": {
+        "inSet": {
+          "state": "complete",
+          "value": false
+        }
+      }
+    }
+  ]
+}

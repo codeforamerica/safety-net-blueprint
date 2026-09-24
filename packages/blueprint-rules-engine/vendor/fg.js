@@ -1,16 +1,33 @@
 /**
  * IRS FactGraph evaluator — vendored from the IRS Direct File project.
  *
- * Source: https://github.com/IRS-Public/direct-file
- * Extracted from spike branch: spike/corticon-to-dsl-translator
- * Spike commit: edca6d1db6fde56473029269e869b3c07e0b9cef
- * SHA-256: 8033fc086c45f0d7748dfe7a6fe0c3a6f6864ee3227c2640c806b59eabdfc621
+ * Upstream source: https://github.com/IRS-Public/direct-file
+ *   Commit:  e0d5c8445
+ *   Path:    direct-file/fact-graph-scala
+ *   Tree:    https://github.com/IRS-Public/direct-file/tree/e0d5c8445/direct-file/fact-graph-scala
  *
- * To check if this file has changed upstream, run:
+ * This file is a build artifact, not an upstream file: `fact-graph-scala` is a
+ * Scala cross-project, and the JavaScript bundle is produced by Scala.js. Direct
+ * File's own client consumes it as the workspace package
+ * `@irs/js-factgraph-scala@0.0.1`, which is not published to npm — so there is
+ * no upstream URL for the bundle itself, only for the source it is built from.
+ *
+ * That source has one commit. IRS-Public/direct-file was published as a single
+ * drop on 2025-05-29 and `fact-graph-scala` has not been touched since, so the
+ * commit above is the only version of it that has ever been public.
+ *
+ * Vendored into this repository in commit edca6d1db6fde56473029269e869b3c07e0b9cef
+ * on branch spike/corticon-to-dsl-translator.
+ *
+ * SHA-256 (this file, excluding this header):
+ *   8033fc086c45f0d7748dfe7a6fe0c3a6f6864ee3227c2640c806b59eabdfc621
+ *
+ * To check whether this file still matches what we recorded, run:
  *   node packages/blueprint-rules-engine/scripts/check-vendor.js
  *
- * DO NOT EDIT. Update by replacing this file with the new version and
- * updating the SHA-256 above and in scripts/check-vendor.js.
+ * DO NOT EDIT. Update by rebuilding from a named upstream commit, replacing
+ * this file, and updating the commit, path and SHA-256 above and in
+ * scripts/check-vendor.js.
  */
 'use strict';
 var $fileLevelThis = this;
