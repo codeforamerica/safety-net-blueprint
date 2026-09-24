@@ -145,11 +145,34 @@ test('graph-schema nodes', async (t) => {
       ...base,
       inputs: {
         ...base.inputs,
-        '$.household.members[]': { type: 'object', description: 'Array of household members' },
+        '$.household.members[]': { type: 'array', description: 'Array of household members' },
         '$.household.members[].age': { type: 'integer', description: 'Age of each member' },
       },
     });
     assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('rejects a collection input typed as anything but array', () => {
+    // The evaluator decides whether a null collection becomes an empty one by
+    // reading this field, so a wrong value changes the answer rather than
+    // failing: the fact resolves 'missing' instead of 'placeholder'. This
+    // test previously asserted `type: 'object'` was valid, which is the shape
+    // the schema's own example documented.
+    for (const type of ['object', 'string']) {
+      const { valid } = validate({
+        ...base,
+        inputs: { ...base.inputs, '$.household.members[]': { type } },
+      });
+      assert.equal(valid, false, `a collection typed '${type}' must be rejected`);
+    }
+  });
+
+  await t.test('rejects a collection input with no type at all', () => {
+    const { valid } = validate({
+      ...base,
+      inputs: { ...base.inputs, '$.household.members[]': { description: 'members' } },
+    });
+    assert.equal(valid, false);
   });
 
   await t.test('accepts scalar input node with default value', () => {

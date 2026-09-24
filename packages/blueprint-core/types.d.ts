@@ -163,6 +163,16 @@ export interface Graph {
   dependencies: Record<string, string[]>;
 }
 
+/** One example record, as `generate(docs, 'examples')` groups them. */
+export interface ExampleRecord {
+  /** The example's key in the source document, e.g. `ApplicationExample1`. */
+  key: string;
+  /** Same as `key`; kept for callers that display a name. */
+  name: string;
+  /** The record itself. */
+  data: Record<string, unknown>;
+}
+
 /** An OpenAPI Overlay document. */
 export interface Overlay {
   overlay?: string;
@@ -254,6 +264,17 @@ export function generate(
   type: 'postman',
   options?: { baseUrl?: string; collectionId?: string | null }
 ): Record<string, unknown>;
+/**
+ * Example records grouped by the schema each exemplifies.
+ *
+ * Keyed by schema name — `Application`, `ApplicationMember` — not by
+ * collection. Naming a collection is the mock server's concern; a schema is
+ * something the document declares.
+ */
+export function generate(
+  docs: Doc[],
+  type: 'examples'
+): Record<string, ExampleRecord[]>;
 
 /** Apply overlays, inject enums, filter by environment, substitute variables. */
 export function resolve(docs: Doc[], options?: ResolveOptions): ResolveResult;
@@ -269,10 +290,6 @@ export const baseContractsDir: string;
 
 // ---------------------------------------------------------------------------
 // Reads over an already-loaded document set.
-//
-// Not pipeline stages. Each is here only because core uses it internally and
-// at least two other packages need the same answer, so it can neither move
-// out nor be dropped. Candidates for removal.
 // ---------------------------------------------------------------------------
 
 
@@ -288,14 +305,4 @@ export function extract(
   docs: Doc[],
   type: 'relationships'
 ): Map<string, { path: string; method: string }>;
-
-/** The schema name a `$ref` ends in, whatever its form. */
-export function extractRefName(ref: string): string | null;
-
-/** The sibling documents a spec's external `$ref`s point at. */
-export function loadExternalRefs(
-  specAbsPath: string,
-  rawSpec: object,
-  fileMap: Map<string, { content: object }>
-): Map<string, object>;
 
