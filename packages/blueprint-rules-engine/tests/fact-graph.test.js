@@ -39,7 +39,7 @@ import { readFileSync } from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { toFactGraphXml, toGraphWithFactGraph } from '../src/fact-graph.js';
+import { toFactGraphXml, toGraphWithFactGraph } from '../tools/fact-graph.js';
 import { toGraph } from '../src/evaluator.js';
 import { generate, load } from '@codeforamerica/blueprint-core';
 

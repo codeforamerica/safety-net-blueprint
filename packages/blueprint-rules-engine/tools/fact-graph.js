@@ -18,7 +18,7 @@
  * @module fact-graph
  */
 
-import { matchesType, EvalResult, Graph } from './evaluator.js';
+import { matchesType, EvalResult, Graph } from '../src/evaluator.js';
 import {
   FactDictionaryFactory,
   GraphFactory,
@@ -788,7 +788,7 @@ export function evaluateWithFactGraph(graph, inputs) {
  * that evaluates using the FactGraph engine.
  *
  * Node-only — the FactGraph engine is not browser-compatible.
- * For browser use, import { toGraph } from './evaluator.js' instead.
+ * For browser use, import { toGraph } from '../src/evaluator.js' instead.
  *
  * @param {Object} graph - A compiled graph: facts, outputs, dependencies
  * @returns {Graph}
