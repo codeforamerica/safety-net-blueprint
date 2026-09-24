@@ -3,7 +3,6 @@
 "@codeforamerica/blueprint-cli": minor
 "@codeforamerica/blueprint-mock-server": minor
 "@codeforamerica/blueprint-explorer": minor
-"@codeforamerica/blueprint-rules-engine": minor
 ---
 
 Collapse blueprint-core to a single entry point.

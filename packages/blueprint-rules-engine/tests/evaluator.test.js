@@ -14,6 +14,7 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
+import { evaluate } from '../src/index.js';
 import { toGraph } from '../src/evaluator.js';
 import { generate } from '@codeforamerica/blueprint-core';
 
@@ -54,7 +55,6 @@ const scenarios = examples.rulesets.snapInterviewProbes.examples;
 
 // The engine evaluates compiled graphs; compiling a contract is a build step,
 // done here the way `generate` does it in the pipeline.
-const rulesetInputs = ruleset.rulesets.snapInterviewProbes.inputs;
 const graph = graphFor(ruleset, 'snapInterviewProbes');
 
 const PROBE_OUTPUTS = ['incomeInconsistencyProbe', 'generalWorkRequirementProbe', 'abawdProbe', 'studentEligibilityProbe', 'immigrationStatusProbe', 'felonComplianceProbe', 'changeVerificationProbe'];
@@ -62,7 +62,7 @@ const PROBE_OUTPUTS = ['incomeInconsistencyProbe', 'generalWorkRequirementProbe'
 describe('evaluator — snap interview probes', () => {
 
   it('scenario 01: no probes fire when household is straightforward', () => {
-    const result = toGraph(graph, rulesetInputs).evaluate(scenarios[0].inputs).filter('output');
+    const result = toGraph(graph).evaluate(scenarios[0].inputs).filter('output');
     assert.deepStrictEqual(result.collect('error'),       {});
     assert.deepStrictEqual(result.collect('missing'),     {});
     assert.deepStrictEqual(result.collect('placeholder'), {});
@@ -72,7 +72,7 @@ describe('evaluator — snap interview probes', () => {
   });
 
   it('scenario 02: income, ABAWD, non-citizen, and changed circumstances probes fire', () => {
-    const result = toGraph(graph, rulesetInputs).evaluate(scenarios[1].inputs).filter('output');
+    const result = toGraph(graph).evaluate(scenarios[1].inputs).filter('output');
     assert.deepStrictEqual(result.collect('error'),       {});
     assert.deepStrictEqual(result.collect('missing'),     {});
     assert.deepStrictEqual(result.collect('placeholder'), {});
@@ -86,7 +86,7 @@ describe('evaluator — snap interview probes', () => {
   });
 
   it('scenario 03: application binding omitted — changeVerificationProbe is missing', () => {
-    const result = toGraph(graph, rulesetInputs).evaluate(scenarios[2].inputs).filter('output');
+    const result = toGraph(graph).evaluate(scenarios[2].inputs).filter('output');
     assert.deepStrictEqual(result.collect('error'),       {});
     assert.deepStrictEqual(result.collect('placeholder'), {});
     assert.ok('changeVerificationProbe' in result.collect('missing'), 'changeVerificationProbe should be missing');
@@ -94,7 +94,7 @@ describe('evaluator — snap interview probes', () => {
   });
 
   it('scenario 04: type error on monthlyIncome — incomeInconsistencyProbe errors, member-based probes resolve', () => {
-    const result = toGraph(graph, rulesetInputs).evaluate(scenarios[3].inputs).filter('output');
+    const result = toGraph(graph).evaluate(scenarios[3].inputs).filter('output');
     assert.deepStrictEqual(result.collect('missing'),     {});
     assert.deepStrictEqual(result.collect('placeholder'), {});
     // incomeGapExists (intermediate) errors internally; its output probe surfaces as error
@@ -103,23 +103,28 @@ describe('evaluator — snap interview probes', () => {
     assert.strictEqual(result.get('changeVerificationProbe').state, 'complete', 'changeVerificationProbe should still be complete');
   });
 
-  it('scenario 05: null collection — CEL resolves exists() to false; all probes complete', () => {
-    // Note: FactGraph diverges here — it returns placeholder for member-based probes because
-    // it returns Placeholder for exists() over an unseeded collection. CEL patches null → []
-    // and evaluates exists() as false. Placeholder propagation from intermediate facts through
-    // to output probes is a known gap in the CEL evaluator.
-    const result = toGraph(graph, rulesetInputs).evaluate(scenarios[4].inputs).filter('output');
-    assert.deepStrictEqual(result.collect('error'),       {});
-    assert.deepStrictEqual(result.collect('missing'),     {});
-    assert.deepStrictEqual(result.collect('placeholder'), {});
-    for (const fact of PROBE_OUTPUTS) {
-      assert.strictEqual(result.get(fact).state, 'complete', `${fact} should be complete`);
+  it('scenario 05: null collection — member probes are placeholder, scalar probes complete', () => {
+    // A null collection is patched to [] and evaluates, so every probe resolves
+    // to false — but the member-based ones did so from a stand-in value, which
+    // makes them placeholder, and that travels to the probes computed from them.
+    // FactGraph agrees fact for fact; the parity test in fact-graph.test.js pins it.
+    const result = toGraph(graph).evaluate(scenarios[4].inputs).filter('output');
+    assert.deepStrictEqual(result.collect('error'),   {});
+    assert.deepStrictEqual(result.collect('missing'), {});
+
+    const memberProbes = ['generalWorkRequirementProbe', 'abawdProbe', 'studentEligibilityProbe', 'immigrationStatusProbe', 'felonComplianceProbe'];
+    for (const fact of memberProbes) {
+      assert.strictEqual(result.get(fact).state, 'placeholder', `${fact} reads the null collection`);
+      assert.strictEqual(result.get(fact).value, false);
+    }
+    for (const fact of ['incomeInconsistencyProbe', 'changeVerificationProbe']) {
+      assert.strictEqual(result.get(fact).state, 'complete', `${fact} reads only scalars`);
     }
     assert.strictEqual(result.get('changeVerificationProbe').value, false);
   });
 
   it('scenario 06: sub-field type error on age — member-based probe outputs error, income and change probes resolve', () => {
-    const result = toGraph(graph, rulesetInputs).evaluate(scenarios[5].inputs).filter('output');
+    const result = toGraph(graph).evaluate(scenarios[5].inputs).filter('output');
     assert.deepStrictEqual(result.collect('missing'),     {});
     assert.deepStrictEqual(result.collect('placeholder'), {});
     // Member-based intermediate facts error; their dependent probe outputs also error
@@ -131,4 +136,162 @@ describe('evaluator — snap interview probes', () => {
     assert.strictEqual(result.get('changeVerificationProbe').state,   'complete', 'changeVerificationProbe should still be complete');
   });
 
+});
+
+/**
+ * Input defaults come from the compiled graph, which declares them per field
+ * path ($.policy.maxAge), so they apply field by field.
+ *
+ * They used to come from the ruleset's authored `inputs:` block, passed to
+ * `evaluate` as a third argument and applied per namespace: a caller who
+ * supplied `policy` at all got no defaults for the parts of it they left out,
+ * and every fact reading those parts failed. Only the FactGraph comparison
+ * tool ever passed that argument, so through the package's own API defaults
+ * never applied at all.
+ */
+describe('evaluator — error messages', () => {
+  it("carries CEL's own reason, not just the expression", () => {
+    // The message used to be "Expression failed to evaluate: <expr>" and
+    // nothing else, because evaluateCEL swallowed the CelError and returned
+    // undefined — hiding the one sentence that says how to fix it.
+    const graph = {
+      outputs: ['scaled'],
+      inputs: { '$.household.size': { type: 'integer' } },
+      facts: { scaled: { expression: 'household.size * 1.5' } },
+      dependencies: { scaled: ['$.household.size'] },
+    };
+
+    const node = evaluate(graph, { household: { size: 2 } }).scaled;
+
+    assert.strictEqual(node.state, 'error');
+    assert.match(node.message, /household\.size \* 1\.5/, 'names the expression');
+    assert.match(node.message, /no matching overload/, "carries CEL's reason");
+    assert.match(node.message, /\(int, double\)/, 'names the types that did not match');
+  });
+});
+
+/**
+ * CEL keeps `int` and `double` apart and defines no arithmetic between them.
+ * A JS number says nothing about which it is, so every input used to reach CEL
+ * as a double and `household.size * 3` failed against a bare integer literal —
+ * reported only as "Expression failed to evaluate". The graph declares the
+ * type, so that is the type CEL is given.
+ */
+describe('evaluator — declared integers reach CEL as ints', () => {
+  const graphFor = (expression, type = 'integer') => ({
+    outputs: ['f'],
+    inputs: { '$.household.size': { type } },
+    facts: { f: { expression } },
+    dependencies: { f: ['$.household.size'] },
+  });
+
+  it('arithmetic against an integer literal works', () => {
+    const node = evaluate(graphFor('household.size * 3'), { household: { size: 2 } }).f;
+    assert.strictEqual(node.state, 'complete');
+    assert.strictEqual(node.value, 6);
+  });
+
+  it('division between integers truncates, as CEL specifies for ints', () => {
+    const node = evaluate(graphFor('household.size / 4'), { household: { size: 7 } }).f;
+    assert.strictEqual(node.value, 1, 'not 1.75 — the declaration says integer');
+  });
+
+  it('a `number` input keeps double semantics', () => {
+    const node = evaluate(graphFor('household.size * 1.5', 'number'), { household: { size: 2 } }).f;
+    assert.strictEqual(node.value, 3);
+  });
+
+  it('results come back as plain numbers, never BigInt', () => {
+    // celToJs narrows CEL ints back to JS numbers. If that ever stopped
+    // covering a path, callers would get a BigInt that breaks JSON.stringify.
+    const node = evaluate(graphFor('household.size * 3'), { household: { size: 2 } }).f;
+    assert.strictEqual(typeof node.value, 'number');
+  });
+
+  it('a derived integer fact is an int to the facts that read it', () => {
+    // A fact declares its type the same way an input does. Honouring it for
+    // inputs but not for facts made `a * 2` fail while `input * 2` worked.
+    const graph = {
+      outputs: ['doubled'],
+      inputs: { '$.household.size': { type: 'integer' } },
+      facts: {
+        tripled: { expression: 'household.size * 3', type: 'integer' },
+        doubled: { expression: 'tripled * 2' },
+      },
+      dependencies: { tripled: ['$.household.size'], doubled: ['tripled'] },
+    };
+
+    const nodes = evaluate(graph, { household: { size: 2 } });
+
+    assert.strictEqual(nodes.doubled.state, 'complete');
+    assert.strictEqual(nodes.doubled.value, 12);
+    assert.strictEqual(typeof nodes.tripled.value, 'number', 'the node keeps a plain number');
+  });
+
+  it('collection sub-fields convert without leaking BigInt or mutating inputs', () => {
+    const collectionOps = loadYaml(
+      join(__dirname, 'fixtures/collection-ops/collection-ops-graph.yaml')
+    );
+    const members = [
+      { name: 'Alice', age: 22, employed: true, citizenshipStatus: 'citizen' },
+      { name: 'Bob', age: 60, employed: false, citizenshipStatus: 'lpr' },
+    ];
+    const nodes = evaluate(collectionOps, {
+      household: { members },
+      policy: { minAge: 18, maxAge: 65 },
+    });
+
+    for (const item of nodes.adultsFilter.value) {
+      assert.strictEqual(typeof item.age, 'number', 'filtered items must not carry BigInt');
+    }
+    assert.strictEqual(members[0].age, 22, "the caller's objects are untouched");
+    assert.strictEqual(typeof members[0].age, 'number');
+  });
+});
+
+describe('evaluator — input defaults', () => {
+  const collectionOps = loadYaml(
+    join(__dirname, 'fixtures/collection-ops/collection-ops-graph.yaml')
+  );
+  // Ages 22 and 60; the declared defaults are minAge 18, maxAge 54.
+  const members = [
+    { name: 'Alice', age: 22, employed: true,  citizenshipStatus: 'citizen' },
+    { name: 'Bob',   age: 60, employed: false, citizenshipStatus: 'lpr' },
+  ];
+  const names = (nodes) => nodes.adultsFilter.value.map((m) => m.name);
+
+  it('applies every default when the namespace is absent', () => {
+    const nodes = evaluate(collectionOps, { household: { members } });
+
+    assert.strictEqual(nodes.adultsFilter.state, 'placeholder');
+    assert.deepStrictEqual(names(nodes), ['Alice']);
+  });
+
+  it('defaults the fields a partial namespace leaves out', () => {
+    // minAge supplied, maxAge left to its default of 54 — Bob is still out.
+    const nodes = evaluate(collectionOps, {
+      household: { members },
+      policy: { minAge: 25 },
+    });
+
+    assert.strictEqual(nodes.adultsFilter.state, 'placeholder');
+    assert.deepStrictEqual(names(nodes), [], 'Alice is under the supplied minAge, Bob over the default maxAge');
+  });
+
+  it('leaves supplied values alone', () => {
+    const nodes = evaluate(collectionOps, {
+      household: { members },
+      policy: { minAge: 18, maxAge: 65 },
+    });
+
+    assert.strictEqual(nodes.adultsFilter.state, 'complete');
+    assert.deepStrictEqual(names(nodes), ['Alice', 'Bob']);
+  });
+
+  it('does not mutate the caller\'s inputs', () => {
+    const inputs = { household: { members }, policy: { minAge: 25 } };
+    evaluate(collectionOps, inputs);
+
+    assert.deepStrictEqual(inputs.policy, { minAge: 25 }, 'maxAge must not leak back into the caller\'s object');
+  });
 });

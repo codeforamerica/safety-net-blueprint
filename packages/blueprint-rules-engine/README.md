@@ -13,95 +13,132 @@
 npm install @codeforamerica/blueprint-rules-engine
 ```
 
-## What It Does
+## What it does
 
-Evaluates Blueprint dependency graph rulesets — declarative CEL expressions that compute eligibility facts from household and policy inputs. Designed to run in both Node.js and the browser.
+Evaluates a **compiled rule graph** — declarative CEL expressions that derive facts from
+inputs such as household circumstances and policy parameters. It runs in Node.js and in
+the browser, with no network call and no contract tooling installed.
 
-Facts are returned in four states:
-
-| State | Meaning |
-|-------|---------|
-| `complete` | Resolved; all inputs were explicitly provided |
-| `placeholder` | Resolved; at least one input fell back to a schema default |
-| `missing` | Could not compute; required inputs were absent |
-| `errors` | Expression threw during evaluation |
+Compiling a `*-rules.yaml` contract into a graph is a build step, and it belongs to
+[`blueprint-core`](https://www.npmjs.com/package/@codeforamerica/blueprint-core). This
+package is the runtime. Keeping the two apart is what lets the evaluator ship to a
+browser: it depends on a CEL interpreter and nothing else.
 
 ## Usage
 
-### Evaluate a ruleset from a `*-rules.yaml` document
-
 ```js
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
-import { readFileSync } from 'fs';
-import yaml from 'js-yaml';
 
-const rulesDoc = yaml.load(readFileSync('snap-rules.yaml', 'utf8'));
-
-const result = evaluate(rulesDoc, {
-  household: { size: 3, monthlyIncome: 2400 },
-  policy:    { incomeLimitMultiplier: 1.3 }
+const nodes = evaluate(graph, {
+  household: { members: [{ name: 'Alice', age: 22, employed: true }] },
+  policy:    { minAge: 18, maxAge: 65 },
 });
 
-console.log(result.complete);
-// { meetsIncomeTest: true, isEligible: true }
-
-console.log(result.missing);
-// { hasQualifyingImmigrationStatus: ['$.household.immigrationStatus'] }
+nodes.adultsFilter;
+// { type: 'output', state: 'complete', value: [ { name: 'Alice', … } ] }
 ```
 
-### Evaluate a pre-compiled graph directly
+The return is a flat map of every fact in the graph, keyed by fact name. Inputs are keyed
+by the graph's top-level namespaces — `{ household: … }` for paths beginning
+`$.household`.
+
+To produce the graph, compile the contract once at build time:
 
 ```js
-import { evaluateGraph } from '@codeforamerica/blueprint-rules-engine';
+import { discover, load, generate } from '@codeforamerica/blueprint-core';
 
-// graph is the output of compileRuleset() from @codeforamerica/blueprint-core
-const result = evaluateGraph(graph, {
-  household: { size: 3, monthlyIncome: 2400 }
-});
+const docs   = discover('./contracts', 'rules').map(load);
+const graphs = generate(docs, 'graph');   // [{ graph, … }, …]
 ```
 
-Use `evaluateGraph` when you have already compiled the ruleset (e.g. at server startup) and want to skip the compilation step on each request.
+Compiled graphs are also written to disk as `*-graph.yaml` by `blueprint-resolve`, so a
+consumer can load one directly rather than depending on core at all.
 
-## API
+### Partial inputs
 
-### `evaluate(rulesDoc, inputs, [rulesetName])`
+Inputs may be incomplete. Nothing throws — each fact reports what it could do:
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `rulesDoc` | `Object` | Parsed `*-rules.yaml` document |
-| `inputs` | `Object` | Named input objects (e.g. `{ household, policy }`) |
-| `rulesetName` | `string` | Ruleset to evaluate; defaults to the first ruleset in the document |
+| `state` | Meaning |
+|---|---|
+| `complete` | Resolved; every input it reads was supplied |
+| `placeholder` | Resolved, but at least one input fell back to a default declared in the graph |
+| `missing` | Could not compute; `missing` lists the input paths it could not reach |
+| `error` | Could not compute; `message` says why (bad input type, failed expression, or a dependency in one of those states) |
 
-Returns `{ complete, placeholder, missing, errors }`.
+Each node also carries `type`, either `output` (a fact the ruleset declares as an answer)
+or `intermediate` (a step on the way to one).
 
-### `evaluateGraph(graph, inputs)`
+Omit an input that has a declared default and the fact resolves, flagged:
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `graph` | `Object` | Compiled graph from `compileRuleset()` or a parsed `*-graph.yaml` |
-| `inputs` | `Object` | Named input objects |
+```js
+evaluate(graph, { household: { members } });   // no policy supplied
 
-Returns `{ complete, placeholder, missing, errors }`. No schema defaults are applied — all inputs must be explicit.
+// adultsFilter → { type: 'output', state: 'placeholder', value: [ … ] }
+// allEmployed  → { type: 'output', state: 'complete',    value: false }
+```
 
-## Browser bundle
+Defaults are read from the graph's `inputs`, which declares them per field path, so
+supplying part of a namespace still defaults the rest of it.
 
-A pre-built IIFE bundle is published at `dist/browser.js` and exposed via the `./browser` package export. It provides `window.RulesEngine = { evaluateGraph }` for use in browser environments without a bundler.
+Omit one with no default and its dependents say exactly what they need:
+
+```js
+evaluate(graph, { policy: { minAge: 18, maxAge: 65 } });   // no household supplied
+
+// adultsFilter → {
+//   type: 'output', state: 'missing', value: null,
+//   missing: ['$.household.members[]']
+// }
+```
+
+That list is what drives progressive disclosure: ask for the inputs the pending outputs
+actually need, and nothing else.
+
+## TypeScript
+
+Types ship with the package — no `@types` install.
+
+```ts
+import { evaluate, type Graph, type FactNode } from '@codeforamerica/blueprint-rules-engine';
+
+const nodes: Record<string, FactNode<unknown>> = evaluate(graph, inputs);
+
+if (nodes.adultsFilter.state === 'missing') {
+  nodes.adultsFilter.missing;   // string[] — narrowed by the discriminated union
+}
+```
+
+`FactNode` is a union discriminated on `state`, so `missing` and `message` are reachable
+only on the states that carry them.
+
+For per-ruleset input and result types rather than `unknown`, generate a client with
+`blueprint-generate-ts-clients`: it emits `${Ruleset}Inputs` and `${Ruleset}Result` and a
+`Rules` export that embeds the graph.
+
+## Browser
+
+A pre-built IIFE bundle ships at `dist/browser.js`, exposed through the `./browser`
+package export. Loaded from a script tag it sets `window.RulesEngine`:
 
 ```html
-<script src="node_modules/@codeforamerica/blueprint-rules-engine/dist/browser.js"></script>
+<script src="https://unpkg.com/@codeforamerica/blueprint-rules-engine/dist/browser.js"></script>
 <script>
-  const result = window.RulesEngine.evaluateGraph(graph, {
-    household: { monthlyIncome: 1800, monthlyExpenses: 2100, members: [] }
+  const nodes = window.RulesEngine.evaluate(graph, {
+    household: { members: [{ name: 'Alice', age: 22, employed: true }] },
   });
-  console.log(result.complete);
 </script>
 ```
 
-The bundle includes only `evaluateGraph` — the function that takes a **pre-compiled** `*-graph.yaml` document. The `evaluate()` function (which compiles a `*-rules.yaml` at call time) is excluded because compilation is a build-time step. Callers receive compiled graphs from the resolve pipeline and evaluate them directly in the browser.
+The bundle is an IIFE and exports nothing importable, so the global is the only way to
+reach it. With a bundler, import `evaluate` from the package root instead — the global is
+typed via `declare global` for the script-tag case.
 
-The bundle is regenerated from source by `npm run build:browser` in this package. Run this after changing `src/cel.js` or `src/evaluator.js`, then commit `dist/browser.js`. The preflight check enforces that the committed bundle matches the current source.
+The bundle is regenerated from source by `npm run build:browser`, and `prepare` runs it
+before publish. `dist/browser.js` is committed, and preflight fails if it has drifted from
+`src/`.
 
 ## Related packages
 
-- [`@codeforamerica/blueprint-core`](https://www.npmjs.com/package/@codeforamerica/blueprint-core) — compiles rulesets and resolves contracts
-- [`@codeforamerica/blueprint-mock-server`](https://www.npmjs.com/package/@codeforamerica/blueprint-mock-server) — mock API server that runs rulesets at the `/rules-eval` endpoint
+- [`@codeforamerica/blueprint-core`](https://www.npmjs.com/package/@codeforamerica/blueprint-core) — compiles rulesets into graphs and resolves contracts
+- [`@codeforamerica/blueprint-cli`](https://www.npmjs.com/package/@codeforamerica/blueprint-cli) — `blueprint-evaluate` runs rulesets from the command line; `blueprint-generate-ts-clients` emits typed per-ruleset clients
+- [`@codeforamerica/blueprint-mock-server`](https://www.npmjs.com/package/@codeforamerica/blueprint-mock-server) — serves a POST endpoint for every ruleset that declares an `endpoint:`

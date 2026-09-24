@@ -8,7 +8,8 @@
  *
  * @param {string} expr    - CEL expression string
  * @param {Object} context - flat map of variable names to values
- * @returns {*} evaluated result (plain JS); undefined on any error
+ * @returns {*} evaluated result (plain JS)
+ * @throws {Error} with CEL's own message when the expression does not evaluate
  */
 
 import { run, isCelError, isCelList, isCelMap } from '@bufbuild/cel';
@@ -27,8 +28,18 @@ function celToJs(val) {
 }
 
 export function evaluateCEL(expr, context = {}) {
-  if (!expr || typeof expr !== 'string') return undefined;
+  if (!expr || typeof expr !== 'string') {
+    throw new Error(`Not a CEL expression: ${JSON.stringify(expr)}`);
+  }
+
   const result = run(expr, context);
-  if (isCelError(result)) return undefined;
+
+  // CEL's own message is the only thing that says *why*. Swallowing it and
+  // returning undefined left every failure reading "Expression failed to
+  // evaluate", which cannot be acted on — the most common cause is a type
+  // mismatch CEL names precisely, e.g. "found no matching overload for '_*_'
+  // applied to '(double, int)'" when an input meets an integer literal.
+  if (isCelError(result)) throw new Error(result.message);
+
   return celToJs(result);
 }

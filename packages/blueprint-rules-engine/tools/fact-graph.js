@@ -41,6 +41,7 @@ function tokenize(expr) {
     if (ch === '!' && expr[i + 1] === '=') { tokens.push({ type: 'op', value: '!=' }); i += 2; continue; }
     if (ch === '=' && expr[i + 1] === '=') { tokens.push({ type: 'op', value: '==' }); i += 2; continue; }
     if (ch === '<' || ch === '>' || ch === '!') { tokens.push({ type: 'op', value: ch }); i++; continue; }
+    if ('+-*/%'.includes(ch)) { tokens.push({ type: 'op', value: ch }); i++; continue; }
     if (ch === '(') { tokens.push({ type: 'lparen' }); i++; continue; }
     if (ch === ')') { tokens.push({ type: 'rparen' }); i++; continue; }
     if (ch === ',') { tokens.push({ type: 'comma' }); i++; continue; }
@@ -50,7 +51,15 @@ function tokenize(expr) {
       let num = '';
       while (i < expr.length && /[0-9.]/.test(expr[i])) num += expr[i++];
       const isFloat = num.includes('.');
-      tokens.push({ type: 'literal', kind: isFloat ? 'float' : 'int', value: isFloat ? parseFloat(num) : parseInt(num, 10) });
+      // `text` is kept so a decimal can be turned into an exact fraction later.
+      // Going through parseFloat first and reconstructing loses the precision
+      // that makes the fraction exact.
+      tokens.push({
+        type: 'literal',
+        kind: isFloat ? 'float' : 'int',
+        value: isFloat ? parseFloat(num) : parseInt(num, 10),
+        text: num,
+      });
       continue;
     }
 
@@ -123,17 +132,38 @@ function parse(expr) {
   }
 
   function parseCmp() {
-    let left = parseUnary();
+    let left = parseAdd();
     const t = peek();
     if (t.type === 'op' && ['<', '>', '<=', '>=', '==', '!='].includes(t.value)) {
       consume();
-      return { type: 'binary', op: t.value, left, right: parseUnary() };
+      return { type: 'binary', op: t.value, left, right: parseAdd() };
+    }
+    return left;
+  }
+
+  // Arithmetic binds tighter than comparison, and * / % tighter than + -,
+  // which is CEL's precedence and JavaScript's.
+  function parseAdd() {
+    let left = parseMul();
+    while (peek().type === 'op' && (peek().value === '+' || peek().value === '-')) {
+      const op = consume().value;
+      left = { type: 'binary', op, left, right: parseMul() };
+    }
+    return left;
+  }
+
+  function parseMul() {
+    let left = parseUnary();
+    while (peek().type === 'op' && ['*', '/', '%'].includes(peek().value)) {
+      const op = consume().value;
+      left = { type: 'binary', op, left, right: parseUnary() };
     }
     return left;
   }
 
   function parseUnary() {
     if (matchOp('!')) { consume(); return { type: 'unary', op: '!', operand: parseUnary() }; }
+    if (matchOp('-')) { consume(); return { type: 'unary', op: '-', operand: parseUnary() }; }
     return parsePostfix();
   }
 
@@ -233,6 +263,30 @@ function toFgPath(jsonPath) {
 
 // ── Schema / type utilities ───────────────────────────────────────────────────
 
+/**
+ * Turn a decimal literal into the exact fraction FactGraph's Rational wants.
+ *
+ * `<Rational>` parses "13/10" and rejects "1.3", so the conversion has to
+ * happen here. It works from the literal's source text rather than a parsed
+ * float, because 1.3 as a double is not exactly 13/10 and reconstructing the
+ * fraction from it reintroduces the error the Rational exists to avoid.
+ *
+ * @param {string} text - the literal as written, e.g. "1.30"
+ * @returns {string} "numerator/denominator", reduced
+ */
+function decimalToFraction(text) {
+  const [whole, frac = ''] = String(text).split('.');
+  if (!frac) return `${parseInt(whole, 10)}/1`;
+
+  const denominator = 10 ** frac.length;
+  const numerator = parseInt(whole, 10) * denominator + parseInt(frac, 10);
+
+  const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
+  const divisor = gcd(Math.abs(numerator), denominator) || 1;
+
+  return `${numerator / divisor}/${denominator / divisor}`;
+}
+
 function schemaTypeToFgType(schemaType) {
   switch (schemaType) {
     case 'integer': return 'Int';
@@ -296,10 +350,13 @@ function astToXml(node, ctx) {
   switch (node.type) {
 
     case 'literal': {
-      const { kind, value } = node;
+      const { kind, value, text } = node;
       if (kind === 'bool')   return value ? '<True/>' : '<False/>';
       if (kind === 'int')    return `<Int>${value}</Int>`;
-      if (kind === 'float')  return `<Int>${Math.round(value)}</Int>`;
+      // A decimal becomes an exact fraction. This used to round to the nearest
+      // Int, so `limit * 1.3` compared against `limit * 1` and the two
+      // evaluators silently computed different things.
+      if (kind === 'float')  return `<Rational>${decimalToFraction(text ?? String(value))}</Rational>`;
       if (kind === 'string') return `<String>${escapeXml(value)}</String>`;
       throw new Error(`Unknown literal kind: ${kind}`);
     }
@@ -321,12 +378,36 @@ function astToXml(node, ctx) {
 
     case 'unary': {
       if (node.op === '!') return `<Not>${astToXml(node.operand, ctx)}</Not>`;
+      if (node.op === '-') {
+        // FactGraph has no negation node; 0 - x is the same thing.
+        return `<Subtract><Minuend><Int>0</Int></Minuend>` +
+               `<Subtrahends>${astToXml(node.operand, ctx)}</Subtrahends></Subtract>`;
+      }
       throw new Error(`Unknown unary op: ${node.op}`);
     }
 
     case 'binary': {
       if (node.op === '&&') return flattenMulti('All', node, '&&', ctx);
       if (node.op === '||') return flattenMulti('Any', node, '||', ctx);
+
+      // Arithmetic. Add and Multiply take their operands as plain children;
+      // Subtract and Divide name theirs. Shapes verified against the engine,
+      // not guessed — FactGraph rejects an unknown wrapper element outright.
+      if (node.op === '+') return flattenMulti('Add', node, '+', ctx);
+      if (node.op === '*') return flattenMulti('Multiply', node, '*', ctx);
+      if (node.op === '-') {
+        return `<Subtract><Minuend>${astToXml(node.left, ctx)}</Minuend>` +
+               `<Subtrahends>${astToXml(node.right, ctx)}</Subtrahends></Subtract>`;
+      }
+      if (node.op === '/') {
+        return `<Divide><Dividend>${astToXml(node.left, ctx)}</Dividend>` +
+               `<Divisors>${astToXml(node.right, ctx)}</Divisors></Divide>`;
+      }
+      if (node.op === '%') {
+        // No modulo CompNode exists in the FactGraph dictionary.
+        throw new Error("FactGraph has no modulo operator, so '%' cannot be translated");
+      }
+
       const tag = binaryOpTag(node.op);
       const left = astToXml(node.left, ctx);
       const right = astToXml(node.right, ctx);
@@ -462,15 +543,26 @@ function indentXml(flat) {
   return out.join('\n');
 }
 
-export function toFactGraph(graph) {
+/**
+ * @param {Object} graph
+ * @param {Map<string,string>} [untranslated] - filled with factName → reason for
+ *   every fact left out of the dictionary. Pass one in to find out what was
+ *   dropped; ignore it and the behaviour is unchanged.
+ */
+export function toFactGraph(graph, untranslated = new Map()) {
   const lines = ['<FactDictionaryModule>'];
   const ctx = buildContext(graph.inputs);
 
-  // Writable input facts
+  // Writable input facts. A declared default becomes a <Placeholder>, which is
+  // FactGraph's own name for a stand-in value — without it the engine is asked
+  // a different question than the CEL evaluator and answers from an unset fact.
   for (const [jsonPath, spec] of Object.entries(graph.inputs)) {
     const fgp = toFgPath(jsonPath);
     const fgType = schemaTypeToFgType(spec.type);
-    lines.push(`  <Fact path="${fgp}"><Writable><${fgType}/></Writable></Fact>`);
+    const placeholder = spec.default === undefined
+      ? ''
+      : `<Placeholder><${fgType}>${spec.default}</${fgType}></Placeholder>`;
+    lines.push(`  <Fact path="${fgp}"><Writable><${fgType}/></Writable>${placeholder}</Fact>`);
   }
 
   // Derived output facts
@@ -483,7 +575,12 @@ export function toFactGraph(graph) {
       const ast = parse(expr);
       derivedXml = astToXml(ast, { ...ctx, filterVar: null, filterCollPath: null });
     } catch (err) {
-      // Skip facts that can't be translated to FactGraph XML
+      // Not every CEL construct has a FactGraph equivalent, and skipping keeps
+      // the rest of the graph comparable. But a silent skip surfaces later as
+      // "path '/factName' was not found", which says nothing about the cause —
+      // that is how a decimal literal in an expression presented for a while.
+      // Record the reason so the caller can report it instead.
+      untranslated.set(factName, err.message ?? String(err));
       continue;
     }
 
@@ -715,7 +812,8 @@ function extractResult(result, uuidToItem) {
  */
 function evaluateCompiledWithFactGraph(graph, inputs) {
   const outputSet = new Set(graph.outputs);
-  const xml = toFactGraph(graph);
+  const untranslated = new Map();
+  const xml = toFactGraph(graph, untranslated);
 
   const dict = FactDictionaryFactory.importFromXml(xml);
   const fgGraph = GraphFactory.apply(dict);
@@ -742,7 +840,15 @@ function evaluateCompiledWithFactGraph(graph, inputs) {
         nodes[factName] = { type, state: extracted.state, value: extracted.value };
       }
     } catch (err) {
-      nodes[factName] = { type, state: 'error', value: null, message: err.message ?? String(err) };
+      const reason = untranslated.get(factName);
+      nodes[factName] = {
+        type,
+        state: 'error',
+        value: null,
+        message: reason
+          ? `'${factName}' has no FactGraph translation, so it is absent from the dictionary: ${reason}`
+          : (err.message ?? String(err)),
+      };
     }
   }
 

@@ -11,9 +11,13 @@
  *   message     — error description (state: 'error' only)
  *   missing     — list of unresolved input paths (state: 'missing' only)
  *
- * States mirror FactGraph's Complete/Placeholder/Incomplete:
- *   complete    — fact resolved; all inputs explicitly provided
- *   placeholder — fact resolved; at least one input used a schema default
+ * States mirror FactGraph's Complete/Placeholder/Incomplete, and are pinned to
+ * it fact for fact by the parity tests in tests/fact-graph.test.js:
+ *   complete    — fact resolved; every input it read was explicitly provided
+ *   placeholder — fact resolved, but from a stand-in somewhere: an input that
+ *                 fell back to its declared default, a null collection read as
+ *                 [], or another fact that is itself a placeholder. Placeholder
+ *                 is contagious in FactGraph and is contagious here.
  *   missing     — fact could not compute; missing required input paths (tracked)
  *   error       — fact threw during evaluation
  *
@@ -63,25 +67,33 @@ function buildNullCollectionPaths(graphInputs, inputs) {
 }
 
 /**
+ * Write a value into the scope at a dotted path, cloning every object along
+ * the way so the caller's input objects are never mutated.
+ *
+ * Missing intermediate objects are created, so a value can be written into a
+ * namespace the caller did not supply at all.
+ */
+function setScopePath(scope, inputs, parts, value) {
+  const namespace = parts[0];
+  // Shallow-clone the namespace so we don't mutate the user's object
+  if (scope[namespace] === inputs[namespace]) {
+    scope[namespace] = { ...inputs[namespace] };
+  }
+  let obj = scope[namespace];
+  for (let i = 1; i < parts.length - 1; i++) {
+    obj[parts[i]] = obj[parts[i]] != null ? { ...obj[parts[i]] } : {};
+    obj = obj[parts[i]];
+  }
+  obj[parts[parts.length - 1]] = value;
+}
+
+/**
  * Patch a scope object so that null array values become [].
- * Clones affected namespace objects to avoid mutating the caller's inputs.
  */
 function patchNullCollections(scope, inputs, nullCollectionPaths) {
   for (const path of nullCollectionPaths) {
-    // '$.household.members[]' → 'household.members' → ['household', 'members']
-    const clean = path.slice(2).replace(/\[\]$/, '');
-    const parts = clean.split('.');
-    const namespace = parts[0];
-    // Shallow-clone the namespace so we don't mutate the user's object
-    if (scope[namespace] === inputs[namespace]) {
-      scope[namespace] = { ...inputs[namespace] };
-    }
-    let obj = scope[namespace];
-    for (let i = 1; i < parts.length - 1; i++) {
-      if (obj[parts[i]] != null) obj[parts[i]] = { ...obj[parts[i]] };
-      obj = obj[parts[i]];
-    }
-    obj[parts[parts.length - 1]] = [];
+    // '$.household.members[]' → ['household', 'members']
+    setScopePath(scope, inputs, path.slice(2).replace(/\[\]$/, '').split('.'), []);
   }
 }
 
@@ -188,16 +200,75 @@ function resolveInputPath(path, inputs) {
 // ── Core evaluator ─────────────────────────────────────────────────────────────
 
 /**
- * Build a scope object from a schema's property defaults.
- * Returns undefined if no defaults are declared.
+ * Convert values the graph declares as `integer` into BigInt, which is how a
+ * CEL `int` is expressed in JavaScript.
+ *
+ * CEL keeps `int` and `double` apart and defines no arithmetic between them,
+ * so `household.size * 3` fails when `size` arrives as a JS number: the value
+ * is a double and the literal is an int. A JS number carries no int/double
+ * distinction for the runtime to read, and the graph declares the type — so
+ * the type it declares is the one CEL should see.
+ *
+ * This also makes `integer / integer` truncate, which is CEL's semantics for
+ * two ints and what the declaration asks for. A fact wanting real division
+ * should say `double(x)`, exactly as it would in any other CEL host.
+ *
+ * Non-integral values are left alone even where the declaration says
+ * `integer`; `buildInputTypeErrors` is what reports those.
  */
-function buildDefaultScope(inputSchema) {
-  if (inputSchema.type !== 'object') return undefined;
-  const obj = {};
-  for (const [propName, propSchema] of Object.entries(inputSchema.properties ?? {})) {
-    if (propSchema.default !== undefined) obj[propName] = propSchema.default;
+function coerceDeclaredIntegers(scope, inputs, graphInputs) {
+  for (const [path, spec] of Object.entries(graphInputs ?? {})) {
+    if (spec.type !== 'integer') continue;
+
+    const inner = path.slice(2);
+    const subFieldIdx = inner.indexOf('[].');
+
+    if (subFieldIdx === -1) {
+      const val = resolveInputPath(path, scope);
+      if (Number.isInteger(val)) setScopePath(scope, inputs, inner.split('.'), BigInt(val));
+      continue;
+    }
+
+    // Collection sub-field ($.household.members[].age) — convert the field on
+    // every item, replacing the array so the caller's items stay untouched.
+    const collRef = inner.slice(0, subFieldIdx);
+    const field = inner.slice(subFieldIdx + 3);
+    const arr = resolveInputPath(`$.${collRef}`, scope);
+    if (!Array.isArray(arr)) continue;
+
+    setScopePath(
+      scope,
+      inputs,
+      collRef.split('.'),
+      arr.map((item) =>
+        item && Number.isInteger(item[field]) ? { ...item, [field]: BigInt(item[field]) } : item
+      )
+    );
   }
-  return Object.keys(obj).length > 0 ? obj : undefined;
+}
+
+/**
+ * Declared input paths that carry a `default` and whose value the caller did
+ * not supply, mapped to that default.
+ *
+ * The defaults are read from the compiled graph, keyed by field path, so a
+ * caller who supplies part of a namespace still gets defaults for the rest of
+ * it. They used to be read from the ruleset's authored `inputs:` block, passed
+ * in alongside the graph — that applied defaults only when a whole namespace
+ * was absent, and required the caller to hold the rules contract this engine
+ * deliberately does not depend on.
+ *
+ * Collection sub-fields ($.household.members[].age) are skipped: there is no
+ * item to default into until the collection itself is supplied.
+ */
+function buildDefaultedPaths(graphInputs, inputs) {
+  const defaults = new Map();
+  for (const [path, spec] of Object.entries(graphInputs ?? {})) {
+    if (spec.default === undefined || path.includes('[]')) continue;
+    // null counts as absent here, matching how missing inputs are treated
+    if (resolveInputPath(path, inputs) == null) defaults.set(path, spec.default);
+  }
+  return defaults;
 }
 
 /**
@@ -205,35 +276,25 @@ function buildDefaultScope(inputSchema) {
  *
  * @param {Object} graph          - compiled graph document (facts, outputs, inputs, dependencies)
  * @param {Object} inputs         - named input objects, e.g. { household: { ... } }
- * @param {Object} [_rulesetInputs] - internal: raw namespace schemas for default application
  * @returns {Object}              - plain map of fact names to typed nodes
  */
-export function evaluate(graph, inputs, _rulesetInputs = null) {
+export function evaluate(graph, inputs) {
   const outputSet = new Set(graph.outputs);
   const factNames = Object.keys(graph.facts);
   const ordered = topoSort(factNames, graph.dependencies);
 
-  const scope = {};
-  const defaultedNamespaces = new Set();
+  const scope = { ...inputs };
 
-  if (_rulesetInputs) {
-    for (const [inputName, inputSchema] of Object.entries(_rulesetInputs)) {
-      if (inputs[inputName] !== undefined) {
-        scope[inputName] = inputs[inputName];
-      } else {
-        const defaults = buildDefaultScope(inputSchema);
-        if (defaults !== undefined) {
-          scope[inputName] = defaults;
-          defaultedNamespaces.add(inputName);
-        }
-      }
-    }
-  } else {
-    Object.assign(scope, inputs);
+  const defaultedPaths = buildDefaultedPaths(graph.inputs, inputs);
+  for (const [path, value] of defaultedPaths) {
+    setScopePath(scope, inputs, path.slice(2).split('.'), value);
   }
 
   const nullCollectionPaths = buildNullCollectionPaths(graph.inputs, inputs);
   patchNullCollections(scope, inputs, nullCollectionPaths);
+
+  // Last, so it also covers values written in by the two passes above.
+  coerceDeclaredIntegers(scope, inputs, graph.inputs);
 
   const inputTypeErrors = buildInputTypeErrors(graph.inputs, inputs);
   const resolved = {};
@@ -249,19 +310,15 @@ export function evaluate(graph, inputs, _rulesetInputs = null) {
       if (dep.startsWith('$.')) {
         if (inputTypeErrors.has(dep)) {
           erroredDeps.add(dep);
-        } else if (nullCollectionPaths.has(dep)) {
+        } else if (nullCollectionPaths.has(dep) || defaultedPaths.has(dep)) {
           defaultedDeps.add(dep);
         } else {
           const val = resolveInputPath(dep, inputs);
-          if (val == null) {
-            const topLevel = dep.slice(2).split('.')[0];
-            if (!defaultedNamespaces.has(topLevel)) {
-              missingPaths.add(dep);
-            }
-          }
+          if (val == null) missingPaths.add(dep);
         }
       } else {
-        // Fact dependency — propagate errors or missing upward
+        // Fact dependency — propagate error, missing and placeholder upward.
+        // Facts are visited in topological order, so nodes[dep] is settled.
         if (nodes[dep]?.state === 'error') {
           erroredDeps.add(dep);
         } else if (resolved[dep] === undefined) {
@@ -270,6 +327,10 @@ export function evaluate(graph, inputs, _rulesetInputs = null) {
           } else {
             missingPaths.add(dep);
           }
+        } else if (nodes[dep]?.state === 'placeholder') {
+          // A fact computed from a placeholder is itself a placeholder —
+          // FactGraph's Placeholder is contagious the same way.
+          defaultedDeps.add(dep);
         }
       }
     }
@@ -293,21 +354,29 @@ export function evaluate(graph, inputs, _rulesetInputs = null) {
     const expr = factDecl?.expression;
     if (!expr) continue;
 
-    const result = evaluateCEL(expr, scope);
-    if (result === undefined) {
-      nodes[factName] = { type, state: 'error', value: null, message: `Expression failed to evaluate: ${expr}` };
-    } else {
-      resolved[factName] = result;
-      scope[factName] = result;
-
-      const usedDefault = defaultedDeps.size > 0 || deps.some(dep => {
-        if (!dep.startsWith('$.')) return false;
-        const topLevel = dep.slice(2).split('.')[0];
-        return defaultedNamespaces.has(topLevel);
-      });
-
-      nodes[factName] = { type, state: usedDefault ? 'placeholder' : 'complete', value: result };
+    let result;
+    try {
+      result = evaluateCEL(expr, scope);
+    } catch (err) {
+      nodes[factName] = {
+        type,
+        state: 'error',
+        value: null,
+        message: `Expression failed to evaluate: ${expr} — ${err.message}`,
+      };
+      continue;
     }
+
+    resolved[factName] = result;
+    // A fact declares its type just as an input does, and a fact reading it
+    // has to see the same CEL type either way — otherwise `a * 2` fails on a
+    // derived integer while succeeding on a declared one. The node keeps the
+    // plain JS number; only the value CEL reads back is widened.
+    scope[factName] =
+      factDecl?.type === 'integer' && Number.isInteger(result) ? BigInt(result) : result;
+
+    const state = defaultedDeps.size > 0 ? 'placeholder' : 'complete';
+    nodes[factName] = { type, state, value: result };
   }
 
   return nodes;
@@ -338,12 +407,11 @@ export class EvalResult {
 }
 
 export class Graph {
-  constructor(compiled, rulesetInputs) {
+  constructor(compiled) {
     this._compiled = compiled;
-    this._rulesetInputs = rulesetInputs ?? null;
   }
   evaluate(inputs) {
-    return new EvalResult(evaluate(this._compiled, inputs, this._rulesetInputs));
+    return new EvalResult(evaluate(this._compiled, inputs));
   }
 }
 
@@ -356,16 +424,15 @@ export class Graph {
  * contract tooling installed.
  *
  * @param {object} graph - A compiled graph: facts, outputs, dependencies
- * @param {object} [inputs] - The ruleset's declared inputs, for type checking
  * @returns {Graph}
  */
-export function toGraph(graph, inputs) {
+export function toGraph(graph) {
   if (!graph?.facts || !graph?.outputs) {
     throw new TypeError(
       'toGraph expects a compiled graph (facts, outputs). To compile a rules ' +
       'contract, use generate(docs, \'graph\') from @codeforamerica/blueprint-core ' +
-      'the graph it produces.'
+      'and pass the graph it produces.'
     );
   }
-  return new Graph(graph, inputs);
+  return new Graph(graph);
 }

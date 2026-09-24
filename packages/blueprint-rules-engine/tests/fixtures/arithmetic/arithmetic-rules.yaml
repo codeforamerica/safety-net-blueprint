@@ -1,0 +1,52 @@
+$schema: "https://blueprint.codeforamerica.org/schemas/rules-schema.yaml"
+domain: eligibility
+rulesets:
+  arithmetic:
+    description: >
+      Arithmetic parity between the CEL evaluator and FactGraph. Modelled on
+      the expedited SNAP rule in blueprint-harness, which is the expression
+      that exposed the translator having no arithmetic at all — its tokenizer
+      rejected '+' outright, so the fact was dropped from the FactGraph
+      dictionary and the two engines were never compared on it.
+
+      Only operand-to-operand arithmetic is covered. Mixing an input with a
+      bare integer literal (income * 3) fails in CEL, and arithmetic producing
+      a Rational cannot be compared against an Int in FactGraph; both are
+      recorded in the header of fact-graph.test.js.
+    inputs:
+      household:
+        type: object
+        properties:
+          monthlyGrossIncome:
+            type: integer
+            description: Gross monthly income for the household.
+          liquidResources:
+            type: integer
+            description: Cash and funds available to the household now.
+          monthlyShelterCost:
+            type: integer
+            description: Rent or mortgage plus utilities.
+          deduction:
+            type: integer
+            description: Total deductions applied against gross income.
+
+    outputs:
+      combinedUnderShelter:
+        type: boolean
+      netIncome:
+        type: integer
+      hasNetIncome:
+        type: boolean
+
+    facts:
+      - path: combinedUnderShelter
+        description: Expedited SNAP — income and resources together fall short of shelter cost.
+        expression: "(household.monthlyGrossIncome + household.liquidResources) < household.monthlyShelterCost"
+
+      - path: netIncome
+        description: Gross income less deductions.
+        expression: "household.monthlyGrossIncome - household.deduction"
+
+      - path: hasNetIncome
+        description: Whether anything remains after deductions. Reads a derived fact, not an input.
+        expression: "netIncome > 0"

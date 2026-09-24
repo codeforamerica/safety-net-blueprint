@@ -28,11 +28,17 @@
     <Writable>
       <Int/>
     </Writable>
+    <Placeholder>
+      <Int>18</Int>
+    </Placeholder>
   </Fact>
   <Fact path="/policy_maxAge">
     <Writable>
       <Int/>
     </Writable>
+    <Placeholder>
+      <Int>54</Int>
+    </Placeholder>
   </Fact>
   <Fact path="/adultsFilter">
     <Derived>
