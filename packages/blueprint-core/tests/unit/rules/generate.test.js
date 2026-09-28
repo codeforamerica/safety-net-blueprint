@@ -12,6 +12,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert';
 import { generateRulesResults } from '../../../src/rules.js';
+import { generate } from '../../../src/index.js';
 import { applyOverlays } from '../../../src/resolve/overlays.js';
 import { doc } from '../../helpers/docs.js';
 
@@ -225,4 +226,84 @@ test('generateRulesResults — endpoint overlay adds POST path to OpenAPI spec',
   assert.ok(responseSchema.allOf, 'response schema uses allOf');
   assert.strictEqual(responseSchema.allOf[0].$ref, 'https://blueprint.codeforamerica.org/base/schemas/rules-evaluation.yaml#/EvaluationResult');
 });
+});
+
+describe('generateRulesResults — $ref in inputs', () => {
+  /**
+   * These go through `generate` rather than calling expandInputs with a stub,
+   * because the resolver lives in generate.js — it is the only step that sees
+   * every document, and unit tests that pass a fake resolver never exercise it.
+   */
+  const member = {
+    type: 'object',
+    properties: {
+      age: { type: 'integer' },
+      citizenshipStatus: { type: 'string', enum: ['us_citizen', 'non_citizen'] },
+    },
+  };
+
+  const rulesDoc = (items) => ({
+    $schema: 'https://blueprint.codeforamerica.org/schemas/rules-schema.yaml',
+    domain: 'intake',
+    rulesets: {
+      screening: {
+        inputs: {
+          household: {
+            type: 'object',
+            properties: { members: { type: 'array', items } },
+          },
+        },
+        outputs: { hasNonCitizen: { type: 'boolean' } },
+        facts: [{
+          path: 'hasNonCitizen',
+          expression: "household.members.exists(m, m.citizenshipStatus == 'non_citizen')",
+          type: 'boolean',
+        }],
+      },
+    },
+  });
+
+  test('resolves a ref to another document in the contract set', () => {
+    const docs = [
+      doc({ $defs: { Member: member } }, { relativePath: 'domains/intake/shared.yaml', type: 'schema' }),
+      doc(rulesDoc({ $ref: './shared.yaml#/$defs/Member' }), {
+        relativePath: 'domains/intake/intake-rules.yaml', type: 'rules',
+      }),
+    ];
+
+    const [{ graph }] = generate(docs, 'graph');
+
+    assert.deepStrictEqual(Object.keys(graph.inputs).sort(), [
+      '$.household.members[]',
+      '$.household.members[].age',
+      '$.household.members[].citizenshipStatus',
+    ]);
+    assert.deepStrictEqual(
+      graph.inputs['$.household.members[].citizenshipStatus'].enum,
+      ['us_citizen', 'non_citizen']
+    );
+  });
+
+  test('resolves a ref within the rules document itself', () => {
+    const content = rulesDoc({ $ref: '#/$defs/Member' });
+    content.$defs = { Member: member };
+
+    const [{ graph }] = generate(
+      [doc(content, { relativePath: 'domains/intake/intake-rules.yaml', type: 'rules' })],
+      'graph'
+    );
+
+    assert.ok('$.household.members[].age' in graph.inputs);
+  });
+
+  test('an unresolvable ref leaves the input opaque rather than failing', () => {
+    const [{ graph }] = generate(
+      [doc(rulesDoc({ $ref: './nowhere.yaml#/$defs/Member' }), {
+        relativePath: 'domains/intake/intake-rules.yaml', type: 'rules',
+      })],
+      'graph'
+    );
+
+    assert.deepStrictEqual(graph.inputs, { '$.household.members[]': { type: 'array' } });
+  });
 });

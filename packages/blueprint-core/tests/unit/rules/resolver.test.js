@@ -146,6 +146,93 @@ test('expandInputs', async (t) => {
 
 });
 
+// ── expandInputs: $ref ───────────────────────────────────────────────────────
+
+test('expandInputs — follows a $ref to its leaf paths', async (t) => {
+  // A $ref used to emit one opaque {type:'object'} node, collapsing every leaf
+  // beneath it. A fact reading members[].isDisabled then recorded a dependency
+  // on the whole object, so one absent field reported all of them as missing —
+  // which defeats partial evaluation, the reason the contract type exists.
+  const member = {
+    type: 'object',
+    properties: {
+      age: { type: 'integer' },
+      citizenshipStatus: { type: 'string', enum: ['us_citizen', 'non_citizen'] },
+    },
+  };
+  const resolve = (ref) => (ref === '#/$defs/Member' ? member : null);
+
+  await t.test('on an input declaration', () => {
+    const paths = expandInputs({ member: { $ref: '#/$defs/Member' } }, resolve);
+    assert.deepStrictEqual(Object.keys(paths).sort(), ['$.member.age', '$.member.citizenshipStatus']);
+    assert.deepStrictEqual(paths['$.member.citizenshipStatus'].enum, ['us_citizen', 'non_citizen']);
+  });
+
+  await t.test('on array items', () => {
+    const paths = expandInputs({
+      household: {
+        type: 'object',
+        properties: { members: { type: 'array', items: { $ref: '#/$defs/Member' } } },
+      },
+    }, resolve);
+    assert.deepStrictEqual(
+      Object.keys(paths).sort(),
+      ['$.household.members[]', '$.household.members[].age', '$.household.members[].citizenshipStatus']
+    );
+    assert.strictEqual(paths['$.household.members[]'].type, 'array');
+  });
+
+  await t.test('on a nested property', () => {
+    const paths = expandInputs({
+      application: { type: 'object', properties: { applicant: { $ref: '#/$defs/Member' } } },
+    }, resolve);
+    assert.ok('$.application.applicant.age' in paths);
+  });
+
+  await t.test('leaves an unresolvable ref opaque rather than inventing paths', () => {
+    const paths = expandInputs({ member: { $ref: './missing.yaml#/$defs/Nope' } }, () => null);
+    assert.deepStrictEqual(paths, { '$.member': { type: 'object' } });
+  });
+
+  await t.test('stops at a self-referential schema', () => {
+    // Legitimate — a member with dependents — but it has no finite set of
+    // leaf paths, so expansion has to stop somewhere.
+    const recursive = {
+      type: 'object',
+      properties: { name: { type: 'string' }, parent: { $ref: '#/$defs/Person' } },
+    };
+    const paths = expandInputs(
+      { person: { $ref: '#/$defs/Person' } },
+      (ref) => (ref === '#/$defs/Person' ? recursive : null)
+    );
+    assert.ok('$.person.name' in paths);
+    assert.strictEqual(paths['$.person.parent'].type, 'object');
+  });
+
+  await t.test('a keyword written beside the $ref wins over the target', () => {
+    // 2020-12 allows keywords alongside $ref and applies them in addition to
+    // it. A description at the referring site says what this input is; the
+    // target's says what the shared type is, so the local one is the more
+    // specific of the two.
+    const paths = expandInputs(
+      { dob: { $ref: '#/DateOfBirth', description: 'Applicant date of birth' } },
+      () => ({ type: 'string', format: 'date', description: 'Date of birth.' })
+    );
+    assert.deepStrictEqual(paths['$.dob'], {
+      type: 'string',
+      format: 'date',
+      description: 'Applicant date of birth',
+    });
+  });
+
+  await t.test('without a resolver, behaviour is unchanged', () => {
+    assert.deepStrictEqual(
+      expandInputs({ member: { $ref: '#/$defs/Member' } }),
+      { '$.member': { type: 'object' } }
+    );
+  });
+});
+
 // ── extractDeps ──────────────────────────────────────────────────────────────
 
 test('extractDeps', async (t) => {

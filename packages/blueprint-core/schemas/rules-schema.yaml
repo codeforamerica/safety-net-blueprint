@@ -230,5 +230,10 @@ $defs:
       (https://blueprint.codeforamerica.org/schemas/...).
       Any object is structurally valid here — $ref resolution and schema
       correctness are checked by the validate pipeline.
+
+      A $ref is followed when the graph is compiled, down to the individual
+      field paths a fact can depend on, including through array items. A ref
+      that cannot be resolved leaves the input as an opaque object, and a
+      schema that refers to itself stops at the point of recursion.
     type: object
 

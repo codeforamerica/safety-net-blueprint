@@ -4,6 +4,27 @@
 # oneOf/discriminator handling.
 
 $defs:
+  HouseholdMember:
+    type: object
+    description: >
+      A person in the household, as the interview rules read them. Shared so a
+      ruleset can reference it rather than restating the shape — the compiler
+      follows the $ref down to individual field paths, which is what keeps
+      missing-input tracking per-field rather than per-object.
+    properties:
+      age:
+        type: integer
+        description: Member's age in years.
+      isEmployed:
+        type: boolean
+        description: Whether the member is currently employed.
+      isStudent:
+        type: boolean
+        description: Whether the member is enrolled at least half-time in higher education.
+      isNonCitizen:
+        type: boolean
+        description: Whether the member is a non-citizen subject to immigration screening.
+
   IncomeSource:
     description: Income reported by a household member. Type discriminator determines the variant.
     oneOf:

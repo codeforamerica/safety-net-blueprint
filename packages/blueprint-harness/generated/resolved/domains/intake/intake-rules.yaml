@@ -19,20 +19,7 @@ rulesets:
             type: array
             description: All individuals in the household.
             items:
-              type: object
-              properties:
-                age:
-                  type: integer
-                  description: Member's age in years.
-                isEmployed:
-                  type: boolean
-                  description: Whether the member is currently employed.
-                isStudent:
-                  type: boolean
-                  description: Whether the member is enrolled at least half-time in higher education.
-                isNonCitizen:
-                  type: boolean
-                  description: Whether the member is a non-citizen subject to immigration screening.
+              $ref: ./intake-schemas.yaml#/$defs/HouseholdMember
       application:
         type: object
         description: Application-level context relevant to the interview.

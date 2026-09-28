@@ -8118,6 +8118,8 @@ paths:
                       description: All individuals in the household.
                       items:
                         type: object
+                        description: |
+                          A person in the household, as the interview rules read them. Shared so a ruleset can reference it rather than restating the shape — the compiler follows the $ref down to individual field paths, which is what keeps missing-input tracking per-field rather than per-object.
                         properties:
                           age:
                             type: integer
@@ -10771,6 +10773,8 @@ components:
               description: All individuals in the household.
               items:
                 type: object
+                description: |
+                  A person in the household, as the interview rules read them. Shared so a ruleset can reference it rather than restating the shape — the compiler follows the $ref down to individual field paths, which is what keeps missing-input tracking per-field rather than per-object.
                 properties:
                   age:
                     type: integer

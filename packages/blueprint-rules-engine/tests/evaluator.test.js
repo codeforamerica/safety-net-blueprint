@@ -390,3 +390,48 @@ describe('evaluator — declaration order does not change the answer', () => {
     assert.deepStrictEqual(nodes.eligible.missing, ['$.household.income']);
   });
 });
+
+/**
+ * The point of expanding a $ref to leaf paths: missing-input tracking stays
+ * per-field. While a ref compiled to one opaque object node, a fact reading
+ * `members[].citizenshipStatus` recorded a dependency on the whole object, so
+ * one absent field reported all of them as missing and a progressive
+ * interview could not tell what to ask for.
+ *
+ * A structural check on graph.inputs would not catch that — this evaluates.
+ */
+describe('evaluator — leaf paths keep missing tracking precise', () => {
+  const graph = {
+    outputs: ['hasNonCitizen'],
+    inputs: {
+      '$.household.members[]': { type: 'array' },
+      '$.household.members[].age': { type: 'integer' },
+      '$.household.members[].citizenshipStatus': { type: 'string' },
+      '$.household.income': { type: 'integer' },
+    },
+    facts: {
+      hasNonCitizen: { expression: "household.members.exists(m, m.citizenshipStatus == 'non_citizen')" },
+      overLimit: { expression: 'household.income > 1000' },
+    },
+    dependencies: {
+      hasNonCitizen: ['$.household.members[]'],
+      overLimit: ['$.household.income'],
+    },
+  };
+
+  it('names only the input actually absent', () => {
+    const nodes = evaluate(graph, {
+      household: { members: [{ age: 30, citizenshipStatus: 'us_citizen' }] },
+    });
+    assert.strictEqual(nodes.hasNonCitizen.state, 'complete');
+    assert.strictEqual(nodes.overLimit.state, 'missing');
+    assert.deepStrictEqual(nodes.overLimit.missing, ['$.household.income']);
+  });
+
+  it('a collection resolves from its declared sub-fields', () => {
+    const nodes = evaluate(graph, {
+      household: { members: [{ age: 30, citizenshipStatus: 'non_citizen' }], income: 900 },
+    });
+    assert.strictEqual(nodes.hasNonCitizen.value, true);
+  });
+});

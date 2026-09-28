@@ -60,20 +60,53 @@ export function discoverRules(specsDir) {
  * @param {Object} inputsMap - { inputName: schemaOrRef, ... }
  * @returns {Object} { [jsonPath]: nodeSpec }
  */
-export function expandInputs(inputsMap) {
+export function expandInputs(inputsMap, resolve = () => null) {
   const result = {};
   for (const [inputName, schema] of Object.entries(inputsMap || {})) {
-    expandSchema(`$.${inputName}`, schema, result);
+    expandSchema(`$.${inputName}`, schema, result, resolve);
   }
   return result;
 }
 
-function expandSchema(prefix, schema, result) {
+/**
+ * Walk a declared input schema into the flat field paths a graph carries.
+ *
+ * A `$ref` is followed. It used to emit a single opaque `{type:'object'}`
+ * node instead, which collapsed every leaf beneath it: a fact reading
+ * `members[].isDisabled` recorded a dependency on `$.members` and nothing
+ * finer, so one absent field reported the whole object as missing. Partial
+ * evaluation is the reason this contract type exists, and that defeated it —
+ * which is why no ruleset used `$ref`, despite the schema's own example
+ * showing one.
+ *
+ * `seen` guards a schema that refers to itself. A self-referential type is
+ * legitimate — a household member with dependents, say — but it has no finite
+ * set of leaf paths, so expansion stops and the node stays opaque.
+ */
+function expandSchema(prefix, schema, result, resolve = () => null, seen = new Set()) {
   if (!schema) return;
 
   if (schema.$ref) {
-    // Cannot expand without resolving — emit a single opaque object node
-    result[prefix] = { type: 'object' };
+    if (seen.has(schema.$ref)) {
+      result[prefix] = { type: 'object', description: `Recursive reference to ${schema.$ref}` };
+      return;
+    }
+
+    const target = resolve(schema.$ref);
+    if (!target || typeof target !== 'object' || Object.keys(target).length === 0) {
+      // Unresolvable. Opaque is the honest result — better than inventing
+      // leaf paths — and the validator reports the unresolved ref separately.
+      result[prefix] = { type: 'object' };
+      return;
+    }
+
+    // 2020-12 allows keywords alongside $ref, and treats them as applying in
+    // addition to it. A description written at the referring site is the more
+    // specific one — it says what this input is, where the target says what
+    // the shared type is — so it wins.
+    const { $ref: _ref, ...siblings } = schema;
+    const merged = { ...target, ...siblings };
+    expandSchema(prefix, merged, result, resolve, new Set([...seen, schema.$ref]));
     return;
   }
 
@@ -81,7 +114,7 @@ function expandSchema(prefix, schema, result) {
     if (schema.properties) {
       // Expand properties recursively — do not emit the object container itself
       for (const [field, fieldSchema] of Object.entries(schema.properties)) {
-        expandSchema(`${prefix}.${field}`, fieldSchema, result);
+        expandSchema(`${prefix}.${field}`, fieldSchema, result, resolve, seen);
       }
     } else {
       // Opaque object with no declared properties
@@ -99,10 +132,17 @@ function expandSchema(prefix, schema, result) {
     if (schema.description) node.description = schema.description;
     result[arrayPath] = node;
 
-    // Expand item properties as sub-fields of the array path
-    if (schema.items?.properties) {
-      for (const [field, fieldSchema] of Object.entries(schema.items.properties)) {
-        expandSchema(`${arrayPath}.${field}`, fieldSchema, result);
+    // Expand item properties as sub-fields of the array path. `items` may be
+    // a $ref — a collection of a shared type is the common shape — so follow
+    // it before looking for properties.
+    const items = schema.items?.$ref && !seen.has(schema.items.$ref)
+      ? resolve(schema.items.$ref) ?? schema.items
+      : schema.items;
+    const itemSeen = schema.items?.$ref ? new Set([...seen, schema.items.$ref]) : seen;
+
+    if (items?.properties) {
+      for (const [field, fieldSchema] of Object.entries(items.properties)) {
+        expandSchema(`${arrayPath}.${field}`, fieldSchema, result, resolve, itemSeen);
       }
     }
     return;
@@ -186,10 +226,13 @@ function containsPathRef(expression, celRef) {
  * @param {string} domain       - domain name (e.g. 'eligibility')
  * @param {string} rulesetName  - ruleset key (e.g. 'expeditedSnap')
  * @param {Object} ruleset      - ruleset object from the rules file
+ * @param {(ref: string) => object|null} [resolve] - follows a $ref in an input
+ *   declaration. Defaults to resolving nothing, which leaves a $ref'd input as
+ *   an opaque object — the caller that has the document set supplies a real one.
  * @returns {Object} compiled graph document (ready to serialize as YAML)
  */
-export function compileRuleset(domain, rulesetName, ruleset) {
-  const expandedInputs = expandInputs(ruleset.inputs || {});
+export function compileRuleset(domain, rulesetName, ruleset, resolve = () => null) {
+  const expandedInputs = expandInputs(ruleset.inputs || {}, resolve);
   const inputPaths = Object.keys(expandedInputs);
 
   const facts = {};
@@ -349,7 +392,7 @@ export function generateRulesEndpointOverlay(domain, rulesDoc, paramIndex = new 
  * @param {Array<{ relativePath: string, doc: Object }>} rulesFiles
  * @returns {{ graphs: Map<string, Object>, overlays: Array<{ overlay: Object, domain: string }> }}
  */
-export function generateRulesResults(rulesFiles, yamlFiles = []) {
+export function generateRulesResults(rulesFiles, yamlFiles = [], resolve = () => null) {
   const graphs = new Map();
   const overlays = [];
   const paramIndex = buildParameterIndex(yamlFiles);
@@ -359,7 +402,7 @@ export function generateRulesResults(rulesFiles, yamlFiles = []) {
     if (!domain || !doc.rulesets) continue;
 
     for (const [rulesetName, ruleset] of Object.entries(doc.rulesets)) {
-      const graph = compileRuleset(domain, rulesetName, ruleset);
+      const graph = compileRuleset(domain, rulesetName, ruleset, (ref) => resolve(ref, doc));
       const dir = relativePath.includes('/') ? relativePath.slice(0, relativePath.lastIndexOf('/') + 1) : '';
       const graphPath = `${dir}${domain}-${rulesetName}-graph.yaml`;
       graphs.set(graphPath, graph);

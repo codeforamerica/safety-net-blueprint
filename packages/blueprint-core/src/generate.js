@@ -16,6 +16,7 @@
  */
 
 import { generateCompositionOverlays } from './compositions.js';
+import { resolveRef } from './load.js';
 import { generateRulesResults } from './rules.js';
 import { detectComponentPrefix, rewriteComponentRefs } from './generate/refs.js';
 import { generateRpcOverlays } from './generate/rpc.js';
@@ -192,7 +193,33 @@ function rulesArtifacts(docs, inputFiles) {
     .filter((doc) => doc.type === 'rules' && doc.content?.rulesets)
     .map((doc) => ({ relativePath: doc.relativePath, doc: doc.content }));
 
-  return rulesFiles.length > 0
-    ? generateRulesResults(rulesFiles, inputFiles)
-    : { graphs: [], overlays: [] };
+  if (rulesFiles.length === 0) return { graphs: [], overlays: [] };
+
+  const byRelativePath = new Map(docs.map((d) => [d.relativePath, d]));
+
+  /**
+   * Follow a `$ref` in an input declaration.
+   *
+   * Internal refs (`#/$defs/Member`) resolve within the rules document itself;
+   * external ones resolve across the contract set, which is why this lives
+   * here rather than in the compiler — `generate` is the only step that sees
+   * every document.
+   */
+  const resolve = (ref, rulesDoc) => {
+    if (typeof ref !== 'string') return null;
+
+    if (ref.startsWith('#')) {
+      let node = rulesDoc;
+      for (const segment of ref.slice(1).split('/').filter(Boolean)) {
+        if (node === null || typeof node !== 'object') return null;
+        node = node[segment];
+      }
+      return node ?? null;
+    }
+
+    const owner = docs.find((d) => d.content === rulesDoc);
+    return resolveRef(ref, docs, owner?.relativePath) ?? null;
+  };
+
+  return generateRulesResults(rulesFiles, inputFiles, resolve);
 }

@@ -176,6 +176,83 @@ describe('load', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  /**
+   * A $ref is written relative to the document holding it. Only the full
+   * relativePath used to be compared, so `./sibling.yaml` from a nested
+   * directory matched nothing — the most natural form of a ref was the one
+   * that did not work. Shared resolution, so it is tested here rather than
+   * only through the rules compiler that surfaced it.
+   */
+  describe('resolveRef() resolves relative to the referring document', () => {
+    const tree = {
+      'domains/intake/intake-openapi.yaml': openapi(),
+      'domains/intake/intake-schemas.yaml': { $defs: { Member: { type: 'object', title: 'Member' } } },
+      'common/shared.yaml': { $defs: { Base: { type: 'object', title: 'Base' } } },
+    };
+    const referrer = (docs) => docs.find((d) => d.relativePath === 'domains/intake/intake-openapi.yaml');
+
+    test('a sibling ref', () => {
+      const dir = contractsIn(tree);
+      try {
+        const docs = discover(dir).map(load);
+        assert.equal(referrer(docs).resolveRef('./intake-schemas.yaml#/$defs/Member', docs).title, 'Member');
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    test('a sibling ref written without the leading ./', () => {
+      const dir = contractsIn(tree);
+      try {
+        const docs = discover(dir).map(load);
+        assert.equal(referrer(docs).resolveRef('intake-schemas.yaml#/$defs/Member', docs).title, 'Member');
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    test('a parent-relative ref still resolves', () => {
+      const dir = contractsIn(tree);
+      try {
+        const docs = discover(dir).map(load);
+        assert.equal(referrer(docs).resolveRef('../../common/shared.yaml#/$defs/Base', docs).title, 'Base');
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    test('a ref naming the full path still resolves', () => {
+      const dir = contractsIn(tree);
+      try {
+        const docs = discover(dir).map(load);
+        assert.equal(referrer(docs).resolveRef('common/shared.yaml#/$defs/Base', docs).title, 'Base');
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    test('an unresolvable ref returns empty rather than throwing', () => {
+      const dir = contractsIn(tree);
+      try {
+        const docs = discover(dir).map(load);
+        assert.deepEqual(referrer(docs).resolveRef('./nowhere.yaml#/$defs/Member', docs), {});
+        assert.deepEqual(referrer(docs).resolveRef('./intake-schemas.yaml#/$defs/Missing', docs), {});
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    test('a ref with no fragment returns empty', () => {
+      const dir = contractsIn(tree);
+      try {
+        const docs = discover(dir).map(load);
+        assert.deepEqual(referrer(docs).resolveRef('./intake-schemas.yaml', docs), {});
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  });
 });
 
 describe('generate', () => {

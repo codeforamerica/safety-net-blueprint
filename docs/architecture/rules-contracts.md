@@ -60,6 +60,8 @@ Few rules models support this. DMN returns a result or fails. Traditional rules 
 
 ## Contract Artifacts
 
+For how to author one, see the [Rules Guide](../guides/rules-guide.md).
+
 Rules contracts produce two artifacts:
 
 **`*-rules.yaml`** — The authored contract. Declares rulesets with inputs, outputs, and facts as CEL expressions. Inputs and outputs can reference shared schemas, giving OpenAPI specs and rules files a common type baseline. Unlike the graph file, the rules file depends on blueprint tooling — `$ref` resolution, overlay conventions, schema validation — and does not include the resolved dependency graph nodes and edges. It is not universally portable.

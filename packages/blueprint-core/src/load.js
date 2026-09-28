@@ -65,7 +65,7 @@ export function load(file) {
     content,
     refs() { return indexRefs(this.content); },
     externalRefs(docs) { return externalRefs(this, docs); },
-    resolveRef(ref, docs) { return resolveRef(ref, docs); },
+    resolveRef(ref, docs) { return resolveRef(ref, docs, this.relativePath); },
     model() { return buildModel(this.type, this.content); },
     resolved: provenance !== null,
     provenance,
@@ -109,9 +109,11 @@ function externalRefs(doc, docs) {
  *
  * @param {string} ref - An external $ref, e.g. `../schemas/intake.yaml#/$defs/Member`
  * @param {import('../types.js').Doc[]} docs
+ * @param {string} [fromPath] - relativePath of the document holding the ref,
+ *   so a relative ref resolves against its own directory
  * @returns {object} The referenced schema, or an empty object if unresolvable
  */
-function resolveRef(ref, docs) {
+export function resolveRef(ref, docs, fromPath = null) {
   const hashIdx = ref.indexOf('#');
   if (hashIdx === -1) return {};
 
@@ -119,8 +121,24 @@ function resolveRef(ref, docs) {
   const wanted = ref.slice(0, hashIdx).replace(/^\.\//, '');
 
   const byRelative = new Map(docs.map((d) => [d.relativePath, d.content]));
+
+  // A ref is written relative to the document holding it, so resolve it
+  // against that document's directory first. Without this a sibling ref —
+  // `./shared.yaml` from `domains/intake/` — matched nothing, because only
+  // the full relativePath was ever compared.
+  const fromDir = fromPath?.includes('/') ? fromPath.slice(0, fromPath.lastIndexOf('/') + 1) : '';
+  const joined = fromDir
+    ? (fromDir + wanted).split('/').reduce((parts, part) => {
+        if (part === '..') parts.pop();
+        else if (part !== '.') parts.push(part);
+        return parts;
+      }, []).join('/')
+    : null;
+
   const content =
-    byRelative.get(wanted) ?? byRelative.get(wanted.replace(/^(\.\.\/)+/, ''));
+    (joined && byRelative.get(joined)) ??
+    byRelative.get(wanted) ??
+    byRelative.get(wanted.replace(/^(\.\.\/)+/, ''));
   if (!content) return {};
 
   let node = content;
