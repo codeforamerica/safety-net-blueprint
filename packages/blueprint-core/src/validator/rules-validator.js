@@ -20,30 +20,6 @@ import { resolverMap } from '../paths.js';
 
 // ── Full dependency scan ──────────────────────────────────────────────────────
 
-/**
- * Build a complete fact-to-fact dependency map by scanning all expressions
- * bidirectionally. The compiler only tracks backward references (facts can only
- * reference previously declared facts), so cycles involving forward references
- * would be silently dropped. This scan catches them.
- *
- * @param {Array<{ path: string, expression: string }>} facts
- * @returns {Object} { factPath: [referencedFactPath, ...], ... }
- */
-function buildFullFactDeps(facts) {
-  const factNames = new Set(facts.map(f => f.path));
-  const deps = {};
-  for (const factDecl of facts) {
-    const refs = [];
-    for (const name of factNames) {
-      if (name === factDecl.path) continue;
-      if (new RegExp(`\\b${name}\\b`).test(factDecl.expression || '')) {
-        refs.push(name);
-      }
-    }
-    if (refs.length > 0) deps[factDecl.path] = refs;
-  }
-  return deps;
-}
 
 // ── Cycle detection ───────────────────────────────────────────────────────────
 
@@ -191,12 +167,14 @@ export function validateRuleset(domain, rulesetName, ruleset) {
   // Compile to get the dependency graph (used for unreachable detection)
   const graph = compileRuleset(domain, rulesetName, ruleset);
 
-  // Build full bidirectional fact deps for cycle detection — the compiler only
-  // tracks backward references, so forward-reference cycles would be missed.
-  const fullFactDeps = buildFullFactDeps(ruleset.facts || []);
-
   // 1. Cycle detection
-  for (const fact of detectCycles(graph.facts, fullFactDeps)) {
+  //
+  // The compiled graph's own dependencies are used. They used to be
+  // backward-only, so a cycle formed through a forward reference was invisible
+  // and this scanned the expressions again to find one — two dependency
+  // scanners, disagreeing by construction. The compiler records every edge
+  // now, so there is one.
+  for (const fact of detectCycles(graph.facts, graph.dependencies)) {
     errors.push({
       rule: 'no-cycles',
       message: `Fact "${fact}" is part of a dependency cycle`,
@@ -211,24 +189,6 @@ export function validateRuleset(domain, rulesetName, ruleset) {
       message: `Fact "${fact}" is never used and not declared in outputs`,
       path: `${base}.facts.${fact}`,
     });
-  }
-
-  // 3. Forward reference detection — a fact referencing a fact declared after it
-  //    would be silently ignored by the compiler (backward-only dependency tracking)
-  const declaredBefore = [];
-  for (const factDecl of ruleset.facts || []) {
-    const allFactNames = (ruleset.facts || []).map(f => f.path);
-    const declaredAfter = allFactNames.filter(n => !declaredBefore.includes(n) && n !== factDecl.path);
-    for (const name of declaredAfter) {
-      if (new RegExp(`\\b${name}\\b`).test(factDecl.expression || '')) {
-        errors.push({
-          rule: 'no-forward-refs',
-          message: `Fact "${factDecl.path}" references "${name}" which is declared after it — move "${name}" before "${factDecl.path}"`,
-          path: `${base}.facts.${factDecl.path}`,
-        });
-      }
-    }
-    declaredBefore.push(factDecl.path);
   }
 
   // 4. CEL expression syntax

@@ -345,3 +345,48 @@ describe('evaluator — timestamp and duration values', () => {
     assert.strictEqual(evaluate(graphFor('timestamp(h.b).getFullYear()'), inputs).f.value, 2025);
   });
 });
+
+/**
+ * Declaration order in a rules contract is not significant — the evaluator
+ * resolves topologically, and the compiler records every edge regardless of
+ * where a fact appears in the file.
+ *
+ * This is the behaviour a validator rule used to hide. The compiler scanned
+ * only the facts declared above the current one, so a forward reference
+ * produced a graph with that edge missing; rather than fixing it, validation
+ * rejected the ordering and told authors to reorder. A structural check on
+ * `graph.dependencies` would not have caught the original defect either —
+ * this evaluates.
+ */
+describe('evaluator — declaration order does not change the answer', () => {
+  const facts = {
+    // eligible is declared first and depends on two facts declared after it
+    eligible: { expression: 'hasAdult && withinLimit' },
+    hasAdult: { expression: 'household.age >= 18' },
+    withinLimit: { expression: 'household.income <= 1000' },
+  };
+  const graph = {
+    outputs: ['eligible'],
+    inputs: { '$.household.age': { type: 'integer' }, '$.household.income': { type: 'integer' } },
+    facts,
+    dependencies: {
+      eligible: ['hasAdult', 'withinLimit'],
+      hasAdult: ['$.household.age'],
+      withinLimit: ['$.household.income'],
+    },
+  };
+
+  it('resolves a fact that depends on ones declared after it', () => {
+    const nodes = evaluate(graph, { household: { age: 30, income: 900 } });
+    assert.strictEqual(nodes.eligible.state, 'complete');
+    assert.strictEqual(nodes.eligible.value, true);
+  });
+
+  it('propagates through the out-of-order dependency', () => {
+    // If the edge were missing, eligible would resolve from an unset name
+    // rather than reporting what it is waiting on.
+    const nodes = evaluate(graph, { household: { age: 30 } });
+    assert.strictEqual(nodes.eligible.state, 'missing');
+    assert.deepStrictEqual(nodes.eligible.missing, ['$.household.income']);
+  });
+});

@@ -14,6 +14,7 @@ import {
   validateRuleset,
   validateRulesDoc,
 } from '../../../src/validator/rules-validator.js';
+import { compileRuleset } from '../../../src/rules.js';
 
 // ── detectCycles ──────────────────────────────────────────────────────────────
 
@@ -223,18 +224,35 @@ test('validateRuleset', async (t) => {
     assert.ok(errors.some(e => e.rule === 'cel-syntax'));
   });
 
-  await t.test('reports a forward reference', () => {
-    const ruleset = {
+  await t.test('accepts a forward reference — declaration order is not significant', () => {
+    // Rejected until now, because the compiler scanned only the facts declared
+    // above the current one and would have produced a graph with the edge
+    // missing. It scans the whole ruleset, which is what the schema has always
+    // promised, so related facts can be grouped together.
+    const errors = validateRuleset('test', 'forwardRefTest', {
       inputs: {},
-      outputs: { b: { type: 'boolean' } },
+      outputs: { a: { type: 'boolean' } },
       facts: [
-        // a references b, but b is declared after a
         { path: 'a', expression: 'b', type: { type: 'boolean' } },
         { path: 'b', expression: 'true', type: { type: 'boolean' } },
       ],
-    };
-    const errors = validateRuleset('test', 'forwardRefTest', ruleset);
-    assert.ok(errors.some(e => e.rule === 'no-forward-refs' && e.message.includes('"a"') && e.message.includes('"b"')));
+    });
+    assert.deepStrictEqual(errors, [], 'a forward reference is valid');
+  });
+
+  await t.test('a forward reference produces the dependency edge', () => {
+    // The reason the rule existed. Without the edge the evaluator cannot know
+    // `a` needs `b` resolved first, and rejecting the ordering hid that the
+    // compiled graph was wrong rather than fixing it.
+    const graph = compileRuleset('test', 'forwardRefTest', {
+      inputs: {},
+      outputs: { a: { type: 'boolean' } },
+      facts: [
+        { path: 'a', expression: 'b', type: 'boolean' },
+        { path: 'b', expression: 'true', type: 'boolean' },
+      ],
+    });
+    assert.deepStrictEqual(graph.dependencies.a, ['b']);
   });
 
   await t.test('does not flag a valid backward reference', () => {

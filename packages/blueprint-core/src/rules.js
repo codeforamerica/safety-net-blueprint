@@ -194,7 +194,16 @@ export function compileRuleset(domain, rulesetName, ruleset) {
 
   const facts = {};
   const dependencies = {};
-  const factPaths = [];
+
+  // Every fact name, before any expression is scanned. Dependencies used to be
+  // extracted against only the facts declared *above* the current one, so a
+  // fact referencing one declared later produced a graph with that edge simply
+  // missing — which is why the validator rejected forward references outright,
+  // and why the schema's promise that declaration order does not matter was
+  // not true. Scanning against the complete set makes the graph correct
+  // whatever order the file is written in; the evaluator already resolves
+  // topologically, and cycles are detected separately.
+  const factPaths = (ruleset.facts || []).map((f) => f.path);
 
   for (const factDecl of ruleset.facts || []) {
     const { path: factPath, expression, description, type } = factDecl;
@@ -209,13 +218,11 @@ export function compileRuleset(domain, rulesetName, ruleset) {
     if (description) node.description = description;
     facts[factPath] = node;
 
-    // Extract dependencies (may reference previously declared facts)
-    const deps = extractDeps(expression, inputPaths, factPaths);
+    // A fact never depends on itself; anything else in the ruleset is fair game.
+    const deps = extractDeps(expression, inputPaths, factPaths.filter((n) => n !== factPath));
     if (deps.length > 0) {
       dependencies[factPath] = deps;
     }
-
-    factPaths.push(factPath);
   }
 
   // Determine outputs: prefer declared outputs keys, fall back to last fact
