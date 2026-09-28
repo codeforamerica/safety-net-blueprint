@@ -8091,16 +8091,7 @@ paths:
                     items:
                       type: object
                       additionalProperties: true
-  /applications/{applicationId}/evaluate-interview-prompts:
-    parameters:
-      - name: applicationId
-        in: path
-        required: true
-        description: Unique identifier of the application.
-        schema:
-          type: string
-          format: uuid
-        example: 00000000-0000-0000-0000-000000000001
+  /applications/evaluate-interview-prompts:
     post:
       summary: Evaluate interviewPrompts
       operationId: evaluateInterviewPrompts

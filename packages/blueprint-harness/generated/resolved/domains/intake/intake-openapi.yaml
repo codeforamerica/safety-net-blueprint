@@ -633,9 +633,7 @@ paths:
           $ref: ../../base/components/responses.yaml#/UnprocessableEntity
         "500":
           $ref: ../../base/components/responses.yaml#/InternalError
-  /applications/{applicationId}/evaluate-interview-prompts:
-    parameters:
-      - $ref: "#/components/parameters/ApplicationIdParam"
+  /applications/evaluate-interview-prompts:
     post:
       summary: Evaluate interviewPrompts
       operationId: evaluateInterviewPrompts

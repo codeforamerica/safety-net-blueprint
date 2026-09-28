@@ -3,7 +3,7 @@ domain: intake
 rulesets:
   interviewPrompts:
     endpoint:
-      path: /applications/{applicationId}/evaluate-interview-prompts
+      path: /applications/evaluate-interview-prompts
     inputs:
       household:
         type: object

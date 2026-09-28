@@ -8267,14 +8267,9 @@ export type EvaluateInterviewPromptsData = {
             hasChangedCircumstances?: boolean;
         };
     };
-    path: {
-        /**
-         * Unique identifier of the application.
-         */
-        applicationId: string;
-    };
+    path?: never;
     query?: never;
-    url: '/applications/{applicationId}/evaluate-interview-prompts';
+    url: '/applications/evaluate-interview-prompts';
 };
 
 export type EvaluateInterviewPromptsErrors = {

@@ -160,10 +160,17 @@ $defs:
         type: string
         description: Human-readable description of what this fact computes.
       type:
-        $ref: "#/$defs/SchemaOrRef"
         description: >
           Optional type declaration for the computed value. Used for documentation
           and cross-artifact field validation. Inferred from the expression if omitted.
+
+          Either a bare type name — the common case, and what every ruleset in
+          the repository uses — or a full schema for a structured value. The
+          compiler has always accepted both; only this declaration did not.
+        oneOf:
+          - type: string
+            enum: [string, number, integer, boolean, object, array]
+          - $ref: "#/$defs/SchemaOrRef"
 
   Endpoint:
     # Example:
@@ -184,7 +191,13 @@ $defs:
         description: >
           Action-specific path segment. The resolver prefixes this with the domain
           base path (e.g., /intake) to form the full endpoint path.
-        pattern: "^/"
+
+          Path parameters are not permitted. A ruleset is evaluated against the
+          inputs in the request body and nothing binds a path segment to them, so
+          a parameter in the path would be accepted and silently ignored — the
+          path would promise resource hydration the endpoint does not perform.
+          Pass the identifier as an input instead.
+        pattern: "^/[^{}]*$"
 
   SchemaMap:
     type: object

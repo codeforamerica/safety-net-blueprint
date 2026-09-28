@@ -193,13 +193,23 @@ function validateSchemas(specs, { resolverMap = {} } = {}) {
   }
 
   // --- Step 3: Find files to validate ---
-  // Only files declaring $schema are validated. External URLs (http/https) are
-  // skipped — they are not locally registered schemas.
+  // Only files declaring $schema are validated.
+  //
+  // A json-schema.org $schema names the *dialect* a schema document is written
+  // in, not a schema to check the document against, so those are skipped. Every
+  // other value names a contract schema and goes through — including canonical
+  // blueprint URLs, which step 4 resolves directly.
+  //
+  // This used to skip anything starting with `http`, which meant rules and
+  // rules-examples contracts — the only types declaring a canonical URL rather
+  // than a bare filename — were never validated at all. A rules file missing
+  // `rulesets` entirely passed. Anything unresolvable is reported as
+  // "Schema not found" below rather than quietly skipped.
   const filesToValidate = specs.filter(({ spec }) =>
     spec &&
     typeof spec === 'object' &&
     spec.$schema &&
-    !spec.$schema.startsWith('http')
+    !spec.$schema.startsWith('https://json-schema.org/')
   );
 
   // --- Step 4: Validate ---
@@ -236,9 +246,13 @@ function validateSchemas(specs, { resolverMap = {} } = {}) {
         continue;
       }
 
-      // Strip $schema before validating — it is not part of the data model
-      const { $schema, ...data } = spec;
-      const isValid = validate(data);
+      // Validate the document as written. $schema was previously stripped
+      // first, on the grounds that it is not part of the data model — but a
+      // contract schema may legitimately require it, and rules-schema.yaml
+      // does, so stripping made every rules contract fail on a field it had.
+      // A schema with additionalProperties: false must now declare $schema
+      // among its properties.
+      const isValid = validate(spec);
 
       if (isValid) {
         results.push({ relativePath, schemaRef, valid: true });

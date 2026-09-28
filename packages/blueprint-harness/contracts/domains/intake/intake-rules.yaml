@@ -7,7 +7,7 @@ rulesets:
   # Implements FNS interview guidance (FNS-1104) and SNAP regulations (7 CFR § 273.2(e)).
   interviewPrompts:
     endpoint:
-      path: /applications/{applicationId}/evaluate-interview-prompts
+      path: /applications/evaluate-interview-prompts
     inputs:
       household:
         type: object

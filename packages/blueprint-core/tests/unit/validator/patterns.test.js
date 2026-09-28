@@ -896,7 +896,7 @@ test('Pattern Validator Tests', async (t) => {
     const errors = [];
     validateOperationRelationships({
       paths: {
-        '/applications/{applicationId}/evaluate-interview-prompts': {
+        '/applications/evaluate-interview-prompts': {
           post: {
             operationId: 'evaluateInterviewPrompts',
             'x-relationship': { type: 'ruleset', domain: 'intake', id: 'interviewPrompts' },
@@ -913,7 +913,7 @@ test('Pattern Validator Tests', async (t) => {
     const errors = [];
     validateOperationRelationships({
       paths: {
-        '/applications/{applicationId}/evaluate-interview-prompts': {
+        '/applications/evaluate-interview-prompts': {
           post: {
             'x-relationship': { type: 'ruleset', id: 'interviewPrompts' },
             responses: {}

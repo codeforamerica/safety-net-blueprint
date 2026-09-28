@@ -3463,9 +3463,7 @@ export const zEvaluateInterviewPromptsData = z.object({
             hasChangedCircumstances: z.optional(z.boolean())
         }))
     }),
-    path: z.object({
-        applicationId: z.uuid()
-    }),
+    path: z.optional(z.never()),
     query: z.optional(z.never())
 });
 

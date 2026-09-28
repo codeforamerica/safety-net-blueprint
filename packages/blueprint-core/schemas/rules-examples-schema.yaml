@@ -1,0 +1,105 @@
+# JSON Schema for domain rules examples YAML files ({domain}-rules-examples.yaml).
+# Validates structural correctness. Whether an example's inputs match the
+# ruleset's declared inputs is a cross-artifact check performed by the
+# validate pipeline.
+#
+# Example usage:
+#
+#   $schema: "https://blueprint.codeforamerica.org/schemas/rules-examples-schema.yaml"
+#   domain: intake
+#   rulesets:
+#     interviewPrompts:
+#       examples:
+#         - description: Income gap and unemployed members
+#           inputs:
+#             household:
+#               monthlyIncome: 800
+#               members:
+#                 - age: 35
+#                   isEmployed: false
+#
+# An examples file names a ruleset in the sibling {domain}-rules.yaml and gives
+# input sets to evaluate it against. `blueprint-evaluate` runs every ruleset and
+# every example in one pass and returns the resulting facts, which is how a
+# ruleset is exercised without writing code.
+#
+# Examples carry inputs only, not expected outputs. They demonstrate and
+# exercise a ruleset rather than assert against it — pinning expected results is
+# the conformance corpus's job, and duplicating it here would create a second
+# set of expectations to keep in step.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/schemas/rules-examples-schema.yaml"
+title: Domain Rules Examples
+description: >
+  Schema for domain rules examples files ({domain}-rules-examples.yaml).
+  Each file provides worked input sets for the rulesets declared in the
+  sibling rules contract, so a ruleset can be run and demonstrated without
+  a caller.
+
+type: object
+required:
+  - $schema
+  - domain
+  - rulesets
+additionalProperties: false
+
+properties:
+  $schema:
+    type: string
+    description: Must reference the rules examples contract schema URI.
+
+  domain:
+    type: string
+    description: >
+      Domain namespace (e.g., intake, eligibility). Must match the domain of
+      the rules contract whose rulesets these examples exercise.
+
+  rulesets:
+    type: object
+    description: >
+      Examples keyed by ruleset name. Each key must name a ruleset declared in
+      the sibling {domain}-rules.yaml; the validate pipeline checks that.
+    minProperties: 1
+    additionalProperties:
+      $ref: "#/$defs/RulesetExamples"
+
+$defs:
+  RulesetExamples:
+    type: object
+    description: The set of worked examples for one ruleset.
+    required:
+      - examples
+    additionalProperties: false
+    properties:
+      examples:
+        type: array
+        description: >
+          Input sets to evaluate the ruleset against. Order is not significant.
+        minItems: 1
+        items:
+          $ref: "#/$defs/Example"
+
+  Example:
+    type: object
+    description: One worked input set.
+    required:
+      - description
+      - inputs
+    additionalProperties: false
+    properties:
+      description:
+        type: string
+        description: >
+          What this example demonstrates — the circumstance being illustrated,
+          not a restatement of the values. Shown alongside results, so it is
+          read by whoever is trying to understand the ruleset.
+        minLength: 1
+
+      inputs:
+        type: object
+        description: >
+          Values keyed by the ruleset's top-level input names. May be partial:
+          partial evaluation is the point, and an example that leaves an input
+          out demonstrates what the ruleset reports as missing.
+        minProperties: 1
