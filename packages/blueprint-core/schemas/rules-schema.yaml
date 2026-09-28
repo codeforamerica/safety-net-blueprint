@@ -204,6 +204,21 @@ $defs:
     description: >
       A map of named input declarations. Each key is the input name as it appears
       in fact expressions; the value is a JSON Schema definition or $ref.
+
+      Two things about declared types affect the answers a ruleset gives, and
+      neither is obvious from the type name alone.
+
+      `integer` means integer arithmetic. Division truncates, so an income of
+      7 divided by 4 is 1, not 1.75. That is CEL's behaviour for two integers
+      and it is what the declaration asks for — in a benefit calculation it is
+      a policy choice, not a rounding detail. A fact that wants real division
+      converts explicitly: `double(x) / 4.0`.
+
+      Prefer `format: date` over `date-time` for temporal inputs unless a rule
+      genuinely depends on the time of day. Dates compare and subtract cleanly;
+      instants carry timezone semantics a determination rarely wants, and the
+      blueprint already puts time-of-day concerns in SLA definitions and state
+      machine transitions rather than in rules.
     minProperties: 1
     additionalProperties:
       $ref: "#/$defs/SchemaOrRef"
