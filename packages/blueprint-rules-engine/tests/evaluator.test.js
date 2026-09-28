@@ -295,3 +295,53 @@ describe('evaluator — input defaults', () => {
     assert.deepStrictEqual(inputs.policy, { minAge: 25 }, 'maxAge must not leak back into the caller\'s object');
   });
 });
+
+/**
+ * CEL's timestamp and duration are protobuf well-known types, not primitives.
+ * Left alone they reach the caller as @bufbuild/cel's internal message
+ * wrapper — the node reads `complete`, and the failure only appears when
+ * something serialises the value.
+ */
+describe('evaluator — timestamp and duration values', () => {
+  const graphFor = (expression) => ({
+    outputs: ['f'],
+    inputs: { '$.h.a': { type: 'string' }, '$.h.b': { type: 'string' } },
+    facts: { f: { expression } },
+    dependencies: { f: ['$.h.a', '$.h.b'] },
+  });
+  const inputs = { h: { a: '2025-03-01T00:00:00Z', b: '2025-02-26T00:00:00Z' } };
+
+  it('returns a timestamp as an RFC 3339 string', () => {
+    const node = evaluate(graphFor('timestamp(h.b)'), inputs).f;
+    assert.strictEqual(node.state, 'complete');
+    assert.strictEqual(node.value, '2025-02-26T00:00:00Z');
+  });
+
+  it('returns a duration as decimal seconds', () => {
+    const node = evaluate(graphFor('timestamp(h.a) - timestamp(h.b)'), inputs).f;
+    assert.strictEqual(node.value, '259200s');
+  });
+
+  it('keeps sub-second precision rather than rounding', () => {
+    assert.strictEqual(evaluate(graphFor("duration('1.5s')"), inputs).f.value, '1.500s');
+  });
+
+  it('converts inside collections too', () => {
+    const node = evaluate(graphFor('[timestamp(h.a), timestamp(h.b)]'), inputs).f;
+    assert.deepStrictEqual(node.value, ['2025-03-01T00:00:00Z', '2025-02-26T00:00:00Z']);
+  });
+
+  it('every value survives JSON serialisation', () => {
+    // The actual bug: a wrapper escaping here threw "Converting circular
+    // structure to JSON" in any consumer that persisted or transmitted it.
+    for (const expr of ['timestamp(h.b)', "duration('48h')", 'timestamp(h.a) - timestamp(h.b)']) {
+      const node = evaluate(graphFor(expr), inputs).f;
+      assert.doesNotThrow(() => JSON.stringify(node), `${expr} must serialise`);
+    }
+  });
+
+  it('comparisons and accessors still return primitives', () => {
+    assert.strictEqual(evaluate(graphFor('timestamp(h.a) > timestamp(h.b)'), inputs).f.value, true);
+    assert.strictEqual(evaluate(graphFor('timestamp(h.b).getFullYear()'), inputs).f.value, 2025);
+  });
+});

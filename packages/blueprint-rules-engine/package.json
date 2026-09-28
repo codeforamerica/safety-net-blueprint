@@ -34,7 +34,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@bufbuild/cel": "^0.6.1"
+    "@bufbuild/cel": "^0.6.1",
+    "@bufbuild/protobuf": "^2.15.0"
   },
   "devDependencies": {
     "@codeforamerica/blueprint-core": "^0.1.1",

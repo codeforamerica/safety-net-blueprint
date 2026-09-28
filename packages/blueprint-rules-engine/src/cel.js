@@ -13,15 +13,50 @@
  */
 
 import { run, isCelError, isCelList, isCelMap } from '@bufbuild/cel';
+import { toJson } from '@bufbuild/protobuf';
+import { TimestampSchema, DurationSchema } from '@bufbuild/protobuf/wkt';
+
+/**
+ * CEL's timestamp and duration values are the protobuf well-known types, and
+ * both have a specified JSON form: RFC 3339 for Timestamp, decimal seconds
+ * with an `s` suffix for Duration.
+ *
+ * Using that form rather than a shape of our own is what lets an engine in
+ * another language produce byte-identical output for the same graph — every
+ * CEL implementation already agrees on it. A house format would have to be
+ * documented and matched by hand.
+ */
+const WELL_KNOWN_JSON = {
+  'google.protobuf.Timestamp': TimestampSchema,
+  'google.protobuf.Duration': DurationSchema,
+};
+
+/** The underlying message, whether CEL handed back a wrapper or the value. */
+function protoMessage(val) {
+  if (typeof val !== 'object' || val === null) return null;
+  return val.$typeName ? val : (val.message?.$typeName ? val.message : null);
+}
 
 /**
  * Recursively convert CEL output types to plain JavaScript values.
- * - CelList  → Array
- * - CelMap   → Object
- * - bigint   → number (CEL integers; safe for eligibility rule values)
+ * - CelList             → Array
+ * - CelMap              → Object
+ * - bigint              → number (CEL integers; safe for eligibility values)
+ * - Timestamp, Duration → their specified JSON strings
+ *
+ * Anything else is returned as-is. That was previously true of timestamps and
+ * durations too, which meant a fact whose value was either came back holding
+ * @bufbuild/cel's internal message wrapper — reported `complete`, and then
+ * throwing "Converting circular structure to JSON" in whatever tried to
+ * serialise it.
  */
 function celToJs(val) {
   if (typeof val === 'bigint') return Number(val);
+
+  const message = protoMessage(val);
+  const schema = message && WELL_KNOWN_JSON[message.$typeName];
+  if (schema) return toJson(schema, message);
+
   if (isCelList(val)) return [...val].map(celToJs);
   if (isCelMap(val)) return Object.fromEntries([...val].map(([k, v]) => [celToJs(k), celToJs(v)]));
   return val;

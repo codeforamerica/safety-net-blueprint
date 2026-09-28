@@ -175,6 +175,47 @@
           "$.h.n"
         ]
       }
+    },
+    "temporal": {
+      "outputs": [
+        "submittedAt",
+        "sinceSubmission",
+        "withinWindow"
+      ],
+      "inputs": {
+        "$.application.submittedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "$.application.asOf": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "facts": {
+        "submittedAt": {
+          "expression": "timestamp(application.submittedAt)"
+        },
+        "sinceSubmission": {
+          "expression": "timestamp(application.asOf) - timestamp(application.submittedAt)"
+        },
+        "withinWindow": {
+          "expression": "timestamp(application.asOf) - timestamp(application.submittedAt) < duration('720h')"
+        }
+      },
+      "dependencies": {
+        "submittedAt": [
+          "$.application.submittedAt"
+        ],
+        "sinceSubmission": [
+          "$.application.submittedAt",
+          "$.application.asOf"
+        ],
+        "withinWindow": [
+          "$.application.submittedAt",
+          "$.application.asOf"
+        ]
+      }
     }
   },
   "cases": [
@@ -627,6 +668,57 @@
         "inSet": {
           "state": "complete",
           "value": false
+        }
+      }
+    },
+    {
+      "name": "a timestamp-valued fact is an RFC 3339 string",
+      "graph": "temporal",
+      "note": "Timestamp and duration are protobuf well-known types, not primitives. Their specified JSON form is part of the output contract: an engine returning its own representation produces results no other engine can read, and values that may not survive serialisation at all.",
+      "inputs": {
+        "application": {
+          "submittedAt": "2025-02-26T00:00:00Z",
+          "asOf": "2025-03-01T00:00:00Z"
+        }
+      },
+      "expect": {
+        "submittedAt": {
+          "state": "complete",
+          "value": "2025-02-26T00:00:00Z"
+        }
+      }
+    },
+    {
+      "name": "a duration-valued fact is decimal seconds",
+      "graph": "temporal",
+      "note": "Three days between the two timestamps. The `s` suffix and the fractional-digit rules come from the protobuf JSON mapping, so every CEL implementation agrees on them.",
+      "inputs": {
+        "application": {
+          "submittedAt": "2025-02-26T00:00:00Z",
+          "asOf": "2025-03-01T00:00:00Z"
+        }
+      },
+      "expect": {
+        "sinceSubmission": {
+          "state": "complete",
+          "value": "259200s"
+        }
+      }
+    },
+    {
+      "name": "comparing durations yields a plain boolean",
+      "graph": "temporal",
+      "note": "Only a final value needs converting — comparisons and accessors already return primitives.",
+      "inputs": {
+        "application": {
+          "submittedAt": "2025-02-26T00:00:00Z",
+          "asOf": "2025-03-01T00:00:00Z"
+        }
+      },
+      "expect": {
+        "withinWindow": {
+          "state": "complete",
+          "value": true
         }
       }
     }

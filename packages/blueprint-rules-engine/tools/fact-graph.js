@@ -222,7 +222,19 @@ function parse(expr) {
       expectType('rparen');
       return { type: 'has', operand: inner };
     }
-    if (t.type === 'ident') { consume(); return { type: 'prop', chain: [t.value] }; }
+    if (t.type === 'ident') {
+      consume();
+      // A bare identifier followed by `(` is a function call — timestamp(),
+      // duration(), double(). None of them have a FactGraph equivalent, and
+      // treating the name as a fact reference instead emitted
+      // <Dependency path="/timestamp">, which surfaced much later as
+      // "cannot find fact at path '/timestamp'" and read as though the two
+      // engines disagreed rather than as a construct one cannot express.
+      if (peek().type === 'lparen') {
+        throw new Error(`FactGraph has no equivalent for '${t.value}()'`);
+      }
+      return { type: 'prop', chain: [t.value] };
+    }
     if (t.type === 'lparen') {
       consume();
       const node = parseExpr();
