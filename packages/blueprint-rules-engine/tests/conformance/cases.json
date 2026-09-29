@@ -216,6 +216,45 @@
           "$.application.asOf"
         ]
       }
+    },
+    "dates": {
+      "outputs": [
+        "birthYear",
+        "bornBefore2009",
+        "submittedYear"
+      ],
+      "inputs": {
+        "$.household.applicantDateOfBirth": {
+          "type": "string",
+          "format": "date"
+        },
+        "$.application.submittedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "facts": {
+        "birthYear": {
+          "expression": "household.applicantDateOfBirth.getFullYear()"
+        },
+        "bornBefore2009": {
+          "expression": "household.applicantDateOfBirth < timestamp('2009-01-01T00:00:00Z')"
+        },
+        "submittedYear": {
+          "expression": "application.submittedAt.getFullYear()"
+        }
+      },
+      "dependencies": {
+        "birthYear": [
+          "$.household.applicantDateOfBirth"
+        ],
+        "bornBefore2009": [
+          "$.household.applicantDateOfBirth"
+        ],
+        "submittedYear": [
+          "$.application.submittedAt"
+        ]
+      }
     }
   },
   "cases": [
@@ -719,6 +758,62 @@
         "withinWindow": {
           "state": "complete",
           "value": true
+        }
+      }
+    },
+    {
+      "name": "a date input is readable without a conversion",
+      "graph": "dates",
+      "note": "An input declared `format: date` arrives as `1989-03-13`, which CEL's timestamp() rejects — it is not RFC 3339. A declared temporal input must reach the expression as a timestamp, or a rule cannot compute an age from a birthday written the way the schema recommends writing it.",
+      "inputs": {
+        "household": {
+          "applicantDateOfBirth": "1989-03-13"
+        },
+        "application": {
+          "submittedAt": "2025-02-26T14:30:00Z"
+        }
+      },
+      "expect": {
+        "birthYear": {
+          "state": "complete",
+          "value": 1989
+        }
+      }
+    },
+    {
+      "name": "a bare date is read at UTC midnight",
+      "graph": "dates",
+      "note": "A date carries no time and no zone. Reading it at UTC midnight is what makes two engines agree on which day it is — and lets a date be compared against an instant without a conversion.",
+      "inputs": {
+        "household": {
+          "applicantDateOfBirth": "1989-03-13"
+        },
+        "application": {
+          "submittedAt": "2025-02-26T14:30:00Z"
+        }
+      },
+      "expect": {
+        "bornBefore2009": {
+          "state": "complete",
+          "value": true
+        }
+      }
+    },
+    {
+      "name": "a date-time input binds the same way",
+      "graph": "dates",
+      "inputs": {
+        "household": {
+          "applicantDateOfBirth": "1989-03-13"
+        },
+        "application": {
+          "submittedAt": "2025-02-26T14:30:00Z"
+        }
+      },
+      "expect": {
+        "submittedYear": {
+          "state": "complete",
+          "value": 2025
         }
       }
     }

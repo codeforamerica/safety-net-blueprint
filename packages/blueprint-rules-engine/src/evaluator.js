@@ -28,6 +28,8 @@
  * @module evaluator
  */
 
+import { timestampFromDate } from '@bufbuild/protobuf/wkt';
+
 import { evaluateCEL } from './cel.js';
 
 // ── Type checking ─────────────────────────────────────────────────────────────
@@ -216,34 +218,75 @@ function resolveInputPath(path, inputs) {
  * Non-integral values are left alone even where the declaration says
  * `integer`; `buildInputTypeErrors` is what reports those.
  */
-function coerceDeclaredIntegers(scope, inputs, graphInputs) {
-  for (const [path, spec] of Object.entries(graphInputs ?? {})) {
-    if (spec.type !== 'integer') continue;
+/**
+ * Convert a declared input to the CEL type its declaration names.
+ *
+ * Returns the converted value, or undefined to leave the value as it is.
+ *
+ * `integer` becomes a BigInt, which is how a CEL `int` is written in
+ * JavaScript. CEL keeps `int` and `double` apart and defines no arithmetic
+ * between them, so `household.size * 3` fails when the value arrives as a JS
+ * number: the value is a double and the literal is an int. A JS number says
+ * nothing about which it is, and the graph declares the type.
+ *
+ * `date` and `date-time` become CEL timestamps. Without this, an input
+ * declared `format: date` arrives as `1989-03-13`, and CEL's only temporal
+ * constructor rejects it — `timestamp('1989-03-13')` is not RFC 3339, so a
+ * rule computing an age from a birthday written exactly as the schema
+ * recommends fails to evaluate. Binding it here means an expression never
+ * calls `timestamp()` on an input at all: `m.dateOfBirth.getFullYear()`
+ * works, and the same declaration behaves the same way in any engine that
+ * honours it. A bare date is read at UTC midnight.
+ */
+function coerceDeclared(spec, value) {
+  if (spec.type === 'integer') {
+    return Number.isInteger(value) ? BigInt(value) : undefined;
+  }
 
+  if (spec.type === 'string' && (spec.format === 'date' || spec.format === 'date-time')) {
+    if (typeof value !== 'string') return undefined;
+    // A date carries no time or zone; RFC 3339 needs both.
+    const text = spec.format === 'date' && !value.includes('T') ? `${value}T00:00:00Z` : value;
+    const date = new Date(text);
+    // An unparseable value is left alone so it is reported as a bad input
+    // rather than silently becoming an epoch date.
+    return Number.isNaN(date.getTime()) ? undefined : timestampFromDate(date);
+  }
+
+  return undefined;
+}
+
+/**
+ * Apply `coerceDeclared` to every declared input, including collection
+ * sub-fields. The caller's objects are never mutated — `setScopePath` clones
+ * on the way down and arrays are rebuilt.
+ */
+function coerceDeclaredInputs(scope, inputs, graphInputs) {
+  for (const [path, spec] of Object.entries(graphInputs ?? {})) {
     const inner = path.slice(2);
     const subFieldIdx = inner.indexOf('[].');
 
     if (subFieldIdx === -1) {
-      const val = resolveInputPath(path, scope);
-      if (Number.isInteger(val)) setScopePath(scope, inputs, inner.split('.'), BigInt(val));
+      const converted = coerceDeclared(spec, resolveInputPath(path, scope));
+      if (converted !== undefined) setScopePath(scope, inputs, inner.split('.'), converted);
       continue;
     }
 
-    // Collection sub-field ($.household.members[].age) — convert the field on
-    // every item, replacing the array so the caller's items stay untouched.
     const collRef = inner.slice(0, subFieldIdx);
     const field = inner.slice(subFieldIdx + 3);
     const arr = resolveInputPath(`$.${collRef}`, scope);
     if (!Array.isArray(arr)) continue;
 
-    setScopePath(
-      scope,
-      inputs,
-      collRef.split('.'),
-      arr.map((item) =>
-        item && Number.isInteger(item[field]) ? { ...item, [field]: BigInt(item[field]) } : item
-      )
-    );
+    let changed = false;
+    const next = arr.map((item) => {
+      if (!item) return item;
+      const converted = coerceDeclared(spec, item[field]);
+      if (converted === undefined) return item;
+      changed = true;
+      return { ...item, [field]: converted };
+    });
+
+    if (changed) setScopePath(scope, inputs, collRef.split('.'), next);
   }
 }
 
@@ -294,7 +337,7 @@ export function evaluate(graph, inputs) {
   patchNullCollections(scope, inputs, nullCollectionPaths);
 
   // Last, so it also covers values written in by the two passes above.
-  coerceDeclaredIntegers(scope, inputs, graph.inputs);
+  coerceDeclaredInputs(scope, inputs, graph.inputs);
 
   const inputTypeErrors = buildInputTypeErrors(graph.inputs, inputs);
   const resolved = {};

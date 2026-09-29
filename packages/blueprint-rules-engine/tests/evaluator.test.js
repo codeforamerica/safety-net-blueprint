@@ -435,3 +435,112 @@ describe('evaluator — leaf paths keep missing tracking precise', () => {
     assert.strictEqual(nodes.hasNonCitizen.value, true);
   });
 });
+
+/**
+ * An input declared `format: date` arrives as `1989-03-13`, and CEL's only
+ * temporal constructor rejects that — `timestamp('1989-03-13')` is not RFC
+ * 3339. So a ruleset following the schema's own advice to prefer `date` over
+ * `date-time` could not compute an age at all.
+ *
+ * Declared temporal inputs are bound as CEL timestamps, so an expression
+ * never calls `timestamp()` on an input.
+ */
+describe('evaluator — declared dates reach CEL as timestamps', () => {
+  const graphFor = (expression, format = 'date') => ({
+    outputs: ['f'],
+    inputs: { '$.h.d': { type: 'string', format } },
+    facts: { f: { expression } },
+    dependencies: { f: ['$.h.d'] },
+  });
+
+  it('a bare date is readable without timestamp()', () => {
+    const node = evaluate(graphFor('h.d.getFullYear()'), { h: { d: '1989-03-13' } }).f;
+    assert.strictEqual(node.state, 'complete');
+    assert.strictEqual(node.value, 1989);
+  });
+
+  it('a bare date is read at UTC midnight', () => {
+    const node = evaluate(graphFor('h.d'), { h: { d: '1989-03-13' } }).f;
+    assert.strictEqual(node.value, '1989-03-13T00:00:00Z');
+  });
+
+  it('date-time inputs bind the same way', () => {
+    const node = evaluate(graphFor('h.d.getFullYear()', 'date-time'), {
+      h: { d: '2025-02-26T14:30:00Z' },
+    }).f;
+    assert.strictEqual(node.value, 2025);
+  });
+
+  it('an expression that already calls timestamp() still works', () => {
+    // 82 call sites exist in a downstream ruleset; binding must not break them.
+    const node = evaluate(graphFor('timestamp(h.d).getFullYear()'), { h: { d: '1989-03-13' } }).f;
+    assert.strictEqual(node.value, 1989);
+  });
+
+  it('dates compare', () => {
+    const node = evaluate(graphFor('h.d < timestamp("2000-01-01T00:00:00Z")'), {
+      h: { d: '1989-03-13' },
+    }).f;
+    assert.strictEqual(node.value, true);
+  });
+
+  it('an unparseable date is left as it was rather than becoming an epoch', () => {
+    // Silently reading a bad date as 1970 would be worse than failing: it
+    // fails at the point of use instead, with CEL naming the type mismatch.
+    const node = evaluate(graphFor('h.d'), { h: { d: 'not-a-date' } }).f;
+    assert.strictEqual(node.value, 'not-a-date');
+  });
+
+  it('collection sub-fields bind too, without mutating the input', () => {
+    const members = [{ dateOfBirth: '1989-03-13' }, { dateOfBirth: '2010-06-01' }];
+    const graph = {
+      outputs: ['minors'],
+      inputs: {
+        '$.h.members[]': { type: 'array' },
+        '$.h.members[].dateOfBirth': { type: 'string', format: 'date' },
+      },
+      facts: { minors: { expression: 'h.members.exists(m, m.dateOfBirth.getFullYear() > 2008)' } },
+      dependencies: { minors: ['$.h.members[]'] },
+    };
+
+    assert.strictEqual(evaluate(graph, { h: { members } }).minors.value, true);
+    assert.strictEqual(members[0].dateOfBirth, '1989-03-13', "the caller's items are untouched");
+  });
+});
+
+describe('evaluator — what the date accessors actually return', () => {
+  // The rules guide tells authors that getMonth() and getDayOfMonth() count
+  // from zero while getDate() does not. That is CEL's contract, implemented by
+  // @bufbuild/cel rather than by us, which is exactly why it is pinned here: a
+  // dependency bump that changed any of it would make the guide wrong with
+  // nothing else failing.
+  const on = (expression) =>
+    evaluate(
+      {
+        outputs: ['f'],
+        inputs: { '$.h.d': { type: 'string', format: 'date' } },
+        facts: { f: { expression } },
+        dependencies: { f: ['$.h.d'] },
+      },
+      { h: { d: '1989-03-13' } }   // a Monday
+    ).f.value;
+
+  const expected = {
+    'h.d.getFullYear()': 1989,
+    'h.d.getMonth()': 2,          // 0-based — March
+    'h.d.getDayOfMonth()': 12,    // 0-based
+    'h.d.getDate()': 13,          // 1-based
+    'h.d.getDayOfWeek()': 1,      // 0-based from Sunday — Monday
+    'h.d.getDayOfYear()': 71,     // 0-based
+  };
+
+  for (const [expression, value] of Object.entries(expected)) {
+    it(`${expression} is ${value}`, () => assert.strictEqual(on(expression), value));
+  }
+
+  it('a timezone argument shifts a UTC-midnight date back a day', () => {
+    // The reason the guide tells authors to leave the zone off unless the
+    // policy means the local calendar date.
+    assert.strictEqual(on("h.d.getDate('America/Denver')"), 12);
+  });
+});

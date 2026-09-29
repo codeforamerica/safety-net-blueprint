@@ -387,3 +387,113 @@ describe('evaluator — collection ops (all/exists/has)', () => {
     });
   });
 });
+
+describe('temporal inputs — Day, and what has no FactGraph type at all', () => {
+  const dateGraph = (facts, inputs) => ({
+    inputs: {
+      '$.household.dateOfBirth': { type: 'string', format: 'date' },
+      ...inputs,
+    },
+    facts,
+    outputs: Object.keys(facts),
+    dependencies: Object.fromEntries(
+      Object.keys(facts).map((f) => [f, ['$.household.dateOfBirth']])
+    ),
+  });
+
+  it('a format: date input is a Day fact, not a String', () => {
+    const xml = toFactGraph(dateGraph({}));
+    assert.match(xml, /<Fact path="\/household_dateOfBirth">\s*<Writable>\s*<Day\/>/);
+  });
+
+  it("timestamp() on a date literal becomes a <Day> constant", () => {
+    // CEL has no date literal, so a constant date can only be written as a
+    // conversion call. Rejecting the call would make the commonest date rule
+    // there is — born before X — untestable across engines.
+    const xml = toFactGraph(
+      dateGraph({ bornBefore2009: { expression: "household.dateOfBirth < timestamp('2009-01-01T00:00:00Z')" } })
+    );
+    assert.match(xml, /<Day>2009-01-01<\/Day>/);
+  });
+
+  it('a bare date literal works the same as midnight UTC', () => {
+    const xml = toFactGraph(
+      dateGraph({ bornBefore2009: { expression: "household.dateOfBirth < timestamp('2009-01-01')" } })
+    );
+    assert.match(xml, /<Day>2009-01-01<\/Day>/);
+  });
+
+  it('and the comparison evaluates, agreeing with the reference engine', () => {
+    const graph = dateGraph({
+      bornBefore2009: { expression: "household.dateOfBirth < timestamp('2009-01-01T00:00:00Z')" },
+    });
+    const inputs = { household: { dateOfBirth: '1989-03-13' } };
+    assert.deepStrictEqual(
+      toGraphWithFactGraph(graph).evaluate(inputs).toJSON().bornBefore2009.value,
+      toGraph(graph).evaluate(inputs).toJSON().bornBefore2009.value
+    );
+  });
+
+  it('a timestamp() carrying a time of day is refused, not silently truncated', () => {
+    // Day is date-granular. Dropping the time would let the two engines agree
+    // on an answer neither was asked for.
+    const untranslated = new Map();
+    toFactGraph(
+      dateGraph({ after: { expression: "household.dateOfBirth < timestamp('2009-01-01T09:30:00Z')" } }),
+      untranslated
+    );
+    assert.match(untranslated.get('after'), /no timestamp type/);
+  });
+
+  it('timestamp() on a computed value is still refused', () => {
+    const untranslated = new Map();
+    toFactGraph(
+      dateGraph({ converted: { expression: 'timestamp(household.dateOfBirth)' } }),
+      untranslated
+    );
+    assert.match(untranslated.get('converted'), /no equivalent for 'timestamp\(\)'/);
+  });
+
+  it('a fact reading a format: date-time input cannot be expressed', () => {
+    const untranslated = new Map();
+    const graph = {
+      inputs: { '$.application.submittedAt': { type: 'string', format: 'date-time' } },
+      facts: { late: { expression: "application.submittedAt < timestamp('2025-01-01')" } },
+      outputs: ['late'],
+      dependencies: { late: ['$.application.submittedAt'] },
+    };
+    const xml = toFactGraph(graph, untranslated);
+    assert.match(untranslated.get('late'), /no timestamp type/);
+    // The input has no fact either — seeding one that is absent from the
+    // dictionary reaches a null node and throws NullPointerException.
+    assert.doesNotMatch(xml, /application_submittedAt/);
+    assert.strictEqual(
+      toGraphWithFactGraph(graph).evaluate({ application: { submittedAt: '2024-06-01T00:00:00Z' } })
+        .toJSON().late.state,
+      'error'
+    );
+  });
+
+  it('a date sub-field of a collection is a Day too', () => {
+    const xml = toFactGraph({
+      inputs: {
+        '$.h.members[]': { type: 'array' },
+        '$.h.members[].dateOfBirth': { type: 'string', format: 'date' },
+      },
+      facts: {},
+      outputs: [],
+      dependencies: {},
+    });
+    assert.match(xml, /<Fact path="\/h_members\/\*\/dateOfBirth">\s*<Writable>\s*<Day\/>/);
+  });
+
+  it('an unparseable date is reported rather than thrown', () => {
+    const graph = dateGraph({
+      bornBefore2009: { expression: "household.dateOfBirth < timestamp('2009-01-01')" },
+    });
+    const result = toGraphWithFactGraph(graph)
+      .evaluate({ household: { dateOfBirth: 'not-a-date' } })
+      .toJSON();
+    assert.strictEqual(result.bornBefore2009.state, 'error');
+  });
+});

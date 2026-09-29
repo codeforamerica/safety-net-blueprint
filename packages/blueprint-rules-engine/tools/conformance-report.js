@@ -127,6 +127,31 @@ function show(value) {
   return JSON.stringify(value);
 }
 
+/**
+ * The CEL behind a case, as lines of `fact: expression`.
+ *
+ * A finding that names only a fact is unreadable without opening the corpus
+ * next to it, and the expression is usually the whole explanation — `<` against
+ * a `timestamp()` literal reads very differently from a year extraction. The
+ * facts an asserted fact is built from are included too, since a divergence
+ * often sits in an intermediate rather than the one the case names.
+ */
+function assertedExpressions(testCase) {
+  const graph = corpus.graphs[testCase.graph];
+  const ordered = [];
+  const seen = new Set();
+
+  const visit = (fact) => {
+    if (seen.has(fact) || !graph.facts?.[fact]?.expression) return;
+    seen.add(fact);
+    for (const dep of graph.dependencies?.[fact] ?? []) visit(dep);
+    ordered.push(`${fact}: ${graph.facts[fact].expression}`);
+  };
+
+  for (const fact of Object.keys(testCase.expect)) visit(fact);
+  return ordered;
+}
+
 function runCase(engine, testCase) {
   const graph = corpus.graphs[testCase.graph];
   const asserted = Object.keys(testCase.expect);
@@ -258,6 +283,13 @@ for (const { engine, results } of report) {
     p(`**Outcome:** ${r.outcome}  `);
     p(`**Detail:** ${r.detail}`);
     p();
+    const expressions = assertedExpressions(r.testCase);
+    if (expressions.length) {
+      p('```cel');
+      for (const line of expressions) p(line);
+      p('```');
+      p();
+    }
     if (r.testCase.note) {
       p(`**Why the corpus requires this:** ${r.testCase.note}`);
       p();

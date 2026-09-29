@@ -219,6 +219,10 @@ $defs:
       instants carry timezone semantics a determination rarely wants, and the
       blueprint already puts time-of-day concerns in SLA definitions and state
       machine transitions rather than in rules.
+
+      Either format reaches an expression as a timestamp, so a fact reads it
+      directly — `m.dateOfBirth.getFullYear()` — without converting first. A
+      bare date is read at UTC midnight.
     minProperties: 1
     additionalProperties:
       $ref: "#/$defs/SchemaOrRef"

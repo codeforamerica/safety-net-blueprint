@@ -23,6 +23,7 @@ import {
   FactDictionaryFactory,
   GraphFactory,
   CollectionFactory,
+  DayFactory,
 } from '../vendor/fg.js';
 
 // ── CEL Tokenizer ─────────────────────────────────────────────────────────────
@@ -91,11 +92,36 @@ function tokenize(expr) {
 
 // ── CEL Parser → AST ──────────────────────────────────────────────────────────
 
+/** A date, or a date-time that lands exactly on UTC midnight. */
+const DAY_LITERAL = /^(\d{4}-\d{2}-\d{2})(?:T00:00:00(?:\.0+)?(?:Z|\+00:00))?$/;
+
+/**
+ * Reduce `timestamp('...')` to a Day literal, or say why it cannot be.
+ *
+ * FactGraph has a Day type but no instant, so a constant date translates and
+ * a constant time does not. Rejecting the whole call would be the easy answer
+ * and the wrong one: "born before 2009" is the commonest date rule there is,
+ * and it is the only date construct the two engines can actually be compared
+ * on.
+ */
+function timestampLiteralToDay(arg) {
+  if (arg.type !== 'literal' || arg.kind !== 'string') {
+    throw new Error("FactGraph has no equivalent for 'timestamp()' on a computed value");
+  }
+  const day = DAY_LITERAL.exec(arg.value)?.[1];
+  if (!day) {
+    throw new Error(
+      `FactGraph has no timestamp type, and '${arg.value}' carries a time of day a <Day> cannot hold`
+    );
+  }
+  return { type: 'literal', kind: 'day', value: day };
+}
+
 /**
  * Parse a CEL expression string into an AST.
  *
  * AST node types:
- *   { type: 'literal', kind: 'int'|'float'|'bool'|'string', value }
+ *   { type: 'literal', kind: 'int'|'float'|'bool'|'string'|'day', value }
  *   { type: 'prop', chain: string[] }          e.g. ['household', 'monthlyIncome']
  *   { type: 'unary', op: '!', operand }
  *   { type: 'binary', op, left, right }        op: '&&'|'||'|'<'|'>'|'<='|'>='|'=='|'!='
@@ -225,12 +251,21 @@ function parse(expr) {
     if (t.type === 'ident') {
       consume();
       // A bare identifier followed by `(` is a function call — timestamp(),
-      // duration(), double(). None of them have a FactGraph equivalent, and
-      // treating the name as a fact reference instead emitted
+      // duration(), double(). Most have no FactGraph equivalent, and treating
+      // the name as a fact reference instead emitted
       // <Dependency path="/timestamp">, which surfaced much later as
       // "cannot find fact at path '/timestamp'" and read as though the two
       // engines disagreed rather than as a construct one cannot express.
+      //
+      // timestamp() is the exception. CEL has no date literal, so a constant
+      // date can only be written as a conversion call — nothing about the
+      // comparison wants an instant. FactGraph writes the same constant as
+      // <Day>, so the call translates rather than blocking the case.
       if (peek().type === 'lparen') {
+        consume();
+        const arg = parseExpr();
+        expectType('rparen');
+        if (t.value === 'timestamp') return timestampLiteralToDay(arg);
         throw new Error(`FactGraph has no equivalent for '${t.value}()'`);
       }
       return { type: 'prop', chain: [t.value] };
@@ -299,7 +334,17 @@ function decimalToFraction(text) {
   return `${numerator / divisor}/${denominator / divisor}`;
 }
 
-function schemaTypeToFgType(schemaType) {
+/**
+ * Map a declared input type to the FactGraph fact type that holds it.
+ *
+ * Takes the whole spec rather than the type string because `format` decides
+ * the answer for temporal inputs: `date` is a Day, and `date-time` has no
+ * FactGraph type at all — see `untranslatableInput`.
+ */
+function schemaTypeToFgType(spec) {
+  const schemaType = typeof spec === 'string' ? spec : spec?.type;
+  if (schemaType === 'string' && spec?.format === 'date') return 'Day';
+
   switch (schemaType) {
     case 'integer': return 'Int';
     case 'number':  return 'Int';
@@ -308,6 +353,21 @@ function schemaTypeToFgType(schemaType) {
     case 'array':   return 'Collection';
     default:        return 'String';
   }
+}
+
+/**
+ * Why an input cannot be represented at all, or null if it can.
+ *
+ * A `date-time` input has no FactGraph type: Day is date-granular, so holding
+ * an instant in one silently drops the time and any comparison against it
+ * answers a different question. Blocking the facts that read it is the honest
+ * result — a wrong answer that agrees is worse than a case that cannot run.
+ */
+function untranslatableInput(spec) {
+  if (spec?.type === 'string' && spec.format === 'date-time') {
+    return 'FactGraph has no timestamp type; its Day type is date-granular';
+  }
+  return null;
 }
 
 function escapeXml(str) {
@@ -324,14 +384,19 @@ function escapeXml(str) {
  * Build the translation context from the compiled graph's input declarations.
  *
  * Returns:
- *   inputFgPaths: Map<celRef, fgPath>  e.g. 'household.monthlyIncome' → '/household_monthlyIncome'
- *   arrayRefs:    Set<celRef>           e.g. 'household.members'
+ *   inputFgPaths:   Map<celRef, fgPath>  e.g. 'household.monthlyIncome' → '/household_monthlyIncome'
+ *   arrayRefs:      Set<celRef>           e.g. 'household.members'
+ *   blockedFgPaths: Map<fgPath, reason>   inputs with no FactGraph type at all
  */
 function buildContext(graphInputs) {
   const inputFgPaths = new Map();
   const arrayRefs = new Set();
+  const blockedFgPaths = new Map();
 
-  for (const jsonPath of Object.keys(graphInputs)) {
+  for (const [jsonPath, spec] of Object.entries(graphInputs)) {
+    const blocked = untranslatableInput(spec);
+    if (blocked) blockedFgPaths.set(toFgPath(jsonPath), blocked);
+
     const clean = jsonPath.slice(2);
     if (clean.includes('[].')) continue; // sub-fields; accessed via relative paths in filters
 
@@ -344,7 +409,7 @@ function buildContext(graphInputs) {
     }
   }
 
-  return { inputFgPaths, arrayRefs };
+  return { inputFgPaths, arrayRefs, blockedFgPaths };
 }
 
 // ── AST → FactGraph XML ───────────────────────────────────────────────────────
@@ -358,6 +423,12 @@ function buildContext(graphInputs) {
  *   filterVar:       string | null  — loop variable in current filter scope
  *   filterCollPath:  string | null  — FG collection path being filtered
  */
+/** Stop translating a fact that reads an input FactGraph cannot hold. */
+function refuseBlocked(ctx, fgPath) {
+  const reason = ctx.blockedFgPaths?.get(fgPath);
+  if (reason) throw new Error(`${reason} (reading ${fgPath})`);
+}
+
 function astToXml(node, ctx) {
   switch (node.type) {
 
@@ -370,6 +441,7 @@ function astToXml(node, ctx) {
       // evaluators silently computed different things.
       if (kind === 'float')  return `<Rational>${decimalToFraction(text ?? String(value))}</Rational>`;
       if (kind === 'string') return `<String>${escapeXml(value)}</String>`;
+      if (kind === 'day')    return `<Day>${value}</Day>`;
       throw new Error(`Unknown literal kind: ${kind}`);
     }
 
@@ -378,12 +450,16 @@ function astToXml(node, ctx) {
       // Inside a filter, references starting with the loop variable are relative
       if (ctx.filterVar && chain[0] === ctx.filterVar) {
         const field = chain.slice(1).join('.');
+        refuseBlocked(ctx, `${ctx.filterCollPath}/*/${field}`);
         return `<Dependency path="${field}"/>`;
       }
       // Absolute path reference
       const celRef = chain.join('.');
       const absPath = ctx.inputFgPaths.get(celRef);
-      if (absPath) return `<Dependency path="${absPath}"/>`;
+      if (absPath) {
+        refuseBlocked(ctx, absPath);
+        return `<Dependency path="${absPath}"/>`;
+      }
       // Fact-to-fact reference
       return `<Dependency path="/${chain.join('_')}"/>`;
     }
@@ -570,7 +646,8 @@ export function toFactGraph(graph, untranslated = new Map()) {
   // a different question than the CEL evaluator and answers from an unset fact.
   for (const [jsonPath, spec] of Object.entries(graph.inputs)) {
     const fgp = toFgPath(jsonPath);
-    const fgType = schemaTypeToFgType(spec.type);
+    if (untranslatableInput(spec)) continue;
+    const fgType = schemaTypeToFgType(spec);
     const placeholder = spec.default === undefined
       ? ''
       : `<Placeholder><${fgType}>${spec.default}</${fgType}></Placeholder>`;
@@ -672,6 +749,26 @@ function findAffectedFacts(failedPaths, graph) {
  *
  * @returns {{ uuidToItem: Map, failedPaths: Map }} uuid→item map and path→errorMsg map
  */
+/**
+ * Convert a declared input value into the object its fact type accepts.
+ *
+ * Only Day needs this: FactGraph parses a date through `DayFactory`, which
+ * returns its own Either rather than throwing, and handing the raw string to
+ * a Day-typed fact fails at the Scala boundary instead.
+ *
+ * @returns {{ value: * } | { error: string }}
+ */
+function toFgValue(spec, val) {
+  if (schemaTypeToFgType(spec) !== 'Day') return { value: val };
+
+  // A rejected date sets `right` to null rather than leaving it undefined, so
+  // `isRight` is the only reliable check — reading `right` alone seeds null and
+  // the failure resurfaces much later as a NullPointerException.
+  const parsed = DayFactory(String(val));
+  if (!parsed?.isRight) return { error: `expected a date, got '${val}'` };
+  return { value: parsed.right };
+}
+
 function seedGraph(fgGraph, graphInputs, inputs) {
   const uuidToItem = new Map();
   const failedPaths = new Map(); // jsonPath → error message
@@ -679,6 +776,9 @@ function seedGraph(fgGraph, graphInputs, inputs) {
   for (const [jsonPath, spec] of Object.entries(graphInputs)) {
     // Skip sub-fields — handled when seeding the parent array
     if (jsonPath.slice(2).includes('[].')) continue;
+    // An input with no FactGraph type has no fact in the dictionary either;
+    // seeding one anyway reaches a null node and throws NullPointerException.
+    if (untranslatableInput(spec)) continue;
 
     if (jsonPath.endsWith('[]')) {
       // Array input → seed collection
@@ -743,9 +843,13 @@ function seedGraph(fgGraph, graphInputs, inputs) {
         const item = arr[i];
         for (const fieldName of subFields) {
           const val = item[fieldName];
-          if (val !== undefined) {
-            fgGraph['set__T__O__V'](`${collPath}/#${uuid}/${fieldName}`, val);
+          if (val === undefined) continue;
+          const seeded = toFgValue(graphInputs[`${arrayPrefix}${fieldName}`], val);
+          if (seeded.error) {
+            failedPaths.set(jsonPath, `.${fieldName}: ${seeded.error}`);
+            continue;
           }
+          fgGraph['set__T__O__V'](`${collPath}/#${uuid}/${fieldName}`, seeded.value);
         }
       }
 
@@ -765,7 +869,12 @@ function seedGraph(fgGraph, graphInputs, inputs) {
         failedPaths.set(jsonPath, `expected ${spec.type}, got ${actual}`);
         continue;
       }
-      fgGraph.set(toFgPath(jsonPath), val);
+      const seeded = toFgValue(spec, val);
+      if (seeded.error) {
+        failedPaths.set(jsonPath, seeded.error);
+        continue;
+      }
+      fgGraph.set(toFgPath(jsonPath), seeded.value);
     }
   }
 

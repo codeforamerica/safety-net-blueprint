@@ -125,10 +125,15 @@ it does not enforce it.
 
 ## Facts
 
-A fact is a CEL expression over inputs and other facts. Name it for what it
-checks, not for a catalog identifier — fact names are what the Explorer's graph
-view displays, so `abawdScreeningPrompt` reads and `promptWR02` does not.
-Identifiers belong on annotations.
+A fact is a [CEL][cel] expression over inputs and other facts — the same
+expression language the blueprint uses in state machine guards, SLA conditions
+and metric filters. This guide covers what Blueprint adds to it, not the
+language itself; for operators, macros and built-in functions, read the
+[CEL language definition][cel-langdef].
+
+Name a fact for what it checks, not for a catalog identifier — fact names are
+what the Explorer's graph view displays, so `abawdScreeningPrompt` reads and
+`promptWR02` does not. Identifiers belong on annotations.
 
 Facts may be declared in any order.
 
@@ -145,6 +150,29 @@ A fact that wants real division converts explicitly — `double(x) / 4.0`.
 time of day. Dates compare and subtract cleanly; instants carry timezone
 semantics a determination rarely wants. Time-of-day belongs in SLA definitions
 and state machine transitions, which is where the blueprint already puts it.
+
+A temporal input reaches expressions as a timestamp, so there is no conversion
+to write — `m.dateOfBirth.getFullYear()` works on an input declared
+`format: date`, and a bare date is read at UTC midnight:
+
+```yaml
+- path: minorMembers
+  expression: "members.filter(m, m.dateOfBirth.getFullYear() > 2008)"
+```
+
+Calling `timestamp()` on an input is unnecessary but harmless.
+
+Two consequences of that binding are worth knowing before writing a date rule.
+The [timestamp accessors][cel-datetime] are CEL's, not ours, and mostly count
+from zero — `getMonth() == 3` is April, and `getDayOfMonth()` is a day behind
+`getDate()`. Nothing reports either as wrong, so check the spec rather than
+assume.
+
+The other is ours: because a bare date is read at UTC midnight, passing a
+timezone moves it. `getDate('America/Denver')` on `1989-03-13` returns `12`.
+Leave the zone off when the stored date is what the policy means — for a date
+of birth or an application date it usually is — and pass it only when the rule
+genuinely turns on a local calendar date.
 
 For money, `number` is evaluated in binary floating point, so `0.1 + 0.2` is
 not exactly `0.3`. That only changes an answer on exact-equality comparisons
@@ -197,3 +225,7 @@ ruleset reports as missing, which is usually the more interesting case.
 as outputs, CEL expressions that do not parse, and `$.path` references that do
 not match the declared inputs. It does not check that an expression computes
 the right answer — that is what examples and the conformance corpus are for.
+
+[cel-datetime]: https://github.com/google/cel-spec/blob/master/doc/langdef.md#datetime-functions
+[cel]: https://cel.dev/
+[cel-langdef]: https://github.com/google/cel-spec/blob/master/doc/langdef.md
