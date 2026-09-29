@@ -56,9 +56,22 @@ fi
 bail_if_failed
 
 step "Checking committed artifacts are up to date"
-if git diff HEAD --exit-code packages/blueprint-rules-engine/dist/browser.js packages/safety-net-explorer/ > /dev/null 2>&1; then
+ARTIFACT_PATHS=(packages/blueprint-rules-engine/dist/browser.js packages/safety-net-explorer/)
+if git diff HEAD --exit-code "${ARTIFACT_PATHS[@]}" > /dev/null 2>&1; then
   pass "Committed artifacts are up to date"
 else
+  # Say which files differ and by how much. Without this the failure names no
+  # file, which is unreadable anywhere you cannot re-run it — a CI log most of
+  # all, and CI is where it fires for reasons a local run does not reproduce.
+  printf '\n  Differs from HEAD:\n'
+  git diff HEAD --stat "${ARTIFACT_PATHS[@]}" | sed 's/^/    /'
+  # A generated file is often minified onto one line, so a full diff is
+  # unreadable. The first few changed hunks are usually enough to tell a
+  # regenerated timestamp from a real content change.
+  printf '\n  First changed hunks:\n'
+  git diff HEAD --unified=0 "${ARTIFACT_PATHS[@]}" \
+    | grep -E '^(diff --git|@@|[-+][^-+])' | head -20 | cut -c1-200 | sed 's/^/    /'
+  printf '\n'
   fail "Generated artifacts are out of date — run \`bash scripts/generate-artifacts.sh --commit\` or commit them manually, then re-run preflight."
 fi
 bail_if_failed
