@@ -5,7 +5,7 @@ import { join, resolve as resolvePath } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
-import { parseArgs, createOpenApiTsConfig, domainToAnnotationExportName, generateAnnotationsAndPolicies, generateRules, collectNullableFieldNames, patchZodGenForNullable, collectNamedEnumDefs, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums } from '../../scripts/generate-ts-clients.js';
+import { parseArgs, createOpenApiTsConfig, domainToAnnotationExportName, generateAnnotationsAndPolicies, generateRules, buildInputType, collectNullableFieldNames, patchZodGenForNullable, collectNamedEnumDefs, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums } from '../../scripts/generate-ts-clients.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -927,4 +927,85 @@ events:
     });
   });
 
+});
+
+// The input type is the only thing telling a consumer what evaluate() expects,
+// and nothing at runtime reads it — the graph is passed to the engine whole.
+// So a wrong type is invisible until someone writes against it, which is why
+// each shape the graph can declare is pinned here rather than smoke-tested.
+describe('buildInputType', () => {
+  const norm = (s) => s.replace(/\s+/g, ' ').trim();
+  const typeFor = (inputs) => norm(buildInputType(inputs));
+
+  it('types a collection as an array, not an object', () => {
+    assert.strictEqual(
+      typeFor({
+        '$.members[]': { type: 'array' },
+        '$.members[].id': { type: 'string' },
+        '$.members[].dateOfBirth': { type: 'string' },
+      }),
+      '{ members?: Array<{ id?: string; dateOfBirth?: string; }>; }'
+    );
+  });
+
+  it('keeps a collection nested under an object rather than dropping it', () => {
+    // Paths deeper than two segments used to be skipped outright, so the
+    // namespace generated empty and the field vanished from the type.
+    assert.strictEqual(
+      typeFor({ '$.household.members[].age': { type: 'integer' } }),
+      '{ household?: { members?: Array<{ age?: number; }>; }; }'
+    );
+  });
+
+  it('types a scalar input as its declared type', () => {
+    // A leaf with no children used to collapse to an empty object.
+    assert.strictEqual(
+      typeFor({ '$.asOfDate': { type: 'string' }, '$.limit': { type: 'integer' } }),
+      '{ asOfDate?: string; limit?: number; }'
+    );
+  });
+
+  it('types a plain nested object', () => {
+    assert.strictEqual(
+      typeFor({
+        '$.notice.status': { type: 'string' },
+        '$.notice.daysSinceCreated': { type: 'integer' },
+      }),
+      '{ notice?: { status?: string; daysSinceCreated?: number; }; }'
+    );
+  });
+
+  it('types a collection with no declared sub-fields as unknown elements', () => {
+    // Array<unknown> and not Array<{}>, which would accept any object.
+    assert.strictEqual(
+      typeFor({ '$.tags[]': { type: 'array' } }),
+      '{ tags?: Array<unknown>; }'
+    );
+  });
+
+  it('does not depend on declaration order', () => {
+    // A graph declares a collection and its sub-fields in whatever order the
+    // ruleset author wrote them; neither may win.
+    const subFieldFirst = typeFor({
+      '$.members[].id': { type: 'string' },
+      '$.members[]': { type: 'array' },
+    });
+    const collectionFirst = typeFor({
+      '$.members[]': { type: 'array' },
+      '$.members[].id': { type: 'string' },
+    });
+    assert.strictEqual(subFieldFirst, collectionFirst);
+    assert.strictEqual(subFieldFirst, '{ members?: Array<{ id?: string; }>; }');
+  });
+
+  it('types a ruleset with no inputs as an empty object', () => {
+    // Not `unknown`, which would reject evaluate({}).
+    assert.strictEqual(typeFor({}), '{}');
+    assert.strictEqual(typeFor(undefined), '{}');
+  });
+
+  it('types an unrecognised declared type as unknown rather than guessing', () => {
+    assert.strictEqual(typeFor({ '$.thing': { type: 'tuple' } }), '{ thing?: unknown; }');
+    assert.strictEqual(typeFor({ '$.thing': {} }), '{ thing?: unknown; }');
+  });
 });

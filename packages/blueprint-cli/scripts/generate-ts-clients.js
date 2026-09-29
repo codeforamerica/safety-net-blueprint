@@ -712,30 +712,61 @@ function schemaTypeToTs(type) {
 
 /**
  * Reconstruct a nested TypeScript object type from flat graph input paths.
- * e.g. { '$.notice.status': { type: 'string' }, '$.notice.daysSinceCreated': { type: 'integer' } }
- *   → { notice?: { status?: string; daysSinceCreated?: number; }; }
+ *
+ * The graph declares inputs as a flat map of JSONPaths, and this is the only
+ * thing that tells a consumer what `evaluate()` expects. So it has to agree
+ * with the payload exactly: a `[]` segment is an array, and a path with no
+ * children is a scalar of its declared type.
+ *
+ *   $.notice.status          → { notice?: { status?: string } }
+ *   $.members[].dateOfBirth  → { members?: Array<{ dateOfBirth?: string }> }
+ *   $.asOfDate               → { asOfDate?: string }
+ *
+ * Paths arrive in no particular order and a collection is usually declared
+ * both as itself and by its sub-fields (`$.members[]` and `$.members[].id`),
+ * so nodes are merged as they are inserted rather than assuming either comes
+ * first.
  */
 function buildInputType(graphInputs) {
-  // Group by top-level namespace, then by nested path
-  const namespaces = {};
+  const root = { fields: new Map() };
+
+  // Insert each declared path into a tree, creating nodes as needed. `array`
+  // marks a node whose value is a list; `type` is set only on a leaf.
   for (const [path, spec] of Object.entries(graphInputs ?? {})) {
-    // Strip '$.' prefix and '[]' array markers for type reconstruction
-    const clean = path.slice(2).replace(/\[\](\.[a-zA-Z])/g, '$1').replace(/\[\]$/, '');
-    const parts = clean.split('.');
-    const ns = parts[0];
-    if (!namespaces[ns]) namespaces[ns] = {};
-    if (parts.length === 2) {
-      namespaces[ns][parts[1]] = schemaTypeToTs(spec.type);
-    }
-    // Skip deeper nesting (array sub-fields) for now — they show up as collection-level deps
+    const segments = path.slice(2).split('.').filter(Boolean);
+    let node = root;
+
+    segments.forEach((segment, index) => {
+      const isArray = segment.endsWith('[]');
+      const name = isArray ? segment.slice(0, -2) : segment;
+
+      if (!node.fields.has(name)) node.fields.set(name, { fields: new Map() });
+      const child = node.fields.get(name);
+      if (isArray) child.array = true;
+
+      // A leaf carries the declared type. An array declared without sub-fields
+      // is a leaf too, but its element type is unknown rather than its own.
+      if (index === segments.length - 1 && !isArray) child.type = spec?.type;
+      node = child;
+    });
   }
 
-  const lines = [];
-  for (const [ns, fields] of Object.entries(namespaces)) {
-    const fieldLines = Object.entries(fields).map(([f, t]) => `    ${f}?: ${t};`).join('\n');
-    lines.push(`  ${ns}?: {\n${fieldLines}\n  };`);
-  }
-  return `{\n${lines.join('\n')}\n}`;
+  const render = (node, depth) => {
+    const pad = '  '.repeat(depth + 1);
+    // No children means a scalar, so use the declared type. An array with no
+    // children has element type `unknown` — `unknown[]` rather than `{}[]`.
+    const element = node.fields.size
+      ? `{\n${[...node.fields]
+          .map(([name, child]) => `${pad}  ${name}?: ${render(child, depth + 1)};`)
+          .join('\n')}\n${pad}}`
+      : node.array ? 'unknown' : schemaTypeToTs(node.type);
+
+    return node.array ? `Array<${element}>` : element;
+  };
+
+  // The root is an object even when a ruleset declares no inputs — falling
+  // through to the scalar branch would type it `unknown` and reject `{}`.
+  return root.fields.size ? render(root, -1) : '{}';
 }
 
 /**
@@ -840,7 +871,7 @@ function generateRules(specsDir, outputDir) {
 }
 
 // Export for testing
-export { parseArgs, createOpenApiTsConfig, exec, resolveOpenApiTsBin, domainToAnnotationExportName, generateAnnotationsAndPolicies, generateRules, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums, patchDomainBarrelForAnnotations };
+export { parseArgs, createOpenApiTsConfig, exec, resolveOpenApiTsBin, domainToAnnotationExportName, generateAnnotationsAndPolicies, generateRules, buildInputType, collectNullableFieldNames, patchZodGenForNullable, collectDiscriminatorMappingKeys, validateDiscriminatorLiterals, patchTypesGenForNamedEnums, patchDomainBarrelForNamedEnums, patchDomainBarrelForAnnotations };
 export { collectNamedEnumDefs } from './collect-named-enum-defs.js';
 
 // Run main function only if this is the entry point
