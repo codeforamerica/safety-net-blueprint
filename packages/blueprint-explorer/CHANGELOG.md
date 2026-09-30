@@ -1,4 +1,4 @@
-# @codeforamerica/blueprint-core
+# @codeforamerica/blueprint-explorer
 
 ## 0.2.0
 
@@ -78,20 +78,8 @@
     old helper looked for a `forEach` body under `forEach.do` rather than the
     sibling `do`, so every loop body rendered empty in the generated state
     machine documentation.
-- 15e4b60: Named registry files (`*-registry-{type}.yaml`) can now be authored against `registry-schema.yaml`. A registry defines reusable, citable items keyed by stable ID, and annotation files reference entries by ID using the registry type as the field name (e.g. `patterns: [external-ref-defs-oneOf]`).
-  
-  `detectType` now returns `'policies'` for policy registry files, matched by `$schema: policies-schema.yaml` or the `-policies.yaml` filename suffix. Previously these returned `'unknown'` and were skipped by every consumer.
-  
-  **Deprecated:** the `policies-schema.yaml` registry format (top-level `policies:` map) is superseded by `registry-schema.yaml` (`type: policies`, `entries:` map). Both formats remain supported. The old format will be removed in a future minor version.
-  
-  **Removed** `overlays/policies-schema.yaml` from safety-net-contracts. It added a `programs` field to the base `Policy` type, but targeted a schema in `blueprint-core/schemas/` that is never part of the resolve input — so it never applied. No resolved output has ever contained `Policy.programs`, which is why removing it is not a breaking change.
-  
-  It also had a second, independent defect worth recording, because the syntax is a trap: its target was written `$defs.Policy.properties`. The overlay path parser treats a leading `$` as the root marker and strips it, so that resolved to `[defs, Policy, properties]` and looked for a property named `defs`. Reaching a property literally named `$defs` requires `$.$defs` — the first `$` is consumed as the root, the second belongs to the name.
-  
-  The capability that overlay reached for already exists in the registry format: registry `Entry` sets `additionalProperties: true` and names `programs` for policies as its example of a type-specific field. A state needing it adds it to the registry entry rather than patching core's schema — which also keeps validation schemas out of reach of the contracts they validate.
-- d1a80d3: **Breaking:** JSON schema validation no longer strips the `$schema` field before validating documents. Schemas with `additionalProperties: false` that do not declare `$schema` as an allowed property will now fail validation. To fix, add `$schema: {type: string}` to the `properties` section of any such schema.
-  
-  `blueprint-core` now includes rules contract support: a schema for authoring `*-rules.yaml` files, a compiler that produces portable `*-graph.yaml` dependency graphs, a validator with cycle detection, unreachable node detection, and CEL expression syntax checking, and a standalone endpoint overlay generator for rulesets that declare an HTTP endpoint. The `operationId` for generated rules endpoints is derived from the declared endpoint path (e.g. `/notices/evaluate-urgency` → `evaluateUrgency`) rather than the ruleset name. The graph schema is also available for validating compiled graph files directly.
+- 15e4b60: `blueprint-explorer` is now a proper library. Each build tool is exported as a named function (`buildContextMap`, `buildDataDictionaries`, `buildApiReference`, etc.) from the package root so consumers can import and call them directly rather than spawning subprocesses into `src/`.
+- 0be0fe7: The Explorer now generates per-ruleset documentation pages with an interactive dependency graph (inputs → intermediate facts → outputs), a click-to-highlight node detail panel showing each fact's expression and annotations, and a live browser-side evaluator. State machine pages now render `evaluate:` steps in the generated diagrams.
 
 ### Patch Changes
 
@@ -104,9 +92,8 @@
   This aligns annotation keys with the data dictionary and the field inventory,
   so a field can be looked up directly in any of them without translating
   between path forms.
-
-## 0.1.1
-
-### Patch Changes
-
-- 6f440c3: `blueprint-resolve` now exits with a clear error if `blueprint-core`'s base contracts are missing, rather than silently producing broken output. The `base-contracts/` and `assets/` directories are now correctly included in the `blueprint-core` npm package, fixing resolution failures for consumers who installed from npm.
+- Updated dependencies [15e4b60]
+- Updated dependencies [a89ec45]
+- Updated dependencies [15e4b60]
+- Updated dependencies [d1a80d3]
+  - @codeforamerica/blueprint-core@0.2.0
