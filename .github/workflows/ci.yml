@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: '22'
 
-      - run: npm install
+      - run: npm ci
 
       - name: Run preflight checks
         run: npm run preflight

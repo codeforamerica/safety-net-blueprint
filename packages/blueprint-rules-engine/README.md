@@ -133,9 +133,11 @@ The bundle is an IIFE and exports nothing importable, so the global is the only 
 reach it. With a bundler, import `evaluate` from the package root instead — the global is
 typed via `declare global` for the script-tag case.
 
-The bundle is regenerated from source by `npm run build:browser`, and `prepare` runs it
-before publish. `dist/browser.js` is committed, and preflight fails if it has drifted from
-`src/`.
+The bundle is regenerated from source by `npm run build:browser`. `dist/` is not
+committed — `prepare` builds it on every install and before publish, and `files`
+ships it to npm, so the copy a consumer gets is always built from the `src/` beside
+it. A minified bundle is not byte-identical across platforms, so committing one and
+checking it had not drifted was a check that could not hold.
 
 ## Known limitation: decimal precision
 

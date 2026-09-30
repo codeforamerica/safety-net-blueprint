@@ -7,8 +7,11 @@
 #   generate-artifacts.sh --commit     — stage and commit regenerated artifacts
 #
 # Artifacts:
-#   packages/blueprint-rules-engine/dist/browser.js
-#   packages/safety-net-explorer/
+#   packages/safety-net-explorer/  — served from the repo by GitHub Pages
+#
+# The rules-engine browser bundle is not here: the package's "prepare" script
+# builds it on every install and "files"/"exports" ship it to npm, so no one
+# reads it from the repo.
 
 set -euo pipefail
 
@@ -16,7 +19,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 ARTIFACTS=(
-  packages/blueprint-rules-engine/dist/browser.js
   packages/safety-net-explorer/
 )
 

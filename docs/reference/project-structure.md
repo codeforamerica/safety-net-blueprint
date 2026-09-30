@@ -65,7 +65,7 @@ safety-net-blueprint/
 │   │   │   ├── evaluator.js        # evaluate() — public API; EvalResult, Graph, toGraph internal
 │   │   │   ├── cel.js              # CEL expression evaluator
 │   │   │   └── fact-graph.js       # IRS FactGraph translator (parity testing)
-│   │   ├── dist/
+│   │   ├── dist/                   # Not committed — built by "prepare" on install
 │   │   │   └── browser.js          # Self-contained browser bundle (window.RulesEngine)
 │   │   └── tests/
 │   │

@@ -56,7 +56,7 @@ fi
 bail_if_failed
 
 step "Checking committed artifacts are up to date"
-ARTIFACT_PATHS=(packages/blueprint-rules-engine/dist/browser.js packages/safety-net-explorer/)
+ARTIFACT_PATHS=(packages/safety-net-explorer/)
 if git diff HEAD --exit-code "${ARTIFACT_PATHS[@]}" > /dev/null 2>&1; then
   pass "Committed artifacts are up to date"
 else
