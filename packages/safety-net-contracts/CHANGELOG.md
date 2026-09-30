@@ -1,9 +1,13 @@
 # Changelog
 
-All notable changes to `@codeforamerica/safety-net-blueprint-contracts` will be documented in this file.
+## 0.1.1
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### Patch Changes
+
+- 15e4b60: **Deprecated:** The `policies-schema.yaml` registry format (`policies:` map) is
+  superseded by `registry-schema.yaml` (`type: policies`, `entries:` map). Named
+  registry files (`*-registry-{type}.yaml`) are discovered automatically. Both
+  formats are supported; the old one will be removed in a future minor version.
 
 ## [Unreleased]
 

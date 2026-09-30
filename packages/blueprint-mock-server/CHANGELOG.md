@@ -1,9 +1,24 @@
 # Changelog
 
-All notable changes to `@codeforamerica/safety-net-blueprint-mock-server` will be documented in this file.
+## 0.2.0
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### Minor Changes
+
+- a89ec45: **Breaking:** `blueprint-core` now has one entry point instead of seventeen
+  subpaths. Import `discover`, `load`, `generate`, `extract`, `resolve`,
+  `validate`, `schemasDir` and `baseContractsDir` from the package root;
+  `/openapi`, `/rules`, `/validator`, `/overlay`, `/relationships`,
+  `/compositions`, `/state-machines`, `/json-schema`, `/registries` and
+  `/annotations` no longer resolve. `load` now takes a `DiscoveredFile`, so
+  `discover(dir).map(load)` replaces
+  `discover(dir).map((f) => load(f.path, f.relativePath))`. `Doc.refs` and
+  `Doc.model` are methods rather than fields, because as fields they went stale
+  as soon as a resolve pass rewrote `content`. OpenAPI loading and validation
+  moved to `blueprint-mock-server`, annotation merging to `blueprint-explorer`,
+  and `bundleSpec` to `blueprint-cli`. (#425)
+- d1a80d3: The mock server now serves a POST endpoint for every ruleset that declares
+  one, evaluating the compiled graph against the request body and returning
+  every fact with its state. (#425)
 
 ## [Unreleased]
 
