@@ -4,106 +4,35 @@
 
 ### Minor Changes
 
-- a89ec45: **Breaking:** `blueprint-core` is now imported from one entry point instead of
-  seventeen subpaths, and every subpath import must be rewritten.
-  
-  The package exported 17 subpaths. It now exports one, `.`, carrying eight
-  names — six pipeline stages and the two directories the package ships:
-  
-  ```js
-  discover(dir, type?)        find contract files, with their type and domain
-  load(file)                  parse one into a Doc
-  generate(docs, type, opts?) derive 'overlay' | 'graph' | 'postman' | 'examples'
-  extract(docs, type, opts?)  read out a stated fact: 'relationships'
-  resolve(docs, { overlays, envTarget, envVariables })
-  validate(docs)
-  schemasDir, baseContractsDir
-  ```
-  
-  `generate` makes what did not exist; `extract` surfaces what the documents
-  already state. Both dispatch on a type string, as `discover(dir, type)` does.
-  
-  These subpaths no longer resolve: `@codeforamerica/blueprint-core/openapi`, `/rules`, `/validator`,
-  `/overlay`, `/relationships`, `/compositions`, `/state-machines`,
-  `/json-schema`, `/registries` and `/annotations` no longer resolve.
-  
-  `load` takes what `discover` returned rather than its parts:
-  
-  ```js
-  - discover(dir).map((f) => load(f.path, f.relativePath))
-  + discover(dir).map(load)
-  ```
-  
-  `DiscoveredFile` and `Doc` both gain `domain`, derived from `info.x-domain`,
-  then a top-level `domain`, then a path segment or filename prefix naming a
-  value in the `Domain` enum. The last two need the whole set, which is why
-  `discover` resolves it.
-  
-  `Doc.refs` and `Doc.model` are now methods. As fields they were computed once
-  at load and went stale the moment a resolve pass rewrote `content`, which had
-  `validate` checking pre-resolution documents. `refs()` entries also carry
-  `name`, the schema name a reference points at, which replaces the former
-  `extractRefName` export.
-  
-  **Moved out of core, to the package that wanted them:**
-  
-  | what | where |
-  |---|---|
-  | OpenAPI spec loading and the server's runtime view of a spec | blueprint-mock-server |
-  | OpenAPI structural validation, example-data validation | blueprint-mock-server |
-  | annotation merging, contract navigation for docs generation | blueprint-explorer |
-  | `bundleSpec` | blueprint-cli |
-  
-  **blueprint-rules-engine no longer depends on blueprint-core.** `toGraph`,
-  `toGraphWithFactGraph` and `toFactGraphXml` take a compiled graph; they no
-  longer accept a rules contract and compile it. Compile with
-  `generate(docs, 'graph')` and pass the graph. The browser bundle drops the
-  stub that existed only to keep core out of it.
-  
-  Also fixed along the way:
-  
-  - `$ref` following was bounded by `process.cwd()`, so resolving the same
-    contracts from a workspace directory silently dropped every cross-file ref
-    and reported hundreds of fields as missing. It is bounded by the contract
-    set now.
-  - `discover` skips deprecated documents, which every caller was doing
-    immediately afterwards anyway.
-  - Resolve separates writing from succeeding: schema conformance still blocks
-    the write, because it can only run before refs are rewritten, but every
-    other failure writes the artifacts, reports, and exits non-zero.
-  - State machine step walking had drifted into three copies of the same
-    accessors. `Doc.model()` normalizes the authored shape — `then`/`else` on
-    if, `when` on match, `do` on forEach — into uniform `{ kind, ...fields,
-    children }` nodes, and the copies are gone. This fixed a silent defect: the
-    old helper looked for a `forEach` body under `forEach.do` rather than the
-    sibling `do`, so every loop body rendered empty in the generated state
-    machine documentation.
-- 15e4b60: Named registry files (`*-registry-{type}.yaml`) can now be authored against `registry-schema.yaml`. A registry defines reusable, citable items keyed by stable ID, and annotation files reference entries by ID using the registry type as the field name (e.g. `patterns: [external-ref-defs-oneOf]`).
-  
-  `detectType` now returns `'policies'` for policy registry files, matched by `$schema: policies-schema.yaml` or the `-policies.yaml` filename suffix. Previously these returned `'unknown'` and were skipped by every consumer.
-  
-  **Deprecated:** the `policies-schema.yaml` registry format (top-level `policies:` map) is superseded by `registry-schema.yaml` (`type: policies`, `entries:` map). Both formats remain supported. The old format will be removed in a future minor version.
-  
-  **Removed** `overlays/policies-schema.yaml` from safety-net-contracts. It added a `programs` field to the base `Policy` type, but targeted a schema in `blueprint-core/schemas/` that is never part of the resolve input — so it never applied. No resolved output has ever contained `Policy.programs`, which is why removing it is not a breaking change.
-  
-  It also had a second, independent defect worth recording, because the syntax is a trap: its target was written `$defs.Policy.properties`. The overlay path parser treats a leading `$` as the root marker and strips it, so that resolved to `[defs, Policy, properties]` and looked for a property named `defs`. Reaching a property literally named `$defs` requires `$.$defs` — the first `$` is consumed as the root, the second belongs to the name.
-  
-  The capability that overlay reached for already exists in the registry format: registry `Entry` sets `additionalProperties: true` and names `programs` for policies as its example of a type-specific field. A state needing it adds it to the registry entry rather than patching core's schema — which also keeps validation schemas out of reach of the contracts they validate.
-- d1a80d3: **Breaking:** JSON schema validation no longer strips the `$schema` field before validating documents. Schemas with `additionalProperties: false` that do not declare `$schema` as an allowed property will now fail validation. To fix, add `$schema: {type: string}` to the `properties` section of any such schema.
-  
-  `blueprint-core` now includes rules contract support: a schema for authoring `*-rules.yaml` files, a compiler that produces portable `*-graph.yaml` dependency graphs, a validator with cycle detection, unreachable node detection, and CEL expression syntax checking, and a standalone endpoint overlay generator for rulesets that declare an HTTP endpoint. The `operationId` for generated rules endpoints is derived from the declared endpoint path (e.g. `/notices/evaluate-urgency` → `evaluateUrgency`) rather than the ruleset name. The graph schema is also available for validating compiled graph files directly.
+- a89ec45: **Breaking:** `blueprint-core` now has one entry point instead of seventeen
+  subpaths. Import `discover`, `load`, `generate`, `extract`, `resolve`,
+  `validate`, `schemasDir` and `baseContractsDir` from the package root;
+  `/openapi`, `/rules`, `/validator`, `/overlay`, `/relationships`,
+  `/compositions`, `/state-machines`, `/json-schema`, `/registries` and
+  `/annotations` no longer resolve. `load` now takes a `DiscoveredFile`, so
+  `discover(dir).map(load)` replaces
+  `discover(dir).map((f) => load(f.path, f.relativePath))`. `Doc.refs` and
+  `Doc.model` are methods rather than fields, because as fields they went stale
+  as soon as a resolve pass rewrote `content`. OpenAPI loading and validation
+  moved to `blueprint-mock-server`, annotation merging to `blueprint-explorer`,
+  and `bundleSpec` to `blueprint-cli`. (#425)
+- 15e4b60: **Deprecated:** The `policies-schema.yaml` registry format (`policies:` map) is
+  superseded by `registry-schema.yaml` (`type: policies`, `entries:` map). Named
+  registry files (`*-registry-{type}.yaml`) are discovered automatically. Both
+  formats are supported; the old one will be removed in a future minor version.
+- d1a80d3: **Breaking:** JSON schema validation no longer strips `$schema` before
+  validating. A schema with `additionalProperties: false` that does not declare
+  `$schema` will now fail; add `$schema: { type: string }` to its properties.
 
-### Patch Changes
-
-- 15e4b60: **Breaking:** Annotation files must now key fields by spec-relative path
+  `blueprint-core` also gains rules contract support: a schema for
+  `*-rules.yaml`, a compiler producing portable `*-graph.yaml` dependency
+  graphs, a validator with cycle and unreachable-node detection and CEL syntax
+  checking, and an endpoint overlay generator. (#425)
+- 15e4b60: **Breaking:** Annotation files key fields by spec-relative path
   (`application.members[].dateOfBirth`) rather than schema-relative path
-  (`member.dateOfBirth`). The first segment is the camelCase schema name — for
-  example `application`, `verification`, `applicationWritable` — followed by the
-  dot-bracket field path.
-  
-  This aligns annotation keys with the data dictionary and the field inventory,
-  so a field can be looked up directly in any of them without translating
-  between path forms.
+  (`member.dateOfBirth`). The first segment is the camelCase schema name,
+  followed by the dot-bracket field path. This matches the data dictionary and
+  the field inventory, so one path form works across all three.
 
 ## 0.1.1
 
