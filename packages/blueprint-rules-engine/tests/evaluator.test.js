@@ -1,0 +1,546 @@
+/**
+ * Evaluator tests for the Blueprint rules engine.
+ *
+ * These tests define the contract the evaluator must satisfy.
+ *
+ * Fixtures: tests/fixtures/snap-interview-probes/
+ *   - snap-interview-probes-rules.yaml         — ruleset definition
+ *   - snap-interview-probes-rules-examples.yaml — scenarios (inputs only; outputs asserted inline)
+ */
+
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import yaml from 'js-yaml';
+import { evaluate } from '../src/index.js';
+import { toGraph } from '../src/evaluator.js';
+import { generate } from '@codeforamerica/blueprint-core';
+
+/**
+ * Compile one ruleset through `generate`, the way the pipeline does.
+ *
+ * Kept local to the test rather than importing a compiler: compiling is a
+ * build step core performs, not something consumers call.
+ */
+function graphFor(rulesDoc, rulesetName) {
+  const name = rulesetName ?? Object.keys(rulesDoc.rulesets ?? {})[0];
+  const graphs = generate([{
+    path: 'rules.yaml',
+    relativePath: 'rules.yaml',
+    type: 'rules',
+    domain: rulesDoc.domain ?? null,
+    content: rulesDoc,
+    refs: () => new Map(),
+    model: () => null,
+    resolved: false,
+    provenance: null,
+  }], 'graph');
+  const found = graphs.find(({ graph }) => graph.ruleset === name);
+  if (!found) throw new Error(`Ruleset "${name}" produced no graph`);
+  return found.graph;
+}
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const fixturesDir = join(__dirname, 'fixtures/snap-interview-probes');
+
+function loadYaml(path) {
+  return yaml.load(readFileSync(path, 'utf8'));
+}
+
+const ruleset  = loadYaml(join(fixturesDir, 'snap-interview-probes-rules.yaml'));
+const examples = loadYaml(join(fixturesDir, 'snap-interview-probes-rules-examples.yaml'));
+const scenarios = examples.rulesets.snapInterviewProbes.examples;
+
+// The engine evaluates compiled graphs; compiling a contract is a build step,
+// done here the way `generate` does it in the pipeline.
+const graph = graphFor(ruleset, 'snapInterviewProbes');
+
+const PROBE_OUTPUTS = ['incomeInconsistencyProbe', 'generalWorkRequirementProbe', 'abawdProbe', 'studentEligibilityProbe', 'immigrationStatusProbe', 'felonComplianceProbe', 'changeVerificationProbe'];
+
+describe('evaluator — snap interview probes', () => {
+
+  it('scenario 01: no probes fire when household is straightforward', () => {
+    const result = toGraph(graph).evaluate(scenarios[0].inputs).filter('output');
+    assert.deepStrictEqual(result.collect('error'),       {});
+    assert.deepStrictEqual(result.collect('missing'),     {});
+    assert.deepStrictEqual(result.collect('placeholder'), {});
+    for (const fact of PROBE_OUTPUTS) {
+      assert.strictEqual(result.get(fact).value, false, `${fact} should be false`);
+    }
+  });
+
+  it('scenario 02: income, ABAWD, non-citizen, and changed circumstances probes fire', () => {
+    const result = toGraph(graph).evaluate(scenarios[1].inputs).filter('output');
+    assert.deepStrictEqual(result.collect('error'),       {});
+    assert.deepStrictEqual(result.collect('missing'),     {});
+    assert.deepStrictEqual(result.collect('placeholder'), {});
+    assert.strictEqual(result.get('incomeInconsistencyProbe').value,   true);
+    assert.strictEqual(result.get('generalWorkRequirementProbe').value, true);
+    assert.strictEqual(result.get('abawdProbe').value,                 true);
+    assert.strictEqual(result.get('immigrationStatusProbe').value,     true);
+    assert.strictEqual(result.get('changeVerificationProbe').value,    true);
+    assert.strictEqual(result.get('studentEligibilityProbe').value,    false);
+    assert.strictEqual(result.get('felonComplianceProbe').value,       false);
+  });
+
+  it('scenario 03: application binding omitted — changeVerificationProbe is missing', () => {
+    const result = toGraph(graph).evaluate(scenarios[2].inputs).filter('output');
+    assert.deepStrictEqual(result.collect('error'),       {});
+    assert.deepStrictEqual(result.collect('placeholder'), {});
+    assert.ok('changeVerificationProbe' in result.collect('missing'), 'changeVerificationProbe should be missing');
+    assert.ok(result.get('incomeInconsistencyProbe').state === 'complete', 'incomeInconsistencyProbe should still be complete');
+  });
+
+  it('scenario 04: type error on monthlyIncome — incomeInconsistencyProbe errors, member-based probes resolve', () => {
+    const result = toGraph(graph).evaluate(scenarios[3].inputs).filter('output');
+    assert.deepStrictEqual(result.collect('missing'),     {});
+    assert.deepStrictEqual(result.collect('placeholder'), {});
+    // incomeGapExists (intermediate) errors internally; its output probe surfaces as error
+    assert.ok('incomeInconsistencyProbe' in result.collect('error'),  'incomeInconsistencyProbe should error');
+    assert.strictEqual(result.get('abawdProbe').state,              'complete', 'abawdProbe should still be complete');
+    assert.strictEqual(result.get('changeVerificationProbe').state, 'complete', 'changeVerificationProbe should still be complete');
+  });
+
+  it('scenario 05: null collection — member probes are placeholder, scalar probes complete', () => {
+    // A null collection is patched to [] and evaluates, so every probe resolves
+    // to false — but the member-based ones did so from a stand-in value, which
+    // makes them placeholder, and that travels to the probes computed from them.
+    // FactGraph agrees fact for fact; the parity test in fact-graph.test.js pins it.
+    const result = toGraph(graph).evaluate(scenarios[4].inputs).filter('output');
+    assert.deepStrictEqual(result.collect('error'),   {});
+    assert.deepStrictEqual(result.collect('missing'), {});
+
+    const memberProbes = ['generalWorkRequirementProbe', 'abawdProbe', 'studentEligibilityProbe', 'immigrationStatusProbe', 'felonComplianceProbe'];
+    for (const fact of memberProbes) {
+      assert.strictEqual(result.get(fact).state, 'placeholder', `${fact} reads the null collection`);
+      assert.strictEqual(result.get(fact).value, false);
+    }
+    for (const fact of ['incomeInconsistencyProbe', 'changeVerificationProbe']) {
+      assert.strictEqual(result.get(fact).state, 'complete', `${fact} reads only scalars`);
+    }
+    assert.strictEqual(result.get('changeVerificationProbe').value, false);
+  });
+
+  it('scenario 06: sub-field type error on age — member-based probe outputs error, income and change probes resolve', () => {
+    const result = toGraph(graph).evaluate(scenarios[5].inputs).filter('output');
+    assert.deepStrictEqual(result.collect('missing'),     {});
+    assert.deepStrictEqual(result.collect('placeholder'), {});
+    // Member-based intermediate facts error; their dependent probe outputs also error
+    const memberProbes = ['generalWorkRequirementProbe', 'abawdProbe', 'studentEligibilityProbe', 'immigrationStatusProbe', 'felonComplianceProbe'];
+    for (const fact of memberProbes) {
+      assert.strictEqual(result.get(fact).state, 'error', `${fact} should be in errors`);
+    }
+    assert.strictEqual(result.get('incomeInconsistencyProbe').state,  'complete', 'incomeInconsistencyProbe should still be complete');
+    assert.strictEqual(result.get('changeVerificationProbe').state,   'complete', 'changeVerificationProbe should still be complete');
+  });
+
+});
+
+/**
+ * Input defaults come from the compiled graph, which declares them per field
+ * path ($.policy.maxAge), so they apply field by field.
+ *
+ * They used to come from the ruleset's authored `inputs:` block, passed to
+ * `evaluate` as a third argument and applied per namespace: a caller who
+ * supplied `policy` at all got no defaults for the parts of it they left out,
+ * and every fact reading those parts failed. Only the FactGraph comparison
+ * tool ever passed that argument, so through the package's own API defaults
+ * never applied at all.
+ */
+describe('evaluator — error messages', () => {
+  it("carries CEL's own reason, not just the expression", () => {
+    // The message used to be "Expression failed to evaluate: <expr>" and
+    // nothing else, because evaluateCEL swallowed the CelError and returned
+    // undefined — hiding the one sentence that says how to fix it.
+    const graph = {
+      outputs: ['scaled'],
+      inputs: { '$.household.size': { type: 'integer' } },
+      facts: { scaled: { expression: 'household.size * 1.5' } },
+      dependencies: { scaled: ['$.household.size'] },
+    };
+
+    const node = evaluate(graph, { household: { size: 2 } }).scaled;
+
+    assert.strictEqual(node.state, 'error');
+    assert.match(node.message, /household\.size \* 1\.5/, 'names the expression');
+    assert.match(node.message, /no matching overload/, "carries CEL's reason");
+    assert.match(node.message, /\(int, double\)/, 'names the types that did not match');
+  });
+});
+
+/**
+ * CEL keeps `int` and `double` apart and defines no arithmetic between them.
+ * A JS number says nothing about which it is, so every input used to reach CEL
+ * as a double and `household.size * 3` failed against a bare integer literal —
+ * reported only as "Expression failed to evaluate". The graph declares the
+ * type, so that is the type CEL is given.
+ */
+describe('evaluator — declared integers reach CEL as ints', () => {
+  const graphFor = (expression, type = 'integer') => ({
+    outputs: ['f'],
+    inputs: { '$.household.size': { type } },
+    facts: { f: { expression } },
+    dependencies: { f: ['$.household.size'] },
+  });
+
+  it('arithmetic against an integer literal works', () => {
+    const node = evaluate(graphFor('household.size * 3'), { household: { size: 2 } }).f;
+    assert.strictEqual(node.state, 'complete');
+    assert.strictEqual(node.value, 6);
+  });
+
+  it('division between integers truncates, as CEL specifies for ints', () => {
+    const node = evaluate(graphFor('household.size / 4'), { household: { size: 7 } }).f;
+    assert.strictEqual(node.value, 1, 'not 1.75 — the declaration says integer');
+  });
+
+  it('a `number` input keeps double semantics', () => {
+    const node = evaluate(graphFor('household.size * 1.5', 'number'), { household: { size: 2 } }).f;
+    assert.strictEqual(node.value, 3);
+  });
+
+  it('results come back as plain numbers, never BigInt', () => {
+    // celToJs narrows CEL ints back to JS numbers. If that ever stopped
+    // covering a path, callers would get a BigInt that breaks JSON.stringify.
+    const node = evaluate(graphFor('household.size * 3'), { household: { size: 2 } }).f;
+    assert.strictEqual(typeof node.value, 'number');
+  });
+
+  it('a derived integer fact is an int to the facts that read it', () => {
+    // A fact declares its type the same way an input does. Honouring it for
+    // inputs but not for facts made `a * 2` fail while `input * 2` worked.
+    const graph = {
+      outputs: ['doubled'],
+      inputs: { '$.household.size': { type: 'integer' } },
+      facts: {
+        tripled: { expression: 'household.size * 3', type: 'integer' },
+        doubled: { expression: 'tripled * 2' },
+      },
+      dependencies: { tripled: ['$.household.size'], doubled: ['tripled'] },
+    };
+
+    const nodes = evaluate(graph, { household: { size: 2 } });
+
+    assert.strictEqual(nodes.doubled.state, 'complete');
+    assert.strictEqual(nodes.doubled.value, 12);
+    assert.strictEqual(typeof nodes.tripled.value, 'number', 'the node keeps a plain number');
+  });
+
+  it('collection sub-fields convert without leaking BigInt or mutating inputs', () => {
+    const collectionOps = loadYaml(
+      join(__dirname, 'fixtures/collection-ops/collection-ops-graph.yaml')
+    );
+    const members = [
+      { name: 'Alice', age: 22, employed: true, citizenshipStatus: 'citizen' },
+      { name: 'Bob', age: 60, employed: false, citizenshipStatus: 'lpr' },
+    ];
+    const nodes = evaluate(collectionOps, {
+      household: { members },
+      policy: { minAge: 18, maxAge: 65 },
+    });
+
+    for (const item of nodes.adultsFilter.value) {
+      assert.strictEqual(typeof item.age, 'number', 'filtered items must not carry BigInt');
+    }
+    assert.strictEqual(members[0].age, 22, "the caller's objects are untouched");
+    assert.strictEqual(typeof members[0].age, 'number');
+  });
+});
+
+describe('evaluator — input defaults', () => {
+  const collectionOps = loadYaml(
+    join(__dirname, 'fixtures/collection-ops/collection-ops-graph.yaml')
+  );
+  // Ages 22 and 60; the declared defaults are minAge 18, maxAge 54.
+  const members = [
+    { name: 'Alice', age: 22, employed: true,  citizenshipStatus: 'citizen' },
+    { name: 'Bob',   age: 60, employed: false, citizenshipStatus: 'lpr' },
+  ];
+  const names = (nodes) => nodes.adultsFilter.value.map((m) => m.name);
+
+  it('applies every default when the namespace is absent', () => {
+    const nodes = evaluate(collectionOps, { household: { members } });
+
+    assert.strictEqual(nodes.adultsFilter.state, 'placeholder');
+    assert.deepStrictEqual(names(nodes), ['Alice']);
+  });
+
+  it('defaults the fields a partial namespace leaves out', () => {
+    // minAge supplied, maxAge left to its default of 54 — Bob is still out.
+    const nodes = evaluate(collectionOps, {
+      household: { members },
+      policy: { minAge: 25 },
+    });
+
+    assert.strictEqual(nodes.adultsFilter.state, 'placeholder');
+    assert.deepStrictEqual(names(nodes), [], 'Alice is under the supplied minAge, Bob over the default maxAge');
+  });
+
+  it('leaves supplied values alone', () => {
+    const nodes = evaluate(collectionOps, {
+      household: { members },
+      policy: { minAge: 18, maxAge: 65 },
+    });
+
+    assert.strictEqual(nodes.adultsFilter.state, 'complete');
+    assert.deepStrictEqual(names(nodes), ['Alice', 'Bob']);
+  });
+
+  it('does not mutate the caller\'s inputs', () => {
+    const inputs = { household: { members }, policy: { minAge: 25 } };
+    evaluate(collectionOps, inputs);
+
+    assert.deepStrictEqual(inputs.policy, { minAge: 25 }, 'maxAge must not leak back into the caller\'s object');
+  });
+});
+
+/**
+ * CEL's timestamp and duration are protobuf well-known types, not primitives.
+ * Left alone they reach the caller as @bufbuild/cel's internal message
+ * wrapper — the node reads `complete`, and the failure only appears when
+ * something serialises the value.
+ */
+describe('evaluator — timestamp and duration values', () => {
+  const graphFor = (expression) => ({
+    outputs: ['f'],
+    inputs: { '$.h.a': { type: 'string' }, '$.h.b': { type: 'string' } },
+    facts: { f: { expression } },
+    dependencies: { f: ['$.h.a', '$.h.b'] },
+  });
+  const inputs = { h: { a: '2025-03-01T00:00:00Z', b: '2025-02-26T00:00:00Z' } };
+
+  it('returns a timestamp as an RFC 3339 string', () => {
+    const node = evaluate(graphFor('timestamp(h.b)'), inputs).f;
+    assert.strictEqual(node.state, 'complete');
+    assert.strictEqual(node.value, '2025-02-26T00:00:00Z');
+  });
+
+  it('returns a duration as decimal seconds', () => {
+    const node = evaluate(graphFor('timestamp(h.a) - timestamp(h.b)'), inputs).f;
+    assert.strictEqual(node.value, '259200s');
+  });
+
+  it('keeps sub-second precision rather than rounding', () => {
+    assert.strictEqual(evaluate(graphFor("duration('1.5s')"), inputs).f.value, '1.500s');
+  });
+
+  it('converts inside collections too', () => {
+    const node = evaluate(graphFor('[timestamp(h.a), timestamp(h.b)]'), inputs).f;
+    assert.deepStrictEqual(node.value, ['2025-03-01T00:00:00Z', '2025-02-26T00:00:00Z']);
+  });
+
+  it('every value survives JSON serialisation', () => {
+    // The actual bug: a wrapper escaping here threw "Converting circular
+    // structure to JSON" in any consumer that persisted or transmitted it.
+    for (const expr of ['timestamp(h.b)', "duration('48h')", 'timestamp(h.a) - timestamp(h.b)']) {
+      const node = evaluate(graphFor(expr), inputs).f;
+      assert.doesNotThrow(() => JSON.stringify(node), `${expr} must serialise`);
+    }
+  });
+
+  it('comparisons and accessors still return primitives', () => {
+    assert.strictEqual(evaluate(graphFor('timestamp(h.a) > timestamp(h.b)'), inputs).f.value, true);
+    assert.strictEqual(evaluate(graphFor('timestamp(h.b).getFullYear()'), inputs).f.value, 2025);
+  });
+});
+
+/**
+ * Declaration order in a rules contract is not significant — the evaluator
+ * resolves topologically, and the compiler records every edge regardless of
+ * where a fact appears in the file.
+ *
+ * This is the behaviour a validator rule used to hide. The compiler scanned
+ * only the facts declared above the current one, so a forward reference
+ * produced a graph with that edge missing; rather than fixing it, validation
+ * rejected the ordering and told authors to reorder. A structural check on
+ * `graph.dependencies` would not have caught the original defect either —
+ * this evaluates.
+ */
+describe('evaluator — declaration order does not change the answer', () => {
+  const facts = {
+    // eligible is declared first and depends on two facts declared after it
+    eligible: { expression: 'hasAdult && withinLimit' },
+    hasAdult: { expression: 'household.age >= 18' },
+    withinLimit: { expression: 'household.income <= 1000' },
+  };
+  const graph = {
+    outputs: ['eligible'],
+    inputs: { '$.household.age': { type: 'integer' }, '$.household.income': { type: 'integer' } },
+    facts,
+    dependencies: {
+      eligible: ['hasAdult', 'withinLimit'],
+      hasAdult: ['$.household.age'],
+      withinLimit: ['$.household.income'],
+    },
+  };
+
+  it('resolves a fact that depends on ones declared after it', () => {
+    const nodes = evaluate(graph, { household: { age: 30, income: 900 } });
+    assert.strictEqual(nodes.eligible.state, 'complete');
+    assert.strictEqual(nodes.eligible.value, true);
+  });
+
+  it('propagates through the out-of-order dependency', () => {
+    // If the edge were missing, eligible would resolve from an unset name
+    // rather than reporting what it is waiting on.
+    const nodes = evaluate(graph, { household: { age: 30 } });
+    assert.strictEqual(nodes.eligible.state, 'missing');
+    assert.deepStrictEqual(nodes.eligible.missing, ['$.household.income']);
+  });
+});
+
+/**
+ * The point of expanding a $ref to leaf paths: missing-input tracking stays
+ * per-field. While a ref compiled to one opaque object node, a fact reading
+ * `members[].citizenshipStatus` recorded a dependency on the whole object, so
+ * one absent field reported all of them as missing and a progressive
+ * interview could not tell what to ask for.
+ *
+ * A structural check on graph.inputs would not catch that — this evaluates.
+ */
+describe('evaluator — leaf paths keep missing tracking precise', () => {
+  const graph = {
+    outputs: ['hasNonCitizen'],
+    inputs: {
+      '$.household.members[]': { type: 'array' },
+      '$.household.members[].age': { type: 'integer' },
+      '$.household.members[].citizenshipStatus': { type: 'string' },
+      '$.household.income': { type: 'integer' },
+    },
+    facts: {
+      hasNonCitizen: { expression: "household.members.exists(m, m.citizenshipStatus == 'non_citizen')" },
+      overLimit: { expression: 'household.income > 1000' },
+    },
+    dependencies: {
+      hasNonCitizen: ['$.household.members[]'],
+      overLimit: ['$.household.income'],
+    },
+  };
+
+  it('names only the input actually absent', () => {
+    const nodes = evaluate(graph, {
+      household: { members: [{ age: 30, citizenshipStatus: 'us_citizen' }] },
+    });
+    assert.strictEqual(nodes.hasNonCitizen.state, 'complete');
+    assert.strictEqual(nodes.overLimit.state, 'missing');
+    assert.deepStrictEqual(nodes.overLimit.missing, ['$.household.income']);
+  });
+
+  it('a collection resolves from its declared sub-fields', () => {
+    const nodes = evaluate(graph, {
+      household: { members: [{ age: 30, citizenshipStatus: 'non_citizen' }], income: 900 },
+    });
+    assert.strictEqual(nodes.hasNonCitizen.value, true);
+  });
+});
+
+/**
+ * An input declared `format: date` arrives as `1989-03-13`, and CEL's only
+ * temporal constructor rejects that — `timestamp('1989-03-13')` is not RFC
+ * 3339. So a ruleset following the schema's own advice to prefer `date` over
+ * `date-time` could not compute an age at all.
+ *
+ * Declared temporal inputs are bound as CEL timestamps, so an expression
+ * never calls `timestamp()` on an input.
+ */
+describe('evaluator — declared dates reach CEL as timestamps', () => {
+  const graphFor = (expression, format = 'date') => ({
+    outputs: ['f'],
+    inputs: { '$.h.d': { type: 'string', format } },
+    facts: { f: { expression } },
+    dependencies: { f: ['$.h.d'] },
+  });
+
+  it('a bare date is readable without timestamp()', () => {
+    const node = evaluate(graphFor('h.d.getFullYear()'), { h: { d: '1989-03-13' } }).f;
+    assert.strictEqual(node.state, 'complete');
+    assert.strictEqual(node.value, 1989);
+  });
+
+  it('a bare date is read at UTC midnight', () => {
+    const node = evaluate(graphFor('h.d'), { h: { d: '1989-03-13' } }).f;
+    assert.strictEqual(node.value, '1989-03-13T00:00:00Z');
+  });
+
+  it('date-time inputs bind the same way', () => {
+    const node = evaluate(graphFor('h.d.getFullYear()', 'date-time'), {
+      h: { d: '2025-02-26T14:30:00Z' },
+    }).f;
+    assert.strictEqual(node.value, 2025);
+  });
+
+  it('an expression that already calls timestamp() still works', () => {
+    // 82 call sites exist in a downstream ruleset; binding must not break them.
+    const node = evaluate(graphFor('timestamp(h.d).getFullYear()'), { h: { d: '1989-03-13' } }).f;
+    assert.strictEqual(node.value, 1989);
+  });
+
+  it('dates compare', () => {
+    const node = evaluate(graphFor('h.d < timestamp("2000-01-01T00:00:00Z")'), {
+      h: { d: '1989-03-13' },
+    }).f;
+    assert.strictEqual(node.value, true);
+  });
+
+  it('an unparseable date is left as it was rather than becoming an epoch', () => {
+    // Silently reading a bad date as 1970 would be worse than failing: it
+    // fails at the point of use instead, with CEL naming the type mismatch.
+    const node = evaluate(graphFor('h.d'), { h: { d: 'not-a-date' } }).f;
+    assert.strictEqual(node.value, 'not-a-date');
+  });
+
+  it('collection sub-fields bind too, without mutating the input', () => {
+    const members = [{ dateOfBirth: '1989-03-13' }, { dateOfBirth: '2010-06-01' }];
+    const graph = {
+      outputs: ['minors'],
+      inputs: {
+        '$.h.members[]': { type: 'array' },
+        '$.h.members[].dateOfBirth': { type: 'string', format: 'date' },
+      },
+      facts: { minors: { expression: 'h.members.exists(m, m.dateOfBirth.getFullYear() > 2008)' } },
+      dependencies: { minors: ['$.h.members[]'] },
+    };
+
+    assert.strictEqual(evaluate(graph, { h: { members } }).minors.value, true);
+    assert.strictEqual(members[0].dateOfBirth, '1989-03-13', "the caller's items are untouched");
+  });
+});
+
+describe('evaluator — what the date accessors actually return', () => {
+  // The rules guide tells authors that getMonth() and getDayOfMonth() count
+  // from zero while getDate() does not. That is CEL's contract, implemented by
+  // @bufbuild/cel rather than by us, which is exactly why it is pinned here: a
+  // dependency bump that changed any of it would make the guide wrong with
+  // nothing else failing.
+  const on = (expression) =>
+    evaluate(
+      {
+        outputs: ['f'],
+        inputs: { '$.h.d': { type: 'string', format: 'date' } },
+        facts: { f: { expression } },
+        dependencies: { f: ['$.h.d'] },
+      },
+      { h: { d: '1989-03-13' } }   // a Monday
+    ).f.value;
+
+  const expected = {
+    'h.d.getFullYear()': 1989,
+    'h.d.getMonth()': 2,          // 0-based — March
+    'h.d.getDayOfMonth()': 12,    // 0-based
+    'h.d.getDate()': 13,          // 1-based
+    'h.d.getDayOfWeek()': 1,      // 0-based from Sunday — Monday
+    'h.d.getDayOfYear()': 71,     // 0-based
+  };
+
+  for (const [expression, value] of Object.entries(expected)) {
+    it(`${expression} is ${value}`, () => assert.strictEqual(on(expression), value));
+  }
+
+  it('a timezone argument shifts a UTC-midnight date back a day', () => {
+    // The reason the guide tells authors to leave the zone off unless the
+    // policy means the local calendar date.
+    assert.strictEqual(on("h.d.getDate('America/Denver')"), 12);
+  });
+});

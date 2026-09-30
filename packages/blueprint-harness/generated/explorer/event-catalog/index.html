@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Blueprint Harness — Event Catalog</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; font-size: 14px; line-height: 1.6; }
+    a { color: #5650BE; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12px; background: #F7EDE8; padding: 1px 5px; border-radius: 3px; border: 1px solid #E9CCBE; color: #2a2a2a; }
+    table { border-collapse: collapse; width: 100%; }
+    th { background: #F7EDE8; color: #1a1a1a; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 8px 12px; text-align: left; border-bottom: 2px solid #E9CCBE; }
+    td { padding: 10px 12px; border-bottom: 1px solid #E9CCBE; vertical-align: top; font-size: 13px; word-break: break-word; overflow-wrap: anywhere; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #F7EDE8; }
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    
+  </style>
+</head>
+<body>
+  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">Event Catalog</a></div>
+  
+  <div style="max-width:960px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
+    <h1 style="font-size:1.5rem;font-weight:800;color:#2B1A78;margin-bottom:0.375rem;">Event Catalog</h1>
+    <p style="color:#666;margin-bottom:2rem;font-size:13px;">Cross-domain event reference auto-generated from state machine <code>emit</code> and subscription declarations.</p>
+    <div style="background:white;border:1px solid #E9CCBE;border-radius:8px;overflow:hidden;">
+      <table>
+        <thead><tr>
+          <th>Event</th><th>Published by</th><th>Subscribers</th>
+        </tr></thead>
+        <tbody><tr id="event-ca.eligibility.determination.complete">
+    <td><code>ca.eligibility.determination.complete</code> <a href="#event-ca.eligibility.determination.complete" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/eligibility.html#machine-determination">Eligibility / Determination</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-ca.intake.application.closed">
+    <td><code>ca.intake.application.closed</code> <a href="#event-ca.intake.application.closed" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-ca.intake.application.submitted">
+    <td><code>ca.intake.application.submitted</code> <a href="#event-ca.intake.application.submitted" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+    <td><a href="../state-machine-docs/eligibility.html#machine-determination">Eligibility / Determination</a></td>
+  </tr><tr id="event-ca.intake.application.withdrawn">
+    <td><code>ca.intake.application.withdrawn</code> <a href="#event-ca.intake.application.withdrawn" class="permalink" title="Link to this event">#</a></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-ca.intake.review_reminder">
+    <td><code>ca.intake.review_reminder</code> <a href="#event-ca.intake.review_reminder" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+  </tr></tbody>
+      </table>
+    </div>
+    
+  <h2 style="font-size:1rem;font-weight:700;color:#2B1A78;margin:2.5rem 0 0.5rem;">Subscribed but not emitted</h2>
+  <p style="font-size:13px;color:#666;margin-bottom:0.75rem;">These events are subscribed to but have no emitter in the current state machines.</p>
+  <ul style="font-size:13px;color:#666;padding-left:1.25rem;">
+    <li><code>ca.intake.review_reminder</code></li>
+  </ul>
+  </div>
+  <script>
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    
+  </script>
+</body>
+</html>

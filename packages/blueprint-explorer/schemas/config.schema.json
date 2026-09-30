@@ -10,6 +10,12 @@
       "description": "Display name for the project (used in hub title and footer).",
       "type": "string"
     },
+    "annotations": {
+      "description": "Allowlist of annotation field types to display across all explorer views (data dictionary, annotations explorer, etc.). If absent, all annotation fields are shown. Use this to suppress internal or structural annotation types that are not meaningful to your audience.",
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
     "repo": {
       "description": "Source repository configuration for generating spec links in the explorer.",
       "type": "object",

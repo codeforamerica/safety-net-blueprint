@@ -12,10 +12,36 @@ import {
   applySetEffect,
   applyCreateEffect,
   applyEffects,
-  applySteps
+  applySteps,
+  initRulesIndex,
 } from '../../src/state-machine-engine.js';
+import { generate } from '@codeforamerica/blueprint-core';
 import { insertResource, clearAll } from '../../src/database-manager.js';
 import { ROLES } from '../roles.js';
+
+/**
+ * Compile one ruleset through `generate`, the way the pipeline does.
+ *
+ * Kept local to the test rather than importing a compiler: compiling is a
+ * build step core performs, not something consumers call.
+ */
+function graphFor(rulesDoc, rulesetName) {
+  const name = rulesetName ?? Object.keys(rulesDoc.rulesets ?? {})[0];
+  const graphs = generate([{
+    path: 'rules.yaml',
+    relativePath: 'rules.yaml',
+    type: 'rules',
+    domain: rulesDoc.domain ?? null,
+    content: rulesDoc,
+    refs: () => new Map(),
+    model: () => null,
+    resolved: false,
+    provenance: null,
+  }], 'graph');
+  const found = graphs.find(({ graph }) => graph.ruleset === name);
+  if (!found) throw new Error(`Ruleset "${name}" produced no graph`);
+  return found.graph;
+}
 
 // =============================================================================
 // resolveValue
@@ -672,9 +698,64 @@ test('applySteps — emit step queues pendingEvent with resolved data', () => {
 // applySteps — evaluate
 // =============================================================================
 
-test('applySteps — evaluate step queues procedureId in pendingProcedures', () => {
-  const { pendingProcedures } = applySteps([{ evaluate: 'assign-queue-rule' }], {}, {});
-  assert.deepStrictEqual(pendingProcedures, [{ procedureId: 'assign-queue-rule' }]);
+// Compile a simple ruleset once and seed the index for all evaluate: tests.
+const _simpleRuleset = {
+  inputs: { person: { type: 'object', properties: { age: { type: 'integer' } } } },
+  facts: [{ path: 'eligible', type: 'boolean', expression: 'person.age >= 18' }],
+  outputs: { eligible: { type: 'boolean' } },
+};
+const _simpleGraph = graphFor({ domain: 'test', rulesets: { simple: _simpleRuleset } }, 'simple');
+initRulesIndex({ simple: _simpleGraph });
+
+test('applySteps — evaluate: string bind stores nodes map in context.entities', () => {
+  const context = { entities: {} };
+  applySteps([{
+    evaluate: 'simple',
+    inputs: { person: { age: 25 } },
+    bind: '$result',
+  }], {}, context);
+  assert.ok(context.entities.result, 'result alias should be in entities');
+  assert.strictEqual(context.entities.result.eligible.value, true);
+  assert.strictEqual(context.entities.result.eligible.type, 'output');
+});
+
+test('applySteps — evaluate: string bind without $ prefix works the same', () => {
+  const context = { entities: {} };
+  applySteps([{
+    evaluate: 'simple',
+    inputs: { person: { age: 25 } },
+    bind: 'result',
+  }], {}, context);
+  assert.ok(context.entities.result);
+  assert.strictEqual(context.entities.result.eligible.value, true);
+});
+
+test('applySteps — evaluate: map bind stores selected fact values in context.entities', () => {
+  const context = { entities: {} };
+  applySteps([{
+    evaluate: 'simple',
+    inputs: { person: { age: 15 } },
+    bind: { isEligible: 'eligible' },
+  }], {}, context);
+  assert.strictEqual(context.entities.isEligible, false);
+});
+
+test('applySteps — evaluate: result available to subsequent steps in same block', () => {
+  const resource = {};
+  const context = { entities: {} };
+  applySteps([
+    { evaluate: 'simple', inputs: { person: { age: 20 } }, bind: '$eval' },
+    { set: { field: 'status', value: '$eval.eligible.value' } },
+  ], resource, context);
+  assert.strictEqual(resource.status, true);
+});
+
+test('applySteps — evaluate: missing ruleset warns and skips without throwing', () => {
+  const context = { entities: {} };
+  assert.doesNotThrow(() => {
+    applySteps([{ evaluate: 'nonexistent' }], {}, context);
+  });
+  assert.deepStrictEqual(context.entities, {});
 });
 
 // =============================================================================

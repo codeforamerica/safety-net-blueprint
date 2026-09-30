@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "required": [
+    "outcome"
+  ],
+  "properties": {
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "approved",
+        "denied"
+      ],
+      "description": "Whether the application was approved or denied at close."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional caseworker notes on the closure decision."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/CloseRequest"
+}

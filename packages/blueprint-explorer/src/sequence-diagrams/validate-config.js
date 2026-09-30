@@ -79,11 +79,19 @@ for (const f of configFiles) {
 
   // Event keys — these can reference events from ANY domain (not just the config domain)
   // so we check against a global event set across all state machines.
+  // Build a set of all known event types across all state machines, including
+  // an unprefixed form so config authors can write "intake.foo" instead of
+  // "ca.intake.foo" — the resolver adds a jurisdiction prefix that shouldn't
+  // need to appear in editorial config files.
   const allEventTypes = new Set();
   for (const sm of smByDomain.values()) {
     for (const machine of sm.machines ?? []) {
       for (const ev of machine.events ?? []) {
-        if (ev.type) allEventTypes.add(ev.type);
+        if (!ev.type) continue;
+        allEventTypes.add(ev.type);
+        // Also add without the leading jurisdiction prefix (e.g. "ca.foo" → "foo")
+        const unprefixed = ev.type.replace(/^[a-z]{2,3}\./, '');
+        if (unprefixed !== ev.type) allEventTypes.add(unprefixed);
       }
     }
   }

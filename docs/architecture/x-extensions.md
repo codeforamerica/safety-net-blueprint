@@ -22,12 +22,37 @@ The machine-readable catalog is in [`docs/conventions/`](../conventions/) under 
 | `x-environments` | Spec | Any spec node | `paths`, operations, schemas, or any other node |
 | `x-events` | Spec | `*-openapi.yaml` | Top-level (peer to `info:`, `paths:`) |
 | `x-enum-source` | Spec | `*-openapi.yaml` | Schema property (on string fields with contract-derived enum values) |
-| `x-relationship` | Spec + Config | `*-openapi.yaml`, `overlays/config.yaml` | Schema property; or `config:` for default style |
+| `x-relationship` | Spec + Config | `*-openapi.yaml`, `overlays/config.yaml` | Schema property (FK fields) or operation level (generated endpoints); or `config:` for default style |
 | `x-sortable` | Spec | `*-openapi.yaml` | List operation level |
 | `x-status` | Spec | `*-openapi.yaml` | `info` level or operation level |
 | `x-visibility` | Spec | `*-openapi.yaml` | `info` level or operation level |
 
 ---
+
+---
+
+## x-casing
+
+**File type:** `overlays/config.yaml` — `config:` section.
+
+Controls how the runtime API serializes JSON field names to clients. Valid values are `camelCase` (default) and `snake_case`.
+
+**This is a rendering hint, not a YAML property rename.** All spec authoring — OpenAPI schemas, overlay additions, annotation keys — must use camelCase property names regardless of this setting. The resolver does not rename YAML properties. `x-casing` is consumed by adapters and mock servers to determine how field names are presented on the wire.
+
+```yaml
+# overlays/config.yaml
+config:
+  x-casing: snake_case
+```
+
+**What changes with `x-casing: snake_case`:**
+- Adapters and mock servers serialize `applicationId` as `application_id` in JSON responses and accept `application_id` in request bodies
+- Generated TypeScript client code and Postman collections reflect the configured casing
+
+**What does NOT change:**
+- YAML property names in OpenAPI specs remain camelCase (`applicationId`, `createdAt`, etc.)
+- Fields added via overlays must still use camelCase in the YAML (`countyCode`, not `county_code`)
+- Annotation keys reference YAML property paths and must always be camelCase
 
 ---
 
@@ -79,7 +104,7 @@ Valid values: `case-management`, `client-management`, `communication`, `data-exc
 
 **File type:** Any spec node — `paths`, operations, schemas, or any other YAML node.
 
-Tags a spec section so the resolve pipeline includes it only in specific environments. When resolving with `--env=<name>`, nodes whose `x-environments` list does not include the target environment are removed. The `x-environments` key is stripped from nodes that are kept.
+Tags a spec section so the resolve pipeline includes it only in specific environments. When resolving with `--env-target=<name>`, nodes whose `x-environments` list does not include the target environment are removed. The `x-environments` key is stripped from nodes that are kept.
 
 ```yaml
 paths:
@@ -170,28 +195,68 @@ status:
 
 ## x-relationship
 
-**File type:** `*-openapi.yaml` — schema property level, on foreign-key fields.
+**File type:** `*-openapi.yaml` — schema property level (FK fields) or operation level (generated endpoints).
 
-Annotates a UUID foreign-key field to identify the related resource. Recommended on all fields that end in `Id` and have `format: uuid`. Enables tooling to generate relationship diagrams, validate referential integrity, and optionally expand related resources inline.
+Declares a relationship between a spec element and another contract artifact. Used in two contexts:
+
+- **FK fields** (`type: fk`, the default): annotates a UUID foreign-key field to identify the related resource. Recommended on all fields that end in `Id` and have `format: uuid`.
+- **Generated operations** (`type: state-machine-action | ruleset | composition`): injected by the resolve pipeline to record which contract artifact produced the endpoint. Enables the explorer and other tooling to link endpoints back to their source artifacts bidirectionally.
+
+Omitting `type` is equivalent to `type: fk` for backward compatibility.
 
 ```yaml
-# components/schemas/Task
+# FK — same-domain reference (type omitted, defaults to fk)
 queueId:
   type: string
   format: uuid
   description: Queue this task is routed to.
   x-relationship:
-    resource: Queue        # Related schema name (PascalCase)
-    style: expand          # Optional: inline the related resource instead of referencing by ID
+    resource: Queue
+    style: expand
+
+# FK — cross-domain reference
+applicationId:
+  type: string
+  format: uuid
+  x-relationship:
+    resource: Application
+    domain: intake
+
+# Operation — generated from a state machine action
+post:
+  operationId: submitApplication
+  x-relationship:
+    type: state-machine-action
+    domain: intake
+    id: submit
+
+# Operation — generated from a rules contract ruleset
+post:
+  operationId: evaluateInterviewPrompts
+  x-relationship:
+    type: ruleset
+    domain: intake
+    id: interviewPrompts
+
+# Operation — generated from a compositions contract
+get:
+  operationId: getApplicationSummary
+  x-relationship:
+    type: composition
+    domain: intake
+    id: applicationSummary
 ```
 
 **Fields:**
 
 | Field | Required | Description |
 |---|---|---|
-| `resource` | Yes | Related schema name as defined in `components/schemas` (e.g., `Queue`, `Person`). Schema names follow PascalCase by convention. |
-| `style` | No | Controls how the resolver transforms the FK field. **If omitted, the annotation is metadata only — the FK field is left as-is, no links object is added, and no field renaming occurs.** Supported values: `expand` inlines the related resource alongside the FK field; `links-only` adds a `links` navigation object. `expand` applies only to forward references (resource → its dependencies); the resolver detects back-references from the URL hierarchy and silently downgrades them to `links-only` when a global `expand` would otherwise apply. Explicitly expanding a back-reference requires `fields` (otherwise the resolver errors at resolve time to prevent unbounded example expansion). See the [overlay guide](../guides/overlay-guide.md#direction-aware-expand). |
-| `fields` | No | Subset of fields to include when `style: expand`. Supports dot notation for nested relationships. When specified, must be a non-empty array — an empty `fields: []` is rejected at resolve time. |
+| `type` | No | Kind of relationship. Defaults to `fk` when absent. Valid values: `fk`, `state-machine-action`, `ruleset`, `composition`. |
+| `resource` | FK only | Related schema name as defined in `components/schemas` (e.g., `Queue`, `Person`). Required when `type` is `fk` or absent. |
+| `domain` | FK: optional; others: required | The blueprint domain that owns the referenced artifact. For FK fields, omit for same-domain references. |
+| `style` | FK only | Controls how the resolver transforms the FK field. **If omitted, the annotation is metadata only.** Supported values: `expand` inlines the related resource alongside the FK field; `links-only` adds a `links` navigation object. `expand` applies only to forward references; back-references are silently downgraded to `links-only`. See the [overlay guide](../guides/overlay-guide.md#direction-aware-expand). |
+| `fields` | FK only | Subset of fields to include when `style: expand`. Supports dot notation. Must be non-empty when specified. |
+| `id` | Non-FK only | Identifier of the artifact within its domain contract. For `state-machine-action`: the action `id`. For `ruleset`: the ruleset name. For `composition`: the composition name. |
 
 `links-only` style adds a `links` navigation object alongside the FK field without expanding it. `expand` style renames the FK field and replaces it with the related resource's schema. Omitting `style` leaves the field untouched — `x-relationship` is purely a metadata annotation in that case, used by tooling (field inventory, diagram generation) but not by the resolver.
 

@@ -1,0 +1,53 @@
+$schema: metrics-schema.yaml
+version: "1.0"
+domain: eligibility
+metrics:
+  - id: determinations_complete
+    name: Determinations Complete
+    description: Number of eligibility determinations finalized within the period.
+    aggregate: count
+    source:
+      collection: events
+      filter:
+        "==":
+          - var: type
+          - eligibility.determination.complete
+  - id: expedited_rate
+    name: Expedited Processing Rate
+    description: Ratio of determinations flagged as expedited to total determinations.
+    aggregate: ratio
+    source:
+      collection: determinations
+      filter:
+        "==":
+          - var: expedited
+          - true
+    total:
+      collection: determinations
+    targets:
+      - stat: ratio
+        operator: ">"
+        amount: 10
+        unit: percent
+  - id: determination_time
+    name: Determination Time
+    description: Median time from determination creation to completion.
+    aggregate: duration
+    from:
+      collection: determinations
+      filter:
+        "==":
+          - var: status
+          - pending
+    to:
+      collection: events
+      filter:
+        "==":
+          - var: type
+          - eligibility.determination.complete
+    pairBy: resourceId
+    targets:
+      - stat: p50
+        operator: <
+        amount: 5
+        unit: days

@@ -58,7 +58,7 @@ resolved/
 {
   "scripts": {
     "resolve": "blueprint-resolve --spec=./node_modules/@codeforamerica/blueprint-safety-net-contracts --overlay=./overlays --out=./resolved",
-    "resolve:prod": "blueprint-resolve --spec=./node_modules/@codeforamerica/blueprint-safety-net-contracts --overlay=./overlays --out=./resolved --env=production --env-file=.env",
+    "resolve:prod": "blueprint-resolve --spec=./node_modules/@codeforamerica/blueprint-safety-net-contracts --overlay=./overlays --out=./resolved --env-target=production --env-variables=.env",
     "validate": "blueprint-validate --spec=./resolved --skip-examples",
     "mock:start": "blueprint-mock --spec=./resolved",
     "swagger": "blueprint-swagger --spec=./resolved",

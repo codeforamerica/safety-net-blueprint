@@ -19,7 +19,8 @@
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import yaml from 'js-yaml';
-import { resolveSchemaRefs, collectTopLevelProperties } from './validation/state-machine-validator.js';
+import { resolveSchemaRefs, collectTopLevelProperties } from './json-schema/index.js';
+import { extractPathParams, buildParameterIndex, buildPathEntry, toPascalCase } from './openapi/utils.js';
 
 const LIST_QUERY_PARAMS = [
   { $ref: './components/parameters.yaml#/SearchQueryParam' },
@@ -156,7 +157,7 @@ export function collectSchemaProperties(schema, specsByFile = new Map()) {
 export function buildResourceSchemaIndex(yamlFiles) {
   const index = new Map();
 
-  for (const { spec, filePath } of yamlFiles) {
+  for (const { spec, filePath, setRoot } of yamlFiles) {
     if (!spec || !spec.paths) continue;
 
     const schemas = spec.components?.schemas || {};
@@ -186,7 +187,7 @@ export function buildResourceSchemaIndex(yamlFiles) {
       const rawSchema = schemas[match[1]];
       if (!rawSchema) continue;
 
-      const context = filePath ? { spec, specFilePath: filePath } : { spec };
+      const context = filePath ? { spec, specFilePath: filePath, setRoot } : { spec };
       const schema = resolveSchemaRefs(rawSchema, context);
       const propMap = collectTopLevelProperties(spec, schema);
       if (propMap.size > 0) {
@@ -381,49 +382,10 @@ export function validateSortableConfig(compositionDoc) {
 // Overlay Generation
 // =============================================================================
 
-/**
- * Extract path parameter names from an endpoint path.
- *
- * "/applications/{applicationId}/review" → ["applicationId"]
- *
- * @param {string} path
- * @returns {string[]}
- */
-export function extractPathParams(path) {
-  return (path.match(/\{([^}]+)\}/g) || []).map(m => m.slice(1, -1));
-}
-
-/**
- * Build a parameter reference index from all loaded OpenAPI files.
- * Maps parameter name → `$ref` string, e.g.:
- *   "applicationId" → "#/components/parameters/ApplicationIdParam"
- *
- * @param {Array<{ relativePath: string, spec: Object }>} yamlFiles
- * @returns {Map<string, string>}
- */
-export function buildParameterIndex(yamlFiles) {
-  const index = new Map();
-
-  for (const { spec } of yamlFiles) {
-    if (!spec?.components?.parameters) continue;
-
-    for (const [key, paramDef] of Object.entries(spec.components.parameters)) {
-      if (paramDef?.name && !index.has(paramDef.name)) {
-        index.set(paramDef.name, `#/components/parameters/${key}`);
-      }
-    }
-  }
-
-  return index;
-}
 
 /**
  * Capitalise the first letter of a string.
  */
-function toPascalCase(name) {
-  return name.charAt(0).toUpperCase() + name.slice(1);
-}
-
 /**
  * Convert a PascalCase string to kebab-case.
  * "ReviewProgress" → "review-progress"
@@ -696,7 +658,16 @@ export function generateStateSchemas(stateConfig) {
   const frameworkProperties = {
     id:            { type: 'string', format: 'uuid', readOnly: true },
     section:       { type: 'string', readOnly: true },
-    itemId:        { type: 'string', format: 'uuid', nullable: true, readOnly: true },
+    // Which record this identifies is selected by `section`, so the target
+    // cannot be declared statically. Without the annotation it reads as an
+    // undeclared foreign key and fails pattern validation.
+    itemId: {
+      type: 'string',
+      format: 'uuid',
+      nullable: true,
+      readOnly: true,
+      'x-relationship': { resource: 'Polymorphic' },
+    },
     createdAt:     { type: 'string', format: 'date-time', readOnly: true },
     updatedAt:     { type: 'string', format: 'date-time', readOnly: true },
   };
@@ -804,16 +775,8 @@ export function generateCompositionOverlay(compositionFile, paramIndex, parentSc
     if (!composition.endpoint?.path) continue;
 
     const endpointPath = composition.endpoint.path;
-    const paramNames = extractPathParams(endpointPath);
     const schemaName = `${toPascalCase(compositionName)}Response`;
     const operationId = `get${toPascalCase(compositionName)}`;
-
-    const parameters = paramNames.map(name => {
-      const ref = paramIndex.get(name);
-      return ref
-        ? { $ref: ref }
-        : { name, in: 'path', required: true, schema: { type: 'string' } };
-    });
 
     const operation = {
       summary: `Get ${compositionName}`,
@@ -832,13 +795,7 @@ export function generateCompositionOverlay(compositionFile, paramIndex, parentSc
       }
     };
 
-    const pathEntry = {};
-    if (parameters.length > 0) {
-      pathEntry.parameters = parameters;
-    }
-    pathEntry.get = operation;
-
-    pathsUpdate[endpointPath] = pathEntry;
+    pathsUpdate[endpointPath] = buildPathEntry(endpointPath, 'get', operation, paramIndex, { type: 'composition', domain, id: compositionName });
 
     const schemaEntry = {
       type: 'object',

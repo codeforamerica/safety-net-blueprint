@@ -1,16 +1,19 @@
 # workflow field inventory
 # Do not edit — regenerate with: node generate-field-inventory.mjs --domain=workflow
 
-# ── queue ───────────────────────────────────────────────────────────────────────
+# ── Queue ───────────────────────────────────────────────────────────────────────
 
+queue.id: { type: uuid }
 queue.name: { type: string }
 queue.description: { type: string }
+queue.source: { type: enum, values: [system, user] }
 
-# ── task ────────────────────────────────────────────────────────────────────────
+# ── Task ────────────────────────────────────────────────────────────────────────
 
 task.subjectId: { type: uuid, relationship: Polymorphic }
 task.queueId: { type: uuid, relationship: Queue }
 task.assignedToId: { type: uuid, relationship: User }
+task.id: { type: uuid }
 task.name: { type: string }
 task.description: { type: string }
 task.status: { type: enum, values: [pending, in_progress, completed, escalated, cancelled, awaiting_client, awaiting_verification, pending_review] }
@@ -26,3 +29,9 @@ task.cancelledAt: { type: datetime }
 task.blockedAt: { type: datetime }
 task.outcome: { type: string }
 task.completionNotes: { type: [string, 'null'] }
+task.slaInfo[]: { type: list }
+task.slaInfo[].slaTypeCode: { type: enum, values: [snap_expedited, snap_standard, medicaid_standard, medicaid_disability] }
+task.slaInfo[].status: { type: enum, values: [active, warning, paused, breached, completed] }
+task.slaInfo[].clockStartedAt: { type: datetime }
+task.slaInfo[].deadline: { type: datetime }
+task.slaDeadline: { type: datetime }

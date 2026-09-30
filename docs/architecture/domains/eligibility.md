@@ -135,6 +135,7 @@ Eligibility also subscribes to `application.withdrawn` from Intake. When an appl
 |---|---|
 | OpenAPI spec | `eligibility-openapi.yaml` |
 | State machine | `eligibility-state-machine.yaml` |
+| Rules | `eligibility-rules.yaml` *(baseline; states customize via overlay)* |
 
 ## Key design decisions
 
@@ -150,7 +151,7 @@ Eligibility also subscribes to `application.withdrawn` from Intake. When an appl
 | 8 | [Eligibility trust boundary with Intake](#decision-8-eligibility-trust-boundary-with-intake) | Eligibility trusts Intake's ready-for-determination signal and does not independently verify application completeness |
 | 9 | [Data exchange service call ownership](#decision-9-data-exchange-service-call-ownership) | Intake calls verification-oriented services; Eligibility calls determination-oriented services |
 | 10 | [Notice of Action trigger](#decision-10-notice-of-action-trigger) | NOA triggered at `intake.application.closed` — fires after all post-determination steps including supervisor approval |
-| 11 | [Eligibility rules engine scope](#decision-11-eligibility-rules-engine-scope) | Program eligibility rules are adapter-layer; the blueprint defines data model, API, and events, not eligibility criteria |
+| 11 | [Eligibility rules engine scope](#decision-11-eligibility-rules-engine-scope) | Rules contracts provide a baseline authoring format states customize; adapter-layer evaluation remains available for states with existing rules engines |
 | 12 | [Who creates Determination and Decision records](#decision-12-who-creates-determination-and-decision-records) | Intake creates both at submission; Eligibility owns and evaluates them |
 | 13 | [Application data snapshot](#decision-13-application-data-snapshot) | Determination and Decision carry a point-in-time snapshot of application data populated by Intake at creation, refreshed at each evaluate call |
 | 14 | [Evaluation trigger alignment](#decision-14-evaluation-trigger-alignment) | Each submission-time evaluation fires on the event that guarantees its required data exists |
@@ -332,19 +333,22 @@ Eligibility also subscribes to `application.withdrawn` from Intake. When an appl
 
 ### Decision 11: Eligibility rules engine scope
 
-**Status:** Decided: B
+**Status:** Decided: C
 
-**What's being decided:** Whether program eligibility rules — income thresholds, categorical eligibility criteria, household composition rules — are contracted as part of the baseline, or left to the state adapter to implement.
+**What's being decided:** Whether program eligibility rules — income thresholds, categorical eligibility criteria, household composition rules — are contracted as part of the baseline, left to the state adapter, or expressed as overlay-customizable rules contracts.
 
 **Considerations:**
-- Program eligibility criteria are highly program-specific, state-variable, and subject to federal regulatory changes; expressing them as contract artifacts would require the blueprint to maintain SNAP, Medicaid, and TANF rules for all possible state configurations and update them when regulations change
+- Program eligibility criteria are highly program-specific, state-variable, and subject to federal regulatory changes; a contracted ruleset the blueprint maintains would require constant updates as regulations change
 - Unlike intake and workflow rules (which define event orchestration — task creation, verification checklist generation, state machine transitions), eligibility evaluation rules involve complex income calculations, household composition logic, and program-specific criteria that differ substantially across states and programs
-- States use a wide variety of rules engines in their existing systems: IBM Cúram rules framework, Pega decision tables, Drools, Corticon, and custom implementations; a contracted rules interface would constrain adapter implementation choices without adding value
-- The blueprint's value in this domain is the data model (Determination, Decision), the API surface, and the event schema — not the program eligibility criteria themselves
+- States use a wide variety of rules engines in their existing systems: IBM Cúram rules framework, Pega decision tables, Drools, Corticon, and custom implementations; mandating a specific evaluation engine would constrain adoption
+- Rules contracts (see [Rules Contracts](../rules-contracts.md)) change what's possible here: they are state-authored and overlay-customizable — the blueprint provides a baseline structure that states extend, rather than maintaining program criteria itself. The compiled graph format is portable and engine-agnostic, so states on Corticon or Drools can replace the reference evaluator without abandoning the contract format.
 
 **Options:**
-- **(A)** Contract eligibility rules as YAML artifacts — portable but impractical at scale; requires the blueprint to maintain program criteria for every program and state configuration; rules content would need updates whenever regulations change
-- **(B)** ✓ Rules engine is adapter-layer: the blueprint defines the inputs (Determination/Decision data model, event schema, API surface) and outputs (Decision status, path, denialReasonCode); program eligibility evaluation logic is the state adapter's responsibility
+- **(A)** Blueprint maintains contracted eligibility rules — impractical; requires the blueprint to keep program criteria current for all programs and state configurations
+- **(B)** Rules engine is fully adapter-layer — the blueprint defines inputs and outputs; states implement evaluation logic entirely in their adapter
+- **(C)** ✓ Rules contracts as a baseline authoring format — the blueprint ships a baseline `eligibility-rules.yaml` that states customize via overlay; the compiled graph is evaluated by `blueprint-rules-engine` by default but is replaceable; states with existing rules engines can still implement evaluation at the adapter layer and ignore the rules contract artifacts
+
+**Decision:** Option C gives states a structured, auditable starting point without requiring the blueprint to maintain program-specific logic. A state that already has Corticon or IBM Cúram can adopt the adapter-layer path (Option B); a state building from scratch has a ready-made rules contract to extend.
 
 ---
 
@@ -494,8 +498,8 @@ The baseline runs electronic eligibility checks at submission only for Medicaid,
 
 | Capability | Industry standard | Blueprint status |
 |---|---|---|
-| Configurable program eligibility rules | Standard in government benefits platforms | **Adapter layer** — the blueprint defines the data model, API, and events; program eligibility criteria are the state adapter's responsibility. See [Decision 11](#decision-11-eligibility-rules-engine-scope) |
-| Categorical eligibility (SSI linkage, TANF-linked categorical SNAP) | Regulatory option for SNAP (7 CFR § 273.2(j)) | **Adapter layer** — implemented in the state's rules engine. See [Decision 11](#decision-11-eligibility-rules-engine-scope) |
+| Configurable program eligibility rules | Standard in government benefits platforms | **Planned** — rules contracts provide a baseline authoring format that states customize via overlay; states with existing rules engines can still implement evaluation at the adapter layer. See [Decision 11](#decision-11-eligibility-rules-engine-scope) |
+| Categorical eligibility (SSI linkage, TANF-linked categorical SNAP) | Regulatory option for SNAP (7 CFR § 273.2(j)) | **Planned** — expressible as facts in a rules contract. See [Decision 11](#decision-11-eligibility-rules-engine-scope) |
 | Mixed-program household handling | Required by multi-program application support | **Planned** — covered by the per-person per-program Decision model |
 
 ## References

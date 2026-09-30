@@ -1,0 +1,91 @@
+$schema: "https://blueprint.codeforamerica.org/schemas/rules-examples-schema.yaml"
+domain: eligibility
+rulesets:
+  snapInterviewProbes:
+    examples:
+      - description: "No probes — employed citizens, income exceeds expenses, no changed circumstances"
+        inputs:
+          household:
+            monthlyIncome: 2400
+            monthlyExpenses: 1800
+            members:
+              - age: 34
+                isEmployed: true
+                isStudent: false
+                isNonCitizen: false
+                isFelon: false
+              - age: 36
+                isEmployed: true
+                isStudent: false
+                isNonCitizen: false
+                isFelon: false
+          application:
+            hasChangedCircumstances: false
+
+      - description: "Multiple probes — income gap, unemployed ABAWD, non-citizen, changed circumstances"
+        inputs:
+          household:
+            monthlyIncome: 800
+            monthlyExpenses: 1200
+            members:
+              - age: 22
+                isEmployed: false
+                isStudent: false
+                isNonCitizen: false
+                isFelon: false
+              - age: 45
+                isEmployed: true
+                isStudent: false
+                isNonCitizen: true
+                isFelon: false
+          application:
+            hasChangedCircumstances: true
+
+      - description: "Missing inputs — application binding omitted, changeVerificationProbe goes to missing"
+        inputs:
+          household:
+            monthlyIncome: 2400
+            monthlyExpenses: 1800
+            members:
+              - age: 34
+                isEmployed: true
+                isStudent: false
+                isNonCitizen: false
+                isFelon: false
+
+      - description: "Type error — monthlyIncome is a string, incomeGapExists errors"
+        inputs:
+          household:
+            monthlyIncome: "not-a-number"
+            monthlyExpenses: 1800
+            members:
+              - age: 34
+                isEmployed: true
+                isStudent: false
+                isNonCitizen: false
+                isFelon: false
+          application:
+            hasChangedCircumstances: false
+
+      - description: "Null collection — members is null, member-based probes go to placeholder"
+        inputs:
+          household:
+            monthlyIncome: 2400
+            monthlyExpenses: 1800
+            members: null
+          application:
+            hasChangedCircumstances: false
+
+      - description: "Sub-field type error — age is a string, member-based intermediate facts error"
+        inputs:
+          household:
+            monthlyIncome: 2400
+            monthlyExpenses: 1800
+            members:
+              - age: "thirty"
+                isEmployed: true
+                isStudent: false
+                isNonCitizen: false
+                isFelon: false
+          application:
+            hasChangedCircumstances: false

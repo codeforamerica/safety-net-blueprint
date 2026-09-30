@@ -43,7 +43,7 @@ At the core of the blueprint is a domain-agnostic framework (`blueprint-core`) t
 
 ## Adopting the Blueprint
 
-To adopt the blueprint, create a repository, install the base packages, apply overlays to customize the contracts for your context, and point the CLIs at the resolved output. See the [Setup Guide](./docs/guides/setup-guide.md) for the full walkthrough and the [Overlay Guide](./docs/guides/overlay-guide.md) for overlay authoring.
+To adopt the blueprint, create a repository, install the base packages, apply overlays to customize the contracts for your context, and point the CLIs at the resolved output. See the [Setup Guide](./docs/guides/setup-guide.md) for the full walkthrough, the [Overlay Guide](./docs/guides/overlay-guide.md) for overlay authoring, and the [Rules Guide](./docs/guides/rules-guide.md) for writing rulesets.
 
 ## Getting Started
 

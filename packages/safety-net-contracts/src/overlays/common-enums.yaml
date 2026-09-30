@@ -4,6 +4,18 @@ info:
   version: 1.0.0
 
 actions:
+  - target: "$.$defs.MetricCollection"
+    file: https://blueprint.codeforamerica.org/base/schemas/enums.yaml
+    description: Add workflow task records collection for safety net metrics
+    replace:
+      type: string
+      description: >
+        Safety Net metric collections. Extends the blueprint-core base MetricCollection
+        with the workflow task records collection used by domain metrics.
+      enum:
+        - events
+        - tasks
+
   - target: "$.$defs.Domain"
     file: https://blueprint.codeforamerica.org/base/schemas/enums.yaml
     description: Add safety net program domains

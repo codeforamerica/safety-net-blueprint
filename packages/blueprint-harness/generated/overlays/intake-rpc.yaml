@@ -1,0 +1,130 @@
+overlay: 1.0.0
+info:
+  title: intake RPC Overlay
+  version: 1.0.0
+  description: Auto-generated RPC endpoints from intake-state-machine.yaml
+actions:
+  - target: $.paths
+    file: domains/intake/intake-openapi.yaml
+    description: Add state machine transition endpoints for intake
+    update:
+      /applications/{applicationId}/submit:
+        post:
+          summary: Submit application
+          description: Formally submits a draft application, starting the regulatory processing clock.
+          operationId: submitApplication
+          tags:
+            - Applications
+          parameters:
+            - $ref: "#/components/parameters/ApplicationIdParam"
+          responses:
+            "200":
+              description: Transition applied successfully.
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Application"
+            "400":
+              $ref: ./components/responses.yaml#/BadRequest
+            "404":
+              $ref: ./components/responses.yaml#/NotFound
+            "409":
+              $ref: ./components/responses.yaml#/Conflict
+            "500":
+              $ref: ./components/responses.yaml#/InternalError
+      /applications/{applicationId}/open:
+        post:
+          summary: Open application
+          description: Moves a submitted application into active caseworker review.
+          operationId: openApplication
+          tags:
+            - Applications
+          parameters:
+            - $ref: "#/components/parameters/ApplicationIdParam"
+          responses:
+            "200":
+              description: Transition applied successfully.
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Application"
+            "400":
+              $ref: ./components/responses.yaml#/BadRequest
+            "404":
+              $ref: ./components/responses.yaml#/NotFound
+            "409":
+              $ref: ./components/responses.yaml#/Conflict
+            "500":
+              $ref: ./components/responses.yaml#/InternalError
+      /applications/{applicationId}/close:
+        post:
+          summary: Close application
+          description: Closes the application once intake processing is complete.
+          operationId: closeApplication
+          tags:
+            - Applications
+          parameters:
+            - $ref: "#/components/parameters/ApplicationIdParam"
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: "#/components/schemas/CloseRequest"
+          responses:
+            "200":
+              description: Transition applied successfully.
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Application"
+            "400":
+              $ref: ./components/responses.yaml#/BadRequest
+            "404":
+              $ref: ./components/responses.yaml#/NotFound
+            "409":
+              $ref: ./components/responses.yaml#/Conflict
+            "500":
+              $ref: ./components/responses.yaml#/InternalError
+      /applications/{applicationId}/withdraw:
+        post:
+          summary: Withdraw application
+          description: Withdraws the application at the household's request.
+          operationId: withdrawApplication
+          tags:
+            - Applications
+          parameters:
+            - $ref: "#/components/parameters/ApplicationIdParam"
+          responses:
+            "200":
+              description: Transition applied successfully.
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Application"
+            "400":
+              $ref: ./components/responses.yaml#/BadRequest
+            "404":
+              $ref: ./components/responses.yaml#/NotFound
+            "409":
+              $ref: ./components/responses.yaml#/Conflict
+            "500":
+              $ref: ./components/responses.yaml#/InternalError
+  - target: $.components.schemas
+    file: domains/intake/intake-openapi.yaml
+    description: Hoist state-machine action $defs into components.schemas for intake
+    update:
+      CloseRequest:
+        type: object
+        required:
+          - outcome
+        properties:
+          outcome:
+            type: string
+            enum:
+              - approved
+              - denied
+            description: Whether the application was approved or denied at close.
+          notes:
+            type: string
+            description: Optional caseworker notes on the closure decision.

@@ -11,7 +11,6 @@
 
 import { readFileSync, readdirSync, existsSync } from 'fs';
 import { resolve } from 'path';
-import { resolvedDir } from '../lib/paths.js';
 
 function flattenSteps(steps) {
   const result = [];
@@ -29,7 +28,7 @@ function flattenSteps(steps) {
   return result;
 }
 
-export function scanGaps(config, contractsDir = resolvedDir) {
+export function scanGaps(config, contractsDir) {
   // Load all contract YAML files as a single searchable text blob
   let contractText = '';
   if (existsSync(contractsDir)) {

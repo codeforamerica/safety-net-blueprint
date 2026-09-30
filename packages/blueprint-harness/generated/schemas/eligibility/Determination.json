@@ -1,0 +1,72 @@
+{
+  "type": "object",
+  "required": [
+    "id",
+    "applicationId",
+    "status",
+    "expedited",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "readOnly": true,
+      "description": "Unique identifier (server-generated)."
+    },
+    "applicationId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The intake application this determination is for."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "in_progress",
+        "complete"
+      ],
+      "readOnly": true,
+      "description": "Current status of the eligibility determination."
+    },
+    "expedited": {
+      "type": "boolean",
+      "readOnly": true,
+      "description": "Whether this household qualifies for expedited processing (7 CFR § 273.2(i))."
+    },
+    "determinedAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true,
+      "readOnly": true,
+      "description": "Timestamp when the determination was finalized. Null until complete."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "readOnly": true,
+      "description": "Timestamp when the determination was created."
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "readOnly": true,
+      "description": "Timestamp when the determination was last updated."
+    },
+    "links": {
+      "type": "object",
+      "readOnly": true,
+      "description": "Related resource links.",
+      "properties": {
+        "application": {
+          "type": "string",
+          "format": "uri-reference",
+          "description": "Link to the related Application resource."
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/Determination"
+}

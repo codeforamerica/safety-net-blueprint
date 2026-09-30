@@ -11,7 +11,7 @@
 
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
-import { dirname, join, resolve } from 'path';
+import { dirname, join, resolve, sep } from 'path';
 import { readdirSync, existsSync } from 'fs';
 import { startMockServer, stopServer, isServerRunning } from '../cli/server.js';
 import { setupFunctional, startFunctionalServer, stopFunctionalServer } from './functional/setup.js';
@@ -50,6 +50,23 @@ const functionalTestFiles = existsSync(functionalDir)
   : [];
 
 const args = process.argv.slice(2);
+
+// `--list` prints every test file this runner would execute, one per line, and
+// exits. It is how tests/check-test-discovery.js verifies that nothing on disk
+// is missed: the runner answers for itself rather than the check duplicating
+// the discovery above and drifting from it.
+if (args.includes('--list')) {
+  for (const file of [
+    ...unitTestFiles,
+    ...integrationTestFiles,
+    ...postmanTestFiles,
+    ...functionalTestFiles,
+  ]) {
+    console.log(file.split(sep).join('/'));
+  }
+  process.exit(0);
+}
+
 const contractsArg    = args.find(a => a.startsWith('--contracts='));
 const rawContractsArg = args.find(a => a.startsWith('--raw-contracts='));
 const seedArg         = args.find(a => a.startsWith('--seed='));
@@ -146,7 +163,13 @@ const resolveScript = resolve(__dirname, '..', '..', 'blueprint-cli', 'scripts',
 async function resolveContracts() {
   console.log('Resolving contracts...');
   await new Promise((res, rej) => {
-    const proc = spawn('node', [resolveScript, `--spec=${rawContractsDir}`, `--overlay=${join(rawContractsDir, 'overlays')}`, `--out=${contractsDir}`], { stdio: 'inherit', shell: false });
+    // --raw-contracts names a contract set, the same as --contracts. Callers
+    // point it at src/ rather than the package root, which is the root
+    // `npm run resolve` uses: the package root would sweep the package's
+    // tests/ into the set, where they are validated as contracts and fail.
+    const specDir = rawContractsDir;
+    const overlayDir = join(specDir, 'overlays');
+    const proc = spawn('node', [resolveScript, `--spec=${specDir}`, `--overlay=${overlayDir}`, `--out=${contractsDir}`], { stdio: 'inherit', shell: false });
     proc.on('close', code => code === 0 ? res() : rej(new Error(`resolve failed with exit code ${code}`)));
     proc.on('error', rej);
   });
@@ -210,6 +233,26 @@ async function runAllTests() {
     }
   }
 
+  // Run functional tests if requested
+  if (runFunctional) {
+    console.log('\n🧪 Functional Tests');
+    console.log('-'.repeat(70));
+
+    console.log('Starting functional server...');
+    await startFunctionalServer();
+    functionalServerStarted = true;
+    await new Promise(res => setTimeout(res, 1500));
+    console.log('Functional server started\n');
+
+    for (const testFile of functionalTestFiles) {
+      await withTimeout(runTest(testFile), TEST_TIMEOUT_MS, testFile)
+        .then(() => passed++)
+        .catch(err => bail(testFile, err));
+    }
+
+    await stopFunctionalServer();
+  }
+
   // Run integration tests if requested
   if (runIntegration) {
     console.log('\n🔗 Integration Tests');
@@ -254,26 +297,6 @@ async function runAllTests() {
 
     if (integrationServerStarted && doStop) await stopServer(false);
     integrationServerStarted = false;
-  }
-
-  // Run functional tests if requested
-  if (runFunctional) {
-    console.log('\n🧪 Functional Tests');
-    console.log('-'.repeat(70));
-
-    console.log('Starting functional server...');
-    await startFunctionalServer();
-    functionalServerStarted = true;
-    await new Promise(res => setTimeout(res, 1500));
-    console.log('Functional server started\n');
-
-    for (const testFile of functionalTestFiles) {
-      await withTimeout(runTest(testFile), TEST_TIMEOUT_MS, testFile)
-        .then(() => passed++)
-        .catch(err => bail(testFile, err));
-    }
-
-    await stopFunctionalServer();
   }
 
   // Summary

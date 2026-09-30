@@ -1,0 +1,144 @@
+$schema: https://blueprint.codeforamerica.org/schemas/graph-schema.yaml
+domain: eligibility
+ruleset: snapInterviewProbes
+outputs:
+  - incomeInconsistencyProbe
+  - generalWorkRequirementProbe
+  - abawdProbe
+  - studentEligibilityProbe
+  - immigrationStatusProbe
+  - felonComplianceProbe
+  - changeVerificationProbe
+inputs:
+  $.household.monthlyIncome:
+    type: number
+    description: Total monthly gross income reported by the household.
+  $.household.monthlyExpenses:
+    type: number
+    description: Total monthly expenses reported by the household.
+  $.household.members[]:
+    type: array
+    description: All individuals in the household.
+  $.household.members[].age:
+    type: integer
+    description: Member's age in years.
+  $.household.members[].isEmployed:
+    type: boolean
+    description: Whether the member is currently employed.
+  $.household.members[].isStudent:
+    type: boolean
+    description: Whether the member is enrolled at least half-time in higher education.
+  $.household.members[].isNonCitizen:
+    type: boolean
+    description: Whether the member is a non-citizen subject to immigration screening.
+  $.household.members[].isFelon:
+    type: boolean
+    description: >-
+      Whether the member has a felony conviction subject to compliance
+      screening.
+  $.application.hasChangedCircumstances:
+    type: boolean
+    description: >-
+      Whether the household reported changes since the application was
+      submitted.
+facts:
+  incomeGapExists:
+    expression: household.monthlyIncome < household.monthlyExpenses
+    type: boolean
+    description: >
+      Monthly income is less than monthly expenses with no explanation of other
+      income sources or assistance — an inconsistency flag per FNS-1104.
+  hasUnemployedWorkEligible:
+    expression: household.members.exists(m, m.age >= 16 && m.age <= 59 && !m.isEmployed)
+    type: boolean
+    description: >
+      At least one household member aged 16–59 is not employed and has not been
+      screened for general work requirement exemptions.
+  hasUnemployedAbawdCandidate:
+    expression: household.members.exists(m, m.age >= 18 && m.age <= 54 && !m.isEmployed)
+    type: boolean
+    description: >
+      At least one household member aged 18–54 is not employed and has not been
+      screened for ABAWD exceptions.
+  hasStudentMembers:
+    expression: household.members.exists(m, m.isStudent)
+    type: boolean
+    description: At least one household member is enrolled in higher education.
+  hasNonCitizenMembers:
+    expression: household.members.exists(m, m.isNonCitizen)
+    type: boolean
+    description: At least one household member is a non-citizen.
+  hasFelonMembers:
+    expression: household.members.exists(m, m.isFelon)
+    type: boolean
+    description: At least one household member has a felony conviction.
+  incomeInconsistencyProbe:
+    expression: incomeGapExists
+    type: boolean
+    description: >
+      Probe the household for unexplained income sources or assistance that
+      account for the gap between income and expenses.
+  generalWorkRequirementProbe:
+    expression: hasUnemployedWorkEligible
+    type: boolean
+    description: >
+      Screen all non-employed members aged 16–59 for general work requirement
+      exemptions (physical/mental fitness, caregiving, education, etc.).
+  abawdProbe:
+    expression: hasUnemployedAbawdCandidate
+    type: boolean
+    description: >
+      Screen all non-employed members aged 18–54 for ABAWD exceptions
+      (pregnancy, disability, homelessness, veteran status, etc.).
+  studentEligibilityProbe:
+    expression: hasStudentMembers
+    type: boolean
+    description: >
+      Screen all student members for SNAP student eligibility exceptions
+      (employment, dependent care, work-study, etc.).
+  immigrationStatusProbe:
+    expression: hasNonCitizenMembers
+    type: boolean
+    description: >
+      Screen all non-citizen members for immigration status and apply sponsor
+      income and resource deeming rules where applicable.
+  felonComplianceProbe:
+    expression: hasFelonMembers
+    type: boolean
+    description: >
+      Verify that all members with felony convictions are in compliance with the
+      terms of their sentences.
+  changeVerificationProbe:
+    expression: application.hasChangedCircumstances
+    type: boolean
+    description: >
+      Identify and verify all changes in household circumstances that occurred
+      between the application date and the interview date.
+dependencies:
+  incomeGapExists:
+    - $.household.monthlyIncome
+    - $.household.monthlyExpenses
+  hasUnemployedWorkEligible:
+    - $.household.members[]
+  hasUnemployedAbawdCandidate:
+    - $.household.members[]
+  hasStudentMembers:
+    - $.household.members[]
+  hasNonCitizenMembers:
+    - $.household.members[]
+  hasFelonMembers:
+    - $.household.members[]
+  incomeInconsistencyProbe:
+    - incomeGapExists
+  generalWorkRequirementProbe:
+    - hasUnemployedWorkEligible
+  abawdProbe:
+    - hasUnemployedAbawdCandidate
+  studentEligibilityProbe:
+    - hasStudentMembers
+  immigrationStatusProbe:
+    - hasNonCitizenMembers
+  felonComplianceProbe:
+    - hasFelonMembers
+  changeVerificationProbe:
+    - $.application.hasChangedCircumstances

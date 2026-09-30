@@ -12,7 +12,7 @@
  */
 
 import { spawn } from 'child_process';
-import { dirname, join, resolve } from 'path';
+import { dirname, join, resolve, sep } from 'path';
 import { fileURLToPath } from 'url';
 import { readdirSync, existsSync } from 'fs';
 import { startMockServer, stopServer, isServerRunning } from '@codeforamerica/blueprint-mock-server';
@@ -46,6 +46,17 @@ const integrationTestFiles = existsSync(integrationDir)
     .filter(f => f.endsWith('.test.js') || f.endsWith('.test.ts'))
     .map(f => join('integration', f))
   : [];
+
+// `--list` prints every test file this runner would execute, one per line, and
+// exits. It is how tests/check-test-discovery.js verifies that nothing on disk
+// is missed: the runner answers for itself rather than the check duplicating
+// the discovery above and drifting from it.
+if (args.includes('--list')) {
+  for (const file of [...unitTestFiles, ...integrationTestFiles]) {
+    console.log(file.split(sep).join('/'));
+  }
+  process.exit(0);
+}
 
 const TEST_TIMEOUT_MS = 5 * 60 * 1000;
 

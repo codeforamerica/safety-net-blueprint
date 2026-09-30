@@ -1,10 +1,11 @@
 # scheduling field inventory
 # Do not edit — regenerate with: node generate-field-inventory.mjs --domain=scheduling
 
-# ── appointment ─────────────────────────────────────────────────────────────────
+# ── Appointment ─────────────────────────────────────────────────────────────────
 
 appointment.personId: { type: uuid, relationship: Person }
 appointment.assignedToId: { type: uuid, relationship: User }
+appointment.id: { type: uuid }
 appointment.startAt: { type: datetime }
 appointment.endAt: { type: datetime }
 appointment.appointmentType: { type: string }

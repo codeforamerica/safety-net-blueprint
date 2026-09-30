@@ -113,10 +113,21 @@ events_endpoint:
 x_events:
   description: |
     The x-events OpenAPI extension declares the domain events emitted by a
-    domain's API. It lives at the top level of each domain's OpenAPI spec and
-    is the source of truth for event payload schemas and CloudEvents type names.
-    AsyncAPI specs are generated from x-events combined with the domain's state
-    machine; state partners do not author AsyncAPI directly.
+    domain's API. It lives at the top level of each domain's OpenAPI spec as
+    a cross-reference — declaring which events this API emits and pointing to
+    the canonical definitions in the domain's AsyncAPI spec. Event channel
+    definitions and message payload schemas are owned by AsyncAPI, not by
+    x-events. The exact mechanism for cross-referencing AsyncAPI from x-events
+    is being finalized.
+
+  source_of_truth:
+    owner: AsyncAPI
+    description: |
+      AsyncAPI is the source of truth for event channel definitions, message
+      schemas, and channel naming. x-events in OpenAPI is a declaration of
+      intent — it names the events this API emits and refers to AsyncAPI for
+      the schema. Do not define event payload schemas inline in x-events or in
+      OpenAPI components/schemas; define them in AsyncAPI message definitions.
 
   format:
     location: Top level of each domain OpenAPI spec (alongside info, paths, components)
@@ -126,6 +137,8 @@ x_events:
         - type: the fully qualified CloudEvents type name
         - summary: short description of what the event signals
         - payload: $ref to the payload schema in components/schemas
+      Note: payload $ref will transition to reference AsyncAPI message schemas
+      once the cross-reference mechanism is finalized.
 
   example: |
     x-events:
@@ -200,6 +213,21 @@ x_events:
       - org.codeforamerica.safety-net-blueprint.workflow.task.created
       - org.codeforamerica.safety-net-blueprint.workflow.task.claimed
 
+  asyncapi_channel_naming:
+    pattern: "{domain}.{entity}.{verb}"
+    description: |
+      AsyncAPI channel names follow the same segments as the CloudEvents type
+      but without the reverse-DNS prefix. The domain matches the API's x-domain
+      value; the entity is the kebab-case resource name; the verb is the action.
+    examples:
+      - intake.application.submitted
+      - intake.application.withdrawn
+      - workflow.task.created
+      - workflow.task.claimed
+    note: |
+      Channel names are the canonical identifier for a stream in the broker.
+      State partners may overlay the prefix to match their own namespace.
+
   versioning:
     description: |
       New fields may be added to an event payload without versioning.
@@ -216,8 +244,9 @@ x_events:
       them for every POST, PATCH, and DELETE, regardless of whether a state
       machine is defined.
 
-      All three events must be declared in x-events and have corresponding
-      payload schemas. This is enforced by convention; api:new scaffolds them
+      All three events must be declared in x-events. Their canonical channel
+      definitions and message schemas must exist in the domain's AsyncAPI spec.
+      This is enforced by convention; api:new scaffolds the x-events declarations
       automatically.
 
     events:

@@ -1,0 +1,606 @@
+openapi: 3.1.0
+info:
+  title: Intake API
+  version: 1.0.0
+  x-domain: intake
+  x-status: stable
+  x-visibility: public
+
+x-events:
+  # CRUD lifecycle events — auto-emitted for every POST, PATCH, DELETE
+  application.created:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.created
+    summary: Emitted when an application is created.
+  application.updated:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.updated
+    summary: Emitted when an application is updated via PATCH.
+  application.deleted:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.deleted
+    summary: Emitted when an application is deleted.
+  applicationMember.created:
+    type: org.codeforamerica.safety-net-blueprint.intake.application-member.created
+    summary: Emitted when a household member is added to an application.
+  applicationMember.updated:
+    type: org.codeforamerica.safety-net-blueprint.intake.application-member.updated
+    summary: Emitted when a household member is updated via PATCH.
+  applicationMember.deleted:
+    type: org.codeforamerica.safety-net-blueprint.intake.application-member.deleted
+    summary: Emitted when a household member is removed from an application.
+  # State machine transition events
+  intake.application.submitted:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.submitted
+    summary: Emitted when an applicant formally submits an application, starting the regulatory processing clock.
+  intake.application.withdrawn:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.withdrawn
+    summary: Emitted when a household withdraws their application.
+  intake.application.closed:
+    type: org.codeforamerica.safety-net-blueprint.intake.application.closed
+    summary: Emitted when intake is complete and the application is closed.
+
+paths:
+  /applications:
+    get:
+      summary: List applications
+      operationId: listApplications
+      tags: [Applications]
+      parameters:
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SortParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+          description: Filter by application status.
+        - name: channel
+          in: query
+          schema:
+            type: string
+          description: Filter by submission channel.
+      responses:
+        '200':
+          description: A paginated list of applications.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationList'
+        '400':
+          $ref: '../../common/components/responses.yaml#/BadRequest'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+    post:
+      summary: Create an application
+      operationId: createApplication
+      tags: [Applications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationCreate'
+      responses:
+        '201':
+          description: Application created successfully.
+          headers:
+            Location:
+              description: URL of the newly created application resource.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        '400':
+          $ref: '../../common/components/responses.yaml#/BadRequest'
+        '422':
+          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+
+  /applications/{applicationId}:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationIdParam'
+    get:
+      summary: Get an application
+      operationId: getApplication
+      tags: [Applications]
+      responses:
+        '200':
+          description: Application retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+    patch:
+      summary: Update an application
+      operationId: updateApplication
+      tags: [Applications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationUpdate'
+      responses:
+        '200':
+          description: Application updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        '400':
+          $ref: '../../common/components/responses.yaml#/BadRequest'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '422':
+          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+    delete:
+      summary: Delete a draft application
+      operationId: deleteApplication
+      tags: [Applications]
+      responses:
+        '204':
+          description: Application deleted successfully.
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+
+  /applications/{applicationId}/members:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationIdParam'
+    get:
+      summary: List household members
+      operationId: listApplicationMembers
+      tags: [Household Members]
+      parameters:
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SortParam'
+      responses:
+        '200':
+          description: Household members for this application.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationMemberList'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+    post:
+      summary: Add a household member
+      operationId: createApplicationMember
+      tags: [Household Members]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationMemberCreate'
+      responses:
+        '201':
+          description: Household member added successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationMember'
+        '400':
+          $ref: '../../common/components/responses.yaml#/BadRequest'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '422':
+          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+
+  /applications/{applicationId}/members/{memberId}:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationIdParam'
+      - $ref: '#/components/parameters/MemberIdParam'
+    get:
+      summary: Get a household member
+      operationId: getApplicationMember
+      tags: [Household Members]
+      responses:
+        '200':
+          description: Household member retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationMember'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+    patch:
+      summary: Update a household member
+      operationId: updateApplicationMember
+      tags: [Household Members]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationMemberUpdate'
+      responses:
+        '200':
+          description: Household member updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationMember'
+        '400':
+          $ref: '../../common/components/responses.yaml#/BadRequest'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '422':
+          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+    delete:
+      summary: Remove a household member
+      operationId: deleteApplicationMember
+      tags: [Household Members]
+      responses:
+        '204':
+          description: Household member removed successfully.
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+
+components:
+  parameters:
+    ApplicationIdParam:
+      name: applicationId
+      in: path
+      required: true
+      description: Unique identifier of the application.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-0000-0000-000000000001
+
+    MemberIdParam:
+      name: memberId
+      in: path
+      required: true
+      description: Unique identifier of the household member.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-0000-0000-000000000010
+
+  schemas:
+    # ---------------------------------------------------------------------------
+    # Application
+    # ---------------------------------------------------------------------------
+    ApplicationWritable:
+      type: object
+      properties:
+        programsAppliedFor:
+          type: array
+          items:
+            type: string
+            enum: [snap, medicaid, chip, tanf]
+          description: Benefit programs the household is applying for.
+        channel:
+          type: string
+          enum: [online, phone, in_person, mail]
+          description: Channel through which the application was submitted.
+        address:
+          # External $ref — Address is defined in common/schemas/shared.yaml.
+          $ref: '../../common/schemas/shared.yaml#/$defs/Address'
+        contactInfo:
+          # External $ref — ContactInfo is defined in common/schemas/shared.yaml.
+          $ref: '../../common/schemas/shared.yaml#/$defs/ContactInfo'
+        labels:
+          # additionalProperties map — arbitrary key-value labels for state-specific tagging.
+          type: object
+          additionalProperties:
+            type: string
+          description: >
+            Arbitrary key-value labels for state-specific tagging, routing, and
+            reporting. States may use these to attach jurisdiction-specific metadata
+            without modifying the core schema.
+
+    Application:
+      description: A benefit application record, including server-managed fields.
+      unevaluatedProperties: false
+      required: [id, status, programsAppliedFor, referenceId, createdAt, updatedAt]
+      allOf:
+        - $ref: '#/components/schemas/ApplicationWritable'
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+              description: Unique identifier (server-generated).
+            referenceId:
+              type: string
+              readOnly: true
+              # x-derived — short human-readable code derived from the UUID at read time.
+              x-derived: "$this.id.substring(0, 8).toUpperCase()"
+              description: Short human-readable reference code for this application.
+            confirmationNumber:
+              type: string
+              readOnly: true
+              deprecated: true
+              description: >
+                Deprecated — use referenceId instead. Legacy confirmation number assigned
+                by older case management systems. Retained for backward compatibility
+                during state migration periods.
+            status:
+              type: string
+              readOnly: true
+              # x-enum-source — populated at resolve time from intake-state-machine.yaml states.
+              x-enum-source: "states[].id"
+              description: Current lifecycle status of the application.
+            submittedAt:
+              type: string
+              format: date-time
+              nullable: true
+              readOnly: true
+              description: Timestamp when the application was formally submitted. Null until submitted.
+            openedAt:
+              type: string
+              format: date-time
+              nullable: true
+              readOnly: true
+              description: Timestamp when a caseworker began active review. Null until the application is opened.
+            slaTypeCode:
+              type: string
+              readOnly: true
+              # x-enum-source — populated at resolve time from intake-sla-types.yaml.
+              x-enum-source: "slaTypes[].id"
+              description: SLA type governing the processing deadline for this application.
+            slaInfo:
+              type: array
+              readOnly: true
+              items:
+                $ref: 'https://blueprint.codeforamerica.org/base/components/sla.yaml#/SlaInfo'
+              description: >
+                Engine-managed SLA tracking entries. Populated on create and updated
+                on every transition. Read by the sla_breach_rate metric.
+            members:
+              type: array
+              items:
+                $ref: '#/components/schemas/ApplicationMember'
+              description: Household members on this application.
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the application was created.
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the application was last updated.
+
+    ApplicationCreate:
+      allOf:
+        - $ref: '#/components/schemas/ApplicationWritable'
+        - type: object
+          required: [programsAppliedFor, channel]
+
+    ApplicationUpdate:
+      allOf:
+        - $ref: '#/components/schemas/ApplicationWritable'
+        - type: object
+          minProperties: 1
+
+    ApplicationList:
+      type: object
+      additionalProperties: false
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Application'
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of matching applications.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of applications per page.
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of applications skipped.
+        hasNext:
+          type: boolean
+          description: Whether more applications are available.
+
+    # ---------------------------------------------------------------------------
+    # ApplicationMember (sub-resource of Application)
+    # ---------------------------------------------------------------------------
+    ApplicationMemberWritable:
+      type: object
+      properties:
+        firstName:
+          type: string
+          description: Member's first name.
+        lastName:
+          type: string
+          description: Member's last name.
+        dateOfBirth:
+          type: string
+          format: date
+          description: Member's date of birth (YYYY-MM-DD).
+        relationship:
+          type: string
+          enum: [self, spouse, child, parent, sibling, other]
+          description: Relationship of this member to the primary applicant.
+        incomeSource:
+          # External $ref to intake-schemas.yaml — discriminated oneOf for income type.
+          $ref: './intake-schemas.yaml#/$defs/IncomeSource'
+        notificationPreference:
+          # Inline oneOf with discriminator — all variants defined in this file.
+          description: How this member prefers to receive benefit notices and updates.
+          oneOf:
+            - $ref: '#/components/schemas/EmailNotification'
+            - $ref: '#/components/schemas/SmsNotification'
+            - $ref: '#/components/schemas/MailNotification'
+          discriminator:
+            propertyName: channel
+        verificationEvidence:
+          # anyOf — a member may have both electronic and manual verification on file.
+          description: >
+            Identity verification evidence for this member. Accepts anyOf: an electronic
+            data match result, a manual caseworker review record, or both.
+          anyOf:
+            - $ref: '#/components/schemas/ElectronicVerification'
+            - $ref: '#/components/schemas/ManualVerification'
+
+    ApplicationMember:
+      description: A household member on a benefit application.
+      unevaluatedProperties: false
+      required: [id, applicationId, firstName, lastName, relationship, createdAt, updatedAt]
+      allOf:
+        - $ref: '#/components/schemas/ApplicationMemberWritable'
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+              description: Unique identifier (server-generated).
+            applicationId:
+              type: string
+              format: uuid
+              description: The application this member belongs to.
+              # x-relationship — intra-domain link from member back to its parent application.
+              x-relationship:
+                type: fk
+                resource: Application
+                style: links-only
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the member was added.
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: Timestamp when the member was last updated.
+
+    ApplicationMemberCreate:
+      allOf:
+        - $ref: '#/components/schemas/ApplicationMemberWritable'
+        - type: object
+          required: [firstName, lastName, relationship]
+
+    ApplicationMemberUpdate:
+      allOf:
+        - $ref: '#/components/schemas/ApplicationMemberWritable'
+        - type: object
+          minProperties: 1
+
+    ApplicationMemberList:
+      type: object
+      additionalProperties: false
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationMember'
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of matching household members.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of household members per page.
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of household members skipped.
+        hasNext:
+          type: boolean
+          description: Whether more household members are available.
+
+    # ---------------------------------------------------------------------------
+    # Notification preference variants (inline oneOf with discriminator)
+    # ---------------------------------------------------------------------------
+    EmailNotification:
+      type: object
+      required: [channel, address]
+      properties:
+        channel:
+          type: string
+          enum: [email]
+        address:
+          type: string
+          format: email
+          description: Email address for benefit notices.
+
+    ElectronicVerification:
+      type: object
+      required: [source, matchCode, verifiedAt]
+      properties:
+        source:
+          type: string
+          description: Data source used for the electronic match (e.g., SSA, IRS-IEVS).
+        matchCode:
+          type: string
+          description: Result code returned by the data source.
+        verifiedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the electronic verification was completed.
+
+    MailNotification:
+      type: object
+      required: [channel, address]
+      properties:
+        channel:
+          type: string
+          enum: [mail]
+        address:
+          $ref: '../../common/schemas/shared.yaml#/$defs/Address'
+
+    ManualVerification:
+      type: object
+      required: [verifiedBy, verifiedAt]
+      properties:
+        verifiedBy:
+          type: string
+          description: ID of the caseworker who performed the manual verification.
+        verifiedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the manual verification was completed.
+        notes:
+          type: string
+          description: Optional caseworker notes on the verification outcome.
+
+    SmsNotification:
+      type: object
+      required: [channel, phone]
+      properties:
+        channel:
+          type: string
+          enum: [sms]
+        phone:
+          type: string
+          description: Phone number for SMS benefit notices (E.164 format).

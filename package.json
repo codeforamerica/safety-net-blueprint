@@ -15,9 +15,6 @@
   "scripts": {
     "start": "node packages/blueprint-mock-server/cli/server.js --spec=packages/safety-net-contracts/src",
     "validate": "node packages/blueprint-cli/scripts/validate.js --resolved=packages/generated/contracts",
-    "validate:refs": "node packages/blueprint-cli/scripts/validate/refs.js --spec=packages/generated/contracts",
-    "validate:patterns": "node packages/blueprint-cli/scripts/validate/patterns.js --spec=packages/safety-net-contracts/src",
-    "validate:schemas": "node packages/blueprint-cli/scripts/validate/schemas.js --spec=packages/safety-net-contracts/src",
     "api:new": "node packages/blueprint-cli/scripts/scaffold-api.js",
     "api:update": "node packages/blueprint-cli/scripts/add-api-resource.js",
     "resolve": "node packages/blueprint-cli/scripts/resolve.js --spec=packages/safety-net-contracts/src --overlay=packages/safety-net-contracts/src/overlays --out=packages/generated/contracts",
@@ -42,10 +39,12 @@
     "changeset": "node scripts/changeset.js",
     "changeset:version": "changeset version",
     "version": "changeset version",
-    "release": "changeset publish"
+    "release": "changeset publish",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.0",
+    "husky": "^9.1.7",
     "jszip": "^3.10.1",
     "zod": "^4.0.0"
   }

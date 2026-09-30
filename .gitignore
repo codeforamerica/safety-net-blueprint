@@ -1,5 +1,4 @@
 node_modules/
-package-lock.json
 .DS_Store
 *.log
 .idea
@@ -9,10 +8,17 @@ packages/blueprint-mock-server/uploads/
 
 # Generated artifacts (regenerate as needed)
 dist/
+!packages/blueprint-rules-engine/dist/
+packages/blueprint-rules-engine/dist/*
+!packages/blueprint-rules-engine/dist/browser.js
 dist-packages/
 data/
 generated/
+!packages/blueprint-harness/generated/
 resolved/
+!packages/blueprint-cli/tests/resolve/golden/resolved/
+!packages/blueprint-harness/generated/resolved/
+!packages/blueprint-harness/generated/clients/
 
 # safety-net-explorer is private and has no README
 
@@ -26,3 +32,9 @@ cursor/
 # Claude Code local settings
 .claude
 Agents.md
+# Built by the rules-engine "prepare" script on every install, and shipped to
+# npm via "files"/"exports". Nothing reads it from the repo, so committing it
+# only created a byte-for-byte freshness check that cannot hold across
+# platforms. packages/safety-net-explorer/ stays committed — GitHub Pages
+# serves it from the repo, which is the case that does need it.
+packages/blueprint-rules-engine/dist/

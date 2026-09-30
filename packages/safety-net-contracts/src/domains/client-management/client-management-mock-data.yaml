@@ -1,12 +1,61 @@
-# Seed data for client-management
-# Edit freely; run mock:seed to regenerate from scratch.
+# Example data for this domain, seeded into the mock server.
+# Validated against the schemas its collections hold.
 
 PersonExample1:
-  id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-  createdAt: '2024-01-01T00:00:00.000Z'
-  updatedAt: '2024-01-01T00:00:00.000Z'
-
+  id: 00000001-0000-4000-8000-000000000001
+  name:
+    firstName: Avery
+    lastName: Johnson
+  email: avery.johnson@fixture.test
+  dateOfBirth: '1985-04-12'
+  phoneNumber: +1-555-001-0001
+  address:
+    addressLine1: 1 Fixture Lane
+    city: Springfield
+    stateProvince: IL
+    postalCode: '62704'
+    county: Sangamon
+  citizenshipInfo:
+    status: citizen
+  createdAt: '2024-01-01T00:00:00Z'
+  updatedAt: '2024-01-01T00:00:00Z'
 PersonExample2:
-  id: b2c3d4e5-f6a7-8901-bcde-f12345678901
-  createdAt: '2024-01-31T00:00:00.000Z'
-  updatedAt: '2024-01-31T00:00:00.000Z'
+  id: 00000001-0000-4000-8000-000000000002
+  name:
+    firstName: Bianca
+    lastName: Rivera
+  email: bianca.rivera@fixture.test
+  dateOfBirth: '1992-11-08'
+  phoneNumber: +1-555-001-0002
+  address:
+    addressLine1: 2 Fixture Lane
+    city: Miami
+    stateProvince: FL
+    postalCode: '33101'
+    county: Miami-Dade
+  citizenshipInfo:
+    status: permanent_resident
+    immigrationInfo:
+      status: lawful_permanent_resident
+      documentType: i_551
+      documentNumber: A123456789
+  createdAt: '2024-01-01T00:00:00Z'
+  updatedAt: '2024-01-01T00:00:00Z'
+PersonExample3:
+  id: 00000001-0000-4000-8000-000000000003
+  name:
+    firstName: Jordan
+    lastName: Fields
+  email: jordan.fields@fixture.test
+  dateOfBirth: '1990-03-20'
+  phoneNumber: +1-555-001-0003
+  address:
+    addressLine1: 3 Fixture Lane
+    city: Chicago
+    stateProvince: IL
+    postalCode: '60605'
+    county: Cook
+  citizenshipInfo:
+    status: citizen
+  createdAt: '2024-01-01T00:00:00Z'
+  updatedAt: '2024-01-01T00:00:00Z'

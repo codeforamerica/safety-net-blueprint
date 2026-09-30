@@ -83,6 +83,20 @@ await startMockServer(['./resolved'], './seed');
 await stopServer();
 ```
 
+### Writing tests against the server
+
+`@codeforamerica/blueprint-mock-server/test-utils` provides the helpers the
+blueprint's own integration tests use — a `fetch` wrapper that points at the
+running server and sets auth headers, plus event injection and stub control.
+
+```js
+import { fetch, caller, injectEvent, clearStubs } from '@codeforamerica/blueprint-mock-server/test-utils';
+
+const res = await fetch('/applications', { caller: caller('user-1', ['caseworker']) });
+await injectEvent('application.submitted', { applicationId: 'app-1' });
+await clearStubs();
+```
+
 ## Changelog
 
 See [CHANGELOG.md](https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-mock-server/CHANGELOG.md) for release history.

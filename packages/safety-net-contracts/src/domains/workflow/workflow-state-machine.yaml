@@ -477,10 +477,15 @@ $defs:
         type: string
         format: uuid
         description: ID of the caseworker to assign the task to
+        x-relationship:
+          resource: User
+          domain: identity-access
       queueId:
         type: string
         format: uuid
         description: Optional queue to move the task to
+        x-relationship:
+          resource: Queue
 
   AwaitClientRequest:
     type: object

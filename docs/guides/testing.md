@@ -41,7 +41,7 @@ npm run test:integration
 
 The integration test suite runs the mock server against `packages/generated/contracts` (the resolved contracts with overlay applied):
 
-1. The mock server is started against `packages/generated/contracts` with seed data from `packages/blueprint-mock-server/tests/integration/seed/`
+1. The mock server is started against `packages/generated/contracts` with seed data from the resolved contracts themselves — the `*-mock-data.yaml` documents in `packages/generated/contracts`
 2. Tests make HTTP requests and assert on responses — CRUD, state machine RPC, domain events, rule evaluation
 3. A Postman collection is run via Newman for additional coverage
 4. Server is stopped after all tests complete
@@ -92,7 +92,7 @@ Postman RPC tests require a task with `status: pending` (the state machine's `in
 
 ### Fixture files
 
-Seed data files are in `packages/blueprint-mock-server/tests/integration/seed/`. The key names in each file match the key names in the corresponding docs example file — this ensures that `$ref` pointers in the spec files (e.g., `"$ref": "./persons-openapi-examples.yaml#/PersonExample1"`) remain valid during fixture dir validation.
+Seed data lives with the contracts, as `*-mock-data.yaml` beside each domain spec, and is resolved into `packages/generated/contracts`. It is validated against the schema each collection holds, so a record naming a schema that does not exist is an error rather than a silent skip. The key names in each file match the key names in the corresponding docs example file — this ensures that `$ref` pointers in the spec files (e.g., `"$ref": "./persons-openapi-examples.yaml#/PersonExample1"`) remain valid during fixture dir validation.
 
 ## Postman/Newman Tests
 
@@ -135,7 +135,7 @@ Create a file in `packages/blueprint-mock-server/tests/unit/` or `packages/bluep
 
 Add to the appropriate section in `packages/blueprint-mock-server/tests/integration/integration.test.js`.
 
-If the test requires new seed data, add records to `packages/blueprint-mock-server/tests/integration/seed/`. Use the established ID namespace for the resource type.
+If the test requires new seed data, add records to the domain's `*-mock-data.yaml` under `packages/safety-net-contracts/src`. Use the established ID namespace for the resource type.
 
 ### New API (integration test coverage)
 

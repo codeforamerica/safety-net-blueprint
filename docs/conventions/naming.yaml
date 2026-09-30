@@ -26,6 +26,14 @@ naming:
   # Example: Person, ApplicationCreate, HouseholdList
   schemas: PascalCase
 
+  # Schema property names (field names): camelCase — always, regardless of x-casing.
+  # x-casing is a rendering hint that tells the runtime how to serialize field names
+  # to API clients. It does NOT rename YAML properties in source files. All spec
+  # authoring — OpenAPI schemas, overlay additions, annotation keys — must use
+  # camelCase property names.
+  # Example: applicationId, dateOfBirth, submittedAt
+  schema_properties: camelCase
+
   # File names: kebab-case
   # Example: user-profiles.yaml, common-parameters.yaml
   files: kebab-case
@@ -44,6 +52,14 @@ naming:
 # =============================================================================
 
 authoring_style:
+  # Usage examples communicate intent faster than long descriptions.
+  examples_over_prose:
+    description: |
+      Add a comment block with a usage example above each type definition that
+      has non-obvious structure or multiple valid forms — directly above the
+      definition it illustrates, not buried inside it. Trim the prose once the
+      example makes the point.
+
   # Do not specify OpenAPI properties that merely restate the default behavior.
   # Omitting defaults keeps specs concise and consistent.
   omit_defaults:

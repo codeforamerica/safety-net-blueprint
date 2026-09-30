@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { discoverApiSpecs, loadSpec, extractMetadata } from '@codeforamerica/blueprint-core/loader';
+import { discoverApiSpecs, loadSpec, extractMetadata } from '../../src/spec-loader.js';
 import { join } from 'path';
 
 const fixturesArg = process.argv.find(a => a.startsWith('--fixtures='));

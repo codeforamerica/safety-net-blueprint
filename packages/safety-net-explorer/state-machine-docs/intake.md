@@ -64,7 +64,7 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Create electronic Verifications per member (identity, citizenship, immigration) and per income source (income), and document Verifications at the household level for the given program. Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.
 - **`data_exchange.call.completed`**
   - Look up: verification (from `event.data.metadata.intake.verificationId`)
-  - Transition the Verification based on the service call result; on inconclusive, creates a document fallback per ex parte rules (42 CFR § 435.911)
+  - Transition the Verification based on the service call result; on inconclusive/partial/error, creates a document fallback per ex parte rules (42 CFR § 435.911)
 - **`scheduling.appointment.scheduled`**
   - Append the appointmentId to Interview.appointments when an appointment is scheduled against an interview subject. Non-interview appointments (subjectType != interview) are ignored.
 - **`document_management.document_version.uploaded`**
@@ -72,6 +72,8 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
   - Satisfy the Verification and record the uploaded document version as evidence; trigger only fires when metadata.intake.verificationId resolves to a known Verification
 - **`eligibility.determination.created`**
   - For each:
+    - For each `$member.programsAppliedFor`:
+      - `POST eligibility/determinations/decisions`
 - **`eligibility.application.decision_completed`**
   - Look up: member (from `event.data.memberId`)
   - Write eligibility outcome to ApplicationMember.programDeterminations. Informational write-back only — does not trigger application close. Medicaid RTE results may arrive before intake closes; SNAP results typically arrive after.
@@ -127,6 +129,8 @@ Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-ope
 - **mark-accept** — Caseworker accepts an electronic result as sufficient to satisfy the obligation, with a required justification
   - Actors: case_worker, or supervisor
   - Transition: `pending`/`inconclusive` → `satisfied`
+  - Record the caseworker who accepted the electronic result (sets `reviewedBy`)
+  - Record when the caseworker accepted the electronic result (sets `reviewedAt`)
   - Emit: `intake.verification.accepted` — caseworker has reviewed and accepted the electronic evidence as sufficient
 
 ### Event subscriptions

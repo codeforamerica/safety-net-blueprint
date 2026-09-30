@@ -1,0 +1,25 @@
+version: "0.1.0"
+
+phases:
+  - id: application-filing
+    label: Application Filing
+    description: Applicant completes and submits a benefits application
+    status: implemented
+    domains:
+      - intake
+      - eligibility
+    stateMachine:
+      machine: intake
+      object: Application
+      states: [draft, submitted]
+    diagrams:
+      - application-submission
+
+diagrams:
+  - id: application-submission
+    title: Application Submitted — Event Chain
+    trigger:
+      domain: intake
+      object: Application
+      action: submit
+      label: "POST /applications/{id}/submit"

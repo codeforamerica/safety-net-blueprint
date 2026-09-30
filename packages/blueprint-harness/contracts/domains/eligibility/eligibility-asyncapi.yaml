@@ -1,0 +1,30 @@
+asyncapi: 3.0.0
+info:
+  title: Eligibility Domain Events
+  version: 0.1.0
+  x-status: draft
+  description: |
+    Event catalog for the Eligibility domain.
+    Add payload schemas below.
+channels:
+  eligibility.determination.complete:
+    address: eligibility.determination.complete
+    messages:
+      DeterminationComplete:
+        $ref: '#/components/messages/DeterminationCompleteMessage'
+components:
+  messages:
+    DeterminationCompleteMessage:
+      name: eligibility.determination.complete
+      summary: TODO — describe when this event is emitted and who consumes it.
+      payload:
+        $ref: '#/components/schemas/DeterminationCompleteEvent'
+  schemas:
+    DeterminationCompleteEvent:
+      allOf:
+        - $ref: https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event
+        - type: object
+          properties:
+            type:
+              type: string
+              const: eligibility.determination.complete

@@ -1,0 +1,347 @@
+openapi: 3.1.0
+info:
+  title: Eligibility API
+  version: 1.0.0
+  x-domain: eligibility
+  x-status: stable
+  x-visibility: internal
+
+x-events:
+  eligibility.determination.complete:
+    type: org.codeforamerica.safety-net-blueprint.eligibility.determination.complete
+    summary: Emitted when an eligibility determination is finalized for all applied programs.
+
+paths:
+  /determinations:
+    get:
+      summary: List determinations
+      operationId: listDeterminations
+      tags: [Determinations]
+      parameters:
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SortParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+          description: Filter by determination status.
+        - name: applicationId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by intake application.
+      responses:
+        '200':
+          description: A paginated list of determinations.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeterminationList'
+        '400':
+          $ref: '../../common/components/responses.yaml#/BadRequest'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+    post:
+      summary: Create a determination
+      operationId: createDetermination
+      tags: [Determinations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeterminationCreate'
+      responses:
+        '201':
+          description: Determination created successfully.
+          headers:
+            Location:
+              description: URL of the newly created determination resource.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Determination'
+        '400':
+          $ref: '../../common/components/responses.yaml#/BadRequest'
+        '422':
+          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+
+  /determinations/{determinationId}:
+    parameters:
+      - $ref: '#/components/parameters/DeterminationIdParam'
+    get:
+      summary: Get a determination
+      operationId: getDetermination
+      tags: [Determinations]
+      responses:
+        '200':
+          description: Determination retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Determination'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+    patch:
+      summary: Update a determination
+      operationId: updateDetermination
+      tags: [Determinations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeterminationUpdate'
+      responses:
+        '200':
+          description: Determination updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Determination'
+        '400':
+          $ref: '../../common/components/responses.yaml#/BadRequest'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '422':
+          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+
+  /determinations/{determinationId}/decisions:
+    parameters:
+      - $ref: '#/components/parameters/DeterminationIdParam'
+    get:
+      summary: List decisions
+      operationId: listDecisions
+      tags: [Decisions]
+      parameters:
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam'
+      responses:
+        '200':
+          description: Per-program eligibility decisions for this determination.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionList'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+
+  /determinations/{determinationId}/decisions/{decisionId}:
+    parameters:
+      - $ref: '#/components/parameters/DeterminationIdParam'
+      - $ref: '#/components/parameters/DecisionIdParam'
+    get:
+      summary: Get a decision
+      operationId: getDecision
+      tags: [Decisions]
+      responses:
+        '200':
+          description: Decision retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Decision'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+
+components:
+  parameters:
+    DeterminationIdParam:
+      name: determinationId
+      in: path
+      required: true
+      description: Unique identifier of the determination.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-0000-0001-000000000001
+
+    DecisionIdParam:
+      name: decisionId
+      in: path
+      required: true
+      description: Unique identifier of the decision.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-0000-0002-000000000001
+
+  schemas:
+    # ---------------------------------------------------------------------------
+    # Determination
+    # ---------------------------------------------------------------------------
+    DeterminationWritable:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+          description: The intake application this determination is for.
+          # x-relationship — cross-domain link to the intake Application resource.
+          x-relationship:
+            type: fk
+            domain: intake
+            resource: Application
+            style: links-only
+
+    Determination:
+      type: object
+      required: [id, applicationId, status, expedited, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier (server-generated).
+        applicationId:
+          type: string
+          format: uuid
+          description: The intake application this determination is for.
+          x-relationship:
+            type: fk
+            domain: intake
+            resource: Application
+            style: links-only
+        status:
+          type: string
+          enum: [pending, in_progress, complete]
+          readOnly: true
+          description: Current status of the eligibility determination.
+        expedited:
+          type: boolean
+          readOnly: true
+          description: Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
+        determinedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+          description: Timestamp when the determination was finalized. Null until complete.
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the determination was created.
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Timestamp when the determination was last updated.
+
+    DeterminationCreate:
+      allOf:
+        - $ref: '#/components/schemas/DeterminationWritable'
+        - type: object
+          required: [applicationId]
+
+    DeterminationUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        status:
+          type: string
+          enum: [pending, in_progress, complete]
+
+    DeterminationList:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Determination'
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean
+
+    # ---------------------------------------------------------------------------
+    # Decision (sub-resource of Determination)
+    # ---------------------------------------------------------------------------
+    Decision:
+      type: object
+      required: [id, determinationId, program, eligible, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier (server-generated).
+        determinationId:
+          type: string
+          format: uuid
+          description: The determination this decision belongs to.
+          # x-relationship — intra-domain link from decision back to its parent determination.
+          x-relationship:
+            type: fk
+            resource: Determination
+            style: links-only
+        program:
+          type: string
+          enum: [snap, medicaid, chip, tanf]
+          description: The benefit program this decision applies to.
+        eligible:
+          type: boolean
+          description: Whether the household is eligible for this program.
+        reason:
+          type: string
+          nullable: true
+          description: Explanation of the eligibility decision.
+        benefitAmount:
+          type: number
+          minimum: 0
+          nullable: true
+          description: Estimated monthly benefit amount if eligible (dollars).
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    DecisionList:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Decision'
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean

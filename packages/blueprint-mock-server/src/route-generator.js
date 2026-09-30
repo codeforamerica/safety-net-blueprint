@@ -16,7 +16,7 @@ import { createMetricsListHandler, createMetricsGetHandler } from './handlers/me
 import { createDocumentUploadHandler, createDocumentVersionUploadHandler } from './handlers/document-upload-handler.js';
 import { createDocumentContentHandler } from './handlers/document-content-handler.js';
 import { findSlaTypes } from './sla-loader.js';
-import { generateStateSchemas } from '@codeforamerica/blueprint-core/compositions';
+import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, registerParentLink } from './composition-assembler.js';
 import { findAll, findById, insertResource, update, registerCollectionDefaults } from './database-manager.js';
 import { emitEvent } from './emit-event.js';
@@ -622,17 +622,9 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
         derives: doc.derives || {},
       };
 
-      // Seed state schemas into apiSpec.schemas so loadStateDefaults can read defaults.
-      // Only fills in schemas not already present — overlay-applied versions in the
-      // resolved spec take precedence over the generated baseline.
-      if (composition.state && apiSpec?.schemas) {
-        const generated = generateStateSchemas(composition.state);
-        for (const [key, schema] of Object.entries(generated)) {
-          if (!(key in apiSpec.schemas)) {
-            apiSpec.schemas[key] = schema;
-          }
-        }
-      }
+      // State schemas come from the resolved spec: applying the composition
+      // overlay puts them there. The server reads resolved contracts, so
+      // there is nothing to generate at runtime.
 
       // Load state defaults from the generated OpenAPI schema (empty if no state declared)
       const stateDefaults = loadStateDefaults(composition.state, apiSpec);
@@ -743,7 +735,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
 
 /**
  * Load default field values for the state resource from the generated OpenAPI writable schema.
- * generateStateSchemas merges {Name}Writable into apiSpec.schemas before this is called,
+ * The resolved spec already carries {Name}Writable from the composition overlay,
  * so apiSpec.schemas reflects the resolved composition state schema with defaults.
  *
  * @param {Object|undefined} stateConfig - composition.state
@@ -950,6 +942,75 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, slaType
       });
 
       console.log(`    POST   ${expressPath} - ${entry.id}: ${entry.from} → ${entry.to ?? '(in-place)'}`);
+    }
+  }
+
+  return registeredEndpoints;
+}
+
+/**
+ * Register rules evaluation routes from discovered *-rules.yaml files.
+ *
+ * Only rulesets that declare an `endpoint:` block get an HTTP route. The full
+ * path is constructed the same way as composition routes: serverBasePath from
+ * the domain's API spec is prepended to endpoint.path.
+ *
+ * @param {import('express').Express} app
+ * @param {Array<{ domain: string, doc: Object, filePath: string }>} rulesFiles
+ * @param {Array<Object>} apiSpecs
+ * @returns {Array<{ method: string, path: string, description: string }>}
+ */
+/**
+ * Index compiled decision graphs by the ruleset each came from.
+ *
+ * Takes the graphs themselves, which is what setup.js produces from
+ * `generate(docs, 'graph')`. A compiled graph names its own ruleset, so
+ * nothing needs to carry it alongside.
+ *
+ * @param {Array<Object>} graphs - Compiled graphs
+ * @returns {Record<string, Object>} Ruleset name to its graph
+ */
+export function buildRulesIndex(graphs = []) {
+  return Object.fromEntries(graphs.map((graph) => [graph.ruleset, graph]));
+}
+
+export function registerRulesRoutes(app, rulesFiles = [], apiSpecs = [], graphs = []) {
+  const byRuleset = buildRulesIndex(graphs);
+  const registeredEndpoints = [];
+
+  for (const { domain, doc } of rulesFiles) {
+    const apiSpec = apiSpecs.find(s => s.name === domain);
+    const basePath = apiSpec?.serverBasePath ?? `/${domain}`;
+
+    for (const [rulesetName, ruleset] of Object.entries(doc.rulesets || {})) {
+      const endpointPath = ruleset.endpoint?.path;
+      if (!endpointPath) continue;
+
+      const fullPath = basePath && !endpointPath.startsWith(basePath)
+        ? `${basePath}${endpointPath}`
+        : endpointPath;
+
+      const graph = byRuleset[rulesetName];
+      if (!graph) continue;
+
+      app.post(fullPath, (req, res) => {
+        try {
+          const nodes = evaluate(graph, req.body ?? {});
+          const result = {};
+          for (const [name, node] of Object.entries(nodes)) {
+            if (node.type !== 'output') continue;
+            const { type: _type, ...rest } = node;
+            result[name] = rest;
+          }
+          res.json(result);
+        } catch (err) {
+          console.error(`Rules evaluation error (${rulesetName}):`, err);
+          internalError(res, err);
+        }
+      });
+
+      registeredEndpoints.push({ method: 'POST', path: fullPath, description: `Evaluate ${rulesetName}` });
+      console.log(`  POST   ${fullPath} - Evaluate ${rulesetName} (rules)`);
     }
   }
 

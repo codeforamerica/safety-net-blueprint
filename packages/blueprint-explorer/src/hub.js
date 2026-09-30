@@ -18,15 +18,17 @@ import { readdirSync, writeFileSync, existsSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { loadConfig } from './lib/config.js';
+import { build as buildAuthored } from './authored.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const contentArg = process.argv.slice(2).find(a => a.startsWith('--content='));
-if (!contentArg) {
-  console.error('Usage: node hub.js --content=<path>');
-  process.exit(1);
-}
-const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
+/**
+ * @param {{ contentDir: string, authoredDir?: string }} opts
+ */
+export function build({ contentDir, authoredDir }) {
+// ── Authored pages ────────────────────────────────────────────────────────────
+
+buildAuthored({ contentDir, authoredDir });
 
 // ── Load content config ───────────────────────────────────────────────────────
 
@@ -74,12 +76,19 @@ function contextMapLabel(slug) {
   return slug.replace(/^domain_/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
+// Rules-docs slugs are `{domain}-{rulesetName}` — strip the domain prefix for the chip label
+function rulesLabel(slug) {
+  const rulesetName = slug.replace(/^[^-]+-/, '');
+  return rulesetName.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase());
+}
+
 // ── Discover pages ────────────────────────────────────────────────────────────
 
 const apiPages     = scanPages(join(contentDir, 'api-reference'));
 const dictPages    = scanPages(join(contentDir, 'data-dictionaries'));
 const clientPages  = scanPages(join(contentDir, 'client-reference'));
 const smPages      = scanPages(join(contentDir, 'state-machine-docs'));
+const rulesPages   = scanPages(join(contentDir, 'rules-docs'), rulesLabel);
 const contextPages = scanPages(join(contentDir, 'context-map'), contextMapLabel)
   .filter(p => p.slug.startsWith('domain_'));
 const seqPages     = scanPages(join(contentDir, 'sequence-diagrams'));
@@ -540,6 +549,30 @@ const html = `<!DOCTYPE html>
         <div class="card-body">
           <div class="card-icon icon-blue">
             <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="4"  cy="4"  r="2.5" fill="#2B1A78"/>
+              <circle cx="16" cy="4"  r="2.5" fill="#5650BE"/>
+              <circle cx="4"  cy="16" r="2.5" fill="#5650BE"/>
+              <circle cx="16" cy="16" r="2.5" fill="#5650BE"/>
+              <circle cx="10" cy="10" r="2.5" fill="#2B1A78"/>
+              <line x1="6" y1="5"  x2="8.5"  y2="8.5"  stroke="#5650BE" stroke-width="1.5"/>
+              <line x1="14" y1="5"  x2="11.5" y2="8.5"  stroke="#5650BE" stroke-width="1.5"/>
+              <line x1="6"  y1="15" x2="8.5"  y2="11.5" stroke="#5650BE" stroke-width="1.5"/>
+              <line x1="14" y1="15" x2="11.5" y2="11.5" stroke="#5650BE" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="card-header-row">
+            <h4><a href="rules-docs/index.html" class="card-link">Rules Docs</a></h4>
+            <span class="status-badge badge-progress">In progress</span>
+          </div>
+          <p>Dependency graph visualizer for blueprint rulesets — inputs, intermediate facts, outputs, policy citations, and browser-side evaluation.</p>${outputTags(rulesPages, `rules-docs`, 'dot-blue')}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-accent accent-blue"></div>
+        <div class="card-body">
+          <div class="card-icon icon-blue">
+            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <circle cx="10" cy="10" r="4" fill="#5650BE"/>
               <circle cx="10" cy="10" r="1.5" fill="white"/>
               <circle cx="3.5" cy="5" r="2" fill="#2B1A78"/>
@@ -557,6 +590,28 @@ const html = `<!DOCTYPE html>
             <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Cross-domain event reference — every published event with its emitting domain and all subscribers, derived from state machine contracts.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-accent accent-sand"></div>
+        <div class="card-body">
+          <div class="card-icon icon-sand">
+            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="2" y="3" width="16" height="2.5" rx="1.25" fill="#b5917a"/>
+              <rect x="2" y="7.5" width="10" height="2" rx="1" fill="#e9ccbe"/>
+              <rect x="2" y="11.5" width="12" height="2" rx="1" fill="#e9ccbe"/>
+              <rect x="2" y="15.5" width="7" height="2" rx="1" fill="#e9ccbe"/>
+              <circle cx="16" cy="14" r="3.5" fill="#f7ede8" stroke="#b5917a" stroke-width="1.5"/>
+              <line x1="14.5" y1="14" x2="17.5" y2="14" stroke="#b5917a" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="16" y1="12.5" x2="16" y2="15.5" stroke="#b5917a" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="card-header-row">
+            <h4><a href="annotations-explorer/index.html" class="card-link">Annotation Registry</a></h4>
+            <span class="status-badge badge-progress">In progress</span>
+          </div>
+          <p>Registry coverage explorer — every annotation registry entry with the schema fields, operations, events, and facts that reference it.</p>
         </div>
       </div>
 
@@ -633,3 +688,18 @@ const html = `<!DOCTYPE html>
 
 writeFileSync(join(contentDir, 'index.html'), html, 'utf8');
 console.log(`  wrote ${join(contentDir, 'index.html')}`);
+} // end build()
+
+// CLI entry point
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const contentArg  = process.argv.slice(2).find(a => a.startsWith('--content='));
+  const authoredArg = process.argv.slice(2).find(a => a.startsWith('--authored='));
+  if (!contentArg) {
+    console.error('Usage: node hub.js --content=<path> [--authored=<source-dir>]');
+    process.exit(1);
+  }
+  build({
+    contentDir:  resolve(process.cwd(), contentArg.slice('--content='.length)),
+    authoredDir: authoredArg ? resolve(process.cwd(), authoredArg.slice('--authored='.length)) : undefined,
+  });
+}

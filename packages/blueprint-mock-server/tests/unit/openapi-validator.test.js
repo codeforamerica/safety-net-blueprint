@@ -5,8 +5,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { validateSpec, validateAll } from '@codeforamerica/blueprint-core/validation';
-import { discoverApiSpecs } from '@codeforamerica/blueprint-core/loader';
+import { validateSpec, validateAll } from '../../src/spec-validator.js';
+import { discoverApiSpecs } from '../../src/spec-loader.js';
 import { join } from 'path';
 
 const fixturesArg = process.argv.find(a => a.startsWith('--fixtures='));

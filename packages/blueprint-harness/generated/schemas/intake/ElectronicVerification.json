@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "required": [
+    "source",
+    "matchCode",
+    "verifiedAt"
+  ],
+  "properties": {
+    "source": {
+      "type": "string",
+      "description": "Data source used for the electronic match (e.g., SSA, IRS-IEVS)."
+    },
+    "matchCode": {
+      "type": "string",
+      "description": "Result code returned by the data source."
+    },
+    "verifiedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the electronic verification was completed."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/ElectronicVerification"
+}

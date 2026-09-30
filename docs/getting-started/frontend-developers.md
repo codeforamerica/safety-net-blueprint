@@ -2,7 +2,7 @@
 
 > **Status: Draft**
 
-This guide is for developers building frontend applications that consume Safety Net APIs. The APIs include both REST endpoints (CRUD operations on resources) and RPC endpoints (behavioral operations like claiming a task or submitting an application). Field metadata contracts drive context-dependent UI rendering — the backend serves field annotations, permissions, and labels that the frontend consumes without hardcoding domain-specific logic.
+This guide is for developers building frontend applications that consume Safety Net APIs. The APIs include both REST endpoints (CRUD operations on resources) and RPC endpoints (behavioral operations like claiming a task or submitting an application). Field metadata contracts drive context-dependent UI rendering — field annotations, permissions, and labels are generated into the TypeScript client at build time and consumed by the frontend without hardcoding domain-specific logic.
 
 > **Frontend harness packages** (form engine, safety harness, harness designer) live in a separate repository: [codeforamerica/safety-net-harness](https://github.com/codeforamerica/safety-net-harness). See that repo for form rendering, layout, component mapping, and navigation.
 
@@ -14,8 +14,9 @@ See also: [Contract-Driven Architecture](../architecture/contract-driven-archite
 
 - [**REST APIs**](#rest-apis-data-operations) — standard CRUD operations on resources (`GET /workflow/tasks`, `POST /intake/applications`)
 - [**RPC APIs**](#rpc-apis-behavioral-operations) — behavioral operations generated from state machine triggers (`POST /workflow/tasks/:id/claim`, `POST /intake/applications/:id/submit`)
-- [**Field metadata**](#field-metadata-context-dependent-ui) — backend-served field annotations (program relevance, verification requirements, regulatory citations), permissions, and labels
+- [**Field metadata**](#field-metadata-context-dependent-ui) — field annotations (program relevance, verification requirements, regulatory citations) generated into the TypeScript client at build time
 - [**Event streams**](#event-streams-real-time-updates) — real-time updates via Server-Sent Events (`GET /events/stream?domain=workflow`)
+- [**Browser-side rules evaluation**](#browser-side-rules-evaluation) — run eligibility rules and screening logic client-side with no server round-trip, using the same compiled graph the backend evaluates
 - [**Mock server**](#develop-against-the-mock-server) — development adapter that interprets behavioral contracts (state machines, rules, metrics) with an in-memory database — no production backend needed
 
 ## Prerequisites
@@ -150,6 +151,37 @@ for (const review of sectionReviews) {
 ```
 
 The key principle: the frontend renders annotations generically. It doesn't know what "program relevance" or "verification requirement" means — it just displays them. Adding a new annotation type is a field metadata change, not a code change. Form layout and rendering are handled by the [safety-net-harness](https://github.com/codeforamerica/safety-net-harness) packages.
+
+### Browser-Side Rules Evaluation
+
+The `blueprint-rules-engine` package runs compiled rule graphs directly in the browser — no server round-trip required. This gives frontend developers a full rules evaluation capability on the client, enabling use cases like:
+
+- **Eligibility screening tools** — run a ruleset against household data the user has entered and immediately show which programs they may qualify for
+- **What-if scenarios** — let a caseworker or applicant adjust inputs and see how outcomes change in real time
+- **Progressive intake forms** — identify exactly which inputs are still needed to resolve pending facts, so the UI can ask targeted follow-up questions rather than presenting a fixed form
+- **Pre-submission feedback** — show applicants which determinations are already resolved and what's still needed before they submit
+
+```typescript
+import { evaluate } from '@codeforamerica/blueprint-rules-engine';
+
+// compiledGraph is the *-graph.yaml for a ruleset, loaded as JSON
+const nodes = evaluate(compiledGraph, inputs);
+
+// Only output facts, keyed by name
+const complete = Object.entries(nodes)
+  .filter(([, n]) => n.type === 'output' && n.state === 'complete')
+  .map(([name, n]) => [name, n.value]);
+// → [['eligible', true], ['hasWorkEligibleAdults', false]]
+
+const missing = Object.entries(nodes)
+  .filter(([, n]) => n.type === 'output' && n.state === 'missing')
+  .map(([name, n]) => [name, n.missing]);
+// → [['benefitAmount', ['$.household.income', '$.household.expenses.housing']]]
+```
+
+The browser evaluator uses the same compiled graph and returns the same flat nodes map as the server-side evaluator. The rules endpoint filters this to output facts only — intermediate facts are available in the browser for debugging but are not part of the HTTP response. The backend evaluation at submission is authoritative — the browser evaluation is advisory.
+
+See [Rules Contracts](../architecture/rules-contracts.md) for the full model.
 
 ### Event Streams (Real-Time Updates)
 

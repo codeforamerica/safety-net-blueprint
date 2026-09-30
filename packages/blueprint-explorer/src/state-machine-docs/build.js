@@ -1,52 +1,64 @@
-import { readdirSync, readFileSync, rmSync, mkdirSync } from 'fs';
+import { readdirSync, rmSync, mkdirSync } from 'fs';
 import { dirname, join, resolve, relative } from 'path';
 import { fileURLToPath } from 'url';
-import { load } from 'js-yaml';
 import { generate, generateOverview, generateEventsPage } from './generate.js';
-import { buildEventIndex } from '@codeforamerica/blueprint-core';
+import { buildEventIndex } from '../contract-nav.js';
+import { discover, extract, load } from '@codeforamerica/blueprint-core';
+import { stateMachineView } from './walk.js';
 import { generateHtml, generateOverviewHtml, generateEventsHtml } from './generate-html.js';
-import { resolvedDir } from '../lib/paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const contentArg = process.argv.find(a => a.startsWith('--content='));
-if (!contentArg) {
-  console.error('Usage: node build.js --content=<path> [--resolved=<path>]');
-  process.exit(1);
-}
-const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
+/**
+ * @param {{ contentDir: string, resolvedDir: string }} opts
+ */
+export function build({ contentDir, resolvedDir }) {
 const outputDir = join(contentDir, 'state-machine-docs');
 const hubHref = relative(outputDir, join(contentDir, 'index.html'));
 mkdirSync(outputDir, { recursive: true });
 readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(join(outputDir, f)));
 
-const files = readdirSync(resolvedDir, { recursive: true })
-  .filter(f => typeof f === 'string' && f.endsWith('-state-machine.yaml'))
-  .map(f => join(resolvedDir, f));
+const stateMachines = discover(resolvedDir, 'state-machine').map(load);
 
-if (!files.length) {
-  console.error('No *-state-machine.yaml files found in', resolvedDir);
+if (!stateMachines.length) {
+  console.error('No state machine contracts found in', resolvedDir);
   process.exit(1);
 }
 
-// Platform file has no machines — skip it for doc generation
-const domainFiles = files.filter(f => {
-  const sm = load(readFileSync(f, 'utf8'));
-  return sm.domain && Array.isArray(sm.machines);
-});
+// A base state machine declares shared procedures and no machines of its
+// own; there is nothing to document for it.
+const domains = stateMachines
+  .filter((doc) => doc.domain && Array.isArray(doc.content?.machines))
+  .map(stateMachineView);
 
-const allStateMachines = domainFiles.map(f => load(readFileSync(f, 'utf8')));
-const eventIndex = buildEventIndex(allStateMachines);
+const eventIndex = buildEventIndex(stateMachines);
 
-console.log(`Generating state machine docs for ${domainFiles.length} domain(s)...`);
+const endpointIndex = extract(discover(resolvedDir, 'openapi').map(load), 'relationships');
 
-for (const file of domainFiles) {
-  generate(file, outputDir, eventIndex, allStateMachines);
-  generateHtml(file, outputDir, eventIndex, allStateMachines, hubHref);
+console.log(`Generating state machine docs for ${domains.length} domain(s)...`);
+
+for (const sm of domains) {
+  generate(sm, outputDir, eventIndex, domains);
+  generateHtml(sm, outputDir, eventIndex, domains, hubHref, endpointIndex);
 }
 
-generateOverview(allStateMachines, outputDir);
-generateOverviewHtml(allStateMachines, outputDir, eventIndex, hubHref);
-generateEventsPage(eventIndex, allStateMachines, outputDir);
-generateEventsHtml(eventIndex, allStateMachines, outputDir, hubHref);
+generateOverview(domains, outputDir);
+generateOverviewHtml(domains, outputDir, eventIndex, hubHref);
+generateEventsPage(eventIndex, domains, outputDir);
+generateEventsHtml(eventIndex, domains, outputDir, hubHref);
 console.log('Done.');
+} // end build()
+
+// CLI entry point
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const contentArg  = process.argv.find(a => a.startsWith('--content='));
+  const resolvedArg = process.argv.find(a => a.startsWith('--resolved='));
+  if (!contentArg) {
+    console.error('Usage: node build.js --content=<path> [--resolved=<path>]');
+    process.exit(1);
+  }
+  build({
+    contentDir:  resolve(process.cwd(), contentArg.slice('--content='.length)),
+    resolvedDir: resolvedArg ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length)) : null,
+  });
+}

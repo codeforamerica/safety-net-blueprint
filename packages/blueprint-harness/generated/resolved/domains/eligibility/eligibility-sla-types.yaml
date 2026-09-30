@@ -1,0 +1,14 @@
+$schema: sla-types-schema.yaml
+version: "1.0"
+domain: eligibility
+slaTypes:
+  - id: snap_expedited
+    name: SNAP Expedited Processing
+    duration:
+      amount: 7
+      unit: days
+    warningThresholdPercent: 70
+    pauseWhen:
+      "==":
+        - var: status
+        - complete

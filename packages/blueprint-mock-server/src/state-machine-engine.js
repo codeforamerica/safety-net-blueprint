@@ -9,6 +9,20 @@ import { evaluateCEL as _evaluateCEL } from './cel-evaluator.js';
 import { deriveCollectionName, resolveDotPath } from './collection-utils.js';
 import { findAll, findById } from './database-manager.js';
 import { resolveTimeToken } from './time-tokens.js';
+import { evaluate as evaluateRules } from '@codeforamerica/blueprint-rules-engine';
+
+// ── Rules index ───────────────────────────────────────────────────────────────
+// Populated at startup by initRulesIndex(). Maps rulesetName → compiled graph.
+let _rulesIndex = {};
+
+/**
+ * Initialize the rules index used by evaluate: steps.
+ * Call once at server startup after discovering and compiling rules files.
+ * @param {Object} index - map of rulesetName → compiled graph
+ */
+export function initRulesIndex(index) {
+  _rulesIndex = index ?? {};
+}
 
 /**
  * Resolve a value expression against a context.
@@ -583,7 +597,27 @@ export function applySteps(steps, resource, context) {
       }
       pendingEvents.push({ type: step.emit.type, data, subject: step.emit.subject ? resolveValue(step.emit.subject, context) : undefined, causationid: step.emit.causationid ? resolveValue(step.emit.causationid, context) : undefined });
     } else if (step.evaluate) {
-      pendingProcedures.push({ procedureId: step.evaluate });
+      const graph = _rulesIndex[step.evaluate];
+      if (!graph) {
+        console.warn(`evaluate: ruleset "${step.evaluate}" not found in rules index — skipping`);
+        continue;
+      }
+      const inputs = {};
+      for (const [key, val] of Object.entries(step.inputs || {})) {
+        inputs[key] = resolveValue(val, context);
+      }
+      const nodes = evaluateRules(graph, inputs);
+      if (step.bind) {
+        if (!context.entities) context.entities = {};
+        if (typeof step.bind === 'string') {
+          const alias = step.bind.startsWith('$') ? step.bind.slice(1) : step.bind;
+          context.entities[alias] = nodes;
+        } else if (typeof step.bind === 'object') {
+          for (const [localAlias, factName] of Object.entries(step.bind)) {
+            context.entities[localAlias] = nodes[factName]?.value ?? null;
+          }
+        }
+      }
     } else if (step.call !== undefined) {
       // call: can be a string (procedure name) or an object (HTTP operation, formerly invoke:)
       if (typeof step.call === 'string') {

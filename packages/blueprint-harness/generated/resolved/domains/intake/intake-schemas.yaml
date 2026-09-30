@@ -1,0 +1,90 @@
+$defs:
+  HouseholdMember:
+    type: object
+    description: |
+      A person in the household, as the interview rules read them. Shared so a ruleset can reference it rather than restating the shape — the compiler follows the $ref down to individual field paths, which is what keeps missing-input tracking per-field rather than per-object.
+    properties:
+      age:
+        type: integer
+        description: Member's age in years.
+      isEmployed:
+        type: boolean
+        description: Whether the member is currently employed.
+      isStudent:
+        type: boolean
+        description: Whether the member is enrolled at least half-time in higher education.
+      isNonCitizen:
+        type: boolean
+        description: Whether the member is a non-citizen subject to immigration screening.
+  IncomeSource:
+    description: Income reported by a household member. Type discriminator determines the variant.
+    oneOf:
+      - $ref: "#/$defs/EmploymentIncome"
+      - $ref: "#/$defs/SelfEmploymentIncome"
+      - $ref: "#/$defs/BenefitIncome"
+    discriminator:
+      propertyName: type
+      mapping:
+        employment: "#/$defs/EmploymentIncome"
+        self_employment: "#/$defs/SelfEmploymentIncome"
+        benefit: "#/$defs/BenefitIncome"
+  EmploymentIncome:
+    type: object
+    description: Income from wages or salary employment.
+    required:
+      - type
+      - employer
+      - monthlyGrossIncome
+    properties:
+      type:
+        type: string
+        const: employment
+      employer:
+        type: string
+        description: Name of the employer.
+      monthlyGrossIncome:
+        type: number
+        minimum: 0
+        description: Monthly gross income before deductions (dollars).
+  SelfEmploymentIncome:
+    type: object
+    description: Income from self-employment or a sole proprietorship.
+    required:
+      - type
+      - businessType
+      - monthlyNetIncome
+    properties:
+      type:
+        type: string
+        const: self_employment
+      businessType:
+        type: string
+        description: Type of business (e.g., sole proprietor, freelance).
+      monthlyNetIncome:
+        type: number
+        minimum: 0
+        description: Monthly net income after business expenses (dollars).
+  BenefitIncome:
+    type: object
+    description: Income from a government benefit program.
+    required:
+      - type
+      - benefitType
+      - monthlyAmount
+    properties:
+      type:
+        type: string
+        const: benefit
+      benefitType:
+        type: string
+        enum:
+          - ssi
+          - ssdi
+          - unemployment
+          - veterans
+          - other
+        description: The benefit program providing income.
+      monthlyAmount:
+        type: number
+        minimum: 0
+        description: Monthly benefit amount (dollars).

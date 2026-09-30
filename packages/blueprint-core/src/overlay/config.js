@@ -56,30 +56,66 @@ const CONFIG_SCHEMA = {
  * @returns {{ config: object|null, errors: string[] }}
  */
 function extractConfig(overlayFiles) {
-  const merged = {};
-  const errors = [];
-  const keyOrigins = {};  // key -> source file path
+  const parsed = [];
 
   for (const filePath of overlayFiles) {
-    let parsed;
     try {
-      const content = readFileSync(filePath, 'utf8');
-      parsed = yaml.load(content);
+      parsed.push({ origin: filePath, document: yaml.load(readFileSync(filePath, 'utf8')) });
     } catch {
       continue; // skip unparseable files
     }
+  }
 
-    if (!parsed || !parsed.config || typeof parsed.config !== 'object') {
+  return mergeConfig(parsed);
+}
+
+/**
+ * The same configuration, read from overlay documents already in memory.
+ *
+ * `resolve` is handed parsed overlays rather than paths, so it cannot go back
+ * to the filesystem for their config. Both entry points merge through
+ * `mergeConfig`, so a state gets the same answer whichever way its overlays
+ * reached the pipeline.
+ *
+ * @param {object[]} overlays - Parsed overlay documents
+ * @returns {{ config: object|null, errors: string[] }}
+ */
+function overlayConfig(overlays) {
+  return mergeConfig(
+    (overlays ?? []).map((document, i) => ({
+      origin: document?.info?.title ?? `overlay[${i}]`,
+      document,
+    }))
+  );
+}
+
+/**
+ * Merge the `config` blocks of several overlays into one.
+ *
+ * A key may be set by exactly one overlay. Two overlays setting `x-casing`
+ * differently have no defensible winner, so that is an error rather than a
+ * last-one-wins silent resolution.
+ *
+ * @param {{ origin: string, document: object }[]} sources
+ * @returns {{ config: object|null, errors: string[] }}
+ */
+function mergeConfig(sources) {
+  const merged = {};
+  const errors = [];
+  const keyOrigins = {};  // key -> where it was set
+
+  for (const { origin, document } of sources) {
+    if (!document || !document.config || typeof document.config !== 'object') {
       continue;
     }
 
-    for (const [key, value] of Object.entries(parsed.config)) {
+    for (const [key, value] of Object.entries(document.config)) {
       if (key in keyOrigins) {
         errors.push(
-          `Config key "${key}" defined in multiple files: ${keyOrigins[key]} and ${filePath}`
+          `Config key "${key}" defined in multiple files: ${keyOrigins[key]} and ${origin}`
         );
       } else {
-        keyOrigins[key] = filePath;
+        keyOrigins[key] = origin;
         merged[key] = value;
       }
     }
@@ -172,4 +208,4 @@ function getConfigDefaults() {
   return defaults;
 }
 
-export { CONFIG_SCHEMA, extractConfig, validateConfig, getConfigDefaults };
+export { CONFIG_SCHEMA, extractConfig, overlayConfig, validateConfig, getConfigDefaults };

@@ -1,35 +1,25 @@
 {
   "name": "@codeforamerica/blueprint-core",
   "version": "0.1.1",
-  "description": "Blueprint framework core — contract resolution and validation",
+  "description": "Blueprint framework core \u2014 contract resolution and validation",
   "type": "module",
   "files": [
     "src/",
     "schemas/",
-    "components/",
-    "templates/",
     "base-contracts/",
-    "assets/"
+    "assets/",
+    "types.d.ts"
   ],
   "exports": {
-    ".": "./src/index.js",
-    "./annotations": "./src/annotations.js",
-    "./policies": "./src/policies.js",
-    "./bundle": "./src/bundle.js",
-    "./state-machines": "./src/state-machines.js",
-    "./config": "./src/overlay/config.js",
-    "./overlay": "./src/overlay/overlay-resolver.js",
-    "./validation": "./src/validation/openapi-validator.js",
-    "./loader": "./src/validation/openapi-loader.js",
-    "./patterns": "./src/validation/pattern-validator.js",
-    "./example-validator": "./src/validation/example-validator.js",
-    "./relationships": "./src/relationships.js",
-    "./compositions": "./src/compositions.js",
-    "./state-machine-validator": "./src/validation/state-machine-validator.js"
+    ".": {
+      "types": "./types.d.ts",
+      "default": "./src/index.js"
+    }
   },
   "scripts": {
-    "test": "node --test tests/unit/*.test.js",
-    "test:unit": "node --test tests/unit/*.test.js"
+    "test": "node --test",
+    "test:unit": "node --test \"tests/unit/**/*.test.js\"",
+    "test:integration": "node --test \"tests/integration/**/*.test.js\""
   },
   "engines": {
     "node": ">=22.11.0"

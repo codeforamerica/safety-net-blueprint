@@ -1,0 +1,50 @@
+$schema: "https://blueprint.codeforamerica.org/schemas/graph-schema.yaml"
+domain: eligibility
+ruleset: collectionOps
+outputs:
+  - adultsFilter
+  - allEmployed
+  - anyNonCitizen
+  - hasMemberName
+inputs:
+  $.household.members[]:
+    type: array
+  $.household.members[].name:
+    type: string
+  $.household.members[].age:
+    type: integer
+  $.household.members[].employed:
+    type: boolean
+  $.household.members[].citizenshipStatus:
+    type: string
+    enum: [citizen, lpr, non-citizen]
+  $.policy.minAge:
+    type: integer
+    default: 18
+  $.policy.maxAge:
+    type: integer
+    default: 54
+facts:
+  adultsFilter:
+    expression: "household.members.filter(m, m.age >= policy.minAge && m.age <= policy.maxAge)"
+    description: "Members aged minAge–maxAge (uses policy defaults for bounds)"
+  allEmployed:
+    expression: "household.members.all(m, m.employed)"
+    description: "True only if every member is employed (uses all() → CollectionSize comparison)"
+  anyNonCitizen:
+    expression: "household.members.exists(m, m.citizenshipStatus != 'citizen')"
+    description: "True if any member is a non-citizen (uses exists() → count > 0)"
+  hasMemberName:
+    expression: "household.members.exists(m, has(m.name))"
+    description: "True if any member has a name field (uses has())"
+dependencies:
+  adultsFilter:
+    - $.household.members[]
+    - $.policy.minAge
+    - $.policy.maxAge
+  allEmployed:
+    - $.household.members[]
+  anyNonCitizen:
+    - $.household.members[]
+  hasMemberName:
+    - $.household.members[]

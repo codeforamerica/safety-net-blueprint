@@ -12,8 +12,7 @@
 
 import { readFileSync } from 'fs';
 import yaml from 'js-yaml';
-import { loadAllSpecs } from '@codeforamerica/blueprint-core/loader';
-import { BASE_URL, fetch, resetServer } from '@codeforamerica/blueprint-mock-server/test-utils';
+import { BASE_URL, fetch, resetServer, loadAllSpecs } from '@codeforamerica/blueprint-mock-server/test-utils';
 import { ROLES } from '../roles.js';
 
 const contractsArg = process.argv.find(a => a.startsWith('--contracts='));

@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Pre-push hook: verify committed artifacts are up to date.
+#
+# This check must pass before a branch can be merged. You can skip it with
+# git push --no-verify, but you will need to run `npm run preflight` and
+# commit any regenerated artifacts before your PR can be merged.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Skip for delete operations (local SHA is all zeros)
+pushing_commits=false
+while read local_ref local_sha remote_ref remote_sha; do
+  if [ "$local_sha" != "0000000000000000000000000000000000000000" ]; then
+    pushing_commits=true
+    break
+  fi
+done
+if [ "$pushing_commits" = "false" ]; then
+  exit 0
+fi
+
+echo ""
+echo "Checking committed artifacts are up to date..."
+echo ""
+
+if ! bash "$ROOT/scripts/generate-artifacts.sh" --check-only; then
+  echo ""
+  echo "ERROR: Generated artifacts are out of date and have been staged."
+  echo ""
+  echo "Run \`bash scripts/generate-artifacts.sh --commit\` or commit them manually,"
+  echo "then run \`npm run preflight\` — it regenerates artifacts and runs the full"
+  echo "test suite. Preflight must pass before your PR can be merged."
+  echo ""
+  echo "You can skip this hook with \`git push --no-verify\`, but preflight must still"
+  echo "pass and all artifacts must be committed before your PR can be merged."
+  echo ""
+  exit 1
+fi
+
+echo ""
+echo "Artifacts are up to date."
+echo ""

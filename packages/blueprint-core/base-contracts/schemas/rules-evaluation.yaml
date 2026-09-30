@@ -1,0 +1,79 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://blueprint.codeforamerica.org/base/schemas/rules-evaluation.yaml"
+
+# Base schemas for rules evaluation results.
+# Returned by ruleset endpoints that assess eligibility, probes, or other rule-driven decisions.
+# States extend item schemas via overlay to add domain-specific fields or tighten types.
+
+EvaluationFact:
+  oneOf:
+    - $ref: '#/EvaluationFactComplete'
+    - $ref: '#/EvaluationFactPlaceholder'
+    - $ref: '#/EvaluationFactMissing'
+    - $ref: '#/EvaluationFactError'
+  discriminator:
+    propertyName: state
+
+EvaluationFactComplete:
+  type: object
+  required: [fact, state, value]
+  properties:
+    fact:
+      type: string
+      description: The fact name.
+    state:
+      type: string
+      enum: [complete]
+    value:
+      description: The computed value.
+
+EvaluationFactPlaceholder:
+  type: object
+  required: [fact, state, value]
+  properties:
+    fact:
+      type: string
+      description: The fact name.
+    state:
+      type: string
+      enum: [placeholder]
+    value:
+      description: The computed value, derived using one or more schema defaults.
+
+EvaluationFactMissing:
+  type: object
+  required: [fact, state, missing]
+  properties:
+    fact:
+      type: string
+      description: The fact name.
+    state:
+      type: string
+      enum: [missing]
+    missing:
+      type: array
+      description: Input paths required to resolve this fact.
+      items:
+        type: string
+
+EvaluationFactError:
+  type: object
+  required: [fact, state, message]
+  properties:
+    fact:
+      type: string
+      description: The fact name.
+    state:
+      type: string
+      enum: [error]
+    message:
+      type: string
+      description: The reason evaluation failed.
+
+EvaluationResult:
+  type: array
+  description: >
+    Ordered list of output fact evaluation results.
+    Only output facts are included; intermediate facts are not returned.
+  items:
+    $ref: '#/EvaluationFact'

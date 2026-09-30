@@ -18,23 +18,48 @@ import { resolve, dirname, basename, relative, join } from 'path';
 import { fileURLToPath } from 'url';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { COLORS, FONT } from './lib/theme.js';
-import { esc, titleCase, breadcrumb, statusBadge, methodBadge, typeBadge, nextEid, expandHidden, expandChip, headerMetaSubtitle } from './lib/html.js';
+import { esc, titleCase, breadcrumb, statusBadge, methodBadge, typeBadge, nextEid, expandHidden, expandChip, headerMetaSubtitle, fieldNameLink, dataDictFieldHref, stateMachineLink, rulesLink, stateMachineDocsHref, rulesDocsHref } from './lib/html.js';
 import { inlineMd, renderMarkdown } from './lib/markdown.js';
 import { twoColumnPage, singleColumnPage } from './lib/layout.js';
-import { resolvedDir, resolvedSourcePairs } from './lib/paths.js';
-import { resolveExternalDefRef, loadContractFiles, loadExternalRefs } from '@codeforamerica/blueprint-core';
+import { resolvedSourcePairs } from './lib/paths.js';
+import { discover, load } from '@codeforamerica/blueprint-core';
+import { findSpecRelativePaths } from './contract-nav.js';
 import { loadConfig } from './lib/config.js';
 
 const __dirname  = dirname(fileURLToPath(import.meta.url));
 
-const contractFiles = loadContractFiles(resolvedDir);
+/**
+ * @param {{ contentDir: string, resolvedDir: string }} opts
+ */
+/**
+ * Follow an external `$defs` ref to the schema it names.
+ *
+ * `fileMap` is what `doc.externalRefs(docs)` returned — the sibling
+ * documents this spec points at, keyed by the ref's file part as written.
+ *
+ * @param {string} ref
+ * @param {Map<string, object>} fileMap
+ * @returns {object|null}
+ */
+function resolveDefRef(ref, fileMap) {
+  if (typeof ref !== 'string') return null;
+  const hashIdx = ref.indexOf('#');
+  if (hashIdx === -1) return null;
 
-const contentArg = process.argv.find(a => a.startsWith('--content='));
-if (!contentArg) {
-  console.error('Usage: node api-reference.js --content=<path> [--resolved=<path>]');
-  process.exit(1);
+  const file = ref.slice(0, hashIdx);
+  const content = fileMap.get(file) ?? fileMap.get(file.replace(/^\.\//, ''));
+  if (!content) return null;
+
+  let node = content;
+  for (const segment of ref.slice(hashIdx + 1).split('/').filter(Boolean)) {
+    if (node === null || typeof node !== 'object') return null;
+    node = node[segment];
+  }
+  return node ?? null;
 }
-const contentDir = resolve(process.cwd(), contentArg.slice('--content='.length));
+
+export async function build({ contentDir, resolvedDir }) {
+const docs = discover(resolvedDir).map(load);
 const outDir = resolve(contentDir, 'api-reference');
 const hubHref = relative(outDir, join(contentDir, 'index.html'));
 const { name: projectName, repo } = loadConfig(contentDir);
@@ -44,29 +69,41 @@ readdirSync(outDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(resolve
 // Resolved source files this tool reads — shown in each page's header metadata.
 const SOURCE_SUFFIXES = ['openapi', 'state-machine'];
 
-// Shared parameters from the resolved components — covers SearchQueryParam, LimitParam, etc.
-const sharedParams = [...contractFiles.values()].find(e => e.type === 'parameters')?.content ?? {};
+// Every component library merged, then partitioned by what OpenAPI says each
+// object is. Matching on shape rather than on a filename or a per-file type
+// means libraries can be added, renamed or split without touching this.
+const allComponents = Object.assign(
+  {},
+  ...docs.filter((d) => d.type === 'components').map((d) => d.content)
+);
+const componentsWhere = (predicate) =>
+  Object.fromEntries(Object.entries(allComponents).filter(([, v]) => predicate(v)));
 
-// Shared responses (BadRequest, NotFound, etc.) from the resolved components.
-// Filter to only response objects (have `description`) — excludes the Error schema entry.
-const rawSharedResponses = [...contractFiles.values()].find(e => e.type === 'responses')?.content ?? {};
-const sharedResponses = Object.fromEntries(Object.entries(rawSharedResponses).filter(([, v]) => v?.description && !v?.type));
+// Parameter Objects — covers SearchQueryParam, LimitParam, etc.
+const sharedParams = componentsWhere(v => v?.in && v?.name);
+
+// Response Objects. `description` without `type` distinguishes them from the
+// schema entries that share these files.
+const sharedResponses = componentsWhere(v => v?.description && !v?.type);
 
 // ── Load + dereference all OpenAPI specs ──────────────────────────────────
 
 const specs = (
   await Promise.all(
-    [...contractFiles.entries()]
-      .filter(([, e]) => e.type === 'openapi')
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(async ([absPath, entry]) => {
+    docs
+      .filter((d) => d.type === 'openapi')
+      .sort((a, b) => a.path.localeCompare(b.path))
+      .map(async (doc) => {
+        const absPath = doc.path;
         const slug = basename(absPath).replace('-openapi.yaml', '');
         try {
-          const raw  = entry.content;
+          const raw  = doc.content;
           const spec = await $RefParser.dereference(absPath);
           if (!spec?.info || !spec?.paths) return null;
-          const fileMap = loadExternalRefs(absPath, raw, contractFiles);
-          return { slug, spec, raw, fileMap };
+          // The Doc answers for its own refs; the set is the pool it
+          // resolves them against.
+          const fileMap = doc.externalRefs(docs);
+          return { slug, spec, raw, fileMap, doc };
         } catch {
           return null;
         }
@@ -78,29 +115,26 @@ const specs = (
 
 const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options'];
 
-// ── State machine reverse index ───────────────────────────────────────────
-// Maps "method:path" → [{domain, actionId, actionDesc}]
+// ── Endpoint relationship index ───────────────────────────────────────────
+// Maps "method:path" → { type, domain, id } from x-relationship on generated
+// operations. Used to link endpoints back to their source contract artifacts.
 
-const SM_RPC_RE = /^(GET|POST|PATCH|PUT|DELETE)\s+(\S+)/i;
-const smActionIndex = new Map(); // "method:path" → [{domain, actionId, actionDesc}]
+const relIndex = new Map(); // "method:path" → { type, domain, id }
 
 try {
-  const smEntries = [...contractFiles.entries()].filter(([, e]) => e.type === 'state-machine');
-  for (const [, smEntry] of smEntries) {
-    const sm = smEntry.content;
-    if (!sm?.apiSpec) continue;
-    const domain = sm.domain;
-    for (const machine of sm.machines ?? []) {
-      for (const action of machine.actions ?? []) {
-        const match = action.description ? SM_RPC_RE.exec(action.description) : null;
-        if (!match) continue;
-        const key = `${match[1].toLowerCase()}:${match[2]}`;
-        if (!smActionIndex.has(key)) smActionIndex.set(key, []);
-        smActionIndex.get(key).push({ domain, actionId: action.id, actionDesc: action.description ?? '' });
+  for (const entry of docs) {
+    if (entry.type !== 'openapi') continue;
+    for (const [path, pathItem] of Object.entries(entry.content?.paths ?? {})) {
+      for (const method of HTTP_METHODS) {
+        const op = pathItem?.[method];
+        const rel = op?.['x-relationship'];
+        if (!rel?.type || rel.type === 'fk') continue;
+        if (!rel.domain || !rel.id) continue;
+        relIndex.set(`${method}:${path}`, rel);
       }
     }
   }
-} catch { /* contractsDir missing or unreadable — silently skip */ }
+} catch { /* resolvedDir missing or unreadable — silently skip */ }
 
 // ── Enum display ──────────────────────────────────────────────────────────
 
@@ -124,11 +158,18 @@ function typeStr(schema) {
     return nonNull.length ? nonNull.join('|') : 'null';
   }
   if (schema.type === 'array') {
-    const inner = schema.items ? typeStr(schema.items) : 'any';
+    const items = schema.items;
+    const inner = items ? (items.enum ? 'enum' : typeStr(items)) : 'any';
     return `array[${inner}]`;
   }
+  if (schema.enum)       return 'enum';
   if (schema.type)       return String(schema.type);
-  if (schema.allOf)      return 'object';
+  if (schema.allOf) {
+    for (const s of schema.allOf) {
+      if (s && typeof s === 'object' && s.type) return typeStr(s);
+    }
+    return 'object';
+  }
   if (schema.oneOf)      return 'oneOf';
   if (schema.anyOf)      return 'anyOf';
   if (schema.properties) return 'object';
@@ -158,7 +199,7 @@ function getRawProps(rawSchema, fileMap = null) {
   if (Array.isArray(rawSchema.allOf)) {
     return Object.assign({}, ...rawSchema.allOf.map(s => {
       if (typeof s?.['$ref'] === 'string' && !s['$ref'].startsWith('#') && fileMap) {
-        const { sourceSchema } = resolveExternalDefRef(s['$ref'], fileMap);
+        const sourceSchema = resolveDefRef(s['$ref'], fileMap);
         return getRawProps(sourceSchema, fileMap);
       }
       return getRawProps(s, fileMap);
@@ -174,13 +215,7 @@ function getRawProps(rawSchema, fileMap = null) {
 function namedPropRef(rawProp) {
   if (!rawProp || typeof rawProp !== 'object') return null;
 
-  function extractRef(ref) {
-    if (typeof ref !== 'string') return null;
-    if (ref.startsWith(SCHEMA_PREFIX)) return ref.slice(SCHEMA_PREFIX.length);
-    const defsMatch = ref.match(/#\/\$defs\/(.+)$/);
-    if (defsMatch) return defsMatch[1];
-    return null;
-  }
+  const extractRef = (ref) => (typeof ref === 'string' ? ref.split('#').pop().split('/').filter(Boolean).pop() ?? null : null);
 
   // Direct object ref
   const directName = extractRef(rawProp['$ref']);
@@ -203,35 +238,140 @@ function namedPropRef(rawProp) {
   return null;
 }
 
-function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fileMap = null) {
+/** Render a oneOf/anyOf schema as a collapsible "(one of)" row with per-variant accordions.
+ *  @param {string|null} typeName  Optional schema name to show as a type chip (e.g. "EvaluationFact") */
+function renderOneOfBlock(variants, discriminatorProp, depth, rawSchemas, fileMap, typeName = null, fieldPath = '', dataDictHref = null, validPaths = null) {
+  const pad = 12 + depth * 20;
+  const variantPad = pad;
+  const variantsHtml = variants.map(v => {
+    let title = v.title;
+    if (!title && discriminatorProp) {
+      const enumVal = v.properties?.[discriminatorProp]?.enum?.[0]
+        ?? v.properties?.[discriminatorProp]?.const;
+      if (enumVal != null) title = `${discriminatorProp}: ${enumVal}`;
+    }
+    title ??= v.description?.split(/[.,]/)[0]?.trim() ?? 'Variant';
+    const inner = renderProps(v, depth + 1, rawSchemas, null, fileMap, fieldPath, dataDictHref, validPaths);
+    return `<details style="border-top:1px solid #ede8f5;">
+      <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;padding:4px ${variantPad}px;background:rgba(124,92,191,0.03);">
+        <span class="chevron" style="font-size:9px;color:#7c5cbf;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+        <span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#7c5cbf;">${esc(title)}</span>
+      </summary>
+      ${inner || `<div style="padding:4px ${variantPad + 20}px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>`}
+    </details>`;
+  }).join('');
+  const typeChip = typeName
+    ? `<span style="font-family:monospace;font-size:11px;font-weight:600;color:${COLORS.midBlue};background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:4px;padding:1px 6px;">${esc(typeName)}</span>`
+    : '';
+  return `<div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px ${pad}px;">
+    <details>
+      <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#aaa;">(one of)</span>
+        ${typeChip}
+      </summary>
+      <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);">${variantsHtml}</div>
+    </details>
+  </div>`;
+}
+
+function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fileMap = null, fieldPath = '', dataDictHref = null, validPaths = null) {
   if (depth > 8 || !schema || typeof schema !== 'object') return '';
 
-  // Merge allOf into a single view
+  // Merge allOf into a single view, propagating the correct raw schema for each entry.
   if (schema.allOf) {
+    const rawAllOf = rawSchema?.allOf ?? [];
     return schema.allOf
       .filter(s => s && typeof s === 'object')
-      .map(s => renderProps(s, depth, rawSchemas, rawSchema, fileMap))
+      .map((s, i) => {
+        const rawEntry = rawAllOf[i];
+        let entryRaw = null;
+        if (rawEntry?.['$ref'] && !rawEntry['$ref'].startsWith('#') && fileMap) {
+          entryRaw = resolveDefRef(rawEntry['$ref'], fileMap) ?? null;
+        } else if (rawEntry && !rawEntry['$ref']) {
+          entryRaw = rawEntry;
+        }
+        return renderProps(s, depth, rawSchemas, entryRaw, fileMap, fieldPath, dataDictHref, validPaths);
+      })
       .join('');
   }
 
-  // Render oneOf/anyOf as labeled variant blocks
-  if (schema.oneOf || schema.anyOf) {
-    const variants = schema.oneOf ?? schema.anyOf;
+  // Render array schemas as a collapsible "[] items" row showing the item shape
+  if (schema.type === 'array' && schema.items && typeof schema.items === 'object') {
     const pad = 12 + depth * 20;
-    return variants.map((v, i) => {
-      const title = v.title ?? `Variant ${i + 1}`;
-      const inner = renderProps(v, depth, rawSchemas, null, fileMap);
-      return `<div style="border-top:1px solid #ede8f5;background:rgba(124,92,191,0.03);">
-        <div style="padding:3px ${pad}px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#7c5cbf;">${esc(title)}</div>
-        ${inner || `<div style="padding:4px ${pad}px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>`}
-      </div>`;
-    }).join('');
+    const items = schema.items;
+    const rawItems = rawSchema?.items ?? null;
+    const rawItemRef = rawItems?.['$ref'] ?? null;
+    const itemRefName = rawItemRef ? (namedPropRef({ '$ref': rawItemRef })?.name ?? null) : null;
+    const itemTypeLabel = itemRefName ?? typeStr(items);
+    const innerHtml = renderProps(items, depth + 1, rawSchemas, itemRefName ? (rawSchemas?.[itemRefName] ?? null) : rawItems, fileMap, fieldPath, dataDictHref, validPaths);
+    const typeChip = `<span style="font-family:monospace;font-size:11px;font-weight:600;color:${COLORS.midBlue};background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:4px;padding:1px 6px;">${esc(itemTypeLabel)}</span>`;
+    return `<div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px ${pad}px;">
+      <details>
+        <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+          <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#aaa;">[] items</span>
+          ${typeChip}
+        </summary>
+        ${innerHtml
+          ? `<div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);">${innerHtml}</div>`
+          : `<div style="padding:6px 12px 6px ${pad + 20}px;font-size:11px;color:#aaa;font-style:italic;">No additional fields</div>`}
+      </details>
+    </div>`;
+  }
+
+  // Render oneOf/anyOf as a collapsible "(one of)" row containing per-variant accordions
+  if (schema.oneOf || schema.anyOf) {
+    const typeName = schema.title ?? schema['x-schema-name'] ?? null;
+    return renderOneOfBlock(schema.oneOf ?? schema.anyOf, schema.discriminator?.propertyName ?? null, depth, rawSchemas, fileMap, typeName, fieldPath, dataDictHref, validPaths);
   }
 
   const props    = schema.properties ?? {};
   const reqs     = new Set(schema.required ?? []);
   const rawProps = getRawProps(rawSchema, fileMap);
   const pad      = 12 + depth * 20;
+
+  // Render additionalProperties as a synthetic "* (any key)" row when there
+  // are no explicit properties — covers map-typed schemas like EvaluationResult.
+  const additionalPropsHtml = (() => {
+    if (Object.keys(props).length > 0) return '';
+    const ap = schema.additionalProperties;
+    if (!ap || typeof ap !== 'object') return '';
+    // Prefer the raw ref name (works for both component and external base schema refs)
+    // since the dereferenced schema has already had $ref replaced with the inline object.
+    const rawApRef = rawSchema?.additionalProperties?.['$ref'] ?? ap['$ref'] ?? null;
+    const refName = rawApRef ? (namedPropRef({ '$ref': rawApRef })?.name ?? null) : null;
+    // When the map value type is itself a oneOf/anyOf, surface it directly as a "(one of)"
+    // row rather than nesting: (any key) → type → (one of).
+    const apVariants = ap.oneOf ?? ap.anyOf ?? null;
+    if (apVariants) {
+      return renderOneOfBlock(apVariants, ap.discriminator?.propertyName ?? null, depth, rawSchemas, fileMap, refName, fieldPath, dataDictHref, validPaths);
+    }
+    const typeLabel = refName ?? typeStr(ap);
+    const innerSchema = ap.type === 'object' || ap.properties || ap.allOf ? ap : null;
+    const innerRaw    = refName ? (rawSchemas?.[refName] ?? null) : null;
+    const innerHtml   = innerSchema ? renderProps(innerSchema, depth + 1, rawSchemas, innerRaw, fileMap, fieldPath, dataDictHref, validPaths) : '';
+    // Simple scalar map — no meaningful inner content, show as flat note
+    if (!innerHtml) {
+      return `<div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px ${pad}px;display:flex;align-items:baseline;gap:6px;">
+        <span style="font-family:monospace;font-size:11px;color:#aaa;">{ [key: string]:</span>
+        <span style="font-family:monospace;font-size:11px;font-weight:600;color:${COLORS.midBlue};background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:4px;padding:1px 6px;">${esc(typeLabel)}</span>
+        <span style="font-family:monospace;font-size:11px;color:#aaa;">}</span>
+      </div>`;
+    }
+    return `<div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px ${pad}px;">
+      <details>
+        <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+          <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+          <span style="font-family:monospace;font-size:12px;font-weight:600;color:#aaa;">* (any key)</span>
+          <span style="font-family:monospace;font-size:11px;font-weight:600;color:${COLORS.midBlue};background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:4px;padding:1px 6px;">${esc(typeLabel)}</span>
+        </summary>
+        <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);">${innerHtml}</div>
+      </details>
+    </div>`;
+  })();
+
+  if (additionalPropsHtml) return additionalPropsHtml;
 
   return Object.entries(props).map(([name, prop]) => {
     if (!prop || typeof prop !== 'object') return '';
@@ -248,14 +388,23 @@ function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fil
       const typeLabel = isArray ? `array[${refName}]` : refName;
       const innerSchema = isArray ? prop.items : prop;
       const innerRaw    = rawSchemas?.[refName] ?? null;
-      const innerHtml   = renderProps(innerSchema, depth + 1, rawSchemas, innerRaw, fileMap);
+      const propPath    = fieldPath ? `${fieldPath}.${name}` : name;
+      // Pagination list wrappers use `items` as their payload property; the data dict
+      // path skips this level (application.id, not application.items[].id).
+      const isListItems = isArray && name === 'items';
+      const innerPath   = isListItems ? fieldPath : (isArray ? `${propPath}[]` : propPath);
+      const innerHtml   = renderProps(innerSchema, depth + 1, rawSchemas, innerRaw, fileMap, innerPath, dataDictHref, validPaths);
       const readOnly    = prop.readOnly  ? `<span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>` : '';
       const writeOnly   = prop.writeOnly ? `<span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">write-only</span>` : '';
+      const dataDictPath = (validPaths && !validPaths.has(innerPath)) ? null : innerPath;
+      const nameHtml = (dataDictHref && dataDictPath)
+        ? fieldNameLink(name, `${dataDictHref}#field-${encodeURIComponent(dataDictPath)}`)
+        : `<span style="font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.text};">${esc(name)}</span>`;
       return `<div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px ${pad}px;">
         <details>
           <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
             <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-            <span style="font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.text};">${esc(name)}</span>
+            ${nameHtml}
             <span style="font-family:monospace;font-size:11px;font-weight:600;color:${COLORS.midBlue};background:${COLORS.paleBlue};border:1px solid ${COLORS.lightBlue};border-radius:4px;padding:1px 6px;">${esc(typeLabel)}</span>
             ${isReq ? `<span style="font-size:9px;font-weight:700;color:${COLORS.richRed};letter-spacing:0.04em;text-transform:uppercase;">required</span>` : ''}
             ${readOnly}${writeOnly}
@@ -271,7 +420,9 @@ function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fil
     const type     = typeStr(prop);
     const enumVals = prop.enum
       ? renderEnumValues(prop.enum)
-      : '';
+      : prop.type === 'array' && prop.items?.enum
+        ? renderEnumValues(prop.items.enum)
+        : '';
     const formatTag = prop.format
       ? `<span style="font-size:10px;color:#999;font-family:monospace;"> (${esc(prop.format)})</span>` : '';
     const readOnly  = prop.readOnly  ? `<span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>` : '';
@@ -279,18 +430,27 @@ function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fil
 
     // Determine what to recurse into (inline anonymous objects)
     let inner = null;
-    if (prop.type === 'object' || prop.properties || prop.allOf) inner = prop;
-    else if (prop.type === 'array' && prop.items && typeof prop.items === 'object') {
+    const isArrayProp = prop.type === 'array';
+    if (prop.type === 'object' || prop.properties || prop.allOf || prop.oneOf || prop.anyOf) inner = prop;
+    else if (isArrayProp && prop.items && typeof prop.items === 'object') {
       const items = prop.items;
       if (items.type === 'object' || items.properties || items.allOf) inner = items;
     }
 
-    const children = inner ? renderProps(inner, depth + 1, rawSchemas, null, fileMap) : '';
+    const propPath    = fieldPath ? `${fieldPath}.${name}` : name;
+    const isListItems = isArrayProp && name === 'items';
+    const innerPath   = isListItems ? fieldPath : (isArrayProp ? `${propPath}[]` : propPath);
+    const children = inner ? renderProps(inner, depth + 1, rawSchemas, null, fileMap, innerPath, dataDictHref, validPaths) : '';
     const hasCh = children.trim().length > 0;
+
+    const dataDictPath = (validPaths && !validPaths.has(innerPath)) ? null : innerPath;
+    const nameHtml = (dataDictHref && dataDictPath)
+      ? fieldNameLink(name, `${dataDictHref}#field-${encodeURIComponent(dataDictPath)}`)
+      : `<span style="font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.text};">${esc(name)}</span>`;
 
     return `<div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px ${pad}px;${hasCh ? 'background:rgba(0,0,0,0.015);' : ''}">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.text};">${esc(name)}</span>
+        ${nameHtml}
         ${typeBadge(type)}${formatTag}
         ${isReq ? `<span style="font-size:9px;font-weight:700;color:${COLORS.richRed};letter-spacing:0.04em;text-transform:uppercase;">required</span>` : ''}
         ${readOnly}${writeOnly}
@@ -302,18 +462,22 @@ function renderProps(schema, depth = 0, rawSchemas = null, rawSchema = null, fil
   }).join('');
 }
 
-function renderSchema(schema, rawSchemas = null, rawSchema = null, fileMap = null) {
+/** Derive the data dictionary root path prefix from a component schema name.
+ *  Strips common write-variant suffixes so "ApplicationCreate" → "application",
+ *  matching the path prefix used in the field inventory. */
+
+function renderSchema(schema, rawSchemas = null, rawSchema = null, fileMap = null, rootPrefix = '', dataDictHref = null, validPaths = null) {
   if (!schema || typeof schema !== 'object') return '';
 
   if (schema.type === 'array' && schema.items) {
-    const itemsBody = renderProps(schema.items, 0, rawSchemas, rawSchema, fileMap);
+    const itemsBody = renderProps(schema.items, 0, rawSchemas, rawSchema, fileMap, rootPrefix, dataDictHref, validPaths);
     const itemsDesc = itemsBody.trim()
       ? `<div style="font-size:10px;font-weight:700;letter-spacing:0.04em;color:#888;padding:5px 12px;background:#fafafa;border-bottom:1px solid #f0f0f0;">Array items:</div>${itemsBody}`
       : typeBadge(typeStr(schema));
     return itemsDesc;
   }
 
-  const body = renderProps(schema, 0, rawSchemas, rawSchema, fileMap);
+  const body = renderProps(schema, 0, rawSchemas, rawSchema, fileMap, rootPrefix, dataDictHref, validPaths);
   if (body.trim()) return body;
   return `<div style="padding:8px 12px;">${typeBadge(typeStr(schema))}</div>`;
 }
@@ -436,7 +600,7 @@ function renderParams(params, paramNameByKey = new Map(), rawParams = []) {
 
 // ── Request body ──────────────────────────────────────────────────────────
 
-function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = null) {
+function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', doc = null) {
   if (!reqBody) return '';
   const content    = reqBody.content ?? {};
   const mediaType  = content['application/json'] ?? Object.values(content)[0] ?? {};
@@ -447,15 +611,16 @@ function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = nul
   let bodyContent;
   if (refName) {
     const rawSchema = rawSchemas?.[refName] ?? null;
+    const rootPrefix = doc ? (findSpecRelativePaths(doc, refName)[0] ?? domainSlug) : domainSlug;
     bodyContent = `<details style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">
       <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
         <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.midBlue};">${esc(refName)}</span>
       </summary>
-      <div style="border-top:1px solid #eee;">${renderSchema(schema, rawSchemas, rawSchema, fileMap)}</div>
+      <div style="border-top:1px solid #eee;">${renderSchema(schema, rawSchemas, rawSchema, fileMap, rootPrefix, dataDictHref, validPaths)}</div>
     </details>`;
   } else {
-    bodyContent = `<div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">${renderSchema(schema, rawSchemas, null, fileMap)}</div>`;
+    bodyContent = `<div style="border:1px solid #eee;border-radius:0 0 4px 4px;overflow:hidden;">${renderSchema(schema, rawSchemas, null, fileMap, domainSlug, dataDictHref, validPaths)}</div>`;
   }
 
   return `<div style="margin-top:16px;">
@@ -468,7 +633,7 @@ function renderRequestBody(reqBody, rawReqBody, rawSchemas = null, fileMap = nul
 
 // ── Response section ──────────────────────────────────────────────────────
 
-function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMap = null) {
+function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', doc = null) {
   if (!responses || !Object.keys(responses).length) return '';
 
   const entries = Object.entries(responses).map(([status, resp]) => {
@@ -488,7 +653,7 @@ function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMa
     let schemaHtml = '';
     if (responseRefName) {
       const inner = schema
-        ? renderSchema(schema, rawSchemas, null, fileMap)
+        ? renderSchema(schema, rawSchemas, null, fileMap, domainSlug, dataDictHref, validPaths)
         : `<div style="padding:8px 12px;font-size:12px;color:#555;">${esc(resp.description ?? '')}</div>`;
       schemaHtml = `<details style="border-top:1px solid #f0f0f0;">
         <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
@@ -499,15 +664,16 @@ function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMa
       </details>`;
     } else if (schemaRefName) {
       const rawSchema = rawSchemas?.[schemaRefName] ?? null;
+      const rootPrefix = doc ? (findSpecRelativePaths(doc, schemaRefName)[0] ?? domainSlug) : domainSlug;
       schemaHtml = `<details style="border-top:1px solid #f0f0f0;">
         <summary style="list-style:none;cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:6px;background:#fafafa;">
           <span class="chevron" style="font-size:9px;color:#aaa;">&#x25B6;</span>
           <span style="font-family:monospace;font-size:12px;font-weight:600;color:${COLORS.midBlue};">${esc(schemaRefName)}</span>
         </summary>
-        <div style="border-top:1px solid #f0f0f0;">${renderSchema(schema, rawSchemas, rawSchema, fileMap)}</div>
+        <div style="border-top:1px solid #f0f0f0;">${renderSchema(schema, rawSchemas, rawSchema, fileMap, rootPrefix, dataDictHref, validPaths)}</div>
       </details>`;
     } else if (schema) {
-      schemaHtml = `<div style="border-top:1px solid #f0f0f0;">${renderSchema(schema, rawSchemas, null, fileMap)}</div>`;
+      schemaHtml = `<div style="border-top:1px solid #f0f0f0;">${renderSchema(schema, rawSchemas, null, fileMap, domainSlug, dataDictHref, validPaths)}</div>`;
     }
 
     return `<div style="border-top:1px solid #eee;">
@@ -527,22 +693,28 @@ function renderResponses(responses, rawResponses = {}, rawSchemas = null, fileMa
 
 // ── Endpoint block ────────────────────────────────────────────────────────
 
-function endpointId(path, method) {
-  return `op-${method}-${path.replace(/\//g, '-').replace(/[{}]/g, '').replace(/--+/g, '-').replace(/^-|-$/g, '')}`;
-}
-
-function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map(), rawSchemas = null, fileMap = null) {
-  const id       = endpointId(path, method);
+function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map(), rawSchemas = null, fileMap = null, dataDictHref = null, validPaths = null, domainSlug = '', doc = null) {
+  const id       = `op-${method}-${path.replace(/\//g, '-').replace(/[{}]/g, '').replace(/--+/g, '-').replace(/^-|-$/g, '')}`;
   const params   = op.parameters ?? [];
   const descHtml = op.description
     ? `<div style="padding:12px 16px;border-top:1px solid #f0f0f0;">${renderMarkdown(op.description)}</div>`
     : '';
 
-  const smEntries = smActionIndex.get(`${method.toLowerCase()}:${path}`) ?? [];
-  const smBadges = smEntries.map(({ domain, actionId, actionDesc }) => {
-    const trimmedDesc = actionDesc.length > 80 ? actionDesc.slice(0, 80) + '…' : actionDesc;
-    return `<a href="../state-machine-docs/${domain}.html#action-${actionId}" style="font-size:10px;background:#f0ecff;border:1px solid #d4c5f5;border-radius:3px;padding:1px 6px;color:#6b4fa8;text-decoration:none;white-space:nowrap;" title="${esc(actionId)}: ${esc(trimmedDesc)}">State machine →</a>`;
-  }).join(' ');
+  const rel = relIndex.get(`${method.toLowerCase()}:${path}`);
+  const relBadge = (() => {
+    if (!rel) return '';
+    const compStyle = `font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;`;
+    if (rel.type === 'state-machine-action') {
+      return stateMachineLink(stateMachineDocsHref(rel.domain, rel.id), `State machine action: ${rel.id}`);
+    }
+    if (rel.type === 'ruleset') {
+      return rulesLink(rulesDocsHref(rel.domain, rel.id), `Rules: ${rel.id}`);
+    }
+    if (rel.type === 'composition') {
+      return `<span style="${compStyle}background:#f0fdf4;border-color:#bbf7d0;color:#15803d;" title="Composition: ${esc(rel.id)}">Composition</span>`;
+    }
+    return '';
+  })();
 
   return `<div id="${id}" class="content-item" style="border:1px solid ${COLORS.sandDark};border-radius:6px;margin-bottom:10px;overflow:hidden;">
   <details>
@@ -555,15 +727,15 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
       </span>
       <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         ${op.deprecated ? `<span style="font-size:9px;font-weight:700;color:#7A4800;background:${COLORS.lightYellow};border:1px solid ${COLORS.warmYellow};border-radius:3px;padding:1px 6px;">DEPRECATED</span>` : ''}
-        ${smBadges}
+        ${relBadge}
         <a href="#${id}" class="permalink" title="Link to this endpoint">#</a>
       </span>
     </summary>
     <div style="padding:12px 16px;">
       ${descHtml}
       ${renderParams(params, paramNameByKey, rawOp?.parameters ?? [])}
-      ${renderRequestBody(op.requestBody, rawOp?.requestBody, rawSchemas, fileMap)}
-      ${renderResponses(op.responses, rawOp?.responses ?? {}, rawSchemas, fileMap)}
+      ${renderRequestBody(op.requestBody, rawOp?.requestBody, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, doc)}
+      ${renderResponses(op.responses, rawOp?.responses ?? {}, rawSchemas, fileMap, dataDictHref, validPaths, domainSlug, doc)}
     </div>
   </details>
 </div>`;
@@ -571,8 +743,9 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
 
 // ── Domain page ───────────────────────────────────────────────────────────
 
-function buildDomainPage({ slug, spec, raw, fileMap = new Map() }) {
-  const metaSubtitle = headerMetaSubtitle(slug, resolvedSourcePairs(slug, { include: SOURCE_SUFFIXES }, repo));
+function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
+  const dataDictHref = `../data-dictionaries/${slug}.html`;
+  const metaSubtitle = headerMetaSubtitle(slug, resolvedSourcePairs(slug, resolvedDir, { include: SOURCE_SUFFIXES }, repo));
 
   const info       = spec.info ?? {};
   const paths      = spec.paths ?? {};
@@ -668,7 +841,7 @@ function buildDomainPage({ slug, spec, raw, fileMap = new Map() }) {
   // Main content sections — nav links point to tag sections; endpoint cards are content-items within
   const sections = [...byTag.entries()].map(([tag, ops]) => {
     const tagDesc = tagMap.get(tag) ?? '';
-    const endpoints = ops.map(({ path, method, op, rawOp }) => renderEndpoint(path, method, op, rawOp, paramNameByKey, rawSchemas, fileMap)).join('');
+    const endpoints = ops.map(({ path, method, op, rawOp }) => renderEndpoint(path, method, op, rawOp, paramNameByKey, rawSchemas, fileMap, dataDictHref, null, slug, doc)).join('');
     return `<section id="${sectionId(tag)}" style="margin-bottom:2.5rem;">
       <div style="margin-bottom:1rem;">
         <h2 style="font-size:1rem;font-weight:800;color:${COLORS.darkBlue};margin-bottom:0.25rem;">${esc(tag)}</h2>
@@ -816,3 +989,18 @@ for (const entry of specs) {
 const indexHtml = buildIndexPage(specs);
 writeFileSync(resolve(outDir, 'index.html'), indexHtml, 'utf8');
 console.log(`  Written: index.html`);
+} // end build()
+
+// CLI entry point
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const contentArg  = process.argv.find(a => a.startsWith('--content='));
+  const resolvedArg = process.argv.find(a => a.startsWith('--resolved='));
+  if (!contentArg) {
+    console.error('Usage: node api-reference.js --content=<path> [--resolved=<path>]');
+    process.exit(1);
+  }
+  build({
+    contentDir:  resolve(process.cwd(), contentArg.slice('--content='.length)),
+    resolvedDir: resolvedArg ? resolve(process.cwd(), resolvedArg.slice('--resolved='.length)) : null,
+  }).catch(e => { console.error(e); process.exit(1); });
+}

@@ -1,0 +1,40 @@
+overlay: '1.0.0'
+info:
+  title: Harness enum extensions
+  version: 1.0.0
+
+# Extends base enum definitions to include harness-specific domains and collections.
+# This mirrors what a real domain package overlay would do when deploying blueprint contracts.
+
+actions:
+  # Extend the MetricCollection enum to include domain-specific resource collections.
+  # The base enum covers workflow (tasks, events); domain packages add their primary
+  # resource collections via overlay.
+  - target: "$.$defs.MetricCollection"
+    files: https://blueprint.codeforamerica.org/base/schemas/enums.yaml
+    description: Add intake and eligibility resource collections to MetricCollection
+    replace:
+      type: string
+      description: >
+        Harness metric collections. Extends the base MetricCollection with the
+        primary resource collections for intake and eligibility domains.
+      enum:
+        - applications
+        - determinations
+        - events
+
+  # Extend the Domain enum to include harness domains.
+  # The base enum only contains "platform"; domain packages add their own values via overlay.
+  - target: "$.$defs.Domain"
+    files: https://blueprint.codeforamerica.org/base/schemas/enums.yaml
+    description: Add harness domains (intake, eligibility) to the Domain enum
+    replace:
+      type: string
+      description: >
+        Harness domain identifier. Extends the blueprint-core base Domain enum
+        with the intake and eligibility domains exercised by these contracts.
+      enum:
+        - eligibility
+        - intake
+        - platform
+

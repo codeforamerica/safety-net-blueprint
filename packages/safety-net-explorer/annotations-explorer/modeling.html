@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>modeling — Annotation Explorer — Safety Net Blueprint</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    details summary::-webkit-details-marker { display: none; }
+
+    /* Full-viewport layout: header pinned, sidebar + content fill remaining height */
+    #page-header { flex-shrink: 0; }
+    .page-layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+    #sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: #2B1A78;
+      color: white;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #sidebar-nav { padding: 0.5rem 0; overflow-y: auto; flex: 1; min-height: 0; }
+    #content { flex: 1; min-width: 0; padding: 2rem 2.5rem 4rem; overflow-y: auto; }
+    mark.search-hl { background: #fff176; color: inherit; border-radius: 2px; padding: 0 1px; }
+    #content [id]:target { scroll-margin-top: 1rem; outline: none; box-shadow: none; }
+
+    /* Nav links */
+    a.nav-link {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 4px 0.75rem; font-size: 11px;
+      color: rgba(255,255,255,0.65); text-decoration: none;
+      transition: background 0.1s;
+    }
+    a.nav-link:hover { background: rgba(255,255,255,0.08); color: white; }
+    a.nav-link.nav-active { background: rgba(255,255,255,0.15); color: white; font-weight: 700; }
+    /* Make inline code readable on the dark sidebar */
+    #sidebar a.nav-link code {
+      color: rgba(255,255,255,0.55); background: transparent; border: none; font-size: 10px;
+    }
+    .nav-section-label {
+      font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.35); padding: 0.75rem 0.75rem 0.2rem;
+    }
+    .nav-count {
+      font-size: 0.65rem; font-weight: 400;
+      background: rgba(255,255,255,0.15); border-radius: 8px;
+      padding: 0.1rem 0.35rem; margin-left: auto;
+    }
+
+    /* Interactive element hover states — applied centrally so all tools get consistent behavior */
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    
+  </style>
+</head>
+<body>
+  <div id="page-header">
+    <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Safety Net Blueprint</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Annotation Explorer</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">modeling</a></div>
+    
+      <div style="background:#2B1A78;padding:0.75rem 1.25rem 0.9rem;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="font-size:16px;font-weight:700;color:white;"><code style="color:rgba(255,255,255,0.9);background:transparent;">modeling</code></div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:0.2rem;">Annotation Explorer</div>
+      </div>
+  </div>
+  <div class="page-layout">
+    <nav id="sidebar">
+      
+      <div style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);flex-shrink:0;">
+        <input id="nav-search" type="search" placeholder="Filter…"
+          style="width:100%;padding:0.3rem 0.5rem;border:1px solid rgba(255,255,255,0.2);border-radius:4px;background:rgba(255,255,255,0.1);color:white;font-size:0.75rem;outline:none;"
+          aria-label="Filter navigation" />
+      </div>
+      <div id="sidebar-nav">
+        <div class="nav-section">
+        <div class="nav-section-label">intake</div>
+        <a class="nav-link" href="#entry--application-authorizedrepresentatives---type" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.authorizedRepresentatives[].type</code>
+        </a><a class="nav-link" href="#entry--application-childsupport-parentsoutsidehome---children--" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.childSupport.parentsOutsideHome[].children[]</code>
+        </a><a class="nav-link" href="#entry--application-deductions--" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.deductions[]</code>
+        </a><a class="nav-link" href="#entry--application-deductions---type" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.deductions[].type</code>
+        </a><a class="nav-link" href="#entry--application-healthplans--" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.healthPlans[]</code>
+        </a><a class="nav-link" href="#entry--application-healthplans---medicareid" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.healthPlans[].medicareId</code>
+        </a><a class="nav-link" href="#entry--application-healthplans---organizationid" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.healthPlans[].organizationId</code>
+        </a><a class="nav-link" href="#entry--application-healthplans---parta-premiumpaidby" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.healthPlans[].partA.premiumPaidBy</code>
+        </a><a class="nav-link" href="#entry--application-healthplans---parta-status" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.healthPlans[].partA.status</code>
+        </a><a class="nav-link" href="#entry--application-healthplans---partb-premiumpaidby" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.healthPlans[].partB.premiumPaidBy</code>
+        </a><a class="nav-link" href="#entry--application-healthplans---partc-premiumpaidby" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.healthPlans[].partC.premiumPaidBy</code>
+        </a><a class="nav-link" href="#entry--application-healthplans---partc-status" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.healthPlans[].partC.status</code>
+        </a><a class="nav-link" href="#entry--application-healthplans---partd-premiumpaidby" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.healthPlans[].partD.premiumPaidBy</code>
+        </a><a class="nav-link" href="#entry--application-healthplans---premiumamount" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.healthPlans[].premiumAmount</code>
+        </a><a class="nav-link" href="#entry--application-householdinfo-roomers---mealsincludedwithrent" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.householdInfo.roomers[].mealsIncludedWithRent</code>
+        </a><a class="nav-link" href="#entry--application-incomes--" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.incomes[]</code>
+        </a><a class="nav-link" href="#entry--application-incomes---amount" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.incomes[].amount</code>
+        </a><a class="nav-link" href="#entry--application-incomes---frequency" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.incomes[].frequency</code>
+        </a><a class="nav-link" href="#entry--application-incomes---jobid" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.incomes[].jobId</code>
+        </a><a class="nav-link" href="#entry--application-members---citizenship-sponsored-hasbeenabandonedbysponsor" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.members[].citizenship.sponsored.hasBeenAbandonedBySponsor</code>
+        </a><a class="nav-link" href="#entry--application-members---citizenship-sponsored-hasbeenmistreatedbysponsor" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.members[].citizenship.sponsored.hasBeenMistreatedBySponsor</code>
+        </a><a class="nav-link" href="#entry--application-members---personalinformation-races--" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.members[].personalInformation.races[]</code>
+        </a><a class="nav-link" href="#entry--application-members---programsappliedfor--" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.members[].programsAppliedFor[]</code>
+        </a><a class="nav-link" href="#entry--application-personrelationships--" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.personRelationships[]</code>
+        </a><a class="nav-link" href="#entry--application-signatures---purpose" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.signatures[].purpose</code>
+        </a><a class="nav-link" href="#entry--application-taxfilers---dependents---type" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.taxFilers[].dependents[].type</code>
+        </a><a class="nav-link" href="#entry--application-taxfilers---memberid" style="padding-left:1.25rem;">
+          <code style="font-size:10px;">application.taxFilers[].memberId</code>
+        </a>
+      </div>
+      </div>
+    </nav>
+    <main id="content">
+      <div style="padding:2rem 0.5rem;">
+      <h1 style="font-size:1.5rem;font-weight:700;color:#2B1A78;margin-bottom:0.3rem;"><code>modeling</code></h1>
+      <p style="color:#555;font-size:0.875rem;margin-bottom:1.5rem;">27 annotations</p>
+      <div id="entry--application-authorizedrepresentatives---type" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.authorizedRepresentatives[].type</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Polymorphic discriminator; id points to application.contacts[].id when type = individual and application.organizations[].id when type = organization.</div>
+        </div><div id="entry--application-childsupport-parentsoutsidehome---children--" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.childSupport.parentsOutsideHome[].children[]</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Array because one non-custodial parent may be the parent of multiple children in the household.</div>
+        </div><div id="entry--application-deductions--" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.deductions[]</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Some intake forms do not collect per-member deduction attribution; in those cases the adapter assigns deduction records to the primary applicant or the tax filer. States whose forms collect per-member attribution should map directly to that member.</div>
+        </div><div id="entry--application-deductions---type" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.deductions[].type</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Stored at the application level with a memberId FK for per-member attribution. When a state's intake form does not associate deductions with specific members, the adapter should assign deduction records to the primary applicant. For prior_period records, only amount is relevant and all other fields are inapplicable.</div>
+        </div><div id="entry--application-healthplans--" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.healthPlans[]</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Medicare plans use a single healthPlan record per person (type = medicare) with named sub-objects for each part (partA, partB, partC, partD). Parts A–D are a fixed closed set, so named sub-objects are cleaner than a discriminated array.</div>
+        </div><div id="entry--application-healthplans---medicareid" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.healthPlans[].medicareId</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Treat as PII. The MBI replaced the SSN-based Health Insurance Claim Number (HICN) in 2018–2020.</div>
+        </div><div id="entry--application-healthplans---organizationid" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.healthPlans[].organizationId</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Applies only when type = employer_sponsored or cobra.</div>
+        </div><div id="entry--application-healthplans---parta-premiumpaidby" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.healthPlans[].partA.premiumPaidBy</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Stored as a controlled enum [self, state, employer, other] rather than free text to support automated MSP determination logic without string matching.</div>
+        </div><div id="entry--application-healthplans---parta-status" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.healthPlans[].partA.status</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">entitled = meets eligibility criteria but not yet actively receiving benefits (e.g., deferred Part B enrollment while on employer coverage); enrolled = actively receiving.</div>
+        </div><div id="entry--application-healthplans---partb-premiumpaidby" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.healthPlans[].partB.premiumPaidBy</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Stored as a controlled enum [self, state, employer, other] rather than free text to support automated MSP determination logic without string matching.</div>
+        </div><div id="entry--application-healthplans---partc-premiumpaidby" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.healthPlans[].partC.premiumPaidBy</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Stored as a controlled enum [self, state, employer, other] rather than free text to support automated MSP determination logic without string matching.</div>
+        </div><div id="entry--application-healthplans---partc-status" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.healthPlans[].partC.status</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Part C replaces traditional Parts A and B — a member enrolled in Part C should not also have Part A and Part B populated.</div>
+        </div><div id="entry--application-healthplans---partd-premiumpaidby" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.healthPlans[].partD.premiumPaidBy</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Stored as a controlled enum [self, state, employer, other] rather than free text to support automated MSP and Low Income Subsidy determination logic without string matching.</div>
+        </div><div id="entry--application-healthplans---premiumamount" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.healthPlans[].premiumAmount</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">A null value means the premium amount is unknown, not that no premium exists. Adapters should preserve null rather than defaulting to zero when the applicant cannot provide the amount.</div>
+        </div><div id="entry--application-householdinfo-roomers---mealsincludedwithrent" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.householdInfo.roomers[].mealsIncludedWithRent</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Boarders are not modeled as a separate type — they are roomers where mealsIncludedWithRent = true. A single roomers[] array with this boolean covers both cases without a discriminated union.</div>
+        </div><div id="entry--application-incomes--" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.incomes[]</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">For prior_period records, only amount is relevant; frequency is inapplicable and jobId should be populated where the source is known.</div>
+        </div><div id="entry--application-incomes---amount" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.incomes[].amount</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Stored as reported (per-period amount) rather than normalized to monthly, to preserve the precision of the applicant's reported figure and allow adapters to apply program-specific normalization methods.</div>
+        </div><div id="entry--application-incomes---frequency" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.incomes[].frequency</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">frequency = variable means amount is the projected annual income, not a per-period figure. Applies to employed and self_employed types only.</div>
+        </div><div id="entry--application-incomes---jobid" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.incomes[].jobId</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">uuid type because it is a foreign key reference, not a free-text identifier.</div>
+        </div><div id="entry--application-members---citizenship-sponsored-hasbeenabandonedbysponsor" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.members[].citizenship.sponsored.hasBeenAbandonedBySponsor</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Kept separate from hasBeenMistreatedBySponsor because abandonment (documented through lack of financial support or sponsor departure) and battery/mistreatment (VAWA-based, requiring police reports, court orders, or professional statements) have distinct legal bases and different verification pathways. Forms that combine them into a single yes/no require a state overlay.</div>
+        </div><div id="entry--application-members---citizenship-sponsored-hasbeenmistreatedbysponsor" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.members[].citizenship.sponsored.hasBeenMistreatedBySponsor</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Kept separate from hasBeenAbandonedBySponsor; see that field's design note for the rationale.</div>
+        </div><div id="entry--application-members---personalinformation-races--" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.members[].personalInformation.races[]</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Array to comply with OMB standards requiring that individuals be able to select all applicable races simultaneously.</div>
+        </div><div id="entry--application-members---programsappliedfor--" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.members[].programsAppliedFor[]</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">A member's selection must be a subset of the household-level programsAppliedFor[] selection.</div>
+        </div><div id="entry--application-personrelationships--" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.personRelationships[]</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Convention — from IS THE [relationshipType] OF to. Storing both directions (A→B parent, B→A child) means callers can query from = X to get all of X's relationships with the correct type label without requiring bidirectional joins.</div>
+        </div><div id="entry--application-signatures---purpose" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.signatures[].purpose</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Discriminator enabling each signature event to be stored and audited independently on the same application record.</div>
+        </div><div id="entry--application-taxfilers---dependents---type" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.taxFilers[].dependents[].type</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">Polymorphic discriminator enabling FK linkage for both household members (via application.members[].id) and non-household dependents (via application.contacts[].id).</div>
+        </div><div id="entry--application-taxfilers---memberid" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span style="font-size:10px;font-weight:600;color:#5650BE;background:#e8ecf5;padding:1px 6px;border-radius:3px;border:1px solid #E9CCBE;">schema</span>
+            <code style="font-size:12px;font-weight:700;">application.taxFilers[].memberId</code>
+          </div>
+          <div style="font-size:13px;color:#1a1a1a;margin-top:0.35rem;line-height:1.5;">A null memberId encodes a non-household filer (e.g. a non-custodial parent not on this application). This is the mechanism for representing filers whose name and identity are not already in application.members[].</div>
+        </div>
+    </div>
+    </main>
+  </div>
+  <script>
+    // Chevron toggle for <details> — set initial state and keep in sync on toggle
+    document.querySelectorAll('details').forEach(d => {
+      const ch = d.querySelector('.chevron');
+      if (ch) ch.textContent = d.open ? '▼' : '▶';
+      d.addEventListener('toggle', () => {
+        const ch = d.querySelector('.chevron');
+        if (ch) ch.textContent = d.open ? '▼' : '▶';
+      });
+    });
+    // data-expand-id toggles — click any [data-expand-id] element to show/hide the
+    // element with the matching id. Works for any target element type (<div>, <tr>, etc.)
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    // Active nav highlighting — click sets immediately; IntersectionObserver keeps it current on scroll
+    (function () {
+      const links = Array.from(document.querySelectorAll('#sidebar a.nav-link[href^="#"]'));
+      if (!links.length) return;
+      function setActive(id) {
+        links.forEach(a => a.classList.toggle('nav-active', a.getAttribute('href') === '#' + id));
+      }
+      // Highlight immediately on click so there's instant feedback
+      links.forEach(a => a.addEventListener('click', () => setActive(a.getAttribute('href').slice(1))));
+      const sections = links
+        .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+        .filter(Boolean);
+      if (!sections.length) return;
+      const io = new IntersectionObserver(entries => {
+        const hit = entries.find(e => e.isIntersecting);
+        if (hit) setActive(hit.target.id);
+      }, { root: document.getElementById('content'), rootMargin: '0px 0px -70% 0px', threshold: 0 });
+      sections.forEach(s => io.observe(s));
+      setActive(sections[0].id);
+    })();
+    
+    (function () {
+      // Returns only text that is currently visible — skips content inside closed <details>
+      function visibleText(node) {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+        if (node.tagName === 'DETAILS' && !node.open) {
+          const summary = node.querySelector('summary');
+          return summary ? summary.textContent : '';
+        }
+        return [...node.childNodes].map(visibleText).join('');
+      }
+      function clearHighlights() {
+        document.querySelectorAll('#content mark.search-hl').forEach(el => {
+          const parent = el.parentNode;
+          el.replaceWith(document.createTextNode(el.textContent));
+          parent?.normalize();
+        });
+      }
+      // Only highlight text in visible nodes (skip closed <details> bodies)
+      function highlightInElement(root, q) {
+        function walk(node) {
+          if (node.tagName === 'DETAILS' && !node.open) {
+            // Only walk the summary
+            const summary = node.querySelector('summary');
+            if (summary) walk(summary);
+            return;
+          }
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            const lower = text.toLowerCase();
+            if (!lower.includes(q)) return;
+            const frag = document.createDocumentFragment();
+            let last = 0, idx = lower.indexOf(q);
+            while (idx !== -1) {
+              if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+              const mark = document.createElement('mark');
+              mark.className = 'search-hl';
+              mark.textContent = text.slice(idx, idx + q.length);
+              frag.appendChild(mark);
+              last = idx + q.length;
+              idx = lower.indexOf(q, last);
+            }
+            if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+            node.parentNode.replaceChild(frag, node);
+            return;
+          }
+          for (const child of [...node.childNodes]) walk(child);
+        }
+        walk(root);
+      }
+      document.getElementById('nav-search')?.addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        clearHighlights();
+        document.querySelectorAll('#sidebar .nav-link[href^="#"]').forEach(a => {
+          const id = a.getAttribute('href').slice(1);
+          const el = document.getElementById(id);
+          const items = el ? [...el.querySelectorAll('.content-item')] : [];
+          const navMatches = !q || a.textContent.toLowerCase().includes(q);
+          const anyItemMatches = q && items.some(item => visibleText(item).toLowerCase().includes(q));
+          // Section visible if nav label matches, any item matches, or (no items) visible section text matches
+          const sectionMatches = !q || navMatches || anyItemMatches ||
+            (el && !items.length && visibleText(el).toLowerCase().includes(q));
+          a.style.display = sectionMatches ? '' : 'none';
+          if (el) {
+            el.style.display = sectionMatches ? '' : 'none';
+            if (items.length > 0) {
+              items.forEach(item => {
+                // Show all items when nav label matched; otherwise filter by visible text only
+                item.style.display = (!q || navMatches || visibleText(item).toLowerCase().includes(q)) ? '' : 'none';
+              });
+            }
+          }
+        });
+        document.querySelectorAll('#sidebar .nav-section').forEach(sec => {
+          const any = [...sec.querySelectorAll('.nav-link')].some(a => a.style.display !== 'none');
+          sec.style.display = any ? '' : 'none';
+        });
+        if (q) {
+          // Highlight within visible content items; fall back to top-level id'd sections without content items
+          document.querySelectorAll('#content .content-item:not([style*="display: none"])').forEach(el => highlightInElement(el, q));
+          document.querySelectorAll('#content > *[id]:not([style*="display: none"])').forEach(el => {
+            if (!el.querySelector('.content-item')) highlightInElement(el, q);
+          });
+        }
+      });
+    })();
+    // Fragment navigation — body has overflow:hidden so the browser cannot scroll to
+    // anchors natively. Read the hash and scroll #content to the target element instead.
+    (function () {
+      function scrollToHash() {
+        const hash = window.location.hash;
+        if (!hash) return;
+        const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+        if (!el) return;
+        const content = document.getElementById('content');
+        if (!content) { el.scrollIntoView(); return; }
+        const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top + content.scrollTop - 16;
+        content.scrollTop = top;
+      }
+      document.addEventListener('DOMContentLoaded', scrollToHash);
+      window.addEventListener('hashchange', scrollToHash);
+    })();
+    
+  </script>
+</body>
+</html>

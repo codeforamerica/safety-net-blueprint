@@ -1,0 +1,10 @@
+{
+  "type": "string",
+  "description": "Valid section names for the applicationReview sectionView.",
+  "enum": [
+    "demographics",
+    "contact"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/ApplicationReviewSections"
+}

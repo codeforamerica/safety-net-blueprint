@@ -13,7 +13,8 @@ import { resolve } from 'path';
 import { resolveUploadsDir } from '../src/handlers/document-upload-handler.js';
 import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
-import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes } from '../src/route-generator.js';
+import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes, registerRulesRoutes, buildRulesIndex } from '../src/route-generator.js';
+import { initRulesIndex } from '../src/state-machine-engine.js';
 import { registerEventSubscriptions } from '../src/event-subscription.js';
 import { closeAll, clearAllDatabases, insertResource, findById } from '../src/database-manager.js';
 import { seedAllDatabases } from '../src/seeder.js';
@@ -80,8 +81,12 @@ function parseSpecDirs() {
   const specDirs = args
     .filter(a => a.startsWith('--spec='))
     .map(a => resolve(a.split('=')[1]));
+  // No default. The previous fallback pointed at packages/contracts, which was
+  // renamed long ago, so omitting --spec failed later and obscurely with an
+  // empty contract set rather than saying what was missing.
   if (specDirs.length === 0) {
-    specDirs.push(resolve(import.meta.dirname, '..', '..', 'contracts'));
+    console.error('Error: --spec=<dir> is required (a directory of resolved contracts)');
+    process.exit(1);
   }
 
   const seedArg = args.find(a => a.startsWith('--seed='));
@@ -120,6 +125,8 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
     let allMetrics = [];
     let allConfigs = [];
     let allCompositions = [];
+    let allRulesFiles = [];
+    let allGraphs = [];
     let allPolicies = {};
     for (const specsDir of specDirs) {
       const result = await performSetup({ specsDir, seedDir, verbose: true });
@@ -129,6 +136,8 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
       allMetrics = allMetrics.concat(result.metrics);
       allConfigs = allConfigs.concat(result.configs || []);
       allCompositions = allCompositions.concat(result.compositions || []);
+      allRulesFiles = allRulesFiles.concat(result.rulesFiles || []);
+      allGraphs = allGraphs.concat(result.graphs || []);
       Object.assign(allPolicies, result.policies || {});
     }
 
@@ -256,7 +265,7 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
     // Reseed endpoint — re-inserts seed data without clearing anything else.
     // Useful after a reset when tests need baseline data present.
     app.post('/mock/reseed', (req, res) => {
-      seedAllDatabases(apiSpecs, '', seedDir);
+      seedAllDatabases(specDirs, seedDir);
       res.status(204).end();
     });
     console.log('  POST   /mock/reseed - Re-seed all collections from seed files');
@@ -292,6 +301,13 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
     if (allCompositions.length > 0) {
       console.log('\nRegistering composition routes...');
       registerCompositionRoutes(app, allCompositions, apiSpecs);
+    }
+
+    // Register rules evaluation routes and initialize the state machine rules index
+    if (allRulesFiles.length > 0) {
+      console.log('\nRegistering rules evaluation routes...');
+      registerRulesRoutes(app, allRulesFiles, apiSpecs, allGraphs);
+      initRulesIndex(buildRulesIndex(allGraphs));
     }
 
     const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics, resolvedUploadsDir);

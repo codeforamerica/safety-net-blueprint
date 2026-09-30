@@ -270,7 +270,7 @@ config:
 
 | Key | Options | Default | Description |
 |-----|---------|---------|-------------|
-| `x-casing` | `camelCase`, `snake_case` | `camelCase` | Property name casing in resolved output |
+| `x-casing` | `camelCase`, `snake_case` | `camelCase` | How adapters and mock servers serialize field names on the wire. This is a rendering hint — YAML property names in specs, overlays, and annotations are always camelCase regardless of this setting. |
 | `x-pagination.style` | `offset`, `cursor`, `page`, `links` | `offset` | Pagination strategy for list endpoints |
 | `x-search.style` | `simple`, `filtered`, `post-search` | `simple` | Search query pattern |
 | `x-relationship.style` | `links-only`, `expand`, `include`, `embed` | none (metadata only) | Global default style for FK references. Applies to response schemas only — request body schemas (POST/PUT/PATCH) always keep plain scalar FKs regardless of this setting. Per-field `style` annotations override this default and are honored wherever they appear. When omitted, fields with no per-field `style` are left as-is. |

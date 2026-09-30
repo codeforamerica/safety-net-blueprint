@@ -1,8 +1,9 @@
 # intake field inventory
 # Do not edit — regenerate with: node generate-field-inventory.mjs --domain=intake
 
-# ── application ─────────────────────────────────────────────────────────────────
+# ── Application ─────────────────────────────────────────────────────────────────
 
+application.id: { type: uuid }
 application.programsAppliedFor[]: { type: enum, values: [snap, medicaid, chip, tanf] }
 application.channel: { type: enum, values: [online, in_person, phone, mail] }
 application.ebt: { type: Ebt }
@@ -21,8 +22,13 @@ application.utilities: { type: Utilities }
 application.utilities.heatCoolMethod: { type: enum, values: [gas, electric, oil, propane, other] }
 application.utilities.heatCoolMethodOther: { type: string }
 application.utilities.receivesLiheap: { type: boolean }
+application.status: { type: enum, values: [draft, submitted, under_review, pending_approval, withdrawn, closed] }
+application.isExpedited: { type: [boolean, 'null'] }
+application.submittedAt: { type: datetime }
+application.withdrawnAt: { type: datetime }
+application.closedAt: { type: datetime }
 
-# ── members ─────────────────────────────────────────────────────────────────────
+# ── ApplicationMember ───────────────────────────────────────────────────────────
 
 application.members[]: { type: list(ApplicationMember) }
 application.members[].personId: { type: uuid, relationship: Person }
@@ -159,7 +165,7 @@ application.members[].programDeterminations[].program: { type: string }
 application.members[].programDeterminations[].outcome: { type: enum, values: [approved, denied] }
 application.members[].programDeterminations[].determinedAt: { type: datetime }
 
-# ── household-info ──────────────────────────────────────────────────────────────
+# ── ApplicationHousehold ────────────────────────────────────────────────────────
 
 application.householdInfo.id: { type: uuid }
 application.householdInfo.applicationId: { type: uuid, relationship: Application }
@@ -172,7 +178,7 @@ application.householdInfo.utilitiesIncludedInRent: { type: boolean }
 application.householdInfo.isSubsidizedHousing: { type: boolean }
 application.householdInfo.receivedTanfInAnotherState: { type: boolean }
 
-# ── tax-filers ──────────────────────────────────────────────────────────────────
+# ── TaxFiler ────────────────────────────────────────────────────────────────────
 
 application.taxFilers[]: { type: list(TaxFiler) }
 application.taxFilers[].id: { type: uuid }
@@ -193,7 +199,7 @@ application.taxFilers[].personClaiming.type: { type: enum, values: [member, cont
 application.taxFilers[].isNonCustodialParent: { type: boolean }
 application.taxFilers[].hasDomesticViolenceTaxFilingException: { type: boolean }
 
-# ── health-plans ────────────────────────────────────────────────────────────────
+# ── HealthPlan ──────────────────────────────────────────────────────────────────
 
 application.healthPlans[]: { type: list(HealthPlan) }
 application.healthPlans[].organizationId: { type: uuid, relationship: Organization, appliesWhen: 'type in [employer_sponsored, cobra]' }
@@ -244,7 +250,7 @@ application.healthPlans[].programType: { type: string, appliesWhen: 'type = tric
 application.healthPlans[].insuranceCompanyName: { type: string, appliesWhen: 'type = tricare' }
 application.healthPlans[].policyNumber: { type: string, appliesWhen: 'type = tricare' }
 
-# ── health-enrollments ──────────────────────────────────────────────────────────
+# ── HealthEnrollment ────────────────────────────────────────────────────────────
 
 application.healthEnrollments[]: { type: list(HealthEnrollment) }
 application.healthEnrollments[].healthPlanId: { type: uuid, relationship: HealthPlan }
@@ -262,7 +268,7 @@ application.healthEnrollments[].sponsor: { type: PersonRef }
 application.healthEnrollments[].sponsor.id: { type: uuid }
 application.healthEnrollments[].sponsor.type: { type: enum, values: [member, contact] }
 
-# ── child-support ───────────────────────────────────────────────────────────────
+# ── ApplicationChildSupport ─────────────────────────────────────────────────────
 
 application.childSupport.id: { type: uuid }
 application.childSupport.applicationId: { type: uuid, relationship: Application }
@@ -275,7 +281,7 @@ application.childSupport.parentsOutsideHome[].children[].id: { type: uuid }
 application.childSupport.parentsOutsideHome[].children[].type: { type: enum, values: [member, contact] }
 application.childSupport.parentsOutsideHome[].attemptedMedicalSupportCooperation: { type: boolean }
 
-# ── contacts ────────────────────────────────────────────────────────────────────
+# ── Contact ─────────────────────────────────────────────────────────────────────
 
 application.contacts[]: { type: list(Contact) }
 application.contacts[].id: { type: uuid }
@@ -297,7 +303,7 @@ application.contacts[].primaryAddress.county: { type: string }
 application.contacts[].primaryPhone: { type: string }
 application.contacts[].email: { type: email }
 
-# ── organizations ───────────────────────────────────────────────────────────────
+# ── Organization ────────────────────────────────────────────────────────────────
 
 application.organizations[]: { type: list(Organization) }
 application.organizations[].id: { type: uuid }
@@ -313,7 +319,7 @@ application.organizations[].address.zip: { type: string }
 application.organizations[].address.county: { type: string }
 application.organizations[].phone: { type: string }
 
-# ── person-relationships ────────────────────────────────────────────────────────
+# ── PersonRelationship ──────────────────────────────────────────────────────────
 
 application.personRelationships[]: { type: list(PersonRelationship) }
 application.personRelationships[].id: { type: uuid }
@@ -326,7 +332,7 @@ application.personRelationships[].to.id: { type: uuid }
 application.personRelationships[].to.type: { type: enum, values: [member, contact] }
 application.personRelationships[].relationshipTypes[]: { type: enum, values: [parent, child, spouse, domestic_partner, sibling, grandparent, grandchild, legal_guardian, caregiver, primary_caregiver, other_relative, unrelated] }
 
-# ── authorized-representatives ──────────────────────────────────────────────────
+# ── AuthorizedRepresentative ────────────────────────────────────────────────────
 
 application.authorizedRepresentatives[]: { type: list(AuthorizedRepresentative) }
 application.authorizedRepresentatives[].id: { type: uuid }
@@ -339,7 +345,7 @@ application.authorizedRepresentatives[].inCareOf.type: { type: enum, values: [me
 application.authorizedRepresentatives[].receivesNotices: { type: boolean }
 application.authorizedRepresentatives[].programs[]: { type: enum, values: [snap, medicaid, chip, tanf, aca] }
 
-# ── signatures ──────────────────────────────────────────────────────────────────
+# ── Signature ───────────────────────────────────────────────────────────────────
 
 application.signatures[]: { type: list(Signature) }
 application.signatures[].id: { type: uuid }
@@ -352,7 +358,7 @@ application.signatures[].purpose: { type: enum, values: [application, authorized
 application.signatures[].signedAt: { type: datetime }
 application.signatures[].signatureMethod: { type: enum, values: [electronic, wet_signature, verbal] }
 
-# ── sponsors ────────────────────────────────────────────────────────────────────
+# ── Sponsor ─────────────────────────────────────────────────────────────────────
 
 application.sponsors[]: { type: list(Sponsor) }
 application.sponsors[].sponsoredMemberId: { type: uuid, relationship: ApplicationMember }
@@ -369,7 +375,7 @@ application.sponsors[].householdSize: { type: integer }
 application.sponsors[].income: { type: number }
 application.sponsors[].livesWithSponsored: { type: boolean }
 
-# ── jobs ────────────────────────────────────────────────────────────────────────
+# ── Job ─────────────────────────────────────────────────────────────────────────
 
 application.jobs[]: { type: list(Job) }
 application.jobs[].employerId: { type: uuid, relationship: Organization, appliesWhen: 'type = employed' }
@@ -397,7 +403,7 @@ application.jobs[].expenses.laborCosts: { type: number, appliesWhen: 'type = sel
 application.jobs[].expenses.costOfMerchandise: { type: number, appliesWhen: 'type = self_employed' }
 application.jobs[].expenses.other: { type: number, appliesWhen: 'type = self_employed' }
 
-# ── incomes ─────────────────────────────────────────────────────────────────────
+# ── Income ──────────────────────────────────────────────────────────────────────
 
 application.incomes[]: { type: list(Income) }
 application.incomes[].jobId: { type: uuid, relationship: Job, appliesWhen: 'type in [employed, self_employed]' }
@@ -416,7 +422,7 @@ application.incomes[].inKindSupportType: { type: enum, values: [shelter, food, u
 application.incomes[].payerName: { type: string, appliesWhen: 'type = in_kind_support' }
 application.incomes[].lumpSumType: { type: enum, values: [lawsuit_settlement, insurance_settlement, social_security_ssi_ssdi_payment, veterans, inheritance, surrender_of_annuity, life_insurance_payout, lottery_gambling_winnings, other], appliesWhen: 'type = lump_sum' }
 
-# ── assets ──────────────────────────────────────────────────────────────────────
+# ── Asset ───────────────────────────────────────────────────────────────────────
 
 application.assets[]: { type: list(Asset) }
 application.assets[].id: { type: uuid }
@@ -445,7 +451,7 @@ application.assets[].address.county: { type: string, appliesWhen: 'type = real_p
 application.assets[].primaryUse: { type: enum, values: [primary_residence, rental, self_employment, for_sale, other], appliesWhen: 'type = real_property' }
 application.assets[].primaryUseOther: { type: string, appliesWhen: 'type = real_property' }
 
-# ── asset-disposals ─────────────────────────────────────────────────────────────
+# ── AssetDisposal ───────────────────────────────────────────────────────────────
 
 application.assetDisposals[]: { type: list(AssetDisposal) }
 application.assetDisposals[].id: { type: uuid }
@@ -457,7 +463,7 @@ application.assetDisposals[].dateOfDisposal: { type: date }
 application.assetDisposals[].amountReceived: { type: number }
 application.assetDisposals[].fairMarketValue: { type: number }
 
-# ── expenses ────────────────────────────────────────────────────────────────────
+# ── Expense ─────────────────────────────────────────────────────────────────────
 
 application.expenses[]: { type: list(Expense) }
 application.expenses[].id: { type: uuid }
@@ -468,7 +474,7 @@ application.expenses[].typeOther: { type: string }
 application.expenses[].amount: { type: number }
 application.expenses[].legallyObligatedAmount: { type: number }
 
-# ── disability-benefits ─────────────────────────────────────────────────────────
+# ── DisabilityBenefit ───────────────────────────────────────────────────────────
 
 application.disabilityBenefits[]: { type: list(DisabilityBenefit) }
 application.disabilityBenefits[].id: { type: uuid }
@@ -480,7 +486,7 @@ application.disabilityBenefits[].applicationDate: { type: date }
 application.disabilityBenefits[].startDate: { type: date }
 application.disabilityBenefits[].endDate: { type: date }
 
-# ── deductions ──────────────────────────────────────────────────────────────────
+# ── Deduction ───────────────────────────────────────────────────────────────────
 
 application.deductions[]: { type: list(Deduction) }
 application.deductions[].id: { type: uuid }
@@ -492,11 +498,12 @@ application.deductions[].frequency: { type: enum, values: [one_time_only, weekly
 application.deductions[].amount: { type: number }
 application.deductions[].annualAmount: { type: number }
 
-# ── verifications ───────────────────────────────────────────────────────────────
+# ── Verification ────────────────────────────────────────────────────────────────
 
 application.verifications[]: { type: list(Verification) }
 application.verifications[].applicationId: { type: uuid, relationship: Application }
 application.verifications[].sourceId: { type: uuid, relationship: Polymorphic }
+application.verifications[].reviewedBy: { type: uuid }
 application.verifications[].id: { type: uuid }
 application.verifications[].status: { type: enum, values: [pending, inconclusive, satisfied, waived, cannot_verify] }
 application.verifications[].evidence[]: { type: string }
@@ -509,8 +516,9 @@ application.verifications[].documentRequests[].channel: { type: enum, values: [e
 application.verifications[].sourceType: { type: enum, values: [member, income] }
 application.verifications[].category: { type: enum, values: [citizenship, identity, immigration, income, residency] }
 application.verifications[].verificationType: { type: enum, values: [document, electronic] }
+application.verifications[].reviewedAt: { type: datetime }
 
-# ── interview ───────────────────────────────────────────────────────────────────
+# ── Interview ───────────────────────────────────────────────────────────────────
 
 application.interview.applicationId: { type: uuid, relationship: Application }
 application.interview.appointments[]: { type: uuid, relationship: External }
@@ -519,12 +527,12 @@ application.interview.waiverStatus: { type: enum, values: [pending, granted, den
 application.interview.waiverReason: { type: string }
 application.interview.completedAt: { type: datetime }
 
-# ── review-progress ─────────────────────────────────────────────────────────────
+# ── ReviewProgressListResponse ──────────────────────────────────────────────────
 
 application.reviewProgress[]: { type: list(ReviewProgressListResponse) }
 application.reviewProgress[].items[]: { type: list(ReviewProgress) }
 application.reviewProgress[].items[].id: { type: uuid }
-application.reviewProgress[].items[].itemId: { type: uuid }
+application.reviewProgress[].items[].itemId: { type: uuid, relationship: Polymorphic }
 application.reviewProgress[].items[].status: { type: enum, values: [not_started, in_progress, complete, flagged] }
 application.reviewProgress[].items[].notes: { type: object }
 application.reviewProgress[].items[].notes.text: { type: string }

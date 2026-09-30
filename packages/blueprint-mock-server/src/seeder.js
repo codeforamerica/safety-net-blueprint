@@ -2,191 +2,133 @@
  * Data seeder - loads example data from YAML files into SQLite
  */
 
-import { readFileSync, readdirSync, statSync } from 'fs';
-import yaml from 'js-yaml';
+import { discover, generate, load } from '@codeforamerica/blueprint-core';
+import { deriveCollectionName } from './collection-utils.js';
 import { insertResource, clearAll } from './database-manager.js';
-import { collectionToSchemaPrefix, extractIndividualResources } from '@codeforamerica/blueprint-core/loader';
-import { deriveCollectionName as deriveCollectionNameFromPath } from './collection-utils.js';
-import { join } from 'path';
 import { resolveTimeTokens } from './time-tokens.js';
 
 /**
- * Recursively find all *-mock-data.yaml files under rootDir.
- * Returns an array of file paths.
+ * The schema a list response holds, by name.
+ *
+ * A list wraps its records in `allOf` alongside the shared pagination
+ * schema, so the items are not always a direct property.
+ *
+ * @param {object} listSchema - The list schema, as authored
+ * @returns {string|null}
  */
-function findMockDataFiles(rootDir) {
-  const results = [];
-  function walk(dir) {
-    for (const entry of readdirSync(dir)) {
-      const full = join(dir, entry);
-      if (statSync(full).isDirectory()) {
-        walk(full);
-      } else if (entry.endsWith('-mock-data.yaml')) {
-        results.push(full);
-      }
+function itemSchemaName(listSchema) {
+  if (!listSchema || typeof listSchema !== 'object') return null;
+
+  for (const candidate of [listSchema, ...(listSchema.allOf ?? [])]) {
+    const ref = candidate?.properties?.items?.items?.$ref;
+    if (ref) return ref.split('/').pop();
+  }
+
+  return null;
+}
+
+/**
+ * Which schema each collection holds, from the contracts.
+ *
+ * A collection endpoint's list response names the schema its records are, so
+ * this is read rather than inferred. `/registry/policies` is collection
+ * `registry-policies` and holds `Policy` — no naming convention connects
+ * those two, and guessing one is how records went unvalidated.
+ *
+ * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
+ * @returns {Map<string, string>} Collection name to schema name
+ */
+function collectionSchemas(docs) {
+  const byCollection = new Map();
+
+  for (const doc of docs.filter((d) => d.type === 'openapi')) {
+    const spec = doc.content ?? {};
+    const server = (spec.servers ?? []).find((s) => s.url?.includes('localhost'));
+    let basePath = '';
+    if (server) {
+      try { basePath = new URL(server.url).pathname.replace(/\/$/, ''); } catch { /* no base path */ }
+    }
+
+    for (const [path, item] of Object.entries(spec.paths ?? {})) {
+      // Skip item endpoints, not every path with a parameter: a
+      // sub-collection carries its parent's parameter in the middle.
+      if (path.endsWith('}') || !item?.get) continue;
+
+      const collection = deriveCollectionName(`${basePath}${path}`, basePath);
+      if (!collection || byCollection.get(collection)) continue;
+
+      const listRef = item.get.responses?.['200']?.content?.['application/json']?.schema?.$ref;
+      const listName = listRef?.split('/').pop();
+
+      // Every collection is recorded even when no schema can be found for it,
+      // because the set is also what gets cleared on boot. A collection left
+      // out here would keep stale rows from the previous run.
+      byCollection.set(collection, itemSchemaName(spec.components?.schemas?.[listName]));
     }
   }
-  walk(rootDir);
-  return results;
-}
 
-/**
- * Load and merge all *-mock-data.yaml files found under seedDir into a
- * single examples map. Keys are record names (e.g. TaskExample1).
- */
-function loadAllExamples(seedDir) {
-  const files = findMockDataFiles(seedDir);
-  const combined = {};
-  for (const filePath of files) {
-    try {
-      const data = yaml.load(readFileSync(filePath, 'utf8')) || {};
-      Object.assign(combined, data);
-    } catch (err) {
-      console.warn(`  Warning: Could not load seed file ${filePath}: ${err.message}`);
-    }
-  }
-  return combined;
-}
-
-/**
- * Derive the collection name from an API's baseResource path.
- * Example: "/tasks" → "tasks", "/persons" → "persons"
- * Falls back to api.name for APIs without a baseResource.
- * @param {Object} api - API metadata object
- * @returns {string} Collection name
- */
-function deriveCollectionName(api) {
-  if (api.baseResource) {
-    const basePath = api.serverBasePath || '';
-    const resourcePath = basePath && api.baseResource.startsWith(basePath)
-      ? api.baseResource.slice(basePath.length)
-      : api.baseResource;
-    return resourcePath.split('/')[1];
-  }
-  return api.name;
-}
-
-/**
- * Derive all unique collection names from an API's endpoints.
- *
- * Uses the path-based `deriveCollectionName` from collection-utils.js (the
- * same helper the route generator uses) so sub-resource paths map to their
- * proper sub-collection names rather than collapsing to the top-level
- * segment. Examples:
- *   /applications                                       → "applications"
- *   /applications/{id}/members                          → "application-members"
- *   /applications/{id}/members/{memberId}/incomes       → "member-incomes"
- *   /applications/{id}/household-info                   → "household-infos"
- *
- * Without this, an API whose paths are all under `/applications/...` would
- * yield only `applications`, leaving every sub-collection the route handlers
- * actually query (`application-members`, `member-incomes`, etc.) empty.
- *
- * @param {Object} api - API metadata object
- * @returns {string[]} Array of collection names
- */
-export function deriveAllCollectionNames(api) {
-  const names = new Set();
-  const basePath = api.serverBasePath || '';
-  for (const endpoint of api.endpoints || []) {
-    const name = deriveCollectionNameFromPath(endpoint.path, basePath);
-    if (name) names.add(name);
-  }
-  // Fallback for APIs with no endpoints
-  if (names.size === 0) names.add(deriveCollectionName(api));
-  return [...names];
-}
-
-/**
- * Extract resources from examples that belong to a specific collection.
- *
- * Uses longest-prefix matching to disambiguate keys when collection schema
- * prefixes share a common prefix. For example, both "applications"
- * (prefix "Application") and "application-members" (prefix
- * "ApplicationMember") match the key "ApplicationMemberExample1" via
- * startsWith — but only "ApplicationMember" is the longest match, so the
- * key is correctly assigned to application-members and not applications.
- *
- * @param {Object} examples - All examples from the YAML file
- * @param {string} collectionName - Target collection name
- * @param {string[]} allCollections - All collection names for this API (used for disambiguation)
- * @returns {Array} Array of resource objects for this collection
- */
-function extractResourcesForCollection(examples, collectionName, allCollections) {
-  const targetPrefix = collectionToSchemaPrefix(collectionName);
-  const allPrefixes = allCollections.map(collectionToSchemaPrefix);
-  const filtered = {};
-  for (const [key, value] of Object.entries(examples)) {
-    if (!key.startsWith(targetPrefix)) continue;
-    // Find the longest schema prefix that matches this key. If a more specific
-    // collection (e.g. "ApplicationMember") also matches, skip this key for the
-    // less specific one (e.g. "Application") so records aren't double-assigned.
-    const longestMatch = allPrefixes
-      .filter((p) => key.startsWith(p))
-      .sort((a, b) => b.length - a.length)[0];
-    if (longestMatch === targetPrefix) {
-      filtered[key] = value;
-    }
-  }
-  return extractIndividualResources(filtered);
+  return byCollection;
 }
 
 /**
  * Seed all databases for all discovered APIs.
  *
- * Recursively discovers all *-mock-data.yaml files under seedDir, merges them
- * into a single examples pool, then routes records to collections by key-prefix
- * matching (e.g. TaskExample1 → tasks). No per-API file lookup — any
- * *-mock-data.yaml file under seedDir contributes to the pool regardless of
- * its location or name.
+ * Records are grouped by collection through core's `generate(docs,
+ * 'examples')` — the same call the rest of the pipeline makes — so the server
+ * seeds exactly what the pipeline says belongs where. Any *-mock-data.yaml
+ * under seedDir joins the pool regardless of its location or name; an example
+ * key names its schema, not its file.
  *
- * @param {Array} apiSpecs - Array of API specification objects
- * @param {string} specsDir - Path to specs directory (unused, kept for compat)
+ * @param {Array} apiSpecs - Array of API specification objects, for the set of
+ *   collections to clear and report on
+ * @param {string|string[]} specsDir - Directory (or directories) of resolved
+ *   contracts. Their paths are what name the collections the records are
+ *   grouped into. The server can be started with several --spec dirs, and a
+ *   reseed has to cover all of them at once or the last one clears the rest.
  * @param {string|null} seedDir - Directory to recurse for *-mock-data.yaml files.
  *   When null, seeding is skipped and all collections start empty.
  * @returns {Object} Summary of seeded data
  */
-export function seedAllDatabases(apiSpecs, specsDir, seedDir) {
-  // Clear all collections first
-  for (const api of apiSpecs) {
-    for (const name of deriveAllCollectionNames(api)) {
-      clearAll(name);
-    }
-  }
+export function seedAllDatabases(specsDir, seedDir) {
+  // Core groups the records by the schema each one exemplifies — a fact the
+  // documents state. Which collection holds a given schema is this server's
+  // business, and the contract answers it: a collection endpoint's list
+  // response names the schema its records are. So the naming rule lives here
+  // only, in collection-utils, where routing needs it regardless.
+  const specDirs = Array.isArray(specsDir) ? specsDir : [specsDir].filter(Boolean);
+  const docs = [
+    ...specDirs.flatMap((dir) => discover(dir)),
+    ...(seedDir ? discover(seedDir) : []),
+  ].map(load);
+
+  const bySchema = generate(docs, 'examples');
+  const schemaOf = collectionSchemas(docs);
+  const collections = [...schemaOf.keys()];
+  const byCollection = Object.fromEntries(
+    collections.map((name) => [name, bySchema[schemaOf.get(name)] ?? []])
+  );
+
+  for (const name of collections) clearAll(name);
 
   if (!seedDir) {
     console.log('\nNo --seed directory specified; databases will be empty.');
-    const summary = {};
-    for (const api of apiSpecs) {
-      for (const name of deriveAllCollectionNames(api)) summary[name] = 0;
-    }
-    return summary;
+    return Object.fromEntries(collections.map((name) => [name, 0]));
   }
 
   console.log(`\nSeeding databases from ${seedDir}...`);
 
-  // Load all *-mock-data.yaml files into one combined pool
-  const allExamples = loadAllExamples(seedDir);
-
-  if (Object.keys(allExamples).length === 0) {
+  if (collections.every((name) => byCollection[name].length === 0)) {
     console.log('  No *-mock-data.yaml files found; databases will be empty.');
-    const summary = {};
-    for (const api of apiSpecs) {
-      for (const name of deriveAllCollectionNames(api)) summary[name] = 0;
-    }
-    return summary;
+    return Object.fromEntries(collections.map((name) => [name, 0]));
   }
-
-  // Collect all collection names across all APIs for disambiguation
-  const allCollections = [...new Set(apiSpecs.flatMap(api => deriveAllCollectionNames(api)))];
 
   const summary = {};
   const now = new Date();
   const baseTimestamp = new Date('2024-01-01T00:00:00Z').getTime();
 
-  for (const collectionName of allCollections) {
+  for (const collectionName of collections) {
     try {
-      const resources = extractResourcesForCollection(allExamples, collectionName, allCollections);
+      const resources = byCollection[collectionName] ?? [];
 
       if (resources.length === 0) {
         summary[collectionName] = 0;

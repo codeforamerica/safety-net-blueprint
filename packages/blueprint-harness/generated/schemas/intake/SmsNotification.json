@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "required": [
+    "channel",
+    "phone"
+  ],
+  "properties": {
+    "channel": {
+      "type": "string",
+      "enum": [
+        "sms"
+      ]
+    },
+    "phone": {
+      "type": "string",
+      "description": "Phone number for SMS benefit notices (E.164 format)."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/SmsNotification"
+}

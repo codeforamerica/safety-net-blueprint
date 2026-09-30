@@ -5,29 +5,28 @@
   "type": "module",
   "files": [
     "src/",
-    "cli/",
-    "test-utils.js"
+    "cli/"
   ],
   "exports": {
-    ".": "./cli/server.js",
-    "./test-utils": "./test-utils.js"
+    ".": "./src/index.js",
+    "./test-utils": "./src/test-utils.js"
   },
   "bin": {
     "blueprint-mock": "cli/server.js",
     "blueprint-swagger": "cli/swagger/server.js"
   },
   "scripts": {
-    "start": "node cli/server.js --spec=../safety-net-contracts",
-    "start:all": "node cli/start-all.js --spec=../safety-net-contracts",
-    "swagger": "node cli/swagger/server.js --spec=../safety-net-contracts",
-    "seed": "node cli/generate-mock-data.js --spec=../safety-net-contracts --out=../generated/mock-data",
-    "validate:mock-data": "node cli/validate-mock-data.js --spec=../safety-net-contracts",
-    "setup": "node cli/setup.js --spec=../safety-net-contracts",
-    "reset": "node cli/reset.js --spec=../safety-net-contracts",
-    "test": "node tests/run-tests.js --all --contracts=../generated/contracts --raw-contracts=../safety-net-contracts --stop",
+    "start": "node cli/server.js --spec=../generated/contracts",
+    "start:all": "node cli/start-all.js --spec=../generated/contracts",
+    "swagger": "node cli/swagger/server.js --spec=../generated/contracts",
+    "seed": "node cli/generate-mock-data.js --spec=../generated/contracts --out=../generated/mock-data",
+    "validate:mock-data": "node cli/validate-mock-data.js --spec=../generated/contracts",
+    "setup": "node cli/setup.js --spec=../generated/contracts",
+    "reset": "node cli/reset.js --spec=../generated/contracts",
+    "test": "node tests/run-tests.js --all --contracts=../generated/contracts --raw-contracts=../safety-net-contracts/src --stop",
     "test:unit": "node tests/run-tests.js --unit --fixtures=tests/fixtures --seed=tests/fixtures",
     "test:functional": "node tests/run-tests.js --functional",
-    "test:integration": "node tests/run-tests.js --integration --contracts=../generated/contracts --raw-contracts=../safety-net-contracts --stop"
+    "test:integration": "node tests/run-tests.js --integration --contracts=../generated/contracts --raw-contracts=../safety-net-contracts/src --stop"
   },
   "engines": {
     "node": ">=22.11.0"
@@ -44,6 +43,7 @@
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
     "@codeforamerica/blueprint-core": "^0.1.0",
+    "@codeforamerica/blueprint-rules-engine": "^0.1.0",
     "@faker-js/faker": "^10.4.0",
     "ajv": "^8.12.0",
     "ajv-formats": "^3.0.1",

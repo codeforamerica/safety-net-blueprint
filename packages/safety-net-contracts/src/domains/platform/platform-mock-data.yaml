@@ -1,258 +1,293 @@
-# Seed data for platform — domain events and policy registry.
-# Events represent historical domain events in CloudEvents 1.0 format.
-# Policies are sourced from packages/contracts/platform-registry-policies.yaml.
+# Example data for this domain, seeded into the mock server.
+# Validated against the schemas its collections hold.
 
-# ── Policy registry ────────────────────────────────────────────────────────────
-
-RegistryPolicyExample1:
+PolicyExample1:
   id: snap-household-composition
-  citation: "7 CFR § 273.1"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.1"
-  description: "All household members must be listed on the application regardless of whether they are individually applying for SNAP. Members who are ineligible — such as non-citizens who do not qualify — must still be listed because their income and resources are counted when calculating the benefit amount for the rest of the household."
-  programs: [snap]
-
-RegistryPolicyExample2:
-  id: snap-authorized-representative
-  citation: "7 CFR § 273.2(n)"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.2"
-  description: "A SNAP authorized representative must be a non-household member. They may apply, be interviewed, and obtain benefits on behalf of the household, but may not also appear as a regular household member on the same application."
-  programs: [snap]
-
-RegistryPolicyExample3:
-  id: medicaid-authorized-representative
-  citation: "42 CFR § 435.923"
-  citationUrl: "https://www.ecfr.gov/current/title-42/section-435.923"
-  description: "A Medicaid authorized representative may be a household member. Unlike SNAP, Medicaid permits a person who lives in the household to act as authorized representative, meaning one person can simultaneously hold both the household member and authorized representative roles."
-  programs: [medicaid]
-
-RegistryPolicyExample4:
-  id: snap-application-acceptance
-  citation: "7 CFR § 273.2(g)"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.2"
-  description: "Agency must accept any application on the date of first contact, even if incomplete. The date received is the application filing date and starts the processing clock."
-  programs: [snap]
-
-RegistryPolicyExample5:
-  id: snap-application-date-stamp
-  citation: "7 CFR § 273.2(c)(1)"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.2"
-  description: "Agency must date-stamp or otherwise record the date of receipt on every application. The date stamp establishes the filing date used for timeliness determinations."
-  programs: [snap]
-
-RegistryPolicyExample6:
-  id: snap-right-to-apply
-  citation: "7 CFR § 273.2(a)"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.2"
-  description: "Any household may apply for SNAP benefits regardless of current participation in other programs. Agencies may not screen out applicants before accepting an application."
-  programs: [snap]
-
-RegistryPolicyExample7:
+  citation: "7 CFR \xA7 273.1"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.1
+  description: All household members must be listed on the application regardless of whether they are individually applying
+    for SNAP.
+  programs:
+  - snap
+PolicyExample2:
   id: snap-processing-clock
-  citation: "7 CFR § 273.2(i)(1)"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.2"
-  description: "Agency must act on an application and provide benefits or send a notice of denial within 30 days of the date of application."
-  programs: [snap]
-
-RegistryPolicyExample8:
+  citation: "7 CFR \xA7 273.2(i)(1)"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
+  description: Agency must act on an application and provide benefits or send a notice of denial within 30 days of the date
+    of application.
+  programs:
+  - snap
+PolicyExample3:
+  id: medicaid-authorized-representative
+  citation: "42 CFR \xA7 435.923"
+  citationUrl: https://www.ecfr.gov/current/title-42/section-435.923
+  description: A Medicaid authorized representative may be a household member. Unlike SNAP, Medicaid permits a person who
+    lives in the household to act as authorized representative, meaning one person can simultaneously hold both the household
+    member and authorized representative roles.
+  programs:
+  - medicaid
+PolicyExample4:
+  id: snap-application-acceptance
+  citation: "7 CFR \xA7 273.2(g)"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
+  description: Agency must accept any application on the date of first contact, even if incomplete. The date received is the
+    application filing date and starts the processing clock.
+  programs:
+  - snap
+PolicyExample5:
+  id: snap-application-date-stamp
+  citation: "7 CFR \xA7 273.2(c)(1)"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
+  description: Agency must date-stamp or otherwise record the date of receipt on every application. The date stamp establishes
+    the filing date used for timeliness determinations.
+  programs:
+  - snap
+PolicyExample6:
+  id: snap-right-to-apply
+  citation: "7 CFR \xA7 273.2(a)"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
+  description: Any household may apply for SNAP benefits regardless of current participation in other programs. Agencies may
+    not screen out applicants before accepting an application.
+  programs:
+  - snap
+PolicyExample7:
+  id: snap-processing-clock
+  citation: "7 CFR \xA7 273.2(i)(1)"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
+  description: Agency must act on an application and provide benefits or send a notice of denial within 30 days of the date
+    of application.
+  programs:
+  - snap
+PolicyExample8:
   id: snap-expedited-processing
-  citation: "7 CFR § 273.2(i)(3)(i)"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.2"
-  description: "Benefits must be issued within 7 days for households with gross monthly income below $150 and liquid resources at or below $100, or households whose combined monthly gross income and liquid resources are less than the monthly rent or mortgage and utilities."
-  programs: [snap]
-
-RegistryPolicyExample9:
+  citation: "7 CFR \xA7 273.2(i)(3)(i)"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
+  description: Benefits must be issued within 7 days for households with gross monthly income below $150 and liquid resources
+    at or below $100, or households whose combined monthly gross income and liquid resources are less than the monthly rent
+    or mortgage and utilities.
+  programs:
+  - snap
+PolicyExample9:
   id: medicaid-processing-clock
-  citation: "42 CFR § 435.912"
-  citationUrl: "https://www.ecfr.gov/current/title-42/section-435.912"
-  description: "States must make eligibility determinations within 45 days of application for most applicants and within 90 days for applicants who require a disability determination."
-  programs: [medicaid]
-
-RegistryPolicyExample10:
+  citation: "42 CFR \xA7 435.912"
+  citationUrl: https://www.ecfr.gov/current/title-42/section-435.912
+  description: States must make eligibility determinations within 45 days of application for most applicants and within 90
+    days for applicants who require a disability determination.
+  programs:
+  - medicaid
+PolicyExample10:
   id: snap-interview-requirement
-  citation: "7 CFR § 273.2(e)"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.2"
-  description: "SNAP applicants must complete an in-person or telephone interview before certification. The interview must be conducted by a qualified eligibility worker."
-  programs: [snap]
-
-RegistryPolicyExample11:
+  citation: "7 CFR \xA7 273.2(e)"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
+  description: SNAP applicants must complete an in-person or telephone interview before certification. The interview must
+    be conducted by a qualified eligibility worker.
+  programs:
+  - snap
+PolicyExample11:
   id: snap-identity-verification
-  citation: "7 CFR § 273.2(f)(1)(vi)"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.2"
-  description: "Agency must verify the identity of the head of household prior to certification. Identity may be verified through a collateral contact or documentary evidence."
-  programs: [snap]
-
-RegistryPolicyExample12:
+  citation: "7 CFR \xA7 273.2(f)(1)(vi)"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
+  description: Agency must verify the identity of the head of household prior to certification. Identity may be verified through
+    a collateral contact or documentary evidence.
+  programs:
+  - snap
+PolicyExample12:
   id: snap-residency-verification
-  citation: "7 CFR § 273.2(f)(1)(iii)"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.2"
-  description: "Residency must be verified; applicants may not be required to show a permanent address. Homeless households and those with no fixed address are eligible."
-  programs: [snap]
-
-RegistryPolicyExample13:
+  citation: "7 CFR \xA7 273.2(f)(1)(iii)"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
+  description: Residency must be verified; applicants may not be required to show a permanent address. Homeless households
+    and those with no fixed address are eligible.
+  programs:
+  - snap
+PolicyExample13:
   id: snap-income-verification
-  citation: "7 CFR § 272.8"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-272.8"
-  description: "Income must be verified through available electronic data sources (SSA IEVS, IRS IEVS, SWICA, UIB) before relying on applicant statements. Electronic verification reduces documentation burden on applicants."
-  programs: [snap]
-
-RegistryPolicyExample14:
+  citation: "7 CFR \xA7 272.8"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-272.8
+  description: Income must be verified through available electronic data sources (SSA IEVS, IRS IEVS, SWICA, UIB) before relying
+    on applicant statements. Electronic verification reduces documentation burden on applicants.
+  programs:
+  - snap
+PolicyExample14:
   id: snap-ssa-identity-check
-  citation: "42 U.S.C. § 1320b-7"
-  citationUrl: "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title42-section1320b-7"
-  description: "Agencies must use SSA data matches to verify identity and citizenship status for SNAP applicants. FDSH SSA is the electronic source for this check."
-  programs: [snap]
-
-RegistryPolicyExample15:
+  citation: "42 U.S.C. \xA7 1320b-7"
+  citationUrl: https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title42-section1320b-7
+  description: Agencies must use SSA data matches to verify identity and citizenship status for SNAP applicants. FDSH SSA
+    is the electronic source for this check.
+  programs:
+  - snap
+PolicyExample15:
   id: snap-citizenship-eligibility
-  citation: "7 CFR § 273.4"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.4"
-  description: "Only U.S. citizens and qualified aliens are eligible for SNAP. Agency must verify citizenship or immigration status for all applicants."
-  programs: [snap]
-
-RegistryPolicyExample16:
+  citation: "7 CFR \xA7 273.4"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.4
+  description: Only U.S. citizens and qualified aliens are eligible for SNAP. Agency must verify citizenship or immigration
+    status for all applicants.
+  programs:
+  - snap
+PolicyExample16:
   id: qualified-alien-eligibility
-  citation: "8 U.S.C. § 1611"
-  citationUrl: "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title8-section1611"
-  description: "Federal statute establishing that only qualified aliens are eligible for federal public benefits including SNAP. Defines the categories of immigration status that confer eligibility."
-  programs: [snap, medicaid]
-
-RegistryPolicyExample17:
+  citation: "8 U.S.C. \xA7 1611"
+  citationUrl: https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title8-section1611
+  description: Federal statute establishing that only qualified aliens are eligible for federal public benefits including
+    SNAP. Defines the categories of immigration status that confer eligibility.
+  programs:
+  - snap
+  - medicaid
+PolicyExample17:
   id: medicaid-citizenship-electronic-check
-  citation: "42 CFR § 435.956(b)"
-  citationUrl: "https://www.ecfr.gov/current/title-42/section-435.956"
-  description: "States must use electronic data sources to verify citizenship before requesting paper documentation. FDSH SSA citizenship check satisfies this requirement."
-  programs: [medicaid]
-
-RegistryPolicyExample18:
+  citation: "42 CFR \xA7 435.956(b)"
+  citationUrl: https://www.ecfr.gov/current/title-42/section-435.956
+  description: States must use electronic data sources to verify citizenship before requesting paper documentation. FDSH SSA
+    citizenship check satisfies this requirement.
+  programs:
+  - medicaid
+PolicyExample18:
   id: medicaid-immigration-electronic-check
-  citation: "42 CFR § 435.956(c)"
-  citationUrl: "https://www.ecfr.gov/current/title-42/section-435.956"
-  description: "States must use electronic data sources to verify immigration status before requesting paper documentation. FDSH VLP satisfies this requirement."
-  programs: [medicaid]
-
-RegistryPolicyExample19:
+  citation: "42 CFR \xA7 435.956(c)"
+  citationUrl: https://www.ecfr.gov/current/title-42/section-435.956
+  description: States must use electronic data sources to verify immigration status before requesting paper documentation.
+    FDSH VLP satisfies this requirement.
+  programs:
+  - medicaid
+PolicyExample19:
   id: medicaid-ex-parte-renewal
-  citation: "42 CFR § 435.916"
-  citationUrl: "https://www.ecfr.gov/current/title-42/section-435.916"
-  description: "States must renew Medicaid eligibility using available electronic data before sending a renewal form to beneficiaries. If electronic data is sufficient, no contact with the beneficiary is required."
-  programs: [medicaid]
-
-RegistryPolicyExample20:
+  citation: "42 CFR \xA7 435.916"
+  citationUrl: https://www.ecfr.gov/current/title-42/section-435.916
+  description: States must renew Medicaid eligibility using available electronic data before sending a renewal form to beneficiaries.
+    If electronic data is sufficient, no contact with the beneficiary is required.
+  programs:
+  - medicaid
+PolicyExample20:
   id: medicaid-ex-parte-determination
-  citation: "42 CFR § 435.911"
-  citationUrl: "https://www.ecfr.gov/current/title-42/section-435.911"
-  description: "States must use available electronic data to make eligibility determinations without requiring additional information from the applicant when data is sufficient to establish eligibility."
-  programs: [medicaid]
-
-RegistryPolicyExample21:
+  citation: "42 CFR \xA7 435.911"
+  citationUrl: https://www.ecfr.gov/current/title-42/section-435.911
+  description: States must use available electronic data to make eligibility determinations without requiring additional information
+    from the applicant when data is sufficient to establish eligibility.
+  programs:
+  - medicaid
+PolicyExample21:
   id: medicaid-data-sharing
-  citation: "42 CFR § 435.948"
-  citationUrl: "https://www.ecfr.gov/current/title-42/section-435.948"
-  description: "States must use data from other agencies and programs to verify eligibility information electronically before requesting documentation from applicants."
-  programs: [medicaid]
-
-RegistryPolicyExample22:
+  citation: "42 CFR \xA7 435.948"
+  citationUrl: https://www.ecfr.gov/current/title-42/section-435.948
+  description: States must use data from other agencies and programs to verify eligibility information electronically before
+    requesting documentation from applicants.
+  programs:
+  - medicaid
+PolicyExample22:
   id: snap-gross-income-test
-  citation: "7 CFR § 273.9(a)"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.9"
-  description: "Household gross income must be at or below 130% of the federal poverty level. Most households must pass the gross income test before the net income test is applied."
-  programs: [snap]
-
-RegistryPolicyExample23:
+  citation: "7 CFR \xA7 273.9(a)"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.9
+  description: Household gross income must be at or below 130% of the federal poverty level. Most households must pass the
+    gross income test before the net income test is applied.
+  programs:
+  - snap
+PolicyExample23:
   id: snap-net-income-test
-  citation: "7 CFR § 273.9(b)"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.9"
-  description: "Household net income after allowable deductions must be at or below 100% of the federal poverty level."
-  programs: [snap]
-
-RegistryPolicyExample24:
+  citation: "7 CFR \xA7 273.9(b)"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.9
+  description: Household net income after allowable deductions must be at or below 100% of the federal poverty level.
+  programs:
+  - snap
+PolicyExample24:
   id: snap-resource-limit
-  citation: "7 CFR § 273.8"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.8"
-  description: "Most households may not have countable liquid resources exceeding $2,750. Households with an elderly or disabled member have a limit of $4,250."
-  programs: [snap]
-
-RegistryPolicyExample25:
+  citation: "7 CFR \xA7 273.8"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.8
+  description: Most households may not have countable liquid resources exceeding $2,750. Households with an elderly or disabled
+    member have a limit of $4,250.
+  programs:
+  - snap
+PolicyExample25:
   id: snap-benefit-calculation
-  citation: "7 CFR § 273.10"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.10"
-  description: "Allotment is calculated by multiplying net income by 30% and subtracting from the maximum allotment for household size. The result determines the monthly benefit amount."
-  programs: [snap]
-
-RegistryPolicyExample26:
+  citation: "7 CFR \xA7 273.10"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.10
+  description: Allotment is calculated by multiplying net income by 30% and subtracting from the maximum allotment for household
+    size. The result determines the monthly benefit amount.
+  programs:
+  - snap
+PolicyExample26:
   id: medicaid-concurrent-application
-  citation: "42 CFR § 435.406"
-  citationUrl: "https://www.ecfr.gov/current/title-42/section-435.406"
-  description: "States must allow households to apply for Medicaid and SNAP in a single application. Agencies may not require separate applications for programs administered by the same agency."
-  programs: [medicaid]
-
-RegistryPolicyExample27:
+  citation: "42 CFR \xA7 435.406"
+  citationUrl: https://www.ecfr.gov/current/title-42/section-435.406
+  description: States must allow households to apply for Medicaid and SNAP in a single application. Agencies may not require
+    separate applications for programs administered by the same agency.
+  programs:
+  - medicaid
+PolicyExample27:
   id: snap-notice-of-action
-  citation: "7 CFR § 273.13"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.13"
-  description: "Adverse action notice required for denials and closures. Agency must provide at least 10 days advance notice before an adverse action takes effect, stating the reason and the right to a fair hearing."
-  programs: [snap]
-
-RegistryPolicyExample28:
+  citation: "7 CFR \xA7 273.13"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.13
+  description: Adverse action notice required for denials and closures. Agency must provide at least 10 days advance notice
+    before an adverse action takes effect, stating the reason and the right to a fair hearing.
+  programs:
+  - snap
+PolicyExample28:
   id: snap-fair-hearing-rights
-  citation: "7 CFR § 273.15(a)"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.15"
-  description: "Every household has the right to a fair hearing to contest any agency action affecting their benefits, including delays, denials, reductions, and terminations."
-  programs: [snap]
-
-RegistryPolicyExample29:
+  citation: "7 CFR \xA7 273.15(a)"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.15
+  description: Every household has the right to a fair hearing to contest any agency action affecting their benefits, including
+    delays, denials, reductions, and terminations.
+  programs:
+  - snap
+PolicyExample29:
   id: snap-supervisor-review
-  citation: "7 CFR § 273.15"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.15"
-  description: "Applicants have the right to a fair hearing if the agency delays or denies benefits. Supervisor review is a prerequisite for escalated cases prior to formal hearing proceedings."
-  programs: [snap]
-
-RegistryPolicyExample30:
+  citation: "7 CFR \xA7 273.15"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.15
+  description: Applicants have the right to a fair hearing if the agency delays or denies benefits. Supervisor review is a
+    prerequisite for escalated cases prior to formal hearing proceedings.
+  programs:
+  - snap
+PolicyExample30:
   id: snap-verification-requirements
-  citation: "7 CFR § 273.2(f)"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.2"
-  description: "Before certifying a household, the agency must verify income, identity, and residency. Verification may occur via electronic check, document review, or interview. States may not require verification of items beyond those listed in this section."
-  programs: [snap]
-
-RegistryPolicyExample31:
+  citation: "7 CFR \xA7 273.2(f)"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
+  description: Before certifying a household, the agency must verify income, identity, and residency. Verification may occur
+    via electronic check, document review, or interview. States may not require verification of items beyond those listed
+    in this section.
+  programs:
+  - snap
+PolicyExample31:
   id: medicaid-electronic-verification-first
-  citation: "42 CFR § 435.940"
-  citationUrl: "https://www.ecfr.gov/current/title-42/section-435.940"
-  description: "When verification is required, electronic data sources must be checked before requesting paper documentation from applicants. Applies to citizenship, immigration status, and income verification. Paper documents may only be requested when an electronic check returns inconclusive."
-  programs: [medicaid]
-
-RegistryPolicyExample32:
+  citation: "42 CFR \xA7 435.940"
+  citationUrl: https://www.ecfr.gov/current/title-42/section-435.940
+  description: When verification is required, electronic data sources must be checked before requesting paper documentation
+    from applicants. Applies to citizenship, immigration status, and income verification. Paper documents may only be requested
+    when an electronic check returns inconclusive.
+  programs:
+  - medicaid
+PolicyExample32:
   id: snap-notice-of-eligibility
-  citation: "7 CFR § 273.2(h)"
-  citationUrl: "https://www.ecfr.gov/current/title-7/section-273.2"
-  description: "Written notice of eligibility or denial must be sent to each applicant household within the 30-day processing deadline (7 days for expedited). Notice must include the eligibility decision, benefit amount if approved, or denial reason if denied."
-  programs: [snap]
-
-RegistryPolicyExample33:
+  citation: "7 CFR \xA7 273.2(h)"
+  citationUrl: https://www.ecfr.gov/current/title-7/section-273.2
+  description: Written notice of eligibility or denial must be sent to each applicant household within the 30-day processing
+    deadline (7 days for expedited). Notice must include the eligibility decision, benefit amount if approved, or denial reason
+    if denied.
+  programs:
+  - snap
+PolicyExample33:
   id: medicaid-notice-of-eligibility
-  citation: "42 CFR § 435.917"
-  citationUrl: "https://www.ecfr.gov/current/title-42/section-435.917"
-  description: "Written notice of eligibility, denial, or termination must be sent within the 45-day processing deadline (90 days if a disability determination is required). Notice must state the decision, the reason, and the applicant's right to appeal."
-  programs: [medicaid]
-
-RegistryPolicyExample34:
+  citation: "42 CFR \xA7 435.917"
+  citationUrl: https://www.ecfr.gov/current/title-42/section-435.917
+  description: Written notice of eligibility, denial, or termination must be sent within the 45-day processing deadline (90
+    days if a disability determination is required). Notice must state the decision, the reason, and the applicant's right
+    to appeal.
+  programs:
+  - medicaid
+PolicyExample34:
   id: medicaid-determination-documentation
-  citation: "42 CFR § 431.17(b)(1)"
-  citationUrl: "https://www.ecfr.gov/current/title-42/section-431.17"
-  description: "Each eligibility determination must be documented with the date of the decision, the regulatory basis for the decision, and all information and documents used to support it. Applies to approvals, denials, and terminations."
-  programs: [medicaid]
-
-# ── Domain events ──────────────────────────────────────────────────────────────
-
+  citation: "42 CFR \xA7 431.17(b)(1)"
+  citationUrl: https://www.ecfr.gov/current/title-42/section-431.17
+  description: Each eligibility determination must be documented with the date of the decision, the regulatory basis for the
+    decision, and all information and documents used to support it. Applies to approvals, denials, and terminations.
+  programs:
+  - medicaid
 EventExample1:
   id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-  specversion: "1.0"
+  specversion: '1.0'
   type: workflow.task.created
   source: /workflow
   subject: cf4d9294-3827-5c92-8c66-b53fa6cf44bb
-  time: "2024-01-01T00:00:00.000Z"
+  time: '2024-01-01T00:00:00.000Z'
   datacontenttype: application/json
-  traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+  traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
   data:
     id: cf4d9294-3827-5c92-8c66-b53fa6cf44bb
     name: Opal Hartmann
@@ -262,26 +297,24 @@ EventExample1:
     isExpedited: true
     queueId: ae5ed10f-657d-55f3-b53c-b381ec583a1e
     priority: expedited
-
 EventExample2:
   id: b2c3d4e5-f6a7-8901-bcde-f12345678901
-  specversion: "1.0"
+  specversion: '1.0'
   type: workflow.task.claimed
   source: /workflow
   subject: cf4d9294-3827-5c92-8c66-b53fa6cf44bb
-  time: "2024-01-01T01:00:00.000Z"
+  time: '2024-01-01T01:00:00.000Z'
   datacontenttype: application/json
-  traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+  traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
   data:
     assignedToId: c076fe9f-2209-52c4-967c-6d0172469fea
-
 EventExample3:
   id: eb25bff3-2772-4560-b9ab-54baffd692ed
-  specversion: "1.0"
+  specversion: '1.0'
   type: workflow.task.created
   source: /workflow
   subject: 52a109fb-4667-5e67-a1b3-860ec6865af3
-  time: "2024-01-31T00:00:00.000Z"
+  time: '2024-01-31T00:00:00.000Z'
   datacontenttype: application/json
   traceparent: null
   data:
@@ -293,14 +326,13 @@ EventExample3:
     isExpedited: false
     queueId: f46c5c87-b1fe-55c2-9166-873c2748d4f4
     priority: high
-
 EventExample4:
   id: 7bb57418-bd6e-4dd7-ba4c-63dd29c9d74d
-  specversion: "1.0"
+  specversion: '1.0'
   type: workflow.task.claimed
   source: /workflow
   subject: 52a109fb-4667-5e67-a1b3-860ec6865af3
-  time: "2024-01-31T01:00:00.000Z"
+  time: '2024-01-31T01:00:00.000Z'
   datacontenttype: application/json
   traceparent: null
   data:

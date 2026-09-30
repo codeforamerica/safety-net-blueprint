@@ -1,0 +1,84 @@
+asyncapi: 3.0.0
+info:
+  title: Intake Domain Events
+  version: 0.1.0
+  x-status: draft
+  description: |
+    Event catalog for the Intake domain.
+    Generated from intake-state-machine.yaml — add payload schemas below.
+channels:
+  ca.intake.application.closed:
+    address: ca.intake.application.closed
+    messages:
+      ApplicationClosed:
+        $ref: "#/components/messages/ApplicationClosedMessage"
+  ca.intake.application.review-reminder:
+    address: ca.intake.application.review-reminder
+    messages:
+      ApplicationReviewReminder:
+        $ref: "#/components/messages/ApplicationReviewReminderMessage"
+  ca.intake.application.submitted:
+    address: ca.intake.application.submitted
+    messages:
+      ApplicationSubmitted:
+        $ref: "#/components/messages/ApplicationSubmittedMessage"
+  ca.intake.application.withdrawn:
+    address: ca.intake.application.withdrawn
+    messages:
+      ApplicationWithdrawn:
+        $ref: "#/components/messages/ApplicationWithdrawnMessage"
+components:
+  messages:
+    ApplicationReviewReminderMessage:
+      name: ca.intake.application.review-reminder
+      summary: Emitted when an application has been awaiting caseworker review for too long.
+      payload:
+        $ref: "#/components/schemas/ApplicationReviewReminderEvent"
+    ApplicationClosedMessage:
+      name: ca.intake.application.closed
+      summary: TODO — describe when this event is emitted and who consumes it.
+      payload:
+        $ref: "#/components/schemas/ApplicationClosedEvent"
+    ApplicationSubmittedMessage:
+      name: ca.intake.application.submitted
+      summary: TODO — describe when this event is emitted and who consumes it.
+      payload:
+        $ref: "#/components/schemas/ApplicationSubmittedEvent"
+    ApplicationWithdrawnMessage:
+      name: ca.intake.application.withdrawn
+      summary: TODO — describe when this event is emitted and who consumes it.
+      payload:
+        $ref: "#/components/schemas/ApplicationWithdrawnEvent"
+  schemas:
+    ApplicationReviewReminderEvent:
+      allOf:
+        - $ref: ../../base/schemas/events.yaml#/$defs/Event
+        - type: object
+          properties:
+            type:
+              type: string
+              const: ca.intake.application.review-reminder
+    ApplicationClosedEvent:
+      allOf:
+        - $ref: ../../base/schemas/events.yaml#/$defs/Event
+        - type: object
+          properties:
+            type:
+              type: string
+              const: ca.intake.application.closed
+    ApplicationSubmittedEvent:
+      allOf:
+        - $ref: ../../base/schemas/events.yaml#/$defs/Event
+        - type: object
+          properties:
+            type:
+              type: string
+              const: ca.intake.application.submitted
+    ApplicationWithdrawnEvent:
+      allOf:
+        - $ref: ../../base/schemas/events.yaml#/$defs/Event
+        - type: object
+          properties:
+            type:
+              type: string
+              const: ca.intake.application.withdrawn

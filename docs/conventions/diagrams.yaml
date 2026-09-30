@@ -1,0 +1,26 @@
+# Design Conventions — Diagram Colors
+# Part of the blueprint conventions. See conventions/ for the full set.
+#
+# Use this palette for all diagrams. Apply the colors semantically; do not
+# introduce colors outside it.
+
+version: "1.0"
+
+diagrams:
+  palette:
+    dark_blue:    { dark: "#2B1A78", mid: "#5650BE", light: "#C2C0E8" }
+    rich_red:     { dark: "#AF121D", mid: "#EF6C75", light: "#F9C8CB" }
+    light_blue:   { dark: "#A1B4EA", mid: "#C9D4F3", light: "#E6EBF9" }
+    warm_yellow:  { dark: "#FFB446", mid: "#FFD699", light: "#FFF3E0" }
+    deep_green:   { dark: "#006152", mid: "#00AD93", light: "#E2F9F6" }
+    sand:         { dark: "#E9CCBE", mid: "#F7EDE8", light: "#F5F0ED" }
+    black:        { dark: "#000000", mid: "#F3F3F3", light: "#FFFFFF" }
+
+  semantics:
+    dark_blue: Primary system and blueprint elements, event bus, core infrastructure
+    rich_red: Problems, broken coupling, error states
+    warm_yellow: Legacy systems, warnings, cautionary states
+    deep_green: Success, migrated or healthy states, consumers that are decoupled
+    light_blue: Phase and column backgrounds, secondary UI elements
+    sand: Neutral structural elements, borders, dividers
+    black: Text (#000000), backgrounds (#F3F3F3), white space (#FFFFFF)

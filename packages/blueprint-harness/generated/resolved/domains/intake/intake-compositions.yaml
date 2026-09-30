@@ -1,0 +1,74 @@
+$schema: compositions-schema.yaml
+version: "1.0"
+domain: intake
+compositions:
+  applicationSummary:
+    resource: applications
+    fields:
+      - id
+      - referenceId
+      - status
+      - programsAppliedFor
+      - channel
+      - submittedAt
+    endpoint:
+      path: /applications/{applicationId}/summary
+      parentLink: true
+    include:
+      members:
+        resource: application-members
+        bind: applicationId
+        fields:
+          - id
+          - firstName
+          - lastName
+          - dateOfBirth
+          - relationship
+          - incomeSource
+  applicationReview:
+    compositeType: sectionView
+    resource: applications
+    fields:
+      - programsAppliedFor
+      - status
+    include:
+      members:
+        resource: application-members
+        bind: applicationId
+        fields:
+          - id
+          - firstName
+          - lastName
+    endpoint:
+      path: /applications/{applicationId}/review
+      parentLink: true
+    sections:
+      demographics:
+        resource: application-members
+        bind: applicationId
+        links: true
+        index:
+          fields:
+            - id
+            - firstName
+            - lastName
+            - dateOfBirth
+      contact:
+        resource: applications
+        fields:
+          - contactInfo
+    state:
+      schema:
+        name: ReviewProgress
+        type: object
+        additionalProperties: false
+        properties:
+          status:
+            type: string
+            description: Caseworker review status for this section.
+            enum:
+              - not_started
+              - in_progress
+              - complete
+              - flagged
+            default: not_started
