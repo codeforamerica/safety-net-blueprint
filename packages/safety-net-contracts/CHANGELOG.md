@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [912c3f0]
+  - @codeforamerica/blueprint-mock-server@0.3.0
+
 ## 0.1.1
 
 ### Patch Changes
