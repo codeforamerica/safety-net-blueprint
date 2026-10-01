@@ -46,7 +46,7 @@ safety-net-blueprint/
 │   │   ├── config.js               # Canonical path configuration (import paths from here)
 │   │   ├── src/                    # Server implementation
 │   │   │   ├── handlers/           # CRUD, transition, upload handlers
-│   │   │   ├── database-manager.js
+│   │   │   ├── stores/             # Store contract, SQLite and in-memory implementations
 │   │   │   ├── state-machine-engine.js
 │   │   │   ├── seeder.js
 │   │   │   └── route-generator.js
@@ -153,7 +153,7 @@ Not every domain has every artifact — only the ones relevant to the domain.
 |---------|----------|---------|------------------|
 | `blueprint-core` | `@codeforamerica/blueprint-core` | Framework library | `js-yaml`, `ajv`, `@apidevtools/json-schema-ref-parser` |
 | `blueprint-cli` | `@codeforamerica/blueprint-cli` | CLI scripts | `blueprint-core`, `@hey-api/openapi-ts`, `@redocly/cli` |
-| `blueprint-mock-server` | `@codeforamerica/blueprint-mock-server` | Mock API server | `blueprint-core`, `express`, `better-sqlite3` |
+| `blueprint-mock-server` | `@codeforamerica/blueprint-mock-server` | Mock API server | `blueprint-core`, `express`, `better-sqlite3` (only the SQLite store loads it) |
 | `blueprint-rules-engine` | `@codeforamerica/blueprint-rules-engine` | CEL evaluator + browser bundle | `js-yaml`, `cel-js` |
 | `blueprint-explorer` | `@codeforamerica/blueprint-explorer` | Explorer build | `blueprint-core`, `blueprint-rules-engine` |
 | `safety-net-contracts` | `@codeforamerica/blueprint-safety-net-contracts` | Domain contracts | `blueprint-cli` (devDep) |

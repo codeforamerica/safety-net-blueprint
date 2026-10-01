@@ -246,7 +246,7 @@ export function clearAllStubs() {
  * For all other events: fires the stub's respond event, merging trigger
  * data with stub-specified overrides.
  */
-function dispatchStubResponse(stub, envelope) {
+function dispatchStubResponse(stub, envelope, store) {
   const eventType = envelope.type || '';
 
   if (eventType === TIMER_REQUESTED) {
@@ -267,7 +267,7 @@ function dispatchStubResponse(stub, envelope) {
       subject: envelope.subject,
       causationid: envelope.id,
       data: firedData,
-    });
+    }, store);
     console.log(`[stub] matched ${stub.id} → fired ${callbackEvent} (timer callback)`);
     return;
   }
@@ -300,12 +300,41 @@ function dispatchStubResponse(stub, envelope) {
     subject: subject !== undefined ? subject : envelope.subject,
     causationid: envelope.id,
     data: Object.keys(resolvedData).length > 0 ? resolvedData : null,
-  });
+  }, store);
   console.log(`[stub] matched ${stub.id} → fired ${fullType}`);
 }
 
-// Check every domain event for a matching stub and dispatch the response.
-eventBus.on('domain-event', (envelope) => {
-  const stub = matchAndPop(envelope.type, envelope);
-  if (stub) dispatchStubResponse(stub, envelope);
-});
+/**
+ * Start dispatching stub responses for domain events.
+ *
+ * Called at startup rather than subscribed on import, because dispatching a
+ * stub emits an event and emitting writes through a store — so the listener
+ * needs one, and a module-load side effect has nothing to be given. Making it
+ * explicit also means importing this module no longer attaches a listener as a
+ * side effect of being imported, which is what let a stray `import` change
+ * behaviour.
+ *
+ * @param {import('./stores/contract.js').Store} store
+ * @returns {() => void} Unsubscribe, for tests that need a clean bus.
+ */
+let stubDispatchListener = null;
+
+export function subscribeStubDispatch(store) {
+  // Idempotent, because startMockServer can run more than once in a process —
+  // the test runner does it per suite. Subscribing again would leave two
+  // listeners on the bus, and a single event would then pop two stubs, which
+  // is how the FIFO integration test caught this. The previous module-load
+  // subscription was immune by accident; an explicit one has to say so.
+  if (stubDispatchListener) eventBus.off('domain-event', stubDispatchListener);
+
+  stubDispatchListener = (envelope) => {
+    const stub = matchAndPop(envelope.type, envelope);
+    if (stub) dispatchStubResponse(stub, envelope, store);
+  };
+  eventBus.on('domain-event', stubDispatchListener);
+
+  return () => {
+    eventBus.off('domain-event', stubDispatchListener);
+    stubDispatchListener = null;
+  };
+}

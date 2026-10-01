@@ -15,7 +15,7 @@ import { extractCallerRoles } from '../auth-context.js';
  * @param {Array} [slaTypes] - SLA types from discoverSlaTypes()
  * @returns {Function} Express handler
  */
-export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, slaTypes = [], machine = null) {
+export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, slaTypes = [], machine = null, { store } = {}) {
   return (req, res) => {
     try {
       const httpStub = matchAndPopHttp(req.method, req.path);
@@ -39,6 +39,7 @@ export function createTransitionHandler(resourceName, stateMachine, trigger, par
       const traceparent = req.headers['traceparent'] || null;
 
       const { success, result, status, error } = executeTransition({
+        store,
         resourceName,
         resourceId,
         trigger,

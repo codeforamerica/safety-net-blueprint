@@ -76,10 +76,11 @@ export async function setupFunctional() {
 
 /**
  * Start the mock server pointing at the resolved fixtures directory.
+ * @param {'sqlite'|'memory'|null} [storeKind] - Where resources are held.
  * @returns {Promise<void>}
  */
-export async function startFunctionalServer() {
-  await startMockServer([resolvedDir]);
+export async function startFunctionalServer(storeKind = null) {
+  await startMockServer([resolvedDir], null, null, storeKind);
 }
 
 /**

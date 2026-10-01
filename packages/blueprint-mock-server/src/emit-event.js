@@ -9,7 +9,6 @@
  */
 
 import { randomUUID } from 'crypto';
-import { create, insertResource } from './database-manager.js';
 import { eventBus } from './event-bus.js';
 
 /**
@@ -24,7 +23,7 @@ import { eventBus } from './event-bus.js';
  * @param {Object} envelope - CloudEvents 1.0 object with at minimum `type` and `specversion`
  * @returns {Object} The stored event record
  */
-export function emitEventEnvelope(envelope) {
+export function emitEventEnvelope(envelope, store) {
   const record = {
     specversion: '1.0',
     datacontenttype: 'application/json',
@@ -36,7 +35,7 @@ export function emitEventEnvelope(envelope) {
   // but not persisted — they are not domain events observable via /platform/events.
   const isInfrastructureEvent = record.type?.startsWith('scheduling.');
   if (!isInfrastructureEvent) {
-    insertResource('events', record);
+    store.insertResource('events', record);
   }
   eventBus.emit('domain-event', record);
   return record;
@@ -75,7 +74,7 @@ function deriveAuthtype(callerRoles) {
  * @param {string|null} [options.now]    - ISO timestamp. Defaults to current time.
  * @returns {Object} The stored event record
  */
-export function emitEvent({ domain, object, action, resourceId, subject, source, data = null, callerId = null, callerRoles = [], traceparent = null, causationid = null, now = null }) {
+export function emitEvent({ domain, object, action, resourceId, subject, source, data = null, callerId = null, callerRoles = [], traceparent = null, causationid = null, now = null, store }) {
   const timestamp = now || new Date().toISOString();
   const normalizedDomain = domain.replace(/-/g, '_');
   const normalizedObject = object.replace(/-/g, '_');
@@ -98,7 +97,7 @@ export function emitEvent({ domain, object, action, resourceId, subject, source,
     data: data ?? null,
   };
 
-  const stored = create('events', envelope);
+  const stored = store.create('events', envelope);
   eventBus.emit('domain-event', stored);
   return stored;
 }

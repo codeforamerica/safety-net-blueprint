@@ -20,6 +20,10 @@ import { startMockServer, stopServer, isServerRunning } from '@codeforamerica/bl
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const args = process.argv.slice(2);
+
+// Which store the mock server this runner boots should use.
+const storeArg = args.find((a) => a.startsWith('--store='));
+const storeKind = storeArg ? storeArg.split('=')[1] : null;
 const contractsArg   = args.find(a => a.startsWith('--contracts='));
 const seedArg        = args.find(a => a.startsWith('--seed='));
 const clientsArg     = args.find(a => a.startsWith('--clients='));
@@ -120,7 +124,7 @@ async function runAllTests() {
     const alreadyRunning = await isServerRunning().catch(() => false);
     if (!alreadyRunning) {
       console.log('Starting mock server...');
-      await startMockServer([contractsDir], seedDir);
+      await startMockServer([contractsDir], seedDir, null, storeKind);
       await new Promise(res => setTimeout(res, 1500));
       console.log('Mock server started\n');
     } else {

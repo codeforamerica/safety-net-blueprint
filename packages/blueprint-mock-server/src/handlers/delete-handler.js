@@ -2,7 +2,6 @@
  * Handler for DELETE /resources/{id}
  */
 
-import { findById, deleteResource } from '../database-manager.js';
 import { emitEvent } from '../emit-event.js';
 import { isConfigManaged } from '../config-registry.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
@@ -15,7 +14,7 @@ import { extractCallerRoles } from '../auth-context.js';
  * @param {Object} endpoint - Endpoint metadata
  * @returns {Function} Express handler
  */
-export function createDeleteHandler(apiMetadata, endpoint) {
+export function createDeleteHandler(apiMetadata, endpoint, { store } = {}) {
   const paramName = extractPrimaryParam(endpoint.path) ?? 'id';
   return (req, res) => {
     try {
@@ -30,7 +29,7 @@ export function createDeleteHandler(apiMetadata, endpoint) {
       const resourceId = req.params[paramName] || req.params.id;
 
       // Check if resource exists
-      const existing = findById(endpoint.collectionName, resourceId);
+      const existing = store.findById(endpoint.collectionName, resourceId);
       if (!existing) {
         return res.status(404).json({
           code: 'NOT_FOUND',
@@ -47,13 +46,14 @@ export function createDeleteHandler(apiMetadata, endpoint) {
       }
 
       // Delete the resource
-      deleteResource(endpoint.collectionName, resourceId);
+      store.deleteResource(endpoint.collectionName, resourceId);
 
       // Auto-emit deleted event
       try {
         const domain = apiMetadata.serverBasePath.replace(/^\//, '');
         const object = endpoint.collectionName.replace(/s$/, '');
         emitEvent({
+        store,
           domain,
           object,
           action: 'deleted',

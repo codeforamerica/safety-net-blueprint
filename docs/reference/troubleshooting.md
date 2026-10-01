@@ -29,6 +29,8 @@ node --version
 gyp ERR! build error
 ```
 
+**Workaround:** run the mock server without the native module — `npm run mock:start -- --store=memory --spec=<dir>`, or `MOCK_STORE=memory`. Resources are held in memory, so `better-sqlite3` is never loaded. The server behaves identically otherwise; the whole test suite passes against either store. You still need the build tools for anything that installs the package from source.
+
 **Solution:** Install build tools.
 
 **macOS:**

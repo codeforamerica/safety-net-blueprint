@@ -13,10 +13,12 @@ import { resolve } from 'path';
 import { resolveUploadsDir } from '../src/handlers/document-upload-handler.js';
 import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
+import { subscribeStubDispatch } from '../src/mock-stub-engine.js';
+import { createMemoryStore } from '../src/stores/memory-store.js';
+import { createSqliteStore } from '../src/stores/sqlite-store.js';
 import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes, registerRulesRoutes, buildRulesIndex } from '../src/route-generator.js';
 import { initRulesIndex } from '../src/state-machine-engine.js';
 import { registerEventSubscriptions } from '../src/event-subscription.js';
-import { closeAll, clearAllDatabases, insertResource, findById } from '../src/database-manager.js';
 import { seedAllDatabases } from '../src/seeder.js';
 import { validateJSON } from '../src/validator.js';
 import { createSseHandler } from '../src/handlers/sse-handler.js';
@@ -42,6 +44,13 @@ Options:
   --seed=<dir>      Directory containing seed data files (default: same as --spec)
   --uploads=<dir>   Directory to store uploaded files (default: blueprint-mock-server/uploads)
                     Override with MOCK_UPLOADS_DIR env var
+  --store=<kind>    Where resources are held: sqlite (default) or memory
+                    sqlite keeps one .db file per collection, so data survives a
+                    restart and can be inspected with the sqlite3 CLI. memory
+                    holds nothing after the process exits — faster, and the same
+                    store the browser build uses. Note that --detach --store=memory
+                    gives a background server whose data disappears with it.
+                    Override with MOCK_STORE env var
   --detach          Start server in the background (logs to mock-server.log)
   --log=<path>      Log file or directory for --detach output (default: spec dir)
   --stop            Stop the running mock server
@@ -51,6 +60,7 @@ Environment:
   MOCK_SERVER_HOST    Host to bind to (default: localhost)
   MOCK_SERVER_PORT    Port to listen on (default: 1080)
   MOCK_UPLOADS_DIR    Override uploads directory (takes precedence over --uploads)
+  MOCK_STORE          sqlite | memory (takes precedence over --store)
 
 Examples:
   npm run mock:start
@@ -71,7 +81,8 @@ function parseSpecDirs() {
   const unknown = args.filter(a =>
     a !== '--help' && a !== '-h' &&
     a !== '--detach' && a !== '--stop' &&
-    !a.startsWith('--spec=') && !a.startsWith('--seed=') && !a.startsWith('--uploads=') && !a.startsWith('--log=')
+    !a.startsWith('--spec=') && !a.startsWith('--seed=') && !a.startsWith('--uploads=') &&
+    !a.startsWith('--log=') && !a.startsWith('--store=')
   );
   if (unknown.length > 0) {
     console.error(`Error: Unknown argument(s): ${unknown.join(', ')}`);
@@ -95,18 +106,30 @@ function parseSpecDirs() {
   const uploadsArg = args.find(a => a.startsWith('--uploads='));
   const uploadsDir = uploadsArg ? resolve(uploadsArg.split('=')[1]) : null;
 
-  return { specDirs, seedDir, uploadsDir };
+  // Env wins over the flag, matching how MOCK_UPLOADS_DIR overrides --uploads.
+  const storeArg = args.find(a => a.startsWith('--store='));
+  const storeKind = process.env.MOCK_STORE || (storeArg ? storeArg.split('=')[1] : 'sqlite');
+  if (storeKind !== 'sqlite' && storeKind !== 'memory') {
+    console.error(`Error: --store must be 'sqlite' or 'memory', got '${storeKind}'`);
+    process.exit(1);
+  }
+
+  return { specDirs, seedDir, uploadsDir, storeKind };
 }
 
 let expressServer = null;
+/** The store this process is using; closed on shutdown. */
+let store = null;
 
 /**
  * Start the mock server
  * @param {string[]|null} specDirs - Spec directories to load. Defaults to parseSpecDirs() (from process.argv).
  * @param {string|null} seedDir - Directory containing seed data files. Defaults to each specDir.
  * @param {string|null} uploadsDir - Directory to store uploaded files. Defaults to blueprint-mock-server/uploads.
+ * @param {'sqlite'|'memory'|null} storeKind - Where resources are held. Defaults to
+ *   --store / MOCK_STORE, and to sqlite when neither is given.
  */
-async function startMockServer(specDirs = null, seedDir = null, uploadsDir = null) {
+async function startMockServer(specDirs = null, seedDir = null, uploadsDir = null, storeKind = null) {
   console.log('='.repeat(70));
   console.log('🚀 Starting Mock API Server');
   console.log('='.repeat(70));
@@ -118,6 +141,24 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
       specDirs = parsed.specDirs;
       seedDir = seedDir ?? parsed.seedDir;
       uploadsDir = uploadsDir ?? parsed.uploadsDir;
+      storeKind = storeKind ?? parsed.storeKind;
+    }
+
+    // Resolved here as well as in parseSpecDirs, because a caller that passes
+    // specDirs explicitly — the test runner does — skips that branch entirely,
+    // so MOCK_STORE was being read only when the CLI parsed its own arguments.
+    // The whole functional suite appeared to pass against the in-memory store
+    // while silently running on SQLite.
+    storeKind = process.env.MOCK_STORE || storeKind || 'sqlite';
+    if (storeKind !== 'sqlite' && storeKind !== 'memory') {
+      throw new Error(`Unknown store '${storeKind}' — expected 'sqlite' or 'memory'`);
+    }
+
+    // Choose the store before anything seeds or registers a route. SQLite
+    // stays the default so `mock:start` behaves as it always has.
+    store = storeKind === 'memory' ? createMemoryStore() : createSqliteStore();
+    if (storeKind === 'memory') {
+      console.log('  Store: in-memory (data will not survive this process)');
     }
     let apiSpecs = [];
     let allStateMachines = [];
@@ -129,7 +170,7 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
     let allGraphs = [];
     let allPolicies = {};
     for (const specsDir of specDirs) {
-      const result = await performSetup({ specsDir, seedDir, verbose: true });
+      const result = await performSetup({ specsDir, seedDir, verbose: true, store });
       apiSpecs = apiSpecs.concat(result.apiSpecs);
       allStateMachines = allStateMachines.concat(result.stateMachines);
       allSlaTypes = allSlaTypes.concat(result.slaTypes);
@@ -181,7 +222,7 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
         });
       }
       try {
-        const stored = emitEventEnvelope(event);
+        const stored = emitEventEnvelope(event, store);
         res.status(201).json(stored);
       } catch (err) {
         console.error('Failed to emit injected event:', err.message);
@@ -240,7 +281,7 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
     // Config-managed items (queues, services, document types) are restored; all other
     // data is wiped. Useful for putting tests into a known-clean state without restarting.
     app.post('/mock/reset', (req, res) => {
-      clearAllDatabases();
+      for (const collection of Object.keys(store.snapshot())) store.clearAll(collection);
       clearAllStubs();
       for (const config of allConfigs) {
         for (const [catalogKey, entries] of Object.entries(config.catalogs)) {
@@ -249,13 +290,13 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
             for (const key of Object.keys(data)) {
               if (key.startsWith('x-')) delete data[key];
             }
-            insertResource(catalogKey, { ...data, source: 'system' });
+            store.insertResource(catalogKey, { ...data, source: 'system' });
             registerConfigManaged(catalogKey, data.id);
           }
         }
       }
       for (const [id, policy] of Object.entries(allPolicies)) {
-        insertResource('registry-policies', { id, ...policy, source: 'system' });
+        store.insertResource('registry-policies', { id, ...policy, source: 'system' });
         registerConfigManaged('registry-policies', id);
       }
       res.status(204).end();
@@ -265,21 +306,25 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
     // Reseed endpoint — re-inserts seed data without clearing anything else.
     // Useful after a reset when tests need baseline data present.
     app.post('/mock/reseed', (req, res) => {
-      seedAllDatabases(specDirs, seedDir);
+      seedAllDatabases(specDirs, seedDir, store);
       res.status(204).end();
     });
     console.log('  POST   /mock/reseed - Re-seed all collections from seed files');
 
 
     // Register event subscriptions
-    registerEventSubscriptions(allStateMachines, allSlaTypes, apiSpecs);
+    registerEventSubscriptions(allStateMachines, allSlaTypes, apiSpecs, store);
+
+    // Stub dispatch is subscribed here rather than on import, since firing a
+    // stub emits an event and emitting writes through a store.
+    subscribeStubDispatch(store);
 
     // Enrich service call creation with catalog-derived fields (after schema validation).
     // Copies serviceType and callMode from the referenced ExternalService, sets status to pending.
     // Uses req.enrichmentData so these fields bypass ExternalServiceCallCreate validation
     // (they're server-derived, not client-provided) but are stored in the resource.
     app.post('/data-exchange/service-calls', (req, res, next) => {
-      const service = req.body?.serviceId ? findById('services', req.body.serviceId) : null;
+      const service = req.body?.serviceId ? store.findById('services', req.body.serviceId) : null;
       if (service) {
         req.enrichmentData = {
           serviceType: service.serviceType,
@@ -300,7 +345,7 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
     // would otherwise register for the same composition-generated paths.
     if (allCompositions.length > 0) {
       console.log('\nRegistering composition routes...');
-      registerCompositionRoutes(app, allCompositions, apiSpecs);
+      registerCompositionRoutes(app, allCompositions, apiSpecs, { store });
     }
 
     // Register rules evaluation routes and initialize the state machine rules index
@@ -310,10 +355,10 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
       initRulesIndex(buildRulesIndex(allGraphs));
     }
 
-    const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics, resolvedUploadsDir);
+    const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics, resolvedUploadsDir, { store });
 
     // Register state machine RPC routes
-    const rpcEndpoints = registerStateMachineRoutes(app, allStateMachines, apiSpecs, allSlaTypes);
+    const rpcEndpoints = registerStateMachineRoutes(app, allStateMachines, apiSpecs, allSlaTypes, { store });
 
 
     // 404 handler for undefined routes
@@ -430,7 +475,7 @@ async function stopServer(exitProcess = true) {
 
   try {
     // Close databases
-    closeAll();
+    store?.close();
     console.log('✓ Databases closed');
 
     // Stop Express server

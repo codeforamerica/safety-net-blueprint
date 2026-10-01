@@ -4,9 +4,12 @@
  */
 
 import { resolve } from 'path';
+import { createSqliteStore } from '../src/stores/sqlite-store.js';
+
+// One store for the life of this command.
+const store = createSqliteStore();
 import { performSetup, displaySetupSummary } from '../src/setup.js';
 import { loadAllSpecs } from '../src/spec-loader.js';
-import { clearAll, closeAll } from '../src/database-manager.js';
 
 function parseSpecDir() {
   const args = process.argv.slice(2);
@@ -66,7 +69,7 @@ async function reset() {
     console.log('\nClearing all databases...');
     for (const api of apiSpecs) {
       try {
-        clearAll(api.name);
+        store.clearAll(api.name);
         console.log(`  ✓ Cleared ${api.name}`);
       } catch (error) {
         console.warn(`  Warning: Could not clear ${api.name}:`, error.message);
@@ -74,7 +77,7 @@ async function reset() {
     }
     
     // Reseed databases using shared setup
-    const { summary } = await performSetup({ specsDir, verbose: false });
+    const { summary } = await performSetup({ specsDir, verbose: false, store });
     
     // Display summary
     console.log('='.repeat(70));
@@ -87,12 +90,12 @@ async function reset() {
     console.log('\nRestart the mock server if it is running.\n');
     
     // Close databases
-    closeAll();
+    store.close();
     
   } catch (error) {
     console.error('\n❌ Reset failed:', error.message);
     console.error(error);
-    closeAll();
+    store.close();
     process.exit(1);
   }
 }

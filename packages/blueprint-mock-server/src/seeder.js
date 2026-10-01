@@ -4,7 +4,6 @@
 
 import { discover, generate, load } from '@codeforamerica/blueprint-core';
 import { deriveCollectionName } from './collection-utils.js';
-import { insertResource, clearAll } from './database-manager.js';
 import { resolveTimeTokens } from './time-tokens.js';
 
 /**
@@ -89,7 +88,7 @@ function collectionSchemas(docs) {
  *   When null, seeding is skipped and all collections start empty.
  * @returns {Object} Summary of seeded data
  */
-export function seedAllDatabases(specsDir, seedDir) {
+export function seedAllDatabases(specsDir, seedDir, store) {
   // Core groups the records by the schema each one exemplifies — a fact the
   // documents state. Which collection holds a given schema is this server's
   // business, and the contract answers it: a collection endpoint's list
@@ -108,7 +107,7 @@ export function seedAllDatabases(specsDir, seedDir) {
     collections.map((name) => [name, bySchema[schemaOf.get(name)] ?? []])
   );
 
-  for (const name of collections) clearAll(name);
+  for (const name of collections) store.clearAll(name);
 
   if (!seedDir) {
     console.log('\nNo --seed directory specified; databases will be empty.');
@@ -143,7 +142,7 @@ export function seedAllDatabases(specsDir, seedDir) {
           const timestamp = new Date(baseTimestamp + minutesOffset).toISOString();
           resource.createdAt = timestamp;
           resource.updatedAt = timestamp;
-          insertResource(collectionName, resource);
+          store.insertResource(collectionName, resource);
           seededCount++;
         } catch (error) {
           console.warn(`  Warning: Could not seed resource ${resources[i].data?.id}: ${error.message}`);

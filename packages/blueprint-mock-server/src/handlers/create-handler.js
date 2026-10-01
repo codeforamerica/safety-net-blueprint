@@ -1,8 +1,7 @@
 /**
- * Handler for POST /resources (create)
+ * Handler for POST /resources (store.create)
  */
 
-import { create, update, findById } from '../database-manager.js';
 import { validate, createErrorResponse } from '../validator.js';
 import { hasConfigManagedResources } from '../config-registry.js';
 import { applyEffects, applySteps } from '../state-machine-engine.js';
@@ -16,14 +15,14 @@ import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extra
 
 
 /**
- * Create create handler for a resource
+ * Create store.create handler for a resource
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
  * @param {Object} endpoint - Endpoint metadata
  * @param {string} baseUrl - Base URL for Location header
  * @param {Object|null} stateMachine - State machine contract (null for APIs without one)
  * @returns {Function} Express handler
  */
-export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null, options = {}) {
+export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null, { store } = {}, options = {}) {
   return (req, res) => {
     try {
       // HTTP stub intercept — if a stub is registered for this method + path, return it
@@ -64,13 +63,13 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       // at the database layer via registerCollectionDefaults / extractRequiredDefaults.
       const createData = mergedBody;
 
-      const resource = create(endpoint.collectionName, createData);
+      const resource = store.create(endpoint.collectionName, createData);
 
       // Mark runtime-created resources as user-sourced when the collection
       // also has config-managed (system) entries, so consumers can distinguish them
       if (hasConfigManagedResources(endpoint.collectionName)) {
         resource.source = 'user';
-        update(endpoint.collectionName, resource.id, { source: 'user' });
+        store.update(endpoint.collectionName, resource.id, { source: 'user' });
       }
 
       // Apply initial state from state machine if no status was supplied in the body.
@@ -78,7 +77,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const initialState = machine?.initialState ?? stateMachine?.initialState;
       if (initialState && !resource.status) {
         resource.status = initialState;
-        update(endpoint.collectionName, resource.id, { status: initialState });
+        store.update(endpoint.collectionName, resource.id, { status: initialState });
       }
 
 
@@ -117,7 +116,8 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         const entities = resolveContextLayers(
           [stateMachine?.context, machine?.context, onCreate?.context],
           resource,
-          baseContext
+          baseContext,
+          store
         );
         if (entities === null) {
           console.error('onCreate: required context binding failed — skipping trigger');
@@ -126,18 +126,18 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         const context = { ...baseContext, entities };
 
         const { pendingCreates, pendingProcedures } = onCreate.steps?.length > 0
-          ? applySteps(onCreate.steps, resource, context)
+          ? applySteps(onCreate.steps, resource, context, store)
           : applyEffects(onCreate.effects || [], resource, context);
 
         const inlineRules = buildInlineRules(stateMachine, machine);
-        executeProcedures(pendingProcedures, resource, inlineRules, context);
+        executeProcedures(pendingProcedures, resource, inlineRules, context, store);
 
         // Execute pending creates
         for (const { entity, data } of pendingCreates) {
           try {
-            create(entity, data);
+            store.create(entity, data);
           } catch (createError) {
-            console.error(`Failed to create ${entity}:`, createError.message);
+            console.error(`Failed to store.create ${entity}:`, createError.message);
           }
         }
 
@@ -155,7 +155,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         }
 
         if (Object.keys(diff).length > 0) {
-          update(endpoint.collectionName, resource.id, diff);
+          store.update(endpoint.collectionName, resource.id, diff);
           // Refresh resource with updated timestamps
           Object.assign(resource, diff);
         }
@@ -165,6 +165,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const callerRoles = extractCallerRoles(req);
       try {
         emitEvent({
+        store,
           domain,
           object,
           action: 'created',
@@ -186,13 +187,13 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
       // Re-read from DB so the response reflects any mutations made by event subscriptions
       // (e.g. assignToQueue running synchronously in response to the created event)
-      const fresh = findById(endpoint.collectionName, resource.id) || resource;
+      const fresh = store.findById(endpoint.collectionName, resource.id) || resource;
 
       // Apply x-relationship expand, links-only, and x-derived transformations (same as GET handler)
       const expandFields = extractExpandFields(endpoint.responseSchema);
       const linksFields = extractLinksFields(endpoint.responseSchema);
       const derivedFields = extractDerivedFields(endpoint.responseSchema);
-      let responseBody = expandFields.length > 0 ? applyExpand(fresh, expandFields, findById) : fresh;
+      let responseBody = expandFields.length > 0 ? applyExpand(fresh, expandFields, store.findById) : fresh;
       if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
       if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
 

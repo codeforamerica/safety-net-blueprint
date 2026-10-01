@@ -4,8 +4,11 @@
  */
 
 import { resolve } from 'path';
+import { createSqliteStore } from '../src/stores/sqlite-store.js';
+
+// One store for the life of this command.
+const store = createSqliteStore();
 import { performSetup, displaySetupSummary } from '../src/setup.js';
-import { closeAll } from '../src/database-manager.js';
 
 async function setup() {
   const args = process.argv.slice(2);
@@ -50,7 +53,7 @@ Flags:
 
   try {
     // Perform setup (load specs and seed databases)
-    const { summary } = await performSetup({ specsDir, seedDir, verbose: true });
+    const { summary } = await performSetup({ specsDir, seedDir, verbose: true, store });
     
     // Display summary
     displaySetupSummary(summary);
@@ -59,12 +62,12 @@ Flags:
     console.log('\nStart the mock server with: npm run mock:start\n');
     
     // Close databases
-    closeAll();
+    store.close();
     
   } catch (error) {
     console.error('\n❌ Setup failed:', error.message);
     console.error(error);
-    closeAll();
+    store.close();
     process.exit(1);
   }
 }

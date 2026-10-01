@@ -5,6 +5,12 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
+import { createMemoryStore } from '../../src/stores/memory-store.js';
+
+// A store of this file's own, rather than one shared through a module-level
+// singleton. In memory because these cases do not need a database — and
+// because a fresh one per file is isolation they did not have before.
+const store = createMemoryStore();
 import {
   resolveValue,
   evaluateGuard,
@@ -16,7 +22,6 @@ import {
   initRulesIndex,
 } from '../../src/state-machine-engine.js';
 import { generate } from '@codeforamerica/blueprint-core';
-import { insertResource, clearAll } from '../../src/database-manager.js';
 import { ROLES } from '../roles.js';
 
 /**
@@ -668,13 +673,13 @@ test('resolveValue — $alias.field returns null when alias not in entities', ()
 test('applySteps — set step mutates resource field', () => {
   const resource = { status: 'pending', assignedToId: null };
   const context = { caller: { id: 'worker-1' }, object: resource, request: {}, now: '2025-01-01T00:00:00Z' };
-  applySteps([{ set: { field: 'assignedToId', value: '$caller.id' } }], resource, context);
+  applySteps([{ set: { field: 'assignedToId', value: '$caller.id' } }], resource, context, store);
   assert.strictEqual(resource.assignedToId, 'worker-1');
 });
 
 test('applySteps — set step with literal value', () => {
   const resource = { status: 'pending' };
-  applySteps([{ set: { field: 'status', value: 'active' } }], resource, {});
+  applySteps([{ set: { field: 'status', value: 'active' } }], resource, {}, store);
   assert.strictEqual(resource.status, 'active');
 });
 
@@ -687,7 +692,7 @@ test('applySteps — emit step queues pendingEvent with resolved data', () => {
   const context = { object: resource, request: {}, now: '2025-01-01T00:00:00Z' };
   const { pendingEvents } = applySteps([{
     emit: { type: 'intake.application.submitted', data: { submittedAt: '$now', appId: '$object.id' } }
-  }], resource, context);
+  }], resource, context, store);
   assert.strictEqual(pendingEvents.length, 1);
   assert.strictEqual(pendingEvents[0].type, 'intake.application.submitted');
   assert.strictEqual(pendingEvents[0].data.submittedAt, '2025-01-01T00:00:00Z');
@@ -713,7 +718,7 @@ test('applySteps — evaluate: string bind stores nodes map in context.entities'
     evaluate: 'simple',
     inputs: { person: { age: 25 } },
     bind: '$result',
-  }], {}, context);
+  }], {}, context, store);
   assert.ok(context.entities.result, 'result alias should be in entities');
   assert.strictEqual(context.entities.result.eligible.value, true);
   assert.strictEqual(context.entities.result.eligible.type, 'output');
@@ -725,7 +730,7 @@ test('applySteps — evaluate: string bind without $ prefix works the same', () 
     evaluate: 'simple',
     inputs: { person: { age: 25 } },
     bind: 'result',
-  }], {}, context);
+  }], {}, context, store);
   assert.ok(context.entities.result);
   assert.strictEqual(context.entities.result.eligible.value, true);
 });
@@ -736,7 +741,7 @@ test('applySteps — evaluate: map bind stores selected fact values in context.e
     evaluate: 'simple',
     inputs: { person: { age: 15 } },
     bind: { isEligible: 'eligible' },
-  }], {}, context);
+  }], {}, context, store);
   assert.strictEqual(context.entities.isEligible, false);
 });
 
@@ -746,14 +751,14 @@ test('applySteps — evaluate: result available to subsequent steps in same bloc
   applySteps([
     { evaluate: 'simple', inputs: { person: { age: 20 } }, bind: '$eval' },
     { set: { field: 'status', value: '$eval.eligible.value' } },
-  ], resource, context);
+  ], resource, context, store);
   assert.strictEqual(resource.status, true);
 });
 
 test('applySteps — evaluate: missing ruleset warns and skips without throwing', () => {
   const context = { entities: {} };
   assert.doesNotThrow(() => {
-    applySteps([{ evaluate: 'nonexistent' }], {}, context);
+    applySteps([{ evaluate: 'nonexistent' }], {}, context, store);
   });
   assert.deepStrictEqual(context.entities, {});
 });
@@ -766,7 +771,7 @@ test('applySteps — invoke POST to collection queues pendingCreate', () => {
   const context = { object: { id: 'app-1' }, request: {}, now: '2025-01-01T00:00:00Z' };
   const { pendingCreates } = applySteps([{
     invoke: { POST: 'intake/application-documents', body: { applicationId: '$object.id', category: 'income' } }
-  }], {}, context);
+  }], {}, context, store);
   assert.strictEqual(pendingCreates.length, 1);
   assert.strictEqual(pendingCreates[0].entity, 'application-documents');
   assert.strictEqual(pendingCreates[0].data.applicationId, 'app-1');
@@ -781,7 +786,7 @@ test('applySteps — invoke POST to operation path queues pendingOperation', () 
   const context = { entities: { application: { id: 'app-99' } }, object: {}, request: {} };
   const { pendingOperations } = applySteps([{
     invoke: { POST: 'intake/applications/{application.id}/open' }
-  }], {}, context);
+  }], {}, context, store);
   assert.strictEqual(pendingOperations.length, 1);
   assert.strictEqual(pendingOperations[0].path, 'intake/applications/app-99/open');
 });
@@ -801,7 +806,7 @@ test('applySteps — invoke PATCH queues pendingAppend with resolved $push body'
       PATCH: 'intake/application-members/{member.id}',
       body: { verifications: { $push: { type: '$this.data.verificationType', status: '$this.data.result' } } }
     }
-  }], {}, context);
+  }], {}, context, store);
   assert.strictEqual(pendingAppends.length, 1);
   assert.strictEqual(pendingAppends[0].path, 'intake/application-members/mem-1');
   assert.deepStrictEqual(pendingAppends[0].body.verifications.$push, { type: 'income', status: 'verified' });
@@ -818,7 +823,7 @@ test('applySteps — when: exposes entity aliases', () => {
   applySteps([{
     when: { '==': [{ var: 'queue.type' }, 'expedited'] },
     set: { field: 'status', value: 'expedited' }
-  }], resource, context);
+  }], resource, context, store);
   assert.strictEqual(resource.status, 'expedited');
 });
 
@@ -827,17 +832,17 @@ test('applySteps — when: exposes entity aliases', () => {
 // =============================================================================
 
 test('applySteps — forEach runs do: once per matching record (field-value where)', () => {
-  clearAll('application-members');
-  insertResource('application-members', { id: 'mem-1', applicationId: 'app-1' });
-  insertResource('application-members', { id: 'mem-2', applicationId: 'app-1' });
-  insertResource('application-members', { id: 'mem-3', applicationId: 'app-2' });
+  store.clearAll('application-members');
+  store.insertResource('application-members', { id: 'mem-1', applicationId: 'app-1' });
+  store.insertResource('application-members', { id: 'mem-2', applicationId: 'app-1' });
+  store.insertResource('application-members', { id: 'mem-3', applicationId: 'app-2' });
 
   const created = [];
   const context = { object: { id: 'app-1' }, entities: {}, request: {} };
   const { pendingCreates } = applySteps([{
     forEach: { from: 'intake/application-members', where: { applicationId: '$object.id' }, as: 'member' },
     do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id' } } }]
-  }], {}, context);
+  }], {}, context, store);
 
   assert.strictEqual(pendingCreates.length, 2);
   const memberIds = pendingCreates.map(c => c.data.memberId).sort();
@@ -845,14 +850,14 @@ test('applySteps — forEach runs do: once per matching record (field-value wher
 });
 
 test('applySteps — forEach skips non-matching records', () => {
-  clearAll('application-members');
-  insertResource('application-members', { id: 'mem-x', applicationId: 'app-99' });
+  store.clearAll('application-members');
+  store.insertResource('application-members', { id: 'mem-x', applicationId: 'app-99' });
 
   const context = { object: { id: 'app-1' }, entities: {}, request: {} };
   const { pendingCreates } = applySteps([{
     forEach: { from: 'intake/application-members', where: { applicationId: '$object.id' }, as: 'member' },
     do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id' } } }]
-  }], {}, context);
+  }], {}, context, store);
 
   assert.strictEqual(pendingCreates.length, 0);
 });
@@ -862,15 +867,15 @@ test('applySteps — forEach skips non-matching records', () => {
 // =============================================================================
 
 test('applySteps — forEach with JSON Logic where filters records', () => {
-  clearAll('application-members');
-  insertResource('application-members', { id: 'mem-1', applicationId: 'app-1', citizenshipStatus: 'citizen' });
-  insertResource('application-members', { id: 'mem-2', applicationId: 'app-1', citizenshipStatus: 'non-citizen' });
+  store.clearAll('application-members');
+  store.insertResource('application-members', { id: 'mem-1', applicationId: 'app-1', citizenshipStatus: 'citizen' });
+  store.insertResource('application-members', { id: 'mem-2', applicationId: 'app-1', citizenshipStatus: 'non-citizen' });
 
   const context = { object: { id: 'app-1' }, entities: {}, request: {} };
   const { pendingCreates } = applySteps([{
     forEach: { from: 'intake/application-members', where: { '==': [{ var: 'citizenshipStatus' }, 'non-citizen'] }, as: 'member' },
     do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id' } } }]
-  }], {}, context);
+  }], {}, context, store);
 
   assert.strictEqual(pendingCreates.length, 1);
   assert.strictEqual(pendingCreates[0].data.memberId, 'mem-2');
@@ -881,12 +886,12 @@ test('applySteps — forEach with JSON Logic where filters records', () => {
 // =============================================================================
 
 test('applySteps — nested forEach iterates inner collection for each outer item', () => {
-  clearAll('application-members');
-  clearAll('service-types');
-  insertResource('application-members', { id: 'mem-1', applicationId: 'app-1' });
-  insertResource('application-members', { id: 'mem-2', applicationId: 'app-1' });
-  insertResource('service-types', { id: 'svc-snap', name: 'snap' });
-  insertResource('service-types', { id: 'svc-mcd', name: 'medicaid' });
+  store.clearAll('application-members');
+  store.clearAll('service-types');
+  store.insertResource('application-members', { id: 'mem-1', applicationId: 'app-1' });
+  store.insertResource('application-members', { id: 'mem-2', applicationId: 'app-1' });
+  store.insertResource('service-types', { id: 'svc-snap', name: 'snap' });
+  store.insertResource('service-types', { id: 'svc-mcd', name: 'medicaid' });
 
   const context = { object: { id: 'app-1' }, entities: {}, request: {} };
   const { pendingCreates } = applySteps([{
@@ -895,7 +900,7 @@ test('applySteps — nested forEach iterates inner collection for each outer ite
       forEach: { from: 'data-exchange/service-types', where: { '!=': [{ var: 'id' }, 'none'] }, as: 'svcType' },
       do: [{ invoke: { POST: 'data-exchange/service-calls', body: { memberId: '$member.id', serviceTypeId: '$svcType.id' } } }]
     }]
-  }], {}, context);
+  }], {}, context, store);
 
   // 2 members × 2 service types = 4 creates
   assert.strictEqual(pendingCreates.length, 4);
@@ -906,7 +911,7 @@ test('applySteps — nested forEach iterates inner collection for each outer ite
 // =============================================================================
 
 test('applySteps — call: string queues procedure in pendingProcedures', () => {
-  const { pendingProcedures } = applySteps([{ call: 'assign-queue' }], {}, {});
+  const { pendingProcedures } = applySteps([{ call: 'assign-queue' }], {}, {}, store);
   assert.deepStrictEqual(pendingProcedures, [{ procedureId: 'assign-queue', with: undefined }]);
 });
 
@@ -915,7 +920,7 @@ test('applySteps — call: string with with: passes parameters', () => {
   const { pendingProcedures } = applySteps([{
     call: 'notify-caseworker',
     with: { applicationId: '$object.id', channel: 'email' }
-  }], {}, context);
+  }], {}, context, store);
   assert.strictEqual(pendingProcedures.length, 1);
   assert.strictEqual(pendingProcedures[0].procedureId, 'notify-caseworker');
   assert.deepStrictEqual(pendingProcedures[0].with, { applicationId: '$object.id', channel: 'email' });
@@ -929,7 +934,7 @@ test('applySteps — call: object POST to collection queues pendingCreate', () =
   const context = { object: { id: 'app-1' }, request: {}, now: '2025-01-01T00:00:00Z' };
   const { pendingCreates } = applySteps([{
     call: { POST: 'intake/application-documents', body: { applicationId: '$object.id', category: 'income' } }
-  }], {}, context);
+  }], {}, context, store);
   assert.strictEqual(pendingCreates.length, 1);
   assert.strictEqual(pendingCreates[0].entity, 'application-documents');
   assert.strictEqual(pendingCreates[0].data.applicationId, 'app-1');
@@ -940,7 +945,7 @@ test('applySteps — call: object POST to operation path queues pendingOperation
   const context = { entities: { application: { id: 'app-99' } }, object: {}, request: {} };
   const { pendingOperations } = applySteps([{
     call: { POST: 'intake/applications/{application.id}/open' }
-  }], {}, context);
+  }], {}, context, store);
   assert.strictEqual(pendingOperations.length, 1);
   assert.strictEqual(pendingOperations[0].path, 'intake/applications/app-99/open');
 });
@@ -956,7 +961,7 @@ test('applySteps — call: object PATCH queues pendingAppend', () => {
       PATCH: 'intake/application-members/{member.id}',
       body: { verifications: { $push: { status: '$this.data.result' } } }
     }
-  }], {}, context);
+  }], {}, context, store);
   assert.strictEqual(pendingAppends.length, 1);
   assert.strictEqual(pendingAppends[0].path, 'intake/application-members/mem-1');
   assert.deepStrictEqual(pendingAppends[0].body.verifications.$push, { status: 'verified' });
@@ -972,7 +977,7 @@ test('applySteps — if: true runs then: steps', () => {
   applySteps([{
     if: "$object.status == 'pending'",
     then: [{ set: { field: 'status', value: 'active' } }]
-  }], resource, context);
+  }], resource, context, store);
   assert.strictEqual(resource.status, 'active');
 });
 
@@ -982,7 +987,7 @@ test('applySteps — if: false skips then: steps', () => {
   applySteps([{
     if: "$object.status == 'pending'",
     then: [{ set: { field: 'status', value: 'active' } }]
-  }], resource, context);
+  }], resource, context, store);
   assert.strictEqual(resource.status, 'pending');
 });
 
@@ -993,7 +998,7 @@ test('applySteps — if: false runs else: steps', () => {
     if: "$object.status == 'pending'",
     then: [{ set: { field: 'status', value: 'active' } }],
     else: [{ set: { field: 'status', value: 'fallback' } }]
-  }], resource, context);
+  }], resource, context, store);
   assert.strictEqual(resource.status, 'fallback');
 });
 
@@ -1004,7 +1009,7 @@ test('applySteps — if: true skips else: steps', () => {
     if: "$object.status == 'pending'",
     then: [{ set: { field: 'status', value: 'active' } }],
     else: [{ set: { field: 'status', value: 'fallback' } }]
-  }], resource, context);
+  }], resource, context, store);
   assert.strictEqual(resource.status, 'active');
 });
 
@@ -1014,7 +1019,7 @@ test('applySteps — if: false with no else: runs no steps', () => {
   applySteps([{
     if: "$object.status == 'pending'",
     then: [{ set: { field: 'status', value: 'active' } }]
-  }], resource, context);
+  }], resource, context, store);
   assert.strictEqual(resource.status, 'pending');
 });
 
@@ -1024,7 +1029,7 @@ test('applySteps — if: propagates pendingEvents from branch', () => {
   const { pendingEvents } = applySteps([{
     if: "$object.status == 'pending'",
     then: [{ emit: { type: 'intake.application.activated', data: { appId: '$object.id' } } }]
-  }], resource, context);
+  }], resource, context, store);
   assert.strictEqual(pendingEvents.length, 1);
   assert.strictEqual(pendingEvents[0].type, 'intake.application.activated');
   assert.strictEqual(pendingEvents[0].data.appId, 'app-1');
@@ -1043,7 +1048,7 @@ test('applySteps — match: runs steps for matching when: branch', () => {
       snap: [{ set: { field: 'status', value: 'snap-routed' } }],
       medicaid: [{ set: { field: 'status', value: 'medicaid-routed' } }]
     }
-  }], resource, context);
+  }], resource, context, store);
   assert.strictEqual(resource.status, 'snap-routed');
 });
 
@@ -1056,7 +1061,7 @@ test('applySteps — match: skips non-matching when: branches', () => {
       snap: [{ set: { field: 'status', value: 'snap-routed' } }],
       medicaid: [{ set: { field: 'status', value: 'medicaid-routed' } }]
     }
-  }], resource, context);
+  }], resource, context, store);
   assert.strictEqual(resource.status, 'medicaid-routed');
 });
 
@@ -1068,7 +1073,7 @@ test('applySteps — match: runs no steps when value matches no branch', () => {
     when: {
       snap: [{ set: { field: 'status', value: 'snap-routed' } }]
     }
-  }], resource, context);
+  }], resource, context, store);
   assert.strictEqual(resource.status, 'pending');
 });
 
@@ -1079,7 +1084,7 @@ test('applySteps — match: propagates pendingCreates from branch', () => {
     when: {
       snap: [{ call: { POST: 'data-exchange/service-calls', body: { applicationId: '$object.id' } } }]
     }
-  }], {}, context);
+  }], {}, context, store);
   assert.strictEqual(pendingCreates.length, 1);
   assert.strictEqual(pendingCreates[0].data.applicationId, 'app-1');
 });

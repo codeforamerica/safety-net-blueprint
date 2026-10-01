@@ -4,7 +4,6 @@
  * Extracted so both paths use identical evaluation, mutation, and event emission.
  */
 
-import { findById, update, create } from './database-manager.js';
 import { findOperation, evaluateGuards, applySteps } from './state-machine-engine.js';
 import { updateSlaInfo } from './sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
@@ -42,11 +41,12 @@ export function executeTransition({
   slaTypes = [],
   requestBody = {},
   traceparent = null,
-  causationid = null
+  causationid = null,
+  store
 }) {
   const timestamp = now || new Date().toISOString();
 
-  const resource = findById(resourceName, resourceId);
+  const resource = store.findById(resourceName, resourceId);
   if (!resource) {
     return { success: false, status: 404, error: `Resource not found: ${resourceId}` };
   }
@@ -72,7 +72,8 @@ export function executeTransition({
   const entities = resolveContextLayers(
     [stateMachine.context, machine?.context, operationContext],
     resource,
-    baseContext
+    baseContext,
+    store
   );
   if (entities === null) {
     return { success: false, status: 409, error: `Context binding failed for action "${trigger}"` };
@@ -118,7 +119,7 @@ export function executeTransition({
   if (resource.slaInfo) updated.slaInfo = resource.slaInfo.map(e => ({ ...e }));
 
   const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } =
-    applySteps(steps, updated, context);
+    applySteps(steps, updated, context, store);
 
   if (transitionTo != null && transitionTo !== '') {
     updated.status = transitionTo;
@@ -130,17 +131,17 @@ export function executeTransition({
 
   const inlineRules = buildInlineRules(stateMachine, machine);
   const { pendingEvents: ruleEvents } = executeProcedures(
-    pendingProcedures, updated, inlineRules, context
+    pendingProcedures, updated, inlineRules, context, store
   );
 
   const diff = {};
   for (const [key, value] of Object.entries(updated)) {
     if (resource[key] !== value) diff[key] = value;
   }
-  const result = update(resourceName, resourceId, diff);
+  const result = store.update(resourceName, resourceId, diff);
 
   for (const { entity, data } of pendingCreates) {
-    try { create(entity, data); }
+    try { store.create(entity, data); }
     catch (e) { console.error(`Failed to create ${entity}:`, e.message); }
   }
 
@@ -156,7 +157,7 @@ export function executeTransition({
         time: timestamp,
         traceparent,
         causationid: event.causationid || causationid || undefined,
-      });
+      }, store);
     } catch (e) {
       console.error(`Failed to emit event "${event.type}":`, e.message);
     }

@@ -13,7 +13,6 @@ import multer from 'multer';
 import { createHash, randomUUID } from 'crypto';
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { insertResource, findById, findAll, update } from '../database-manager.js';
 import { emitEvent } from '../emit-event.js';
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -35,7 +34,7 @@ export function resolveUploadsDir(defaultDir) {
  * @param {string} baseUrl - Base URL for Location header
  * @returns {Array} [multerMiddleware, expressHandler]
  */
-export function createDocumentUploadHandler(uploadsDir, baseUrl) {
+export function createDocumentUploadHandler(uploadsDir, baseUrl, { store } = {}) {
   const middleware = upload.single('file');
 
   const handler = (req, res) => {
@@ -101,7 +100,7 @@ export function createDocumentUploadHandler(uploadsDir, baseUrl) {
       uploadedById: req.headers['x-caller-id'] || 'anonymous',
       createdAt: now
     };
-    insertResource('document-versions', version);
+    store.insertResource('document-versions', version);
 
     const document = {
       id: documentId,
@@ -118,9 +117,10 @@ export function createDocumentUploadHandler(uploadsDir, baseUrl) {
       createdAt: now,
       updatedAt: now
     };
-    insertResource('documents', document);
+    store.insertResource('documents', document);
 
-    emitEvent({ domain: 'document-management', object: 'document', action: 'created', resourceId: document.id, source: '/document-management', data: { documentId, latestVersionId: versionId } });
+    emitEvent({
+        store, domain: 'document-management', object: 'document', action: 'created', resourceId: document.id, source: '/document-management', data: { documentId, latestVersionId: versionId } });
 
     res.status(201)
       .set('Location', `${baseUrl}/document-management/documents/${documentId}`)
@@ -138,13 +138,13 @@ export function createDocumentUploadHandler(uploadsDir, baseUrl) {
  * @param {string} baseUrl - Base URL for Location header
  * @returns {Array} [multerMiddleware, expressHandler]
  */
-export function createDocumentVersionUploadHandler(uploadsDir, baseUrl) {
+export function createDocumentVersionUploadHandler(uploadsDir, baseUrl, { store } = {}) {
   const middleware = upload.single('file');
 
   const handler = (req, res) => {
     const { documentId } = req.params;
 
-    const document = findById('documents', documentId);
+    const document = store.findById('documents', documentId);
     if (!document) {
       return res.status(404).json({ code: 'NOT_FOUND', message: 'Document not found' });
     }
@@ -157,7 +157,7 @@ export function createDocumentVersionUploadHandler(uploadsDir, baseUrl) {
       });
     }
 
-    const { items: existingVersions } = findAll('document-versions', { documentId }, { limit: 1000 });
+    const { items: existingVersions } = store.findAll('document-versions', { documentId }, { limit: 1000 });
     const versionNumber = existingVersions.length + 1;
     const versionId = randomUUID();
     const now = new Date().toISOString();
@@ -180,11 +180,12 @@ export function createDocumentVersionUploadHandler(uploadsDir, baseUrl) {
       uploadedById: req.headers['x-caller-id'] || 'anonymous',
       createdAt: now
     };
-    insertResource('document-versions', version);
+    store.insertResource('document-versions', version);
 
-    update('documents', documentId, { latestVersionId: versionId, updatedAt: now });
+    store.update('documents', documentId, { latestVersionId: versionId, updatedAt: now });
 
-    emitEvent({ domain: 'document-management', object: 'document-version', action: 'uploaded', resourceId: versionId, source: '/document-management', data: { documentId, versionId, versionNumber } });
+    emitEvent({
+        store, domain: 'document-management', object: 'document-version', action: 'uploaded', resourceId: versionId, source: '/document-management', data: { documentId, versionId, versionNumber } });
 
     res.status(201)
       .set('Location', `${baseUrl}/document-management/document-versions/${versionId}`)

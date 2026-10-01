@@ -16,7 +16,8 @@
  *   q=field.nested:value        # Nested field (dot notation)
  */
 
-import { parseQueryString, tokensToSqlConditions, tokensToJsFilter, getNestedValue } from './query-parser.js';
+import { parseQueryString, tokensToSqlConditions, tokensToJsFilter, getNestedValue, collectStringValues } from './query-parser.js';
+import { sqlHandleFor } from './stores/sql-capability.js';
 import { parseSortString, buildOrderByClause } from './sort-parser.js';
 
 /**
@@ -199,7 +200,7 @@ const RESERVED_PARAMS = new Set(['q', 'search', 'limit', 'offset', 'page', 'sort
  * @param {Object} queryParams
  * @returns {Object[]}
  */
-export function filterItems(items, queryParams = {}) {
+export function filterItems(items, queryParams = {}, searchableFields = []) {
   if (!items || items.length === 0) return items;
 
   let result = items;
@@ -211,11 +212,18 @@ export function filterItems(items, queryParams = {}) {
     result = result.filter(predicate);
   }
 
-  // legacy search= full-text substring across all string values
+  // legacy search= full-text substring across all string values.
+  //
+  // Walks string values rather than stringifying the record. JSON.stringify
+  // includes field *names* and numbers, so `search=status` matched every record
+  // that merely had a status field, and `search=42` matched a numeric amount —
+  // neither of which the SQL path returns, since it scans json_tree for
+  // type = 'text' only. collectStringValues is the same helper the q= full-text
+  // tokens already use, which is why those were right and this was not.
   if (queryParams.search) {
     const needle = String(queryParams.search).toLowerCase();
     result = result.filter(item =>
-      JSON.stringify(item).toLowerCase().includes(needle)
+      collectStringValues(item).some(s => s.toLowerCase().includes(needle))
     );
   }
 
@@ -227,6 +235,17 @@ export function filterItems(items, queryParams = {}) {
   if (!queryParams.q) {
     for (const [key, value] of Object.entries(queryParams)) {
       if (RESERVED_PARAMS.has(key) || value === undefined || value === null || value === '') continue;
+
+      // Skip fields the caller did not declare filterable, exactly as
+      // buildSearchConditions does — otherwise a list endpoint served from a
+      // store without SQL would filter on fields the SQL path ignores, and the
+      // same request would answer differently depending on the store.
+      //
+      // An empty list means "no declaration", which is how a composition
+      // section calls this: it filters the fully assembled set so that embedded
+      // state and link fields remain filterable. That asymmetry is tracked in
+      // #454 and is not settled here.
+      if (searchableFields.length > 0 && !searchableFields.includes(key)) continue;
 
       // traceid matches the trace-id segment of the W3C traceparent field
       if (key === 'traceid') {
@@ -359,7 +378,43 @@ export function sortItems(items, queryParams = {}, sortConfig) {
  *        On success: items + pagination metadata.
  *        On sort parse failure: an error object the list handler renders as 400.
  */
-export function executeSearch(db, queryParams = {}, searchableFields = [], paginationDefaults = {}, sortConfig) {
+/**
+ * executeSearch over a store with no SQL, using the JS query path.
+ *
+ * Reads the collection whole, then reuses the same filter/sort/paginate chain a
+ * composition section uses. Acceptable here and not in a real database: the
+ * seeded dataset is 888 records across 35 collections, and this is a mock
+ * server. If that stops being true, this is the function that notices.
+ *
+ * `searchableFields` is passed through so that an undeclared filter is ignored
+ * exactly as the SQL path ignores it — without that, the same request would
+ * answer differently depending on which store was behind it.
+ */
+function executeSearchInJs(store, collection, queryParams, searchableFields, paginationDefaults, sortConfig) {
+  const { items } = store.findAll(collection, {}, { limit: null });
+
+  const filtered = filterItems(items, queryParams, searchableFields);
+  const sorted = sortItems(filtered, queryParams, sortConfig);
+  if (sorted.error) return { error: sorted.error };
+
+  return paginateItems(sorted.items, queryParams, paginationDefaults);
+}
+
+export function executeSearch(store, collection, queryParams = {}, searchableFields = [], paginationDefaults = {}, sortConfig) {
+  // A store that can hand over a SQLite handle gets the SQL path: filtering,
+  // ordering and limiting happen in the statement, over the indexes created
+  // with the table. Any other store is read whole and filtered in JS — the
+  // same implementation a composition section already uses, since there is no
+  // table to query once a section is assembled.
+  //
+  // Both must answer identically; tests/unit/query-conformance.test.js asserts
+  // that over 35 query shapes, because the only thing holding the two paths
+  // together before was a comment, and it was wrong.
+  const db = sqlHandleFor(store, collection);
+  if (!db) {
+    return executeSearchInJs(store, collection, queryParams, searchableFields, paginationDefaults, sortConfig);
+  }
+
   // Sort resolution happens OUTSIDE the try/catch below by design — sort
   // errors are caller-side input validation (translate to 400), not database
   // failures (which return empty results). Do not move this resolution

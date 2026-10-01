@@ -5,7 +5,12 @@
 
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import { insertResource, clearAll, findAll, findById } from '../../src/database-manager.js';
+import { createMemoryStore } from '../../src/stores/memory-store.js';
+
+// A store of this file's own, rather than one shared through a module-level
+// singleton. In memory because these cases do not need a database — and
+// because a fresh one per file is isolation they did not have before.
+const store = createMemoryStore();
 import { registerEventSubscriptions } from '../../src/event-subscription.js';
 import { eventBus } from '../../src/event-bus.js';
 
@@ -30,9 +35,9 @@ function makeEvent(type, subject, data = null) {
 // =============================================================================
 
 test('machine onEvent — runs when guards pass', (t, done) => {
-  clearAll('applications');
+  store.clearAll('applications');
   const APP_ID = 'app-guard-pass';
-  insertResource('applications', { id: APP_ID, status: 'submitted', isUrgent: true });
+  store.insertResource('applications', { id: APP_ID, status: 'submitted', isUrgent: true });
 
   const machine = {
     object: 'Application',
@@ -52,7 +57,7 @@ test('machine onEvent — runs when guards pass', (t, done) => {
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] }
   }];
 
-  registerEventSubscriptions(smEntries);
+  registerEventSubscriptions(smEntries, [], [], store);
   eventBus.emit('domain-event', makeEvent(
     'intake.application.submitted',
     APP_ID
@@ -66,9 +71,9 @@ test('machine onEvent — runs when guards pass', (t, done) => {
 });
 
 test('machine onEvent — skipped when guards fail', (t, done) => {
-  clearAll('applications');
+  store.clearAll('applications');
   const APP_ID = 'app-guard-fail';
-  insertResource('applications', { id: APP_ID, status: 'submitted', isUrgent: false });
+  store.insertResource('applications', { id: APP_ID, status: 'submitted', isUrgent: false });
 
   let stepRan = false;
 
@@ -90,7 +95,7 @@ test('machine onEvent — skipped when guards fail', (t, done) => {
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] }
   }];
 
-  registerEventSubscriptions(smEntries);
+  registerEventSubscriptions(smEntries, [], [], store);
   eventBus.emit('domain-event', makeEvent(
     'intake.application.submitted',
     APP_ID
@@ -98,7 +103,7 @@ test('machine onEvent — skipped when guards fail', (t, done) => {
 
   setImmediate(() => {
     // guard fails — resource unchanged
-    const app = findById('applications', APP_ID);
+    const app = store.findById('applications', APP_ID);
     assert.strictEqual(app.priority, undefined);
     done();
   });
@@ -109,9 +114,9 @@ test('machine onEvent — skipped when guards fail', (t, done) => {
 // =============================================================================
 
 test('machine onEvent — applies transition and persists resource mutations', (t, done) => {
-  clearAll('applications');
+  store.clearAll('applications');
   const APP_ID = 'app-transition-1';
-  insertResource('applications', { id: APP_ID, status: 'submitted' });
+  store.insertResource('applications', { id: APP_ID, status: 'submitted' });
 
   const machine = {
     object: 'Application',
@@ -128,14 +133,14 @@ test('machine onEvent — applies transition and persists resource mutations', (
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] }
   }];
 
-  registerEventSubscriptions(smEntries);
+  registerEventSubscriptions(smEntries, [], [], store);
   eventBus.emit('domain-event', makeEvent(
     'intake.application.submitted',
     APP_ID
   ));
 
   setImmediate(() => {
-    const app = findById('applications', APP_ID);
+    const app = store.findById('applications', APP_ID);
     assert.strictEqual(app.status, 'under_review');
     assert.ok(app.reviewedAt, 'reviewedAt was set');
     done();
@@ -143,7 +148,7 @@ test('machine onEvent — applies transition and persists resource mutations', (
 });
 
 test('machine onEvent — skipped when resource not found', (t, done) => {
-  clearAll('applications');
+  store.clearAll('applications');
 
   const machine = {
     object: 'Application',
@@ -160,7 +165,7 @@ test('machine onEvent — skipped when resource not found', (t, done) => {
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] }
   }];
 
-  registerEventSubscriptions(smEntries);
+  registerEventSubscriptions(smEntries, [], [], store);
 
   // No crash when subject doesn't exist
   eventBus.emit('domain-event', makeEvent(
@@ -172,9 +177,9 @@ test('machine onEvent — skipped when resource not found', (t, done) => {
 });
 
 test('machine onEvent — skipped when resource in wrong from state', (t, done) => {
-  clearAll('applications');
+  store.clearAll('applications');
   const APP_ID = 'app-wrong-state';
-  insertResource('applications', { id: APP_ID, status: 'under_review' });
+  store.insertResource('applications', { id: APP_ID, status: 'under_review' });
 
   const machine = {
     object: 'Application',
@@ -191,14 +196,14 @@ test('machine onEvent — skipped when resource in wrong from state', (t, done) 
     stateMachine: { domain: 'intake', context: null, rules: [], guards: [] }
   }];
 
-  registerEventSubscriptions(smEntries);
+  registerEventSubscriptions(smEntries, [], [], store);
   eventBus.emit('domain-event', makeEvent(
     'intake.application.submitted',
     APP_ID
   ));
 
   setImmediate(() => {
-    const app = findById('applications', APP_ID);
+    const app = store.findById('applications', APP_ID);
     assert.strictEqual(app.status, 'under_review');
     assert.strictEqual(app.flag, undefined);
     done();

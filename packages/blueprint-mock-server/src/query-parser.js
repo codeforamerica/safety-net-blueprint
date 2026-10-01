@@ -497,7 +497,7 @@ export function getNestedValue(obj, path) {
  * @param {*} value
  * @returns {string[]}
  */
-function collectStringValues(value) {
+export function collectStringValues(value) {
   if (typeof value === 'string') return [value];
   if (Array.isArray(value)) return value.flatMap(collectStringValues);
   if (value && typeof value === 'object') return Object.values(value).flatMap(collectStringValues);

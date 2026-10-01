@@ -18,7 +18,6 @@ import { createDocumentContentHandler } from './handlers/document-content-handle
 import { findSlaTypes } from './sla-loader.js';
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, registerParentLink } from './composition-assembler.js';
-import { findAll, findById, insertResource, update, registerCollectionDefaults } from './database-manager.js';
 import { emitEvent } from './emit-event.js';
 import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
 import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX } from './search-engine.js';
@@ -84,15 +83,16 @@ function deriveParentCollection(path, basePath) {
  * Create a GET handler for a singleton sub-resource.
  * Looks up the resource by parent field value (e.g., applicationId) rather than by its own id.
  */
-function createSingletonGetHandler(endpoint, parentParam, parentField) {
+function createSingletonGetHandler(endpoint, parentParam, parentField, deps = {}) {
+  const { store } = deps;
   return (req, res) => {
     try {
       const parentId = req.params[parentParam];
-      const { items } = findAll(endpoint.collectionName, { [parentField]: parentId }, { limit: 1 });
+      const { items } = store.findAll(endpoint.collectionName, { [parentField]: parentId }, { limit: 1 });
       if (items.length === 0) {
         // Singleton sub-resources always exist conceptually — initialize an empty one on first access.
         const newRecord = { id: randomUUID(), [parentField]: parentId };
-        insertResource(endpoint.collectionName, newRecord);
+        store.insertResource(endpoint.collectionName, newRecord);
         return res.json(newRecord);
       }
       res.json(items[0]);
@@ -109,7 +109,8 @@ function createSingletonGetHandler(endpoint, parentParam, parentField) {
  * Singleton sub-resources have no POST endpoint, so PATCH must serve as the creation
  * path for resources not auto-created by the rules engine (e.g., household-info).
  */
-function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parentField) {
+function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parentField, deps = {}) {
+  const { store } = deps;
   const resourceLabel = endpoint.collectionName.replace(/s$/, '');
   return (req, res) => {
     try {
@@ -122,7 +123,7 @@ function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parent
         return res.status(400).json({ code: 'BAD_REQUEST', message: 'Request body must contain at least one field to update', details: [{ field: 'body', message: 'minProperties: 1' }] });
       }
 
-      const { items } = findAll(endpoint.collectionName, { [parentField]: parentId }, { limit: 1 });
+      const { items } = store.findAll(endpoint.collectionName, { [parentField]: parentId }, { limit: 1 });
       let result;
       let action;
       let eventData;
@@ -130,13 +131,13 @@ function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parent
       if (items.length === 0) {
         // No record yet — create one (upsert)
         const newRecord = { id: randomUUID(), [parentField]: parentId, ...req.body };
-        insertResource(endpoint.collectionName, newRecord);
-        result = findAll(endpoint.collectionName, { id: newRecord.id }, { limit: 1 }).items[0];
+        store.insertResource(endpoint.collectionName, newRecord);
+        result = store.findAll(endpoint.collectionName, { id: newRecord.id }, { limit: 1 }).items[0];
         action = 'created';
         eventData = { ...result };
       } else {
         const before = { ...items[0] };
-        result = update(endpoint.collectionName, items[0].id, req.body);
+        result = store.update(endpoint.collectionName, items[0].id, req.body);
         action = 'updated';
         eventData = { changes: buildChanges(before, result) };
       }
@@ -144,6 +145,7 @@ function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parent
       try {
         const domain = apiMetadata.serverBasePath.replace(/^\//, '');
         emitEvent({
+          store,
           domain,
           object: resourceLabel,
           action,
@@ -253,7 +255,8 @@ export function extractRequiredDefaults(responseSchema) {
  * @param {Array} stateMachines - State machine entries for this API's domain (from discoverStateMachines)
  * @returns {Array} Array of registered endpoint info
  */
-export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaTypes = [], uploadsDir = null) {
+export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaTypes = [], uploadsDir = null, deps = {}) {
+  const { store } = deps;
   const registeredEndpoints = [];
 
   console.log(`  Registering routes for ${apiMetadata.title}...`);
@@ -289,34 +292,34 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       // Handled by manual registration in server.js before routes are registered
       continue;
     } else if (endpoint.operationId === 'uploadDocument' && uploadsDir) {
-      const [middleware, uploadHandler] = createDocumentUploadHandler(uploadsDir, baseUrl);
+      const [middleware, uploadHandler] = createDocumentUploadHandler(uploadsDir, baseUrl, deps);
       app.post(expressPath, middleware, uploadHandler);
       registeredEndpoints.push({ method: 'POST', path: expressPath, description: 'Upload document (multipart)' });
       console.log(`    POST   ${expressPath} - Upload document (multipart)`);
       continue;
     } else if (endpoint.operationId === 'uploadDocumentVersion' && uploadsDir) {
-      const [middleware, uploadHandler] = createDocumentVersionUploadHandler(uploadsDir, baseUrl);
+      const [middleware, uploadHandler] = createDocumentVersionUploadHandler(uploadsDir, baseUrl, deps);
       app.post(expressPath, middleware, uploadHandler);
       registeredEndpoints.push({ method: 'POST', path: expressPath, description: 'Upload document version (multipart)' });
       console.log(`    POST   ${expressPath} - Upload document version (multipart)`);
       continue;
     } else if (endpoint.operationId === 'getDocumentVersionContent' && uploadsDir) {
-      const contentHandler = createDocumentContentHandler(uploadsDir);
+      const contentHandler = createDocumentContentHandler(uploadsDir, deps);
       app.get(expressPath, contentHandler);
       registeredEndpoints.push({ method: 'GET', path: expressPath, description: 'Get document version file content' });
       console.log(`    GET    ${expressPath} - Get document version file content`);
       continue;
     } else if (endpoint.operationId === 'search') {
       // Cross-resource search endpoint — custom handler
-      handler = createSearchHandler(apiMetadata);
+      handler = createSearchHandler(apiMetadata, deps);
       description = 'Cross-resource search';
     } else if (method === 'get' && endpoint.path.endsWith('/me')) {
       // GET /resource/me — current-user singleton
-      handler = createCurrentUserHandler(apiMetadata, endpointWithCollection);
+      handler = createCurrentUserHandler(apiMetadata, endpointWithCollection, deps);
       description = 'Get authenticated user';
     } else if (method === 'get' && isCollectionEndpoint(endpoint.path)) {
       // GET /resources - List/search
-      handler = createListHandler(apiMetadata, endpointWithCollection);
+      handler = createListHandler(apiMetadata, endpointWithCollection, deps);
       description = 'List/search resources';
     } else if (method === 'post' && isCollectionEndpoint(endpoint.path)) {
       // POST /resources - Create
@@ -328,8 +331,8 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       const domainSlaTypes = smForEndpoint ? findSlaTypes(slaTypes, smForEndpoint.domain) : [];
       const requiredDefaults = extractRequiredDefaults(endpoint.responseSchema);
       if (machineForEndpoint?.initialState) requiredDefaults.status = machineForEndpoint.initialState;
-      if (Object.keys(requiredDefaults).length > 0) registerCollectionDefaults(collectionName, requiredDefaults);
-      handler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, domainSlaTypes, machineForEndpoint);
+      if (Object.keys(requiredDefaults).length > 0) store.registerCollectionDefaults(collectionName, requiredDefaults);
+      handler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, domainSlaTypes, machineForEndpoint, deps);
       description = 'Create resource';
     } else if (isSubResourceEndpoint(endpoint.path)) {
       // Sub-resource endpoint: /resources/{parentId}/sub or /resources/{parentId}/sub/{subId}
@@ -339,10 +342,10 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       if (isSingletonSubResource(endpoint.path)) {
         // Singleton: at most one child per parent (e.g., /applications/{applicationId}/interview)
         if (method === 'get') {
-          handler = createSingletonGetHandler(endpointWithCollection, parentParam, parentField);
+          handler = createSingletonGetHandler(endpointWithCollection, parentParam, parentField, deps);
           description = 'Get singleton sub-resource';
         } else if (method === 'patch') {
-          handler = createSingletonUpdateHandler(apiMetadata, endpointWithCollection, parentParam, parentField);
+          handler = createSingletonUpdateHandler(apiMetadata, endpointWithCollection, parentParam, parentField, deps);
           description = 'Update singleton sub-resource';
         } else if (method === 'post') {
           // POST on a singular sub-path is a state machine RPC/transition endpoint.
@@ -352,7 +355,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
           const smEntry = findStateMachineForCollection(stateMachines, parentCollectionName);
           if (smEntry) {
             const domainSlaTypes = findSlaTypes(slaTypes, smEntry.stateMachine.domain);
-            handler = createTransitionHandler(parentCollectionName, smEntry.stateMachine, trigger, parentParam, domainSlaTypes, smEntry.machine);
+            handler = createTransitionHandler(parentCollectionName, smEntry.stateMachine, trigger, parentParam, domainSlaTypes, smEntry.machine, deps);
             description = `${trigger} transition on ${parentCollectionName}`;
           } else {
             console.warn(`    Warning: No state machine found for POST ${endpoint.path} (parent collection: ${parentCollectionName})`);
@@ -372,7 +375,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
               const parentId = req.params[parentParam];
               // Verify parent exists before listing sub-resources
               if (parentCollection) {
-                const { items: parentCheck } = findAll(parentCollection, { id: parentId }, { limit: 1 });
+                const { items: parentCheck } = store.findAll(parentCollection, { id: parentId }, { limit: 1 });
                 if (parentCheck.length === 0) {
                   const label = capitalize(parentCollection.replace(/s$/, ''));
                   return res.status(404).json({ code: 'NOT_FOUND', message: `${label} not found` });
@@ -389,7 +392,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
               const extraFilters = Object.fromEntries(
                 Object.entries(req.query).filter(([k]) => !reservedParams.has(k))
               );
-              const { items, total } = findAll(endpointWithCollection.collectionName, { [parentField]: parentId, ...extraFilters }, { limit, offset });
+              const { items, total } = store.findAll(endpointWithCollection.collectionName, { [parentField]: parentId, ...extraFilters }, { limit, offset });
               const itemSchema = getItemSchema(endpoint.responseSchema, apiMetadata.schemas);
               const expandFields = extractExpandFields(itemSchema);
               const expandedItems = expandFields.length > 0
@@ -409,8 +412,8 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
           const subDomainSlaTypes = subSmForEndpoint ? findSlaTypes(slaTypes, subSmForEndpoint.domain) : [];
           const subRequiredDefaults = extractRequiredDefaults(endpoint.responseSchema);
           if (subMachineForEndpoint?.initialState) subRequiredDefaults.status = subMachineForEndpoint.initialState;
-          if (Object.keys(subRequiredDefaults).length > 0) registerCollectionDefaults(collectionName, subRequiredDefaults);
-          const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint);
+          if (Object.keys(subRequiredDefaults).length > 0) store.registerCollectionDefaults(collectionName, subRequiredDefaults);
+          const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint, deps);
           handler = (req, res) => {
             // Spread ALL path params, not just the last one — sub-sub-resource
             // routes (e.g. /applications/{applicationId}/members/{memberId}/incomes)
@@ -427,13 +430,13 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
     } else if (isSubItemEndpoint(endpoint.path)) {
       // Sub-item: /resources/{parentId}/sub/{subId} — standard item handlers, correct collection
       if (method === 'get') {
-        handler = createGetHandler(apiMetadata, endpointWithCollection);
+        handler = createGetHandler(apiMetadata, endpointWithCollection, deps);
         description = 'Get sub-resource by ID';
       } else if (method === 'patch') {
-        handler = createUpdateHandler(apiMetadata, endpointWithCollection, null);
+        handler = createUpdateHandler(apiMetadata, endpointWithCollection, null, [], null, deps);
         description = 'Update sub-resource';
       } else if (method === 'delete') {
-        handler = createDeleteHandler(apiMetadata, endpointWithCollection);
+        handler = createDeleteHandler(apiMetadata, endpointWithCollection, deps);
         description = 'Delete sub-resource';
       } else {
         console.warn(`    Warning: Unsupported method ${method.toUpperCase()} on sub-item ${endpoint.path}`);
@@ -441,18 +444,18 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       }
     } else if (method === 'get' && isItemEndpoint(endpoint.path)) {
       // GET /resources/{id} - Get by ID
-      handler = createGetHandler(apiMetadata, endpointWithCollection);
+      handler = createGetHandler(apiMetadata, endpointWithCollection, deps);
       description = 'Get resource by ID';
     } else if (method === 'patch' && isItemEndpoint(endpoint.path)) {
       // PATCH /resources/{id} - Update
       const smEntry = findStateMachineForCollection(stateMachines, collectionName);
       const smForEndpoint = smEntry?.stateMachine || null;
       const machineForEndpoint = smEntry?.machine || null;
-      handler = createUpdateHandler(apiMetadata, endpointWithCollection, smForEndpoint, [], machineForEndpoint);
+      handler = createUpdateHandler(apiMetadata, endpointWithCollection, smForEndpoint, [], machineForEndpoint, deps);
       description = 'Update resource';
     } else if (method === 'delete' && isItemEndpoint(endpoint.path)) {
       // DELETE /resources/{id} - Delete
-      handler = createDeleteHandler(apiMetadata, endpointWithCollection);
+      handler = createDeleteHandler(apiMetadata, endpointWithCollection, deps);
       description = 'Delete resource';
     } else {
       console.warn(`    Warning: Unsupported endpoint ${method.toUpperCase()} ${endpoint.path}`);
@@ -484,7 +487,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
  * @param {Array} stateMachines - Array from discoverStateMachines()
  * @returns {Array} Array of all registered endpoints grouped by API
  */
-export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], slaTypes = [], metrics = [], uploadsDir = null) {
+export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], slaTypes = [], metrics = [], uploadsDir = null, deps = {}) {
   console.log('\nRegistering API routes...');
 
   const allEndpoints = [];
@@ -493,8 +496,8 @@ export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], sl
   // for the /workflow/metrics paths declared in workflow-openapi.yaml.
   if (metrics.length > 0) {
     console.log('  Registering metrics routes...');
-    app.get('/workflow/metrics', createMetricsListHandler(metrics));
-    app.get('/workflow/metrics/:metricId', createMetricsGetHandler(metrics));
+    app.get('/workflow/metrics', createMetricsListHandler(metrics, deps));
+    app.get('/workflow/metrics/:metricId', createMetricsGetHandler(metrics, deps));
     console.log('    GET    /workflow/metrics - List computed metrics');
     console.log('    GET    /workflow/metrics/:metricId - Get computed metric');
   }
@@ -502,7 +505,7 @@ export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], sl
   for (const apiSpec of apiSpecs) {
     // Pass all state machines for this domain — there may be more than one (e.g., Application + ApplicationDocument)
     const domainSMs = stateMachines.filter(s => s.domain === apiSpec.name);
-    const endpoints = registerRoutes(app, apiSpec, baseUrl, domainSMs, slaTypes, uploadsDir);
+    const endpoints = registerRoutes(app, apiSpec, baseUrl, domainSMs, slaTypes, uploadsDir, deps);
     allEndpoints.push({
       apiName: apiSpec.name,
       title: apiSpec.title,
@@ -585,7 +588,8 @@ function buildResourceCollectionNameMap(apiSpecs) {
  * @param {Array} apiSpecs - Array of API metadata (used to resolve domain base paths)
  * @returns {Array} Registered endpoint info
  */
-export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs = []) {
+export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs = [], deps = {}) {
+  const { store } = deps;
   const registeredEndpoints = [];
   const resourceItemPathMap = buildResourceItemPathMap(apiSpecs);
   const resourceCollectionNameMap = buildResourceCollectionNameMap(apiSpecs);
@@ -630,7 +634,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
       const stateDefaults = loadStateDefaults(composition.state, apiSpec);
 
       const paginationDefaults = apiSpec?.pagination || {};
-      const assemblerOpts = { resourceItemPathMap, resourceCollectionNameMap, serverBasePath: basePath };
+      const assemblerOpts = { resourceItemPathMap, resourceCollectionNameMap, serverBasePath: basePath, store };
 
       const rootCollectionName = resourceCollectionNameMap.get(composition.resource) ?? composition.resource;
 
@@ -639,7 +643,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
         app.get(indexExpressPath, (req, res) => {
           try {
             const parentId = primaryParam ? req.params[primaryParam] : null;
-            if (parentId && !findById(rootCollectionName, parentId)) {
+            if (parentId && !store.findById(rootCollectionName, parentId)) {
               return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
             }
             res.json(assembleSectionIndex(compositionWithDoc, req.params, indexExpressPath, stateDefaults, assemblerOpts));
@@ -654,7 +658,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
         app.get(panelExpressPath, (req, res) => {
           try {
             const parentId = primaryParam ? req.params[primaryParam] : null;
-            if (parentId && !findById(rootCollectionName, parentId)) {
+            if (parentId && !store.findById(rootCollectionName, parentId)) {
               return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
             }
             const panelOpts = { ...assemblerOpts, queryParams: req.query, paginationDefaults };
@@ -722,7 +726,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
         if (stateInfo) {
           const stateEndpoints = registerStateRoutes(
             app, composition, compositionName, stateInfo, stateDefaults,
-            endpointPath, fullPath, basePath
+            endpointPath, fullPath, basePath, deps
           );
           registeredEndpoints.push(...stateEndpoints);
         }
@@ -778,7 +782,8 @@ function loadStateDefaults(stateConfig, apiSpec) {
  * @param {string} basePath - Server base path (e.g. /intake)
  * @returns {Array} Registered endpoint descriptors
  */
-function registerStateRoutes(app, composition, compositionName, stateInfo, stateDefaults, endpointPath, fullPath, basePath) {
+function registerStateRoutes(app, composition, compositionName, stateInfo, stateDefaults, endpointPath, fullPath, basePath, deps = {}) {
+  const { store } = deps;
   const bindParam = extractPrimaryParam(endpointPath);
   if (!bindParam) return [];
 
@@ -797,12 +802,12 @@ function registerStateRoutes(app, composition, compositionName, stateInfo, state
   // GET /{section} — paginated list of state records for that section
   app.get(sectionPath, (req, res) => {
     try {
-      const parent = findById(composition.resource, req.params[bindParam]);
+      const parent = store.findById(composition.resource, req.params[bindParam]);
       if (!parent) return res.status(404).json({ code: 'NOT_FOUND', message: 'Parent resource not found' });
 
       const limit = Math.min(parseInt(req.query.limit) || PAGINATION_DEFAULTS.limitDefault, STATE_RECORDS_LIMIT_MAX);
       const offset = parseInt(req.query.offset) || 0;
-      const result = listStateRecords(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, { limit, offset });
+      const result = listStateRecords(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, { limit, offset }, store);
       res.json(result);
     } catch (error) { internalError(res, error); }
   });
@@ -810,7 +815,7 @@ function registerStateRoutes(app, composition, compositionName, stateInfo, state
   // GET /{section}/{itemId} — single state record
   app.get(itemPath, (req, res) => {
     try {
-      const record = findStateRecord(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, req.params.itemId);
+      const record = findStateRecord(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, req.params.itemId, store);
       if (!record) return res.status(404).json({ code: 'NOT_FOUND', message: 'State record not found' });
       res.json(record);
     } catch (error) { internalError(res, error); }
@@ -820,10 +825,10 @@ function registerStateRoutes(app, composition, compositionName, stateInfo, state
   for (const method of ['put', 'patch']) {
     app[method](sectionPath, (req, res) => {
       try {
-        const parent = findById(composition.resource, req.params[bindParam]);
+        const parent = store.findById(composition.resource, req.params[bindParam]);
         if (!parent) return res.status(404).json({ code: 'NOT_FOUND', message: 'Parent resource not found' });
         const body = method === 'put' ? { ...stateDefaults, ...req.body } : req.body;
-        const record = upsertStateRecord(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, null, body);
+        const record = upsertStateRecord(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, null, body, store);
         res.json(record);
       } catch (error) { internalError(res, error); }
     });
@@ -833,10 +838,10 @@ function registerStateRoutes(app, composition, compositionName, stateInfo, state
   for (const method of ['put', 'patch']) {
     app[method](itemPath, (req, res) => {
       try {
-        const parent = findById(composition.resource, req.params[bindParam]);
+        const parent = store.findById(composition.resource, req.params[bindParam]);
         if (!parent) return res.status(404).json({ code: 'NOT_FOUND', message: 'Parent resource not found' });
         const body = method === 'put' ? { ...stateDefaults, ...req.body } : req.body;
-        const record = upsertStateRecord(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, req.params.itemId, body);
+        const record = upsertStateRecord(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, req.params.itemId, body, store);
         res.json(record);
       } catch (error) { internalError(res, error); }
     });
@@ -866,7 +871,7 @@ function registerStateRoutes(app, composition, compositionName, stateInfo, state
  * @param {Array} apiSpecs - Array of API metadata objects
  * @returns {Array} Array of registered RPC endpoint info
  */
-export function registerStateMachineRoutes(app, stateMachines, apiSpecs, slaTypes = []) {
+export function registerStateMachineRoutes(app, stateMachines, apiSpecs, slaTypes = [], deps = {}) {
   const registeredEndpoints = [];
 
   for (const sm of stateMachines) {
@@ -928,7 +933,8 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, slaType
         entry.id,
         paramName,
         domainSlaTypes,
-        sm.machine
+        sm.machine,
+        deps
       );
 
       app.post(expressPath, handler);

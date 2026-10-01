@@ -4,13 +4,18 @@
 
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import { insertResource, clearAll, findById, findAll } from '../../src/database-manager.js';
+import { createMemoryStore } from '../../src/stores/memory-store.js';
+
+// A store of this file's own, rather than one shared through a module-level
+// singleton. In memory because these cases do not need a database — and
+// because a fresh one per file is isolation they did not have before.
+const store = createMemoryStore();
 import { executeTransition } from '../../src/state-machine-runner.js';
 import { ROLES } from '../roles.js';
 
 beforeEach(() => {
-  clearAll('testresources');
-  clearAll('events');
+  store.clearAll('testresources');
+  store.clearAll('events');
 });
 
 function makeStateMachine() {
@@ -36,7 +41,7 @@ function makeMachine(actions) {
 // =============================================================================
 
 test('executeTransition — passes when request body matches schema', () => {
-  insertResource('testresources', { id: 'res-1', status: 'open' });
+  store.insertResource('testresources', { id: 'res-1', status: 'open' });
 
   const machine = makeMachine([{
     id: 'close',
@@ -53,6 +58,7 @@ test('executeTransition — passes when request body matches schema', () => {
   }]);
 
   const result = executeTransition({
+    store: store,
     resourceName: 'testresources',
     resourceId: 'res-1',
     trigger: 'close',
@@ -65,11 +71,11 @@ test('executeTransition — passes when request body matches schema', () => {
   });
 
   assert.strictEqual(result.success, true);
-  assert.strictEqual(findById('testresources', 'res-1').status, 'closed');
+  assert.strictEqual(store.findById('testresources', 'res-1').status, 'closed');
 });
 
 test('executeTransition — returns 422 when request body fails schema', () => {
-  insertResource('testresources', { id: 'res-2', status: 'open' });
+  store.insertResource('testresources', { id: 'res-2', status: 'open' });
 
   const machine = makeMachine([{
     id: 'close',
@@ -86,6 +92,7 @@ test('executeTransition — returns 422 when request body fails schema', () => {
   }]);
 
   const result = executeTransition({
+    store: store,
     resourceName: 'testresources',
     resourceId: 'res-2',
     trigger: 'close',
@@ -100,11 +107,11 @@ test('executeTransition — returns 422 when request body fails schema', () => {
   assert.strictEqual(result.success, false);
   assert.strictEqual(result.status, 422);
   assert.ok(result.error.includes('validation'));
-  assert.strictEqual(findById('testresources', 'res-2').status, 'open');
+  assert.strictEqual(store.findById('testresources', 'res-2').status, 'open');
 });
 
 test('executeTransition — skips validation when no schema.request defined', () => {
-  insertResource('testresources', { id: 'res-3', status: 'open' });
+  store.insertResource('testresources', { id: 'res-3', status: 'open' });
 
   const machine = makeMachine([{
     id: 'close',
@@ -114,6 +121,7 @@ test('executeTransition — skips validation when no schema.request defined', ()
   }]);
 
   const result = executeTransition({
+    store: store,
     resourceName: 'testresources',
     resourceId: 'res-3',
     trigger: 'close',
@@ -133,7 +141,7 @@ test('executeTransition — skips validation when no schema.request defined', ()
 // =============================================================================
 
 test('executeTransition — caller role absent from all clauses → 403', () => {
-  insertResource('testresources', { id: 'res-or-1', status: 'pending', assignedToId: null });
+  store.insertResource('testresources', { id: 'res-or-1', status: 'pending', assignedToId: null });
 
   const machine = makeMachine([{
     id: 'claim',
@@ -146,6 +154,7 @@ test('executeTransition — caller role absent from all clauses → 403', () => 
   }]);
 
   const result = executeTransition({
+    store: store,
     resourceName: 'testresources',
     resourceId: 'res-or-1',
     trigger: 'claim',
@@ -159,11 +168,11 @@ test('executeTransition — caller role absent from all clauses → 403', () => 
   assert.strictEqual(result.success, false);
   assert.strictEqual(result.status, 403);
   assert.ok(result.error.includes('claim'), `expected error to mention action name, got: ${result.error}`);
-  assert.strictEqual(findById('testresources', 'res-or-1').status, 'pending');
+  assert.strictEqual(store.findById('testresources', 'res-or-1').status, 'pending');
 });
 
 test('executeTransition — first clause fails, second clause passes → 200', () => {
-  insertResource('testresources', { id: 'res-or-2', status: 'pending', assignedToId: 'other-worker' });
+  store.insertResource('testresources', { id: 'res-or-2', status: 'pending', assignedToId: 'other-worker' });
 
   const machine = makeMachine([{
     id: 'escalate',
@@ -176,6 +185,7 @@ test('executeTransition — first clause fails, second clause passes → 200', (
   }]);
 
   const result = executeTransition({
+    store: store,
     resourceName: 'testresources',
     resourceId: 'res-or-2',
     trigger: 'escalate',
@@ -187,11 +197,11 @@ test('executeTransition — first clause fails, second clause passes → 200', (
   });
 
   assert.strictEqual(result.success, true);
-  assert.strictEqual(findById('testresources', 'res-or-2').status, 'escalated');
+  assert.strictEqual(store.findById('testresources', 'res-or-2').status, 'escalated');
 });
 
 test('executeTransition — caller role matches but all conditions fail → 409', () => {
-  insertResource('testresources', { id: 'res-or-3', status: 'pending', assignedToId: 'other-worker' });
+  store.insertResource('testresources', { id: 'res-or-3', status: 'pending', assignedToId: 'other-worker' });
 
   const machine = makeMachine([{
     id: 'escalate',
@@ -203,6 +213,7 @@ test('executeTransition — caller role matches but all conditions fail → 409'
   }]);
 
   const result = executeTransition({
+    store: store,
     resourceName: 'testresources',
     resourceId: 'res-or-3',
     trigger: 'escalate',
@@ -215,7 +226,7 @@ test('executeTransition — caller role matches but all conditions fail → 409'
 
   assert.strictEqual(result.success, false);
   assert.strictEqual(result.status, 409);
-  assert.strictEqual(findById('testresources', 'res-or-3').status, 'pending');
+  assert.strictEqual(store.findById('testresources', 'res-or-3').status, 'pending');
 });
 
 // =============================================================================
@@ -223,7 +234,7 @@ test('executeTransition — caller role matches but all conditions fail → 409'
 // =============================================================================
 
 test('executeTransition — CEL condition guard passes, transition succeeds', () => {
-  insertResource('testresources', { id: 'res-cel-1', status: 'pending', assignedToId: null });
+  store.insertResource('testresources', { id: 'res-cel-1', status: 'pending', assignedToId: null });
 
   const machine = makeMachine([{
     id: 'claim',
@@ -233,6 +244,7 @@ test('executeTransition — CEL condition guard passes, transition succeeds', ()
   }]);
 
   const result = executeTransition({
+    store: store,
     resourceName: 'testresources',
     resourceId: 'res-cel-1',
     trigger: 'claim',
@@ -244,11 +256,11 @@ test('executeTransition — CEL condition guard passes, transition succeeds', ()
   });
 
   assert.strictEqual(result.success, true);
-  assert.strictEqual(findById('testresources', 'res-cel-1').status, 'in_progress');
+  assert.strictEqual(store.findById('testresources', 'res-cel-1').status, 'in_progress');
 });
 
 test('executeTransition — CEL condition guard fails → 409, resource unchanged', () => {
-  insertResource('testresources', { id: 'res-cel-2', status: 'pending', assignedToId: 'other-worker' });
+  store.insertResource('testresources', { id: 'res-cel-2', status: 'pending', assignedToId: 'other-worker' });
 
   const machine = makeMachine([{
     id: 'claim',
@@ -258,6 +270,7 @@ test('executeTransition — CEL condition guard fails → 409, resource unchange
   }]);
 
   const result = executeTransition({
+    store: store,
     resourceName: 'testresources',
     resourceId: 'res-cel-2',
     trigger: 'claim',
@@ -271,11 +284,11 @@ test('executeTransition — CEL condition guard fails → 409, resource unchange
   assert.strictEqual(result.success, false);
   assert.strictEqual(result.status, 409);
   assert.ok(result.error.includes('claim'), `expected error to mention action name, got: ${result.error}`);
-  assert.strictEqual(findById('testresources', 'res-cel-2').status, 'pending');
+  assert.strictEqual(store.findById('testresources', 'res-cel-2').status, 'pending');
 });
 
 test('executeTransition — caller.id CEL guard passes when IDs match', () => {
-  insertResource('testresources', { id: 'res-cel-3', status: 'in_progress', assignedToId: 'worker-1' });
+  store.insertResource('testresources', { id: 'res-cel-3', status: 'in_progress', assignedToId: 'worker-1' });
 
   const machine = makeMachine([{
     id: 'complete',
@@ -285,6 +298,7 @@ test('executeTransition — caller.id CEL guard passes when IDs match', () => {
   }]);
 
   const result = executeTransition({
+    store: store,
     resourceName: 'testresources',
     resourceId: 'res-cel-3',
     trigger: 'complete',
@@ -296,11 +310,11 @@ test('executeTransition — caller.id CEL guard passes when IDs match', () => {
   });
 
   assert.strictEqual(result.success, true);
-  assert.strictEqual(findById('testresources', 'res-cel-3').status, 'completed');
+  assert.strictEqual(store.findById('testresources', 'res-cel-3').status, 'completed');
 });
 
 test('executeTransition — caller.id CEL guard fails when different worker → 409', () => {
-  insertResource('testresources', { id: 'res-cel-4', status: 'in_progress', assignedToId: 'worker-1' });
+  store.insertResource('testresources', { id: 'res-cel-4', status: 'in_progress', assignedToId: 'worker-1' });
 
   const machine = makeMachine([{
     id: 'complete',
@@ -310,6 +324,7 @@ test('executeTransition — caller.id CEL guard fails when different worker → 
   }]);
 
   const result = executeTransition({
+    store: store,
     resourceName: 'testresources',
     resourceId: 'res-cel-4',
     trigger: 'complete',
@@ -322,7 +337,7 @@ test('executeTransition — caller.id CEL guard fails when different worker → 
 
   assert.strictEqual(result.success, false);
   assert.strictEqual(result.status, 409);
-  assert.strictEqual(findById('testresources', 'res-cel-4').status, 'in_progress');
+  assert.strictEqual(store.findById('testresources', 'res-cel-4').status, 'in_progress');
 });
 
 // =============================================================================
@@ -330,7 +345,7 @@ test('executeTransition — caller.id CEL guard fails when different worker → 
 // =============================================================================
 
 test('executeTransition — set: step mutates field on transition', () => {
-  insertResource('testresources', { id: 'res-steps-1', status: 'pending', assignedToId: null });
+  store.insertResource('testresources', { id: 'res-steps-1', status: 'pending', assignedToId: null });
 
   const machine = makeMachine([{
     id: 'claim',
@@ -340,6 +355,7 @@ test('executeTransition — set: step mutates field on transition', () => {
   }]);
 
   const result = executeTransition({
+    store: store,
     resourceName: 'testresources',
     resourceId: 'res-steps-1',
     trigger: 'claim',
@@ -351,13 +367,13 @@ test('executeTransition — set: step mutates field on transition', () => {
   });
 
   assert.strictEqual(result.success, true);
-  const updated = findById('testresources', 'res-steps-1');
+  const updated = store.findById('testresources', 'res-steps-1');
   assert.strictEqual(updated.status, 'in_progress');
   assert.strictEqual(updated.assignedToId, 'worker-1');
 });
 
 test('executeTransition — emit: step stores event in database', () => {
-  insertResource('testresources', { id: 'res-steps-2', status: 'pending' });
+  store.insertResource('testresources', { id: 'res-steps-2', status: 'pending' });
 
   const machine = makeMachine([{
     id: 'submit',
@@ -367,6 +383,7 @@ test('executeTransition — emit: step stores event in database', () => {
   }]);
 
   const result = executeTransition({
+    store: store,
     resourceName: 'testresources',
     resourceId: 'res-steps-2',
     trigger: 'submit',
@@ -379,7 +396,7 @@ test('executeTransition — emit: step stores event in database', () => {
   });
 
   assert.strictEqual(result.success, true);
-  const { items: events } = findAll('events', {});
+  const { items: events } = store.findAll('events', {});
   const emitted = events.find(e => e.type === 'test.testresource.submitted');
   assert.ok(emitted, 'submitted event should be stored in events collection');
   assert.strictEqual(emitted.subject, 'res-steps-2');
@@ -387,7 +404,7 @@ test('executeTransition — emit: step stores event in database', () => {
 });
 
 test('executeTransition — emit: subject override uses value expression instead of resourceId', () => {
-  insertResource('testresources', { id: 'res-steps-2b', status: 'pending', parentId: 'parent-app-99' });
+  store.insertResource('testresources', { id: 'res-steps-2b', status: 'pending', parentId: 'parent-app-99' });
 
   const machine = makeMachine([{
     id: 'complete',
@@ -397,6 +414,7 @@ test('executeTransition — emit: subject override uses value expression instead
   }]);
 
   const result = executeTransition({
+    store: store,
     resourceName: 'testresources',
     resourceId: 'res-steps-2b',
     trigger: 'complete',
@@ -409,14 +427,14 @@ test('executeTransition — emit: subject override uses value expression instead
   });
 
   assert.strictEqual(result.success, true);
-  const { items: events } = findAll('events', {});
+  const { items: events } = store.findAll('events', {});
   const emitted = events.find(e => e.type && e.type.includes('determination_completed'));
   assert.ok(emitted, 'determination_completed event should be stored');
   assert.strictEqual(emitted.subject, 'parent-app-99', 'subject should be the overridden value, not the resource id');
 });
 
 test('executeTransition — if: step runs correct branch based on resource state', () => {
-  insertResource('testresources', { id: 'res-steps-3', status: 'pending', isExpedited: false });
+  store.insertResource('testresources', { id: 'res-steps-3', status: 'pending', isExpedited: false });
 
   const machine = makeMachine([{
     id: 'route',
@@ -430,6 +448,7 @@ test('executeTransition — if: step runs correct branch based on resource state
   }]);
 
   const result = executeTransition({
+    store: store,
     resourceName: 'testresources',
     resourceId: 'res-steps-3',
     trigger: 'route',
@@ -441,11 +460,11 @@ test('executeTransition — if: step runs correct branch based on resource state
   });
 
   assert.strictEqual(result.success, true);
-  assert.strictEqual(findById('testresources', 'res-steps-3').priority, 'normal');
+  assert.strictEqual(store.findById('testresources', 'res-steps-3').priority, 'normal');
 });
 
 test('executeTransition — if: true branch runs when condition met', () => {
-  insertResource('testresources', { id: 'res-steps-4', status: 'pending', isExpedited: true });
+  store.insertResource('testresources', { id: 'res-steps-4', status: 'pending', isExpedited: true });
 
   const machine = makeMachine([{
     id: 'route',
@@ -459,6 +478,7 @@ test('executeTransition — if: true branch runs when condition met', () => {
   }]);
 
   const result = executeTransition({
+    store: store,
     resourceName: 'testresources',
     resourceId: 'res-steps-4',
     trigger: 'route',
@@ -470,5 +490,5 @@ test('executeTransition — if: true branch runs when condition met', () => {
   });
 
   assert.strictEqual(result.success, true);
-  assert.strictEqual(findById('testresources', 'res-steps-4').priority, 'high');
+  assert.strictEqual(store.findById('testresources', 'res-steps-4').priority, 'high');
 });

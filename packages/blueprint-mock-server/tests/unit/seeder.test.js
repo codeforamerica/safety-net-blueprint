@@ -5,9 +5,14 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
+import { createMemoryStore } from '../../src/stores/memory-store.js';
+
+// A store of this file's own, rather than one shared through a module-level
+// singleton. In memory because these cases do not need a database — and
+// because a fresh one per file is isolation they did not have before.
+const store = createMemoryStore();
 import { seedAllDatabases } from '../../src/seeder.js';
 import { loadAllSpecs } from '../../src/spec-loader.js';
-import { count, findAll, clearAll, insertResource } from '../../src/database-manager.js';
 import { join } from 'path';
 
 const fixturesArg = process.argv.find(a => a.startsWith('--fixtures='));
@@ -20,7 +25,7 @@ const seedDir        = seedArg.slice('--seed='.length);
 // Cleanup function — uses SQL DELETE rather than file deletion to
 // avoid SQLite WAL replay issues (deleting .db but not .db-wal/.db-shm
 // causes WAL to be replayed into the new file, restoring deleted rows).
-const cleanup = () => { clearAll('persons'); };
+const cleanup = () => { store.clearAll('persons'); };
 
 test('Database Seeder Tests', async (t) => {
   
@@ -35,14 +40,14 @@ test('Database Seeder Tests', async (t) => {
         { path: '/client-management/persons/{personId}' },
       ],
     };
-    const summary = seedAllDatabases(fixtureSpecDir, seedDir);
+    const summary = seedAllDatabases(fixtureSpecDir, seedDir, store);
 
     assert.ok(typeof summary === 'object', 'Should return summary object');
     const seededCount = summary['persons'] ?? 0;
     assert.ok(seededCount >= 0, 'Should return count');
 
     if (seededCount > 0) {
-      const dbCount = count('persons');
+      const dbCount = store.count('persons');
       assert.strictEqual(dbCount, seededCount, 'Database should have seeded count');
       console.log(`  ✓ Seeded ${seededCount} person(s)`);
     } else {
@@ -61,8 +66,8 @@ test('Database Seeder Tests', async (t) => {
         { path: '/client-management/persons/{personId}' },
       ],
     };
-    seedAllDatabases(fixtureSpecDir, seedDir);
-    const records = findAll('persons', {});
+    seedAllDatabases(fixtureSpecDir, seedDir, store);
+    const records = store.findAll('persons', {});
 
     if (records.length > 0) {
       const first = records[0];
@@ -84,8 +89,8 @@ test('Database Seeder Tests', async (t) => {
         { path: '/client-management/persons/{personId}' },
       ],
     };
-    seedAllDatabases(fixtureSpecDir, seedDir);
-    const records = findAll('persons', {});
+    seedAllDatabases(fixtureSpecDir, seedDir, store);
+    const records = store.findAll('persons', {});
 
     if (records.length > 1) {
       for (let i = 0; i < records.length - 1; i++) {
@@ -105,9 +110,9 @@ test('Database Seeder Tests', async (t) => {
       serverBasePath: '/client-management',
       endpoints: [{ path: '/client-management/persons' }],
     };
-    seedAllDatabases(fixtureSpecDir, null);
+    seedAllDatabases(fixtureSpecDir, null, store);
 
-    assert.strictEqual(count('persons'), 0, 'Should be empty with no seedDir');
+    assert.strictEqual(store.count('persons'), 0, 'Should be empty with no seedDir');
     console.log('  ✓ Empty databases with null seedDir');
   });
 
@@ -124,9 +129,9 @@ test('Database Seeder Tests', async (t) => {
       serverBasePath: '/client-management',
       endpoints: [{ path: '/client-management/persons' }],
     };
-    seedAllDatabases(fixtureSpecDir, emptyDir);
+    seedAllDatabases(fixtureSpecDir, emptyDir, store);
 
-    assert.strictEqual(count('persons'), 0, 'Should be empty when no seed files found');
+    assert.strictEqual(store.count('persons'), 0, 'Should be empty when no seed files found');
     console.log('  ✓ Empty databases when no mock-data files present');
   });
   
@@ -134,7 +139,7 @@ test('Database Seeder Tests', async (t) => {
     cleanup();
 
     const apiSpecs = await loadAllSpecs({ specsDir: fixtureSpecDir });
-    const summary = seedAllDatabases(fixtureSpecDir, seedDir);
+    const summary = seedAllDatabases(fixtureSpecDir, seedDir, store);
 
     assert.ok(typeof summary === 'object', 'Should return summary object');
     assert.ok(Object.keys(summary).length >= apiSpecs.length,
@@ -184,18 +189,18 @@ test('Database Seeder Tests', async (t) => {
 
       const target = 'widget-parts';
       const sentinelId = '00000000-dead-beef-0000-000000000001';
-      insertResource(target, {
+      store.insertResource(target, {
         id: sentinelId,
         widgetId: '00000000-0000-0000-0000-000000000000',
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
       });
-      assert.strictEqual(findAll(target, { id: sentinelId }).total, 1,
+      assert.strictEqual(store.findAll(target, { id: sentinelId }).total, 1,
         'Sentinel should be present before reseed');
 
-      seedAllDatabases(dir, dir);
+      seedAllDatabases(dir, dir, store);
 
-      assert.strictEqual(findAll(target, { id: sentinelId }).total, 0,
+      assert.strictEqual(store.findAll(target, { id: sentinelId }).total, 0,
         `Sub-collection "${target}" should be cleared at boot`);
       console.log(`  ✓ Sub-collection "${target}" cleared on reseed`);
     } finally {
@@ -208,8 +213,8 @@ test('Database Seeder Tests', async (t) => {
     // via startsWith, causing member records to be seeded into applications.db.
     // After the fix, longest-prefix matching assigns each key to the most
     // specific collection only.
-    clearAll('applications');
-    clearAll('application-members');
+    store.clearAll('applications');
+    store.clearAll('application-members');
 
     const api = {
       name: 'intake',
@@ -273,26 +278,26 @@ test('Database Seeder Tests', async (t) => {
     }));
 
     const { seedAllDatabases: seed } = await import('../../src/seeder.js');
-    seed([api], tmpSeedDir, tmpSeedDir);
+    seed([api], tmpSeedDir, store);
 
-    const appsInApplications = findAll('applications', {}).total;
-    const membersInApplications = findAll('applications', { id: 'c0000001-0000-4000-8000-000000000001' }).total;
-    const membersInMembers = findAll('application-members', {}).total;
+    const appsInApplications = store.findAll('applications', {}).total;
+    const membersInApplications = store.findAll('applications', { id: 'c0000001-0000-4000-8000-000000000001' }).total;
+    const membersInMembers = store.findAll('application-members', {}).total;
 
     assert.strictEqual(appsInApplications, 1, 'applications collection should have exactly 1 record');
     assert.strictEqual(membersInApplications, 0, 'member record must not appear in applications collection');
     assert.strictEqual(membersInMembers, 1, 'application-members collection should have exactly 1 record');
     console.log('  ✓ Prefix collision: member records correctly isolated to application-members');
 
-    clearAll('applications');
-    clearAll('application-members');
+    store.clearAll('applications');
+    store.clearAll('application-members');
   });
 
   await t.test('seedAllDatabases - seeds from seedDir when it differs from specsDir', async () => {
     // Verifies that passing a separate seedDir causes seed data to be loaded
     // from that directory rather than from specsDir. This is the behaviour that
     // --seed=<dir> in setup.js exposes on the CLI.
-    clearAll('widgets');
+    store.clearAll('widgets');
 
     const { writeFileSync, mkdtempSync } = await import('fs');
     const { join: pathJoin } = await import('path');
@@ -310,13 +315,13 @@ test('Database Seeder Tests', async (t) => {
     // The fixture spec dir names the collections; the custom seed dir supplies
     // the records — confirming seeds come from seedDir, not from specsDir.
     const { seedAllDatabases: seed } = await import('../../src/seeder.js');
-    seed(fixtureSpecDir, tmpSeedDir);
+    seed(fixtureSpecDir, tmpSeedDir, store);
 
-    const found = findAll('widgets', { id: 'f0000001-0000-4000-8000-000000000001' });
+    const found = store.findAll('widgets', { id: 'f0000001-0000-4000-8000-000000000001' });
     assert.strictEqual(found.total, 1, 'record from custom seedDir should be present in widgets');
     console.log('  ✓ seedDir correctly overrides specsDir for seed loading');
 
-    clearAll('widgets');
+    store.clearAll('widgets');
   });
 
 });

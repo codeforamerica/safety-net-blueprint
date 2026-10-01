@@ -5,13 +5,29 @@
  * asserts that the resulting item IDs match. This is the living contract that
  * prevents the two implementations from diverging silently.
  *
- * SQL path:  executeSearch(db, queryParams, searchableFields, paginationDefaults)
- * JS path:   filterItems(items, queryParams)  +  paginateItems(filtered, queryParams)
+ * SQL path:  executeSearch(sqliteStore, collection, …) — pushed down into SQL
+ * JS path:   executeSearch(memoryStore, collection, …) — the same query in JS,
+ *            and the path a composition section takes via
+ *            filterItems + sortItems + paginateItems
+ *
+ * `executeSearch` takes a store rather than a raw handle so it can dispatch on
+ * whether the store can answer SQL at all. Both branches are asserted here, so
+ * a list endpoint answers the same whichever store is behind it.
+ *
+ * This suite had no coverage of the legacy `search=` parameter, which is where
+ * a real divergence had been living: `filterItems` stringified the whole record
+ * and so matched field *names* and numbers, while SQL scans json_tree for
+ * type = 'text' only. `search=status` returned every record that merely had a
+ * status field. Cases for it are below.
  */
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert';
-import Database from 'better-sqlite3';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createSqliteStore } from '../../src/stores/sqlite-store.js';
+import { createMemoryStore } from '../../src/stores/memory-store.js';
 import { executeSearch, filterItems, paginateItems } from '../../src/search-engine.js';
 
 // ---------------------------------------------------------------------------
@@ -51,13 +67,20 @@ const RECORDS = [
   { id: '6', name: 'Frank', createdAt: '2024-01-06T00:00:00Z' },
 ];
 
-function makeDb(records) {
-  const db = new Database(':memory:');
-  db.prepare('CREATE TABLE resources (id TEXT PRIMARY KEY, data TEXT NOT NULL)').run();
-  for (const record of records) {
-    db.prepare('INSERT INTO resources (id, data) VALUES (?, ?)').run(record.id, JSON.stringify(record));
+const COLLECTION = 'resources';
+
+/** A SQLite-backed store and an in-memory one, holding the same records. */
+function makeStores(records) {
+  const dir = mkdtempSync(join(tmpdir(), 'parity-'));
+  const sqlite = createSqliteStore({ dataDir: dir });
+  const memory = createMemoryStore();
+  for (const store of [sqlite, memory]) {
+    store.clearAll(COLLECTION);
+    // Copy each record: insertResource fills in timestamps by mutating its
+    // argument, so a shared object would leak one store's defaults into the other.
+    for (const record of records) store.insertResource(COLLECTION, { ...record });
   }
-  return db;
+  return { sqlite, memory, cleanup: () => { sqlite.close(); rmSync(dir, { recursive: true, force: true }); } };
 }
 
 // SQL orders createdAt DESC; pre-sort the JS array the same way so pagination
@@ -74,17 +97,30 @@ function sortedIds(items) {
  */
 function parity(label, queryParams, searchableFields = []) {
   test(label, () => {
-    const db = makeDb(RECORDS);
-    const sqlResult = executeSearch(db, queryParams, searchableFields, { limit: 100 });
-    assert.ok(!sqlResult.error, `SQL error: ${JSON.stringify(sqlResult.error)}`);
+    const { sqlite, memory, cleanup } = makeStores(RECORDS);
+    try {
+      const sqlResult = executeSearch(sqlite, COLLECTION, queryParams, searchableFields, { limit: 100 });
+      assert.ok(!sqlResult.error, `SQL error: ${JSON.stringify(sqlResult.error)}`);
 
-    const jsFiltered = filterItems(RECORDS, queryParams);
+      const memResult = executeSearch(memory, COLLECTION, queryParams, searchableFields, { limit: 100 });
+      assert.ok(!memResult.error, `memory error: ${JSON.stringify(memResult.error)}`);
 
-    assert.deepStrictEqual(
-      sortedIds(sqlResult.items),
-      sortedIds(jsFiltered),
-      `SQL=[${sortedIds(sqlResult.items)}] JS=[${sortedIds(jsFiltered)}]`
-    );
+      // The same list endpoint, two stores.
+      assert.deepStrictEqual(
+        sortedIds(memResult.items),
+        sortedIds(sqlResult.items),
+        `SQL=[${sortedIds(sqlResult.items)}] memory=[${sortedIds(memResult.items)}]`
+      );
+
+      // And the composition path, which filters an assembled array directly.
+      assert.deepStrictEqual(
+        sortedIds(filterItems(RECORDS, queryParams, searchableFields)),
+        sortedIds(sqlResult.items),
+        `SQL=[${sortedIds(sqlResult.items)}] filterItems=[${sortedIds(filterItems(RECORDS, queryParams, searchableFields))}]`
+      );
+    } finally {
+      cleanup();
+    }
   });
 }
 
@@ -152,41 +188,71 @@ describe('parity — traceid param', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Legacy search= parameter
+//
+// This suite had no cases here, which is how a real divergence survived:
+// filterItems did JSON.stringify(item).includes(needle), so it matched field
+// *names* and numeric values, while SQL scans json_tree for type = 'text'.
+// `search=status` returned every record that merely had a status field.
+// ---------------------------------------------------------------------------
+
+describe('parity — legacy search=', () => {
+  parity('matches a string value', { search: 'Alice' });
+  parity('is case-insensitive', { search: 'alice' });
+  parity('matches a substring', { search: 'lic' });
+  parity('matches a value in an array', { search: 'snap' });
+  parity('matches nothing when absent', { search: 'Nonexistent' });
+
+  // The three the bug got wrong.
+  parity('does not match a field name', { search: 'status' });
+  parity('does not match a field name that is also a value', { search: 'city' });
+  parity('does not match a number', { search: '30' });
+});
+
+// ---------------------------------------------------------------------------
 // Pagination parity
 // ---------------------------------------------------------------------------
 
 describe('parity — pagination', () => {
   test('limit+offset produce the same slice from the filtered set', () => {
     const queryParams = { q: 'status:active', limit: '2', offset: '0' };
-    const db = makeDb(RECORDS);
+    const { sqlite, memory, cleanup } = makeStores(RECORDS);
+    try {
+      const sqlResult = executeSearch(sqlite, COLLECTION, queryParams, [], { limit: 100 });
+      assert.ok(!sqlResult.error);
 
-    // SQL path
-    const sqlResult = executeSearch(db, queryParams, [], { limit: 100 });
-    assert.ok(!sqlResult.error);
+      const memResult = executeSearch(memory, COLLECTION, queryParams, [], { limit: 100 });
+      assert.deepStrictEqual(sortedIds(memResult.items), sortedIds(sqlResult.items));
+      assert.strictEqual(memResult.total, sqlResult.total);
+      assert.strictEqual(memResult.limit, sqlResult.limit);
+      assert.strictEqual(memResult.offset, sqlResult.offset);
+      assert.strictEqual(memResult.hasNext, sqlResult.hasNext);
 
-    // JS path — items pre-sorted createdAt DESC to match SQL ORDER BY
-    const jsFiltered = filterItems(RECORDS_DESC, queryParams);
-    const jsPaginated = paginateItems(jsFiltered, queryParams);
-
-    assert.deepStrictEqual(sortedIds(sqlResult.items), sortedIds(jsPaginated.items));
-    assert.strictEqual(sqlResult.total, jsPaginated.total);
-    assert.strictEqual(sqlResult.limit, jsPaginated.limit);
-    assert.strictEqual(sqlResult.offset, jsPaginated.offset);
-    assert.strictEqual(sqlResult.hasNext, jsPaginated.hasNext);
+      // Composition path — items pre-sorted createdAt DESC to match SQL ORDER BY
+      const jsPaginated = paginateItems(filterItems(RECORDS_DESC, queryParams), queryParams);
+      assert.deepStrictEqual(sortedIds(jsPaginated.items), sortedIds(sqlResult.items));
+      assert.strictEqual(jsPaginated.total, sqlResult.total);
+    } finally {
+      cleanup();
+    }
   });
 
   test('second page (offset=2) matches between SQL and JS', () => {
     const queryParams = { q: 'status:active', limit: '2', offset: '2' };
-    const db = makeDb(RECORDS);
+    const { sqlite, memory, cleanup } = makeStores(RECORDS);
+    try {
+      const sqlResult = executeSearch(sqlite, COLLECTION, queryParams, [], { limit: 100 });
+      assert.ok(!sqlResult.error);
 
-    const sqlResult = executeSearch(db, queryParams, [], { limit: 100 });
-    assert.ok(!sqlResult.error);
+      const memResult = executeSearch(memory, COLLECTION, queryParams, [], { limit: 100 });
+      assert.deepStrictEqual(sortedIds(memResult.items), sortedIds(sqlResult.items));
+      assert.strictEqual(memResult.hasNext, sqlResult.hasNext);
 
-    const jsFiltered = filterItems(RECORDS_DESC, queryParams);
-    const jsPaginated = paginateItems(jsFiltered, queryParams);
-
-    assert.deepStrictEqual(sortedIds(sqlResult.items), sortedIds(jsPaginated.items));
-    assert.strictEqual(sqlResult.total, jsPaginated.total);
-    assert.strictEqual(sqlResult.hasNext, jsPaginated.hasNext);
+      const jsPaginated = paginateItems(filterItems(RECORDS_DESC, queryParams), queryParams);
+      assert.deepStrictEqual(sortedIds(jsPaginated.items), sortedIds(sqlResult.items));
+      assert.strictEqual(jsPaginated.total, sqlResult.total);
+    } finally {
+      cleanup();
+    }
   });
 });

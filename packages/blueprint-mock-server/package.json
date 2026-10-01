@@ -9,6 +9,7 @@
   ],
   "exports": {
     ".": "./src/index.js",
+    "./store": "./src/stores/memory-store.js",
     "./test-utils": "./src/test-utils.js"
   },
   "bin": {

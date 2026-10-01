@@ -4,7 +4,12 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { insertResource, clearAll } from '../../src/database-manager.js';
+import { createMemoryStore } from '../../src/stores/memory-store.js';
+
+// A store of this file's own, rather than one shared through a module-level
+// singleton. In memory because these cases do not need a database — and
+// because a fresh one per file is isolation they did not have before.
+const store = createMemoryStore();
 import { executeProcedures } from '../../src/handlers/procedure-runner.js';
 
 // =============================================================================
@@ -25,10 +30,10 @@ function makeInlineRule({ id = 'test-rule', evaluation = 'first-match-wins', con
 }
 
 function seedQueues() {
-  clearAll('queues');
-  insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
-  insertResource('queues', { id: 'q-general', name: 'general-intake' });
-  insertResource('queues', { id: 'q-alameda', name: 'alameda-intake' });
+  store.clearAll('queues');
+  store.insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
+  store.insertResource('queues', { id: 'q-general', name: 'general-intake' });
+  store.insertResource('queues', { id: 'q-alameda', name: 'alameda-intake' });
 }
 
 // =============================================================================
@@ -36,10 +41,10 @@ function seedQueues() {
 // =============================================================================
 
 test('executeProcedures — context binding resolves entity and makes fields available', () => {
-  clearAll('applications');
+  store.clearAll('applications');
   seedQueues();
 
-  insertResource('applications', { id: 'app-1', programs: ['snap'] });
+  store.insertResource('applications', { id: 'app-1', programs: ['snap'] });
   const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
 
   const inlineRules = makeInlineRule({
@@ -54,7 +59,7 @@ test('executeProcedures — context binding resolves entity and makes fields ava
     }]
   });
 
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task));
+  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   assert.strictEqual(task.queueId, 'q-snap');
 });
 
@@ -63,7 +68,7 @@ test('executeProcedures — context binding resolves entity and makes fields ava
 // =============================================================================
 
 test('executeProcedures — entity not found skips rule set entirely', () => {
-  clearAll('applications');
+  store.clearAll('applications');
   seedQueues();
 
   const task = { id: 'task-1', subjectId: 'nonexistent', queueId: null };
@@ -79,7 +84,7 @@ test('executeProcedures — entity not found skips rule set entirely', () => {
     }]
   });
 
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task));
+  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   assert.strictEqual(task.queueId, null); // required binding failed — rule skipped
 });
 
@@ -88,7 +93,7 @@ test('executeProcedures — entity not found skips rule set entirely', () => {
 // =============================================================================
 
 test('executeProcedures — missing from field value skips rule set entirely', () => {
-  clearAll('applications');
+  store.clearAll('applications');
   seedQueues();
 
   const task = { id: 'task-1', queueId: null }; // no subjectId
@@ -104,7 +109,7 @@ test('executeProcedures — missing from field value skips rule set entirely', (
     }]
   });
 
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task));
+  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   assert.strictEqual(task.queueId, null); // required binding failed — rule skipped
 });
 
@@ -113,7 +118,7 @@ test('executeProcedures — missing from field value skips rule set entirely', (
 // =============================================================================
 
 test('executeProcedures — optional binding skipped when from field missing, rule set continues', () => {
-  clearAll('applications');
+  store.clearAll('applications');
   seedQueues();
 
   const task = { id: 'task-1', queueId: null }; // no subjectId
@@ -137,12 +142,12 @@ test('executeProcedures — optional binding skipped when from field missing, ru
   });
 
   // binding skipped (optional) — snap condition fails (application null) — catch-all fires
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task));
+  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   assert.strictEqual(task.queueId, 'q-general');
 });
 
 test('executeProcedures — optional binding skipped when entity not found, rule set continues', () => {
-  clearAll('applications');
+  store.clearAll('applications');
   seedQueues();
 
   const task = { id: 'task-1', subjectId: 'nonexistent', queueId: null };
@@ -166,7 +171,7 @@ test('executeProcedures — optional binding skipped when entity not found, rule
   });
 
   // binding skipped (optional) — snap condition fails (application null) — catch-all fires
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task));
+  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   assert.strictEqual(task.queueId, 'q-general');
 });
 
@@ -175,12 +180,12 @@ test('executeProcedures — optional binding skipped when entity not found, rule
 // =============================================================================
 
 test('executeProcedures — chained binding resolves entity via prior resolved entity field', () => {
-  clearAll('applications');
-  clearAll('cases');
+  store.clearAll('applications');
+  store.clearAll('cases');
   seedQueues();
 
-  insertResource('applications', { id: 'app-1', programs: ['snap'], caseId: 'case-99' });
-  insertResource('cases', { id: 'case-99', county: 'alameda' });
+  store.insertResource('applications', { id: 'app-1', programs: ['snap'], caseId: 'case-99' });
+  store.insertResource('cases', { id: 'case-99', county: 'alameda' });
   const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
 
   const inlineRules = makeInlineRule({
@@ -195,7 +200,7 @@ test('executeProcedures — chained binding resolves entity via prior resolved e
     }]
   });
 
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task));
+  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   assert.strictEqual(task.queueId, 'q-alameda');
 });
 
@@ -221,12 +226,12 @@ test('executeProcedures — calling resource fields accessible as "$object.*" in
     ]
   });
 
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task));
+  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   assert.strictEqual(task.queueId, 'q-general'); // isExpedited false → catch-all
 
   task.isExpedited = true;
   task.queueId = null;
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task));
+  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   assert.strictEqual(task.queueId, 'q-snap'); // isExpedited true → matches first condition
 });
 
@@ -250,7 +255,7 @@ test('executeProcedures — non-id where clause resolves entity by named field',
     }]
   });
 
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task));
+  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   assert.strictEqual(task.queueId, 'q-snap');
 });
 
@@ -269,7 +274,7 @@ test('executeProcedures — all-match fires all matching conditions', () => {
     ]
   });
 
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task));
+  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   // Both conditions fired: expedited then high → final value is 'high'
   assert.strictEqual(task.priority, 'high');
 });
@@ -285,7 +290,7 @@ test('executeProcedures — first-match-wins stops at first matching condition',
     ]
   });
 
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task));
+  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   // Only snap-rule fired → 'expedited'
   assert.strictEqual(task.priority, 'expedited');
 });
@@ -304,7 +309,7 @@ test('executeProcedures — conditions evaluated in declaration order without ex
     ]
   });
 
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task));
+  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   assert.strictEqual(task.queueId, 'q-first'); // first-match-wins stops after first match
 });
 
@@ -318,7 +323,7 @@ test('executeProcedures — order field overrides declaration order', () => {
     ]
   });
 
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task));
+  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   assert.strictEqual(task.queueId, 'q-first'); // order:1 runs first despite being declared second
 });
 
@@ -327,9 +332,9 @@ test('executeProcedures — order field overrides declaration order', () => {
 // =============================================================================
 
 test('executeProcedures — JSON Logic where in context binding returns first match', () => {
-  clearAll('queues');
-  insertResource('queues', { id: 'q-snap', name: 'snap-intake', priority: 1 });
-  insertResource('queues', { id: 'q-general', name: 'general-intake', priority: 2 });
+  store.clearAll('queues');
+  store.insertResource('queues', { id: 'q-snap', name: 'snap-intake', priority: 1 });
+  store.insertResource('queues', { id: 'q-general', name: 'general-intake', priority: 2 });
 
   const task = { id: 'task-1', queueId: null };
 
@@ -346,7 +351,7 @@ test('executeProcedures — JSON Logic where in context binding returns first ma
     }]
   });
 
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task));
+  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   assert.strictEqual(task.queueId, 'q-snap');
 });
 
@@ -355,10 +360,10 @@ test('executeProcedures — JSON Logic where in context binding returns first ma
 // =============================================================================
 
 test('executeProcedures — rule-level context adds bindings not in caller scope', () => {
-  clearAll('applications');
-  clearAll('queues');
-  insertResource('applications', { id: 'app-1', programs: ['snap'] });
-  insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
+  store.clearAll('applications');
+  store.clearAll('queues');
+  store.insertResource('applications', { id: 'app-1', programs: ['snap'] });
+  store.insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
 
   // Rule has its own context: (application binding) not provided by caller
   const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
@@ -373,15 +378,15 @@ test('executeProcedures — rule-level context adds bindings not in caller scope
   });
 
   // Call-site context has no entities — the rule resolves its own
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task));
+  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   assert.strictEqual(task.queueId, 'q-snap');
 });
 
 test('executeProcedures — rule-level context can chain from caller-scope entities', () => {
-  clearAll('applications');
-  clearAll('queues');
-  insertResource('applications', { id: 'app-1', programs: ['snap'], countyQueueName: 'snap-intake' });
-  insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
+  store.clearAll('applications');
+  store.clearAll('queues');
+  store.insertResource('applications', { id: 'app-1', programs: ['snap'], countyQueueName: 'snap-intake' });
+  store.insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
 
   const task = { id: 'task-1', subjectId: 'app-1', queueId: null };
 
@@ -397,6 +402,6 @@ test('executeProcedures — rule-level context can chain from caller-scope entit
     }]
   });
 
-  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task));
+  executeProcedures([{ procedureId: 'test-rule' }], task, inlineRules, makeContext(task), store);
   assert.strictEqual(task.queueId, 'q-snap');
 });
