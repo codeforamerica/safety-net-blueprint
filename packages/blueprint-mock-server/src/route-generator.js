@@ -253,7 +253,7 @@ export function extractRequiredDefaults(responseSchema) {
  * @param {Array} stateMachines - State machine entries for this API's domain (from discoverStateMachines)
  * @returns {Array} Array of registered endpoint info
  */
-export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaTypes = [], uploadsDir = null) {
+export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaTypes = [], uploadsDir = null, deps = {}) {
   const registeredEndpoints = [];
 
   console.log(`  Registering routes for ${apiMetadata.title}...`);
@@ -308,7 +308,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       continue;
     } else if (endpoint.operationId === 'search') {
       // Cross-resource search endpoint — custom handler
-      handler = createSearchHandler(apiMetadata);
+      handler = createSearchHandler(apiMetadata, deps);
       description = 'Cross-resource search';
     } else if (method === 'get' && endpoint.path.endsWith('/me')) {
       // GET /resource/me — current-user singleton
@@ -316,7 +316,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       description = 'Get authenticated user';
     } else if (method === 'get' && isCollectionEndpoint(endpoint.path)) {
       // GET /resources - List/search
-      handler = createListHandler(apiMetadata, endpointWithCollection);
+      handler = createListHandler(apiMetadata, endpointWithCollection, deps);
       description = 'List/search resources';
     } else if (method === 'post' && isCollectionEndpoint(endpoint.path)) {
       // POST /resources - Create
@@ -484,7 +484,7 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
  * @param {Array} stateMachines - Array from discoverStateMachines()
  * @returns {Array} Array of all registered endpoints grouped by API
  */
-export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], slaTypes = [], metrics = [], uploadsDir = null) {
+export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], slaTypes = [], metrics = [], uploadsDir = null, deps = {}) {
   console.log('\nRegistering API routes...');
 
   const allEndpoints = [];
@@ -502,7 +502,7 @@ export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], sl
   for (const apiSpec of apiSpecs) {
     // Pass all state machines for this domain — there may be more than one (e.g., Application + ApplicationDocument)
     const domainSMs = stateMachines.filter(s => s.domain === apiSpec.name);
-    const endpoints = registerRoutes(app, apiSpec, baseUrl, domainSMs, slaTypes, uploadsDir);
+    const endpoints = registerRoutes(app, apiSpec, baseUrl, domainSMs, slaTypes, uploadsDir, deps);
     allEndpoints.push({
       apiName: apiSpec.name,
       title: apiSpec.title,

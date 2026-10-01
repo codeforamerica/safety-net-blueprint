@@ -5,8 +5,7 @@
  * SearchResult shape with facet counts per resource type.
  */
 
-import { getDatabase } from '../database-manager.js';
-import { buildSearchConditions, buildWhereClause, parsePagination } from '../search-engine.js';
+import { executeSearch, parsePagination, STATE_RECORDS_LIMIT_MAX } from '../search-engine.js';
 
 /**
  * Resource mapping configuration.
@@ -95,7 +94,7 @@ const ALL_TYPES = Object.keys(RESOURCE_MAP);
  * @param {Object} apiMetadata - API metadata from the search OpenAPI spec
  * @returns {Function} Express handler
  */
-export function createSearchHandler(apiMetadata) {
+export function createSearchHandler(apiMetadata, { store } = {}) {
   return (req, res) => {
     try {
       const queryParams = req.query || {};
@@ -129,46 +128,32 @@ export function createSearchHandler(apiMetadata) {
       for (const type of requestedTypes) {
         const config = RESOURCE_MAP[type];
 
-        let db;
-        try {
-          db = getDatabase(config.dbName);
-        } catch {
-          // Database may not exist if the corresponding spec wasn't loaded
+        // Through executeSearch rather than hand-built SQL, so this endpoint
+        // dispatches to SQL or to the JS query path the same way a list
+        // endpoint does. The previous version built its own statement and
+        // swallowed the failure: `catch { facetCounts[type] = 0; continue; }`
+        // was written for a spec that had not been loaded, but it also caught
+        // "this store has no SQL", so /search quietly returned no results and
+        // zero facet counts on a store without SQLite rather than failing.
+        //
+        // No per-collection pagination — pagination applies to the merged set
+        // below — so this asks for everything up to the same ceiling the state
+        // record endpoints use.
+        const result = executeSearch(
+          store,
+          config.dbName,
+          searchParams,
+          config.searchableFields,
+          { limitDefault: STATE_RECORDS_LIMIT_MAX, limitMax: STATE_RECORDS_LIMIT_MAX },
+        );
+
+        if (result.error) {
           facetCounts[type] = 0;
           continue;
         }
 
-        // Build search conditions using the existing search engine
-        const { whereClauses, params } = buildSearchConditions(
-          searchParams,
-          config.searchableFields,
-        );
-        const whereClause = buildWhereClause(whereClauses);
-
-        // Count matching rows for facets
-        const countQuery = `SELECT COUNT(*) as count FROM resources ${whereClause}`.trim();
-        const countResult = db.prepare(countQuery).get(...params);
-        const matchCount = countResult?.count || 0;
-        facetCounts[type] = matchCount;
-
-        if (matchCount === 0) continue;
-
-        // Fetch all matching rows (no per-DB pagination — pagination applied to merged set)
-        const selectQuery = `
-          SELECT data FROM resources
-          ${whereClause}
-          ORDER BY COALESCE(json_extract(data, '$.createdAt'), '1970-01-01T00:00:00Z') DESC
-        `.trim();
-        const rows = db.prepare(selectQuery).all(...params);
-
-        for (const row of rows) {
-          try {
-            const resource = JSON.parse(row.data);
-            allResults.push({ type, resource });
-          } catch {
-            // skip unparseable rows
-          }
-        }
+        facetCounts[type] = result.total;
+        for (const resource of result.items) allResults.push({ type, resource });
       }
 
       // Sort merged results by createdAt descending

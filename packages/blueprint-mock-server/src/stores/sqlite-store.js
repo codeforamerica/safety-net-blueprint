@@ -16,37 +16,30 @@ import { existsSync, mkdirSync } from 'fs';
 import { randomUUID } from 'crypto';
 import { deepMerge } from '../deep-merge.js';
 import { assertSafeFieldName, normalizeFilterValue } from './contract.js';
+import { registerSqlCapability, sqlHandleFor } from './sql-capability.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_DATA_DIR = join(__dirname, '../../generated/mock-data');
 
 /**
- * Raw SQLite handles, by store.
+ * The SQLite handle for one collection, for callers that build their own SQL.
  *
- * Deliberately outside the store object. `search-engine.js` and
- * `handlers/search-handler.js` build queries the contract cannot express and
- * need the handle, but putting `getDatabase` on the store would make it look
- * like part of the interface — and the in-memory store could never provide it.
- * Keeping it here means the contract surface stays honest and the escape hatch
- * is visibly an escape hatch. Both callers going away is what retires this.
- */
-const handles = new WeakMap();
-
-/**
- * The SQLite handle for one collection, for the two callers that still build
- * their own SQL. Throws for any store that is not SQLite-backed.
+ * Throws for a store that is not SQLite-backed. Callers that can fall back to a
+ * JS query should ask `sqlHandleFor` in `sql-capability.js` instead, which
+ * returns null — and importantly can be imported without pulling
+ * `better-sqlite3` into the caller's module graph.
  *
- * @deprecated Route the query through the store instead; see `contract.js`.
+ * @deprecated Route the query through the store where the contract can express it.
  */
 export function sqliteHandle(store, collection) {
-  const getDatabase = handles.get(store);
-  if (!getDatabase) {
+  const handle = sqlHandleFor(store, collection);
+  if (!handle) {
     throw new Error(
       'sqliteHandle() was given a store that is not SQLite-backed. Raw SQL has no ' +
         'equivalent in an in-memory store — express the query through the store contract.'
     );
   }
-  return getDatabase(collection);
+  return handle;
 }
 
 /**
@@ -276,6 +269,6 @@ export function createSqliteStore({ dataDir = DEFAULT_DATA_DIR } = {}) {
     },
   };
 
-  handles.set(store, getDatabase);
+  registerSqlCapability(store, getDatabase);
   return store;
 }

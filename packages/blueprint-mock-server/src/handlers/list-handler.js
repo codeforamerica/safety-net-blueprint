@@ -2,7 +2,7 @@
  * Handler for GET /resources (list/search)
  */
 
-import { getDatabase, findById } from '../database-manager.js';
+import { findById } from '../database-manager.js';
 import { executeSearch, PAGINATION_DEFAULTS } from '../search-engine.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractAuthContext } from '../auth-context.js';
@@ -38,7 +38,7 @@ function extractStringFields(schemas) {
  * @param {Object} endpoint - Endpoint metadata
  * @returns {Function} Express handler
  */
-export function createListHandler(apiMetadata, endpoint) {
+export function createListHandler(apiMetadata, endpoint, { store } = {}) {
   // Derive searchable fields from schema string properties
   const schemaFields = extractStringFields(apiMetadata.schemas || {});
 
@@ -50,7 +50,6 @@ export function createListHandler(apiMetadata, endpoint) {
       }
 
       // Get database (this will create it if it doesn't exist)
-      const db = getDatabase(endpoint.collectionName);
 
       // Resolve "me" in the q param to the authenticated user's ID.
       // e.g. q=assignedTo:me → q=assignedTo:<callerId>
@@ -90,7 +89,8 @@ export function createListHandler(apiMetadata, endpoint) {
 
       // Execute search with filters, pagination, and sort
       const result = executeSearch(
-        db,
+        store,
+        endpoint.collectionName,
         queryParams,
         searchableFields,
         paginationDefaults,

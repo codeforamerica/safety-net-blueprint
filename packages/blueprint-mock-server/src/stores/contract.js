@@ -100,6 +100,13 @@
  *   primitive a consumer needs to serialise a session; where the bytes go is the
  *   consumer's business, not the store's.
  *
+ *   **Not a backup mechanism, and redundant with persistence.** A SQLite-backed
+ *   store already has its data on disk, so this looks like duplication there —
+ *   but it produces portable JSON rather than a binary database file, which is
+ *   what makes a session movable between implementations and exportable as the
+ *   payload a real API would have received. Copying `.db` files is the backup
+ *   mechanism; this is the interchange one.
+ *
  * @property {(snapshot: Object<string, Object[]>) => void} restore
  *   Replaces the contents of each named collection wholesale. Collections absent
  *   from the snapshot are left alone.

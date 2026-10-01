@@ -6,7 +6,10 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import Database from 'better-sqlite3';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createSqliteStore } from '../../src/stores/sqlite-store.js';
 import { buildSearchConditions, executeSearch } from '../../src/search-engine.js';
 
 /**
@@ -14,14 +17,22 @@ import { buildSearchConditions, executeSearch } from '../../src/search-engine.js
  * @param {Object} resource - The JSON resource to insert
  * @returns {Database} In-memory database instance
  */
-function makeDb(resource) {
-  const db = new Database(':memory:');
-  db.prepare('CREATE TABLE resources (id TEXT PRIMARY KEY, data TEXT NOT NULL)').run();
-  db.prepare('INSERT INTO resources (id, data) VALUES (?, ?)').run(
-    resource.id,
-    JSON.stringify(resource)
-  );
-  return db;
+const COLLECTION = 'resources';
+
+/**
+ * A SQLite-backed store holding one record.
+ *
+ * `executeSearch` takes a store and a collection rather than a raw handle, so
+ * that it can dispatch to SQL or to the JS query path depending on what the
+ * store supports. These cases exercise the SQL branch deliberately — the two
+ * branches are compared against each other in query-conformance.test.js.
+ */
+function makeStore(resource) {
+  const dir = mkdtempSync(join(tmpdir(), 'search-cond-'));
+  const store = createSqliteStore({ dataDir: dir });
+  store.clearAll(COLLECTION);
+  store.insertResource(COLLECTION, { ...resource });
+  return { store, cleanup: () => { store.close(); rmSync(dir, { recursive: true, force: true }); } };
 }
 
 test('buildSearchConditions', async (t) => {
@@ -129,41 +140,41 @@ test('executeSearch — nested field search', async (t) => {
     status: 'active',
   };
 
-  const db = makeDb(record);
+  const { store, cleanup } = makeStore(record);
 
   await t.test('search finds value in top-level nested object (name.firstName)', () => {
-    const result = executeSearch(db, { search: 'Avery' }, []);
+    const result = executeSearch(store, COLLECTION, { search: 'Avery' }, []);
     assert.strictEqual(result.total, 1, 'Should find record by nested firstName');
     assert.strictEqual(result.items[0].id, 'test-1');
     console.log('  ✓ Finds value in top-level nested object');
   });
 
   await t.test('search finds value deep in array of objects (household.members[].name.firstName)', () => {
-    const result = executeSearch(db, { search: 'Morgan' }, []);
+    const result = executeSearch(store, COLLECTION, { search: 'Morgan' }, []);
     assert.strictEqual(result.total, 1, 'Should find record by deeply nested firstName');
     assert.strictEqual(result.items[0].id, 'test-1');
     console.log('  ✓ Finds value deep in array of objects');
   });
 
   await t.test('search is case-insensitive', () => {
-    const result = executeSearch(db, { search: 'avery' }, []);
+    const result = executeSearch(store, COLLECTION, { search: 'avery' }, []);
     assert.strictEqual(result.total, 1, 'Search should be case-insensitive');
     console.log('  ✓ Search is case-insensitive');
   });
 
   await t.test('search returns no results for non-matching term', () => {
-    const result = executeSearch(db, { search: 'Nonexistent' }, []);
+    const result = executeSearch(store, COLLECTION, { search: 'Nonexistent' }, []);
     assert.strictEqual(result.total, 0, 'Should return no results for non-matching term');
     console.log('  ✓ Returns no results for non-matching term');
   });
 
   await t.test('q full-text finds value in nested field', () => {
-    const result = executeSearch(db, { q: '*Avery*' }, []);
+    const result = executeSearch(store, COLLECTION, { q: '*Avery*' }, []);
     assert.strictEqual(result.total, 1, 'q full-text should find nested value');
     console.log('  ✓ q full-text finds value in nested field');
   });
 
-  db.close();
+  cleanup();
 });
 
 console.log('\n✓ All buildSearchConditions tests passed\n');

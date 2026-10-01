@@ -19,22 +19,42 @@
 import { createSqliteStore, sqliteHandle } from './stores/sqlite-store.js';
 
 /**
- * The process-wide store. Exported so that code being migrated can hand the
- * same instance to something that now expects a store parameter, rather than
- * creating a second one over the same files.
+ * The process-wide store.
+ *
+ * Mutable, which is the thing injection exists to avoid — so it is deliberately
+ * temporary. Every export below reads it at call time, which means `useStore()`
+ * can swap it once at startup and the 21 modules still importing these
+ * functions pick up the choice without being touched.
+ *
+ * That is what makes `--store=memory` work before the modules take a store as a
+ * parameter, and therefore what lets the whole functional suite run against the
+ * in-memory store now rather than after the injection work. It goes away with
+ * the shim.
  */
-export const defaultStore = createSqliteStore();
+let current = createSqliteStore();
 
-export const registerCollectionDefaults = (...args) => defaultStore.registerCollectionDefaults(...args);
-export const findAll = (...args) => defaultStore.findAll(...args);
-export const search = (...args) => defaultStore.search(...args);
-export const findById = (...args) => defaultStore.findById(...args);
-export const create = (...args) => defaultStore.create(...args);
-export const update = (...args) => defaultStore.update(...args);
-export const deleteResource = (...args) => defaultStore.deleteResource(...args);
-export const clearAll = (...args) => defaultStore.clearAll(...args);
-export const insertResource = (...args) => defaultStore.insertResource(...args);
-export const count = (...args) => defaultStore.count(...args);
+/** @deprecated Reads the process-wide store. Take one as a parameter instead. */
+export const defaultStore = { get current() { return current; } };
+
+/**
+ * Replace the process-wide store. Call once, before any seeding or routing.
+ *
+ * @param {import('./stores/contract.js').Store} store
+ */
+export function useStore(store) {
+  current = store;
+}
+
+export const registerCollectionDefaults = (...args) => current.registerCollectionDefaults(...args);
+export const findAll = (...args) => current.findAll(...args);
+export const search = (...args) => current.search(...args);
+export const findById = (...args) => current.findById(...args);
+export const create = (...args) => current.create(...args);
+export const update = (...args) => current.update(...args);
+export const deleteResource = (...args) => current.deleteResource(...args);
+export const clearAll = (...args) => current.clearAll(...args);
+export const insertResource = (...args) => current.insertResource(...args);
+export const count = (...args) => current.count(...args);
 
 /**
  * Clear every collection the store has opened.
@@ -43,12 +63,12 @@ export const count = (...args) => defaultStore.count(...args);
  * distinct capability, so it is not part of the store contract.
  */
 export function clearAllDatabases() {
-  for (const collection of Object.keys(defaultStore.snapshot())) {
-    defaultStore.clearAll(collection);
+  for (const collection of Object.keys(current.snapshot())) {
+    current.clearAll(collection);
   }
 }
 
-export const closeAll = () => defaultStore.close();
+export const closeAll = () => current.close();
 
 /**
  * @deprecated Reaches the raw SQLite handle, which only the SQL store has.
@@ -59,4 +79,4 @@ export const closeAll = () => defaultStore.close();
  * callers, and reconciling them is what decides the store's eventual query
  * shape; see `stores/contract.js`.
  */
-export const getDatabase = (resourceName) => sqliteHandle(defaultStore, resourceName);
+export const getDatabase = (resourceName) => sqliteHandle(current, resourceName);
