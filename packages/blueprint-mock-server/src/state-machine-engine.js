@@ -7,7 +7,6 @@
 import jsonLogic from 'json-logic-js';
 import { evaluateCEL as _evaluateCEL } from './cel-evaluator.js';
 import { deriveCollectionName, resolveDotPath } from './collection-utils.js';
-import { findAll, findById } from './database-manager.js';
 import { resolveTimeToken } from './time-tokens.js';
 import { evaluate as evaluateRules } from '@codeforamerica/blueprint-rules-engine';
 
@@ -464,7 +463,7 @@ function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, p
  *   pendingEvents: Array<{ action: string, data: Object }>
  * }}
  */
-export function applySteps(steps, resource, context) {
+export function applySteps(steps, resource, context, store) {
   const pendingCreates = [];
   const pendingOperations = [];
   const pendingAppends = [];
@@ -487,7 +486,7 @@ export function applySteps(steps, resource, context) {
       };
       const conditionMet = evaluateCEL(step.if, celData);
       const branchSteps = conditionMet ? (step.then || []) : (step.else || []);
-      const nested = applySteps(branchSteps, resource, context);
+      const nested = applySteps(branchSteps, resource, context, store);
       pendingCreates.push(...nested.pendingCreates);
       pendingOperations.push(...nested.pendingOperations);
       pendingAppends.push(...nested.pendingAppends);
@@ -502,7 +501,7 @@ export function applySteps(steps, resource, context) {
       const branches = step.when || {};
       const matchedSteps = branches[matchValue];
       if (matchedSteps) {
-        const nested = applySteps(matchedSteps, resource, context);
+        const nested = applySteps(matchedSteps, resource, context, store);
         pendingCreates.push(...nested.pendingCreates);
         pendingOperations.push(...nested.pendingOperations);
         pendingAppends.push(...nested.pendingAppends);
@@ -525,7 +524,7 @@ export function applySteps(steps, resource, context) {
             // Expose category/item as $params.category equivalent
             params: { ...(context.params || {}), ...(itemAlias ? { [itemAlias]: item } : {}) },
           };
-          const nested = applySteps(step.do || [], resource, itemContext);
+          const nested = applySteps(step.do || [], resource, itemContext, store);
           pendingCreates.push(...nested.pendingCreates);
           pendingOperations.push(...nested.pendingOperations);
           pendingAppends.push(...nested.pendingAppends);
@@ -548,7 +547,7 @@ export function applySteps(steps, resource, context) {
 
       let items;
       if (isJsonLogic) {
-        const { items: allItems } = findAll(collection, {});
+        const { items: allItems } = store.findAll(collection, {});
         const logicData = {
           this: context.this ?? {},
           object: context.object ?? {},
@@ -573,7 +572,7 @@ export function applySteps(steps, resource, context) {
           console.warn('forEach: where clause resolved to undefined — skipping');
           continue;
         }
-        ({ items } = findAll(collection, query));
+        ({ items } = store.findAll(collection, query));
       }
 
       for (const item of items) {
@@ -581,7 +580,7 @@ export function applySteps(steps, resource, context) {
           ...context,
           entities: { ...(context.entities ?? {}), [itemAlias]: item },
         };
-        const nested = applySteps(forEachSteps || [], resource, itemContext);
+        const nested = applySteps(forEachSteps || [], resource, itemContext, store);
         pendingCreates.push(...nested.pendingCreates);
         pendingOperations.push(...nested.pendingOperations);
         pendingAppends.push(...nested.pendingAppends);

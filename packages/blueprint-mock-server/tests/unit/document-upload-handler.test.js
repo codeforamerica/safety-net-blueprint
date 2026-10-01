@@ -4,10 +4,20 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
+import { createMemoryStore } from '../../src/stores/memory-store.js';
+
+// A store of this file's own, rather than one shared through a module-level
+// singleton. In memory because these cases do not need a database — and
+// because a fresh one per file is isolation they did not have before.
+const store = createMemoryStore();
 import { mkdtempSync, rmSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { clearAll, findById, findAll, insertResource } from '../../src/database-manager.js';
+
+// The handler takes its store as a parameter now. These cases seed through the
+// shim's module-level exports, so they must hand the handler that same store or
+// it would read an empty one.
+const deps = { store: store };
 import { PassThrough } from 'stream';
 import {
   createDocumentUploadHandler,
@@ -75,12 +85,12 @@ test('resolveUploadsDir — falls back to defaultDir when env var not set', () =
 // =============================================================================
 
 test('uploadDocument — creates document and version records, saves file to disk', () => {
-  clearAll('documents');
-  clearAll('document-versions');
+  store.clearAll('documents');
+  store.clearAll('document-versions');
 
   const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
   try {
-    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080');
+    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080', deps);
     const req = makeReq();
     const res = makeRes();
 
@@ -95,7 +105,7 @@ test('uploadDocument — creates document and version records, saves file to dis
     assert.ok(res._headers['Location']?.includes(res._body.id), 'Location header set');
 
     // Version record created
-    const version = findById('document-versions', res._body.latestVersionId);
+    const version = store.findById('document-versions', res._body.latestVersionId);
     assert.ok(version, 'version record exists');
     assert.strictEqual(version.versionNumber, 1);
     assert.strictEqual(version.fileName, 'test.txt');
@@ -115,7 +125,7 @@ test('uploadDocument — creates document and version records, saves file to dis
 test('uploadDocument — returns 422 when file is missing', () => {
   const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
   try {
-    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080');
+    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080', deps);
     const req = makeReq({ file: null });
     const res = makeRes();
 
@@ -131,7 +141,7 @@ test('uploadDocument — returns 422 when file is missing', () => {
 test('uploadDocument — returns 422 when documentTypeId is missing', () => {
   const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
   try {
-    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080');
+    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080', deps);
     const req = makeReq({ body: { title: 'Test' } });
     const res = makeRes();
 
@@ -147,7 +157,7 @@ test('uploadDocument — returns 422 when documentTypeId is missing', () => {
 test('uploadDocument — returns 422 when title is missing', () => {
   const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
   try {
-    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080');
+    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080', deps);
     const req = makeReq({ body: { documentTypeId: 'a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5' } });
     const res = makeRes();
 
@@ -163,7 +173,7 @@ test('uploadDocument — returns 422 when title is missing', () => {
 test('uploadDocument — returns 400 when metadata is invalid JSON', () => {
   const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
   try {
-    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080');
+    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080', deps);
     const req = makeReq({ body: { documentTypeId: 'a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5', title: 'Test', metadata: 'not-json' } });
     const res = makeRes();
 
@@ -177,12 +187,12 @@ test('uploadDocument — returns 400 when metadata is invalid JSON', () => {
 });
 
 test('uploadDocument — parses metadata JSON string onto document record', () => {
-  clearAll('documents');
-  clearAll('document-versions');
+  store.clearAll('documents');
+  store.clearAll('document-versions');
 
   const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
   try {
-    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080');
+    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080', deps);
     const req = makeReq({
       body: {
         documentTypeId: 'a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5',
@@ -205,20 +215,20 @@ test('uploadDocument — parses metadata JSON string onto document record', () =
 // =============================================================================
 
 test('uploadDocumentVersion — adds version to existing document, increments versionNumber', () => {
-  clearAll('documents');
-  clearAll('document-versions');
+  store.clearAll('documents');
+  store.clearAll('document-versions');
 
   const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
   try {
     // Seed a document and first version
-    const [, uploadHandler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080');
+    const [, uploadHandler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080', deps);
     const uploadReq = makeReq();
     const uploadRes = makeRes();
     uploadHandler(uploadReq, uploadRes);
     const documentId = uploadRes._body.id;
 
     // Add second version
-    const [, versionHandler] = createDocumentVersionUploadHandler(uploadsDir, 'http://localhost:1080');
+    const [, versionHandler] = createDocumentVersionUploadHandler(uploadsDir, 'http://localhost:1080', deps);
     const req = makeReq({
       params: { documentId },
       file: { originalname: 'v2.txt', mimetype: 'text/plain', size: 5, buffer: Buffer.from('hello') }
@@ -232,7 +242,7 @@ test('uploadDocumentVersion — adds version to existing document, increments ve
     assert.strictEqual(res._body.documentId, documentId);
 
     // Document latestVersionId updated
-    const doc = findById('documents', documentId);
+    const doc = store.findById('documents', documentId);
     assert.strictEqual(doc.latestVersionId, res._body.id);
 
     // File on disk
@@ -244,11 +254,11 @@ test('uploadDocumentVersion — adds version to existing document, increments ve
 });
 
 test('uploadDocumentVersion — returns 404 when document does not exist', () => {
-  clearAll('documents');
+  store.clearAll('documents');
 
   const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
   try {
-    const [, handler] = createDocumentVersionUploadHandler(uploadsDir, 'http://localhost:1080');
+    const [, handler] = createDocumentVersionUploadHandler(uploadsDir, 'http://localhost:1080', deps);
     const req = makeReq({ params: { documentId: '00000000-0000-0000-0000-000000000000' } });
     const res = makeRes();
 
@@ -265,13 +275,13 @@ test('uploadDocumentVersion — returns 404 when document does not exist', () =>
 // =============================================================================
 
 test('getDocumentVersionContent — sets Content-Type and Content-Disposition headers', (t, done) => {
-  clearAll('documents');
-  clearAll('document-versions');
+  store.clearAll('documents');
+  store.clearAll('document-versions');
 
   const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
 
   // Upload a document to seed DB and disk
-  const [, uploadHandler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080');
+  const [, uploadHandler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080', deps);
   const uploadReq = makeReq();
   const uploadRes = makeRes();
   uploadHandler(uploadReq, uploadRes);
@@ -282,7 +292,7 @@ test('getDocumentVersionContent — sets Content-Type and Content-Disposition he
   res._headers = {};
   res.setHeader = (k, v) => { res._headers[k] = v; };
 
-  const contentHandler = createDocumentContentHandler(uploadsDir);
+  const contentHandler = createDocumentContentHandler(uploadsDir, deps);
   contentHandler({ params: { documentVersionId: versionId } }, res);
 
   res.on('finish', () => {
@@ -299,11 +309,11 @@ test('getDocumentVersionContent — sets Content-Type and Content-Disposition he
 });
 
 test('getDocumentVersionContent — returns 404 when version does not exist', () => {
-  clearAll('document-versions');
+  store.clearAll('document-versions');
 
   const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
   try {
-    const handler = createDocumentContentHandler(uploadsDir);
+    const handler = createDocumentContentHandler(uploadsDir, deps);
     const req = { params: { documentVersionId: '00000000-0000-0000-0000-000000000000' } };
     const res = makeRes();
 
@@ -316,14 +326,14 @@ test('getDocumentVersionContent — returns 404 when version does not exist', ()
 });
 
 test('getDocumentVersionContent — returns 404 when file is missing from disk', () => {
-  clearAll('documents');
-  clearAll('document-versions');
+  store.clearAll('documents');
+  store.clearAll('document-versions');
 
   const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
   try {
     // Insert a version record with no corresponding file on disk
     const versionId = '11111111-1111-4111-8111-111111111111';
-    insertResource('document-versions', {
+    store.insertResource('document-versions', {
       id: versionId,
       documentId: '22222222-2222-4222-8222-222222222222',
       versionNumber: 1,
@@ -335,7 +345,7 @@ test('getDocumentVersionContent — returns 404 when file is missing from disk',
       createdAt: new Date().toISOString()
     });
 
-    const handler = createDocumentContentHandler(uploadsDir);
+    const handler = createDocumentContentHandler(uploadsDir, deps);
     const req = { params: { documentVersionId: versionId } };
     const res = makeRes();
 

@@ -2,7 +2,6 @@
  * Handler for GET /resources (list/search)
  */
 
-import { findById } from '../database-manager.js';
 import { executeSearch, PAGINATION_DEFAULTS } from '../search-engine.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractAuthContext } from '../auth-context.js';
@@ -128,7 +127,7 @@ export function createListHandler(apiMetadata, endpoint, { store } = {}) {
       const derivedFields = extractDerivedFields(itemSchema);
       if (expandFields.length > 0 || linksFields.length > 0 || derivedFields.length > 0) {
         safeResult.items = safeResult.items.map(item => {
-          let result = expandFields.length > 0 ? applyExpand(item, expandFields, findById) : item;
+          let result = expandFields.length > 0 ? applyExpand(item, expandFields, (c, id) => store.findById(c, id)) : item;
           if (linksFields.length > 0) result = applyLinks(result, linksFields, apiMetadata.serverBasePath);
           if (derivedFields.length > 0) result = applyDerivedFields(result, derivedFields);
           return result;

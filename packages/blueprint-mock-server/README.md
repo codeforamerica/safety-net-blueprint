@@ -57,12 +57,67 @@ applications:
     programsAppliedFor: [snap]
 ```
 
+## Stores
+
+Resources are held in a store, chosen at startup.
+
+```bash
+npm run mock:start -- --spec=<dir>                   # sqlite (default)
+npm run mock:start -- --spec=<dir> --store=memory    # in memory
+MOCK_STORE=memory npm test                           # for a test run
+```
+
+**`sqlite`** keeps one `.db` file per collection under `generated/mock-data/`, so
+data survives a restart and can be inspected with the `sqlite3` CLI. It is the
+default, so nothing about running the server by hand has changed.
+
+**`memory`** holds everything in Maps. Faster — measurably so on writes — leaves
+nothing on disk, and loads no native module, which is also a way past a
+`better-sqlite3` build failure. Nothing survives the process.
+
+In practice the two are hard to tell apart, because the server clears and
+reseeds every collection at startup either way: SQLite's durability is never
+actually relied upon.
+
+### Using a store directly
+
+```js
+import { createMemoryStore } from '@codeforamerica/blueprint-mock-server/store';
+
+const store = createMemoryStore();
+store.insertResource('applications', { id: 'app-001', status: 'draft' });
+store.findAll('applications', { status: 'draft' });
+```
+
+`./store` exports the in-memory store on its own, without pulling in Express or
+a native module, so it can be used in a browser or in a test that has no need of
+a server. `createSqliteStore` comes from the package root, since that is Node
+only regardless.
+
+Every method is synchronous. Both implementations are natively synchronous —
+`better-sqlite3` is a synchronous binding and the other is Maps — so promises
+would buy nothing and would make every handler async.
+
+### Writing another store
+
+`src/stores/contract.js` documents the thirteen methods and, more usefully, the
+three behaviours that are easy to get wrong because they fall out of SQLite's
+storage model rather than from the method names: reads return copies rather than
+references, ordering is `createdAt` descending rather than insertion order, and a
+`null` filter matches a missing field as well as an explicit null.
+
+`tests/unit/store-conformance.test.js` is the executable version — it runs every
+case against both implementations, and a new store is correct when it passes.
+That suite found three real defects on the day it was written, so it is worth
+running against anything new rather than reading the contract and trusting it.
+
 ## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MOCK_SERVER_HOST` | `localhost` | Server bind address |
 | `MOCK_SERVER_PORT` | `1080` | Server port |
+| `MOCK_STORE` | `sqlite` | `sqlite` or `memory` — takes precedence over `--store` |
 
 ## Simulating Events
 

@@ -2,21 +2,47 @@
  * Unit tests for composition-assembler.
  *
  * Tests assembleSectionIndex, assembleSectionPanel, and filter evaluation
- * using in-memory database-manager state.
+ * using an in-memory store.
  */
 
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import { clearAll, insertResource } from '../../src/database-manager.js';
+import { createMemoryStore } from '../../src/stores/memory-store.js';
+
+// A store of this file's own, rather than one shared through a module-level
+// singleton. In memory because these cases do not need a database — and
+// because a fresh one per file is isolation they did not have before.
+const store = createMemoryStore();
 import {
-  assembleSectionIndex,
-  assembleSectionPanel,
+  assembleSectionIndex as assembleSectionIndexWithStore,
+  assembleSectionPanel as assembleSectionPanelWithStore,
   deriveStateResource,
-  findStateRecord,
-  listStateRecords,
-  upsertStateRecord,
+  findStateRecord as findStateRecordWithStore,
+  listStateRecords as listStateRecordsWithStore,
+  upsertStateRecord as upsertStateRecordWithStore,
   toExpressPath,
 } from '../../src/composition-assembler.js';
+
+// These take a store now. Wrapping once rather than threading it through 121
+// call sites: every case here seeds and asserts through the shim's exports, so
+// they all want the same store, and passing it explicitly everywhere would bury
+// what each case is actually testing.
+const STORE = store;
+
+const assembleSectionIndex = (composition, params, basePath, stateDefaults = {}, opts = {}) =>
+  assembleSectionIndexWithStore(composition, params, basePath, stateDefaults, { ...opts, store: STORE });
+
+const assembleSectionPanel = (composition, section, params, stateDefaults = {}, opts = {}) =>
+  assembleSectionPanelWithStore(composition, section, params, stateDefaults, { ...opts, store: STORE });
+
+const findStateRecord = (collection, bindParam, bindValue, section, itemId = null) =>
+  findStateRecordWithStore(collection, bindParam, bindValue, section, itemId, STORE);
+
+const listStateRecords = (collection, bindParam, bindValue, section, pagination = {}) =>
+  listStateRecordsWithStore(collection, bindParam, bindValue, section, pagination, STORE);
+
+const upsertStateRecord = (collection, bindParam, bindValue, section, itemId, updates) =>
+  upsertStateRecordWithStore(collection, bindParam, bindValue, section, itemId, updates, STORE);
 import { extractPrimaryParam } from '../../src/collection-utils.js';
 
 // ---------------------------------------------------------------------------
@@ -74,18 +100,18 @@ const SIMPLE_COMPOSITION = {
 };
 
 function seedTestData() {
-  clearAll('application-members');
-  clearAll('verifications');
-  clearAll('application-notes');
-  clearAll('household-infos');
+  store.clearAll('application-members');
+  store.clearAll('verifications');
+  store.clearAll('application-notes');
+  store.clearAll('household-infos');
 
-  insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice', lastName: 'Smith', email: 'alice@example.com' });
-  insertResource('application-members', { id: MEMBER_ID_2, applicationId: APP_ID, firstName: 'Bob', lastName: 'Jones', email: 'bob@example.com' });
+  store.insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice', lastName: 'Smith', email: 'alice@example.com' });
+  store.insertResource('application-members', { id: MEMBER_ID_2, applicationId: APP_ID, firstName: 'Bob', lastName: 'Jones', email: 'bob@example.com' });
 
-  insertResource('verifications', { id: 'ver-001', applicationId: APP_ID, category: 'identity', status: 'pending' });
-  insertResource('verifications', { id: 'ver-002', applicationId: APP_ID, category: 'income', status: 'pending' });
+  store.insertResource('verifications', { id: 'ver-001', applicationId: APP_ID, category: 'identity', status: 'pending' });
+  store.insertResource('verifications', { id: 'ver-002', applicationId: APP_ID, category: 'income', status: 'pending' });
 
-  insertResource('application-notes', { id: 'note-001', applicationId: APP_ID, text: 'First note' });
+  store.insertResource('application-notes', { id: 'note-001', applicationId: APP_ID, text: 'First note' });
 }
 
 // ---------------------------------------------------------------------------
@@ -194,14 +220,14 @@ const INDEX_VIEW_COMPOSITION = {
 
 describe('assembleSectionIndex — index views', () => {
   beforeEach(() => {
-    clearAll('application-members');
-    clearAll('household-infos');
-    insertResource('application-members', {
+    store.clearAll('application-members');
+    store.clearAll('household-infos');
+    store.insertResource('application-members', {
       id: MEMBER_ID_1, applicationId: APP_ID,
       firstName: 'Alice', lastName: 'Smith', email: 'alice@example.com',
       roles: ['primary_applicant'],
     });
-    insertResource('application-members', {
+    store.insertResource('application-members', {
       id: MEMBER_ID_2, applicationId: APP_ID,
       firstName: 'Bob', lastName: 'Jones', email: 'bob@example.com',
       roles: ['household_member'],
@@ -262,15 +288,15 @@ const FIELDS_COMPOSITION = {
 
 describe('assembleSectionIndex — root-level fields: projection', () => {
   beforeEach(() => {
-    clearAll('applications');
-    clearAll('application-members');
-    insertResource('applications', {
+    store.clearAll('applications');
+    store.clearAll('application-members');
+    store.insertResource('applications', {
       id: APP_ID,
       programs: ['snap', 'medicaid'],
       status: 'submitted',
       internalFlag: 'secret',
     });
-    insertResource('application-members', {
+    store.insertResource('application-members', {
       id: MEMBER_ID_1,
       applicationId: APP_ID,
       firstName: 'Alice',
@@ -337,7 +363,7 @@ describe('assembleSectionPanel — bind resolution', () => {
   });
 
   test('only returns members for the given applicationId', () => {
-    insertResource('application-members', { id: 'mem-other', applicationId: 'other-app', firstName: 'Other', lastName: 'Person' });
+    store.insertResource('application-members', { id: 'mem-other', applicationId: 'other-app', firstName: 'Other', lastName: 'Person' });
     const result = assembleSectionPanel(SIMPLE_COMPOSITION, 'demographics', { applicationId: APP_ID });
     assert.strictEqual(result.items.length, 2);
     for (const item of result.items) {
@@ -505,7 +531,7 @@ describe('state CRUD helpers', () => {
   const BIND_PARAM = 'applicationId';
   const BIND_VALUE = 'app-state-001';
 
-  beforeEach(() => clearAll(COLL));
+  beforeEach(() => store.clearAll(COLL));
 
   test('upsertStateRecord creates a new record', () => {
     const record = upsertStateRecord(COLL, BIND_PARAM, BIND_VALUE, 'identity', null, { status: 'not_started' });
@@ -715,10 +741,10 @@ describe('assembleSectionPanel — state embedding', () => {
   };
 
   beforeEach(() => {
-    clearAll('application-members');
-    clearAll(STATE_COLL);
-    insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice' });
-    insertResource('application-members', { id: MEMBER_ID_2, applicationId: APP_ID, firstName: 'Bob' });
+    store.clearAll('application-members');
+    store.clearAll(STATE_COLL);
+    store.insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice' });
+    store.insertResource('application-members', { id: MEMBER_ID_2, applicationId: APP_ID, firstName: 'Bob' });
   });
 
   test('embeds state from DB under camelKey when record exists', () => {
@@ -808,11 +834,11 @@ describe('assembleSectionIndex — state embedding', () => {
   };
 
   beforeEach(() => {
-    clearAll('application-members');
-    clearAll('household-infos');
-    clearAll(STATE_COLL);
-    insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice' });
-    insertResource('application-members', { id: MEMBER_ID_2, applicationId: APP_ID, firstName: 'Bob' });
+    store.clearAll('application-members');
+    store.clearAll('household-infos');
+    store.clearAll(STATE_COLL);
+    store.insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice' });
+    store.insertResource('application-members', { id: MEMBER_ID_2, applicationId: APP_ID, firstName: 'Bob' });
   });
 
   test('embeds section-level state on each section entry', () => {
@@ -868,8 +894,8 @@ describe('assembleSectionPanel — dot-notation field projection', () => {
   };
 
   beforeEach(() => {
-    clearAll('application-members');
-    insertResource('application-members', {
+    store.clearAll('application-members');
+    store.insertResource('application-members', {
       id: MEMBER_ID_1,
       applicationId: APP_ID,
       firstName: 'Jane',
@@ -887,8 +913,8 @@ describe('assembleSectionPanel — dot-notation field projection', () => {
   });
 
   test('missing nested value is omitted from output', () => {
-    clearAll('application-members');
-    insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID });
+    store.clearAll('application-members');
+    store.insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID });
     const panel = assembleSectionPanel(DOT_COMPOSITION, 'contact', { applicationId: APP_ID });
     const item = panel.items[0];
     // address.city and address.zip are missing — key should be absent or empty
@@ -920,10 +946,10 @@ describe('assembleSectionPanel — sorting', () => {
   };
 
   beforeEach(() => {
-    clearAll('application-members');
-    clearAll('household-infos');
-    insertResource('application-members', { id: MEMBER_ID_2, applicationId: APP_ID, firstName: 'Bob', lastName: 'Jones' });
-    insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice', lastName: 'Smith' });
+    store.clearAll('application-members');
+    store.clearAll('household-infos');
+    store.insertResource('application-members', { id: MEMBER_ID_2, applicationId: APP_ID, firstName: 'Bob', lastName: 'Jones' });
+    store.insertResource('application-members', { id: MEMBER_ID_1, applicationId: APP_ID, firstName: 'Alice', lastName: 'Smith' });
   });
 
   test('applies default sort when no ?sort= provided', () => {

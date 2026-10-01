@@ -19,9 +19,18 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
+import { createMemoryStore } from '../../src/stores/memory-store.js';
+
+// A store of this file's own, rather than one shared through a module-level
+// singleton. In memory because these cases do not need a database — and
+// because a fresh one per file is isolation they did not have before.
+const store = createMemoryStore();
+
+// Handlers take their store as a parameter. These cases seed and assert through
+// the shim's module-level exports, so they pass that same store.
+const DEPS = { store: store };
 import { extractRequiredDefaults } from '../../src/route-generator.js';
 import { createCreateHandler } from '../../src/handlers/create-handler.js';
-import { clearAll, registerCollectionDefaults } from '../../src/database-manager.js';
 
 // =============================================================================
 // Existing behavior: required arrays default to []
@@ -189,7 +198,7 @@ function makeHandler(schema) {
   const collection = `test-null-defaults-${Date.now()}`;
   const endpoint = { collectionName: collection, requestSchema: schema };
   const apiMetadata = { serverBasePath: '/test', name: 'test' };
-  const handler = createCreateHandler(apiMetadata, endpoint, 'http://localhost:1080', null);
+  const handler = createCreateHandler(apiMetadata, endpoint, 'http://localhost:1080', null, [], null, DEPS);
   return { handler, collection };
 }
 
@@ -229,7 +238,7 @@ test('create handler — optional non-nullable field is omitted from stored reco
     assert.ok(!('residency' in responseBody), 'optional non-nullable field must be absent, not null');
     assert.strictEqual(responseBody.residency, undefined);
   } finally {
-    clearAll(collection);
+    store.clearAll(collection);
   }
 });
 
@@ -246,14 +255,14 @@ test('create handler — required nullable field is null-initialized via collect
   };
   const { handler, collection } = makeHandler(schema);
   // Simulate what route-generator does: register collection defaults from response schema
-  registerCollectionDefaults(collection, { description: null });
+  store.registerCollectionDefaults(collection, { description: null });
   try {
     const { statusCode, responseBody } = await callHandler(handler, { name: 'Alice' });
     assert.strictEqual(statusCode, 201);
     assert.ok('description' in responseBody, 'required nullable field must be present via collection defaults');
     assert.strictEqual(responseBody.description, null);
   } finally {
-    clearAll(collection);
+    store.clearAll(collection);
   }
 });
 
@@ -274,7 +283,7 @@ test('create handler — optional nullable field is omitted (optional wins)', as
     assert.strictEqual(statusCode, 201);
     assert.ok(!('note' in responseBody), 'optional nullable field must be absent when not provided');
   } finally {
-    clearAll(collection);
+    store.clearAll(collection);
   }
 });
 
@@ -294,6 +303,6 @@ test('create handler — provided optional field is stored as-is', async () => {
     assert.strictEqual(statusCode, 201);
     assert.deepStrictEqual(responseBody.residency, { state: 'CA' });
   } finally {
-    clearAll(collection);
+    store.clearAll(collection);
   }
 });

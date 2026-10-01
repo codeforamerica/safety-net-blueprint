@@ -2,7 +2,6 @@
  * Handler for GET /metrics and GET /metrics/{metricId}
  */
 
-import { findAll } from '../database-manager.js';
 import jsonLogic from 'json-logic-js';
 
 /**
@@ -61,7 +60,7 @@ function applyQueryFilters(records, queryFilters, collection) {
  */
 function getCollection(name) {
   try {
-    return findAll(name).items || [];
+    return store.findAll(name).items || [];
   } catch {
     return [];
   }
@@ -192,7 +191,7 @@ function formatMetric(metric, domain, value, breakdown, computedAt) {
  * @param {Array} allMetrics - Array from discoverMetrics()
  * @returns {Function} Express handler
  */
-export function createMetricsListHandler(allMetrics) {
+export function createMetricsListHandler(allMetrics, { store } = {}) {
   return (req, res) => {
     try {
       const queryFilters = {
@@ -261,7 +260,7 @@ export function createMetricsListHandler(allMetrics) {
  * @param {Array} allMetrics - Array from discoverMetrics()
  * @returns {Function} Express handler
  */
-export function createMetricsGetHandler(allMetrics) {
+export function createMetricsGetHandler(allMetrics, { store } = {}) {
   return (req, res) => {
     try {
       const { metricId } = req.params;

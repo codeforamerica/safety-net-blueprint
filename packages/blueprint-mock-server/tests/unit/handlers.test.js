@@ -5,18 +5,14 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
+import { createMemoryStore } from '../../src/stores/memory-store.js';
+
+// A store of this file's own, rather than one shared through a module-level
+// singleton. In memory because these cases do not need a database — and
+// because a fresh one per file is isolation they did not have before.
+const store = createMemoryStore();
 import { join } from 'path';
 import { seedAllDatabases } from '../../src/seeder.js';
-import {
-  findAll,
-  findById,
-  create,
-  update,
-  deleteResource,
-  count,
-  clearAll,
-  insertResource
-} from '../../src/database-manager.js';
 const fixturesArg = process.argv.find(a => a.startsWith('--fixtures='));
 const seedArg = process.argv.find(a => a.startsWith('--seed='));
 if (!fixturesArg) { console.error('--fixtures= is required'); process.exit(1); }
@@ -26,7 +22,7 @@ const seedDir = seedArg.slice('--seed='.length);
 // the fixture spec directory as well as the seed data.
 const fixtureSpecDir = join(fixturesArg.slice('--fixtures='.length), 'spec');
 
-const cleanup = () => { clearAll('persons'); };
+const cleanup = () => { store.clearAll('persons'); };
 
 test('CRUD Handler Tests', async (t) => {
   
@@ -40,10 +36,10 @@ test('CRUD Handler Tests', async (t) => {
       { path: '/client-management/persons/{personId}' },
     ],
   };
-  seedAllDatabases(fixtureSpecDir, seedDir);
+  seedAllDatabases(fixtureSpecDir, seedDir, store);
   
   await t.test('LIST - returns all resources', () => {
-    const results = findAll('persons', {});
+    const results = store.findAll('persons', {});
     
     assert.ok(Array.isArray(results.items), 'Should return items array');
     assert.ok(results.items.length > 0, 'Should have seeded data');
@@ -60,7 +56,7 @@ test('CRUD Handler Tests', async (t) => {
   await t.test('LIST - applies pagination', () => {
     const limit = 1;
     const offset = 0;
-    const results = findAll('persons', {}, { limit, offset });
+    const results = store.findAll('persons', {}, { limit, offset });
     
     assert.strictEqual(results.items.length, limit, 'Should respect limit');
     
@@ -68,7 +64,7 @@ test('CRUD Handler Tests', async (t) => {
   });
   
   await t.test('LIST - returns correct structure', () => {
-    const results = findAll('persons', {});
+    const results = store.findAll('persons', {});
     
     assert.ok(Array.isArray(results.items), 'Should return items array');
     assert.ok(typeof results.total === 'number', 'Should have total');
@@ -78,10 +74,10 @@ test('CRUD Handler Tests', async (t) => {
   });
   
   await t.test('GET - returns resource by ID', () => {
-    const all = findAll('persons', {});
+    const all = store.findAll('persons', {});
     const testId = all.items[0].id;
     
-    const result = findById('persons', testId);
+    const result = store.findById('persons', testId);
     
     assert.ok(result, 'Should find resource');
     assert.strictEqual(result.id, testId, 'Should match requested ID');
@@ -90,7 +86,7 @@ test('CRUD Handler Tests', async (t) => {
   });
   
   await t.test('GET - returns null for non-existent ID', () => {
-    const result = findById('persons', '00000000-0000-0000-0000-000000000000');
+    const result = store.findById('persons', '00000000-0000-0000-0000-000000000000');
     
     assert.strictEqual(result, null, 'Should return null for missing resource');
     
@@ -98,7 +94,7 @@ test('CRUD Handler Tests', async (t) => {
   });
   
   await t.test('CREATE - inserts new resource', () => {
-    const beforeCount = count('persons');
+    const beforeCount = store.count('persons');
     
     const newResource = {
       id: 'test-id-create',
@@ -107,12 +103,12 @@ test('CRUD Handler Tests', async (t) => {
       updatedAt: new Date().toISOString()
     };
     
-    insertResource('persons', newResource);
+    store.insertResource('persons', newResource);
     
-    const afterCount = count('persons');
+    const afterCount = store.count('persons');
     assert.strictEqual(afterCount, beforeCount + 1, 'Should increase count');
     
-    const found = findById('persons', 'test-id-create');
+    const found = store.findById('persons', 'test-id-create');
     assert.ok(found, 'Should find created resource');
     assert.strictEqual(found.name.firstName, 'Test', 'Should have correct data');
     
@@ -120,13 +116,13 @@ test('CRUD Handler Tests', async (t) => {
   });
   
   await t.test('UPDATE - modifies existing resource', () => {
-    const all = findAll('persons', {});
+    const all = store.findAll('persons', {});
     const testId = all.items[0].id;
     
     const updates = { monthlyIncome: 9999 };
-    update('persons', testId, updates);
+    store.update('persons', testId, updates);
     
-    const updated = findById('persons', testId);
+    const updated = store.findById('persons', testId);
     assert.strictEqual(updated.monthlyIncome, 9999, 'Should have updated value');
     assert.strictEqual(updated.id, testId, 'ID should not change');
     
@@ -134,14 +130,14 @@ test('CRUD Handler Tests', async (t) => {
   });
   
   await t.test('UPDATE - preserves other fields', () => {
-    const all = findAll('persons', {});
+    const all = store.findAll('persons', {});
     const testId = all.items[0].id;
-    const original = findById('persons', testId);
+    const original = store.findById('persons', testId);
     const originalName = original.name;
     
-    update('persons', testId, { monthlyIncome: 8888 });
+    store.update('persons', testId, { monthlyIncome: 8888 });
     
-    const updated = findById('persons', testId);
+    const updated = store.findById('persons', testId);
     assert.deepStrictEqual(updated.name, originalName, 'Other fields should be preserved');
     
     console.log(`  ✓ Preserved other fields during update`);
@@ -150,28 +146,28 @@ test('CRUD Handler Tests', async (t) => {
   await t.test('DELETE - removes resource', () => {
     // Create a resource to delete
     const deleteId = 'test-id-delete';
-    insertResource('persons', {
+    store.insertResource('persons', {
       id: deleteId,
       name: { firstName: 'Delete', lastName: 'Me' },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
     
-    const beforeCount = count('persons');
-    const deleted = deleteResource('persons', deleteId);
-    const afterCount = count('persons');
+    const beforeCount = store.count('persons');
+    const deleted = store.deleteResource('persons', deleteId);
+    const afterCount = store.count('persons');
     
     assert.strictEqual(deleted, true, 'Should return true');
     assert.strictEqual(afterCount, beforeCount - 1, 'Should decrease count');
     
-    const found = findById('persons', deleteId);
+    const found = store.findById('persons', deleteId);
     assert.strictEqual(found, null, 'Should not find deleted resource');
     
     console.log(`  ✓ Deleted resource, count: ${beforeCount} → ${afterCount}`);
   });
   
   await t.test('DELETE - returns false for non-existent ID', () => {
-    const deleted = deleteResource('persons', '00000000-0000-0000-0000-000000000000');
+    const deleted = store.deleteResource('persons', '00000000-0000-0000-0000-000000000000');
     
     assert.strictEqual(deleted, false, 'Should return false for missing resource');
     

@@ -2,7 +2,6 @@
  * Handler for GET /resources/{id}
  */
 
-import { findById } from '../database-manager.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractAuthContext } from '../auth-context.js';
 import { parentLinkRegistry } from '../composition-assembler.js';
@@ -15,7 +14,7 @@ import { extractPrimaryParam, capitalize } from '../collection-utils.js';
  * @param {Object} endpoint - Endpoint metadata
  * @returns {Function} Express handler
  */
-export function createGetHandler(apiMetadata, endpoint) {
+export function createGetHandler(apiMetadata, endpoint, { store } = {}) {
   const paramName = extractPrimaryParam(endpoint.path) ?? 'id';
   return (req, res) => {
     try {
@@ -37,7 +36,7 @@ export function createGetHandler(apiMetadata, endpoint) {
         resourceId = auth.userId;
       }
 
-      const resource = findById(endpoint.collectionName, resourceId);
+      const resource = store.findById(endpoint.collectionName, resourceId);
 
       if (!resource) {
         return res.status(404).json({
@@ -62,7 +61,7 @@ export function createGetHandler(apiMetadata, endpoint) {
       const expandFields = extractExpandFields(endpoint.responseSchema);
       const linksFields = extractLinksFields(endpoint.responseSchema);
       const derivedFields = extractDerivedFields(endpoint.responseSchema);
-      let responseBody = expandFields.length > 0 ? applyExpand(resource, expandFields, findById) : resource;
+      let responseBody = expandFields.length > 0 ? applyExpand(resource, expandFields, (c, id) => store.findById(c, id)) : resource;
       if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
       if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
       res.json(responseBody);

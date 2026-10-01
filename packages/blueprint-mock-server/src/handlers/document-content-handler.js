@@ -5,7 +5,6 @@
 
 import { createReadStream, existsSync } from 'fs';
 import { join } from 'path';
-import { findById } from '../database-manager.js';
 
 /**
  * Create handler for GET /document-versions/{documentVersionId}/content.
@@ -13,11 +12,11 @@ import { findById } from '../database-manager.js';
  * @param {string} uploadsDir - Directory where uploaded files are stored
  * @returns {Function} Express handler
  */
-export function createDocumentContentHandler(uploadsDir) {
+export function createDocumentContentHandler(uploadsDir, { store } = {}) {
   return (req, res) => {
     const { documentVersionId } = req.params;
 
-    const version = findById('document-versions', documentVersionId);
+    const version = store.findById('document-versions', documentVersionId);
     if (!version) {
       return res.status(404).json({ code: 'NOT_FOUND', message: 'Document version not found' });
     }

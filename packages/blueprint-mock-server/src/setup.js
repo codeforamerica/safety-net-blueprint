@@ -11,7 +11,6 @@ import { discoverStateMachines } from './state-machine-loader.js';
 import { discoverSlaTypes } from './sla-loader.js';
 import { discoverMetrics } from './metrics-loader.js';
 import { discoverConfigs } from './config-loader.js';
-import { insertResource } from './database-manager.js';
 import { registerConfigManaged } from './config-registry.js';
 import { discover, generate, load } from '@codeforamerica/blueprint-core';
 /**
@@ -22,7 +21,7 @@ import { discover, generate, load } from '@codeforamerica/blueprint-core';
  * @param {boolean} options.skipValidation - Skip validation step
  * @returns {Promise<Object>} Setup result with apiSpecs and summary
  */
-export async function performSetup({ specsDir, seedDir, verbose = true, skipValidation = false } = {}) {
+export async function performSetup({ specsDir, seedDir, verbose = true, skipValidation = false, store } = {}) {
   if (!specsDir) {
     throw new Error('specsDir is required — pass --spec <dir> to specify the spec file or directory');
   }
@@ -118,7 +117,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   }
 
   // Seed databases from example files
-  const summary = seedAllDatabases(specsDir, seedDir);
+  const summary = seedAllDatabases(specsDir, seedDir, store);
 
   // Seed config-managed resources (after seedAllDatabases, which clears collections first)
   const configs = discoverConfigs(specsDir);
@@ -130,7 +129,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
         for (const key of Object.keys(data)) {
           if (key.startsWith('x-')) delete data[key];
         }
-        insertResource(catalogKey, { ...data, source: 'system' });
+        store.insertResource(catalogKey, { ...data, source: 'system' });
         registerConfigManaged(catalogKey, data.id);
       }
       if (verbose) {
@@ -143,7 +142,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   const policies = registryEntries(discover(specsDir).map(load), 'policies');
   const policyEntries = Object.entries(policies);
   for (const [id, policy] of policyEntries) {
-    insertResource('registry-policies', { id, ...policy, source: 'system' });
+    store.insertResource('registry-policies', { id, ...policy, source: 'system' });
     registerConfigManaged('registry-policies', id);
   }
   if (verbose && policyEntries.length > 0) {

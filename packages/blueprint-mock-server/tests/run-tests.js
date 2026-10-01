@@ -51,6 +51,12 @@ const functionalTestFiles = existsSync(functionalDir)
 
 const args = process.argv.slice(2);
 
+// Which store the servers this runner boots should use. Passed through rather
+// than read from the environment, so a run says on its own command line what it
+// exercised.
+const storeArg = args.find((a) => a.startsWith('--store='));
+const storeKind = storeArg ? storeArg.split('=')[1] : null;
+
 // `--list` prints every test file this runner would execute, one per line, and
 // exits. It is how tests/check-test-discovery.js verifies that nothing on disk
 // is missed: the runner answers for itself rather than the check duplicating
@@ -239,7 +245,7 @@ async function runAllTests() {
     console.log('-'.repeat(70));
 
     console.log('Starting functional server...');
-    await startFunctionalServer();
+    await startFunctionalServer(storeKind);
     functionalServerStarted = true;
     await new Promise(res => setTimeout(res, 1500));
     console.log('Functional server started\n');
@@ -266,7 +272,7 @@ async function runAllTests() {
     const integrationAlreadyRunning = await isServerRunning().catch(() => false);
     if (!integrationAlreadyRunning) {
       console.log('Starting mock server...');
-      await startMockServer([integrationResolvedDir], integrationSeedDir);
+      await startMockServer([integrationResolvedDir], integrationSeedDir, null, storeKind);
       await new Promise(res => setTimeout(res, 1500));
       integrationServerStarted = true;
       console.log('Mock server started\n');

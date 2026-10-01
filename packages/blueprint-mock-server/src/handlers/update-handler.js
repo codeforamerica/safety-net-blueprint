@@ -1,8 +1,7 @@
 /**
- * Handler for PATCH /resources/{id} (update)
+ * Handler for PATCH /resources/{id} (store.update)
  */
 
-import { findById, update } from '../database-manager.js';
 import { validate, createErrorResponse } from '../validator.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { applyEffects, applySteps } from '../state-machine-engine.js';
@@ -55,13 +54,13 @@ export function buildChanges(before, after) {
 }
 
 /**
- * Create update handler for a resource
+ * Create store.update handler for a resource
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
  * @param {Object} endpoint - Endpoint metadata
  * @param {Object|null} stateMachine - State machine contract (for onUpdate effects)
  * @returns {Function} Express handler
  */
-export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, slaTypes = [], machine = null) {
+export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, slaTypes = [], machine = null, { store } = {}) {
   const paramName = extractPrimaryParam(endpoint.path) ?? 'id';
   return (req, res) => {
     try {
@@ -84,7 +83,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
       }
 
       // Check if resource exists
-      const existing = findById(endpoint.collectionName, resourceId);
+      const existing = store.findById(endpoint.collectionName, resourceId);
       if (!existing) {
         return res.status(404).json({
           code: 'NOT_FOUND',
@@ -136,7 +135,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
       const existingSnapshot = { ...existing };
 
       // Update in database (database manager handles deep merge and updatedAt timestamp)
-      const updated = update(endpoint.collectionName, resourceId, req.body);
+      const updated = store.update(endpoint.collectionName, resourceId, req.body);
 
       // Fire onUpdate steps/effects if any watched fields changed.
       // Must run before emitting so rule-driven mutations (e.g. priority re-scored
@@ -165,7 +164,8 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           const entities = resolveContextLayers(
             [stateMachine?.context, machine?.context, onUpdate?.context],
             updated,
-            baseContext
+            baseContext,
+            store
           );
           if (entities === null) {
             console.error('onUpdate: required context binding failed — skipping trigger');
@@ -174,12 +174,12 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
 
           let pendingProcedures;
           if (onUpdate?.steps?.length > 0) {
-            ({ pendingProcedures } = applySteps(onUpdate.steps, updated, context));
+            ({ pendingProcedures } = applySteps(onUpdate.steps, updated, context, store));
           } else {
             ({ pendingProcedures } = applyEffects(onUpdate.effects, updated, context));
           }
           const inlineRules = buildInlineRules(stateMachine, machine);
-          executeProcedures(pendingProcedures, updated, inlineRules, context);
+          executeProcedures(pendingProcedures, updated, inlineRules, context, store);
 
           // Persist any rule-driven mutations (e.g. priority, queueId) back to DB
           const onUpdateDiff = {};
@@ -190,7 +190,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
             }
           }
           if (Object.keys(onUpdateDiff).length > 0) {
-            update(endpoint.collectionName, resourceId, onUpdateDiff);
+            store.update(endpoint.collectionName, resourceId, onUpdateDiff);
           }
         }
       }
@@ -203,6 +203,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
         const domain = apiMetadata.serverBasePath.replace(/^\//, '');
         const object = endpoint.collectionName.replace(/s$/, '');
         emitEvent({
+        store,
           domain,
           object,
           action: 'updated',
@@ -221,7 +222,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
       const expandFields = extractExpandFields(endpoint.responseSchema);
       const linksFields = extractLinksFields(endpoint.responseSchema);
       const derivedFields = extractDerivedFields(endpoint.responseSchema);
-      let responseBody = expandFields.length > 0 ? applyExpand(updated, expandFields, findById) : updated;
+      let responseBody = expandFields.length > 0 ? applyExpand(updated, expandFields, store.findById) : updated;
       if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
       if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
       res.json(responseBody);

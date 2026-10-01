@@ -5,8 +5,16 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
+import { createMemoryStore } from '../../src/stores/memory-store.js';
+
+// A store of this file's own, rather than one shared through a module-level
+// singleton. In memory because these cases do not need a database — and
+// because a fresh one per file is isolation they did not have before.
+const store = createMemoryStore();
+
+// The handler takes its store as a parameter; these cases seed through the
+// shim's exports, so they hand it the same one.
 import { deepEqual, buildChanges, createUpdateHandler } from '../../src/handlers/update-handler.js';
-import { insertResource, clearAll, findById } from '../../src/database-manager.js';
 
 // =============================================================================
 // deepEqual
@@ -194,8 +202,8 @@ const apiMetadata = { serverBasePath: '/test' };
 const endpoint = { collectionName: 'testresources', path: '/testresources/{id}', requestSchema: null };
 
 test('createUpdateHandler — onUpdate fires when watched field is patched', () => {
-  clearAll('testresources');
-  insertResource('testresources', { id: 'res-1', isExpedited: false, priority: 'normal' });
+  store.clearAll('testresources');
+  store.insertResource('testresources', { id: 'res-1', isExpedited: false, priority: 'normal' });
 
   const machine = {
     object: 'testresource',
@@ -207,18 +215,18 @@ test('createUpdateHandler — onUpdate fires when watched field is patched', () 
     }
   };
 
-  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine);
+  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine, { store: store });
   const { req, res } = makeReqRes({ id: 'res-1' }, { isExpedited: true });
   handler(req, res);
 
   assert.strictEqual(res._code, 200);
-  const saved = findById('testresources', 'res-1');
+  const saved = store.findById('testresources', 'res-1');
   assert.strictEqual(saved.priority, 'expedited');
 });
 
 test('createUpdateHandler — onUpdate does not fire when non-watched field is patched', () => {
-  clearAll('testresources');
-  insertResource('testresources', { id: 'res-2', isExpedited: false, priority: 'normal', notes: '' });
+  store.clearAll('testresources');
+  store.insertResource('testresources', { id: 'res-2', isExpedited: false, priority: 'normal', notes: '' });
 
   const machine = {
     object: 'testresource',
@@ -230,18 +238,18 @@ test('createUpdateHandler — onUpdate does not fire when non-watched field is p
     }
   };
 
-  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine);
+  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine, { store: store });
   const { req, res } = makeReqRes({ id: 'res-2' }, { notes: 'updated' });
   handler(req, res);
 
   assert.strictEqual(res._code, 200);
-  const saved = findById('testresources', 'res-2');
+  const saved = store.findById('testresources', 'res-2');
   assert.strictEqual(saved.priority, 'normal'); // onUpdate did not fire
 });
 
 test('createUpdateHandler — onUpdate fires for all fields when no watchedFields defined', () => {
-  clearAll('testresources');
-  insertResource('testresources', { id: 'res-3', notes: '', priority: 'normal' });
+  store.clearAll('testresources');
+  store.insertResource('testresources', { id: 'res-3', notes: '', priority: 'normal' });
 
   const machine = {
     object: 'testresource',
@@ -253,10 +261,10 @@ test('createUpdateHandler — onUpdate fires for all fields when no watchedField
     }
   };
 
-  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine);
+  const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine, { store: store });
   const { req, res } = makeReqRes({ id: 'res-3' }, { notes: 'anything' });
   handler(req, res);
 
-  const saved = findById('testresources', 'res-3');
+  const saved = store.findById('testresources', 'res-3');
   assert.strictEqual(saved.priority, 'high');
 });

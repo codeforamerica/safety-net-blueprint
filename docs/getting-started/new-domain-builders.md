@@ -183,7 +183,9 @@ The TypeScript clients include typed access to annotations. See [API Clients](..
 npx blueprint-mock --spec ./resolved
 ```
 
-The mock auto-discovers all `*-openapi.yaml` files in the resolved directory and creates live CRUD endpoints backed by an in-memory SQLite database. RPC endpoints from state machines are included in the resolved specs and served automatically.
+The mock auto-discovers all `*-openapi.yaml` files in the resolved directory and creates live CRUD endpoints. RPC endpoints from state machines are included in the resolved specs and served automatically.
+
+Resources are held in SQLite by default — one `.db` file per collection, so data survives a restart and can be inspected with the `sqlite3` CLI. Pass `--store=memory` (or set `MOCK_STORE=memory`) to hold everything in memory instead: faster, nothing left on disk, and nothing kept after the process exits. Either way the server clears and reseeds every collection at startup, so the difference is rarely visible in normal use.
 
 To browse the API interactively, run the Swagger UI alongside the mock:
 

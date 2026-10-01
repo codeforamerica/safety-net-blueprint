@@ -5,6 +5,14 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
+import { createMemoryStore } from '../../src/stores/memory-store.js';
+
+// A store of this file's own, rather than one shared through a module-level
+// singleton. In memory because these cases do not need a database — and
+// because a fresh one per file is isolation they did not have before.
+const store = createMemoryStore();
+
+const DEPS = { store: store };
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -73,7 +81,7 @@ test('Route Generator Tests', async (t) => {
       { path: '/persons/{personId}', method: 'get', operationId: 'getPerson' }
     ]);
 
-    registerRoutes(app, metadata, 'http://localhost:1080');
+    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     const routes = app.getRoutes();
 
     assert.strictEqual(routes.length, 1);
@@ -87,7 +95,7 @@ test('Route Generator Tests', async (t) => {
       { path: '/orgs/{orgId}/users/{userId}', method: 'get', operationId: 'getOrgUser' }
     ]);
 
-    registerRoutes(app, metadata, 'http://localhost:1080');
+    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     const routes = app.getRoutes();
 
     assert.strictEqual(routes[0].path, '/orgs/:orgId/users/:userId');
@@ -101,7 +109,7 @@ test('Route Generator Tests', async (t) => {
     ]);
 
     // Note: This will be treated as a collection endpoint and get a list handler
-    registerRoutes(app, metadata, 'http://localhost:1080');
+    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     const routes = app.getRoutes();
 
     assert.strictEqual(routes[0].path, '/health');
@@ -118,7 +126,7 @@ test('Route Generator Tests', async (t) => {
       { path: '/persons', method: 'get', operationId: 'listPersons' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
 
     assert.strictEqual(registered[0].description, 'List/search resources');
     console.log('  ✓ Assigns list handler to collection GET');
@@ -130,7 +138,7 @@ test('Route Generator Tests', async (t) => {
       { path: '/persons/{personId}', method: 'get', operationId: 'getPerson' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
 
     assert.strictEqual(registered[0].description, 'Get resource by ID');
     console.log('  ✓ Assigns get handler to item GET');
@@ -142,7 +150,7 @@ test('Route Generator Tests', async (t) => {
       { path: '/persons', method: 'post', operationId: 'createPerson' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
 
     assert.strictEqual(registered[0].description, 'Create resource');
     console.log('  ✓ Assigns create handler to collection POST');
@@ -154,7 +162,7 @@ test('Route Generator Tests', async (t) => {
       { path: '/persons/{personId}', method: 'patch', operationId: 'updatePerson' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
 
     assert.strictEqual(registered[0].description, 'Update resource');
     console.log('  ✓ Assigns update handler to item PATCH');
@@ -166,7 +174,7 @@ test('Route Generator Tests', async (t) => {
       { path: '/persons/{personId}', method: 'delete', operationId: 'deletePerson' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
 
     assert.strictEqual(registered[0].description, 'Delete resource');
     console.log('  ✓ Assigns delete handler to item DELETE');
@@ -182,7 +190,7 @@ test('Route Generator Tests', async (t) => {
       { path: '/persons/{personId}', method: 'post', operationId: 'postToItem' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
 
     assert.strictEqual(registered.length, 0, 'Should not register unsupported endpoint');
     assert.strictEqual(app.getRoutes().length, 0);
@@ -195,7 +203,7 @@ test('Route Generator Tests', async (t) => {
       { path: '/persons', method: 'patch', operationId: 'patchCollection' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
 
     assert.strictEqual(registered.length, 0, 'Should not register unsupported endpoint');
     console.log('  ✓ Skips PATCH to collection endpoint (unsupported)');
@@ -207,7 +215,7 @@ test('Route Generator Tests', async (t) => {
       { path: '/persons', method: 'delete', operationId: 'deleteCollection' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
 
     assert.strictEqual(registered.length, 0, 'Should not register unsupported endpoint');
     console.log('  ✓ Skips DELETE to collection endpoint (unsupported)');
@@ -227,7 +235,7 @@ test('Route Generator Tests', async (t) => {
       { path: '/persons/{personId}', method: 'delete', operationId: 'deletePerson' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     const routes = app.getRoutes();
 
     assert.strictEqual(registered.length, 5, 'Should register all 5 CRUD endpoints');
@@ -249,7 +257,7 @@ test('Route Generator Tests', async (t) => {
       { path: '/persons', method: 'get', operationId: 'listPersons' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
 
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].method, 'GET');
@@ -337,7 +345,7 @@ test('Route Generator Tests', async (t) => {
       { path: '/persons/{personId}', method: 'delete', operationId: 'deletePerson' }
     ]);
 
-    registerRoutes(app, metadata, 'http://localhost:1080');
+    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     const routes = app.getRoutes();
 
     for (const route of routes) {
@@ -358,7 +366,7 @@ test('Route Generator Tests', async (t) => {
       { path: '/persons', method: 'POST', operationId: 'createPerson' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     const routes = app.getRoutes();
 
     assert.strictEqual(registered.length, 2);
@@ -373,7 +381,7 @@ test('Route Generator Tests', async (t) => {
       { path: '/api/v1/users/{userId}/posts/{postId}', method: 'get', operationId: 'getUserPost' }
     ]);
 
-    registerRoutes(app, metadata, 'http://localhost:1080');
+    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     const routes = app.getRoutes();
 
     assert.strictEqual(routes[0].path, '/api/v1/users/:userId/posts/:postId');
@@ -398,7 +406,7 @@ test('Route Generator Tests', async (t) => {
       ]
     };
 
-    registerRoutes(app, metadata, 'http://localhost:1080');
+    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     const routes = app.getRoutes();
 
     // All routes should be registered at the full prefixed path
@@ -418,7 +426,7 @@ test('Route Generator Tests', async (t) => {
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/documents', method: 'get', operationId: 'listDocuments' }
     ]);
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].description, 'List sub-resources');
     assert.strictEqual(app.getRoutes()[0].path, '/applications/:applicationId/documents');
@@ -430,7 +438,7 @@ test('Route Generator Tests', async (t) => {
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/documents', method: 'post', operationId: 'createDocument' }
     ]);
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].description, 'Create sub-resource');
     console.log('  ✓ Sub-collection POST registered as create sub-resource');
@@ -441,7 +449,7 @@ test('Route Generator Tests', async (t) => {
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/documents/{documentId}', method: 'get', operationId: 'getDocument' }
     ]);
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].description, 'Get sub-resource by ID');
     assert.strictEqual(app.getRoutes()[0].path, '/applications/:applicationId/documents/:documentId');
@@ -453,7 +461,7 @@ test('Route Generator Tests', async (t) => {
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/documents/{documentId}', method: 'patch', operationId: 'updateDocument' }
     ]);
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     assert.strictEqual(registered[0].description, 'Update sub-resource');
     console.log('  ✓ Sub-item PATCH registered as update sub-resource');
   });
@@ -463,7 +471,7 @@ test('Route Generator Tests', async (t) => {
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/documents/{documentId}', method: 'delete', operationId: 'deleteDocument' }
     ]);
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     assert.strictEqual(registered[0].description, 'Delete sub-resource');
     console.log('  ✓ Sub-item DELETE registered as delete sub-resource');
   });
@@ -473,7 +481,7 @@ test('Route Generator Tests', async (t) => {
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/interview', method: 'get', operationId: 'getInterview' }
     ]);
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].description, 'Get singleton sub-resource');
     assert.strictEqual(app.getRoutes()[0].path, '/applications/:applicationId/interview');
@@ -485,7 +493,7 @@ test('Route Generator Tests', async (t) => {
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/interview', method: 'patch', operationId: 'updateInterview' }
     ]);
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080');
+    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     assert.strictEqual(registered[0].description, 'Update singleton sub-resource');
     console.log('  ✓ Singleton PATCH registered as update singleton sub-resource');
   });
@@ -498,7 +506,7 @@ test('Route Generator Tests', async (t) => {
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/documents', method: 'get', operationId: 'listDocuments' }
     ]);
-    registerRoutes(app, metadata, 'http://localhost:1080');
+    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     const routes = app.getRoutes();
     assert.strictEqual(routes.length, 1);
     let statusCode = null;
@@ -518,7 +526,7 @@ test('Route Generator Tests', async (t) => {
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/interview', method: 'get', operationId: 'getInterview' }
     ]);
-    registerRoutes(app, metadata, 'http://localhost:1080');
+    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     const routes = app.getRoutes();
 
     let responseBody = null;
@@ -541,7 +549,7 @@ test('Route Generator Tests', async (t) => {
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/documents', method: 'get', operationId: 'listDocuments' }
     ]);
-    registerRoutes(app, metadata, 'http://localhost:1080');
+    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     const routes = app.getRoutes();
 
     let statusCode = null;
@@ -560,7 +568,7 @@ test('Route Generator Tests', async (t) => {
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/documents', method: 'post', operationId: 'createDocument' }
     ]);
-    registerRoutes(app, metadata, 'http://localhost:1080');
+    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     const routes = app.getRoutes();
 
     let capturedBody = null;
@@ -595,7 +603,7 @@ test('Route Generator Tests', async (t) => {
       ]
     };
 
-    registerRoutes(app, metadata, 'http://localhost:1080');
+    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
     const routes = app.getRoutes();
 
     assert.strictEqual(routes.length, 1);

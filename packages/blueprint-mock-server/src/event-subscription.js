@@ -12,7 +12,6 @@
  */
 
 import { eventBus } from './event-bus.js';
-import { create, update, findById } from './database-manager.js';
 import { executeTransition } from './state-machine-runner.js';
 import { applySteps, evaluateGuards } from './state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
@@ -46,7 +45,7 @@ function findSmEntryForCollection(allStateMachines, domain, collection) {
  * Execute a pending operation trigger (invoke: { POST: domain/collection/{id}/operation }).
  * The path is fully interpolated: domain/collection/uuid/operation.
  */
-function executePendingOperation({ path, body }, now, allStateMachines, allSlaTypes, caller, traceparent = null, causationid = null) {
+function executePendingOperation({ path, body }, now, allStateMachines, allSlaTypes, caller, traceparent = null, causationid = null, store) {
   const parts = path.split('/');
   if (parts.length < 4) {
     console.error(`executePendingOperation: path "${path}" must have at least 4 segments`);
@@ -66,6 +65,7 @@ function executePendingOperation({ path, body }, now, allStateMachines, allSlaTy
 
   try {
     executeTransition({
+      store,
       resourceName: collection,
       resourceId,
       trigger: operation,
@@ -87,14 +87,14 @@ function executePendingOperation({ path, body }, now, allStateMachines, allSlaTy
 /**
  * Apply a pending array-append (invoke: { PATCH: domain/collection/{id}, body: { field: { $push: value } } }).
  */
-function executePendingAppend({ path, body }) {
+function executePendingAppend({ path, body }, store) {
   const parts = path.split('/');
   const id = parts.pop();
   const collectionPath = parts.join('/');
   const domain = parts[0];
   const collection = deriveCollectionName(collectionPath, domain);
 
-  const existing = findById(collection, id);
+  const existing = store.findById(collection, id);
   if (!existing) {
     console.error(`executePendingAppend: ${collection}/${id} not found`);
     return;
@@ -110,7 +110,7 @@ function executePendingAppend({ path, body }) {
     }
   }
 
-  update(collection, id, patch);
+  store.update(collection, id, patch);
 }
 
 /**
@@ -120,7 +120,7 @@ function executePendingAppend({ path, body }) {
  * @param {Array} allStateMachines - from discoverStateMachines()
  * @param {Array} [allSlaTypes]    - from discoverSlaTypes()
  */
-export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], apiSpecs = []) {
+export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], apiSpecs = [], store) {
   // Collect events entries from new-format state machines
   const machineEventSubs = [];
   for (const smEntry of allStateMachines) {
@@ -156,7 +156,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         let originalSnapshot = null;
         if (entry.transition) {
           targetCollection = toKebabCase(smEntry.machine.object) + 's';
-          const found = findById(targetCollection, event.subject);
+          const found = store.findById(targetCollection, event.subject);
           if (!found) {
             console.error(`Machine onEvent "${entry.type}": resource "${event.subject}" not found in ${targetCollection} — skipping`);
             continue;
@@ -187,7 +187,8 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         const entities = resolveContextLayers(
           [smEntry.stateMachine?.context, smEntry.machine?.context, entry.context],
           resource,
-          baseContext
+          baseContext,
+          store
         );
         if (entities === null) {
           console.error(`Machine onEvent "${entry.type}": required context binding failed — skipping`);
@@ -207,7 +208,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         }
 
         const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } =
-          applySteps(entry.steps, resource, context);
+          applySteps(entry.steps, resource, context, store);
 
         // Apply state transition if present (mutations are persisted after procedures run)
         if (entry.transition?.to) {
@@ -217,8 +218,9 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         // Handle collection creates
         for (const { entity, domain: entDomain, eventObject, data } of pendingCreates) {
           try {
-            const created = create(entity, data);
+            const created = store.create(entity, data);
             emitEvent({
+        store,
               domain: entDomain || smEntry.domain,
               object: eventObject || entity.replace(/s$/, ''),
               action: 'created',
@@ -238,7 +240,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         // Handle array appends
         for (const append of pendingAppends) {
           try {
-            executePendingAppend(append);
+            executePendingAppend(append, store);
           } catch (e) {
             console.error(`onEvent append failed for "${append.path}":`, e.message);
           }
@@ -247,7 +249,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         // Handle operation triggers
         for (const op of pendingOperations) {
           try {
-            executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id);
+            executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id, store);
           } catch (e) {
             console.error(`onEvent operation failed for "${op.path}":`, e.message);
           }
@@ -264,11 +266,11 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
           const inlineRules = buildInlineRules(smEntry.stateMachine, smEntry.machine);
           try {
             const { pendingOperations: procOps, pendingEvents: procEvts } = executeProcedures(
-              pendingProcedures, resource, inlineRules, context
+              pendingProcedures, resource, inlineRules, context, store
             );
             for (const op of procOps) {
               try {
-                executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id);
+                executePendingOperation(op, now, allStateMachines, allSlaTypes, caller, event.traceparent, event.id, store);
               } catch (e) {
                 console.error(`onEvent procedure operation failed for "${op.path}":`, e.message);
               }
@@ -288,7 +290,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
             }
           }
           if (Object.keys(diff).length > 0) {
-            update(targetCollection, event.subject, diff);
+            store.update(targetCollection, event.subject, diff);
           }
         }
 

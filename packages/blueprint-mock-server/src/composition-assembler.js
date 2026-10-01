@@ -15,7 +15,6 @@
  */
 
 import { evaluateCEL } from './cel-evaluator.js';
-import { findAll, findById, create, update } from './database-manager.js';
 import { deriveCollectionName, extractPrimaryParam, resolveDotPath, toKebabCase } from './collection-utils.js';
 import { filterItems, paginateItems, sortItems } from './search-engine.js';
 
@@ -93,12 +92,12 @@ function buildSelfLink(resourceItemPath, serverBasePath, params, itemId) {
  * @param {Object} context - Evaluation context ({ sectionName })
  * @returns {Array|Object|null} Items array, empty object (missing: empty), or null
  */
-function fetchNodeItems(node, bindValues, context, resourceCollectionNameMap) {
+function fetchNodeItems(node, bindValues, context, resourceCollectionNameMap, store) {
   const { resource, bind, filter, fields, missing } = node;
 
   const collectionName = resourceCollectionNameMap?.get(resource) ?? resource;
   const filterObj = bind ? { [bind]: bindValues[bind] } : {};
-  const { items } = findAll(collectionName, filterObj, { limit: null });
+  const { items } = store.findAll(collectionName, filterObj, { limit: null });
 
   const filtered = filter
     ? items.filter(item => Boolean(evaluateCEL(filter, { ...COMPOSITION_HELPERS, ...item, $section: { name: context.sectionName } })))
@@ -197,7 +196,7 @@ function buildBindValues(params) {
  * @param {Object} stateDefaults - Default field values for the state resource
  * @returns {Object}
  */
-export function assembleSectionIndex(composition, params, basePath, stateDefaults = {}, { resourceItemPathMap = null, resourceCollectionNameMap = null, serverBasePath = '' } = {}) {
+export function assembleSectionIndex(composition, params, basePath, stateDefaults = {}, { resourceItemPathMap = null, resourceCollectionNameMap = null, serverBasePath = '', store } = {}) {
   const sectionDefs = composition.sections || {};
   const bindValues = buildBindValues(params);
 
@@ -217,7 +216,7 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
     // The index shows one state object per section; per-item state appears on the panel only.
     if (stateInfo && bindParam) {
       const bindValue = bindValues[bindParam];
-      const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, name, null);
+      const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, name, null, store);
       const fields = stripFrameworkFields(record, bindParam);
       entry[stateInfo.camelKey] = (fields && Object.keys(fields).length > 0) ? fields : { ...stateDefaults };
     }
@@ -240,7 +239,7 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
       missing: sectionDef.missing,
       filter: indexConfig?.filter,
     };
-    let items = fetchNodeItems(fetchNode, bindValues, context, resourceCollectionNameMap);
+    let items = fetchNodeItems(fetchNode, bindValues, context, resourceCollectionNameMap, store);
 
     if (!Array.isArray(items)) {
       // Singleton (missing: empty) — expose as data, unaffected by view filter
@@ -274,7 +273,7 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
     if (stateInfo && bindParam) {
       const bindValue = bindValues[bindParam];
       finalItems = finalItems.map((item, idx) => {
-        const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, name, itemIds[idx] ?? null);
+        const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, name, itemIds[idx] ?? null, store);
         const fields = stripFrameworkFields(record, bindParam);
         return {
           ...item,
@@ -297,7 +296,7 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
     const primaryParam = extractPrimaryParam(composition.endpoint?.path ?? '');
     if (primaryParam && bindValues[primaryParam]) {
       const rootCollectionName = resourceCollectionNameMap?.get(composition.resource) ?? composition.resource;
-      const { items: parentItems } = findAll(
+      const { items: parentItems } = store.findAll(
         rootCollectionName,
         { id: bindValues[primaryParam] },
         { limit: 1 }
@@ -312,7 +311,7 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
   const rootInclude = {};
   if (composition.include) {
     for (const [key, includeNode] of Object.entries(composition.include)) {
-      rootInclude[key] = fetchNodeItems(includeNode, bindValues, {}, resourceCollectionNameMap);
+      rootInclude[key] = fetchNodeItems(includeNode, bindValues, {}, resourceCollectionNameMap, store);
     }
   }
 
@@ -338,12 +337,12 @@ export function assembleSectionIndex(composition, params, basePath, stateDefault
  * @param {Object} opts
  * @returns {Object|null} Assembled record, or null if root resource not found
  */
-export function assemblePlainComposition(composition, params, { resourceItemPathMap = null, resourceCollectionNameMap = null, serverBasePath = '' } = {}) {
+export function assemblePlainComposition(composition, params, { resourceItemPathMap = null, resourceCollectionNameMap = null, serverBasePath = '', store } = {}) {
   const bindValues = buildBindValues(params);
   const primaryParam = extractPrimaryParam(composition.endpoint?.path ?? '');
   const rootId = primaryParam ? bindValues[primaryParam] : null;
   const rootCollectionName = resourceCollectionNameMap?.get(composition.resource) ?? composition.resource;
-  const rootRecord = rootId ? findById(rootCollectionName, rootId) : null;
+  const rootRecord = rootId ? store.findById(rootCollectionName, rootId) : null;
   if (!rootRecord) return null;
 
   const record = composition.fields ? projectFields(rootRecord, composition.fields) : { ...rootRecord };
@@ -352,7 +351,7 @@ export function assemblePlainComposition(composition, params, { resourceItemPath
     const context = { sectionName: null };
     const include = {};
     for (const [key, includeNode] of Object.entries(composition.include)) {
-      let items = fetchNodeItems(includeNode, bindValues, context, resourceCollectionNameMap);
+      let items = fetchNodeItems(includeNode, bindValues, context, resourceCollectionNameMap, store);
       if (includeNode.links && resourceItemPathMap && Array.isArray(items)) {
         const includeCollectionName = resourceCollectionNameMap?.get(includeNode.resource) ?? includeNode.resource;
         const itemPath = resourceItemPathMap.get(includeCollectionName);
@@ -402,7 +401,7 @@ export function assemblePlainComposition(composition, params, { resourceItemPath
  * @param {Object} [opts.paginationDefaults={}] - Domain pagination defaults
  * @returns {Object|null} Panel response, or null if section not found
  */
-export function assembleSectionPanel(composition, sectionName, params, stateDefaults = {}, { resourceItemPathMap = null, resourceCollectionNameMap = null, serverBasePath = '', queryParams = {}, paginationDefaults = {} } = {}) {
+export function assembleSectionPanel(composition, sectionName, params, stateDefaults = {}, { resourceItemPathMap = null, resourceCollectionNameMap = null, serverBasePath = '', queryParams = {}, paginationDefaults = {}, store } = {}) {
   const sections = composition.sections || {};
   const sectionDef = sections[sectionName];
   if (!sectionDef) return null;
@@ -411,13 +410,13 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
   const context = { sectionName };
 
   // Fetch primary section resource using the section's base filter
-  let items = fetchNodeItems(sectionDef, bindValues, context, resourceCollectionNameMap);
+  let items = fetchNodeItems(sectionDef, bindValues, context, resourceCollectionNameMap, store);
 
   // Fetch section-level includes
   const include = {};
   if (sectionDef.include) {
     for (const [key, includeNode] of Object.entries(sectionDef.include)) {
-      include[key] = fetchNodeItems(includeNode, bindValues, context, resourceCollectionNameMap);
+      include[key] = fetchNodeItems(includeNode, bindValues, context, resourceCollectionNameMap, store);
     }
   }
 
@@ -426,7 +425,7 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
     for (const [key, panelNode] of Object.entries(composition.panel.include)) {
       // Panel includes may already appear in section includes — section wins
       if (!(key in include)) {
-        include[key] = fetchNodeItems(panelNode, bindValues, context, resourceCollectionNameMap);
+        include[key] = fetchNodeItems(panelNode, bindValues, context, resourceCollectionNameMap, store);
       }
     }
   }
@@ -443,7 +442,7 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
   // Present for both list and singleton sections.
   if (stateInfo && bindParam) {
     const bindValue = bindValues[bindParam];
-    const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, sectionName, null);
+    const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, sectionName, null, store);
     const fields = stripFrameworkFields(record, bindParam);
     response[stateInfo.camelKey] = (fields && Object.keys(fields).length > 0) ? fields : { ...stateDefaults };
   }
@@ -454,7 +453,7 @@ export function assembleSectionPanel(composition, sectionName, params, stateDefa
     if (stateInfo && bindParam) {
       const bindValue = bindValues[bindParam];
       for (const item of items) {
-        const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, sectionName, item.id ?? null);
+        const record = findStateRecord(stateInfo.collectionName, bindParam, bindValue, sectionName, item.id ?? null, store);
         const fields = stripFrameworkFields(record, bindParam);
         item[stateInfo.camelKey] = (fields && Object.keys(fields).length > 0) ? fields : { ...stateDefaults };
       }
@@ -541,17 +540,17 @@ export function deriveStateResource(stateConfig, endpointPath, basePath) {
  * @param {string|null} itemId - Item ID for collection-backed sections; null for singletons
  * @returns {Object|null}
  */
-export function findStateRecord(collectionName, bindParam, bindValue, section, itemId = null) {
+export function findStateRecord(collectionName, bindParam, bindValue, section, itemId = null, store) {
   const filters = { [bindParam]: bindValue, section };
   if (itemId !== null) {
     filters.itemId = itemId;
-    const { items } = findAll(collectionName, filters, { limit: 1 });
+    const { items } = store.findAll(collectionName, filters, { limit: 1 });
     return items[0] ?? null;
   }
   // Section-level lookup (itemId: null): findAll skips null filter values so it
   // would match per-item records too. Fetch all section records and find the one
   // without an itemId explicitly.
-  const { items } = findAll(collectionName, filters, { limit: null });
+  const { items } = store.findAll(collectionName, filters, { limit: null });
   return items.find(r => r.itemId === undefined || r.itemId === null) ?? null;
 }
 
@@ -565,10 +564,10 @@ export function findStateRecord(collectionName, bindParam, bindValue, section, i
  * @param {Object} pagination - { limit, offset }
  * @returns {{ items: Object[], total: number, limit: number, offset: number, hasNext: boolean }}
  */
-export function listStateRecords(collectionName, bindParam, bindValue, section, pagination = {}) {
+export function listStateRecords(collectionName, bindParam, bindValue, section, pagination = {}, store) {
   const limit = pagination.limit ?? 25;
   const offset = pagination.offset ?? 0;
-  const { items, total } = findAll(collectionName, { [bindParam]: bindValue, section }, { limit, offset });
+  const { items, total } = store.findAll(collectionName, { [bindParam]: bindValue, section }, { limit, offset });
   return { items, total, limit, offset, hasNext: offset + items.length < total };
 }
 
@@ -583,15 +582,15 @@ export function listStateRecords(collectionName, bindParam, bindValue, section, 
  * @param {Object} updates - Client-supplied fields
  * @returns {Object} The full updated (or newly created) record
  */
-export function upsertStateRecord(collectionName, bindParam, bindValue, section, itemId, updates) {
+export function upsertStateRecord(collectionName, bindParam, bindValue, section, itemId, updates, store) {
   const filters = { [bindParam]: bindValue, section, itemId: itemId ?? null };
-  const { items } = findAll(collectionName, filters, { limit: 1 });
+  const { items } = store.findAll(collectionName, filters, { limit: 1 });
 
   if (items[0]) {
-    return update(collectionName, items[0].id, updates);
+    return store.update(collectionName, items[0].id, updates);
   }
 
-  return create(collectionName, {
+  return store.create(collectionName, {
     [bindParam]: bindValue,
     section,
     itemId: itemId ?? null,

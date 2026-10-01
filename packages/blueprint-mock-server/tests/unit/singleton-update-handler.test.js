@@ -7,7 +7,12 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { insertResource, clearAll, findAll } from '../../src/database-manager.js';
+import { createMemoryStore } from '../../src/stores/memory-store.js';
+
+// A store of this file's own, rather than one shared through a module-level
+// singleton. In memory because these cases do not need a database — and
+// because a fresh one per file is isolation they did not have before.
+const store = createMemoryStore();
 import { registerRoutes } from '../../src/route-generator.js';
 
 // ---------------------------------------------------------------------------
@@ -53,12 +58,12 @@ function makeReqRes(params, body, headers = {}) {
 // ---------------------------------------------------------------------------
 
 test('singleton PATCH — create (upsert): emits .created with full resource snapshot', () => {
-  clearAll('household-info');
-  clearAll('events');
+  store.clearAll('household-info');
+  store.clearAll('events');
 
   const app = createMockApp();
   const metadata = createSingletonMetadata('/test/applications/{applicationId}/household-info');
-  registerRoutes(app, metadata, 'http://localhost:1080');
+  registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, { store: store });
   const route = app.getRoutes().find(r => r.method === 'PATCH');
 
   const { req, res } = makeReqRes(
@@ -71,7 +76,7 @@ test('singleton PATCH — create (upsert): emits .created with full resource sna
   assert.ok(res._data.id, 'response has an id');
   assert.strictEqual(res._data.size, 3);
 
-  const { items: events } = findAll('events', {});
+  const { items: events } = store.findAll('events', {});
   assert.strictEqual(events.length, 1);
   const event = events[0];
   assert.ok(event.type.endsWith('.created'), `event type should end with .created, got ${event.type}`);
@@ -82,11 +87,11 @@ test('singleton PATCH — create (upsert): emits .created with full resource sna
 });
 
 test('singleton PATCH — update: emits .updated with changes diff', () => {
-  clearAll('household-info');
-  clearAll('events');
+  store.clearAll('household-info');
+  store.clearAll('events');
 
   // Pre-seed an existing record
-  insertResource('household-info', {
+  store.insertResource('household-info', {
     id: 'hh-1',
     applicationId: 'app-2',
     size: 3,
@@ -95,7 +100,7 @@ test('singleton PATCH — update: emits .updated with changes diff', () => {
 
   const app = createMockApp();
   const metadata = createSingletonMetadata('/test/applications/{applicationId}/household-info');
-  registerRoutes(app, metadata, 'http://localhost:1080');
+  registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, { store: store });
   const route = app.getRoutes().find(r => r.method === 'PATCH');
 
   const { req, res } = makeReqRes(
@@ -107,7 +112,7 @@ test('singleton PATCH — update: emits .updated with changes diff', () => {
   assert.strictEqual(res._code, 200);
   assert.strictEqual(res._data.size, 4);
 
-  const { items: events } = findAll('events', {});
+  const { items: events } = store.findAll('events', {});
   assert.strictEqual(events.length, 1);
   const event = events[0];
   assert.ok(event.type.endsWith('.updated'), `event type should end with .updated, got ${event.type}`);
@@ -121,10 +126,10 @@ test('singleton PATCH — update: emits .updated with changes diff', () => {
 });
 
 test('singleton PATCH — update with no meaningful change: emits .updated with empty changes', () => {
-  clearAll('household-info');
-  clearAll('events');
+  store.clearAll('household-info');
+  store.clearAll('events');
 
-  insertResource('household-info', {
+  store.insertResource('household-info', {
     id: 'hh-3',
     applicationId: 'app-3',
     size: 3,
@@ -132,7 +137,7 @@ test('singleton PATCH — update with no meaningful change: emits .updated with 
 
   const app = createMockApp();
   const metadata = createSingletonMetadata('/test/applications/{applicationId}/household-info');
-  registerRoutes(app, metadata, 'http://localhost:1080');
+  registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, { store: store });
   const route = app.getRoutes().find(r => r.method === 'PATCH');
 
   const { req, res } = makeReqRes(
@@ -143,7 +148,7 @@ test('singleton PATCH — update with no meaningful change: emits .updated with 
 
   assert.strictEqual(res._code, 200);
 
-  const { items: events } = findAll('events', {});
+  const { items: events } = store.findAll('events', {});
   assert.strictEqual(events.length, 1);
   const event = events[0];
   assert.ok(event.type.endsWith('.updated'));

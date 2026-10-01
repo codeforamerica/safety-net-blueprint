@@ -4,7 +4,6 @@
  */
 
 import jsonLogic from 'json-logic-js';
-import { create, update, findAll, findById } from '../database-manager.js';
 import { deriveCollectionName, resolveDotPath } from '../collection-utils.js';
 import { applySteps, resolveValue } from '../state-machine-engine.js';
 import { emitEvent } from '../emit-event.js';
@@ -62,7 +61,7 @@ function resolveWhereValue(val, resource, context, resolved) {
  * @param {Object} [context] - Step context for $this.field and previously resolved alias resolution
  * @returns {Object} Map of alias → entity|array|null
  */
-function resolveContextBindings(contextBindings, resource, context) {
+function resolveContextBindings(contextBindings, resource, context, store) {
   const resolved = {};
 
   for (const binding of contextBindings || []) {
@@ -83,7 +82,7 @@ function resolveContextBindings(contextBindings, resource, context) {
     const isJsonLogic = Object.keys(where).some(k => logicOperators.has(k));
 
     if (isJsonLogic) {
-      const { items: allItems } = findAll(collection, {});
+      const { items: allItems } = store.findAll(collection, {});
       const logicData = {
         this: context?.this ?? {},
         object: resource,
@@ -114,9 +113,9 @@ function resolveContextBindings(contextBindings, resource, context) {
     }
 
     if (query.id) {
-      resolved[alias] = findById(collection, query.id) ?? null;
+      resolved[alias] = store.findById(collection, query.id) ?? null;
     } else {
-      const { items } = findAll(collection, query, { limit: 1 });
+      const { items } = store.findAll(collection, query, { limit: 1 });
       resolved[alias] = items.length > 0 ? items[0] : null;
     }
   }
@@ -137,12 +136,12 @@ function resolveContextBindings(contextBindings, resource, context) {
  * @param {Object} baseContext - Base step context (caller, this, now, existing entities)
  * @returns {Object|null} Merged entities map, or null if a required binding failed
  */
-export function resolveContextLayers(layers, resource, baseContext) {
+export function resolveContextLayers(layers, resource, baseContext, store) {
   let entities = { ...(baseContext.entities || {}) };
   for (const bindings of layers) {
     if (!bindings || bindings.length === 0) continue;
     const layerContext = { ...baseContext, entities };
-    const resolved = resolveContextBindings(bindings, resource, layerContext);
+    const resolved = resolveContextBindings(bindings, resource, layerContext, store);
     Object.assign(entities, resolved);
   }
   return entities;
@@ -151,14 +150,14 @@ export function resolveContextLayers(layers, resource, baseContext) {
 /**
  * Apply a pending array-append (PATCH with $push body) to a resource in the database.
  */
-function applyPendingAppend({ path, body }) {
+function applyPendingAppend({ path, body }, store) {
   const parts = path.split('/');
   const id = parts.pop();
   const collectionPath = parts.join('/');
   const domain = parts[0];
   const collection = deriveCollectionName(collectionPath, domain);
 
-  const existing = findById(collection, id);
+  const existing = store.findById(collection, id);
   if (!existing) {
     console.error(`applyPendingAppend: ${collection}/${id} not found`);
     return;
@@ -174,7 +173,7 @@ function applyPendingAppend({ path, body }) {
     }
   }
 
-  update(collection, id, patch);
+  store.update(collection, id, patch);
 }
 
 /**
@@ -263,14 +262,14 @@ function resolveWithArgs(withArgs, context) {
  * @param {Object} context - State machine context
  * @returns {{ operations: Array, events: Array }}
  */
-function executeProcedure(procedureId, inlineProcedures, resource, context) {
+function executeProcedure(procedureId, inlineProcedures, resource, context, store) {
   const proc = (inlineProcedures || []).find(r => r.id === procedureId);
   if (!proc) {
     console.warn(`Procedure "${procedureId}" not found in state machine`);
     return { operations: [], events: [] };
   }
 
-  const entities = resolveContextBindings(proc.context, resource, context);
+  const entities = resolveContextBindings(proc.context, resource, context, store);
   if (entities === null) return { operations: [], events: [] };
 
   const stepContext = { ...context, entities: { ...(context.entities || {}), ...entities } };
@@ -279,7 +278,7 @@ function executeProcedure(procedureId, inlineProcedures, resource, context) {
   if (proc.steps !== undefined || hasProcedureStepKey(proc)) {
     const steps = proc.steps != null ? proc.steps : [proc];
     const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } =
-      applySteps(steps, resource, stepContext);
+      applySteps(steps, resource, stepContext, store);
 
     const allPendingEvents = [...(pendingEvents || [])];
 
@@ -293,9 +292,10 @@ function executeProcedure(procedureId, inlineProcedures, resource, context) {
         }
       }
       try {
-        const created = create(entity, createData);
+        const created = store.create(entity, createData);
         if (domain && eventObject) {
           emitEvent({
+            store,
             domain,
             object: eventObject,
             action: 'created',
@@ -311,7 +311,7 @@ function executeProcedure(procedureId, inlineProcedures, resource, context) {
     }
 
     for (const append of pendingAppends) {
-      applyPendingAppend(append);
+      applyPendingAppend(append, store);
     }
 
     allPendingOperations.push(...pendingOperations);
@@ -347,7 +347,7 @@ function executeProcedure(procedureId, inlineProcedures, resource, context) {
 
     if (matches) {
       const { pendingCreates, pendingOperations, pendingAppends, pendingProcedures, pendingEvents } =
-        applySteps(cond.then || [], resource, stepContext);
+        applySteps(cond.then || [], resource, stepContext, store);
 
       for (const { entity, domain, eventObject, stubUrl, data: createData } of pendingCreates) {
         if (stubUrl) {
@@ -359,9 +359,10 @@ function executeProcedure(procedureId, inlineProcedures, resource, context) {
           }
         }
         try {
-          const created = create(entity, createData);
+          const created = store.create(entity, createData);
           if (domain && eventObject) {
             emitEvent({
+            store,
               domain,
               object: eventObject,
               action: 'created',
@@ -377,7 +378,7 @@ function executeProcedure(procedureId, inlineProcedures, resource, context) {
       }
 
       for (const append of pendingAppends) {
-        applyPendingAppend(append);
+        applyPendingAppend(append, store);
       }
 
       allPendingOperations.push(...pendingOperations);
@@ -407,7 +408,7 @@ function executeProcedure(procedureId, inlineProcedures, resource, context) {
  * @param {Object} [context] - State machine context
  * @returns {{ pendingOperations: Array, pendingEvents: Array }}
  */
-export function executeProcedures(pendingProcedures, resource, inlineProcedures = [], context = null) {
+export function executeProcedures(pendingProcedures, resource, inlineProcedures = [], context = null, store) {
   const allPendingOperations = [];
   const allPendingEvents = [];
   if (!pendingProcedures || pendingProcedures.length === 0) {
@@ -430,7 +431,7 @@ export function executeProcedures(pendingProcedures, resource, inlineProcedures 
       const resolvedParams = resolveWithArgs(item.with, stepContext);
       callContext = { ...stepContext, params: { ...(stepContext.params || {}), ...resolvedParams } };
     }
-    const { operations: ops, events: evts } = executeProcedure(procedureId, inlineProcedures, resource, callContext);
+    const { operations: ops, events: evts } = executeProcedure(procedureId, inlineProcedures, resource, callContext, store);
     allPendingOperations.push(...(ops || []));
     allPendingEvents.push(...(evts || []));
   }

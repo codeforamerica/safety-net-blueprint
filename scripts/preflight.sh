@@ -137,8 +137,18 @@ step "Stopping any running mock server for a clean-slate run"
 lsof -ti :1080 | xargs kill -9 2>/dev/null || true
 pass "Mock server stopped (or was not running)"
 
+# The two suites below boot a mock server, and --store=memory is deliberate.
+#
+# Not for speed, though it is faster: it exercises the in-memory store end to
+# end on every run, which is the coverage worth having, since it is the newer
+# implementation and the one a browser build would use.
+#
+# SQLite is not left untested. store-conformance.test.js runs every case against
+# both implementations in under a second, and sqlite-store.test.js covers what is
+# specific to it. For a full end-to-end pass against SQLite — worth doing before
+# a release — drop the flag.
 step "Running blueprint-mock-server tests"
-if node packages/blueprint-mock-server/tests/run-tests.js --all --contracts=packages/generated/contracts --raw-contracts=packages/safety-net-contracts/src --stop 2>&1; then
+if node packages/blueprint-mock-server/tests/run-tests.js --all --contracts=packages/generated/contracts --raw-contracts=packages/safety-net-contracts/src --store=memory --stop 2>&1; then
   pass "Tests passed"
 else
   fail "Tests failed"
@@ -146,7 +156,7 @@ fi
 bail_if_failed
 
 step "Running safety-net-contracts tests"
-if node packages/safety-net-contracts/tests/run-tests.js --all --contracts=packages/generated/contracts --seed=packages/generated/contracts --clients=packages/generated/clients --stop 2>&1; then
+if node packages/safety-net-contracts/tests/run-tests.js --all --contracts=packages/generated/contracts --seed=packages/generated/contracts --clients=packages/generated/clients --store=memory --stop 2>&1; then
   pass "Tests passed"
 else
   fail "Tests failed"

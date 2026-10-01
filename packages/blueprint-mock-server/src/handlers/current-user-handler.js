@@ -2,7 +2,6 @@
  * Handler for /users/me — returns the authenticated user's own record.
  */
 
-import { findById } from '../database-manager.js';
 import { extractAuthContext } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 
@@ -12,7 +11,7 @@ import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extra
  * @param {Object} endpoint - Endpoint metadata
  * @returns {Function} Express handler
  */
-export function createCurrentUserHandler(apiMetadata, endpoint) {
+export function createCurrentUserHandler(apiMetadata, endpoint, { store } = {}) {
   return (req, res) => {
     try {
       const auth = extractAuthContext(req);
@@ -23,7 +22,7 @@ export function createCurrentUserHandler(apiMetadata, endpoint) {
         });
       }
 
-      const resource = findById(endpoint.collectionName, auth.userId);
+      const resource = store.findById(endpoint.collectionName, auth.userId);
       if (!resource) {
         return res.status(404).json({
           code: 'NOT_FOUND',
@@ -34,7 +33,7 @@ export function createCurrentUserHandler(apiMetadata, endpoint) {
       const expandFields = extractExpandFields(endpoint.responseSchema);
       const linksFields = extractLinksFields(endpoint.responseSchema);
       const derivedFields = extractDerivedFields(endpoint.responseSchema);
-      let responseBody = expandFields.length > 0 ? applyExpand(resource, expandFields, findById) : resource;
+      let responseBody = expandFields.length > 0 ? applyExpand(resource, expandFields, (c, id) => store.findById(c, id)) : resource;
       if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
       if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
       res.json(responseBody);
