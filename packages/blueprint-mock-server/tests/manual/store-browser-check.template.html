@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>blueprint-mock-server store — browser check</title>
+<style>
+  body { font: 14px/1.5 ui-monospace, Menlo, monospace; max-width: 820px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.1rem; }
+  #summary { font-weight: bold; padding: .6rem .8rem; border-radius: 4px; }
+  #summary.ok { background: #e6f4ea; color: #137333; }
+  #summary.bad { background: #fce8e6; color: #c5221f; }
+  #ua { color: #666; font-size: 12px; margin: .6rem 0 1.2rem; }
+  table { border-collapse: collapse; width: 100%; }
+  td { padding: .35rem .5rem; border-bottom: 1px solid #eee; vertical-align: top; }
+  tr.ok td:first-child { color: #137333; }
+  tr.bad td:first-child { color: #c5221f; font-weight: bold; }
+  td:nth-child(3) { color: #666; }
+</style>
+<h1>blueprint-mock-server · in-memory store · browser check</h1>
+<p>Open this file directly (<code>file://</code>) to verify the store runs with no server and no Node.</p>
+<div id="summary">running…</div>
+<div id="ua"></div>
+<table><tbody id="rows"></tbody></table>
+<script>/*__BUNDLE__*/</script>
+<script>
+const results = [];
+const check = (name, fn) => {
+  try { const detail = fn(); results.push({ name, ok: true, detail: detail ?? '' }); }
+  catch (e) { results.push({ name, ok: false, detail: e.message }); }
+};
+const eq = (a, b, msg) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${msg}: ${JSON.stringify(a)} != ${JSON.stringify(b)}`); };
+
+check('page is a secure context', () => {
+  if (!window.isSecureContext) throw new Error('file:// is NOT a secure context in this browser');
+  return 'isSecureContext = true';
+});
+
+check('crypto.randomUUID is available', () => {
+  if (typeof crypto?.randomUUID !== 'function') throw new Error('crypto.randomUUID is undefined — the store cannot mint ids');
+  return crypto.randomUUID();
+});
+
+const { createMemoryStore } = StoreBundle;
+check('the store module loaded', () => {
+  if (typeof createMemoryStore !== 'function') throw new Error('createMemoryStore missing from the bundle');
+  return 'createMemoryStore present';
+});
+
+const store = createMemoryStore();
+const C = 'widgets';
+
+check('create and read back', () => {
+  const made = store.create(C, { name: 'Ada' });
+  eq(store.findById(C, made.id).name, 'Ada', 'round trip');
+  return made.id;
+});
+
+check('reads return copies, not references', () => {
+  store.clearAll(C);
+  store.insertResource(C, { id: 'x', name: 'original' });
+  store.findById(C, 'x').name = 'mutated';
+  eq(store.findById(C, 'x').name, 'original', 'stored state was reachable');
+  return 'mutation isolated';
+});
+
+check('orders newest first by createdAt', () => {
+  store.clearAll(C);
+  store.insertResource(C, { id: 'b', createdAt: '2024-02-01T00:00:00Z' });
+  store.insertResource(C, { id: 'a', createdAt: '2024-03-01T00:00:00Z' });
+  store.insertResource(C, { id: 'c', createdAt: '2024-01-01T00:00:00Z' });
+  eq(store.findAll(C, {}, { limit: null }).items.map(r => r.id), ['a','b','c'], 'order');
+  return 'a, b, c';
+});
+
+check('a null filter matches a missing field', () => {
+  store.clearAll(C);
+  store.insertResource(C, { id: 'section' });
+  store.insertResource(C, { id: 'item', itemId: 'i-1' });
+  eq(store.findAll(C, { itemId: null }, { limit: null }).items.map(r => r.id), ['section'], 'null filter');
+  return 'matched the record with no itemId';
+});
+
+check('boolean filters are normalised', () => {
+  store.clearAll(C);
+  store.insertResource(C, { id: 'on', active: true });
+  eq(store.findAll(C, { active: 1 }, { limit: null }).items.map(r => r.id), ['on'], 'filter 1 vs stored true');
+  return '{ active: 1 } matched a stored true';
+});
+
+check('snapshot and restore round-trip', () => {
+  store.clearAll(C);
+  store.insertResource(C, { id: 'keep', createdAt: '2024-01-01T00:00:00Z' });
+  const taken = store.snapshot();
+  store.clearAll(C);
+  store.restore(taken);
+  eq(store.count(C), 1, 'restored count');
+  return 'session survived a round trip';
+});
+
+check('unsafe field names are rejected', () => {
+  let threw = false;
+  try { store.findAll(C, { "a' OR '1'='1": 'x' }); } catch { threw = true; }
+  if (!threw) throw new Error('the guard did not fire');
+  return 'guard fired';
+});
+
+const passed = results.filter(r => r.ok).length;
+document.getElementById('summary').textContent =
+  `${passed} of ${results.length} checks passed` + (passed === results.length ? ' — the store runs in this browser' : '');
+document.getElementById('summary').className = passed === results.length ? 'ok' : 'bad';
+document.getElementById('ua').textContent = navigator.userAgent + '  ·  ' + location.protocol;
+document.getElementById('rows').innerHTML = results.map(r =>
+  `<tr class="${r.ok ? 'ok' : 'bad'}"><td>${r.ok ? 'PASS' : 'FAIL'}</td><td>${r.name}</td><td>${r.detail}</td></tr>`
+).join('');
+</script>

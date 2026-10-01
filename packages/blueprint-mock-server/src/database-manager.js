@@ -1,327 +1,62 @@
 /**
- * Database manager for SQLite persistence
- * Uses JSON column storage for flexible schema
+ * Module-level SQLite store, kept as a shim.
+ *
+ * This file used to *be* the store. Its behaviour now lives in
+ * `stores/sqlite-store.js` behind the interface in `stores/contract.js`, so a
+ * second implementation can be substituted — see `stores/memory-store.js`.
+ *
+ * It survives as a shim so the modules that import these functions directly can
+ * move to an injected store without a flag day. Every export delegates to one
+ * process-wide store instance, which is what the previous module-level state
+ * amounted to.
+ *
+ * **Do not add to this file.** New code takes a store as a parameter. This goes
+ * away once nothing imports it.
+ *
+ * @deprecated Use the `Store` passed in by the caller.
  */
 
-import Database from 'better-sqlite3';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
-import { randomUUID } from 'crypto';
-import { deepMerge } from './deep-merge.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Store database connections
-const databases = new Map();
-
-function assertSafeFieldName(name) {
-  if (!/^[a-zA-Z0-9_.]+$/.test(name)) {
-    throw new Error(`Unsafe field name rejected: ${name}`);
-  }
-}
-
-// Per-collection default field values applied on create (populated at startup from response schemas)
-const collectionDefaults = new Map();
+import { createSqliteStore, sqliteHandle } from './stores/sqlite-store.js';
 
 /**
- * Register default field values for a collection. Applied by create() to every new record.
- * Used to ensure readOnly required fields (e.g. evidence: []) are present on newly created resources.
+ * The process-wide store. Exported so that code being migrated can hand the
+ * same instance to something that now expects a store parameter, rather than
+ * creating a second one over the same files.
  */
-export function registerCollectionDefaults(collectionName, defaults) {
-  collectionDefaults.set(collectionName, defaults);
-}
+export const defaultStore = createSqliteStore();
+
+export const registerCollectionDefaults = (...args) => defaultStore.registerCollectionDefaults(...args);
+export const findAll = (...args) => defaultStore.findAll(...args);
+export const search = (...args) => defaultStore.search(...args);
+export const findById = (...args) => defaultStore.findById(...args);
+export const create = (...args) => defaultStore.create(...args);
+export const update = (...args) => defaultStore.update(...args);
+export const deleteResource = (...args) => defaultStore.deleteResource(...args);
+export const clearAll = (...args) => defaultStore.clearAll(...args);
+export const insertResource = (...args) => defaultStore.insertResource(...args);
+export const count = (...args) => defaultStore.count(...args);
 
 /**
- * Get or create database for a resource type
- * @param {string} resourceName - Name of the resource (e.g., 'persons')
- * @returns {Database} SQLite database instance
- */
-export function getDatabase(resourceName) {
-  if (databases.has(resourceName)) {
-    return databases.get(resourceName);
-  }
-  
-  const dataDir = join(__dirname, '../generated/mock-data');
-  if (!existsSync(dataDir)) {
-    mkdirSync(dataDir, { recursive: true });
-  }
-  
-  const dbPath = join(dataDir, `${resourceName}.db`);
-  const db = new Database(dbPath);
-  
-  // Enable JSON support
-  db.pragma('journal_mode = WAL');
-  
-  // Create resources table with JSON storage
-  try {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS resources (
-        id TEXT PRIMARY KEY,
-        data TEXT NOT NULL
-      );
-    `);
-  } catch (error) {
-    console.error(`Failed to create resources table for ${resourceName}:`, error);
-    throw error;
-  }
-  
-  // Create indexes for common search fields
-  // These improve query performance for JSON extracts
-  // Using nested path for name fields (name.firstName, name.lastName)
-  try {
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_name_firstName ON resources(json_extract(data, '$.name.firstName'));`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_name_lastName ON resources(json_extract(data, '$.name.lastName'));`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_status ON resources(json_extract(data, '$.status'));`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_email ON resources(json_extract(data, '$.email'));`);
-    db.exec(`CREATE INDEX IF NOT EXISTS idx_createdAt ON resources(json_extract(data, '$.createdAt'));`);
-  } catch (error) {
-    // Indexes may already exist or fields may not be present in all resources
-    console.warn(`Warning: Could not create indexes for ${resourceName}:`, error.message);
-  }
-  
-  databases.set(resourceName, db);
-  return db;
-}
-
-/**
- * Find all resources with optional filtering and pagination
- * @param {string} resourceName - Name of the resource
- * @param {Object} filters - Filter conditions (key-value pairs)
- * @param {Object} pagination - Pagination options {limit, offset}
- * @returns {Object} {items: Array, total: number}
- */
-export function findAll(resourceName, filters = {}, pagination = {}) {
-  const db = getDatabase(resourceName);
-  // limit: null means fetch all records (no SQL LIMIT). Callers that do JS-level
-  // filtering or pagination (e.g. the composition assembler) pass null so they
-  // work with the full bind-filtered set before applying their own slice.
-  const { limit = 25, offset = 0 } = pagination;
-  const unlimited = pagination.limit === null;
-
-  // Build WHERE clause from filters
-  const whereClauses = [];
-  const params = [];
-
-  for (const [key, value] of Object.entries(filters)) {
-    if (value === undefined) continue;
-    assertSafeFieldName(key);
-    if (value === null) {
-      whereClauses.push(`json_extract(data, '$.${key}') IS NULL`);
-    } else {
-      whereClauses.push(`json_extract(data, '$.${key}') = ?`);
-      params.push(value);
-    }
-  }
-
-  const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-  // Get total count
-  const countStmt = db.prepare(`SELECT COUNT(*) as count FROM resources ${whereClause}`);
-  const { count: total } = countStmt.get(...params);
-
-  // Get items — omit LIMIT/OFFSET when caller requests all records
-  const selectQuery = unlimited
-    ? `SELECT data FROM resources ${whereClause} ORDER BY json_extract(data, '$.createdAt') DESC`
-    : `SELECT data FROM resources ${whereClause} ORDER BY json_extract(data, '$.createdAt') DESC LIMIT ? OFFSET ?`;
-
-  const selectStmt = db.prepare(selectQuery);
-  const rows = unlimited
-    ? selectStmt.all(...params)
-    : selectStmt.all(...params, limit, offset);
-  const items = rows.map(row => JSON.parse(row.data));
-
-  return { items, total };
-}
-
-/**
- * Search resources by query
- * @param {string} resourceName - Name of the resource
- * @param {string} query - Search query
- * @param {string[]} searchFields - Fields to search in
- * @param {Object} pagination - Pagination options
- * @returns {Object} {items: Array, total: number}
- */
-export function search(resourceName, query, searchFields = [], pagination = {}) {
-  const db = getDatabase(resourceName);
-  const { limit = 25, offset = 0 } = pagination;
-  
-  if (!query || searchFields.length === 0) {
-    return findAll(resourceName, {}, pagination);
-  }
-  
-  // Build WHERE clause for search
-  const whereClauses = searchFields.map(field => {
-    assertSafeFieldName(field);
-    return `LOWER(json_extract(data, '$.${field}')) LIKE LOWER(?)`;
-  });
-  const whereClause = `WHERE ${whereClauses.join(' OR ')}`;
-  
-  // Prepare search pattern
-  const searchPattern = `%${query}%`;
-  const params = searchFields.map(() => searchPattern);
-  
-  // Get total count
-  const countStmt = db.prepare(`SELECT COUNT(*) as count FROM resources ${whereClause}`);
-  const { count: total } = countStmt.get(...params);
-  
-  // Get paginated items
-  const selectStmt = db.prepare(`
-    SELECT data FROM resources 
-    ${whereClause}
-    ORDER BY json_extract(data, '$.createdAt') DESC
-    LIMIT ? OFFSET ?
-  `);
-  
-  const rows = selectStmt.all(...params, limit, offset);
-  const items = rows.map(row => JSON.parse(row.data));
-  
-  return { items, total };
-}
-
-/**
- * Find a resource by ID
- * @param {string} resourceName - Name of the resource
- * @param {string} id - Resource ID
- * @returns {Object|null} Resource object or null if not found
- */
-export function findById(resourceName, id) {
-  const db = getDatabase(resourceName);
-  const stmt = db.prepare('SELECT data FROM resources WHERE id = ?');
-  const row = stmt.get(id);
-  
-  if (!row) {
-    return null;
-  }
-  
-  return JSON.parse(row.data);
-}
-
-/**
- * Create a new resource
- * @param {string} resourceName - Name of the resource
- * @param {Object} data - Resource data
- * @returns {Object} Created resource with generated fields
- */
-export function create(resourceName, data) {
-  const db = getDatabase(resourceName);
-  
-  // Generate server-side fields
-  const id = randomUUID();
-  const now = new Date().toISOString();
-  
-  const defaults = collectionDefaults.get(resourceName) || {};
-  const resource = {
-    ...defaults,
-    ...data,
-    id,
-    createdAt: now,
-    updatedAt: now
-  };
-  
-  const stmt = db.prepare('INSERT INTO resources (id, data) VALUES (?, ?)');
-  stmt.run(id, JSON.stringify(resource));
-  
-  return resource;
-}
-
-/**
- * Update a resource
- * @param {string} resourceName - Name of the resource
- * @param {string} id - Resource ID
- * @param {Object} updates - Fields to update
- * @returns {Object|null} Updated resource or null if not found
- */
-export function update(resourceName, id, updates) {
-  const db = getDatabase(resourceName);
-  
-  // Get existing resource
-  const existing = findById(resourceName, id);
-  if (!existing) {
-    return null;
-  }
-  
-  // Deep merge updates (preserving id and createdAt)
-  const merged = deepMerge(existing, updates, ['id', 'createdAt']);
-  const updated = {
-    ...merged,
-    updatedAt: new Date().toISOString()
-  };
-  
-  const stmt = db.prepare('UPDATE resources SET data = ? WHERE id = ?');
-  stmt.run(JSON.stringify(updated), id);
-  
-  return updated;
-}
-
-/**
- * Delete a resource
- * @param {string} resourceName - Name of the resource
- * @param {string} id - Resource ID
- * @returns {boolean} True if deleted, false if not found
- */
-export function deleteResource(resourceName, id) {
-  const db = getDatabase(resourceName);
-  
-  const stmt = db.prepare('DELETE FROM resources WHERE id = ? RETURNING id');
-  const result = stmt.get(id);
-  
-  return result !== undefined;
-}
-
-/**
- * Clear all resources from a database
- * @param {string} resourceName - Name of the resource
- */
-export function clearAll(resourceName) {
-  const db = getDatabase(resourceName);
-  db.prepare('DELETE FROM resources').run();
-}
-
-/**
- * Insert a resource with specific ID (for seeding)
- * @param {string} resourceName - Name of the resource
- * @param {Object} resource - Complete resource object with id
- */
-export function insertResource(resourceName, resource) {
-  const db = getDatabase(resourceName);
-  
-  // Ensure timestamps exist
-  if (!resource.createdAt) {
-    resource.createdAt = new Date().toISOString();
-  }
-  if (!resource.updatedAt) {
-    resource.updatedAt = resource.createdAt;
-  }
-  
-  const stmt = db.prepare('INSERT OR REPLACE INTO resources (id, data) VALUES (?, ?)');
-  stmt.run(resource.id, JSON.stringify(resource));
-}
-
-/**
- * Get count of resources
- * @param {string} resourceName - Name of the resource
- * @returns {number} Count of resources
- */
-export function count(resourceName) {
-  const db = getDatabase(resourceName);
-  const { count } = db.prepare('SELECT COUNT(*) as count FROM resources').get();
-  return count;
-}
-
-/**
- * Close all database connections
+ * Clear every collection the store has opened.
+ *
+ * Kept because callers use it; it is `clearAll` across everything rather than a
+ * distinct capability, so it is not part of the store contract.
  */
 export function clearAllDatabases() {
-  for (const db of databases.values()) {
-    db.prepare('DELETE FROM resources').run();
+  for (const collection of Object.keys(defaultStore.snapshot())) {
+    defaultStore.clearAll(collection);
   }
 }
 
-export function closeAll() {
-  for (const [name, db] of databases.entries()) {
-    db.close();
-    databases.delete(name);
-  }
-}
+export const closeAll = () => defaultStore.close();
+
+/**
+ * @deprecated Reaches the raw SQLite handle, which only the SQL store has.
+ *
+ * `search-engine.js` and `handlers/search-handler.js` still use this to build
+ * queries the store cannot express — range comparisons, array membership,
+ * full-text across every value, a configurable ORDER BY. Those are the last
+ * callers, and reconciling them is what decides the store's eventual query
+ * shape; see `stores/contract.js`.
+ */
+export const getDatabase = (resourceName) => sqliteHandle(defaultStore, resourceName);
