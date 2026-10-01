@@ -4,8 +4,8 @@
 # ── Document ────────────────────────────────────────────────────────────────────
 
 document.id: { type: uuid }
-document.documentTypeId: { type: uuid, relationship: document-management/document-types }
-document.latestVersionId: { type: uuid, relationship: document-management/document-versions }
+document.documentTypeId: { type: uuid, relationship: DocumentType }
+document.latestVersionId: { type: uuid, relationship: DocumentVersion }
 document.title: { type: string }
 document.documentDate: { type: date }
 document.lifecycleState: { type: enum, values: [active, retained, pending_disposition, destroyed] }
