@@ -34,7 +34,7 @@ const { ok, report } = validate(resolved.docs);
 | `discover(dir, type?)` | Find contract files on disk, each with its type and domain. Optionally filtered to one type |
 | `load(file)` | Parse what `discover` returned into a `Doc` |
 | `generate(docs, type, opts?)` | Derive an artifact: `overlay`, `graph`, `postman`, or `examples` |
-| `extract(docs, type, opts?)` | Read out a fact the documents already state: `relationships` |
+| `extract(docs, type, opts?)` | Read out a fact the documents already state: `relationships`, `state-machines`, `sla-types`, `metrics`, `config` |
 | `resolve(docs, opts)` | Apply the resolution passes below |
 | `validate(docs)` | Check the set against its schemas and cross-artifact rules |
 
@@ -70,8 +70,11 @@ RPC action paths and composition endpoints are not passes — they are overlays 
 | **Events** | Emitted and subscribed event types against the channels declared for them |
 | **Annotations** | Annotation keys against the fields they describe |
 | **Field references** | SLA type and metric field paths against the schemas they point at |
+| **References** | Every `$ref` and `x-relationship.resource` against the document or schema it names |
 
 Every contract type is either validated or explicitly reported as having no validator, so a type nobody checks surfaces as a gap rather than passing silently.
+
+A reference that names something not in the set is an error, not a warning. A `$ref` to a missing document, or an `x-relationship.resource` naming no schema, used to be either ignored or reported as a warning during resolution — which is how 56 broken refs and five inert relationships survived in this repo's own contracts. Canonical `https://blueprint.codeforamerica.org/...` refs are exempt: they resolve through the schema registry rather than by path.
 
 OpenAPI structural validation and example-data validation live in `blueprint-mock-server`, which is what serves them.
 

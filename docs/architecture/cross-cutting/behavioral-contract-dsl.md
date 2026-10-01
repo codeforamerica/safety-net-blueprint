@@ -26,6 +26,8 @@ The DSL spans three artifact types. All three share the same expression syntax, 
 
 A state machine file covers one domain and may contain multiple machines — one per governed entity type. Domain files can extend `platform-state-machine.yaml` to inherit shared guards and procedures. The precedence chain is platform → domain → machine: each level can override definitions from the level above using the same id.
 
+A file declaring `machines:` must declare `domain:`; a **library** file — one carrying only `guards:` and `procedures:` to be inherited, like `platform-state-machine.yaml` — declares neither. Its identity is not domain-scoped, and a contract set is not obliged to have any particular domain for it to sit in. An `extends:` naming a file that is not in the set is an error rather than a file loaded without its guards: an engine treats a guard it cannot find as satisfied, so inheriting nothing would silently pass every transition those guards were gating.
+
 ```
 platform-state-machine.yaml          domain-state-machine.yaml
 ├── guards:  (platform-wide)          ├── extends: ./platform-state-machine.yaml

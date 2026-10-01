@@ -67,7 +67,7 @@ components:
     # subject: serviceCallId
     CallCompletedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -119,7 +119,7 @@ components:
     # subject: serviceCallId
     CallFailedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -162,7 +162,7 @@ components:
     # subject: serviceCallId
     CallSubmittedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -197,7 +197,7 @@ components:
     # subject: serviceCallId
     CallTimedOutEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:

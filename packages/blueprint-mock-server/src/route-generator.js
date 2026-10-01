@@ -15,7 +15,6 @@ import { createSearchHandler } from './handlers/search-handler.js';
 import { createMetricsListHandler, createMetricsGetHandler } from './handlers/metrics-handler.js';
 import { createDocumentUploadHandler, createDocumentVersionUploadHandler } from './handlers/document-upload-handler.js';
 import { createDocumentContentHandler } from './handlers/document-content-handler.js';
-import { findSlaTypes } from './sla-loader.js';
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, registerParentLink } from './composition-assembler.js';
 import { emitEvent } from './emit-event.js';
@@ -23,6 +22,22 @@ import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capi
 import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX } from './search-engine.js';
 import { randomUUID } from 'node:crypto';
 import { extractCallerRoles } from './auth-context.js';
+
+/**
+ * SLA types declared for one domain.
+ *
+ * Moved here from `sla-loader.js`, which is gone: discovering and parsing the
+ * SLA contracts is now `extract(docs, 'sla-types')` in blueprint-core, and
+ * this is the only thing the old module did that was not discovery. This file
+ * is its only caller.
+ *
+ * @param {{ domain: string, slaTypes: object[] }[]} allSlaTypes - From extract
+ * @param {string} domain
+ * @returns {object[]} The domain's SLA types, or empty when it declares none
+ */
+function findSlaTypes(allSlaTypes, domain) {
+  return (allSlaTypes ?? []).find((entry) => entry.domain === domain)?.slaTypes ?? [];
+}
 
 /**
  * Determine if a path is a flat collection endpoint (no path parameters).

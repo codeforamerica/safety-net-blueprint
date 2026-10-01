@@ -15,7 +15,8 @@ import { resolveSchemaRefs, resolveRef, collectTopLevelProperties, getPropertyAt
 /**
  * @param {import('../../types.js').Doc} doc - An annotations document
  * @param {object} context
- * @param {Map<string, { spec: object, filePath: string }>} context.specsByDomain
+ * @param {Map<string, { spec: object, filePath: string, relativePath: string|null }>} context.specsByDomain
+ * @param {Map<string, *>} context.byRelativePath - The set, for following cross-file $refs
  * @param {Set<string>} context.actions - "<object>.<action>" keys from state machines
  * @param {Set<string>} context.channels - Every AsyncAPI channel
  * @param {Map<string, { domain: string, facts: Set<string> }>} context.graphs - Facts per ruleset
@@ -26,7 +27,7 @@ export function validateAnnotations(doc, context) {
   const domain = doc.content?.domain ?? null;
 
   return [
-    ...checkKeys(doc.content?.schema, (key) => schemaPathError(key, context.specsByDomain, domain), 'schema'),
+    ...checkKeys(doc.content?.schema, (key) => schemaPathError(key, context.specsByDomain, domain, context.byRelativePath), 'schema'),
     ...checkKeys(doc.content?.operations, (key) =>
       context.actions.has(key) ? null : `Operation "${key}" matches no state machine action.`, 'operations'),
     ...checkKeys(doc.content?.events, (key) =>
@@ -66,9 +67,10 @@ function checkKeys(section, check, sectionName) {
  * @param {string} key
  * @param {Map<string, { spec: object, filePath: string }>} specsByDomain
  * @param {string|null} domain
+ * @param {Map<string, *>} [byRelativePath] - The set, for following cross-file $refs
  * @returns {string|null}
  */
-function schemaPathError(key, specsByDomain, domain) {
+function schemaPathError(key, specsByDomain, domain, byRelativePath = null) {
   if (!key) return 'Empty annotation key.';
   if (specsByDomain.size === 0) return null;
 
@@ -83,12 +85,12 @@ function schemaPathError(key, specsByDomain, domain) {
   if (!found) return `Schema "${base}" is not declared in any OpenAPI document.`;
   if (!fieldPath) return null; // annotating the resource itself
 
-  const { spec, filePath, setRoot, schemaName } = found;
-  const schema = resolveSchemaRefs(spec.components.schemas[schemaName], { spec, specFilePath: filePath, setRoot });
+  const { spec, relativePath, schemaName } = found;
+  const schema = resolveSchemaRefs(spec.components.schemas[schemaName], { spec, byRelativePath, fromPath: relativePath });
 
   if (getPropertyAtPath(spec, schema, fieldPath)) return null;
 
-  return walkPath(spec, filePath, setRoot, schema, fieldPath)
+  return walkPath(spec, relativePath, byRelativePath, schema, fieldPath)
     ? null
     : `Path "${key}" does not exist on schema "${base}".`;
 }
@@ -128,14 +130,14 @@ function findSchema(specsByDomain, candidates, domain) {
  * array items, then as a sub-resource.
  *
  * @param {object} spec
- * @param {string} filePath
- * @param {string|null} setRoot - Contract-set root bounding $ref following
+ * @param {string|null} relativePath - Path of the document holding the schema
+ * @param {Map<string, *>|null} byRelativePath - The set, for cross-file $refs
  * @param {object} schema
  * @param {string} fieldPath
  * @returns {boolean}
  */
-function walkPath(spec, filePath, setRoot, schema, fieldPath) {
-  const subResources = buildSubResourceMap(spec, filePath, setRoot);
+function walkPath(spec, relativePath, byRelativePath, schema, fieldPath) {
+  const subResources = buildSubResourceMap(spec, relativePath, byRelativePath);
   let current = schema;
 
   for (const segment of fieldPath.replace(/\[\]/g, '').split('.').filter(Boolean)) {
@@ -173,18 +175,18 @@ function walkPath(spec, filePath, setRoot, schema, fieldPath) {
  * a collection's list schema.
  *
  * @param {object} spec
- * @param {string} filePath
- * @param {string|null} setRoot - Contract-set root bounding $ref following
+ * @param {string|null} relativePath - Path of the document holding the schema
+ * @param {Map<string, *>|null} byRelativePath - The set, for cross-file $refs
  * @returns {Map<string, object>}
  */
-function buildSubResourceMap(spec, filePath, setRoot) {
+function buildSubResourceMap(spec, relativePath, byRelativePath) {
   const map = new Map();
   const schemas = spec?.components?.schemas ?? {};
 
   const schemaFor = (ref) => {
     const name = typeof ref === 'string' ? ref.match(/^#\/components\/schemas\/(.+)$/)?.[1] : null;
     const raw = name ? schemas[name] : null;
-    return raw ? resolveSchemaRefs(raw, { spec, specFilePath: filePath, setRoot }) : null;
+    return raw ? resolveSchemaRefs(raw, { spec, byRelativePath, fromPath: relativePath }) : null;
   };
 
   const camel = (s) => s.replace(/-([a-z])/g, (_, c) => c.toUpperCase());

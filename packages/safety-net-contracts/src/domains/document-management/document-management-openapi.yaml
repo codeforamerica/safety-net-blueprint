@@ -660,8 +660,7 @@ components:
           format: uuid
           description: Links to the DocumentType governing retention rules for this document.
           x-relationship:
-            resource: document-management/document-types
-            field: id
+            resource: DocumentType
         title:
           type: string
           maxLength: 200
@@ -681,8 +680,7 @@ components:
           format: uuid
           description: ID of the most recent DocumentVersion. Single authoritative pointer to the current file.
           x-relationship:
-            resource: document-management/document-versions
-            field: id
+            resource: DocumentVersion
         retentionDeadline:
           type: string
           format: date
@@ -778,8 +776,7 @@ components:
           format: uuid
           description: Links to the parent Document.
           x-relationship:
-            resource: document-management/documents
-            field: id
+            resource: Document
         versionNumber:
           type: integer
           description: Sequential version number. 1 for the first version.
@@ -909,8 +906,7 @@ components:
           type: string
           format: uuid
           x-relationship:
-            resource: document-management/documents
-            field: id
+            resource: Document
         subjectType:
           type: string
           description: The kind of record this document is linked to (e.g. application, case). States add values via overlay.
@@ -948,8 +944,7 @@ components:
           type: string
           format: uuid
           x-relationship:
-            resource: document-management/documents
-            field: id
+            resource: Document
         subjectType:
           type: string
           enum:

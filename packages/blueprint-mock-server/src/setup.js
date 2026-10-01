@@ -7,12 +7,8 @@ import { loadAllSpecs, discoverApiSpecs } from './spec-loader.js';
 import { seedAllDatabases } from './seeder.js';
 import { validateMockData } from './mock-data-validator.js';
 import { validateAll, getValidationStatus } from './spec-validator.js';
-import { discoverStateMachines } from './state-machine-loader.js';
-import { discoverSlaTypes } from './sla-loader.js';
-import { discoverMetrics } from './metrics-loader.js';
-import { discoverConfigs } from './config-loader.js';
 import { registerConfigManaged } from './config-registry.js';
-import { discover, generate, load } from '@codeforamerica/blueprint-core';
+import { discover, generate, load, extract } from '@codeforamerica/blueprint-core';
 /**
  * Perform setup: load specs and seed databases
  * @param {Object} options - Setup options
@@ -35,6 +31,13 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     console.log(`  Specs: ${specsDir}`);
     if (seedDir !== specsDir) console.log(`  Seed:  ${seedDir}`);
   }
+
+  // One discovery pass for every contract type. This used to be ten walks of
+  // the same directory — four loaders each doing their own recursive readdir,
+  // plus discover() called separately for compositions, rules, graphs and the
+  // policy registry. The loaders are gone; `extract` reads the same facts from
+  // documents already in memory.
+  const docs = discover(specsDir).map(load);
 
   const apiSpecs = await loadAllSpecs({ specsDir });
 
@@ -77,21 +80,21 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   }
 
   // Discover state machine contracts
-  const stateMachines = discoverStateMachines(specsDir);
+  const stateMachines = extract(docs, 'state-machines');
   if (verbose && stateMachines.length > 0) {
     console.log(`\n✓ Discovered ${stateMachines.length} state machine(s):`);
     stateMachines.forEach(sm => console.log(`  - ${sm.domain}/${sm.object}`));
   }
 
   // Discover SLA type contracts
-  const slaTypes = discoverSlaTypes(specsDir);
+  const slaTypes = extract(docs, 'sla-types');
   if (verbose && slaTypes.length > 0) {
     console.log(`\n✓ Discovered ${slaTypes.length} SLA type config(s):`);
     slaTypes.forEach(s => console.log(`  - ${s.domain} (${s.slaTypes.length} type(s))`));
   }
 
   // Discover composition definitions
-  const compositions = contractsOfType(specsDir, 'compositions', 'compositions');
+  const compositions = contractsOfType(docs, 'compositions', 'compositions');
   if (verbose && compositions.length > 0) {
     console.log(`\n✓ Discovered ${compositions.length} composition file(s):`);
     compositions.forEach(c => console.log(`  - ${c.domain} (${Object.keys(c.doc.compositions || {}).length} composition(s))`));
@@ -100,9 +103,9 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   // Discover rules files. Their decision graphs are compiled by generate —
   // the same build step the resolve pipeline runs — so the server evaluates
   // exactly what the pipeline would have written.
-  const rulesFiles = contractsOfType(specsDir, 'rules', 'rulesets');
+  const rulesFiles = contractsOfType(docs, 'rules', 'rulesets');
   const graphs = rulesFiles.length > 0
-    ? generate(discover(specsDir).map(load), 'graph').map(({ graph }) => graph)
+    ? generate(docs, 'graph').map(({ graph }) => graph)
     : [];
   if (verbose && rulesFiles.length > 0) {
     console.log(`\n✓ Discovered ${rulesFiles.length} rules file(s):`);
@@ -110,7 +113,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   }
 
   // Discover metric definition contracts
-  const metrics = discoverMetrics(specsDir);
+  const metrics = extract(docs, 'metrics');
   if (verbose && metrics.length > 0) {
     console.log(`\n✓ Discovered ${metrics.length} metric definition(s):`);
     metrics.forEach(m => console.log(`  - ${m.domain} (${m.metrics.length} metric(s))`));
@@ -120,7 +123,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   const summary = seedAllDatabases(specsDir, seedDir, store);
 
   // Seed config-managed resources (after seedAllDatabases, which clears collections first)
-  const configs = discoverConfigs(specsDir);
+  const configs = extract(docs, 'config');
   for (const config of configs) {
     for (const [catalogKey, entries] of Object.entries(config.catalogs)) {
       for (const entry of entries) {
@@ -139,7 +142,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   }
 
   // Seed platform policy registry into the mock database
-  const policies = registryEntries(discover(specsDir).map(load), 'policies');
+  const policies = registryEntries(docs, 'policies');
   const policyEntries = Object.entries(policies);
   for (const [id, policy] of policyEntries) {
     store.insertResource('registry-policies', { id, ...policy, source: 'system' });
@@ -177,21 +180,21 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
 }
 
 /**
- * Contract documents of one type, in the shape the server's loaders expect.
+ * Contract documents of one type, in the shape the server's consumers expect.
  *
- * Replaces core's discoverRules/discoverCompositions: `discover` already
- * knows the type from the document's own $schema, so the only thing left is
- * to skip documents that declare none of the section the caller wants.
+ * `discover` already knows the type from the document's own $schema, so the
+ * only thing left is to skip documents that declare none of the section the
+ * caller wants. Takes the loaded set rather than a directory, so this costs no
+ * extra walk.
  *
- * @param {string} specsDir
- * @param {string} type - Contract type to discover
+ * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
+ * @param {string} type - Contract type to select
  * @param {string} section - Top-level key a usable document must declare
  * @returns {{ filePath: string, domain: string, doc: object }[]}
  */
-function contractsOfType(specsDir, type, section) {
-  return discover(specsDir, type)
-    .map(load)
-    .filter((doc) => doc.content?.[section])
+function contractsOfType(docs, type, section) {
+  return docs
+    .filter((doc) => doc.type === type && doc.content?.[section])
     .map((doc) => ({ filePath: doc.path, domain: doc.content.domain, doc: doc.content }));
 }
 

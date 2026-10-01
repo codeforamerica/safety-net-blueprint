@@ -15,7 +15,7 @@
  */
 
 import { resolveSchemaRefs, collectTopLevelProperties } from './json-schema/index.js';
-import { setRootOf } from './contract-types.js';
+import { indexByRelativePath } from './ref-lookup.js';
 
 const ENDPOINT_METHODS = ['get', 'post', 'put', 'patch', 'delete'];
 
@@ -34,6 +34,7 @@ const openapiDocs = (docs) => docs.filter((d) => d.type === 'openapi');
  */
 export function buildSchemaIndex(docs) {
   const index = new Map();
+  const byRelativePath = indexByRelativePath(docs);
 
   for (const doc of openapiDocs(docs)) {
     const schemas = doc.content?.components?.schemas;
@@ -42,7 +43,7 @@ export function buildSchemaIndex(docs) {
     for (const [name, rawSchema] of Object.entries(schemas)) {
       if (index.has(name)) continue;
       const schema = resolveSchemaRefs(rawSchema, {
-        spec: doc.content, specFilePath: doc.path, setRoot: setRootOf(doc),
+        spec: doc.content, byRelativePath, fromPath: doc.relativePath,
       });
       index.set(name, {
         spec: doc.content,
@@ -170,7 +171,7 @@ export function buildCollectionPropertyIndex(collectionIndex, schemaIndex) {
  * not a file, so any document declaring the schema answers the question.
  *
  * @param {import('../types.js').Doc[]} docs
- * @returns {Map<string, { spec: object, filePath: string, setRoot: string|null }>}
+ * @returns {Map<string, { spec: object, filePath: string, relativePath: string|null }>}
  */
 export function buildSpecsByDomain(docs) {
   const index = new Map();
@@ -178,7 +179,9 @@ export function buildSpecsByDomain(docs) {
   for (const doc of openapiDocs(docs)) {
     const domain = doc.content?.info?.['x-domain'];
     if (!domain || index.has(domain)) continue;
-    index.set(domain, { spec: doc.content, filePath: doc.path, setRoot: setRootOf(doc) });
+    // relativePath, not a set root: refs now resolve by naming a document in
+    // the set rather than by being inside a bounding directory.
+    index.set(domain, { spec: doc.content, filePath: doc.path, relativePath: doc.relativePath });
   }
 
   return index;
