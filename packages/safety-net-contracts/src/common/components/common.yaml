@@ -1,8 +1,6 @@
 # Common domain schemas shared across multiple APIs
 #
-# Schemas: EmployerInfo, Language, Program, Signature
-#
-# See also: schemas/common/employment.yaml (canonical EmployerInfo definition)
+# Schemas: Domain, Language, Program, Signature
 #
 # See also:
 #   contact.yaml  — Address, Email, PhoneNumber
@@ -11,9 +9,6 @@
 
 Domain:
   $ref: "../schemas/enums.yaml#/$defs/Domain"
-
-EmployerInfo:
-  $ref: "../schemas/employment.yaml#/$defs/EmployerInfo"
 
 Language:
   $ref: "../schemas/enums.yaml#/$defs/Language"

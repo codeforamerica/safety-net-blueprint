@@ -56,7 +56,7 @@ components:
     # subject: appointmentId
     AppointmentScheduledEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -86,23 +86,23 @@ components:
     # subject: timerId
     TimerCancelledEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
               type: string
               const: scheduling.timer.cancelled
             data:
-              $ref: '../../schemas/events.yaml#/SchedulingTimerCancelledEvent'
+              $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/SchedulingTimerCancelledEvent'
 
     # subject: timerId
     TimerRequestedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
               type: string
               const: scheduling.timer.requested
             data:
-              $ref: '../../schemas/events.yaml#/SchedulingTimerRequestedEvent'
+              $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/SchedulingTimerRequestedEvent'

@@ -18,7 +18,16 @@ Validation runs against the **resolved** output in `packages/generated/contracts
 `npm run validate` runs four layers in sequence:
 
 1. **OpenAPI** — valid OpenAPI 3.x format, all `$ref` references resolve, examples match their schemas
-2. **Refs** — fragment references are valid (no dangling `#/components/...` pointers)
+2. **References** — every reference names something that is actually there:
+   - fragment refs resolve within their own document (no dangling `#/components/...` pointers)
+   - external `$ref`s name a document in the contract set — a path missing a
+     directory segment is an error, not a silently inert reference. Canonical
+     `https://blueprint.codeforamerica.org/...` refs are exempt; they resolve
+     through the schema registry rather than by path
+   - `x-relationship.resource` names a schema in the set. A value that resolves
+     to nothing leaves the relationship inert — no transform is applied and the
+     field stays a bare scalar — so this is an error rather than the resolve-time
+     warning it used to be
 3. **Annotations** — dot-notation field paths in annotation files resolve to real schema properties
 4. **State machines** — within-file consistency and cross-artifact checks (see below)
 

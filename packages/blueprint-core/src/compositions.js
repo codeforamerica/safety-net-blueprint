@@ -20,6 +20,7 @@ import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import yaml from 'js-yaml';
 import { resolveSchemaRefs, collectTopLevelProperties } from './json-schema/index.js';
+import { indexByRelativePath } from './ref-lookup.js';
 import { extractPathParams, buildParameterIndex, buildPathEntry, toPascalCase } from './openapi/utils.js';
 
 const LIST_QUERY_PARAMS = [
@@ -156,8 +157,9 @@ export function collectSchemaProperties(schema, specsByFile = new Map()) {
  */
 export function buildResourceSchemaIndex(yamlFiles) {
   const index = new Map();
+  const byRelativePath = indexByRelativePath(yamlFiles);
 
-  for (const { spec, filePath, setRoot } of yamlFiles) {
+  for (const { spec, relativePath } of yamlFiles) {
     if (!spec || !spec.paths) continue;
 
     const schemas = spec.components?.schemas || {};
@@ -187,8 +189,7 @@ export function buildResourceSchemaIndex(yamlFiles) {
       const rawSchema = schemas[match[1]];
       if (!rawSchema) continue;
 
-      const context = filePath ? { spec, specFilePath: filePath, setRoot } : { spec };
-      const schema = resolveSchemaRefs(rawSchema, context);
+      const schema = resolveSchemaRefs(rawSchema, { spec, byRelativePath, fromPath: relativePath });
       const propMap = collectTopLevelProperties(spec, schema);
       if (propMap.size > 0) {
         index.set(slug, new Set(propMap.keys()));

@@ -13,44 +13,7 @@
 // Ref resolution
 // =============================================================================
 
-import { readFileSync, existsSync } from 'fs';
-import { join, dirname, resolve, relative, isAbsolute } from 'path';
-import yaml from 'js-yaml';
-
-/** Package root per directory, so the walk up happens once per location. */
-const packageRoots = new Map();
-
-/**
- * The package a file belongs to, as the nearest ancestor holding a package.json.
- *
- * This bounds `$ref` following: a document may reference its siblings but not
- * reach outside the package that ships it. Derived from the referring file
- * rather than `process.cwd()`, which is wherever the command happened to be
- * run from — resolving the same contracts from a workspace directory silently
- * dropped every cross-file ref and reported hundreds of missing fields.
- *
- * @param {string} filePath - Absolute path to the referring document
- * @returns {string|null} Absolute package root, or null if none found
- */
-function packageRootOf(filePath) {
-  let dir = dirname(resolve(filePath));
-
-  if (packageRoots.has(dir)) return packageRoots.get(dir);
-
-  const start = dir;
-  let root = null;
-
-  for (let parent = dir; ; parent = dirname(parent)) {
-    if (existsSync(join(parent, 'package.json'))) {
-      root = parent;
-      break;
-    }
-    if (parent === dirname(parent)) break;  // filesystem root
-  }
-
-  packageRoots.set(start, root);
-  return root;
-}
+import { followRef } from '../ref-lookup.js';
 
 /**
  * Resolve an internal $ref (e.g. '#/components/schemas/Foo') within a spec document.
@@ -74,12 +37,20 @@ export function resolveRef(spec, ref) {
  * Recursively resolve all $refs in a schema, including external file refs.
  * Returns a new schema object with all refs inlined.
  *
+ * External refs resolve against the document set passed in, not off disk, so
+ * this runs wherever the set does. A ref naming a document outside the set is
+ * left as-is — which is also how the old filesystem version behaved for a ref
+ * escaping the contract-set root, just without having to compute the bound.
+ *
  * @param {object} schema
- * @param {{ spec?: object, specFilePath?: string, setRoot?: string }} ctx
+ * @param {{ spec?: object, byRelativePath?: Map<string, *>, fromPath?: string }} ctx
+ *   `spec` resolves same-document refs; `byRelativePath` and `fromPath`
+ *   resolve cross-file ones. Omit the latter two and external refs are left
+ *   untouched.
  * @param {number} depth
  * @returns {object}
  */
-export function resolveSchemaRefs(schema, { spec = null, specFilePath = null, setRoot = null } = {}, depth = 0) {
+export function resolveSchemaRefs(schema, { spec = null, byRelativePath = null, fromPath = null } = {}, depth = 0) {
   if (!schema || typeof schema !== 'object' || depth > 10) return schema;
 
   if (typeof schema.$ref === 'string') {
@@ -88,41 +59,29 @@ export function resolveSchemaRefs(schema, { spec = null, specFilePath = null, se
         const parts = schema.$ref.slice(2).split('/');
         let node = spec;
         for (const part of parts) node = node?.[part];
-        if (node && node !== schema) return resolveSchemaRefs(node, { spec, specFilePath, setRoot }, depth + 1);
+        if (node && node !== schema) return resolveSchemaRefs(node, { spec, byRelativePath, fromPath }, depth + 1);
       }
       return schema;
     } else {
-      if (specFilePath) {
-        const [filePart, jsonPointer] = schema.$ref.split('#');
-        const fullPath = join(dirname(specFilePath), filePart);
-        const resolvedFull = resolve(fullPath);
-        // The contract set the referring document belongs to. Falls back to
-        // its package when the caller has no set root to give — a document
-        // loaded on its own is not part of a set.
-        const bound = setRoot ?? packageRootOf(specFilePath);
-        if (!bound) return schema;
-        const refRel = relative(bound, resolvedFull);
-        if (refRel.startsWith('..') || isAbsolute(refRel)) return schema;
-        try {
-          const externalDoc = yaml.load(readFileSync(resolvedFull, 'utf8'), { schema: yaml.DEFAULT_SCHEMA });
-          let resolved = externalDoc;
-          if (jsonPointer) {
-            const parts = jsonPointer.slice(1).split('/');
-            for (const part of parts) resolved = resolved?.[part];
-          }
-          if (resolved && resolved !== schema) {
-            // setRoot is carried through: following a ref moves which file we
-            // are in, not which contract set.
-            return resolveSchemaRefs(resolved, { spec: externalDoc, specFilePath: fullPath, setRoot }, depth + 1);
-          }
-        } catch { /* fall through */ }
+      if (byRelativePath) {
+        const found = followRef(schema.$ref, byRelativePath, fromPath);
+        if (found && found.node && found.node !== schema) {
+          // Resolution continues inside the document the ref led to: both the
+          // spec for same-document refs and the path relative refs are written
+          // against move with it.
+          return resolveSchemaRefs(
+            found.node,
+            { spec: found.content, byRelativePath, fromPath: found.relativePath },
+            depth + 1
+          );
+        }
       }
       return schema;
     }
   }
 
   const out = { ...schema };
-  const ctx = { spec, specFilePath, setRoot };
+  const ctx = { spec, byRelativePath, fromPath };
 
   for (const combinator of ['allOf', 'oneOf', 'anyOf']) {
     if (schema[combinator]) {

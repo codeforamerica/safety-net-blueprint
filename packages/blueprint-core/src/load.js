@@ -29,6 +29,7 @@ import { readFileSync, existsSync } from 'fs';
 import { basename, dirname, join, resolve as resolvePath, parse as parsePath } from 'path';
 import yaml from 'js-yaml';
 import { detectType } from './openapi/contract-files.js';
+import { followRef, indexByRelativePath } from './ref-lookup.js';
 
 export const MANIFEST_FILENAME = '.blueprint-resolved.json';
 
@@ -114,39 +115,9 @@ function externalRefs(doc, docs) {
  * @returns {object} The referenced schema, or an empty object if unresolvable
  */
 export function resolveRef(ref, docs, fromPath = null) {
-  const hashIdx = ref.indexOf('#');
-  if (hashIdx === -1) return {};
-
-  const anchor = ref.slice(hashIdx + 1);
-  const wanted = ref.slice(0, hashIdx).replace(/^\.\//, '');
-
-  const byRelative = new Map(docs.map((d) => [d.relativePath, d.content]));
-
-  // A ref is written relative to the document holding it, so resolve it
-  // against that document's directory first. Without this a sibling ref —
-  // `./shared.yaml` from `domains/intake/` — matched nothing, because only
-  // the full relativePath was ever compared.
-  const fromDir = fromPath?.includes('/') ? fromPath.slice(0, fromPath.lastIndexOf('/') + 1) : '';
-  const joined = fromDir
-    ? (fromDir + wanted).split('/').reduce((parts, part) => {
-        if (part === '..') parts.pop();
-        else if (part !== '.') parts.push(part);
-        return parts;
-      }, []).join('/')
-    : null;
-
-  const content =
-    (joined && byRelative.get(joined)) ??
-    byRelative.get(wanted) ??
-    byRelative.get(wanted.replace(/^(\.\.\/)+/, ''));
-  if (!content) return {};
-
-  let node = content;
-  for (const segment of anchor.split('/').filter(Boolean)) {
-    if (node === null || typeof node !== 'object') return {};
-    node = node[segment];
-  }
-  return node ?? {};
+  if (!ref.includes('#')) return {};
+  const found = followRef(ref, indexByRelativePath(docs), fromPath);
+  return found?.node ?? {};
 }
 
 /**

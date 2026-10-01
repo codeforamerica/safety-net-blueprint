@@ -35,6 +35,16 @@ description: >
 type: object
 required:
   - version
+# A document declaring machines belongs to a domain. One declaring neither
+# machines nor a top-level object is a library — guards and procedures meant to
+# be inherited via `extends` — and names no domain, because its identity is not
+# domain-scoped and a contract set is not obliged to have any particular domain
+# for it to sit in. Stated here rather than left to a loader: a document that
+# declares machines without a domain is dropped by anything indexing by domain,
+# which surfaces as a missing endpoint rather than an error.
+dependentRequired:
+  machines: [domain]
+  object: [domain]
 additionalProperties: false
 
 properties:
@@ -54,7 +64,10 @@ properties:
 
   domain:
     type: string
-    description: Domain namespace (e.g., workflow, eligibility).
+    description: >
+      Domain namespace (e.g., workflow, eligibility). Required of any document
+      declaring machines; omitted by a library document that exists only to be
+      inherited via extends.
 
   apiSpec:
     type: string

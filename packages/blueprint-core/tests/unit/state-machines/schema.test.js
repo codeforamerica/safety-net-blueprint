@@ -75,10 +75,26 @@ test('state-machine-schema structural requirements', async (t) => {
     assert.equal(valid, false);
   });
 
-  await t.test('domain is optional (platform files omit it)', () => {
-    const { domain: _, ...doc } = base;
+  await t.test('domain is optional for a library file, which omits machines too', () => {
+    // A platform file carries guards and procedures to be inherited via
+    // extends. It declares no machines, and no domain — its identity is not
+    // domain-scoped, and a contract set need not have any particular domain
+    // for it to sit in.
+    const { domain: _, machines: __, ...doc } = base;
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('domain is required once machines are declared', () => {
+    // Without this, such a document is dropped by anything indexing by domain
+    // and the only symptom is a transition endpoint that does not exist.
+    const { domain: _, ...doc } = base;
+    const { valid, errors } = validate(doc);
+    assert.equal(valid, false, 'machines without a domain must not validate');
+    assert.ok(
+      errors.some((e) => /domain/.test(e.message ?? '')),
+      `expected a domain error, got: ${errorPaths(errors).join(', ')}`
+    );
   });
 
   await t.test('apiSpec is optional (platform files omit it)', () => {
