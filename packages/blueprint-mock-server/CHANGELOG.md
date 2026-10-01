@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- 912c3f0: Run the server with `--store=memory` to hold resources in memory instead of SQLite — nothing written to disk and no native module loaded. SQLite stays the default. `createMemoryStore` is also available on its own from the new `./store` export, without Express or a native module. (#448)
+
 ## 0.2.0
 
 ### Minor Changes
