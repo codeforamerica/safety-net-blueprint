@@ -2,4 +2,4 @@
 "@codeforamerica/blueprint-core": patch
 ---
 
-`doc.externalRefs(docs)` resolves against the contract set's relative paths instead of joining and normalizing absolute filesystem paths, so it now behaves the same as `doc.resolveRef` and works where there is no filesystem. A document loaded on its own, with no `relativePath`, no longer resolves refs to its siblings. (#448)
+Before, `doc.externalRefs(docs)` and `doc.resolveRef` could disagree about the same ref, and `externalRefs` needed a filesystem to answer at all. Now both resolve against the set's relative paths — and a document loaded on its own, with no `relativePath`, no longer finds its siblings. (#448)

@@ -2,4 +2,4 @@
 "@codeforamerica/blueprint-mock-server": patch
 ---
 
-An event emitted for a spec that declares no localhost server URL no longer gets a malformed type. The domain prefix comes from that URL, and an empty one produced `".application.created"` — a leading dot and no domain, which nothing can subscribe to. The segment is now left out rather than emitted empty. (#448)
+Before, creating a resource under a spec that declares no localhost server URL emitted an event typed `".application.created"` — a leading dot and no domain, which nothing could subscribe to. Now the domain segment is left out rather than emitted empty. (#448)

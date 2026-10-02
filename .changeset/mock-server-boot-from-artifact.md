@@ -2,4 +2,4 @@
 "@codeforamerica/blueprint-mock-server": minor
 ---
 
-`blueprint-mock --spec=contracts.json` boots from a contracts artifact instead of walking a directory, so the server reads exactly the documents the artifact was built from. Seeding, reseed and mock-data validation all work from it — the same file a browser boots from. (#448)
+Before, `blueprint-mock` could only start from a contracts directory. Now `--spec=contracts.json` starts it from a bundled artifact, and seeding, reseed and mock-data validation all read from that file. (#448)

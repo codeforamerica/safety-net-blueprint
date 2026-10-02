@@ -1,5 +1,5 @@
 ---
-"@codeforamerica/blueprint-mock-server": patch
+"@codeforamerica/blueprint-mock-server": minor
 ---
 
-The server no longer dereferences OpenAPI specs before reading them. It resolves each `$ref` against the contract set when something needs to see through one, which is why `@apidevtools/json-schema-ref-parser` is no longer used to load specs, and why the server now walks a contract directory once rather than twice. Schemas reach validation by the ref that named them, so ajv resolves cross-file refs itself. (#448)
+Before, a spec with a `$ref` naming something outside the contract set stopped the server from starting. Now it starts, and warns that no validator could be compiled for that schema — so requests to the affected endpoint are accepted unchecked. `blueprint-validate` reports the bad ref instead. (#448)

@@ -2,4 +2,4 @@
 "@codeforamerica/blueprint-mock-server": patch
 ---
 
-A metric counting a collection other than `tasks` or `events` no longer answers 500. The metrics list endpoint prepared only those two collections, so a contract set measuring anything else — applications, determinations — crashed on an undefined lookup. The collections are now read from the metric definitions themselves. (#448)
+Before, a contract set with a metric counting anything other than `tasks` or `events` got a 500 from the metrics endpoint. Now the collections come from the metric definitions, so counting applications or determinations works. (#448)

@@ -2,4 +2,4 @@
 "@codeforamerica/blueprint-core": minor
 ---
 
-`extract` and `generate` can now run in a browser, from the new `./browser` export — importing them from `.` pulls in `discover` and `load`, so a bundler fails on their `fs` imports before it can tree-shake them away. `generate(docs, 'artifact')` reduces a contract set to one serializable object and `extract(artifact, 'docs')` reads it back as documents, methods and all, so a page gets the same `Doc[]` that `discover(dir).map(load)` produces in Node. (#448)
+Before, `extract` and `generate` only ran in Node, because importing either one pulled the filesystem in with it. Now the new `./browser` export runs them in a page: `generate(docs, 'artifact')` turns a contract set into one serializable object, `extract(artifact, 'docs')` turns it back into documents, and `{ domains: ['intake'] }` narrows it to the domains you name. (#448)
