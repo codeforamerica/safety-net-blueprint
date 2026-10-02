@@ -230,17 +230,29 @@ export function mergePathParamsIntoBody(body, params) {
  * loudly via schema validation. This prevents masking real validation gaps.
  *
  * Returns a defaults map like { evidence: [], description: null }.
+ *
+ * `follow` resolves a `$ref` to the schema it names. Needed because the specs
+ * are no longer dereferenced before the server reads them (#448): a composed
+ * schema's `allOf` members are usually refs, and without following them this
+ * sees no properties at all and produces no defaults. That failed quietly —
+ * a Verification's required `documentRequests` came back undefined instead of
+ * `[]`, which no unit test caught because the fixtures are already flat.
+ *
+ * @param {object} responseSchema
+ * @param {(schema: *) => *} [follow] - From `api.resolve.schema`. Identity
+ *   when omitted, which is right for a schema that carries no refs.
  */
-export function extractRequiredDefaults(responseSchema) {
+export function extractRequiredDefaults(responseSchema, follow = (x) => x) {
   if (!responseSchema) return {};
   const defaults = {};
-  const schemas = responseSchema.allOf || [responseSchema];
+  const root = follow(responseSchema);
+  const schemas = (root.allOf || [root]).map(follow);
   // Collect all property definitions across all allOf members so that
   // required fields declared in one schema can reference types defined in another.
   const allProps = Object.assign({}, ...schemas.map(s => s.properties || {}));
   for (const s of schemas) {
     for (const field of (s.required || [])) {
-      const prop = allProps[field];
+      const prop = follow(allProps[field]);
       if (!prop) continue;
       // Nullable wins over array: a type union that includes 'null' means
       // the schema explicitly allows null content, even for arrays.
@@ -335,7 +347,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
       const smForEndpoint = smEntry?.stateMachine || null;
       const machineForEndpoint = smEntry?.machine || null;
       const domainSlaTypes = smForEndpoint ? findSlaTypes(slaTypes, smForEndpoint.domain) : [];
-      const requiredDefaults = extractRequiredDefaults(endpoint.responseSchema);
+      const requiredDefaults = extractRequiredDefaults(endpoint.responseSchema, apiMetadata.resolve?.schema);
       if (machineForEndpoint?.initialState) requiredDefaults.status = machineForEndpoint.initialState;
       if (Object.keys(requiredDefaults).length > 0) store.registerCollectionDefaults(collectionName, requiredDefaults);
       handler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, domainSlaTypes, machineForEndpoint, deps);
@@ -412,7 +424,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
           const subSmForEndpoint = subSmEntry?.stateMachine || null;
           const subMachineForEndpoint = subSmEntry?.machine || null;
           const subDomainSlaTypes = subSmForEndpoint ? findSlaTypes(slaTypes, subSmForEndpoint.domain) : [];
-          const subRequiredDefaults = extractRequiredDefaults(endpoint.responseSchema);
+          const subRequiredDefaults = extractRequiredDefaults(endpoint.responseSchema, apiMetadata.resolve?.schema);
           if (subMachineForEndpoint?.initialState) subRequiredDefaults.status = subMachineForEndpoint.initialState;
           if (Object.keys(subRequiredDefaults).length > 0) store.registerCollectionDefaults(collectionName, subRequiredDefaults);
           const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint, deps);
