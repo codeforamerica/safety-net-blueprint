@@ -193,3 +193,46 @@ export function wrapRoute(routes, key, wrap) {
   entry.handler = wrap(entry.handler);
   return true;
 }
+
+/**
+ * Replace the handlers of contract-declared routes, matched by `operationId`.
+ *
+ * A few endpoints are declared in a contract but cannot be served by generated
+ * CRUD: `streamEvents` is a stream, `publishEvent` fires the event bus rather
+ * than storing a row. They are overrides rather than extra registrations, so
+ * adding a platform endpoint to the contract needs no code — only an endpoint
+ * whose *behaviour* is special does.
+ *
+ * Matching on `operationId` rather than a path string is the point. A path can
+ * be changed in the contract; the operationId is its identity, so renaming the
+ * path moves the override with it.
+ *
+ * An unmatched override warns rather than throws: a contract set that declares
+ * no platform domain is legitimate — the functional fixtures are one — so a
+ * missing operationId cannot be told apart from a smaller set at this level.
+ * Drift against the real contract set is caught by a test instead.
+ *
+ * @param {Map<string, object>} routes
+ * @param {Record<string, Function>} overrides - operationId → handler
+ * @returns {{ applied: string[], unmatched: string[] }}
+ */
+export function overrideByOperationId(routes, overrides) {
+  const byOperationId = new Map();
+  for (const [key, entry] of routes) {
+    if (entry.operationId) byOperationId.set(entry.operationId, key);
+  }
+
+  const applied = [];
+  const unmatched = [];
+  for (const [operationId, handler] of Object.entries(overrides)) {
+    const key = byOperationId.get(operationId);
+    if (key === undefined) {
+      unmatched.push(operationId);
+      continue;
+    }
+    routes.get(key).handler = handler;
+    applied.push(key);
+  }
+
+  return { applied, unmatched };
+}

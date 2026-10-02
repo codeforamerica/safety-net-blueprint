@@ -14,8 +14,10 @@ import { subscribeStubDispatch } from '../src/mock-stub-engine.js';
 import { createMemoryStore } from '../src/stores/memory-store.js';
 import { createSqliteStore } from '../src/stores/sqlite-store.js';
 import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes, registerRulesRoutes, buildRulesIndex } from '../src/route-generator.js';
-import { addRoute, createDispatcher, wrapRoute } from '../src/http/route-table.js';
+import { createDispatcher, wrapRoute, overrideByOperationId } from '../src/http/route-table.js';
+import { registerPlatformRoutes, contractOverrides } from '../src/platform-routes.js';
 import { jsonBody, readJsonBody, invalidJson } from '../src/http/request.js';
+import { discover, load } from '@codeforamerica/blueprint-core';
 import { createNodeServer } from '../src/http/node-server.js';
 import { initRulesIndex } from '../src/state-machine-engine.js';
 import { registerEventSubscriptions } from '../src/event-subscription.js';
@@ -152,6 +154,12 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
     if (storeKind === 'memory') {
       console.log('  Store: in-memory (data will not survive this process)');
     }
+    // How /mock/reseed gets its documents. A function rather than a value so
+    // Node re-reads the directory on each call; the browser entry supplies one
+    // that returns the artifact's documents.
+    const readDocs = () => [...new Set([...specDirs, seedDir].filter(Boolean))]
+      .flatMap((dir) => discover(dir))
+      .map(load);
     let apiSpecs = [];
     let allStateMachines = [];
     let allSlaTypes = [];
@@ -181,117 +189,17 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
     // first-match-wins resolution did.
     const routes = new Map();
 
-    // Health check endpoint
-    addRoute(routes, 'GET', '/health', () =>
-      Response.json({ status: 'ok', apis: apiSpecs.map(a => a.name) }));
-
-    // Register SSE stream endpoint before item routes to avoid :id capture
-    addRoute(routes, 'GET', '/platform/events/stream', createSseHandler(),
-      { description: 'Domain event stream (SSE)' });
-    console.log('  GET    /platform/events/stream - Domain event stream (SSE)');
-
-    // Register event injection endpoint — accepts a CloudEvents 1.0 envelope and
-    // fires it to the event bus so event-triggered rule sets can respond to it.
-    // Useful for simulating events from external domains during integration testing.
-    addRoute(routes, 'POST', '/platform/events', async (request) => {
-      const parsed = await readJsonBody(request);
-      if (!parsed.ok) return invalidJson();
-      const event = parsed.value;
-      if (!event?.type || !event?.specversion) {
-        const missing = ['specversion', 'type'].filter(f => !event?.[f]);
-        return Response.json({
-          code: 'VALIDATION_ERROR',
-          message: 'Request body must be a CloudEvents 1.0 envelope',
-          details: missing.map(f => ({ field: f, message: 'required' }))
-        }, { status: 422 });
-      }
-      return Response.json(emitEventEnvelope(event, store), { status: 201 });
+    // One route table for the whole server. Registration order is priority:
+    // addRoute keeps the first entry for a key, which is what Express's
+    // first-match-wins resolution did.
+    registerPlatformRoutes(routes, {
+      store,
+      apiNames: apiSpecs.map((a) => a.name),
+      readDocs,
+      configs: allConfigs,
+      policies: allPolicies,
+      seeded: Boolean(seedDir),
     });
-    console.log('  POST   /platform/events - Inject external domain event (testing)');
-
-    // Event stub registry — pre-program event responses for integration tests.
-    addRoute(routes, 'POST', '/mock/stubs/events', async (request) => {
-      try {
-        return Response.json(registerStub(await jsonBody(request)), { status: 201 });
-      } catch (err) {
-        return Response.json({ code: 'VALIDATION_ERROR', message: err.message }, { status: 422 });
-      }
-    });
-    addRoute(routes, 'GET', '/mock/stubs/events', () => {
-      const items = listStubs();
-      return Response.json({ items, total: items.length });
-    });
-    addRoute(routes, 'DELETE', '/mock/stubs/events', () => {
-      clearStubs();
-      return new Response(null, { status: 204 });
-    });
-    addRoute(routes, 'DELETE', '/mock/stubs/events/{id}', (request, { params }) =>
-      removeStub(params.id)
-        ? new Response(null, { status: 204 })
-        : Response.json({ code: 'NOT_FOUND', message: `Stub "${params.id}" not found` }, { status: 404 }));
-    console.log('  POST   /mock/stubs/events - Register an event stub');
-    console.log('  GET    /mock/stubs/events - List active event stubs');
-    console.log('  DELETE /mock/stubs/events/:id - Remove an event stub');
-    console.log('  DELETE /mock/stubs/events - Clear all event stubs');
-
-    // HTTP stub registry — intercept any inbound request and return a pre-programmed response.
-    addRoute(routes, 'POST', '/mock/stubs/http', async (request) => {
-      try {
-        return Response.json(registerHttpStub(await jsonBody(request)), { status: 201 });
-      } catch (err) {
-        return Response.json({ code: 'VALIDATION_ERROR', message: err.message }, { status: 422 });
-      }
-    });
-    addRoute(routes, 'GET', '/mock/stubs/http', () => {
-      const items = listHttpStubs();
-      return Response.json({ items, total: items.length });
-    });
-    addRoute(routes, 'DELETE', '/mock/stubs/http', () => {
-      clearHttpStubs();
-      return new Response(null, { status: 204 });
-    });
-    addRoute(routes, 'DELETE', '/mock/stubs/http/{id}', (request, { params }) =>
-      removeHttpStub(params.id)
-        ? new Response(null, { status: 204 })
-        : Response.json({ code: 'NOT_FOUND', message: `Stub "${params.id}" not found` }, { status: 404 }));
-    console.log('  POST   /mock/stubs/http - Register an HTTP stub');
-    console.log('  GET    /mock/stubs/http - List active HTTP stubs');
-    console.log('  DELETE /mock/stubs/http/:id - Remove an HTTP stub');
-    console.log('  DELETE /mock/stubs/http - Clear all HTTP stubs');
-
-    // Reset endpoint — clears all runtime data and restores config-managed resources.
-    // Config-managed items (queues, services, document types) are restored; all other
-    // data is wiped. Useful for putting tests into a known-clean state without restarting.
-    addRoute(routes, 'POST', '/mock/reset', () => {
-      for (const collection of Object.keys(store.snapshot())) store.clearAll(collection);
-      clearAllStubs();
-      for (const config of allConfigs) {
-        for (const [catalogKey, entries] of Object.entries(config.catalogs)) {
-          for (const entry of entries) {
-            const data = { ...entry };
-            for (const key of Object.keys(data)) {
-              if (key.startsWith('x-')) delete data[key];
-            }
-            store.insertResource(catalogKey, { ...data, source: 'system' });
-            registerConfigManaged(catalogKey, data.id);
-          }
-        }
-      }
-      for (const [id, policy] of Object.entries(allPolicies)) {
-        store.insertResource('registry-policies', { id, ...policy, source: 'system' });
-        registerConfigManaged('registry-policies', id);
-      }
-      return new Response(null, { status: 204 });
-    });
-    console.log('  POST   /mock/reset - Reset all runtime data (keeps config-managed resources)');
-
-    // Reseed endpoint — re-inserts seed data without clearing anything else.
-    // Useful after a reset when tests need baseline data present.
-    addRoute(routes, 'POST', '/mock/reseed', () => {
-      seedAllDatabases(specDirs, seedDir, store);
-      return new Response(null, { status: 204 });
-    });
-    console.log('  POST   /mock/reseed - Re-seed all collections from seed files');
 
 
     // Register event subscriptions
@@ -319,6 +227,15 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
 
     // Register state machine RPC routes
     const rpcEndpoints = registerStateMachineRoutes(routes, allStateMachines, apiSpecs, allSlaTypes, { store });
+
+    // A few contract-declared endpoints cannot be served by generated CRUD.
+    // Matched by operationId, so adding a platform endpoint to the contract
+    // needs no code here, and an override that stops matching fails at boot.
+    const { applied, unmatched } = overrideByOperationId(routes, contractOverrides({ store }));
+    for (const key of applied) console.log(`  ${key} - contract route, custom handler`);
+    if (unmatched.length > 0) {
+      console.warn(`  Note: no contract route declares ${unmatched.join(', ')} — not overridden`);
+    }
 
     // Service-call creation is enriched with catalog-derived fields: serviceType
     // and callMode come from the referenced ExternalService, and status starts
