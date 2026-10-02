@@ -30,7 +30,7 @@ import { registerEventSubscriptions } from './event-subscription.js';
 import { subscribeStubDispatch } from './mock-stub-engine.js';
 import { registerConfigManaged } from './config-registry.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
-import { contractsOfType, registryEntries, graphsOf, unresolvedRulesWarning } from './contract-views.js';
+import { contractsOfType, graphsOf, unresolvedRulesWarning } from './contract-views.js';
 
 
 
@@ -77,7 +77,7 @@ export async function createMockServer({
   const graphs = graphsOf(docs);
   const unresolved = unresolvedRulesWarning(rulesFiles, graphs);
   if (unresolved) console.warn(`Warning: ${unresolved}`);
-  const policies = registryEntries(docs, 'policies');
+  const policies = extract(docs, 'registries').policies ?? {};
 
   // Seed before routing so a list endpoint answers on the first request.
   if (seed) seedAllDatabases(docs, store, { seeded: true });

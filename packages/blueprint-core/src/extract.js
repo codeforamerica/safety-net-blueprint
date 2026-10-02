@@ -10,6 +10,7 @@
  *   sla-types        SLA type definitions, by domain
  *   metrics          metric definitions, by domain
  *   config           domain configuration catalogs, by domain
+ *   registries       registry entries, keyed by the type each registry claims
  *   examples         example records, grouped by the schema each exemplifies
  *   docs             the documents inside an artifact, as a contract set
  *
@@ -34,7 +35,7 @@
  */
 
 import { buildRelationshipIndex } from './indexes.js';
-import { readStateMachines, readSlaTypes, readMetrics, readConfigs } from './contract-readers.js';
+import { readStateMachines, readSlaTypes, readMetrics, readConfigs, readRegistries } from './contract-readers.js';
 import { buildExamples } from './examples.js';
 import { docsFromArtifact } from './artifact.js';
 
@@ -45,6 +46,7 @@ const READERS = {
   'sla-types': readSlaTypes,
   metrics: readMetrics,
   config: readConfigs,
+  registries: readRegistries,
   examples: buildExamples,
   docs: docsFromArtifact,
 };
@@ -52,7 +54,7 @@ const READERS = {
 /**
  * @param {import('../types.js').Doc[]|object} docs - A contract set, or an
  *   artifact when reading `docs`
- * @param {'relationships'|'state-machines'|'sla-types'|'metrics'|'config'|'examples'|'docs'} type - Which fact to read out
+ * @param {'relationships'|'state-machines'|'sla-types'|'metrics'|'config'|'registries'|'examples'|'docs'} type - Which fact to read out
  * @param {object} [options] - Passed to the reader that needs them
  * @returns {*} Whatever that fact is
  */

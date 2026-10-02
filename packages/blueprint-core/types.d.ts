@@ -361,6 +361,18 @@ export function extract(docs: Doc[], type: 'sla-types'): SlaTypesEntry[];
 export function extract(docs: Doc[], type: 'metrics'): MetricsEntry[];
 export function extract(docs: Doc[], type: 'config'): ConfigEntry[];
 /**
+ * Registry entries, keyed by the type each registry claims.
+ *
+ * Registries are generic — core knows the format, the contract set declares
+ * which types exist — so this groups by what it finds rather than taking a
+ * type to look for. Entries merge across documents, later winning, which is
+ * how an overlay adds to a registry it did not author.
+ */
+export function extract(
+  docs: Doc[],
+  type: 'registries'
+): Record<string, Record<string, Record<string, unknown>>>;
+/**
  * Example records grouped by the schema each exemplifies.
  *
  * Keyed by schema name — `Application`, `ApplicationMember` — not by

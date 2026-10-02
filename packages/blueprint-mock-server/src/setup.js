@@ -9,7 +9,7 @@ import { validateMockData } from './mock-data-validator.js';
 import { validateAll, getValidationStatus } from './spec-validator.js';
 import { registerConfigManaged } from './config-registry.js';
 import { discover, load, extract } from '@codeforamerica/blueprint-core';
-import { contractsOfType, registryEntries, graphsOf, unresolvedRulesWarning } from './contract-views.js';
+import { contractsOfType, graphsOf, unresolvedRulesWarning } from './contract-views.js';
 /**
  * Perform setup: load specs and seed databases
  * @param {Object} options - Setup options
@@ -150,7 +150,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   }
 
   // Seed platform policy registry into the mock database
-  const policies = registryEntries(docs, 'policies');
+  const policies = extract(docs, 'registries').policies ?? {};
   const policyEntries = Object.entries(policies);
   for (const [id, policy] of policyEntries) {
     store.insertResource('registry-policies', { id, ...policy, source: 'system' });

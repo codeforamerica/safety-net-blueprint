@@ -1,17 +1,19 @@
 /**
  * Reading what the server needs out of a document set.
  *
- * Four small readers, shared by the two boot paths. `setup.js` walks a
+ * Three small readers, shared by the two boot paths. `setup.js` walks a
  * directory and `browser.js` takes an artifact, but once either has `docs`
  * they ask the same questions — and were each answering them with their own
  * copy of these functions, one of which carried a comment saying it was "kept
  * in step with setup.js" (#448). Keeping them in step by hand is the thing
  * that fails quietly, so they live here instead.
  *
- * Everything here is a pure read over `docs`. Nothing derives anything the
- * documents do not already state, which is why none of it belongs in
- * `blueprint-core`'s `extract` — these are the server's vocabulary, not the
- * contract set's.
+ * Everything here is a pure read over `docs`. What belongs here rather than in
+ * `blueprint-core`'s `extract` is anything phrased in the *server's*
+ * vocabulary: `contractsOfType` returns the `{ filePath, domain, doc }` shape
+ * the route generator wants, and the graph readers encode a decision about
+ * where compilation happens. Reading a contract type is `extract`'s remit —
+ * registry entries used to be here and are now `extract(docs, 'registries')`.
  */
 
 /**
@@ -28,26 +30,6 @@ export function contractsOfType(docs, type, section) {
     .map((doc) => ({ filePath: doc.path, domain: doc.content.domain, doc: doc.content }));
 }
 
-/**
- * Every entry across the registries of one type, merged.
- *
- * Registries are generic — core knows the format, not which types exist — so
- * a type like `policies` is named by the contracts that need it. A set may
- * declare the same type in more than one document; later entries win, which
- * is how an overlay adds to a registry it did not write.
- *
- * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
- * @param {string} type - Registry type, e.g. 'policies'
- * @returns {Record<string, object>}
- */
-export function registryEntries(docs, type) {
-  const merged = {};
-  for (const doc of docs) {
-    if (doc.type !== 'registry' || doc.content?.type !== type) continue;
-    Object.assign(merged, doc.content.entries ?? {});
-  }
-  return merged;
-}
 
 /**
  * The compiled decision graphs in the set.

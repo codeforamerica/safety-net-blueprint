@@ -263,3 +263,43 @@ function resolveActionSchemas(stateMachine, byRelativePath, fromPath) {
     }
   }
 }
+
+/**
+ * Registry entries, keyed by registry type.
+ *
+ * A registry is generic on purpose: core knows the format — `type:` naming
+ * what kind of registry it is, `entries:` mapping id to entry — and the
+ * contract set declares which types exist. So this reads every registry in
+ * the set and groups by the type each one claims, rather than taking a type
+ * to look for. A caller that wants one asks for it by name:
+ *
+ *   extract(docs, 'registries').policies
+ *
+ * Entries merge across documents, later winning, which is how an overlay adds
+ * to a registry it did not author. Unlike the readers above, this does not
+ * require a `domain` — the platform registries that prompted it (policies,
+ * task queues) are cross-domain by nature.
+ *
+ * Lives here rather than in `blueprint-mock-server` because it reads a
+ * contract type, which is `extract`'s remit. The server had its own copy that
+ * took a single type and returned bare entries, so a second registry type
+ * meant a second call and nothing listed what types a set actually declared.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {Record<string, Record<string, object>>} Registry type to its
+ *   merged entries, keyed by entry id
+ */
+export function readRegistries(docs) {
+  const byType = {};
+
+  for (const doc of docs) {
+    if (doc.type !== 'registry') continue;
+    const type = doc.content?.type;
+    if (typeof type !== 'string' || !type) continue;
+
+    byType[type] ??= {};
+    Object.assign(byType[type], doc.content.entries ?? {});
+  }
+
+  return byType;
+}
