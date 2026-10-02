@@ -14,6 +14,10 @@
     ".": {
       "types": "./types.d.ts",
       "default": "./src/index.js"
+    },
+    "./browser": {
+      "types": "./types.d.ts",
+      "default": "./src/browser.js"
     }
   },
   "scripts": {

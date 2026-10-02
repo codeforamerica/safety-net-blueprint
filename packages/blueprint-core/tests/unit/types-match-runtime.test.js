@@ -5,7 +5,7 @@
  * `src/index.js` — and it had. It declared `extractRefName` and
  * `loadExternalRefs`, both removed when the surface collapsed, so TypeScript
  * accepted a call that was `undefined` at runtime. It also omitted
- * `generate(docs, 'examples')`, making a working call a type error.
+ * `extract(docs, 'examples')`, making a working call a type error.
  *
  * Over-declaring is the dangerous direction: a type error caught at compile
  * time costs a minute, and one that compiles and fails in a state's pipeline

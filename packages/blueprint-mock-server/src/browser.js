@@ -29,7 +29,7 @@ import { seedAllDatabases } from './seeder.js';
 import { registerEventSubscriptions } from './event-subscription.js';
 import { subscribeStubDispatch } from './mock-stub-engine.js';
 import { registerConfigManaged } from './config-registry.js';
-import { extract, generate } from '@codeforamerica/blueprint-core';
+import { extract, generate } from '@codeforamerica/blueprint-core/browser';
 
 /** Documents the mock server's registry helper, kept in step with setup.js. */
 function registryEntries(docs, type) {

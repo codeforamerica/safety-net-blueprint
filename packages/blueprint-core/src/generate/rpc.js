@@ -11,7 +11,7 @@
  * applies it.
  */
 
-import { basename } from 'path';
+import { fileNameOf } from '../contract-types.js';
 import { buildParameterIndex, buildPathEntry, extractRefName } from '../openapi/utils.js';
 import { detectComponentPrefix, rewriteComponentRefs } from './refs.js';
 
@@ -283,7 +283,7 @@ export function generateRpcOverlays(docs) {
     if (!stateMachine?.domain || !hasObject || !stateMachine.apiSpec) continue;
 
     const target = docs.find(
-      (candidate) => basename(candidate.relativePath ?? candidate.path) === basename(stateMachine.apiSpec)
+      (candidate) => fileNameOf(candidate.relativePath ?? candidate.path) === fileNameOf(stateMachine.apiSpec)
     );
     if (!target) continue;
 
@@ -296,7 +296,7 @@ export function generateRpcOverlays(docs) {
     const overlay = generateOverlay(stateMachine, endpointInfo);
 
     for (const action of overlay.actions ?? []) {
-      if (typeof action.file === 'string' && basename(action.file) === basename(stateMachine.apiSpec)) {
+      if (typeof action.file === 'string' && fileNameOf(action.file) === fileNameOf(stateMachine.apiSpec)) {
         action.file = target.relativePath ?? target.path;
       }
     }

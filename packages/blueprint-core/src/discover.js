@@ -8,8 +8,7 @@
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join, relative, basename } from 'path';
 import yaml from 'js-yaml';
-import { detectType } from './openapi/contract-files.js';
-import { isDeprecated, extractDomain } from './contract-types.js';
+import { detectType, isDeprecated, extractDomain } from './contract-types.js';
 
 /**
  * Walk a directory tree for contract files, reporting each file's type.

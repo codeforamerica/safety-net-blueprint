@@ -7,7 +7,7 @@
  * returns `{...doc, content}` reports the new content, not the original.
  */
 
-import { detectType } from '../../src/openapi/contract-files.js';
+import { detectType } from '../../src/contract-types.js';
 
 /**
  * @param {object} content - Parsed document content

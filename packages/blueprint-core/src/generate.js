@@ -8,7 +8,16 @@
  *             composition, ruleset or state machine action implies
  *   graph     compiled decision graphs, one per ruleset
  *   postman   a Postman collection exercising every endpoint
- *   examples  the contract set's example records, grouped by collection
+ *   artifact  the whole contract set as one serializable object
+ *
+ * Every one of these produces content the inputs do not contain. `examples`
+ * used to be here and is now `extract(docs, 'examples')`: grouping records the
+ * documents already declare is a readout, not a derivation, and having one
+ * case that contradicted the distinction made the distinction useless.
+ *
+ * `artifact` is what a browser boots from — a contract set that was discovered
+ * and loaded in Node, reduced to data that survives JSON, which
+ * `extract(artifact, 'docs')` reads back (#448).
  *
  * Takes the whole document set because an overlay targets a sibling spec by
  * relative path, and rules compile against schemas other documents declare.
@@ -16,26 +25,25 @@
  */
 
 import { generateCompositionOverlays } from './compositions.js';
-import { resolveRef } from './load.js';
+import { resolveRef } from './ref-lookup.js';
 import { generateRulesResults } from './rules.js';
 import { detectComponentPrefix, rewriteComponentRefs } from './generate/refs.js';
 import { generateRpcOverlays } from './generate/rpc.js';
 import { buildPostman } from './generate/postman.js';
-import { buildExamples } from './generate/examples.js';
-import { basename } from 'path';
-import { stemOf, siblingPath } from './contract-types.js';
+import { buildArtifact } from './artifact.js';
+import { stemOf, siblingPath, fileNameOf } from './contract-types.js';
 
 /** What `generate` knows how to produce. */
 const BUILDERS = {
   overlay: buildOverlays,
   graph: buildGraphs,
   postman: buildPostman,
-  examples: buildExamples,
+  artifact: buildArtifact,
 };
 
 /**
  * @param {import('../types.js').Doc[]} docs
- * @param {'overlay'|'graph'|'postman'|'examples'} type - Which artifact to build
+ * @param {'overlay'|'graph'|'postman'|'artifact'} type - Which artifact to build
  * @param {object} [options] - Passed to the builder that needs them
  * @returns {*} Whatever that artifact is
  */
@@ -121,12 +129,12 @@ function alignRefs(generated, docs) {
   return generated.map(({ domain: stem, overlay }) => {
     const target =
       docs.find((doc) => doc.relativePath === siblingPath(stem, 'openapi')) ??
-      docs.find((doc) => basename(doc.relativePath ?? '') === basename(siblingPath(stem, 'openapi') ?? ''));
+      docs.find((doc) => fileNameOf(doc.relativePath ?? '') === fileNameOf(siblingPath(stem, 'openapi') ?? ''));
 
     if (!target) return overlay;
 
     for (const action of overlay.actions ?? []) {
-      if (typeof action.file === 'string' && basename(action.file) === basename(target.relativePath)) {
+      if (typeof action.file === 'string' && fileNameOf(action.file) === fileNameOf(target.relativePath)) {
         action.file = target.relativePath;
       }
     }

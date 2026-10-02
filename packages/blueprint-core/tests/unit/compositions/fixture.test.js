@@ -5,23 +5,10 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, writeFileSync, rmSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import yaml from 'js-yaml';
 import {
-  discoverCompositions,
   buildResourceSchemaIndex,
   validateBindFields,
 } from '../../../src/compositions.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-function createTempDir() {
-  const dir = join(__dirname, `tmp-compositions-${Date.now()}`);
-  mkdirSync(dir, { recursive: true });
-  return dir;
-}
 
 // Fixture: a minimal compositions file for the widgets domain
 const FIXTURE_COMPOSITIONS = {
@@ -68,31 +55,22 @@ const FIXTURE_OPENAPI = {
   },
 };
 
+// One entry per compositions document, the shape `discover`/`load` produce.
+const widgets = {
+  filePath: 'widgets-compositions.yaml',
+  domain: 'widgets',
+  doc: FIXTURE_COMPOSITIONS,
+};
+
 test('compositions resolver integration with fixture data', async (t) => {
-  let tmpDir;
 
-  await t.test('discoverCompositions finds fixture compositions file', () => {
-    tmpDir = createTempDir();
-    writeFileSync(join(tmpDir, 'widgets-compositions.yaml'), yaml.dump(FIXTURE_COMPOSITIONS));
-
-    const compositions = discoverCompositions(tmpDir);
-    const widgets = compositions.find(c => c.domain === 'widgets');
-    assert.ok(widgets, 'should discover widgets-compositions.yaml');
+  await t.test('the fixture declares the composition under test', () => {
     assert.ok(widgets.doc.compositions.partSummary, 'should have partSummary composition');
   });
 
   await t.test('validateBindFields finds no errors against fixture spec', () => {
-    if (!tmpDir) tmpDir = createTempDir();
-    writeFileSync(join(tmpDir, 'widgets-compositions.yaml'), yaml.dump(FIXTURE_COMPOSITIONS));
-    writeFileSync(join(tmpDir, 'widgets-openapi.yaml'), yaml.dump(FIXTURE_OPENAPI));
-
-    const compositions = discoverCompositions(tmpDir);
-    const widgets = compositions.find(c => c.domain === 'widgets');
-    assert.ok(widgets, 'fixture compositions must be discoverable');
-
-    const specPath = join(tmpDir, 'widgets-openapi.yaml');
     const yamlFiles = [
-      { relativePath: 'widgets-openapi.yaml', filePath: specPath, spec: FIXTURE_OPENAPI },
+      { relativePath: 'widgets-openapi.yaml', spec: FIXTURE_OPENAPI },
     ];
 
     const index = buildResourceSchemaIndex(yamlFiles);
@@ -104,8 +82,5 @@ test('compositions resolver integration with fixture data', async (t) => {
       }
     }
     assert.equal(errors.length, 0, 'no bind validation errors expected for fixture compositions');
-
-    rmSync(tmpDir, { recursive: true, force: true });
-    tmpDir = null;
   });
 });

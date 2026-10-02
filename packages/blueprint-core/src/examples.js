@@ -16,8 +16,8 @@
  * document declares, so nothing has to agree about anything.
  */
 
-import { basename } from 'path';
-import { collectionToSchemaPrefix, extractIndividualResources } from '../openapi/utils.js';
+import { fileNameOf } from './contract-types.js';
+import { collectionToSchemaPrefix, extractIndividualResources } from './openapi/utils.js';
 
 /**
  * @param {import('../../types.js').Doc[]} docs
@@ -28,7 +28,7 @@ export function buildExamples(docs) {
   const bySchema = {};
 
   for (const doc of docs.filter((d) => d.type === 'openapi')) {
-    const name = basename(doc.path, '-openapi.yaml');
+    const name = fileNameOf(doc.path, '-openapi.yaml');
     const schemas = Object.keys(doc.content?.components?.schemas ?? {});
     const examples = examplesOf(docs, name, doc.content);
 
@@ -101,7 +101,7 @@ export function examplesForCollection(examples, collection, collections) {
  * @returns {Record<string, unknown>}
  */
 function examplesOf(docs, name, spec) {
-  const seed = docs.find((doc) => basename(doc.path) === `${name}.yaml`);
+  const seed = docs.find((doc) => fileNameOf(doc.path) === `${name}.yaml`);
   if (seed) return seed.content ?? {};
 
   const pooled = {};

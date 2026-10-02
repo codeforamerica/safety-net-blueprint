@@ -2,7 +2,7 @@
  * Data seeder - loads example data from YAML files into SQLite
  */
 
-import { generate } from '@codeforamerica/blueprint-core';
+import { extract } from '@codeforamerica/blueprint-core';
 import { deriveCollectionName } from './collection-utils.js';
 import { resolveTimeTokens } from './time-tokens.js';
 
@@ -72,7 +72,7 @@ function collectionSchemas(docs) {
 /**
  * Seed all databases for all discovered APIs.
  *
- * Records are grouped by collection through core's `generate(docs,
+ * Records are grouped by collection through core's `extract(docs,
  * 'examples')` — the same call the rest of the pipeline makes — so the server
  * seeds exactly what the pipeline says belongs where. Any *-mock-data.yaml
  * under seedDir joins the pool regardless of its location or name; an example
@@ -96,7 +96,7 @@ export function seedAllDatabases(docs, store, { seeded = true } = {}) {
   // response names the schema its records are. So the naming rule lives here
   // only, in collection-utils, where routing needs it regardless.
 
-  const bySchema = generate(docs, 'examples');
+  const bySchema = extract(docs, 'examples');
   const schemaOf = collectionSchemas(docs);
   const collections = [...schemaOf.keys()];
   const byCollection = Object.fromEntries(

@@ -303,7 +303,7 @@ describe('generate', () => {
       },
     });
     try {
-      const grouped = generate(discover(dir).map(load), 'examples');
+      const grouped = extract(discover(dir).map(load), 'examples');
       assert.deepEqual(grouped['Application'].map((r) => r.data.id), ['a1']);
       assert.deepEqual(grouped['ApplicationMember'].map((r) => r.data.id), ['m1']);
     } finally {

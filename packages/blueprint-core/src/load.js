@@ -26,10 +26,10 @@
  */
 
 import { readFileSync, existsSync } from 'fs';
-import { basename, dirname, join, resolve as resolvePath, parse as parsePath } from 'path';
+import { basename, dirname, join, parse as parsePath } from 'path';
 import yaml from 'js-yaml';
-import { detectType } from './openapi/contract-files.js';
-import { followRef, indexByRelativePath } from './ref-lookup.js';
+import { detectType } from './contract-types.js';
+import { toDoc } from './doc.js';
 
 export const MANIFEST_FILENAME = '.blueprint-resolved.json';
 
@@ -52,264 +52,17 @@ export function load(file) {
 
   const raw = readFileSync(path, 'utf8');
   const content = yaml.load(raw, { schema: yaml.CORE_SCHEMA });
-  const type = detectType(basename(path), content);
-  const provenance = readManifest(path);
 
-  return {
+  // Reading is this function's whole job; building the Doc belongs to doc.js,
+  // which an artifact can reach without a filesystem.
+  return toDoc({
     path,
     relativePath,
-    // discover() resolves this against the whole set, which is the only way
-    // the path-segment and filename fallbacks can work. Loading a file alone
-    // still gets the two answers the content itself provides.
-    domain: domain ?? content?.info?.['x-domain'] ?? content?.domain ?? null,
-    type,
+    domain,
+    type: detectType(basename(path), content),
     content,
-    refs() { return indexRefs(this.content); },
-    externalRefs(docs) { return externalRefs(this, docs); },
-    resolveRef(ref, docs) { return resolveRef(ref, docs, this.relativePath); },
-    model() { return buildModel(this.type, this.content); },
-    resolved: provenance !== null,
-    provenance,
-  };
-}
-
-/**
- * The sibling documents this document's external $refs point at.
- *
- * Keyed by the ref's file part exactly as written, since that is what a
- * caller has in hand when it meets the ref. Canonical https:// refs are
- * skipped — they are rewritten to relative paths at write time, and before
- * that they resolve through the schema registry, not the file tree.
- *
- * @param {import('../types.js').Doc} doc
- * @param {import('../types.js').Doc[]} docs - The set to resolve against
- * @returns {Map<string, object>} Ref file part to that document's content
- */
-function externalRefs(doc, docs) {
-  const byPath = new Map(docs.map((d) => [resolvePath(d.path), d.content]));
-  const dir = dirname(resolvePath(doc.path));
-  const found = new Map();
-
-  for (const ref of doc.refs().values()) {
-    if (!ref.external || !ref.file) continue;
-    if (ref.file.startsWith('http://') || ref.file.startsWith('https://')) continue;
-
-    const content = byPath.get(resolvePath(dir, ref.file));
-    if (content) found.set(ref.file, content);
-  }
-
-  return found;
-}
-
-/**
- * Follow one external $ref to the schema it names.
- *
- * The file part is matched against relative paths within the set. A ref
- * written from a subdirectory may lead with `../` segments that the set's
- * own paths do not have, so those are stripped and retried.
- *
- * @param {string} ref - An external $ref, e.g. `../schemas/intake.yaml#/$defs/Member`
- * @param {import('../types.js').Doc[]} docs
- * @param {string} [fromPath] - relativePath of the document holding the ref,
- *   so a relative ref resolves against its own directory
- * @returns {object} The referenced schema, or an empty object if unresolvable
- */
-export function resolveRef(ref, docs, fromPath = null) {
-  if (!ref.includes('#')) return {};
-  const found = followRef(ref, indexByRelativePath(docs), fromPath);
-  return found?.node ?? {};
-}
-
-/**
- * Index every $ref in a document.
- *
- * Local refs resolve to the object they point at. External refs are recorded
- * with their file and fragment but left unresolved — resolving them needs the
- * sibling documents, which `load` deliberately does not read.
- *
- * @param {*} content - Parsed document
- * @returns {Map<string, { pointer: string, external: boolean, file: string|null, target: * }>}
- */
-function indexRefs(content) {
-  const refs = new Map();
-
-  function walk(node) {
-    if (!node || typeof node !== 'object') return;
-    if (Array.isArray(node)) {
-      node.forEach(walk);
-      return;
-    }
-    for (const [key, value] of Object.entries(node)) {
-      if (key === '$ref' && typeof value === 'string') {
-        const hashIdx = value.indexOf('#');
-        const file = hashIdx === 0 ? null : value.slice(0, hashIdx === -1 ? value.length : hashIdx);
-        const pointer = hashIdx === -1 ? '' : value.slice(hashIdx + 1);
-        const external = file !== null;
-        // `resolved` is tracked separately from `target` because a pointer can
-        // legitimately address a null node. Collapsing the two would report a
-        // valid reference as broken.
-        const found = external ? undefined : resolvePointer(content, pointer);
-        refs.set(value, {
-          pointer,
-          external,
-          file,
-          // The last fragment segment, which is the schema name across every
-          // ref form: #/components/schemas/Foo, #/$defs/Foo, and external
-          // refs ending in either.
-          name: pointer.split('/').filter(Boolean).pop() ?? null,
-          resolved: external ? null : found !== undefined,
-          target: found ?? null,
-        });
-      }
-      walk(value);
-    }
-  }
-
-  walk(content);
-  return refs;
-}
-
-/**
- * Follow a JSON Pointer within a document.
- *
- * @param {*} root - Document to walk
- * @param {string} pointer - Fragment, e.g. '/components/schemas/Application'
- * @returns {*} The referenced value, or undefined if the path does not exist
- */
-function resolvePointer(root, pointer) {
-  if (!pointer) return root;
-
-  let node = root;
-  for (const rawSegment of pointer.split('/').filter(Boolean)) {
-    const segment = rawSegment.replace(/~1/g, '/').replace(/~0/g, '~');
-    if (node === null || typeof node !== 'object') return undefined;
-    node = node[segment];
-  }
-  return node;
-}
-
-/**
- * Build the normalized view for blueprint-authored contract types.
- *
- * Only state machines are normalized today. Rules and compositions get a model
- * when something needs to walk them — adding one is additive, since every Doc
- * already carries the field.
- *
- * @param {string} type - Contract type from detectType
- * @param {*} content - Parsed document
- * @returns {*|null} Normalized view, or null for standards-defined types
- */
-function buildModel(type, content) {
-  if (type !== 'state-machine') return null;
-  if (!content || typeof content !== 'object') return null;
-
-  // A base state machine (one others `extend`) carries shared procedures at the
-  // top level and declares no machines of its own. Both shapes are normalized,
-  // so `model` is non-null for every blueprint-authored document.
-  return {
-    machines: (content.machines ?? []).map((machine) => ({
-      ...machine,
-      actions: normalizeStepHolders(machine.actions),
-      events: normalizeStepHolders(machine.events),
-      procedures: normalizeStepHolders(machine.procedures),
-    })),
-    procedures: normalizeStepHolders(content.procedures),
-  };
-}
-
-/**
- * Normalize the steps of every entry in an action, event, or procedure list.
- *
- * All three carry a `steps` array; only their surrounding fields differ, so
- * those are passed through untouched.
- *
- * @param {object[]} holders - Entries from machine.actions/events/procedures
- * @returns {object[]}
- */
-function normalizeStepHolders(holders) {
-  if (!Array.isArray(holders)) return [];
-  return holders.map((holder) => ({ ...holder, steps: normalizeSteps(holder.steps) }));
-}
-
-/**
- * Convert the step list of an action into uniform nodes.
- *
- * The authored format nests bodies under a different key per step kind —
- * `then`/`else` on if, `when` on match, `do` on forEach — and puts
- * `description` inside the body for set/emit but beside it for the branching
- * kinds. Normalizing gives every step `{ kind, ...fields, children }`, so a
- * caller walks the tree with plain recursion instead of a helper per kind.
- *
- * It also collapses the one dual shape in the authored format: `call` is
- * either a procedure name or an HTTP request object. The model always reports
- * both `procedure` and `request`, one of them null.
- *
- * @param {object[]} steps - Authored steps from content
- * @returns {{ kind: string, children: object[] }[]}
- */
-function normalizeSteps(steps) {
-  if (!Array.isArray(steps)) return [];
-  return steps.map(normalizeStep);
-}
-
-/**
- * @param {object} step - One authored step
- * @returns {{ kind: string, children: object[] }}
- */
-function normalizeStep(step) {
-  if ('if' in step) {
-    return {
-      kind: 'if',
-      condition: step.if,
-      description: step.description,
-      children: [
-        { kind: 'then', children: normalizeSteps(step.then) },
-        ...(step.else ? [{ kind: 'else', children: normalizeSteps(step.else) }] : []),
-      ],
-    };
-  }
-
-  if ('match' in step) {
-    return {
-      kind: 'match',
-      on: step.match,
-      description: step.description,
-      children: Object.entries(step.when ?? {}).map(([value, branchSteps]) => ({
-        kind: 'case',
-        value,
-        children: normalizeSteps(branchSteps),
-      })),
-    };
-  }
-
-  if ('forEach' in step) {
-    return {
-      kind: 'forEach',
-      ...step.forEach,
-      description: step.description,
-      children: normalizeSteps(step.do),
-    };
-  }
-
-  if ('call' in step) {
-    const isProcedure = typeof step.call === 'string';
-    return {
-      kind: 'call',
-      procedure: isProcedure ? step.call : null,
-      request: isProcedure ? null : step.call,
-      description: step.description,
-      children: [],
-    };
-  }
-
-  // set and emit carry their own description inside the body, so spread last.
-  const kind = Object.keys(step)[0] ?? 'unknown';
-  const body = step[kind];
-  return {
-    kind,
-    ...(body && typeof body === 'object' && !Array.isArray(body) ? body : {}),
-    children: [],
-  };
+    provenance: readManifest(path),
+  });
 }
 
 /**

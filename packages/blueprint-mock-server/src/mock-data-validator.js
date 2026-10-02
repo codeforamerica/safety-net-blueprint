@@ -6,7 +6,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { readdirSync, statSync } from 'fs';
 import yaml from 'js-yaml';
-import { discover, generate, load } from '@codeforamerica/blueprint-core';
+import { discover, extract, load } from '@codeforamerica/blueprint-core';
 import { validateAgainstSchema } from './example-validator.js';
 
 /**
@@ -42,7 +42,7 @@ export function validateMockData(specsDir, apiSpecs) {
   // `Policy`, so the lookup found nothing and skipped validation in silence.
   const docs = discover(specsDir).map(load);
   const schemaOf = new Map();
-  for (const [schema, records] of Object.entries(generate(docs, 'examples'))) {
+  for (const [schema, records] of Object.entries(extract(docs, 'examples'))) {
     for (const record of records) schemaOf.set(record.key, schema);
   }
 

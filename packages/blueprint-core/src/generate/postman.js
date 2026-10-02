@@ -10,7 +10,7 @@
  * examples, state machines — is in the set it is given.
  */
 
-import { basename } from 'path';
+import { fileNameOf } from '../contract-types.js';
 import { collectionToSchemaPrefix, extractIndividualResources } from '../openapi/utils.js';
 
 /**
@@ -32,7 +32,7 @@ let contracts = new Map();
  * @returns {object} A Postman v2.1 collection
  */
 export function buildPostman(docs, { baseUrl = 'http://localhost:1080', collectionId = null } = {}) {
-  contracts = new Map(docs.map((doc) => [basename(doc.path), doc.content]));
+  contracts = new Map(docs.map((doc) => [fileNameOf(doc.path), doc.content]));
 
   const apiSpecs = docs
     .filter((doc) => doc.type === 'openapi')
@@ -59,7 +59,7 @@ export function buildPostman(docs, { baseUrl = 'http://localhost:1080', collecti
  */
 function apiMetadataOf(doc, docs) {
   const spec = doc.content ?? {};
-  const name = basename(doc.path, '-openapi.yaml');
+  const name = fileNameOf(doc.path, '-openapi.yaml');
   const refs = doc.refs();
 
   const deref = (param) => {

@@ -9,7 +9,7 @@
  * by JSON Schema validation via each file's $schema declaration.
  */
 
-import { detectType } from '../openapi/contract-files.js';
+import { detectType } from '../contract-types.js';
 import { validateRulesDoc } from './rules-validator.js';
 
 /**

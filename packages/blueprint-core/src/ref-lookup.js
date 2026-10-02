@@ -149,3 +149,28 @@ export function followRef(ref, byRelativePath, fromPath = null) {
   const node = pointerInto(content, pointer);
   return node === undefined ? null : { node, content, relativePath };
 }
+
+/**
+ * Follow one external $ref to the schema it names.
+ *
+ * The file part is matched against relative paths within the set. A ref
+ * written from a subdirectory may lead with `../` segments that the set's
+ * own paths do not have, so those are stripped and retried.
+ *
+ * Returns `{}` rather than null for an unresolvable ref: callers spread the
+ * result into a schema, and a missing external ref means "nothing to add".
+ *
+ * Lived in `load.js` as a wrapper over the two functions above, which left
+ * `generate` importing the filesystem to reach five lines that never touch it.
+ *
+ * @param {string} ref - An external $ref, e.g. `../schemas/intake.yaml#/$defs/Member`
+ * @param {import('../types.js').Doc[]} docs
+ * @param {string} [fromPath] - relativePath of the document holding the ref,
+ *   so a relative ref resolves against its own directory
+ * @returns {object} The referenced schema, or an empty object if unresolvable
+ */
+export function resolveRef(ref, docs, fromPath = null) {
+  if (!ref.includes('#')) return {};
+  const found = followRef(ref, indexByRelativePath(docs), fromPath);
+  return found?.node ?? {};
+}

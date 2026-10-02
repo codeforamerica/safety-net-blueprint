@@ -183,7 +183,7 @@ describe('generate', () => {
   });
 
   test('examples group by the schema each record exemplifies', () => {
-    const grouped = generate(docs, 'examples');
+    const grouped = extract(docs, 'examples');
     assert.deepEqual(grouped['Application'].map((r) => r.data.id).sort(), ['a1', 'a2']);
   });
 

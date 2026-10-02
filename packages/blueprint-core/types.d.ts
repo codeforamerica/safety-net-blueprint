@@ -163,7 +163,24 @@ export interface Graph {
   dependencies: Record<string, string[]>;
 }
 
-/** One example record, as `generate(docs, 'examples')` groups them. */
+/**
+ * A contract set reduced to data, as `generate(docs, 'artifact')` builds it
+ * and `extract(artifact, 'docs')` reads it back.
+ *
+ * `docs` holds each document stripped of its methods, which JSON cannot carry;
+ * reading it back rebuilds them. `createdAt` and `integrity` are added by
+ * whoever writes the file — a hash covers bytes, and `generate` returns an
+ * object, so the writer is the only thing holding bytes to hash.
+ */
+export interface ContractsArtifact {
+  artifactVersion: number;
+  docs: Array<Omit<Doc, 'refs' | 'externalRefs' | 'resolveRef' | 'model' | 'resolved'>>;
+  createdAt?: string;
+  /** Not a signature — it is recomputable. */
+  integrity?: { algorithm: string; hash: string };
+}
+
+/** One example record, as `extract(docs, 'examples')` groups them. */
 export interface ExampleRecord {
   /** The example's key in the source document, e.g. `ApplicationExample1`. */
   key: string;
@@ -265,16 +282,10 @@ export function generate(
   options?: { baseUrl?: string; collectionId?: string | null }
 ): Record<string, unknown>;
 /**
- * Example records grouped by the schema each exemplifies.
- *
- * Keyed by schema name — `Application`, `ApplicationMember` — not by
- * collection. Naming a collection is the mock server's concern; a schema is
- * something the document declares.
+ * The whole contract set as one serializable object, for a browser to boot
+ * from. Carries no derived facts and no integrity hash.
  */
-export function generate(
-  docs: Doc[],
-  type: 'examples'
-): Record<string, ExampleRecord[]>;
+export function generate(docs: Doc[], type: 'artifact'): ContractsArtifact;
 
 /** Apply overlays, inject enums, filter by environment, substitute variables. */
 export function resolve(docs: Doc[], options?: ResolveOptions): ResolveResult;
@@ -349,4 +360,24 @@ export function extract(docs: Doc[], type: 'state-machines'): StateMachineEntry[
 export function extract(docs: Doc[], type: 'sla-types'): SlaTypesEntry[];
 export function extract(docs: Doc[], type: 'metrics'): MetricsEntry[];
 export function extract(docs: Doc[], type: 'config'): ConfigEntry[];
+/**
+ * Example records grouped by the schema each exemplifies.
+ *
+ * Keyed by schema name — `Application`, `ApplicationMember` — not by
+ * collection. Naming a collection is the mock server's concern; a schema is
+ * something the document declares.
+ *
+ * Was `generate(docs, 'examples')`. It groups records the documents already
+ * declare rather than producing anything they do not contain, which makes it
+ * a readout by `extract`'s own definition.
+ */
+export function extract(docs: Doc[], type: 'examples'): Record<string, ExampleRecord[]>;
+/**
+ * The contract set inside an artifact, with each document's methods rebuilt.
+ *
+ * The one case whose first argument is an artifact rather than a document set.
+ * Takes the parsed object, not a path — the caller has already read the file,
+ * with `readFileSync` or `await (await fetch(…)).json()`.
+ */
+export function extract(artifact: ContractsArtifact, type: 'docs'): Doc[];
 
