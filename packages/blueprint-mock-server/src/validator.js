@@ -90,8 +90,14 @@ function prepareSchemaForValidation(schema) {
 
   // Strip $id and $schema so AJV doesn't try to register shared sub-schemas
   // (e.g., schemas/common/income.yaml) multiple times when the same file is
-  // referenced by more than one OpenAPI spec. The validator only needs to check
-  // structure, not resolve cross-schema $refs by ID.
+  // referenced by more than one OpenAPI spec.
+  //
+  // This path only handles schemas with no cross-file refs to resolve. It used
+  // to say the validator "only needs to check structure, not resolve
+  // cross-schema $refs by ID", which held only because $RefParser had already
+  // inlined them. It does not any more — resolving by ID is exactly what
+  // schema-registry.js does, and a schema that needs it comes through
+  // `resolveValidator` instead (#448).
   delete prepared.$id;
   delete prepared.$schema;
 
@@ -151,6 +157,43 @@ function prepareSchemaForValidation(schema) {
   return prepared;
 }
 
+/** Schemas already reported as uncompilable, so each is said once. */
+const uncompilable = new Set();
+
+/**
+ * The validator for a schema, by whichever route can produce one.
+ *
+ * Prefers the registry, which resolves `$ref`s against the document the schema
+ * was declared in. Falls back to compiling the object, which is right for a
+ * schema carrying no refs — and can fail outright for one that does, since a
+ * detached object gives ajv no base to resolve against. A compile error here
+ * would otherwise surface as an unhandled MissingRefError inside a request
+ * handler, which is a bad place to learn that a contract ref is wrong.
+ *
+ * Note the two resolvers do not agree in one case: core's `followRef` retries
+ * a ref with its leading `../` segments stripped, so a ref written one level
+ * too shallow still resolves for anything reading documents. ajv does
+ * ordinary URI arithmetic and will not find it. That set is malformed either
+ * way, but it reaches this function rather than failing earlier.
+ *
+ * @param {object} schema
+ * @param {string} schemaKey
+ * @param {{ relativePath?: string, ref?: string|null }|null} source
+ * @returns {import('ajv').ValidateFunction|null}
+ */
+function resolveValidator(schema, schemaKey, source) {
+  if (registryAjv && source?.relativePath && source?.ref) {
+    const fromRegistry = validatorForRef(registryAjv, source.relativePath, source.ref);
+    if (fromRegistry) return fromRegistry;
+  }
+
+  try {
+    return getValidator(schemaKey, schema);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Validate request data against a schema.
  *
@@ -175,9 +218,22 @@ export function validate(data, schema, schemaKey, source = null) {
     return { valid: true, errors: [] };
   }
 
-  const validator = (registryAjv && source?.relativePath && source?.ref
-    ? validatorForRef(registryAjv, source.relativePath, source.ref)
-    : null) ?? getValidator(schemaKey, schema);
+  const validator = resolveValidator(schema, schemaKey, source);
+  if (!validator) {
+    // Nothing to validate against, and a request is not the place to discover
+    // that. Reported once per schema so it is visible without one line per
+    // request; the contract set is what needs fixing.
+    if (!uncompilable.has(schemaKey)) {
+      uncompilable.add(schemaKey);
+      console.warn(
+        `Warning: no validator could be compiled for "${schemaKey}", so requests to it ` +
+        'are not checked. A $ref in its schema names nothing in the contract set — ' +
+        'check the relative path, including how many `../` segments it leads with.'
+      );
+    }
+    return { valid: true, errors: [] };
+  }
+
   const valid = validator(data);
   
   if (valid) {
