@@ -207,7 +207,7 @@ describe('resolving a cross-file $ref', () => {
 describe('nullable', () => {
 
   test('a nullable field with a type still accepts null', () => {
-    // Stripping `nullable` wholesale broke this: ajv honours
+    // Stripping `nullable` wholesale broke this: ajv honors
     // `{ type: string, nullable: true }` by widening the type, so removing it
     // rejected the null the field exists to allow. Five Application date
     // fields and two Users failed this way.
@@ -259,7 +259,7 @@ describe('extractRequiredDefaults', () => {
 
   test('without a resolver, a ref yields no defaults', () => {
     // Stated so the dependency is explicit rather than incidental: this is
-    // exactly the old behaviour, and exactly the bug.
+    // exactly the old behavior, and exactly the bug.
     withSet(({ docs }) => {
       const [api] = apiSpecsFromDocs(docs);
       const endpoint = api.endpoints.find((e) => e.method === 'POST');

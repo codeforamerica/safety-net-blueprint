@@ -105,20 +105,6 @@ export function extractDomain(filename, relativePath, content, knownDomains) {
   return null;
 }
 
-/**
- * The directory a document's contract set is rooted at.
- *
- * `path` ends with `relativePath` by construction — discover() supplies both
- * — so the root is whatever remains. Null for a document loaded on its own,
- * which has no set to be bounded by.
- *
- * @param {import('../types.js').Doc} doc
- * @returns {string|null}
- */
-export function setRootOf(doc) {
-  if (!doc?.relativePath) return null;
-  return doc.path.slice(0, doc.path.length - doc.relativePath.length);
-}
 
 /**
  * `x-relationship.resource` values that name no resource.

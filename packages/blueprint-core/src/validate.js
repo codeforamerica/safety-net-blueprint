@@ -24,7 +24,7 @@ import { validateEvents } from './validator/event-validator.js';
 import { validateSlaTypeFields, validateMetricFields } from './validator/field-reference-validator.js';
 import { validateAnnotations } from './validator/annotation-validator.js';
 import { validateSchemas } from './validator/json-schema-validator.js';
-import { stemOf, setRootOf, isDeprecated, isReservedResource } from './contract-types.js';
+import { stemOf, isDeprecated, isReservedResource } from './contract-types.js';
 import { indexByRelativePath, followRef, isRemoteRef } from './ref-lookup.js';
 import {
   buildSchemaIndex,
@@ -73,7 +73,6 @@ export function validate(docs) {
   const yamlFiles = docs.map((doc) => ({
     relativePath: doc.relativePath ?? doc.path,
     filePath: doc.path,
-    setRoot: setRootOf(doc),
     spec: doc.content,
   }));
 

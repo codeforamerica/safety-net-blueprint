@@ -5,7 +5,7 @@
  * on an Express `req` — the JSON body, the query string — is read from the
  * `Request` here instead. Both helpers reproduce what Express presented, since
  * the handlers were written against that and a quiet change in either would
- * alter behaviour without failing a test.
+ * alter behavior without failing a test.
  */
 
 /**
@@ -51,7 +51,7 @@ export async function readJsonBody(request) {
  *
  * Express's default parser returns a string for a single occurrence and an
  * array for a repeated one, and handlers rely on that — so this reproduces it
- * rather than flattening, which would silently change filter behaviour for a
+ * rather than flattening, which would silently change filter behavior for a
  * repeated query parameter.
  *
  * @param {Request} request

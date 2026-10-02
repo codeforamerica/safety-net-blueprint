@@ -99,8 +99,8 @@ async function main() {
   console.log(`  ${docs.length} document(s) from ${dirs.length} director${dirs.length === 1 ? 'y' : 'ies'}`);
 
   // Validation happens here because it cannot happen later: `validate` needs a
-  // Doc's methods, and the artifact is plain data. A consumer trusts the hash
-  // instead of re-checking.
+  // Doc's methods, and the artifact is plain data. So a consumer cannot
+  // re-check it, which is why writing a broken one takes --skip-validation.
   if (!options.skipValidation) {
     console.log('\nValidating...');
     const { ok, results } = validate(docs);
@@ -140,12 +140,12 @@ async function main() {
     console.log(`  domains: ${[...kept].sort().join(', ')}`);
   }
 
-  const serialised = JSON.stringify(artifact);
+  const serialized = JSON.stringify(artifact);
   const outPath = resolve(options.out);
-  writeFileSync(outPath, serialised);
+  writeFileSync(outPath, serialized);
 
   console.log(`\n✓ Wrote ${outPath}`);
-  console.log(`  ${artifact.docs.length} documents, ${(Buffer.byteLength(serialised) / 1024 / 1024).toFixed(2)} MB`);
+  console.log(`  ${artifact.docs.length} documents, ${(Buffer.byteLength(serialized) / 1024 / 1024).toFixed(2)} MB`);
   if (options.skipValidation) {
     console.log('  Not validated — --skip-validation was passed.');
   }

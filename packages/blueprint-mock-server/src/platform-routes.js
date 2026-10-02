@@ -139,7 +139,7 @@ export function registerPlatformRoutes(routes, { store, apiNames = [], readDocs,
  *
  * Keyed by `operationId` and applied with `overrideByOperationId` once the
  * contract routes exist. Adding a platform endpoint to the contract needs
- * nothing here — only an endpoint whose *behaviour* is special does, and an
+ * nothing here — only an endpoint whose *behavior* is special does, and an
  * override naming an operationId the contract no longer has fails at boot
  * rather than leaving a route quietly served by the generated handler.
  *

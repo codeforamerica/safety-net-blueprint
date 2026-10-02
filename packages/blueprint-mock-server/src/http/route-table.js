@@ -218,7 +218,7 @@ function withPathname(request, pathname) {
 /**
  * Replace a route's handler with one wrapping the original.
  *
- * The composition point for behaviour that used to be middleware. Middleware
+ * The composition point for behavior that used to be middleware. Middleware
  * matched a path prefix and ran for anything under it; this names one route, so
  * it cannot quietly apply to a route added later.
  *
@@ -244,7 +244,7 @@ export function wrapRoute(routes, key, wrap) {
  * CRUD: `streamEvents` is a stream, `publishEvent` fires the event bus rather
  * than storing a row. They are overrides rather than extra registrations, so
  * adding a platform endpoint to the contract needs no code — only an endpoint
- * whose *behaviour* is special does.
+ * whose *behavior* is special does.
  *
  * Matching on `operationId` rather than a path string is the point. A path can
  * be changed in the contract; the operationId is its identity, so renaming the

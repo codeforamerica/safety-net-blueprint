@@ -74,7 +74,7 @@ Four bugs, and every one of them passed the existing test suites, because
 no refs to resolve. They were caught only by running against the real contract
 set:
 
-- `nullable` stripped wholesale. ajv honours `{ type: string, nullable: true }`
+- `nullable` stripped wholesale. ajv honors `{ type: string, nullable: true }`
   by widening the type, so removing it rejected the `null` the field exists to
   allow.
 - The 2020-12 ajv build adopted for the dialect the documents declare. It

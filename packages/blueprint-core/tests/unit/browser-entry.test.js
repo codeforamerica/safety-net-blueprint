@@ -93,7 +93,7 @@ test('The /browser entry', async (t) => {
   await t.test('bundles for the browser platform', () => {
     // The property as the bundler sees it. esbuild resolves before it shakes,
     // so this fails on an unreachable `fs` import the same way a real build
-    // would — which is the behaviour the check above exists to protect.
+    // would — which is the behavior the check above exists to protect.
     const result = execFileSync('npx', [
       'esbuild', browserEntry,
       '--bundle', '--platform=browser', '--format=esm', '--log-level=error',

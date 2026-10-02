@@ -1,7 +1,7 @@
 /**
  * Unit tests for the route table (#448 step 2).
  *
- * The two behaviours worth pinning are the ones that would regress routing
+ * The two behaviors worth pinning are the ones that would regress routing
  * silently: literal segments beating parameters, and first registration
  * winning a collision.
  */
