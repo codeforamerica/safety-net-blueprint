@@ -307,7 +307,8 @@ MOCK_SERVER_HOST=0.0.0.0 MOCK_SERVER_PORT=8080 npm run mock:start
 |---------|-------------|
 | `npm run mock:start` | Start server (databases empty without `--seed`) |
 | `npm run mock:start -- --seed=<dir>` | Start server and seed from `*-mock-data.yaml` files under `<dir>` |
-| `npm run mock:start -- --uploads=<dir>` | Store uploaded files under `<dir>` (default: `blueprint-mock-server/uploads`; overridden by `MOCK_UPLOADS_DIR`) |
+| `npm run mock:start -- --store=memory` | Hold resources in memory instead of SQLite — nothing written to disk, no native module |
+| `npm run mock:start -- --spec=contracts.json` | Start from a bundled contracts artifact instead of walking a directory |
 | `npm run mock:seed` | Generate faker-based seed files into `packages/generated/mock-data/` |
 
 | Endpoint | Description |

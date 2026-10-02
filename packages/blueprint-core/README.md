@@ -75,8 +75,10 @@ const docs = extract(JSON.parse(contracts), 'docs');
 ```
 
 The documents come back with their methods rebuilt, which JSON cannot carry,
-so nothing downstream can tell whether a set was walked off disk or read from
-a file. `$ref`s are left intact: they name other documents in the same set, so
+so a set read from a file behaves like one walked off disk. An artifact records
+each document's place in the set and nothing about the machine that wrote it, so
+`path` is the same as `relativePath` on the way back — readers that want a
+filename take the last segment either way. `$ref`s are left intact: they name other documents in the same set, so
 the set is already complete, and inlining them is the difference between a
 0.67 MB file and a 3.95 MB one.
 
