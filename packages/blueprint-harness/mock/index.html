@@ -141,11 +141,45 @@
 </main>
 
 <script type="module">
-import { createMockServer } from './mock.js';
+/**
+ * Two builds, one source.
+ *
+ * Served over http(s) this page fetches `mock.js` and `contracts.json`
+ * alongside it. As a single file — for `file://`, where both of those fetches
+ * are blocked as cross-origin — the build inlines the bundle as a global and
+ * the artifact as a JSON script tag, and the two lookups below find them
+ * already present (#448).
+ */
+const { createMockServer } = globalThis.BlueprintMock ?? await import('./mock.js');
+
+const loadContracts = async () => {
+  const inlined = document.getElementById('contracts-data');
+  return inlined ? JSON.parse(inlined.textContent) : (await fetch('./contracts.json')).json();
+};
 
 const $ = (id) => document.getElementById(id);
 const show = (id, value) => {
   $(id).textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+};
+
+/**
+ * An element with text in it, built rather than parsed.
+ *
+ * Nothing here assembles HTML from values. Almost everything this page
+ * displays comes out of the contracts artifact — route paths, endpoint names,
+ * response bodies — and an artifact is a JSON file, which is to say input. A
+ * path containing markup would be executed if it were interpolated into
+ * innerHTML, so it never is: `textContent` assigns a string as a string.
+ *
+ * @param {string} tag
+ * @param {string} [text]
+ * @param {string} [className]
+ */
+const el = (tag, text = '', className = '') => {
+  const node = document.createElement(tag);
+  if (text !== '') node.textContent = text;
+  if (className) node.className = className;
+  return node;
 };
 
 /**
@@ -207,17 +241,26 @@ let offered;
 
 const boot = async () => {
   const started = performance.now();
-  const contracts = await (await fetch('./contracts.json')).json();
+  const contracts = await loadContracts();
   mock = await createMockServer({ contracts, basePath });
   offered = survey(mock.routes);
 
   const ms = Math.round(performance.now() - started);
   const seeded = (await call(offered.list ?? '/health')).body?.items?.length ?? null;
 
-  $('boot').innerHTML =
-    `<span class="pass">ready</span> — ${contracts.docs.length} contract documents, ` +
-    `${mock.routes.size} routes, booted in ${ms} ms` +
-    (seeded === 0 ? ' · <span class="note">this contract set ships no mock data, so collections start empty</span>' : '');
+  const status = $('boot');
+  status.replaceChildren(
+    el('span', 'ready', 'pass'),
+    document.createTextNode(
+      ` — ${contracts.docs.length} contract documents, ${mock.routes.size} routes, booted in ${ms} ms`
+    )
+  );
+  if (seeded === 0) {
+    status.append(
+      document.createTextNode(' · '),
+      el('span', 'this contract set ships no mock data, so collections start empty', 'note')
+    );
+  }
 
   // Sections the contract set cannot support say so rather than 404ing.
   for (const [id, available, what] of [
@@ -246,18 +289,27 @@ $('run-probes').onclick = async () => {
   ].filter(Boolean);
 
   const body = $('probes').querySelector('tbody');
-  body.innerHTML = '';
+  body.replaceChildren();
+
   for (const [method, path, what] of probes) {
     const { status, body: payload } = await call(path, { method });
     const expected404 = path.includes('not-a-route');
     const ok = expected404 ? status === 404 : status < 400;
     const summary = Array.isArray(payload?.items)
       ? `${payload.items.length} item(s) of ${payload.total ?? '?'}`
-      : (payload?.status ?? payload?.code ?? typeof payload);
+      : String(payload?.status ?? payload?.code ?? typeof payload);
 
-    body.insertAdjacentHTML('beforeend',
-      `<tr><td class="status ${ok ? 'pass' : 'fail'}">${status}</td>` +
-      `<td><code>${method} ${path}</code></td><td>${what}</td><td>${summary}</td></tr>`);
+    const request = el('td');
+    request.append(el('code', `${method} ${path}`));
+
+    const row = el('tr');
+    row.append(
+      el('td', String(status), `status ${ok ? 'pass' : 'fail'}`),
+      request,
+      el('td', what),
+      el('td', summary)
+    );
+    body.append(row);
   }
   $('probe-note').textContent = 'every one of these went through mock.fetch — no network involved';
 };
@@ -303,7 +355,14 @@ $('stub-clear').onclick = async () => {
 $('event-publish').onclick = async () => show('event-out', await call(offered.events, {
   method: 'POST',
   headers: { 'content-type': 'application/json' },
-  body: JSON.stringify({ type: $('event-type').value, source: 'this-page', data: { note: 'injected from the browser' } }),
+  // A CloudEvents 1.0 envelope: the mock checks `specversion` and `type`
+  // before publishing, and a subscriber reads the same envelope back.
+  body: JSON.stringify({
+    specversion: '1.0',
+    type: $('event-type').value,
+    source: 'this-page',
+    data: { note: 'injected from the browser' },
+  }),
 }));
 $('event-list').onclick = async () => show('event-out', await call(offered.events ?? '/health'));
 
@@ -314,6 +373,10 @@ $('upload').onclick = async () => {
 
   const form = new FormData();
   form.append('file', file);
+  // Both required by the upload handler, which classifies a document before
+  // storing its description.
+  form.append('documentTypeId', 'proof-of-income');
+  form.append('title', file.name);
   show('upload-out', await call(offered.upload, { method: 'POST', body: form }));
 };
 
@@ -328,7 +391,10 @@ $('reset').onclick = async () => show('admin-out', {
 });
 
 boot().catch((error) => {
-  $('boot').innerHTML = `<span class="fail">failed to start</span> — ${error.message}`;
+  $('boot').replaceChildren(
+    el('span', 'failed to start', 'fail'),
+    document.createTextNode(` — ${error.message}`)
+  );
   console.error(error);
 });
 </script>

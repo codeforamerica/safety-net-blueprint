@@ -1,0 +1,164 @@
+# Platform API — the cross-cutting surface every domain shares.
+#
+# Here to exercise the parts of the mock server that are selected by
+# operationId rather than by path: `publishEvent` and `streamEvents` are
+# replaced at boot with the event bus and an SSE stream, and `listEvents`
+# reads the log those write to. Without this spec the sample contract set
+# could not demonstrate event injection at all.
+openapi: 3.1.0
+info:
+  title: Platform API
+  version: 1.0.0
+  description: Events and other cross-domain platform concerns.
+  x-domain: platform
+servers:
+  - url: http://localhost:1080/platform
+    description: Local development server
+tags:
+  - name: Events
+    description: The domain event log.
+paths:
+  /events:
+    get:
+      operationId: listEvents
+      tags: [Events]
+      summary: List events
+      description: Every event published so far, newest first.
+      parameters:
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SortParam'
+      responses:
+        '200':
+          description: A page of events.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventList'
+    post:
+      operationId: publishEvent
+      tags: [Events]
+      summary: Publish an event
+      description: >
+        Put an event on the bus. The mock server replaces this operation with
+        one that also notifies subscribers, which is how a test drives a state
+        machine without performing the action that would have emitted it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventWritable'
+      responses:
+        '201':
+          description: The event as published.
+          headers:
+            Location:
+              description: URL of the newly published event.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+  /events/stream:
+    get:
+      operationId: streamEvents
+      tags: [Events]
+      summary: Subscribe to events
+      description: >
+        A Server-Sent Events stream. The mock server replaces this operation
+        with one that holds the response open and writes each event as it is
+        published.
+      responses:
+        '200':
+          description: An event stream.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+  /events/{eventId}:
+    parameters:
+      - name: eventId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getEvent
+      tags: [Events]
+      summary: Get one event
+      responses:
+        '200':
+          description: The event.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+components:
+  schemas:
+    EventWritable:
+      type: object
+      description: >
+        A CloudEvents 1.0 envelope. The spec is followed rather than
+        paraphrased because the mock server validates `specversion` and `type`
+        before publishing, and a subscriber reads the same envelope off the
+        SSE stream.
+      required: [specversion, type, source]
+      properties:
+        specversion:
+          type: string
+          const: '1.0'
+          description: CloudEvents version. Always `1.0`.
+        type:
+          type: string
+          description: Event type, e.g. `intake.application.submitted`.
+        source:
+          type: string
+          description: What published it.
+        subject:
+          type: string
+          description: The resource it concerns.
+        datacontenttype:
+          type: string
+          description: Media type of `data`.
+        data:
+          type: object
+          description: The event payload.
+          additionalProperties: true
+    Event:
+      allOf:
+        - $ref: '#/components/schemas/EventWritable'
+        - type: object
+          required: [id, time]
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            time:
+              type: string
+              format: date-time
+              readOnly: true
+              description: When it was published.
+    EventList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasNext:
+          type: boolean

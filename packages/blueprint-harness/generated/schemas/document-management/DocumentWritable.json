@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "required": [
+    "title"
+  ],
+  "properties": {
+    "documentTypeId": {
+      "type": "string",
+      "description": "What kind of document this is."
+    },
+    "title": {
+      "type": "string",
+      "description": "A human-readable name for the document."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/DocumentWritable"
+}

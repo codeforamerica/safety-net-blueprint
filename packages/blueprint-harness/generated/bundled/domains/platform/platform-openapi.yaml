@@ -1,0 +1,576 @@
+openapi: 3.1.0
+info:
+  title: Platform API
+  version: 1.0.0
+  description: Events and other cross-domain platform concerns.
+  x-domain: platform
+servers:
+  - url: http://localhost:1080/platform
+    description: Local development server
+tags:
+  - name: Events
+    description: The domain event log.
+paths:
+  /events:
+    get:
+      operationId: listEvents
+      tags:
+        - Events
+      summary: List events
+      description: Every event published so far, newest first.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Search query using field:value syntax. Multiple conditions separated by
+            spaces are ANDed together.
+
+            **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+            Most HTTP clients handle this automatically. Examples in this documentation
+            show human-readable syntax for clarity.
+
+            ## Syntax
+
+            | Pattern | Description | Example |
+            |---------|-------------|---------|
+            | `term` | Full-text exact match | `john` |
+            | `*term*` | Full-text contains | `*john*` |
+            | `term*` | Full-text starts with | `john*` |
+            | `*term` | Full-text ends with | `*smith` |
+            | `field:value` | Exact match on field | `status:approved` |
+            | `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+            | `field:value*` | Starts with | `name:john*` |
+            | `field:*value` | Ends with | `email:*@example.com` |
+            | `field:"value"` | Quoted value (for spaces) | `name:"john doe"` |
+            | `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
+            | `field:>value` | Greater than | `income:>1000` |
+            | `field:>=value` | Greater than or equal | `income:>=1000` |
+            | `field:<value` | Less than | `income:<5000` |
+            | `field:<=value` | Less than or equal | `income:<=5000` |
+            | `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
+            | `-field:value` | Exclude / negate | `-status:denied` |
+            | `field:*` | Field exists (not null) | `email:*` |
+            | `-field:*` | Field does not exist | `-deletedAt:*` |
+
+            ## Examples
+
+            - `john` — exact match for "john" in searchable fields
+            - `*john*` — contains "john" in searchable fields
+            - `name:*smith*` — name contains "smith" (case-insensitive)
+            - `email:*@example.com` — email ends with "@example.com"
+            - `status:approved` — exact match on status field
+            - `status:approved,pending` — status is "approved" OR "pending"
+            - `income:>=1000` — income greater than or equal to 1000
+            - `created:>2024-01-01` — created after January 1, 2024
+            - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+            - `-status:denied` — exclude records with status "denied"
+            - `-deletedAt:*` — only records where deletedAt does not exist
+            - `applicant.state:CA` — nested field filter
+
+            ## URL Encoding Reference
+
+            When manually constructing URLs, encode these characters:
+
+            | Character | Encoded |
+            |-----------|---------|
+            | (space) | `%20` or `+` |
+            | `"` | `%22` |
+            | `:` | `%3A` |
+            | `>` | `%3E` |
+            | `<` | `%3C` |
+            | `,` | `%2C` |
+
+            **Example:**
+            ```
+            Human-readable: q=status:approved income:>=1000
+            URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000
+            ```
+          examples:
+            simpleSearch:
+              summary: Full-text exact match
+              value: john
+            containsSearch:
+              summary: Full-text contains
+              value: "*john*"
+            exactMatch:
+              summary: Filter by status
+              value: status:approved
+            containsField:
+              summary: Name contains (case-insensitive)
+              value: name:*smith*
+            startsWithField:
+              summary: Name starts with
+              value: name:john*
+            endsWithField:
+              summary: Email ends with domain
+              value: email:*@example.com
+            multipleFilters:
+              summary: Status and income filter
+              value: status:approved income:>=1000
+            dateRange:
+              summary: Created after date
+              value: created:>2024-01-01
+            multiValue:
+              summary: Multiple statuses (OR)
+              value: status:approved,pending,under_review
+            negation:
+              summary: Exclude denied
+              value: "-status:denied"
+            notExists:
+              summary: Field does not exist
+              value: "-deletedAt:*"
+            nestedField:
+              summary: Filter by nested field
+              value: applicant.state:CA
+        - name: limit
+          in: query
+          description: Maximum number of items to return (1-100).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: offset
+          in: query
+          description: Number of items to skip before collecting results.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Comma-separated list of fields to sort the response by. Prefix a field
+            with `-` for descending order. The first field is the primary sort;
+            subsequent fields are tie-breakers in declaration order.
+
+            **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+            Most HTTP clients handle this automatically. Examples below show
+            human-readable syntax for clarity.
+
+            Which fields a given list endpoint allows is declared in the operation's
+            `x-sortable.fields` extension. Sending a field name not present in that
+            list returns `400 FIELD_NOT_SORTABLE`. Sending a field name that doesn't
+            exist on the resource schema returns `400 INVALID_SORT_FIELD`. When this
+            parameter is omitted, the operation's `x-sortable.default` (if declared)
+            is applied; otherwise no client-driven sort is applied. A configured
+            tie-breaker (default `id`) is always appended for stable pagination.
+
+            See `api-patterns.yaml#sorting` for the full convention and
+            `docs/architecture/x-extensions.md` for the extension shape.
+
+            ## Syntax
+
+            | Pattern | Description | Example |
+            |---------|-------------|---------|
+            | `fieldName` | Ascending | `sort=createdAt` |
+            | `-fieldName` | Descending | `sort=-createdAt` |
+            | `field1,field2` | Multi-field | `sort=status,-priority` |
+            | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
+
+            ## Examples
+
+            - `sort=createdAt` — oldest first
+            - `sort=-createdAt` — newest first
+            - `sort=-priority,dueDate` — highest priority first, then oldest due date
+            - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+          examples:
+            ascendingByDate:
+              summary: Oldest first
+              value: createdAt
+            descendingByDate:
+              summary: Newest first
+              value: "-createdAt"
+            multiField:
+              summary: Multi-field — primary then tie-breaker
+              value: "-priority,dueDate"
+            nestedField:
+              summary: Sort by a nested field
+              value: name.lastName
+      responses:
+        "200":
+          description: A page of events.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - total
+                properties:
+                  items:
+                    type: array
+                    items:
+                      allOf:
+                        - type: object
+                          description: |
+                            A CloudEvents 1.0 envelope. The spec is followed rather than paraphrased because the mock server validates `specversion` and `type` before publishing, and a subscriber reads the same envelope off the SSE stream.
+                          required:
+                            - specversion
+                            - type
+                            - source
+                          properties:
+                            specversion:
+                              type: string
+                              const: "1.0"
+                              description: CloudEvents version. Always `1.0`.
+                            type:
+                              type: string
+                              description: Event type, e.g. `intake.application.submitted`.
+                            source:
+                              type: string
+                              description: What published it.
+                            subject:
+                              type: string
+                              description: The resource it concerns.
+                            datacontenttype:
+                              type: string
+                              description: Media type of `data`.
+                            data:
+                              type: object
+                              description: The event payload.
+                              additionalProperties: true
+                        - type: object
+                          required:
+                            - id
+                            - time
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                              readOnly: true
+                            time:
+                              type: string
+                              format: date-time
+                              readOnly: true
+                              description: When it was published.
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+                  hasNext:
+                    type: boolean
+    post:
+      operationId: publishEvent
+      tags:
+        - Events
+      summary: Publish an event
+      description: |
+        Put an event on the bus. The mock server replaces this operation with one that also notifies subscribers, which is how a test drives a state machine without performing the action that would have emitted it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: |
+                A CloudEvents 1.0 envelope. The spec is followed rather than paraphrased because the mock server validates `specversion` and `type` before publishing, and a subscriber reads the same envelope off the SSE stream.
+              required:
+                - specversion
+                - type
+                - source
+              properties:
+                specversion:
+                  type: string
+                  const: "1.0"
+                  description: CloudEvents version. Always `1.0`.
+                type:
+                  type: string
+                  description: Event type, e.g. `intake.application.submitted`.
+                source:
+                  type: string
+                  description: What published it.
+                subject:
+                  type: string
+                  description: The resource it concerns.
+                datacontenttype:
+                  type: string
+                  description: Media type of `data`.
+                data:
+                  type: object
+                  description: The event payload.
+                  additionalProperties: true
+      responses:
+        "201":
+          description: The event as published.
+          headers:
+            Location:
+              description: URL of the newly published event.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    description: |
+                      A CloudEvents 1.0 envelope. The spec is followed rather than paraphrased because the mock server validates `specversion` and `type` before publishing, and a subscriber reads the same envelope off the SSE stream.
+                    required:
+                      - specversion
+                      - type
+                      - source
+                    properties:
+                      specversion:
+                        type: string
+                        const: "1.0"
+                        description: CloudEvents version. Always `1.0`.
+                      type:
+                        type: string
+                        description: Event type, e.g. `intake.application.submitted`.
+                      source:
+                        type: string
+                        description: What published it.
+                      subject:
+                        type: string
+                        description: The resource it concerns.
+                      datacontenttype:
+                        type: string
+                        description: Media type of `data`.
+                      data:
+                        type: object
+                        description: The event payload.
+                        additionalProperties: true
+                  - type: object
+                    required:
+                      - id
+                      - time
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                      time:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                        description: When it was published.
+  /events/stream:
+    get:
+      operationId: streamEvents
+      tags:
+        - Events
+      summary: Subscribe to events
+      description: |
+        A Server-Sent Events stream. The mock server replaces this operation with one that holds the response open and writes each event as it is published.
+      responses:
+        "200":
+          description: An event stream.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+  /events/{eventId}:
+    parameters:
+      - name: eventId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getEvent
+      tags:
+        - Events
+      summary: Get one event
+      responses:
+        "200":
+          description: The event.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    description: |
+                      A CloudEvents 1.0 envelope. The spec is followed rather than paraphrased because the mock server validates `specversion` and `type` before publishing, and a subscriber reads the same envelope off the SSE stream.
+                    required:
+                      - specversion
+                      - type
+                      - source
+                    properties:
+                      specversion:
+                        type: string
+                        const: "1.0"
+                        description: CloudEvents version. Always `1.0`.
+                      type:
+                        type: string
+                        description: Event type, e.g. `intake.application.submitted`.
+                      source:
+                        type: string
+                        description: What published it.
+                      subject:
+                        type: string
+                        description: The resource it concerns.
+                      datacontenttype:
+                        type: string
+                        description: Media type of `data`.
+                      data:
+                        type: object
+                        description: The event payload.
+                        additionalProperties: true
+                  - type: object
+                    required:
+                      - id
+                      - time
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        readOnly: true
+                      time:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                        description: When it was published.
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+components:
+  schemas:
+    EventWritable:
+      type: object
+      description: |
+        A CloudEvents 1.0 envelope. The spec is followed rather than paraphrased because the mock server validates `specversion` and `type` before publishing, and a subscriber reads the same envelope off the SSE stream.
+      required:
+        - specversion
+        - type
+        - source
+      properties:
+        specversion:
+          type: string
+          const: "1.0"
+          description: CloudEvents version. Always `1.0`.
+        type:
+          type: string
+          description: Event type, e.g. `intake.application.submitted`.
+        source:
+          type: string
+          description: What published it.
+        subject:
+          type: string
+          description: The resource it concerns.
+        datacontenttype:
+          type: string
+          description: Media type of `data`.
+        data:
+          type: object
+          description: The event payload.
+          additionalProperties: true
+    Event:
+      allOf:
+        - type: object
+          description: |
+            A CloudEvents 1.0 envelope. The spec is followed rather than paraphrased because the mock server validates `specversion` and `type` before publishing, and a subscriber reads the same envelope off the SSE stream.
+          required:
+            - specversion
+            - type
+            - source
+          properties:
+            specversion:
+              type: string
+              const: "1.0"
+              description: CloudEvents version. Always `1.0`.
+            type:
+              type: string
+              description: Event type, e.g. `intake.application.submitted`.
+            source:
+              type: string
+              description: What published it.
+            subject:
+              type: string
+              description: The resource it concerns.
+            datacontenttype:
+              type: string
+              description: Media type of `data`.
+            data:
+              type: object
+              description: The event payload.
+              additionalProperties: true
+        - type: object
+          required:
+            - id
+            - time
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            time:
+              type: string
+              format: date-time
+              readOnly: true
+              description: When it was published.
+    EventList:
+      type: object
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            allOf:
+              - type: object
+                description: |
+                  A CloudEvents 1.0 envelope. The spec is followed rather than paraphrased because the mock server validates `specversion` and `type` before publishing, and a subscriber reads the same envelope off the SSE stream.
+                required:
+                  - specversion
+                  - type
+                  - source
+                properties:
+                  specversion:
+                    type: string
+                    const: "1.0"
+                    description: CloudEvents version. Always `1.0`.
+                  type:
+                    type: string
+                    description: Event type, e.g. `intake.application.submitted`.
+                  source:
+                    type: string
+                    description: What published it.
+                  subject:
+                    type: string
+                    description: The resource it concerns.
+                  datacontenttype:
+                    type: string
+                    description: Media type of `data`.
+                  data:
+                    type: object
+                    description: The event payload.
+                    additionalProperties: true
+              - type: object
+                required:
+                  - id
+                  - time
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    readOnly: true
+                  time:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                    description: When it was published.
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasNext:
+          type: boolean

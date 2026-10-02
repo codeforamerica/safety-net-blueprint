@@ -9,7 +9,6 @@
 import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
-import { mkdirSync, copyFileSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -72,41 +71,11 @@ run(join(CLI, 'export-schemas.js'), [
 ]);
 
 console.log('  [8/8] Building the browser mock page...');
-buildMockPage();
+run(join(CLI, 'build-mock-page.js'), [
+  `--spec=${join(HARNESS, 'generated/resolved')}`,
+  `--out=${join(HARNESS, 'generated/mock')}`,
+]);
 
 console.log('Done.');
 
-/**
- * The demo page: three static files that run the mock server with no server.
- *
- * `generated/mock/` is what a CDN would serve — GitHub Pages, or anything else
- * that hands over files unchanged (#448):
- *
- *   index.html       authored, copied from mock/
- *   mock.js          the mock server, bundled for the browser
- *   contracts.json   the contract set as data
- *
- * Built from `generated/resolved`, which keeps its `$ref`s. The mock resolves
- * them against the set, so nothing here is dereferenced.
- */
-function buildMockPage() {
-  const outDir = join(HARNESS, 'generated/mock');
-  mkdirSync(outDir, { recursive: true });
 
-  run(join(CLI, 'bundle-contracts.js'), [
-    `--spec=${join(HARNESS, 'generated/resolved')}`,
-    `--out=${join(outDir, 'contracts.json')}`,
-  ]);
-
-  // esbuild rather than a script, because the mock server's browser entry is
-  // the thing being bundled and it belongs to another package.
-  const entry = resolve(__dirname, '../../blueprint-mock-server/src/browser.js');
-  const esbuild = spawnSync('npx', [
-    'esbuild', entry,
-    '--bundle', '--platform=browser', '--format=esm', '--minify',
-    '--log-level=error', `--outfile=${join(outDir, 'mock.js')}`,
-  ], { stdio: 'inherit' });
-  if (esbuild.status !== 0) process.exit(esbuild.status ?? 1);
-
-  copyFileSync(join(HARNESS, 'mock/index.html'), join(outDir, 'index.html'));
-}

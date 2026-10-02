@@ -1,0 +1,162 @@
+openapi: 3.1.0
+info:
+  title: Document Management API
+  version: 1.0.0
+  description: Uploading documents and reading back what was stored about them.
+  x-domain: document-management
+servers:
+  - url: http://localhost:1080/document-management
+    description: Local development server
+tags:
+  - name: Documents
+    description: Uploaded documents.
+paths:
+  /documents:
+    get:
+      operationId: listDocuments
+      tags:
+        - Documents
+      summary: List documents
+      parameters:
+        - $ref: ../../base/components/parameters.yaml#/SearchQueryParam
+        - $ref: ../../base/components/parameters.yaml#/LimitParam
+        - $ref: ../../base/components/parameters.yaml#/OffsetParam
+        - $ref: ../../base/components/parameters.yaml#/SortParam
+      responses:
+        "200":
+          description: A page of documents.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentList"
+    post:
+      operationId: uploadDocument
+      tags:
+        - Documents
+      summary: Upload a document
+      description: |
+        A `multipart/form-data` request carrying the file itself. The response describes what was stored — name, type, size and a content hash — and not the contents, which are never written anywhere.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - documentTypeId
+                - title
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The file to upload.
+                documentTypeId:
+                  type: string
+                  description: |
+                    What kind of document this is. Required by the upload handler, which classifies before it stores.
+                title:
+                  type: string
+                  description: A human-readable name for the document.
+      responses:
+        "201":
+          description: The stored description of the upload.
+          headers:
+            Location:
+              description: URL of the newly created document.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "422":
+          $ref: ../../common/components/responses.yaml#/UnprocessableEntity
+  /documents/{documentId}:
+    parameters:
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getDocument
+      tags:
+        - Documents
+      summary: Get one document
+      responses:
+        "200":
+          description: The document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          $ref: ../../common/components/responses.yaml#/NotFound
+components:
+  schemas:
+    DocumentWritable:
+      type: object
+      required:
+        - title
+      properties:
+        documentTypeId:
+          type: string
+          description: What kind of document this is.
+        title:
+          type: string
+          description: A human-readable name for the document.
+    Document:
+      allOf:
+        - $ref: "#/components/schemas/DocumentWritable"
+        - type: object
+          required:
+            - id
+            - fileName
+            - mimeType
+            - sizeBytes
+            - contentHash
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            fileName:
+              type: string
+              readOnly: true
+              description: The name the file was uploaded under.
+            mimeType:
+              type: string
+              readOnly: true
+            sizeBytes:
+              type: integer
+              readOnly: true
+              description: How many bytes were received, before they were discarded.
+            contentHash:
+              type: string
+              readOnly: true
+              description: SHA-256 of the bytes, computed while reading them.
+            uploadedAt:
+              type: string
+              format: date-time
+              readOnly: true
+    DocumentList:
+      type: object
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        hasNext:
+          type: boolean

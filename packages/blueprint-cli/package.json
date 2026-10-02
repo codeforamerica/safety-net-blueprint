@@ -1,7 +1,7 @@
 {
   "name": "@codeforamerica/blueprint-cli",
   "version": "0.3.0",
-  "description": "CLI tooling for the Blueprint framework \u2014 validate, resolve, scaffold, and generate artifacts across all contract types",
+  "description": "CLI tooling for the Blueprint framework — validate, resolve, scaffold, and generate artifacts across all contract types",
   "type": "module",
   "files": [
     "scripts/"
@@ -16,7 +16,8 @@
     "blueprint-generate-ts-clients": "./scripts/generate-ts-clients.js",
     "blueprint-resolve": "./scripts/resolve.js",
     "blueprint-scaffold-api": "./scripts/scaffold-api.js",
-    "blueprint-bundle-contracts": "./scripts/bundle-contracts.js"
+    "blueprint-bundle-contracts": "./scripts/bundle-contracts.js",
+    "blueprint-build-mock-page": "./scripts/build-mock-page.js"
   },
   "scripts": {
     "test": "node --test",
