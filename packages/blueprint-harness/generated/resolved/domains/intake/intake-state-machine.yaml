@@ -39,6 +39,10 @@ machines:
               description: Record the submission timestamp (regulatory clock start).
           - emit:
               type: ca.intake.application.submitted
+              subject: $object.id
+              data:
+                id: $object.id
+                programsAppliedFor: $object.programsAppliedFor
               description: Triggers eligibility screening, caseworker task creation, and confirmation notice.
       - id: open
         description: Moves a submitted application into active caseworker review.

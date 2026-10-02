@@ -56,7 +56,9 @@
   .step.failed { border-left: 3px solid var(--bad); }
   .step h2 { font-size: 1.02rem; margin: 0 0 .1rem; display: flex; gap: .55rem; align-items: baseline; }
   .step h2 .n { color: var(--faint); font-family: var(--mono); font-size: .85rem; }
-  .step .what { color: var(--muted); font-size: .92rem; margin: .4rem 0 .8rem; }
+  .step .what { color: var(--muted); font-size: .92rem; margin: .4rem 0 .5rem; }
+  .step .source { font-family: var(--mono); font-size: .74rem; color: var(--faint); margin: 0; }
+  .step .source span { color: var(--accent); }
   .step .why { font-size: .88rem; margin: .8rem 0 0; padding-left: .8rem; border-left: 2px solid var(--line); color: var(--muted); }
   .step .why b { color: var(--ink); font-weight: 600; }
   .cannot { background: #fdfbf5; border-left: 3px solid var(--warm); }
@@ -150,11 +152,32 @@ let contracts;
 const CALLER = 'the-guided-tour';
 
 /**
- * One request through the mock, recorded so a step can show what it sent.
+ * A request body as it would read in a transcript.
  *
- * Returns the parsed body alongside the status and a one-line description of
- * the request, which is what the step displays — the point being that these
- * are ordinary `fetch` calls and nothing is special about them.
+ * `FormData` has no serialisation — and a document upload is one of the steps —
+ * so its parts are described instead, which is also the honest thing to show:
+ * the file's bytes are what the mock measures and never stores.
+ */
+const printableBody = (body) => {
+  if (body === undefined) return null;
+  if (body instanceof FormData) {
+    return [...body.entries()]
+      .map(([name, value]) => (value instanceof File
+        ? `${name}: ${value.name} (${value.type || 'application/octet-stream'}, ${value.size} bytes)`
+        : `${name}: ${value}`))
+      .join('\n');
+  }
+  return JSON.stringify(body, null, 2);
+};
+
+/**
+ * One request through the mock, recorded so a step can show the exchange.
+ *
+ * Both halves are kept — the request line, its headers and its body, then the
+ * status, the response headers and the response body — because the request is
+ * half the evidence: the caller header is why a transition is allowed, and the
+ * content type is why a body is validated. The point being that these are
+ * ordinary `fetch` calls and nothing is special about them.
  */
 const calls = [];
 const call = async (method, path, body) => {
@@ -166,18 +189,60 @@ const call = async (method, path, body) => {
     init.body = body;
   }
 
-  const response = await mock.fetch(new Request(new URL(basePath + path, location.origin), init));
+  // Built before it is sent so the transcript can read the headers the Request
+  // itself added — a multipart boundary is not in `init`.
+  const request = new Request(new URL(basePath + path, location.origin), init);
+  const response = await mock.fetch(request);
   const text = await response.text();
   let parsed;
   try { parsed = JSON.parse(text); } catch { parsed = text; }
 
-  const record = { line: `${method} ${path}`, status: response.status, body: parsed };
+  const record = {
+    line: `${method} ${path}`,
+    status: response.status,
+    body: parsed,
+    request: {
+      line: `${method} ${basePath}${path}`,
+      headers: [...request.headers],
+      body: printableBody(body),
+    },
+    response: {
+      statusText: response.statusText,
+      headers: [...response.headers],
+    },
+  };
   calls.push(record);
   return record;
 };
 
 /** Shared state between steps: a record created in one is transitioned in the next. */
 const tour = {};
+
+/**
+ * A declared event that nothing in the contract set subscribes to.
+ *
+ * Preferring one the story will actually emit, so the stub registered for it
+ * fires later in the tour rather than needing a second record pushed through
+ * to trigger it. Suffix matching because a deployment prefixes event types
+ * with its jurisdiction and a subscription is declared without the prefix.
+ */
+const unsubscribed = () => offered.eventTypes
+  .filter((type) => !offered.subscriptions.some((sub) => type.endsWith(sub.type)));
+
+const unsubscribedCount = () => unsubscribed().length;
+
+const unsubscribedEvent = () => {
+  const open = unsubscribed();
+  if (open.length === 0) return null;
+
+  // What the story's last action emits, if that is one of them.
+  for (const action of offered.story?.actions ?? []) {
+    const emits = (action.steps ?? []).map((step) => step.emit?.type).filter(Boolean);
+    const match = open.find((type) => emits.some((emitted) => type.endsWith(emitted)));
+    if (match) return { type: match, action: action.id };
+  }
+  return { type: open[0], action: null };
+};
 
 /**
  * What this contract set offers.
@@ -215,6 +280,9 @@ const survey = () => {
     .filter((doc) => doc.type === 'state-machine')
     .flatMap((doc) => (doc.content?.machines ?? []).map((machine) => ({
       domain: doc.domain,
+      // Which document declared it, so a step can cite the contract driving
+      // it rather than asserting that one exists.
+      source: doc.relativePath,
       object: machine.object,
       initialState: machine.initialState,
       actions: (machine.actions ?? [])
@@ -259,9 +327,90 @@ const survey = () => {
     story.action = (id) => story.actions.find((a) => a.id === id) ?? null;
   }
 
+  // ── Which document declares what ──
+  //
+  // Every step cites its contract, and cites it by looking: a step that said
+  // "the contract declares this" without naming the file is asking to be
+  // taken at its word, which is the opposite of the point.
+
+  /** Every document of a type, by its place in the set. */
+  const sourcesOfType = (type) => contracts.docs
+    .filter((doc) => doc.type === type)
+    .map((doc) => doc.relativePath)
+    .filter(Boolean);
+
+  /**
+   * The OpenAPI document that declares a route.
+   *
+   * A `servers` URL is absolute, so the prefix a route picks up is that URL's
+   * pathname — `http://localhost:1080/intake` is why `/applications` is served
+   * at `/intake/applications`.
+   */
+  const specFor = (routePath) => {
+    for (const doc of contracts.docs.filter((d) => d.type === 'openapi')) {
+      const prefixes = (doc.content?.servers ?? [{ url: '' }]).map((server) => {
+        try { return new URL(server.url).pathname.replace(/\/$/, ''); } catch { return server.url ?? ''; }
+      });
+      for (const declared of Object.keys(doc.content?.paths ?? {})) {
+        if (prefixes.some((prefix) => prefix + declared === routePath)) return doc.relativePath;
+      }
+    }
+    return null;
+  };
+
+  /** The AsyncAPI document that declares an event type as a channel. */
+  const asyncapiFor = (type) => {
+    if (!type) return null;
+    const doc = contracts.docs.find((d) => d.type === 'asyncapi'
+      && Object.keys(d.content?.channels ?? {}).includes(type));
+    return doc?.relativePath ?? null;
+  };
+
+  /**
+   * The ruleset document a compiled graph was compiled from: its sibling in
+   * the same domain. Citing every `rules` document in the set named one from
+   * a domain with nothing to do with this route.
+   */
+  const rulesFor = (routePath) => {
+    const graph = graphFor(routePath);
+    if (!graph) return null;
+    const domain = graph.slice(0, graph.lastIndexOf('/'));
+    const doc = contracts.docs.find((d) => d.type === 'rules' && d.relativePath?.startsWith(domain + '/'));
+    return doc?.relativePath ?? null;
+  };
+
+  /**
+   * The compiled graph behind an evaluate route.
+   *
+   * The route names the ruleset in kebab-case and the document carries it in
+   * camelCase, so both are flattened before comparing.
+   */
+  const graphFor = (routePath) => {
+    const flat = (value) => String(value).toLowerCase().replace(/-/g, '');
+    const wanted = flat((routePath ?? '').split('/').pop()?.replace(/^evaluate-/, '') ?? '');
+    if (!wanted) return null;
+    const doc = contracts.docs.find((d) => d.type === 'graph' && flat(d.relativePath).includes(wanted));
+    return doc?.relativePath ?? null;
+  };
+
+  // Who reacts to what, declared. A machine's `events:` entries are
+  // subscriptions, so the contract set says which domain answers which event
+  // — the tour names the subscriber instead of asking the reader to imagine
+  // one.
+  const subscriptions = contracts.docs
+    .filter((doc) => doc.type === 'state-machine')
+    .flatMap((doc) => (doc.content?.machines ?? []).flatMap((machine) =>
+      (machine.events ?? []).map((entry) => ({
+        domain: doc.domain,
+        object: machine.object,
+        type: entry.type,
+        source: doc.relativePath,
+      }))));
+
   return {
     keys,
     eventTypes,
+    subscriptions,
     collection: story?.collection ?? collection,
     story,
     machines: usable,
@@ -269,6 +418,12 @@ const survey = () => {
     evaluate: path('POST', (p) => p.includes('/evaluate')),
     upload: path('POST', (p) => p.includes('document') && !p.includes('{')),
     adapter: path('POST', (p) => p.includes('adapter')),
+    specFor,
+    graphFor,
+    rulesFor,
+    asyncapiFor,
+    asyncapi: sourcesOfType('asyncapi'),
+    rules: sourcesOfType('rules'),
   };
 };
 
@@ -285,7 +440,8 @@ const STEPS = [
   {
     title: 'Start an application',
     what: 'One POST. Nothing existed before this.',
-    why: 'Two fields in the response were not sent. <b>referenceId</b> is derived by the contract — <code>x-derived</code> on the schema — and <b>countyCode</b> exists at all only because a state overlay added it to this deployment. Neither is mock code.',
+    source: () => [offered.specFor(offered.collection)],
+    why: 'Two fields in the response were not sent. <b>programCount</b> is computed from <code>programsAppliedFor</code> by an <code>x-derived</code> expression on the schema — a field of the response that is a function of the request. And <b>countyCode</b> exists at all only because a state overlay added it to this deployment. Neither is mock code.',
     run: async () => {
       // The create body comes from the contract's required fields, so this
       // works for a collection with different requirements.
@@ -297,15 +453,15 @@ const STEPS = [
       if (created.status >= 400) return { facts: [['refused', JSON.stringify(created.body)]] };
 
       tour.id = created.body.id;
-      tour.ref = created.body.referenceId;
       // The states this record actually passes through, appended as it moves.
       tour.path = [created.body.status];
 
       return {
         facts: [
-          ['created', `${created.status} — ${tour.ref}`],
+          ['created', `${created.status} — ${String(created.body.id).slice(0, 8)}…`],
           ['status the machine starts in', String(created.body.status)],
-          ['referenceId, derived by the contract', String(created.body.referenceId)],
+          ['programsAppliedFor, as sent', JSON.stringify(created.body.programsAppliedFor)],
+          ['programCount, derived from it by the contract', String(created.body.programCount)],
           ['countyCode, added by a state overlay', String(created.body.countyCode)],
         ],
       };
@@ -313,37 +469,86 @@ const STEPS = [
   },
 
   {
+    title: 'An event came out of it',
+    what: 'Read the event log. Nothing posted to it, and no broker is running.',
+    source: () => [offered.specFor(offered.collection)],
+    why: 'That write already emitted, and the event carries the record. The bus runs in this page, so the <b>asynchronous half of the system is observable before anything is deployed</b> — and a subscriber reads the same CloudEvents envelope it would read from a real broker. The types a domain may publish are a declared set: an AsyncAPI channel address <i>is</i> an event type, which is why the stub step further down offers a list rather than a text box.',
+    needs: () => offered.events && tour.id,
+    run: async () => {
+      const log = await call('GET', offered.events);
+      const items = log.body.items ?? [];
+      const mine = items.filter((event) => JSON.stringify(event.data ?? {}).includes(tour.id));
+      const [first] = mine;
+
+      // The log is the record of what happened, so the step reports what is
+      // in it rather than what it expected to find there.
+      const facts = [
+        ['events in the log', String(log.body.total ?? items.length)],
+        ['about the application just created', String(mine.length || '—')],
+      ];
+      if (first) {
+        facts.push(
+          ['type', String(first.type)],
+          ['envelope', `CloudEvents ${first.specversion ?? '?'}`],
+          ['it carries the record', first.data?.id === tour.id ? 'yes' : 'no'],
+          ['event types the contract declares', String(offered.eventTypes.length)],
+        );
+      }
+      return { facts };
+    },
+  },
+
+  {
     title: 'Try to close it',
-    what: 'Skip ahead and close the application that was just opened.',
+    what: 'Skip to the end and close the application that was just created.',
+    source: () => [offered.story?.source],
     why: 'This is the part a REST mock cannot do. A mock returns the response you configured; it has no idea what state the record is in. <b>This one refuses</b>, because the contract says <code>close</code> runs from <code>under_review</code> and the record is in <code>draft</code>. So the mock is a conformance check on your client, not a stand-in for a server.',
     needs: () => tour.id && offered.story,
     run: async () => {
-      const facts = [];
-      // Every action whose `from` does not include the record's current state.
       const record = await call('GET', `${offered.collection}/${tour.id}`);
-      const blocked = offered.story.actions.filter((a) => !a.from.includes(record.body.status));
+      const status = record.body.status;
 
-      for (const action of blocked.slice(0, 2)) {
-        const attempt = await call('POST', action.path.replace(/\{[^}]+\}/, tour.id), {});
-        facts.push([
-          `POST …/${action.id} (declared ${action.from.join('|')} → ${action.transition.to})`,
-          `${attempt.status} — ${attempt.body?.message ?? ''}`,
-        ]);
-      }
-      facts.push(['the record is untouched', String((await call(`GET`, `${offered.collection}/${tour.id}`)).body.status)]);
-      return { facts };
+      // One attempt, and the action that ends the story rather than whichever
+      // happened to be declared first. A target state with no action leading
+      // out of it is where the lifecycle stops, so attempting it is literally
+      // skipping to the end — which is what the step claims to do.
+      const blocked = offered.story.actions.filter((a) => !a.from.includes(status));
+      const endsTheStory = (action) =>
+        !offered.story.actions.some((a) => a.from.includes(action.transition.to));
+      const action = blocked.find(endsTheStory) ?? blocked[0];
+      if (!action) return { facts: [['every action is allowed from', String(status)]] };
+
+      const attempt = await call('POST', action.path.replace(/\{[^}]+\}/, tour.id), {});
+      const after = await call('GET', `${offered.collection}/${tour.id}`);
+
+      return {
+        facts: [
+          [
+            `POST …/${action.id} (declared ${action.from.join('|')} → ${action.transition.to})`,
+            `${attempt.status} — ${attempt.body?.message ?? ''}`,
+          ],
+          ['the record is untouched', String(after.body.status)],
+        ],
+      };
     },
   },
 
   {
     title: 'Submit it',
     what: 'The one transition the contract allows from here.',
+    source: () => [offered.story?.source],
     why: 'The action declares <code>draft → submitted</code>, and the steps inside it write <b>submittedAt</b>. The timestamp is the evidence that an action ran rather than a field being set — it came from a step in the state machine, not from the request.',
     needs: () => tour.id && offered.story,
     run: async () => {
       const before = await call('GET', `${offered.collection}/${tour.id}`);
       const action = offered.story.actions.find((a) => a.from.includes(before.body.status));
       if (!action) return { facts: [['no action allowed from', String(before.body.status)]] };
+
+      // The log before and after, so the event this transition emitted can be
+      // named rather than inferred from the end of the list.
+      const typesBefore = offered.events
+        ? ((await call('GET', offered.events)).body.items ?? []).map((event) => event.type)
+        : [];
 
       const acted = await call('POST', action.path.replace(/\{[^}]+\}/, tour.id), {});
       const after = await call('GET', `${offered.collection}/${tour.id}`);
@@ -361,70 +566,114 @@ const STEPS = [
           facts.push([`${field}, written by a step in the action`, String(value)]);
         }
       }
+
+      if (offered.events) {
+        const typesAfter = ((await call('GET', offered.events)).body.items ?? []).map((event) => event.type);
+        const emitted = typesAfter.filter((type) => {
+          const index = typesBefore.indexOf(type);
+          if (index === -1) return true;
+          typesBefore.splice(index, 1);
+          return false;
+        });
+        for (const type of emitted) {
+          const declared = offered.eventTypes.includes(type);
+          facts.push([
+            'emitted by a step in the action',
+            declared ? `${type} (a channel the contract declares)` : type,
+          ]);
+        }
+        // What the transition emitted, so later steps can act on that exact
+        // event rather than offering a choice the story has already made.
+        tour.emitted = emitted.find((type) => offered.eventTypes.includes(type)) ?? emitted[0] ?? null;
+      }
       return { facts };
     },
   },
 
   {
-    title: 'An event came out of it',
-    what: 'Read the event log. Nothing posted to it.',
-    why: 'The state machine declares that submitting emits this event, so it did. The bus runs in this page, which means the <b>asynchronous half of the system is observable with no broker</b> — and what a subscriber reads is the same CloudEvents envelope a real one would.',
-    needs: () => offered.events,
+    title: 'Eligibility reacted, in its own domain',
+    what: 'Nothing was called. Read the other domain\'s collection and see what appeared there.',
+    // Both halves of the wiring: the machine that emits and the machine that
+    // subscribes, which are different documents in different domains.
+    source: () => [offered.story?.source, ...new Set(offered.subscriptions.map((s) => s.source))],
+    why: 'This is the part that is hard to fake. The eligibility machine declares a subscription to <code>intake.application.submitted</code> and a step that creates a determination, so submitting an application <b>produced a record in a different domain</b> — and that create emitted its own event in turn. Two domains, one chain, and the only thing connecting them is a contract: no handler here knows that eligibility exists.',
+    needs: () => tour.id && offered.subscriptions.length > 0,
     run: async () => {
-      const log = await call('GET', offered.events);
-      const types = (log.body.items ?? []).map((e) => e.type);
-      const mine = (log.body.items ?? []).filter((e) => JSON.stringify(e.data ?? {}).includes(tour.id));
+      // The subscriber the contract names for the event the transition
+      // emitted. Matched on a suffix because a deployment prefixes event
+      // types with its jurisdiction and a subscription is declared without it.
+      const subscriber = offered.subscriptions.find((s) => tour.emitted?.endsWith(s.type))
+        ?? offered.subscriptions[0];
 
-      return {
-        facts: [
-          ['events in the log', String(log.body.total ?? types.length)],
-          ...types.slice(-2).map((t) => ['emitted', t]),
-          ['about this application', String(mine.length || '—')],
-        ],
+      // Its collection, found in the route table rather than named here.
+      const collectionOf = (sub) => {
+        const plural = sub.object.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's';
+        return offered.keys
+          .filter((k) => k.startsWith('GET '))
+          .map((k) => k.slice(4))
+          .find((p) => !p.includes('{') && p.endsWith('/' + plural)) ?? null;
       };
+
+      const path = collectionOf(subscriber);
+      if (!path) return { facts: [['no collection in the route table for', subscriber.object]] };
+
+      const listed = await call('GET', path);
+      const mine = (listed.body.items ?? []).filter((item) =>
+        Object.values(item).includes(tour.id));
+
+      const facts = [
+        ['the contract declares', `${subscriber.domain}/${subscriber.object} reacts to ${subscriber.type}`],
+        ['it was triggered by', String(tour.emitted ?? '—')],
+        [`records in ${path} for this application`, String(mine.length)],
+      ];
+      for (const record of mine) {
+        facts.push([`${subscriber.object.toLowerCase()} created by the subscription`, `${record.id} — ${record.status ?? ''}`]);
+        tour.reaction = record;
+      }
+
+      if (offered.events) {
+        const log = await call('GET', offered.events);
+        const chain = (log.body.items ?? [])
+          .filter((event) => event.subject === tour.id || event.subject === tour.reaction?.id)
+          // By `time`, not by log order: a subscription's event is written
+          // while the transition that triggered it is still running, so the
+          // list comes back with the effect ahead of its cause.
+          .sort((a, b) => String(a.time).localeCompare(String(b.time)))
+          .map((event) => event.type);
+        facts.push(['the chain, across both domains', [...new Set(chain)].join(' → ') || '—']);
+      }
+      return { facts };
     },
   },
 
   {
-    title: 'Something downstream should answer',
-    what: 'Register a stub for that event, then move another application through the same transition.',
-    why: 'In a deployment, eligibility would react to the submission and answer asynchronously. A stub <b>collapses that round trip</b>, so a scenario runs end to end with nothing else deployed. It is consumed on match — one registration, one occurrence — which is what makes it usable in a test.',
-    needs: () => offered.events && offered.eventTypes.length > 0,
-    control: () => {
-      const select = el('select');
-      select.setAttribute('aria-label', 'event to react to');
-      for (const type of offered.eventTypes) select.append(el('option', type));
-      const submitted = offered.eventTypes.find((t) => /submitted$/.test(t));
-      if (submitted) select.value = submitted;
-      return { node: select, value: () => select.value };
-    },
-    run: async (control) => {
-      const trigger = control?.value?.() ?? offered.eventTypes[0];
-      const reply = `${trigger.replace(/\.[^.]+$/, '')}.acknowledged`;
+    title: 'Stand in for a service nobody has built',
+    what: 'One stub, on the one event this contract set declares and nothing subscribes to.',
+    source: () => [offered.story?.source, offered.asyncapiFor(unsubscribedEvent()?.type)],
+    why: 'Eligibility answered on its own because a contract declares that it should. <b>Nothing declares a subscriber for the closing notice</b> — in a deployment that is a service someone else is still building, and a scenario that needs it cannot run. A stub takes its place, and this one is <b>registered now and fires in the last step</b>, when the application actually closes. It is consumed on match, one registration for one occurrence, so a test cannot pass twice by accident.',
+    needs: () => offered.events && !!unsubscribedEvent(),
+    run: async () => {
+      const { type: trigger, action } = unsubscribedEvent();
+      const reply = `${trigger.replace(/\.[^.]+$/, '')}.notice-sent`;
 
       const registered = await call('POST', '/mock/stubs/events', {
         on: trigger,
-        respond: { type: reply, data: { note: 'fired by a stub, not by a service' } },
+        respond: { type: reply, data: { note: 'answered by a stub, not by a service' } },
       });
+      // The last step looks for this, which is what makes the two steps one
+      // story rather than two demonstrations.
+      tour.stub = { on: trigger, reply };
 
-      // A second application, so the trigger fires again without rewinding
-      // the one this tour is following.
-      const other = await call('POST', offered.collection, { programsAppliedFor: ['snap'], channel: 'phone' });
-      const first = offered.story.actions.find((a) => a.from.includes(other.body?.status));
-      if (first && other.body?.id) {
-        await call('POST', first.path.replace(/\{[^}]+\}/, other.body.id), {});
-      }
-
-      const log = await call('GET', offered.events);
-      const remaining = await call('GET', '/mock/stubs/events');
+      const pending = await call('GET', '/mock/stubs/events');
 
       return {
         facts: [
-          ['event types the contract declares', String(offered.eventTypes.length)],
+          ['events the contract declares', String(offered.eventTypes.length)],
+          ['of those, with a subscriber declared', String(offered.eventTypes.length - unsubscribedCount())],
           ['stub registered on', trigger],
-          ['it fires', reply],
-          ['log now ends with', (log.body.items ?? []).slice(-2).map((e) => e.type).join(' then ') || '—'],
-          ['stubs left', String(remaining.body.total ?? 0)],
+          ['which is emitted by', action ? `the ${action} action, in the last step` : 'a step in the contract'],
+          ['it answers with', reply],
+          ['registered', `${registered.status} — ${pending.body.total ?? 0} waiting`],
         ],
       };
     },
@@ -432,8 +681,9 @@ const STEPS = [
 
   {
     title: 'Open it for review',
-    what: 'The transition that was refused two steps ago.',
-    why: 'Same call, same record, different answer — because the state changed in between. <b>The refusal earlier was not a canned 409</b>; it was the contract being applied to the record as it then was.',
+    what: 'The next transition the contract allows, and the one that makes closing reachable.',
+    source: () => [offered.story?.source],
+    why: 'Nothing here chose the order. Each step asks which action declares a <code>from</code> that includes the state the record is actually in, and there is one — so the <b>lifecycle walks itself</b>. This is the state that <code>close</code> needed, which is why the refusal in step three becomes a success in the last step.',
     needs: () => tour.id && offered.story,
     run: async () => {
       const current = await call('GET', `${offered.collection}/${tour.id}`);
@@ -446,7 +696,8 @@ const STEPS = [
 
       return {
         facts: [
-          [`POST …/${action.id}`, `${acted.status} — refused in step 2, allowed now`],
+          [`POST …/${action.id}`, String(acted.status)],
+          ['the action was chosen by', `its declared from: ${action.from.join('|')}`],
           ['status', String(after.body.status)],
         ],
       };
@@ -456,6 +707,7 @@ const STEPS = [
   {
     title: 'Decide whether the household qualifies',
     what: 'Run the expedited SNAP ruleset. Move the income and watch the answer change.',
+    source: () => [offered.graphFor(offered.evaluate), offered.rulesFor(offered.evaluate)],
     why: 'A mock would return a fixed <code>{ eligible: true }</code>. This <b>evaluates the compiled ruleset</b>, so the answer is computed — and it is not where the headline number suggests. The income threshold is 150, but a household at 724 still qualifies, because a second condition carries: income plus resources below the shelter cost. At 725 it stops. <b>That is the policy, and reading it off the contract is the point</b> — a state can check its own interpretation here before writing any code.',
     needs: () => offered.evaluate,
     control: () => {
@@ -497,12 +749,13 @@ const STEPS = [
 
   {
     title: 'Attach proof of income',
+    source: () => [offered.specFor(offered.upload)],
     what: 'Upload a file as real multipart/form-data.',
     why: 'The bytes are hashed while being read and then <b>discarded</b>. What is kept is a description — name, type, size, hash. Deliberate: a bundled artifact is a public artefact, so it must not be able to carry a real document.',
     needs: () => offered.upload,
     run: async () => {
       const form = new FormData();
-      form.append('file', new File([`pay stub for ${tour.ref ?? 'this household'}`], 'pay-stub.txt', { type: 'text/plain' }));
+      form.append('file', new File(['pay stub for the household on this application'], 'pay-stub.txt', { type: 'text/plain' }));
       form.append('documentTypeId', 'proof-of-income');
       form.append('title', 'Pay stub');
 
@@ -525,7 +778,8 @@ const STEPS = [
   {
     title: 'Close it, and look at the trail',
     what: 'The last transition. It needs an outcome, because the action says so.',
-    why: '<code>close</code> declares a request schema requiring <b>outcome</b>, so closing without one is refused — the action\'s own contract, enforced. And across the whole story: four states, two refusals, an evaluated ruleset, a document and a chain of events, with <b>not a line of it written as mock code</b>. Change a contract and this behaviour changes with it, which is the difference between mocking an API and mocking a system.',
+    source: () => [offered.story?.source],
+    why: '<b>This is the call that was refused in step three</b> — same call, same record, different answer, because the state changed in between. So that 409 was not a canned response; it was the contract applied to the record as it then was. And <code>close</code> declares a request schema requiring <b>outcome</b>, so closing without one is still refused, by the action\'s own contract. Across the whole story: four states, two refusals, an evaluated ruleset, a document and a chain of events, with <b>not a line of it written as mock code</b>.',
     needs: () => tour.id && offered.story,
     run: async () => {
       // Without a body first, to show the action's request schema being applied.
@@ -539,6 +793,8 @@ const STEPS = [
       const final = await call('GET', `${offered.collection}/${tour.id}`);
       if (final.body.status !== current.body.status) tour.path?.push(final.body.status);
       const log = offered.events ? await call('GET', offered.events) : null;
+      const stubFired = tour.stub
+        && (log?.body.items ?? []).some((event) => event.type === tour.stub.reply);
 
       const transitions = offered.machines
         .flatMap((m) => m.actions.length)
@@ -549,6 +805,10 @@ const STEPS = [
           [`POST …/${action.id} with no body`, `${refused.status} — ${refused.body?.message ?? ''}`],
           [`POST …/${action.id} with outcome approved`, String(closed.status)],
           ['final status', String(final.body.status)],
+          ...(tour.stub ? [[
+            `the stub registered earlier, on ${tour.stub.on}`,
+            stubFired ? `fired — ${tour.stub.reply}` : 'did not fire',
+          ]] : []),
           ['the path it took', (tour.path ?? []).join(' → ')],
           ['events emitted along the way', String(log?.body?.total ?? '—')],
           ['routes, all generated from contracts', String(mock.routes.size)],
@@ -570,6 +830,16 @@ const renderStep = (step, index) => {
   heading.append(el('span', String(index + 1).padStart(2, '0'), 'n'), el('span', step.title));
   section.append(heading, el('p', step.what, 'what'));
 
+  // The document that drives the step, named from the artifact rather than
+  // written here. A step claiming "the contract declares this" without saying
+  // which file is asking to be taken at its word.
+  const cited = [...new Set((step.source?.() ?? []).filter(Boolean))];
+  if (cited.length > 0) {
+    const source = el('p', '', 'source');
+    source.append(el('span', 'declared in '), document.createTextNode(cited.join('  ·  ')));
+    section.append(source);
+  }
+
   const controls = el('div', '', 'controls');
   controls.style.margin = '.3rem 0 0';
 
@@ -587,11 +857,13 @@ const renderStep = (step, index) => {
   const facts = el('ul', '', 'facts');
   const detail = el('pre');
   detail.hidden = true;
-  const toggle = el('button', 'Show the requests');
+  const toggle = el('button', 'Show the requests and responses');
   toggle.hidden = true;
   toggle.onclick = () => {
     detail.hidden = !detail.hidden;
-    toggle.textContent = detail.hidden ? 'Show the requests' : 'Hide the requests';
+    toggle.textContent = detail.hidden
+      ? 'Show the requests and responses'
+      : 'Hide the requests and responses';
   };
   controls.append(toggle);
 
@@ -621,9 +893,7 @@ const runStep = async (step, parts) => {
     parts.facts.replaceChildren(...facts.map(([label, value]) => fact(label, value)));
 
     const made = calls.slice(from);
-    parts.detail.textContent = made
-      .map((c) => `${c.line}\n  → ${c.status}\n${JSON.stringify(c.body, null, 2)}`)
-      .join('\n\n');
+    parts.detail.textContent = made.map(transcript).join('\n\n' + '─'.repeat(60) + '\n\n');
     parts.toggle.hidden = made.length === 0;
 
     parts.section.classList.add('done');
@@ -643,6 +913,26 @@ const fact = (label, value) => {
   const li = el('li');
   li.append(el('span', label + ': '), el('code', String(value)));
   return li;
+};
+
+/**
+ * One exchange, written the way an HTTP exchange reads.
+ *
+ * Request line, request headers, request body; then the status line, the
+ * response headers and the response body. Assembled as text and assigned with
+ * `textContent`, so a response body containing markup is shown, not run.
+ */
+const transcript = (c) => {
+  const lines = [c.request.line];
+  for (const [name, value] of c.request.headers) lines.push(`${name}: ${value}`);
+  if (c.request.body) lines.push('', c.request.body);
+
+  lines.push('', `→ ${c.status}${c.response.statusText ? ' ' + c.response.statusText : ''}`);
+  for (const [name, value] of c.response.headers) lines.push(`${name}: ${value}`);
+  if (c.body !== '' && c.body !== undefined) {
+    lines.push('', typeof c.body === 'string' ? c.body : JSON.stringify(c.body, null, 2));
+  }
+  return lines.join('\n');
 };
 
 // ── Boot ────────────────────────────────────────────────────────────────────

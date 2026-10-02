@@ -17,7 +17,7 @@ application.contactInfo.email: { type: email }
 application.contactInfo.preferredContact: { type: enum, values: [phone, email, mail] }
 application.labels: { type: object }
 application.countyCode: { type: string }
-application.referenceId: { type: string }
+application.programCount: { type: integer }
 application.confirmationNumber: { type: string }
 application.status: { type: enum, values: [draft, submitted, under_review, withdrawn, closed] }
 application.submittedAt: { type: datetime }

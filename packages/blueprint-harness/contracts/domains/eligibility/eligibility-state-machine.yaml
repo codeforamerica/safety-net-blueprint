@@ -32,7 +32,14 @@ machines:
       - type: intake.application.submitted
         description: Initiate an eligibility determination for each program applied for.
         steps:
+          # The object form of `call:` takes the method as the key — `POST:` —
+          # and the path as its value. Written as `path:`/`method:` this parsed,
+          # validated and then did nothing: the step engine found no method key
+          # and skipped it, so the one cross-domain reaction the contract set
+          # declares never ran. The schema allows additional properties here,
+          # so nothing caught it (#448).
           - call:
-              path: eligibility/determinations
-              method: POST
+              POST: eligibility/determinations
+              body:
+                applicationId: $object.id
               description: Create a pending determination for the submitted application.

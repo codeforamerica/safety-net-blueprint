@@ -14,9 +14,6 @@ schema:
     patterns:
       - deprecated-field
       - read-only-field
-  application.referenceId:
-    patterns:
-      - read-only-field
   application.status:
     patterns:
       - x-enum-source

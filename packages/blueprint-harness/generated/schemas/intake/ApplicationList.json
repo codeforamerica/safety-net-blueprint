@@ -17,7 +17,7 @@
           "id",
           "status",
           "programsAppliedFor",
-          "referenceId",
+          "programCount",
           "createdAt",
           "updatedAt"
         ],
@@ -126,15 +126,15 @@
                 "readOnly": true,
                 "description": "Unique identifier (server-generated)."
               },
-              "referenceId": {
-                "type": "string",
+              "programCount": {
+                "type": "integer",
                 "readOnly": true,
-                "description": "Short human-readable reference code for this application."
+                "description": "How many programs this application covers, from programsAppliedFor."
               },
               "confirmationNumber": {
                 "type": "string",
                 "readOnly": true,
-                "description": "Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.\n"
+                "description": "Deprecated — use id instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.\n"
               },
               "status": {
                 "type": "string",

@@ -69,7 +69,7 @@ export const zApplication = z.object({
     countyCode: z.optional(z.string().max(10))
 }).and(z.object({
     id: z.uuid().readonly(),
-    referenceId: z.string().readonly(),
+    programCount: z.int().readonly(),
     confirmationNumber: z.optional(z.string().readonly()),
     status: z.enum([
         'draft',
@@ -281,7 +281,7 @@ export const zApplicationList = z.object({
         countyCode: z.optional(z.string().max(10))
     }).and(z.object({
         id: z.uuid().readonly(),
-        referenceId: z.string().readonly(),
+        programCount: z.int().readonly(),
         confirmationNumber: z.optional(z.string().readonly()),
         status: z.enum([
             'draft',
@@ -1374,7 +1374,7 @@ export const zListApplicationsResponse = z.object({
         countyCode: z.optional(z.string().max(10))
     }).and(z.object({
         id: z.uuid().readonly(),
-        referenceId: z.string().readonly(),
+        programCount: z.int().readonly(),
         confirmationNumber: z.optional(z.string().readonly()),
         status: z.enum([
             'draft',
@@ -1565,7 +1565,7 @@ export const zCreateApplicationResponse = z.object({
     countyCode: z.optional(z.string().max(10))
 }).and(z.object({
     id: z.uuid().readonly(),
-    referenceId: z.string().readonly(),
+    programCount: z.int().readonly(),
     confirmationNumber: z.optional(z.string().readonly()),
     status: z.enum([
         'draft',
@@ -1736,7 +1736,7 @@ export const zGetApplicationResponse = z.object({
     countyCode: z.optional(z.string().max(10))
 }).and(z.object({
     id: z.uuid().readonly(),
-    referenceId: z.string().readonly(),
+    programCount: z.int().readonly(),
     confirmationNumber: z.optional(z.string().readonly()),
     status: z.enum([
         'draft',
@@ -1924,7 +1924,7 @@ export const zUpdateApplicationResponse = z.object({
     countyCode: z.optional(z.string().max(10))
 }).and(z.object({
     id: z.uuid().readonly(),
-    referenceId: z.string().readonly(),
+    programCount: z.int().readonly(),
     confirmationNumber: z.optional(z.string().readonly()),
     status: z.enum([
         'draft',
@@ -2589,7 +2589,7 @@ export const zSubmitApplicationResponse = z.object({
     countyCode: z.optional(z.string().max(10))
 }).and(z.object({
     id: z.uuid().readonly(),
-    referenceId: z.string().readonly(),
+    programCount: z.int().readonly(),
     confirmationNumber: z.optional(z.string().readonly()),
     status: z.enum([
         'draft',
@@ -2747,7 +2747,7 @@ export const zOpenApplicationResponse = z.object({
     countyCode: z.optional(z.string().max(10))
 }).and(z.object({
     id: z.uuid().readonly(),
-    referenceId: z.string().readonly(),
+    programCount: z.int().readonly(),
     confirmationNumber: z.optional(z.string().readonly()),
     status: z.enum([
         'draft',
@@ -2908,7 +2908,7 @@ export const zCloseApplicationResponse = z.object({
     countyCode: z.optional(z.string().max(10))
 }).and(z.object({
     id: z.uuid().readonly(),
-    referenceId: z.string().readonly(),
+    programCount: z.int().readonly(),
     confirmationNumber: z.optional(z.string().readonly()),
     status: z.enum([
         'draft',
@@ -3066,7 +3066,7 @@ export const zWithdrawApplicationResponse = z.object({
     countyCode: z.optional(z.string().max(10))
 }).and(z.object({
     id: z.uuid().readonly(),
-    referenceId: z.string().readonly(),
+    programCount: z.int().readonly(),
     confirmationNumber: z.optional(z.string().readonly()),
     status: z.enum([
         'draft',

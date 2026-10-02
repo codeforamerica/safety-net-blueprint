@@ -325,7 +325,7 @@ components:
     Application:
       description: A benefit application record, including server-managed fields.
       unevaluatedProperties: false
-      required: [id, status, programsAppliedFor, referenceId, createdAt, updatedAt]
+      required: [id, status, programsAppliedFor, programCount, createdAt, updatedAt]
       allOf:
         - $ref: '#/components/schemas/ApplicationWritable'
         - type: object
@@ -335,18 +335,28 @@ components:
               format: uuid
               readOnly: true
               description: Unique identifier (server-generated).
-            referenceId:
-              type: string
+            programCount:
+              type: integer
               readOnly: true
-              # x-derived — short human-readable code derived from the UUID at read time.
-              x-derived: "$this.id.substring(0, 8).toUpperCase()"
-              description: Short human-readable reference code for this application.
+              # x-derived — computed from another field at read time, in CEL.
+              #
+              # This replaced a `referenceId` derived as
+              # `$this.id.substring(0, 8).toUpperCase()`, which was wrong three
+              # ways: it restated the id rather than deriving anything, the
+              # first eight hex characters of a UUID are not unique enough to
+              # be a code a caseworker reads aloud, and `substring`/
+              # `toUpperCase` are not CEL — they only evaluated because the
+              # mock's evaluator falls through to JavaScript. `.size()` is in
+              # the supported set, and the value is genuinely a function of a
+              # field the request supplied.
+              x-derived: "$this.programsAppliedFor.size()"
+              description: How many programs this application covers, from programsAppliedFor.
             confirmationNumber:
               type: string
               readOnly: true
               deprecated: true
               description: >
-                Deprecated — use referenceId instead. Legacy confirmation number assigned
+                Deprecated — use id instead. Legacy confirmation number assigned
                 by older case management systems. Retained for backward compatibility
                 during state migration periods.
             status:

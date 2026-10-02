@@ -40,6 +40,15 @@ machines:
               description: Record the submission timestamp (regulatory clock start).
           - emit:
               type: intake.application.submitted
+              # Carries the application, not just a type. A subscriber in
+              # another domain cannot act on an empty payload, and eligibility
+              # declares a subscription to this event below in
+              # eligibility-state-machine.yaml. `id` matching `subject` is what
+              # binds the payload to `$object` in the subscriber's steps.
+              subject: $object.id
+              data:
+                id: $object.id
+                programsAppliedFor: $object.programsAppliedFor
               description: Triggers eligibility screening, caseworker task creation, and confirmation notice.
 
       - id: open

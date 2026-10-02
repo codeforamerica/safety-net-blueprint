@@ -34,6 +34,7 @@ machines:
         description: Initiate an eligibility determination for each program applied for.
         steps:
           - call:
-              path: eligibility/determinations
-              method: POST
+              POST: eligibility/determinations
+              body:
+                applicationId: $object.id
               description: Create a pending determination for the submitted application.

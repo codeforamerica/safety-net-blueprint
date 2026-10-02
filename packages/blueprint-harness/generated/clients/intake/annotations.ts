@@ -18,11 +18,6 @@ export const Annotations = {
         "read-only-field"
       ]
     },
-    "application.referenceId": {
-      "patterns": [
-        "read-only-field"
-      ]
-    },
     "application.status": {
       "patterns": [
         "x-enum-source",

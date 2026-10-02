@@ -726,7 +726,7 @@ components:
         - id
         - status
         - programsAppliedFor
-        - referenceId
+        - programCount
         - createdAt
         - updatedAt
       allOf:
@@ -738,17 +738,17 @@ components:
               format: uuid
               readOnly: true
               description: Unique identifier (server-generated).
-            referenceId:
-              type: string
+            programCount:
+              type: integer
               readOnly: true
-              x-derived: $this.id.substring(0, 8).toUpperCase()
-              description: Short human-readable reference code for this application.
+              x-derived: $this.programsAppliedFor.size()
+              description: How many programs this application covers, from programsAppliedFor.
             confirmationNumber:
               type: string
               readOnly: true
               deprecated: true
               description: |
-                Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+                Deprecated — use id instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
             status:
               type: string
               readOnly: true

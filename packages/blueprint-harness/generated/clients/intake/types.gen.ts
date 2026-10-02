@@ -131,11 +131,11 @@ export type Application = {
      */
     readonly id: string;
     /**
-     * Short human-readable reference code for this application.
+     * How many programs this application covers, from programsAppliedFor.
      */
-    readonly referenceId: string;
+    readonly programCount: number;
     /**
-     * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+     * Deprecated — use id instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
      *
      *
      * @deprecated
@@ -559,11 +559,11 @@ export type ApplicationList = {
          */
         readonly id: string;
         /**
-         * Short human-readable reference code for this application.
+         * How many programs this application covers, from programsAppliedFor.
          */
-        readonly referenceId: string;
+        readonly programCount: number;
         /**
-         * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+         * Deprecated — use id instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
          *
          *
          * @deprecated
@@ -2706,11 +2706,11 @@ export type ListApplicationsResponses = {
              */
             readonly id: string;
             /**
-             * Short human-readable reference code for this application.
+             * How many programs this application covers, from programsAppliedFor.
              */
-            readonly referenceId: string;
+            readonly programCount: number;
             /**
-             * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+             * Deprecated — use id instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
              *
              *
              * @deprecated
@@ -3120,11 +3120,11 @@ export type CreateApplicationResponses = {
          */
         readonly id: string;
         /**
-         * Short human-readable reference code for this application.
+         * How many programs this application covers, from programsAppliedFor.
          */
-        readonly referenceId: string;
+        readonly programCount: number;
         /**
-         * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+         * Deprecated — use id instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
          *
          *
          * @deprecated
@@ -3494,11 +3494,11 @@ export type GetApplicationResponses = {
          */
         readonly id: string;
         /**
-         * Short human-readable reference code for this application.
+         * How many programs this application covers, from programsAppliedFor.
          */
-        readonly referenceId: string;
+        readonly programCount: number;
         /**
-         * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+         * Deprecated — use id instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
          *
          *
          * @deprecated
@@ -3902,11 +3902,11 @@ export type UpdateApplicationResponses = {
          */
         readonly id: string;
         /**
-         * Short human-readable reference code for this application.
+         * How many programs this application covers, from programsAppliedFor.
          */
-        readonly referenceId: string;
+        readonly programCount: number;
         /**
-         * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+         * Deprecated — use id instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
          *
          *
          * @deprecated
@@ -5494,11 +5494,11 @@ export type SubmitApplicationResponses = {
          */
         readonly id: string;
         /**
-         * Short human-readable reference code for this application.
+         * How many programs this application covers, from programsAppliedFor.
          */
-        readonly referenceId: string;
+        readonly programCount: number;
         /**
-         * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+         * Deprecated — use id instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
          *
          *
          * @deprecated
@@ -5891,11 +5891,11 @@ export type OpenApplicationResponses = {
          */
         readonly id: string;
         /**
-         * Short human-readable reference code for this application.
+         * How many programs this application covers, from programsAppliedFor.
          */
-        readonly referenceId: string;
+        readonly programCount: number;
         /**
-         * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+         * Deprecated — use id instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
          *
          *
          * @deprecated
@@ -6297,11 +6297,11 @@ export type CloseApplicationResponses = {
          */
         readonly id: string;
         /**
-         * Short human-readable reference code for this application.
+         * How many programs this application covers, from programsAppliedFor.
          */
-        readonly referenceId: string;
+        readonly programCount: number;
         /**
-         * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+         * Deprecated — use id instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
          *
          *
          * @deprecated
@@ -6694,11 +6694,11 @@ export type WithdrawApplicationResponses = {
          */
         readonly id: string;
         /**
-         * Short human-readable reference code for this application.
+         * How many programs this application covers, from programsAppliedFor.
          */
-        readonly referenceId: string;
+        readonly programCount: number;
         /**
-         * Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
+         * Deprecated — use id instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.
          *
          *
          * @deprecated

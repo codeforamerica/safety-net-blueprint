@@ -4,7 +4,6 @@ ApplicationExample1:
   programsAppliedFor:
     - snap
   channel: online
-  referenceId: "11111111"
   createdAt: "2026-02-01T09:00:00Z"
   updatedAt: "2026-02-01T09:15:00Z"
 ApplicationExample2:
@@ -14,6 +13,5 @@ ApplicationExample2:
     - snap
     - medicaid
   channel: phone
-  referenceId: "22222222"
   createdAt: "2026-02-02T10:00:00Z"
   updatedAt: "2026-02-02T10:00:00Z"
