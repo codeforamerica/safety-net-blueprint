@@ -232,7 +232,7 @@ export function apiSpecsFromDocs(docs) {
     const name = basename(doc.path, '-openapi.yaml');
     try {
       const resolve = resolverFor(doc, docs);
-      loaded.push({ ...extractMetadata(doc.content, name, resolve), resolve });
+      loaded.push({ ...extractMetadata(doc.content, name, resolve), resolve, relativePath: doc.relativePath });
     } catch (error) {
       console.warn(`Warning: Could not read spec ${name}:`, error.message);
     }
