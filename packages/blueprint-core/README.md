@@ -33,8 +33,8 @@ const { ok, report } = validate(resolved.docs);
 |----------|-------------|
 | `discover(dir, type?)` | Find contract files on disk, each with its type and domain. Optionally filtered to one type |
 | `load(file)` | Parse what `discover` returned into a `Doc` |
-| `generate(docs, type, opts?)` | Derive an artifact: `overlay`, `graph`, `postman`, or `examples` |
-| `extract(docs, type, opts?)` | Read out a fact the documents already state: `relationships`, `state-machines`, `sla-types`, `metrics`, `config` |
+| `generate(docs, type, opts?)` | Derive an artifact: `overlay`, `graph`, `postman`, or `artifact` |
+| `extract(docs, type, opts?)` | Read out a fact the documents already state: `relationships`, `state-machines`, `sla-types`, `metrics`, `config`, `registries`, `examples` |
 | `resolve(docs, opts)` | Apply the resolution passes below |
 | `validate(docs)` | Check the set against its schemas and cross-artifact rules |
 
@@ -58,6 +58,60 @@ Passes run in order, each taking the whole set and returning it.
 | **Placeholder substitution** | Replaces `${VAR}` strings in contracts with values from an env file |
 
 RPC action paths and composition endpoints are not passes — they are overlays produced by `generate(docs, 'overlay')` and applied like any other.
+
+### A contract set as one file
+
+`generate(docs, 'artifact')` reduces a set to data, and `extract(artifact,
+'docs')` reads it back:
+
+```js
+import { discover, load, generate, extract } from '@codeforamerica/blueprint-core';
+
+const artifact = generate(discover(dir).map(load), 'artifact');
+writeFileSync('contracts.json', JSON.stringify(artifact));
+
+// Elsewhere — in Node, or in a browser:
+const docs = extract(JSON.parse(contracts), 'docs');
+```
+
+The documents come back with their methods rebuilt, which JSON cannot carry,
+so nothing downstream can tell whether a set was walked off disk or read from
+a file. `$ref`s are left intact: they name other documents in the same set, so
+the set is already complete, and inlining them is the difference between a
+0.67 MB file and a 3.95 MB one.
+
+For one domain and what it references, pass `{ domains: ['intake'] }` — the
+named domains plus `platform` plus the transitive closure of their refs, so
+the result is self-contained.
+
+`blueprint-cli`'s `blueprint-bundle-contracts` is this with validation and a
+command line around it.
+
+### In a browser
+
+`extract` and `generate` need no filesystem, and the `./browser` export is
+those two alone:
+
+```js
+import { extract, generate } from '@codeforamerica/blueprint-core/browser';
+```
+
+A separate subpath rather than a condition on `"."`, because this is a smaller
+surface and not a second implementation — importing `discover` from it should
+fail at the import rather than resolve to `undefined` and break somewhere
+unrelated.
+
+Importing them from `"."` does not work in a browser, and the reason is worth
+knowing: a bundler resolves every import in a module graph *before* it
+tree-shakes, so `index.js` re-exporting `discover` is enough to fail a page
+build even when the consumer imports nothing but `extract`. The main entry
+re-exports `./browser`, so the two cannot drift.
+
+`discover` and `load` are absent because they read a directory. `resolve` and
+`validate` are absent for a different reason: they read resources this package
+ships — the schemas to validate against, overlay documents — rather than
+anything the caller supplies. Bundling those the way contracts are bundled
+would make both portable.
 
 ### Validation
 
