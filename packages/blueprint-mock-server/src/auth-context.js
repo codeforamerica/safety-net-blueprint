@@ -10,19 +10,38 @@
  */
 
 /**
- * Extract auth context from an Express request.
- * @param {import('express').Request} req
+ * Read one header from either request shape.
+ *
+ * Handlers are being converted to Fetch `Request`, whose `headers` is a
+ * `Headers` instance, while unconverted ones still pass an Express request,
+ * whose `headers` is a lowercase-keyed plain object. This reads both so the
+ * conversion can proceed a handler at a time (#448). It collapses to
+ * `headers.get` once every caller is converted.
+ *
+ * @param {{ headers?: Headers|Record<string,string> }} req
+ * @param {string} name - Lowercase header name
+ * @returns {string|undefined}
+ */
+function headerOf(req, name) {
+  const headers = req?.headers;
+  if (!headers) return undefined;
+  return typeof headers.get === 'function' ? (headers.get(name) ?? undefined) : headers[name];
+}
+
+/**
+ * Extract auth context from a request.
+ * @param {import('express').Request|Request} req
  * @returns {{ userId: string, sub?: string, roles?: Array } | null}
  */
 export function extractAuthContext(req) {
   // 1. X-Caller-Id header (mock/dev convention)
-  const callerId = req.headers['x-caller-id'];
+  const callerId = headerOf(req, 'x-caller-id');
   if (callerId) {
     return { userId: callerId };
   }
 
   // 2. Bearer JWT
-  const authHeader = req.headers['authorization'];
+  const authHeader = headerOf(req, 'authorization');
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
     try {
@@ -44,12 +63,22 @@ export function extractAuthContext(req) {
 
 /**
  * Extract the caller's roles from the X-Caller-Roles request header.
- * @param {import('express').Request} req
+ * @param {import('express').Request|Request} req
  * @returns {string[]}
  */
 export function extractCallerRoles(req) {
-  const header = req.headers['x-caller-roles'];
+  const header = headerOf(req, 'x-caller-roles');
   return header ? header.split(',').map(r => r.trim()).filter(Boolean) : [];
+}
+
+/**
+ * Read a header from either request shape, for callers that want one directly.
+ * @param {import('express').Request|Request} req
+ * @param {string} name - Lowercase header name
+ * @returns {string|null}
+ */
+export function callerHeader(req, name) {
+  return headerOf(req, name) ?? null;
 }
 
 /**

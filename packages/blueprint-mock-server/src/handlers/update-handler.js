@@ -8,8 +8,9 @@ import { applyEffects, applySteps } from '../state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
 import { mergeByPrecedence, buildInlineRules, extractPrimaryParam, capitalize } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
-import { extractAuthContext, extractCallerRoles } from '../auth-context.js';
+import { extractAuthContext, extractCallerRoles, callerHeader } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
+import { assertFetchShaped, readJsonBody } from '../http/request.js';
 
 export function deepEqual(a, b) {
   if (a === b) return true;
@@ -58,26 +59,30 @@ export function buildChanges(before, after) {
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
  * @param {Object} endpoint - Endpoint metadata
  * @param {Object|null} stateMachine - State machine contract (for onUpdate effects)
- * @returns {Function} Express handler
+ * @returns {(request: Request, ctx: object) => Promise<Response>}
  */
 export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, slaTypes = [], machine = null, { store } = {}) {
   const paramName = extractPrimaryParam(endpoint.path) ?? 'id';
-  return (req, res) => {
+  return async (request, ctx = {}) => {
+    const { params = {}, body: bodyOverride } = ctx;
+    const { pathname } = new URL(assertFetchShaped(request, 'createUpdateHandler').url);
     try {
-      const httpStub = matchAndPopHttp(req.method, req.path);
+      const httpStub = matchAndPopHttp(request.method, pathname);
       if (httpStub) {
-        return res.status(httpStub.response?.status ?? 200).json(httpStub.response?.body ?? {});
+        return Response.json(httpStub.response?.body ?? {}, { status: httpStub.response?.status ?? 200 });
       }
 
-      let resourceId = req.params[paramName] || req.params.id;
+      const requestBody = bodyOverride !== undefined ? bodyOverride : (await readJsonBody(request)).value;
+
+      let resourceId = params[paramName] || params.id;
 
       if (resourceId === 'me') {
-        const auth = extractAuthContext(req);
+        const auth = extractAuthContext(request);
         if (!auth) {
-          return res.status(401).json({
+          return Response.json({
             code: 'UNAUTHORIZED',
             message: 'Authentication required'
-          });
+          }, { status: 401 });
         }
         resourceId = auth.userId;
       }
@@ -85,38 +90,38 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
       // Check if resource exists
       const existing = store.findById(endpoint.collectionName, resourceId);
       if (!existing) {
-        return res.status(404).json({
+        return Response.json({
           code: 'NOT_FOUND',
           message: `${capitalize(paramName.replace(/Id$/, ''))} not found`
-        });
+        }, { status: 404 });
       }
 
       // Check if request body is an object (400 for malformed request)
-      if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
-        return res.status(400).json({
+      if (!requestBody || typeof requestBody !== 'object' || Array.isArray(requestBody)) {
+        return Response.json({
           code: 'BAD_REQUEST',
           message: 'Request body must be a JSON object',
           details: [{ field: 'body', message: 'must be object' }]
-        });
+        }, { status: 400 });
       }
 
       // Check minProperties requirement for PATCH (at least 1 field)
-      if (Object.keys(req.body).length === 0) {
-        return res.status(400).json({
+      if (Object.keys(requestBody).length === 0) {
+        return Response.json({
           code: 'BAD_REQUEST',
           message: 'Request body must contain at least one field to update',
           details: [{ field: 'body', message: 'minProperties: 1' }]
-        });
+        }, { status: 400 });
       }
 
       // For PATCH, merge with existing data first, then validate the complete merged object.
       // Exclude null values for fields the client didn't send — those are null-initialized
       // placeholders from record creation and should not trigger validation failures.
-      const mergedData = { ...existing, ...req.body };
+      const mergedData = { ...existing, ...requestBody };
 
       // Validate merged data (422 for validation errors)
       if (endpoint.requestSchema) {
-        const clientFields = new Set(Object.keys(req.body));
+        const clientFields = new Set(Object.keys(requestBody));
         const dataForValidation = Object.fromEntries(
           Object.entries(mergedData).filter(([k, v]) => v !== null || clientFields.has(k))
         );
@@ -127,7 +132,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
         );
 
         if (!valid) {
-          return res.status(422).json(createErrorResponse(errors, 422));
+          return Response.json(createErrorResponse(errors, 422), { status: 422 });
         }
       }
 
@@ -135,7 +140,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
       const existingSnapshot = { ...existing };
 
       // Update in database (database manager handles deep merge and updatedAt timestamp)
-      const updated = store.update(endpoint.collectionName, resourceId, req.body);
+      const updated = store.update(endpoint.collectionName, resourceId, requestBody);
 
       // Fire onUpdate steps/effects if any watched fields changed.
       // Must run before emitting so rule-driven mutations (e.g. priority re-scored
@@ -145,19 +150,19 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
 
       if (hasOnUpdate) {
         const watchedFields = onUpdate?.fields;
-        const patchedFields = Object.keys(req.body);
+        const patchedFields = Object.keys(requestBody);
         const shouldFire = !watchedFields || watchedFields.length === 0
           || patchedFields.some(f => watchedFields.includes(f));
 
         if (shouldFire) {
-          const callerRoles = extractCallerRoles(req);
+          const callerRoles = extractCallerRoles(request);
           const baseContext = {
             caller: {
-              id: req.headers['x-caller-id'],
+              id: callerHeader(request, 'x-caller-id'),
               roles: callerRoles
             },
             object: { ...existing },
-            request: req.body,
+            request: requestBody,
             now: new Date().toISOString(),
           };
 
@@ -184,7 +189,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           // Persist any rule-driven mutations (e.g. priority, queueId) back to DB
           const onUpdateDiff = {};
           for (const [key, value] of Object.entries(updated)) {
-            if (existingSnapshot[key] !== value && !req.body.hasOwnProperty(key)
+            if (existingSnapshot[key] !== value && !Object.prototype.hasOwnProperty.call(requestBody, key)
                 && key !== 'id' && key !== 'createdAt' && key !== 'updatedAt') {
               onUpdateDiff[key] = value;
             }
@@ -200,7 +205,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
 
       // Emit updated event with complete field-level diff
       try {
-        const domain = apiMetadata.serverBasePath.replace(/^\//, '');
+        const domain = (apiMetadata.serverBasePath ?? '').replace(/^\//, '');
         const object = endpoint.collectionName.replace(/s$/, '');
         emitEvent({
         store,
@@ -210,9 +215,9 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
           resourceId,
           source: apiMetadata.serverBasePath,
           data: { changes },
-          callerId: req.headers['x-caller-id'] || null,
-          callerRoles: extractCallerRoles(req),
-          traceparent: req.headers['traceparent'] || null,
+          callerId: callerHeader(request, 'x-caller-id'),
+          callerRoles: extractCallerRoles(request),
+          traceparent: callerHeader(request, 'traceparent'),
           now: updated.updatedAt,
         });
       } catch (eventError) {
@@ -225,14 +230,14 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
       let responseBody = expandFields.length > 0 ? applyExpand(updated, expandFields, store.findById) : updated;
       if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
       if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
-      res.json(responseBody);
+      return Response.json(responseBody);
     } catch (error) {
       console.error('Update handler error:', error);
-      res.status(500).json({
+      return Response.json({
         code: 'INTERNAL_ERROR',
         message: 'An unexpected error occurred',
         details: [{ message: error.message }]
-      });
+      }, { status: 500 });
     }
   };
 }

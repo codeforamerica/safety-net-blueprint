@@ -2,12 +2,15 @@
  * The mock server's runtime view of an OpenAPI spec.
  *
  * Discovery and parsing are blueprint-core's `discover` and `load`; what is
+ * `basename` is local rather than from `node:path` so this module carries no
+ * Node-only import: the only thing needed is the last path segment, with an
+ * optional suffix removed.
+ *
  * here is the shape the server itself needs — server base path, endpoint
  * list, schemas, error responses, pagination defaults. That is a runtime
  * concern, not a contract one, which is why it lives with the server.
  */
 
-import { basename } from 'path';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { discover } from '@codeforamerica/blueprint-core';
 
@@ -17,6 +20,18 @@ import { discover } from '@codeforamerica/blueprint-core';
  * @param {Object} options
  * @param {string} options.specsDir - Path to the specs file or directory (required)
  */
+/**
+ * The last segment of a path, with an optional suffix removed.
+ *
+ * @param {string} path
+ * @param {string} [suffix]
+ * @returns {string}
+ */
+function basename(path, suffix = '') {
+  const last = path.split('/').pop() ?? '';
+  return suffix && last.endsWith(suffix) ? last.slice(0, -suffix.length) : last;
+}
+
 export function discoverApiSpecs({ specsDir } = {}) {
   if (!specsDir) {
     throw new Error('specsDir is required — pass --spec <path> to specify the specs file or directory');
