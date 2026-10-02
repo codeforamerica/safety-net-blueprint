@@ -3,9 +3,9 @@
 The server resolves references against the contract set when something needs
 to see through one. It does not dereference the specs first.
 
-That is a reversal: until #448 the server was handed specs with every `$ref`
-inlined by `$RefParser`, and this records why, because the old way is the
-obvious way and someone will suggest it again.
+That is a reversal: the server used to be handed specs with every `$ref`
+inlined by `$RefParser`, and this records why it no longer is, because the old
+way is the obvious way and someone will suggest it again.
 
 ## What changed
 
@@ -79,7 +79,9 @@ set:
   allow.
 - The 2020-12 ajv build adopted for the dialect the documents declare. It
   enforces `unevaluatedProperties`, which draft-07 ignores, so seed data that
-  had always passed began failing. Reverted; tracked in #461.
+  had always passed began failing. Reverted — `createAjv` in
+  `src/schema-registry.js` builds a draft-07 validator deliberately, and says
+  so there.
 - `extractRequiredDefaults` reading `allOf` members without following them, so
   a required array came back `undefined` instead of `[]` — silently.
 - `extractExpandFields`, `extractLinksFields` and `extractDerivedFields` doing
@@ -99,5 +101,5 @@ reading it — and in two CLI scripts. All Node-only, none on the browser path.
 ## See also
 
 - `ROUTING.md` — the route table and why the matcher is hand-rolled
-- #461 — the contracts declare JSON Schema 2020-12 and the validator is draft-07
-- #448 — running the server in a browser, which is what forced all of this
+- `src/schema-registry.js` — how documents are registered with ajv, and why the
+  validator is built for draft-07 while the documents declare 2020-12
