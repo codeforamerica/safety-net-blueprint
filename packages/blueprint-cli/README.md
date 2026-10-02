@@ -172,30 +172,6 @@ npx blueprint-bundle-contracts --spec=./resolved --domain=intake --out=./intake.
 | `--domain=intake` | 25 | 0.42 MB |
 | `--domain=scheduling` | 12 | 0.10 MB |
 
-### `blueprint-build-mock-page`
-
-Builds a page that runs the mock server, with no server.
-
-```bash
-npx blueprint-build-mock-page --spec=./resolved --out=./mock-page
-```
-
-Writes two things, because serving a page and opening one have different
-constraints:
-
-| Output | For |
-|---|---|
-| `index.html` + `mock.js` + `contracts.json` | Serving over http(s) — GitHub Pages, S3, `npx serve` |
-| `standalone.html` | Opening from `file://`, where fetching a sibling file is blocked as cross-origin |
-
-The page reads the route table the mock builds rather than naming paths, so it
-demonstrates whatever contract set it is given and disables what the set does
-not declare. Event injection and document upload need a contract declaring
-`publishEvent` and `uploadDocument`; without them those controls say so rather
-than failing when clicked.
-
-Takes `--domain` too, passed through to the bundler.
-
 ## Changelog
 
 See [CHANGELOG.md](https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-cli/CHANGELOG.md) for release history.

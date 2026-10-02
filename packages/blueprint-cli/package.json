@@ -16,8 +16,7 @@
     "blueprint-generate-ts-clients": "./scripts/generate-ts-clients.js",
     "blueprint-resolve": "./scripts/resolve.js",
     "blueprint-scaffold-api": "./scripts/scaffold-api.js",
-    "blueprint-bundle-contracts": "./scripts/bundle-contracts.js",
-    "blueprint-build-mock-page": "./scripts/build-mock-page.js"
+    "blueprint-bundle-contracts": "./scripts/bundle-contracts.js"
   },
   "scripts": {
     "test": "node --test",

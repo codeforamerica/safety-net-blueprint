@@ -1,6 +1,17 @@
-#!/usr/bin/env node
 /**
- * Build a page that runs the mock server, with no server.
+ * Build the harness's demo page: the mock server running with no server.
+ *
+ * A harness script rather than a CLI bin, and deliberately not publishable.
+ * Building a demo page is not a capability anyone deploying this needs — what
+ * they need is what the page imports, `@codeforamerica/blueprint-mock-server/browser`
+ * and `blueprint-bundle-contracts`. This assembles one worked example of the
+ * two, which is what the harness is for, and its output lands in
+ * `generated/mock/` beside the explorer, the schemas and the clients.
+ *
+ * It lived in `blueprint-cli` first, where it could not have worked: that
+ * package declares no dependency on the mock server at all, and only a
+ * devDependency on this one, yet the script read files from both by relative
+ * path. Installed from npm, neither directory exists.
  *
  * Two outputs from one source, because two ways of serving it have different
  * constraints (#448):
@@ -19,7 +30,7 @@
  * rather than one that 404s when clicked.
  *
  * Usage:
- *   blueprint-build-mock-page --spec=<dir> --out=<dir> [--domain=<name>]
+ *   node scripts/build-mock-page.js --spec=<dir> --out=<dir> [--domain=<name>]
  */
 
 import { spawnSync } from 'node:child_process';
@@ -29,15 +40,27 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-/** The authored page, and the mock server entry to bundle. */
-const PAGE = resolve(here, '../../blueprint-harness/mock/index.html');
-const MOCK_ENTRY = resolve(here, '../../blueprint-mock-server/src/browser.js');
+/** The authored page, which is this package's own input. */
+const PAGE = resolve(here, '../mock/index.html');
+
+/**
+ * The mock server's browser entry, resolved by the name a consumer would use
+ * rather than by walking up to a sibling directory. If `./browser` ever stops
+ * being exported, this fails here instead of producing a page that cannot be
+ * built the documented way.
+ */
+const MOCK_ENTRY = fileURLToPath(
+  import.meta.resolve('@codeforamerica/blueprint-mock-server/browser')
+);
+
+/** Where `blueprint-bundle-contracts` lives in this workspace. */
+const BUNDLE_CONTRACTS = resolve(here, '../../blueprint-cli/scripts/bundle-contracts.js');
 
 const USAGE = `
-Build a page that runs the mock server in a browser.
+Build the harness demo page: the mock server running in a browser.
 
 Usage:
-  blueprint-build-mock-page --spec=<dir> --out=<dir> [--domain=<name>...]
+  node scripts/build-mock-page.js --spec=<dir> --out=<dir> [--domain=<name>...]
 
 Options:
   --spec=<dir>      Resolved contracts directory. Repeatable.
@@ -101,7 +124,7 @@ function main() {
 
   console.log('Bundling contracts...');
   run(process.execPath, [
-    join(here, 'bundle-contracts.js'),
+    BUNDLE_CONTRACTS,
     ...options.specDirs.map((dir) => `--spec=${dir}`),
     ...options.domains.map((name) => `--domain=${name}`),
     `--out=${join(outDir, 'contracts.json')}`,

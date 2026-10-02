@@ -71,7 +71,7 @@ run(join(CLI, 'export-schemas.js'), [
 ]);
 
 console.log('  [8/8] Building the browser mock page...');
-run(join(CLI, 'build-mock-page.js'), [
+run(join(__dirname, 'build-mock-page.js'), [
   `--spec=${join(HARNESS, 'generated/resolved')}`,
   `--out=${join(HARNESS, 'generated/mock')}`,
 ]);

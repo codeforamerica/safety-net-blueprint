@@ -39,6 +39,20 @@ function bundle({ minify = false } = {}) {
 
 describe('the browser entry', () => {
 
+  test('resolves by the name the README tells people to import', async () => {
+    // `src/browser.js` existed for some time without being listed in
+    // `exports`, so the documented import failed for everyone outside this
+    // repo. Nothing caught it: the page's build bundles the file by path, and
+    // every test here reached it by path too. This asks Node the question a
+    // consumer asks.
+    const specifier = '@codeforamerica/blueprint-mock-server/browser';
+    const resolved = await import.meta.resolve(specifier);
+    assert.ok(resolved.endsWith('/src/browser.js'), `${specifier} resolved to ${resolved}`);
+
+    const { createMockServer } = await import(specifier);
+    assert.strictEqual(typeof createMockServer, 'function');
+  });
+
   test('bundles for the browser platform with no Node builtins', () => {
     // platform=browser makes `fs`, `path` and the rest unresolvable, so this
     // fails loudly rather than producing a bundle that breaks at runtime.
@@ -264,7 +278,7 @@ describe('the single-file build', () => {
   const buildPage = () => {
     const out = mkdtempSync(join(tmpdir(), 'mock-page-'));
     execFileSync(process.execPath, [
-      resolve(packageRoot, '../blueprint-cli/scripts/build-mock-page.js'),
+      resolve(packageRoot, '../blueprint-harness/scripts/build-mock-page.js'),
       `--spec=${resolve(packageRoot, '../blueprint-harness/generated/resolved')}`,
       `--out=${out}`,
     ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });

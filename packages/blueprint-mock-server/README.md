@@ -15,7 +15,7 @@ npm install @codeforamerica/blueprint-mock-server
 
 ## What It Does
 
-An Express-based mock API server that reads resolved OpenAPI specs and state machine definitions and stands up a fully functional API — no backend required. Frontend teams can develop and test against real API contracts from day one.
+A mock API server that reads resolved OpenAPI specs and state machine definitions and stands up a fully functional API — no backend required. It runs on `node:http`, or as a `fetch` handler with no server at all, including in a browser. Frontend teams can develop and test against real API contracts from day one.
 
 - **Auto-discovers specs** — generates all routes from `*-openapi.yaml` files at startup
 - **Database per domain** — each domain gets its own in-memory database with full CRUD support
@@ -24,7 +24,7 @@ An Express-based mock API server that reads resolved OpenAPI specs and state mac
 - **SLA enforcement** — tracks SLA clocks and fires timer events when deadlines are reached
 - **Event streaming** — SSE endpoints emit domain events on state transitions
 - **Event and HTTP stubbing** — simulate downstream responses for testing event-driven flows
-- **Document upload** — handles file uploads and serves documents back at runtime
+- **Document upload** — accepts multipart uploads and records what it measured about each file; the bytes are never stored
 - **Metrics endpoints** — computes and serves metrics from live database records
 - **Search and filtering** — full-text search, filtering, sorting, and pagination on all list endpoints
 - **Swagger UI** — browse and test all endpoints interactively at `http://localhost:3000`
@@ -100,9 +100,8 @@ store.insertResource('applications', { id: 'app-001', status: 'draft' });
 store.findAll('applications', { status: 'draft' });
 ```
 
-`./store` exports the in-memory store on its own, without pulling in Express or
-a native module, so it can be used in a browser or in a test that has no need of
-a server. `createSqliteStore` comes from the package root, since that is Node
+`./store` exports the in-memory store on its own, without a native module, so
+it can be used in a browser or in a test that has no need of a server. `createSqliteStore` comes from the package root, since that is Node
 only regardless.
 
 Every method is synchronous. Both implementations are natively synchronous —
@@ -176,8 +175,9 @@ createMockServer({ contracts, basePath: location.pathname.replace(/\/[^/]*$/, ''
 The prefix is stripped once, before matching, so handlers and HTTP stubs never
 see it.
 
-To build a page rather than wire one up, `blueprint-build-mock-page` writes
-both a served version and a single self-contained file.
+`blueprint-harness` builds a worked example of both — a served version and a
+single self-contained file — in `packages/blueprint-harness/generated/mock/`.
+The page it is built from is `packages/blueprint-harness/mock/index.html`.
 
 ## References are not dereferenced
 
