@@ -59,12 +59,12 @@ export function schemaIdFor(relativePath) {
  * @returns {import('ajv').default}
  */
 export function createAjv(options = {}) {
-  // The default build, which is the dialect the server has always validated
-  // against. The 2020-12 build is tempting — it is the dialect the documents
-  // declare — but it enforces `unevaluatedProperties`, which draft-07 ignores
-  // as unknown, so switching would silently make validation stricter and fail
-  // seed data that has always passed. That is a change worth making
-  // deliberately, not as a side effect of resolving refs differently.
+  // The default build is draft-07, and the documents declare 2020-12. That
+  // mismatch is deliberate for now and tracked in #461: the 2020-12 build
+  // enforces `unevaluatedProperties`, which draft-07 ignores as unknown, and
+  // switching fails 8 seed records that have always passed. Making validation
+  // stricter is a change worth doing deliberately, not as a side effect of
+  // resolving refs differently.
   const ajv = new Ajv({ strict: false, allErrors: true, ...options });
   addFormats(ajv);
   return ajv;
@@ -84,6 +84,9 @@ export function createAjv(options = {}) {
  *               allow. What it cannot handle is `{ allOf: [$ref], nullable:
  *               true }`, where it throws for want of a `type` — so the
  *               keyword goes only when there is nothing for it to qualify.
+ *               A workaround: `nullable` is an OpenAPI 3.0 keyword and these
+ *               documents declare 3.1, which replaced it with
+ *               `type: [X, 'null']`. Tracked in #461.
  *   `$id`       set to the document's path, so relative refs out of it resolve.
  *
  * One normalized copy per document — bounded by the size of the set, not
