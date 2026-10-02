@@ -297,10 +297,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
     // Determine handler based on method and path type.
     // Check order matters: sub-resource/sub-item checks must come before the flat
     // item check because both contain '{' parameters.
-    if (endpoint.operationId === 'streamEvents') {
-      // Handled by manual registration in server.js before routes are registered
-      continue;
-    } else if (endpoint.operationId === 'uploadDocument') {
+    if (endpoint.operationId === 'uploadDocument') {
       addRoute(routes, 'POST', expressPath, createDocumentUploadHandler(baseUrl, deps),
         { operationId: endpoint.operationId, description: 'Upload document (multipart)' });
       registeredEndpoints.push({ method: 'POST', path: expressPath, description: 'Upload document (multipart)' });

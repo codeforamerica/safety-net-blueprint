@@ -12,6 +12,7 @@ import { createMemoryStore } from '../../src/stores/memory-store.js';
 // because a fresh one per file is isolation they did not have before.
 const store = createMemoryStore();
 import { join } from 'path';
+import { discover, load } from '@codeforamerica/blueprint-core';
 import { seedAllDatabases } from '../../src/seeder.js';
 const fixturesArg = process.argv.find(a => a.startsWith('--fixtures='));
 const seedArg = process.argv.find(a => a.startsWith('--seed='));
@@ -36,7 +37,7 @@ test('CRUD Handler Tests', async (t) => {
       { path: '/client-management/persons/{personId}' },
     ],
   };
-  seedAllDatabases(fixtureSpecDir, seedDir, store);
+  seedAllDatabases([fixtureSpecDir, seedDir].filter(Boolean).flatMap((d) => discover(d)).map(load), store);
   
   await t.test('LIST - returns all resources', () => {
     const results = store.findAll('persons', {});

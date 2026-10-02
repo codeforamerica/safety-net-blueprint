@@ -37,7 +37,13 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   // plus discover() called separately for compositions, rules, graphs and the
   // policy registry. The loaders are gone; `extract` reads the same facts from
   // documents already in memory.
-  const docs = discover(specsDir).map(load);
+  // The seed directory's documents belong in the same set: seeding reads
+  // mock-data documents through `generate(docs, 'examples')`, so they have to
+  // be here rather than discovered separately inside the seeder.
+  const docs = [
+    ...discover(specsDir),
+    ...(seedDir && seedDir !== specsDir ? discover(seedDir) : []),
+  ].map(load);
 
   const apiSpecs = await loadAllSpecs({ specsDir });
 
@@ -120,7 +126,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   }
 
   // Seed databases from example files
-  const summary = seedAllDatabases(specsDir, seedDir, store);
+  const summary = seedAllDatabases(docs, store, { seeded: Boolean(seedDir) });
 
   // Seed config-managed resources (after seedAllDatabases, which clears collections first)
   const configs = extract(docs, 'config');
@@ -176,7 +182,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     }
   }
 
-  return { apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, policies, summary };
+  return { docs, apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, policies, summary };
 }
 
 /**
