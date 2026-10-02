@@ -11,8 +11,8 @@
  * concern, not a contract one, which is why it lives with the server.
  */
 
-import $RefParser from '@apidevtools/json-schema-ref-parser';
-import { discover } from '@codeforamerica/blueprint-core';
+import { discover, load } from '@codeforamerica/blueprint-core';
+import { resolverFor } from './schema-refs.js';
 
 /**
  * Discover all API specification files in the given specs directory.
@@ -47,33 +47,32 @@ export function discoverApiSpecs({ specsDir } = {}) {
     }));
 }
 
-/**
- * Load and dereference (resolve all $refs) an OpenAPI specification
- * @param {string} specPath - Path to the OpenAPI spec file
- * @returns {Promise<Object>} Dereferenced OpenAPI specification
- */
-export async function loadSpec(specPath) {
-  try {
-    // Use $RefParser to dereference all $refs (including external file refs)
-    const spec = await $RefParser.dereference(specPath, {
-      dereference: {
-        circular: 'ignore'
-      }
-    });
-    return spec;
-  } catch (error) {
-    console.error(`Error loading spec ${specPath}:`, error.message);
-    throw error;
-  }
-}
 
 /**
- * Extract metadata from a dereferenced OpenAPI spec
- * @param {Object} spec - Dereferenced OpenAPI specification
+ * Extract the server's metadata from an OpenAPI document.
+ *
+ * Takes the document as written, `$ref`s and all. Only the top hop of each
+ * schema is followed, by `resolve`: enough that a caller holding
+ * `endpoint.responseSchema` has the schema object rather than a pointer to it,
+ * while the nested refs inside stay refs for whatever walks in. That is the
+ * difference between resolving and dereferencing — this follows one link, it
+ * does not flatten a tree (#448).
+ *
+ * Parameters are resolved outright because they are small and every consumer
+ * reads `name` and `in` off them. `components.schemas` is passed through
+ * untouched: those are the definitions, not references to them.
+ *
+ * @param {Object} spec - An OpenAPI document, refs intact
  * @param {string} resourceName - Name of the resource (e.g., 'persons')
+ * @param {{ node: Function, schema: Function }} [resolve] - Bound to this
+ *   document and its set. Omitted for an already-flat document, in which case
+ *   nothing needs following.
  * @returns {Object} Metadata about the API
  */
-export function extractMetadata(spec, resourceName) {
+export function extractMetadata(spec, resourceName, resolve = null) {
+  // An already-flat document needs no resolution, so callers that have one —
+  // the tests, and anything handed a dereferenced spec — can omit the resolver.
+  const follow = resolve?.schema ?? ((schema) => schema);
   const paths = spec.paths || {};
 
   // Extract base path from the localhost server URL (e.g., http://localhost:1080/intake -> /intake)
@@ -107,13 +106,13 @@ export function extractMetadata(spec, resourceName) {
   };
   
   // Extract pagination defaults from spec
-  const limitParam = spec.components?.parameters?.LimitParam;
+  const limitParam = follow(spec.components?.parameters?.LimitParam);
   if (limitParam?.schema) {
     metadata.pagination.limitDefault = limitParam.schema.default || 25;
     metadata.pagination.limitMax = limitParam.schema.maximum || 100;
   }
   
-  const offsetParam = spec.components?.parameters?.OffsetParam;
+  const offsetParam = follow(spec.components?.parameters?.OffsetParam);
   if (offsetParam?.schema) {
     metadata.pagination.offsetDefault = offsetParam.schema.default || 0;
   }
@@ -130,7 +129,7 @@ export function extractMetadata(spec, resourceName) {
     for (const [responseName, response] of Object.entries(spec.components.responses)) {
       if (responseName.includes('Error') || responseName === 'NotFound' || 
           responseName === 'BadRequest' || responseName === 'UnprocessableEntity') {
-        metadata.errorResponses[responseName] = response;
+        metadata.errorResponses[responseName] = follow(response);
       }
     }
   }
@@ -138,7 +137,7 @@ export function extractMetadata(spec, resourceName) {
   // Extract endpoints
   for (const [path, pathItem] of Object.entries(paths)) {
     // Get path-level parameters
-    const pathParameters = pathItem.parameters || [];
+    const pathParameters = (pathItem.parameters || []).map(follow);
     
     for (const [method, operation] of Object.entries(pathItem)) {
       // Skip parameters object and unsupported methods
@@ -153,7 +152,7 @@ export function extractMetadata(spec, resourceName) {
       
       // Merge path-level and operation-level parameters
       const operationParameters = operation.parameters || [];
-      const allParameters = [...pathParameters, ...operationParameters];
+      const allParameters = [...pathParameters, ...operationParameters].map(follow);
       
       const endpoint = {
         path: serverBasePath && !path.startsWith(serverBasePath) ? `${serverBasePath}${path}` : path,
@@ -172,19 +171,19 @@ export function extractMetadata(spec, resourceName) {
 
       // Extract request schema
       if (operation.requestBody?.content?.['application/json']?.schema) {
-        endpoint.requestSchema = operation.requestBody.content['application/json'].schema;
+        endpoint.requestSchema = follow(operation.requestBody.content['application/json'].schema);
       }
 
       // Extract response schema (200/201)
       const successStatus = method === 'post' ? '201' : '200';
       if (operation.responses?.[successStatus]?.content?.['application/json']?.schema) {
-        endpoint.responseSchema = operation.responses[successStatus].content['application/json'].schema;
+        endpoint.responseSchema = follow(operation.responses[successStatus].content['application/json'].schema);
       }
       
       // Extract error schemas
       for (const [statusCode, response] of Object.entries(operation.responses || {})) {
-        if (statusCode >= 400 && response.content?.['application/json']?.schema) {
-          endpoint.errorSchemas[statusCode] = response.content['application/json'].schema;
+        if (statusCode >= 400 && follow(response).content?.['application/json']?.schema) {
+          endpoint.errorSchemas[statusCode] = follow(follow(response).content['application/json'].schema);
         }
       }
       
@@ -204,18 +203,40 @@ export function extractMetadata(spec, resourceName) {
  * @returns {Promise<Array>} Array of API metadata objects
  */
 export async function loadAllSpecs({ specsDir } = {}) {
-  const apiSpecs = discoverApiSpecs({ specsDir });
-  const loadedSpecs = [];
+  if (!specsDir) {
+    throw new Error('specsDir is required — pass --spec <path> to specify the specs file or directory');
+  }
+  return apiSpecsFromDocs(discover(specsDir).map(load));
+}
 
-  for (const apiSpec of apiSpecs) {
+/**
+ * The server's view of every OpenAPI document in a set.
+ *
+ * Takes `docs` rather than a directory, which is what lets the same call serve
+ * both boot paths: Node walks a tree, a page reads an artifact, and from there
+ * the question is identical (#448).
+ *
+ * No dereferencing. The refs in these documents all name other documents in
+ * the same set, so nothing is missing — and inlining them would multiply every
+ * shared schema by the number of places referencing it. Each API carries a
+ * `resolve` bound to its own document instead, so a caller walking a schema
+ * follows a ref where it meets one.
+ *
+ * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
+ * @returns {object[]} One metadata object per OpenAPI document
+ */
+export function apiSpecsFromDocs(docs) {
+  const loaded = [];
+
+  for (const doc of docs.filter((d) => d.type === 'openapi')) {
+    const name = basename(doc.path, '-openapi.yaml');
     try {
-      const spec = await loadSpec(apiSpec.specPath);
-      const metadata = extractMetadata(spec, apiSpec.name);
-      loadedSpecs.push(metadata);
+      const resolve = resolverFor(doc, docs);
+      loaded.push({ ...extractMetadata(doc.content, name, resolve), resolve });
     } catch (error) {
-      console.warn(`Warning: Could not load ${apiSpec.name}:`, error.message);
+      console.warn(`Warning: Could not read spec ${name}:`, error.message);
     }
   }
 
-  return loadedSpecs;
+  return loaded;
 }
