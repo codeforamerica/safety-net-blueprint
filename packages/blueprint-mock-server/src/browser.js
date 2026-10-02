@@ -18,7 +18,7 @@
  */
 
 import { createMemoryStore } from './stores/memory-store.js';
-import { assertArtifact, verifyIntegrity, specsFromArtifact } from './contracts.js';
+import { apiSpecsFromDocs } from './spec-loader.js';
 import { registerPlatformRoutes, contractOverrides } from './platform-routes.js';
 import {
   registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes,
@@ -51,26 +51,21 @@ export async function createMockServer({
   store = createMemoryStore(),
   baseUrl = '',
   seed = true,
-  verifyHash = true,
 } = {}) {
-  assertArtifact(contracts);
-
-  if (verifyHash) {
-    const { ok, expected, actual } = await verifyIntegrity(contracts);
-    if (!ok) {
-      throw new Error(
-        `Contracts artifact failed its integrity check (expected ${expected?.slice(0, 16)}…, ` +
-        `got ${actual.slice(0, 16)}…). It was modified after being built, so the claim that ` +
-        'it was validated no longer holds. Rebuild it with blueprint-bundle-contracts.'
-      );
-    }
-  }
-
-  const docs = contracts.docs;
+  // Core owns the artifact format, both halves: `generate(docs, 'artifact')`
+  // wrote this and `extract(artifact, 'docs')` reads it back, rebuilding each
+  // document's methods — which JSON cannot carry and which `extract(docs,
+  // 'relationships')` and the schema walkers need. It also checks the version
+  // and shape, so there is nothing left for this entry to assert (#448).
+  const docs = extract(contracts, 'docs');
 
   // The request validator resolves $refs against the set, same as in Node.
   initSchemaRegistry(docs);
-  const apiSpecs = specsFromArtifact(contracts);
+
+  // From the documents, not a separate `specs` key. The artifact used to carry
+  // the OpenAPI documents twice — once with refs, once dereferenced — which is
+  // most of why it was 3.95 MB rather than 0.67 MB.
+  const apiSpecs = apiSpecsFromDocs(docs);
 
   const stateMachines = extract(docs, 'state-machines');
   const slaTypes = extract(docs, 'sla-types');

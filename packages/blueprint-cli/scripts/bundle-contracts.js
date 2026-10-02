@@ -3,27 +3,34 @@
  * Bundle a contract set into a single JSON artifact.
  *
  * The mock server reads contracts by walking a directory, which a browser
- * cannot do. This does the walking once, in Node, and writes what it found:
- * every document parsed, and the OpenAPI specs dereferenced. `blueprint-mock
- * --spec=contracts.json` then boots from the file, and so does a page (#448).
+ * cannot do. This does the walking once, in Node, and writes what it found —
+ * every document, parsed. `blueprint-mock --spec=contracts.json` then boots
+ * from the file, and so does a page (#448).
  *
- * What is *not* in the artifact is as deliberate as what is. Seed records,
- * config catalogs and registries are all derived from the documents at boot,
- * byte-identically, so precomputing them would be a second source of truth for
- * facts the documents already state.
+ * This script does three things and owns none of them. `discover` and `load`
+ * read the tree, `validate` checks it, and `generate(docs, 'artifact')` decides
+ * the shape — which is also where `extract(artifact, 'docs')` reads it back, so
+ * the format is stated once rather than split between a writer and a reader.
+ * What is left here is a command: parse arguments, report, write a file.
+ *
+ * What is *not* in the artifact is as deliberate as what is:
+ *
+ *   No derived facts. Seed records, config catalogs, compiled graphs and
+ *   registries are read out of the documents at boot by the same calls Node
+ *   makes, so the artifact cannot disagree with the library reading it.
+ *
+ *   No dereferenced copy of the specs. The refs name documents in the same
+ *   set, so the set is already complete; inlining them multiplied every shared
+ *   schema by the number of places referencing it, and took the artifact from
+ *   0.67 MB to 3.95 MB.
  *
  * Usage:
  *   blueprint-bundle-contracts --spec=<dir> [--seed=<dir>] --out=contracts.json
  */
 
-import { discover, load, validate } from '@codeforamerica/blueprint-core';
-import $RefParser from '@apidevtools/json-schema-ref-parser';
+import { discover, load, validate, generate } from '@codeforamerica/blueprint-core';
 import { writeFileSync, existsSync } from 'node:fs';
-import { createHash } from 'node:crypto';
-import { basename, resolve } from 'node:path';
-
-/** The shape this builder writes. Bumped when the artifact's layout changes. */
-const ARTIFACT_VERSION = 1;
+import { resolve } from 'node:path';
 
 function parseArgs(argv) {
   const options = { specDirs: [], seedDir: null, out: null, skipValidation: false, help: false };
@@ -51,29 +58,11 @@ Options:
   --skip-validation   Write the artifact even if the contract set has errors.
   --help              Show this message.
 
-The artifact carries every document and the dereferenced OpenAPI specs, plus a
-hash of both. Seed records, config catalogs and registries are derived from the
+The artifact carries every document as data, with its $refs intact. Seed
+records, config catalogs, compiled graphs and registries are read out of those
 documents at boot rather than stored.
 `.trim();
 
-/**
- * Strip a Doc down to the data a consumer can rebuild it from.
- *
- * A `Doc` carries methods, which do not survive JSON. Every reader the mock
- * server uses — `extract`, `generate`, the registry helpers — reads only these
- * fields, which is why the artifact can be plain data.
- */
-function plainDoc(doc) {
-  return {
-    path: doc.path,
-    relativePath: doc.relativePath,
-    domain: doc.domain,
-    type: doc.type,
-    content: doc.content,
-    resolved: doc.resolved,
-    provenance: doc.provenance,
-  };
-}
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
@@ -123,35 +112,19 @@ async function main() {
     console.log(`  ✓ ${docs.length} document(s), no errors`);
   }
 
-  console.log('\nDereferencing OpenAPI specs...');
-  const specs = {};
-  for (const doc of docs.filter((d) => d.type === 'openapi')) {
-    const name = basename(doc.path, '-openapi.yaml');
-    specs[name] = await $RefParser.dereference(doc.path, { dereference: { circular: 'ignore' } });
-    console.log(`  ✓ ${name}`);
-  }
+  // `createdAt` is this command's, not the format's — provenance for whoever
+  // finds the file later. Nothing reads it.
+  const artifact = { ...generate(docs, 'artifact'), createdAt: new Date().toISOString() };
 
-  const payload = { docs: docs.map(plainDoc), specs };
-  const serialised = JSON.stringify(payload);
-  const hash = createHash('sha256').update(serialised).digest('hex');
-
-  const artifact = {
-    artifactVersion: ARTIFACT_VERSION,
-    createdAt: new Date().toISOString(),
-    // The hash covers the payload only, so it is reproducible: re-bundling the
-    // same contracts yields the same hash even though `createdAt` differs.
-    integrity: { algorithm: 'sha256', hash },
-    validated: !options.skipValidation,
-    ...payload,
-  };
-
+  const serialised = JSON.stringify(artifact);
   const outPath = resolve(options.out);
-  writeFileSync(outPath, JSON.stringify(artifact));
-  const bytes = Buffer.byteLength(JSON.stringify(artifact));
+  writeFileSync(outPath, serialised);
 
   console.log(`\n✓ Wrote ${outPath}`);
-  console.log(`  ${docs.length} documents, ${Object.keys(specs).length} specs, ${(bytes / 1024 / 1024).toFixed(2)} MB`);
-  console.log(`  sha256 ${hash.slice(0, 16)}…`);
+  console.log(`  ${artifact.docs.length} documents, ${(Buffer.byteLength(serialised) / 1024 / 1024).toFixed(2)} MB`);
+  if (options.skipValidation) {
+    console.log('  Not validated — --skip-validation was passed.');
+  }
 }
 
 main().catch((error) => {

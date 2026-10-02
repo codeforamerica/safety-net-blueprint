@@ -168,16 +168,17 @@ export interface Graph {
  * and `extract(artifact, 'docs')` reads it back.
  *
  * `docs` holds each document stripped of its methods, which JSON cannot carry;
- * reading it back rebuilds them. `createdAt` and `integrity` are added by
- * whoever writes the file — a hash covers bytes, and `generate` returns an
- * object, so the writer is the only thing holding bytes to hash.
+ * reading it back rebuilds them. The OpenAPI documents keep their `$ref`s:
+ * they name other documents in the same set, so the set is already complete,
+ * and inlining them took the artifact from 0.67 MB to 3.95 MB.
+ *
+ * `createdAt` belongs to whoever writes the file, not to the format — nothing
+ * reads it.
  */
 export interface ContractsArtifact {
   artifactVersion: number;
   docs: Array<Omit<Doc, 'refs' | 'externalRefs' | 'resolveRef' | 'model' | 'resolved'>>;
   createdAt?: string;
-  /** Not a signature — it is recomputable. */
-  integrity?: { algorithm: string; hash: string };
 }
 
 /** One example record, as `extract(docs, 'examples')` groups them. */
