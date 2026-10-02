@@ -16,6 +16,40 @@
 import { evaluateCEL } from '../cel-evaluator.js';
 
 /**
+ * Every property map a schema contributes, following refs on the way.
+ *
+ * A composed schema declares its fields across `allOf` members, and those
+ * members are refs — so without following them there are no properties to
+ * read and an annotated field is invisible. That failed quietly: list items
+ * came back without their `links`, because `x-relationship` lives on a
+ * property the walker could not see (#448).
+ *
+ * `follow` is `api.resolve.schema`, which resolves one hop against the
+ * document the schema was declared in. Identity when omitted, which is right
+ * for a schema that carries no refs.
+ *
+ * @param {object} schema
+ * @param {(schema: *) => *} follow
+ * @returns {object[]} Property maps, outermost first
+ */
+function propertiesOf(schema, follow = (x) => x) {
+  const resolved = follow(schema);
+  if (!resolved || typeof resolved !== 'object') return [];
+
+  const sources = [];
+  if (resolved.properties) sources.push(resolved.properties);
+
+  if (Array.isArray(resolved.allOf)) {
+    for (const entry of resolved.allOf) {
+      const member = follow(entry);
+      if (member?.properties) sources.push(member.properties);
+    }
+  }
+
+  return sources;
+}
+
+/**
  * Walk a response schema and return all fields annotated with
  * x-relationship.style: expand.
  *
@@ -24,18 +58,11 @@ import { evaluateCEL } from '../cel-evaluator.js';
  * @param {object} schema - OpenAPI schema object (resolved, post-overlay)
  * @returns {Array<{ fieldName: string, fkField: string, resource: string, collection: string }>}
  */
-export function extractExpandFields(schema) {
+export function extractExpandFields(schema, follow = (x) => x) {
   if (!schema) return [];
 
   const fields = [];
-  const propertySources = [];
-
-  if (schema.properties) propertySources.push(schema.properties);
-  if (Array.isArray(schema.allOf)) {
-    for (const entry of schema.allOf) {
-      if (entry.properties) propertySources.push(entry.properties);
-    }
-  }
+  const propertySources = propertiesOf(schema, follow);
 
   for (const props of propertySources) {
     for (const [fieldName, propDef] of Object.entries(props)) {
@@ -102,26 +129,34 @@ export function applyExpand(record, expandFields, lookup) {
  * @param {object} schemas - All schemas from apiMetadata.schemas
  * @returns {object|null}
  */
-export function getItemSchema(listSchema, schemas) {
+export function getItemSchema(listSchema, schemas, follow = (x) => x) {
   if (!listSchema) return null;
 
+  const root = follow(listSchema);
   const sources = [];
-  if (listSchema.properties) sources.push(listSchema);
-  if (Array.isArray(listSchema.allOf)) sources.push(...listSchema.allOf);
+  if (root.properties) sources.push(root);
+  if (Array.isArray(root.allOf)) sources.push(...root.allOf.map(follow));
 
   for (const entry of sources) {
-    const itemsItems = entry.properties?.items?.items;
-    if (itemsItems) {
-      // If the item schema is a $ref, resolve it using the schemas map.
-      if (itemsItems.$ref && schemas) {
+    const itemsItems = entry?.properties?.items?.items;
+    if (!itemsItems) continue;
+
+    if (typeof itemsItems.$ref === 'string') {
+      // Prefer the resolver, which follows a ref into another document.
+      // The name lookup below only works for a same-document ref, and was
+      // the only option while specs arrived dereferenced (#448).
+      const resolved = follow(itemsItems);
+      if (resolved !== itemsItems) return resolved;
+
+      if (schemas) {
         const refName = itemsItems.$ref.split('/').pop();
         return schemas[refName] ?? itemsItems;
       }
-      return itemsItems;
     }
+    return itemsItems;
   }
 
-  return listSchema;
+  return root;
 }
 
 /**
@@ -145,18 +180,11 @@ function resourceToCollection(resource) {
  * @param {object} schema - OpenAPI schema object (resolved, post-overlay)
  * @returns {Array<{ fkField: string, linkName: string, resource: string, collection: string }>}
  */
-export function extractLinksFields(schema) {
+export function extractLinksFields(schema, follow = (x) => x) {
   if (!schema) return [];
 
   const fields = [];
-  const propertySources = [];
-
-  if (schema.properties) propertySources.push(schema.properties);
-  if (Array.isArray(schema.allOf)) {
-    for (const entry of schema.allOf) {
-      if (entry.properties) propertySources.push(entry.properties);
-    }
-  }
+  const propertySources = propertiesOf(schema, follow);
 
   for (const props of propertySources) {
     for (const [fieldName, propDef] of Object.entries(props)) {
@@ -215,18 +243,11 @@ export function applyLinks(record, linksFields, serverBasePath = '') {
  * @param {object} schema - OpenAPI schema object (resolved, post-overlay)
  * @returns {Array<{ fieldName: string, expr: string }>}
  */
-export function extractDerivedFields(schema) {
+export function extractDerivedFields(schema, follow = (x) => x) {
   if (!schema) return [];
 
   const fields = [];
-  const propertySources = [];
-
-  if (schema.properties) propertySources.push(schema.properties);
-  if (Array.isArray(schema.allOf)) {
-    for (const entry of schema.allOf) {
-      if (entry.properties) propertySources.push(entry.properties);
-    }
-  }
+  const propertySources = propertiesOf(schema, follow);
 
   for (const props of propertySources) {
     for (const [fieldName, propDef] of Object.entries(props)) {

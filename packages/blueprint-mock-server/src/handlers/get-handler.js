@@ -65,9 +65,9 @@ export function createGetHandler(apiMetadata, endpoint, { store } = {}) {
       return Response.json({ ...resource, _links });
     }
 
-    const expandFields = extractExpandFields(endpoint.responseSchema);
-    const linksFields = extractLinksFields(endpoint.responseSchema);
-    const derivedFields = extractDerivedFields(endpoint.responseSchema);
+    const expandFields = extractExpandFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
+    const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
+    const derivedFields = extractDerivedFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
     let responseBody = expandFields.length > 0 ? applyExpand(resource, expandFields, (c, id) => store.findById(c, id)) : resource;
     if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
     if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);

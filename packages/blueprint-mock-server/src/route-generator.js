@@ -410,8 +410,8 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
               Object.entries(query).filter(([k]) => !reservedParams.has(k))
             );
             const { items, total } = store.findAll(endpointWithCollection.collectionName, { [parentField]: parentId, ...extraFilters }, { limit, offset });
-            const itemSchema = getItemSchema(endpoint.responseSchema, apiMetadata.schemas);
-            const expandFields = extractExpandFields(itemSchema);
+            const itemSchema = getItemSchema(endpoint.responseSchema, apiMetadata.schemas, apiMetadata.resolve?.schema);
+            const expandFields = extractExpandFields(itemSchema, apiMetadata.resolve?.schema);
             const expandedItems = expandFields.length > 0
               ? items.map(item => applyExpand(item, expandFields, findById))
               : items;

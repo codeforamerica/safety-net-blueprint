@@ -198,9 +198,9 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const fresh = store.findById(endpoint.collectionName, resource.id) || resource;
 
       // Apply x-relationship expand, links-only, and x-derived transformations (same as GET handler)
-      const expandFields = extractExpandFields(endpoint.responseSchema);
-      const linksFields = extractLinksFields(endpoint.responseSchema);
-      const derivedFields = extractDerivedFields(endpoint.responseSchema);
+      const expandFields = extractExpandFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
+      const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
+      const derivedFields = extractDerivedFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
       let responseBody = expandFields.length > 0 ? applyExpand(fresh, expandFields, store.findById) : fresh;
       if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
       if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);

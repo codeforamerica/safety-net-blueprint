@@ -65,9 +65,20 @@ export async function setupFunctional() {
   // resolve.js discovers all *-openapi.yaml files in the spec dir and copies
   // them to outDir, applying relationship resolution on the way.
   const overlayDir = join(fixturesDir, 'overlay');
-  await runScript(resolveScript, [`--spec=${fixturesDir}`, `--overlay=${overlayDir}`, `--out=${resolvedDir}`, '--resolve', '--bundle']);
+  // No --bundle. That flag dereferences every $ref, and a dereferenced
+  // fixture cannot exercise ref resolution at all — which is how four bugs in
+  // the move away from dereferencing passed this suite and were caught only
+  // against the real contract set (#448). Refs intact is also what the server
+  // actually meets: packages/generated/contracts is resolved without --bundle
+  // and carries 1089 external refs.
+  //
+  // Both the server and the TypeScript client generator read this one output.
+  // Dereferencing turned out to be needed by neither — what the --bundle flag
+  // was really doing here was hiding an invalid UUID in ChildExample1, which
+  // it dropped from seeding rather than seeding and failing on.
+  await runScript(resolveScript, [`--spec=${fixturesDir}`, `--overlay=${overlayDir}`, `--out=${resolvedDir}`, '--resolve']);
 
-  // Generate TypeScript clients for all resolved specs
+  // Generate TypeScript clients from the same output
   console.log('\nGenerating TypeScript clients...');
   await runScript(generateScript, [`--spec=${resolvedDir}`, `--out=${generatedDir}`]);
 

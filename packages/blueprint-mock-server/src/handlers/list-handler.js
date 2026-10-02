@@ -122,10 +122,10 @@ export function createListHandler(apiMetadata, endpoint, { store } = {}) {
         hasNext: result.hasNext || false
       };
 
-      const itemSchema = getItemSchema(endpoint.responseSchema, apiMetadata.schemas);
-      const expandFields = extractExpandFields(itemSchema);
-      const linksFields = extractLinksFields(itemSchema);
-      const derivedFields = extractDerivedFields(itemSchema);
+      const itemSchema = getItemSchema(endpoint.responseSchema, apiMetadata.schemas, apiMetadata.resolve?.schema);
+      const expandFields = extractExpandFields(itemSchema, apiMetadata.resolve?.schema);
+      const linksFields = extractLinksFields(itemSchema, apiMetadata.resolve?.schema);
+      const derivedFields = extractDerivedFields(itemSchema, apiMetadata.resolve?.schema);
       if (expandFields.length > 0 || linksFields.length > 0 || derivedFields.length > 0) {
         safeResult.items = safeResult.items.map(item => {
           let result = expandFields.length > 0 ? applyExpand(item, expandFields, (c, id) => store.findById(c, id)) : item;
