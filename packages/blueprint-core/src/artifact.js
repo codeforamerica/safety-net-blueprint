@@ -37,12 +37,18 @@ export const ARTIFACT_VERSION = 1;
  * A Doc's methods cannot survive JSON, which is the whole reason `toDoc`
  * exists to put them back.
  *
+ * `path` is deliberately dropped. It is the absolute path on whichever machine
+ * ran `discover`, which means nothing to a reader of the file and everything to
+ * anyone reading the file: the harness artifact is committed and inlined into
+ * `standalone.html`, so it was publishing a home directory — a username — 38
+ * times in a page meant for anyone to open. `relativePath` is the identity
+ * every lookup already keys on, and `toDoc` restores `path` from it.
+ *
  * @param {import('../types.js').Doc} doc
  * @returns {object}
  */
 function plainDoc(doc) {
   return {
-    path: doc.path,
     relativePath: doc.relativePath,
     domain: doc.domain,
     type: doc.type,

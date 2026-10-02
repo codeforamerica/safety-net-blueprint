@@ -126,12 +126,12 @@ async function main() {
     }
   }
 
-  // `createdAt` is this command's, not the format's — provenance for whoever
-  // finds the file later. Nothing reads it.
-  const artifact = {
-    ...generate(docs, 'artifact', { domains: options.domains }),
-    createdAt: new Date().toISOString(),
-  };
+  // No build timestamp. It was here as provenance for whoever found the file
+  // later, and nothing read it — but the harness artifact is committed, so a
+  // timestamp meant every regenerate produced a diff in two tracked files with
+  // no contract change behind it, and ruled out ever checking freshness by
+  // rebuilding and diffing.
+  const artifact = generate(docs, 'artifact', { domains: options.domains });
 
   if (options.domains.length > 0) {
     const kept = new Set(artifact.docs.map((doc) => doc.domain ?? '(shared)'));

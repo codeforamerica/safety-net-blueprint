@@ -172,13 +172,15 @@ export interface Graph {
  * they name other documents in the same set, so the set is already complete,
  * and inlining them took the artifact from 0.67 MB to 3.95 MB.
  *
- * `createdAt` belongs to whoever writes the file, not to the format — nothing
- * reads it.
+ * Each document carries `relativePath` and no `path`: an absolute path is a
+ * fact about the machine that built the file, not about the contract set, and
+ * this file gets committed and served. Nothing else is in here either — no
+ * build timestamp, no derived facts, no hash — so the same contract set always
+ * produces the same bytes.
  */
 export interface ContractsArtifact {
   artifactVersion: number;
-  docs: Array<Omit<Doc, 'refs' | 'externalRefs' | 'resolveRef' | 'model' | 'resolved'>>;
-  createdAt?: string;
+  docs: Array<Omit<Doc, 'path' | 'refs' | 'externalRefs' | 'resolveRef' | 'model' | 'resolved'>>;
 }
 
 /** One example record, as `extract(docs, 'examples')` groups them. */

@@ -24,8 +24,15 @@ import { followRef, indexByRelativePath, resolveRef, isRemoteRef } from './ref-l
 /**
  * Build a Doc from already-parsed document data.
  *
+ * `path` falls back to `relativePath` because an artifact has no filesystem to
+ * be absolute against — it stores only each document's position in the set, so
+ * that is the only path it can offer. Readers that want a filename take the
+ * last segment and are unaffected; the one place deriving a set root by
+ * stripping `relativePath` off `path` is `validate`, which runs over documents
+ * from `discover` before any artifact is written.
+ *
  * @param {object} fields
- * @param {string} fields.path - Where the document came from
+ * @param {string} [fields.path] - Where the document came from, when it came from somewhere
  * @param {string|null} [fields.relativePath] - Its path within the contract set
  * @param {string|null} [fields.domain] - Falls back to what the content declares
  * @param {string} fields.type - From `detectType`
@@ -35,7 +42,7 @@ import { followRef, indexByRelativePath, resolveRef, isRemoteRef } from './ref-l
  */
 export function toDoc({ path, relativePath = null, domain = null, type, content, provenance = null }) {
   return {
-    path,
+    path: path ?? relativePath,
     relativePath,
     // discover() resolves this against the whole set, which is the only way
     // the path-segment and filename fallbacks can work. Loading a file alone

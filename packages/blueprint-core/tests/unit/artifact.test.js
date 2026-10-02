@@ -155,8 +155,45 @@ describe('generate(docs, \'artifact\') and extract(artifact, \'docs\')', () => {
     const [doc] = generate(fromDisk, 'artifact').docs;
     assert.deepEqual(
       Object.keys(doc).sort(),
-      ['content', 'domain', 'path', 'provenance', 'relativePath', 'type']
+      ['content', 'domain', 'provenance', 'relativePath', 'type']
     );
+  });
+
+  test('carries nothing about the machine that built it', () => {
+    // The harness artifact is committed and inlined into standalone.html, so
+    // an absolute path published the build machine's home directory — and the
+    // username in it — once per document. The whole serialized form is checked
+    // rather than the `path` field, because the point is that the directory
+    // does not appear anywhere.
+    const dir = contractsIn(TREE);
+    try {
+      const artifact = generate(discover(dir).map(load), 'artifact');
+      assert.ok(artifact.docs.length > 0);
+      for (const doc of artifact.docs) assert.equal(doc.path, undefined);
+      assert.ok(!JSON.stringify(artifact).includes(dir), 'artifact names its build directory');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('the same contract set serializes to the same bytes', () => {
+    // Nothing in here is derived from when or where the build ran, which is
+    // what makes a committed artifact reviewable: a diff means a contract
+    // changed.
+    const { fromDisk } = bothWays(TREE);
+    assert.equal(
+      JSON.stringify(generate(fromDisk, 'artifact')),
+      JSON.stringify(generate(fromDisk, 'artifact'))
+    );
+  });
+
+  test('a document read back has a path, which is its place in the set', () => {
+    // Readers take the last segment of `path` for a filename, so it cannot be
+    // undefined just because the artifact does not store one.
+    const { fromDisk } = bothWays(TREE);
+    const [doc] = extract(generate(fromDisk, 'artifact'), 'docs');
+    assert.equal(doc.path, doc.relativePath);
+    assert.ok(doc.path);
   });
 
   describe('refuses an artifact it cannot read', () => {
