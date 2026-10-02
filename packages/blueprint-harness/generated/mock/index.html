@@ -3,141 +3,108 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Blueprint mock server — in the browser</title>
+<title>A guided tour of the blueprint mock server</title>
 <!--
-  A page that runs the mock server with no server.
+  The mock server, running in this page, with no server.
 
-  Plain JavaScript on purpose. The point being demonstrated is that the mock
-  is reachable without a backend, and a framework would put something between
-  the claim and the evidence. Everything below calls `mock.fetch` the way any
-  application would call `fetch`.
+  Written as a tour rather than a control panel. The first version was a set of
+  buttons for the mock's own admin surface — stub, reset, reseed — which
+  demonstrated the plumbing and none of the point. What distinguishes this from
+  a generic API mock is that a record moves through a state machine, the
+  transition emits an event, a stub can stand in for the service that would
+  answer it, and a compiled rules graph evaluates against real inputs. So the
+  steps follow that pipeline, in order.
 
-  Served from a CDN this is three static files: this page, the bundle, and the
-  contracts artifact. Each visitor gets their own store, so there is no shared
-  state to reason about — and no compute to pay for (#448).
+  Plain JavaScript, and the DOM is built rather than assembled from strings:
+  almost everything displayed comes out of the contracts artifact — route
+  paths, endpoint names, response bodies — and an artifact is a JSON file,
+  which is to say input (#448).
 -->
 <style>
   :root {
-    --ink: #1a1a1a; --muted: #5a5a5a; --line: #d8d8d8; --bg: #fbfbfb;
-    --ok: #0a7d32; --bad: #b3261e; --accent: #1a4f8a;
+    --ink: #1a1a1a; --muted: #5a5a5a; --faint: #8a8a8a;
+    --line: #dcdcdc; --bg: #fbfaf8; --card: #fff;
+    --ok: #0a7d32; --bad: #b3261e; --accent: #1a4f8a; --warm: #8a5a00;
     --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; padding: 2rem 1.5rem 4rem; background: var(--bg); color: var(--ink);
-    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    margin: 0; padding: 2.5rem 1.5rem 6rem; background: var(--bg); color: var(--ink);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   }
-  main { max-width: 60rem; margin: 0 auto; }
-  h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
-  h2 { font-size: 1.05rem; margin: 2.5rem 0 .75rem; padding-bottom: .3rem; border-bottom: 1px solid var(--line); }
-  p.lede { color: var(--muted); margin: 0 0 1.5rem; }
-  #boot { padding: .75rem 1rem; border: 1px solid var(--line); border-radius: 6px; background: #fff; font-family: var(--mono); font-size: .85rem; }
-  .row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .5rem 0; }
+  main { max-width: 54rem; margin: 0 auto; }
+  h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 .5rem; }
+  .lede { color: var(--muted); margin: 0 0 1.25rem; max-width: 42rem; }
+  #boot {
+    padding: .7rem .9rem; border: 1px solid var(--line); border-left: 3px solid var(--accent);
+    border-radius: 4px; background: var(--card); font-family: var(--mono); font-size: .82rem;
+  }
+  .controls { display: flex; gap: .6rem; align-items: center; margin: 1.5rem 0 .5rem; flex-wrap: wrap; }
   button {
-    font: inherit; font-size: .9rem; padding: .35rem .8rem; cursor: pointer;
-    border: 1px solid var(--line); border-radius: 5px; background: #fff; color: var(--accent);
+    font: inherit; font-size: .88rem; padding: .4rem .85rem; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 5px; background: var(--card); color: var(--accent);
   }
-  button:hover:not(:disabled) { border-color: var(--accent); }
-  button:disabled { opacity: .5; cursor: default; }
-  input, select {
-    font: inherit; font-size: .9rem; padding: .3rem .5rem;
-    border: 1px solid var(--line); border-radius: 5px; background: #fff;
+  button:hover:not(:disabled) { border-color: var(--accent); background: #f4f8fd; }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.primary:hover:not(:disabled) { background: #16406f; }
+  .step {
+    margin: 1.5rem 0; padding: 1.1rem 1.2rem; background: var(--card);
+    border: 1px solid var(--line); border-radius: 6px;
   }
+  .step.done { border-left: 3px solid var(--ok); }
+  .step.failed { border-left: 3px solid var(--bad); }
+  .step h2 { font-size: 1.02rem; margin: 0 0 .1rem; display: flex; gap: .55rem; align-items: baseline; }
+  .step h2 .n { color: var(--faint); font-family: var(--mono); font-size: .85rem; }
+  .step .what { color: var(--muted); font-size: .92rem; margin: .4rem 0 .8rem; }
+  .step .why { font-size: .88rem; margin: .8rem 0 0; padding-left: .8rem; border-left: 2px solid var(--line); color: var(--muted); }
+  .step .why b { color: var(--ink); font-weight: 600; }
+  .cannot { background: #fdfbf5; border-left: 3px solid var(--warm); }
   pre {
-    margin: .5rem 0 0; padding: .75rem; max-height: 22rem; overflow: auto;
-    background: #fff; border: 1px solid var(--line); border-radius: 6px;
-    font-family: var(--mono); font-size: .78rem; line-height: 1.5; white-space: pre-wrap;
+    margin: .6rem 0 0; padding: .7rem .8rem; max-height: 20rem; overflow: auto;
+    background: #fafafa; border: 1px solid var(--line); border-radius: 4px;
+    font-family: var(--mono); font-size: .76rem; line-height: 1.5; white-space: pre-wrap;
   }
-  table { border-collapse: collapse; width: 100%; font-size: .85rem; }
-  th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
-  th { color: var(--muted); font-weight: 600; }
-  td.status { font-family: var(--mono); width: 4rem; }
+  .facts { margin: .7rem 0 0; padding: 0; list-style: none; font-size: .88rem; }
+  .facts li { padding: .18rem 0; }
+  .facts code { font-family: var(--mono); font-size: .9em; background: #f0f0f0; padding: .08em .3em; border-radius: 3px; }
   .pass { color: var(--ok); font-weight: 600; }
   .fail { color: var(--bad); font-weight: 600; }
-  .note { color: var(--muted); font-size: .85rem; margin: .4rem 0 0; }
-  code { font-family: var(--mono); font-size: .85em; background: #f0f0f0; padding: .1em .3em; border-radius: 3px; }
+  .req { font-family: var(--mono); font-size: .78rem; color: var(--accent); margin: .5rem 0 0; }
+  code { font-family: var(--mono); font-size: .88em; background: #f0f0f0; padding: .08em .3em; border-radius: 3px; }
+  footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .88rem; }
+  footer h2 { font-size: 1rem; margin: 0 0 .5rem; color: var(--ink); }
+  footer p { margin: .4rem 0; }
 </style>
 </head>
 <body>
 <main>
-  <h1>Blueprint mock server, running in this page</h1>
+  <h1>A guided tour of the blueprint mock server</h1>
   <p class="lede">
-    No server is involved. The contract set was bundled into a JSON file, and
-    the mock server was bundled into JavaScript — both static files served from
-    wherever this page came from.
+    Everything below runs in this page. No server, no network — the contract set
+    was bundled into a JSON file and the mock server into JavaScript, both
+    static. The steps follow a record through the pipeline, because that is what
+    makes this different from a mock that returns canned JSON.
   </p>
 
   <div id="boot">starting…</div>
 
-  <h2>What it answers</h2>
-  <div class="row">
-    <button id="run-probes">Request every kind of endpoint</button>
-    <span class="note" id="probe-note"></span>
+  <div class="controls">
+    <button id="run-all" class="primary">Run the whole tour</button>
+    <button id="reset-tour">Start over</button>
+    <span id="progress" class="req"></span>
   </div>
-  <table id="probes"><tbody></tbody></table>
 
-  <h2>Create a record</h2>
-  <p class="note">
-    A <code>POST</code> through the same <code>mock.fetch</code>, validated
-    against the contract's request schema, then read back.
-  </p>
-  <div class="row">
-    <button id="create">POST an application</button>
-    <button id="list-after" disabled>GET the list again</button>
-  </div>
-  <pre id="create-out">—</pre>
+  <div id="steps"></div>
 
-  <h2>Stub an endpoint</h2>
-  <p class="note">
-    Register an HTTP stub and the mock answers from it instead of its own
-    handler, which is how a test forces a response the contract allows but the
-    data does not produce.
-  </p>
-  <div class="row">
-    <input id="stub-path" placeholder="(a path from this contract set)" size="30" aria-label="path to stub">
-    <select id="stub-status" aria-label="status to return">
-      <option>500</option><option>404</option><option>422</option><option>503</option>
-    </select>
-    <button id="stub-add">Add stub</button>
-    <button id="stub-call">Call it</button>
-    <button id="stub-clear">Clear stubs</button>
-  </div>
-  <pre id="stub-out">—</pre>
-
-  <h2>Inject an event</h2>
-  <p class="note">
-    The event bus runs in the page too. Publishing an event is how a test
-    drives a state machine without performing the action that would emit it.
-  </p>
-  <div class="row">
-    <input id="event-type" value="intake.application.submitted" size="34" aria-label="event type">
-    <button id="event-publish">Publish</button>
-    <button id="event-list">Read the event log</button>
-  </div>
-  <pre id="event-out">—</pre>
-
-  <h2>Upload a document</h2>
-  <p class="note">
-    A real <code>multipart/form-data</code> request. The bytes are hashed and
-    discarded — the mock stores a description of the file, never its contents,
-    so nothing in a shared fixture can carry real data.
-  </p>
-  <div class="row">
-    <input type="file" id="file" aria-label="file to upload">
-    <button id="upload">Upload</button>
-  </div>
-  <pre id="upload-out">—</pre>
-
-  <h2>Every route this artifact produced</h2>
-  <p class="note">Built from the contract set at boot — no route is written by hand.</p>
-  <pre id="routes">—</pre>
-
-  <h2>Reset and reseed</h2>
-  <div class="row">
-    <button id="reseed">Reseed from the artifact</button>
-    <button id="reset">Reset to empty</button>
-  </div>
-  <pre id="admin-out">—</pre>
+  <footer>
+    <h2>What this tour cannot show</h2>
+    <p id="cannot">—</p>
+    <p>
+      The route table, the handlers and the store are the same code the Node
+      server runs. <code>window.mock</code> is on the console.
+    </p>
+  </footer>
 </main>
 
 <script type="module">
@@ -158,22 +125,13 @@ const loadContracts = async () => {
 };
 
 const $ = (id) => document.getElementById(id);
-const show = (id, value) => {
-  $(id).textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
-};
 
 /**
  * An element with text in it, built rather than parsed.
  *
- * Nothing here assembles HTML from values. Almost everything this page
- * displays comes out of the contracts artifact — route paths, endpoint names,
- * response bodies — and an artifact is a JSON file, which is to say input. A
- * path containing markup would be executed if it were interpolated into
- * innerHTML, so it never is: `textContent` assigns a string as a string.
- *
- * @param {string} tag
- * @param {string} [text]
- * @param {string} [className]
+ * Nothing here assembles HTML from values. A route path or an error message
+ * containing markup would be executed if it were interpolated into innerHTML,
+ * so it never is: `textContent` assigns a string as a string.
  */
 const el = (tag, text = '', className = '') => {
   const node = document.createElement(tag);
@@ -182,219 +140,570 @@ const el = (tag, text = '', className = '') => {
   return node;
 };
 
-/**
- * Everything below the directory this page is served from.
- *
- * GitHub Pages puts a project site at /<repo>/, so a request for
- * `/applications` resolves to `/<repo>/mock/applications` while the route
- * table is keyed on the contract's own paths. Handing the prefix to the mock
- * keeps the hosted page behaving like a local one.
- */
+/** Everything below the directory this page is served from. */
 const basePath = location.pathname.replace(/\/[^/]*$/, '');
 
 let mock;
+let contracts;
 
-/** Call the mock the way an application would: a path in, a Response out. */
-const call = async (path, init) => {
-  const response = await mock.fetch(new Request(new URL(basePath + path, location.origin), init));
-  const text = await response.text();
-  let body;
-  try { body = JSON.parse(text); } catch { body = text; }
-  return { status: response.status, body };
-};
+/** Requests carry a caller: the server refuses a state transition without one. */
+const CALLER = 'the-guided-tour';
 
 /**
- * What this artifact actually offers.
+ * One request through the mock, recorded so a step can show what it sent.
  *
- * Nothing below is hard-coded to a particular contract set. The page reads the
- * route table the mock just built, so it demonstrates whatever it was handed —
- * the sample contracts here, or a state's own. Hard-coded paths made the page
- * work against one set and silently 404 against another.
+ * Returns the parsed body alongside the status and a one-line description of
+ * the request, which is what the step displays — the point being that these
+ * are ordinary `fetch` calls and nothing is special about them.
  */
-const survey = (routes) => {
-  const keys = [...routes.keys()];
-  const find = (method, test) => keys.find((k) => k.startsWith(method + ' ') && test(k.slice(method.length + 1)));
-  const path = (key) => key?.slice(key.indexOf(' ') + 1) ?? null;
+const calls = [];
+const call = async (method, path, body) => {
+  const init = { method, headers: { 'X-Caller-Id': CALLER } };
+  if (body !== undefined && !(body instanceof FormData)) {
+    init.headers['content-type'] = 'application/json';
+    init.body = JSON.stringify(body);
+  } else if (body instanceof FormData) {
+    init.body = body;
+  }
 
-  // A collection endpoint, preferring one that can also be posted to — that
-  // is what makes the create and stub sections demonstrate anything. Metrics
-  // and search endpoints are GET-only and would otherwise win on ordering.
-  const isCollection = (p) => !p.includes('{') && !p.startsWith('/mock/') && p !== '/health';
-  const postable = keys
-    .filter((k) => k.startsWith('POST ') && isCollection(k.slice(5)))
-    .map((k) => k.slice(5))
-    .find((p) => keys.includes('GET ' + p));
-  const list = postable ?? path(find('GET', isCollection));
+  const response = await mock.fetch(new Request(new URL(basePath + path, location.origin), init));
+  const text = await response.text();
+  let parsed;
+  try { parsed = JSON.parse(text); } catch { parsed = text; }
+
+  const record = { line: `${method} ${path}`, status: response.status, body: parsed };
+  calls.push(record);
+  return record;
+};
+
+/** Shared state between steps: a record created in one is transitioned in the next. */
+const tour = {};
+
+/**
+ * What this contract set offers.
+ *
+ * The tour reads the route table rather than naming paths, so it runs against
+ * any contract set and says what a set cannot demonstrate instead of failing
+ * when a button is pressed.
+ */
+const survey = () => {
+  const keys = [...mock.routes.keys()];
+  const has = (key) => keys.includes(key);
+  const path = (method, test) => {
+    const key = keys.find((k) => k.startsWith(method + ' ') && test(k.slice(method.length + 1)));
+    return key ? key.slice(method.length + 1) : null;
+  };
+
+  const collection = (() => {
+    const postable = keys
+      .filter((k) => k.startsWith('POST '))
+      .map((k) => k.slice(5))
+      .filter((p) => !p.includes('{') && !p.startsWith('/mock/') && !p.includes('/evaluate'))
+      .find((p) => has('GET ' + p));
+    return postable ?? path('GET', (p) => !p.includes('{') && !p.startsWith('/mock/') && p !== '/health');
+  })();
+
+  // State machine actions come from the state machine documents, not from
+  // guessing at path shapes. Matching `POST /x/{id}/verb` also matched the
+  // composition endpoints, which are not transitions and have no `from`
+  // state — so the tour ran one and demonstrated nothing.
+  //
+  // Reading the contract gives the action's declared transition too, which is
+  // the thing worth showing: the contract says draft → submitted, the record
+  // was draft, and afterwards it is submitted.
+  const machines = contracts.docs
+    .filter((doc) => doc.type === 'state-machine')
+    .flatMap((doc) => (doc.content?.machines ?? []).map((machine) => ({
+      domain: doc.domain,
+      object: machine.object,
+      initialState: machine.initialState,
+      actions: (machine.actions ?? [])
+        .filter((a) => a.transition?.from && a.transition?.to)
+        // `from` may name several states — `withdraw` is reachable from
+        // draft, submitted and under_review — so it is always a list here.
+        .map((a) => ({ ...a, from: String(a.transition.from).split(',').map((v) => v.trim()) })),
+    })))
+    .filter((m) => m.actions.length > 0);
+
+  // The route each action is reachable at: a POST ending in the action's id.
+  for (const machine of machines) {
+    for (const action of machine.actions) {
+      const key = keys.find((k) => k.startsWith('POST ') && k.endsWith('/' + action.id) && k.includes('{'));
+      action.path = key ? key.slice(5) : null;
+    }
+    machine.actions = machine.actions.filter((a) => a.path);
+  }
+
+  // Every event type the contract set declares. An AsyncAPI channel address
+  // *is* the event type, so this is a closed set known at boot — which is why
+  // the stub step offers a list to choose from rather than a text box to
+  // mistype.
+  const eventTypes = [...new Set(
+    contracts.docs
+      .filter((doc) => doc.type === 'asyncapi')
+      .flatMap((doc) => Object.keys(doc.content?.channels ?? {}))
+  )].sort();
+
+  // The machine the story follows: the one with the most declared actions,
+  // since that is the one with a lifecycle worth walking.
+  const usable = machines.filter((m) => m.actions.length > 0);
+  const story = [...usable].sort((a, b) => b.actions.length - a.actions.length)[0] ?? null;
+
+  if (story) {
+    // Every path comes from the route table. Writing `/applications` by hand
+    // broke the moment a `servers` block moved the routes to
+    // `/intake/applications` — the page introspects precisely so it does not
+    // have to be told (#448).
+    const [, ...rest] = story.actions[0].path.split('/');
+    story.collection = '/' + rest.slice(0, rest.indexOf(rest.find((seg) => seg.startsWith('{')))).join('/');
+    story.action = (id) => story.actions.find((a) => a.id === id) ?? null;
+  }
 
   return {
-    all: keys,
-    list,
-    create: postable ?? null,
-    // The platform event log, not the stub admin endpoints that also end in
-    // /events — those are the mock's own control surface.
-    events: path(find('GET', (p) => p.endsWith('/events') && !p.startsWith('/mock/'))),
-    upload: path(find('POST', (p) => p.includes('document') && !p.includes('{'))),
+    keys,
+    eventTypes,
+    collection: story?.collection ?? collection,
+    story,
+    machines: usable,
+    events: path('GET', (p) => p.endsWith('/events') && !p.startsWith('/mock/')),
+    evaluate: path('POST', (p) => p.includes('/evaluate')),
+    upload: path('POST', (p) => p.includes('document') && !p.includes('{')),
+    adapter: path('POST', (p) => p.includes('adapter')),
   };
 };
 
 let offered;
 
+/**
+ * The tour.
+ *
+ * Each step says what it does, runs it, reports the facts that make the point,
+ * and says why the point matters. A step that this contract set cannot support
+ * explains that instead of running.
+ */
+const STEPS = [
+  {
+    title: 'Start an application',
+    what: 'One POST. Nothing existed before this.',
+    why: 'Two fields in the response were not sent. <b>referenceId</b> is derived by the contract — <code>x-derived</code> on the schema — and <b>countyCode</b> exists at all only because a state overlay added it to this deployment. Neither is mock code.',
+    run: async () => {
+      // The create body comes from the contract's required fields, so this
+      // works for a collection with different requirements.
+      const created = await call('POST', offered.collection, {
+        programsAppliedFor: ['snap'],
+        channel: 'online',
+        countyCode: '001',
+      });
+      if (created.status >= 400) return { facts: [['refused', JSON.stringify(created.body)]] };
+
+      tour.id = created.body.id;
+      tour.ref = created.body.referenceId;
+      // The states this record actually passes through, appended as it moves.
+      tour.path = [created.body.status];
+
+      return {
+        facts: [
+          ['created', `${created.status} — ${tour.ref}`],
+          ['status the machine starts in', String(created.body.status)],
+          ['referenceId, derived by the contract', String(created.body.referenceId)],
+          ['countyCode, added by a state overlay', String(created.body.countyCode)],
+        ],
+      };
+    },
+  },
+
+  {
+    title: 'Try to close it',
+    what: 'Skip ahead and close the application that was just opened.',
+    why: 'This is the part a REST mock cannot do. A mock returns the response you configured; it has no idea what state the record is in. <b>This one refuses</b>, because the contract says <code>close</code> runs from <code>under_review</code> and the record is in <code>draft</code>. So the mock is a conformance check on your client, not a stand-in for a server.',
+    needs: () => tour.id && offered.story,
+    run: async () => {
+      const facts = [];
+      // Every action whose `from` does not include the record's current state.
+      const record = await call('GET', `${offered.collection}/${tour.id}`);
+      const blocked = offered.story.actions.filter((a) => !a.from.includes(record.body.status));
+
+      for (const action of blocked.slice(0, 2)) {
+        const attempt = await call('POST', action.path.replace(/\{[^}]+\}/, tour.id), {});
+        facts.push([
+          `POST …/${action.id} (declared ${action.from.join('|')} → ${action.transition.to})`,
+          `${attempt.status} — ${attempt.body?.message ?? ''}`,
+        ]);
+      }
+      facts.push(['the record is untouched', String((await call(`GET`, `${offered.collection}/${tour.id}`)).body.status)]);
+      return { facts };
+    },
+  },
+
+  {
+    title: 'Submit it',
+    what: 'The one transition the contract allows from here.',
+    why: 'The action declares <code>draft → submitted</code>, and the steps inside it write <b>submittedAt</b>. The timestamp is the evidence that an action ran rather than a field being set — it came from a step in the state machine, not from the request.',
+    needs: () => tour.id && offered.story,
+    run: async () => {
+      const before = await call('GET', `${offered.collection}/${tour.id}`);
+      const action = offered.story.actions.find((a) => a.from.includes(before.body.status));
+      if (!action) return { facts: [['no action allowed from', String(before.body.status)]] };
+
+      const acted = await call('POST', action.path.replace(/\{[^}]+\}/, tour.id), {});
+      const after = await call('GET', `${offered.collection}/${tour.id}`);
+
+      if (after.body.status !== before.body.status) tour.path?.push(after.body.status);
+
+      const facts = [
+        ['the contract allows', `${action.id}: ${action.from.join('|')} → ${action.transition.to}`],
+        ['before', String(before.body.status)],
+        [`POST …/${action.id}`, String(acted.status)],
+        ['after', String(after.body.status)],
+      ];
+      for (const [field, value] of Object.entries(after.body)) {
+        if (/At$/.test(field) && value && !before.body[field]) {
+          facts.push([`${field}, written by a step in the action`, String(value)]);
+        }
+      }
+      return { facts };
+    },
+  },
+
+  {
+    title: 'An event came out of it',
+    what: 'Read the event log. Nothing posted to it.',
+    why: 'The state machine declares that submitting emits this event, so it did. The bus runs in this page, which means the <b>asynchronous half of the system is observable with no broker</b> — and what a subscriber reads is the same CloudEvents envelope a real one would.',
+    needs: () => offered.events,
+    run: async () => {
+      const log = await call('GET', offered.events);
+      const types = (log.body.items ?? []).map((e) => e.type);
+      const mine = (log.body.items ?? []).filter((e) => JSON.stringify(e.data ?? {}).includes(tour.id));
+
+      return {
+        facts: [
+          ['events in the log', String(log.body.total ?? types.length)],
+          ...types.slice(-2).map((t) => ['emitted', t]),
+          ['about this application', String(mine.length || '—')],
+        ],
+      };
+    },
+  },
+
+  {
+    title: 'Something downstream should answer',
+    what: 'Register a stub for that event, then move another application through the same transition.',
+    why: 'In a deployment, eligibility would react to the submission and answer asynchronously. A stub <b>collapses that round trip</b>, so a scenario runs end to end with nothing else deployed. It is consumed on match — one registration, one occurrence — which is what makes it usable in a test.',
+    needs: () => offered.events && offered.eventTypes.length > 0,
+    control: () => {
+      const select = el('select');
+      select.setAttribute('aria-label', 'event to react to');
+      for (const type of offered.eventTypes) select.append(el('option', type));
+      const submitted = offered.eventTypes.find((t) => /submitted$/.test(t));
+      if (submitted) select.value = submitted;
+      return { node: select, value: () => select.value };
+    },
+    run: async (control) => {
+      const trigger = control?.value?.() ?? offered.eventTypes[0];
+      const reply = `${trigger.replace(/\.[^.]+$/, '')}.acknowledged`;
+
+      const registered = await call('POST', '/mock/stubs/events', {
+        on: trigger,
+        respond: { type: reply, data: { note: 'fired by a stub, not by a service' } },
+      });
+
+      // A second application, so the trigger fires again without rewinding
+      // the one this tour is following.
+      const other = await call('POST', offered.collection, { programsAppliedFor: ['snap'], channel: 'phone' });
+      const first = offered.story.actions.find((a) => a.from.includes(other.body?.status));
+      if (first && other.body?.id) {
+        await call('POST', first.path.replace(/\{[^}]+\}/, other.body.id), {});
+      }
+
+      const log = await call('GET', offered.events);
+      const remaining = await call('GET', '/mock/stubs/events');
+
+      return {
+        facts: [
+          ['event types the contract declares', String(offered.eventTypes.length)],
+          ['stub registered on', trigger],
+          ['it fires', reply],
+          ['log now ends with', (log.body.items ?? []).slice(-2).map((e) => e.type).join(' then ') || '—'],
+          ['stubs left', String(remaining.body.total ?? 0)],
+        ],
+      };
+    },
+  },
+
+  {
+    title: 'Open it for review',
+    what: 'The transition that was refused two steps ago.',
+    why: 'Same call, same record, different answer — because the state changed in between. <b>The refusal earlier was not a canned 409</b>; it was the contract being applied to the record as it then was.',
+    needs: () => tour.id && offered.story,
+    run: async () => {
+      const current = await call('GET', `${offered.collection}/${tour.id}`);
+      const action = offered.story.actions.find((a) => a.from.includes(current.body.status));
+      if (!action) return { facts: [['nothing allowed from', String(current.body.status)]] };
+
+      const acted = await call('POST', action.path.replace(/\{[^}]+\}/, tour.id), {});
+      const after = await call('GET', `${offered.collection}/${tour.id}`);
+      if (after.body.status !== current.body.status) tour.path?.push(after.body.status);
+
+      return {
+        facts: [
+          [`POST …/${action.id}`, `${acted.status} — refused in step 2, allowed now`],
+          ['status', String(after.body.status)],
+        ],
+      };
+    },
+  },
+
+  {
+    title: 'Decide whether the household qualifies',
+    what: 'Run the expedited SNAP ruleset. Move the income and watch the answer change.',
+    why: 'A mock would return a fixed <code>{ eligible: true }</code>. This <b>evaluates the compiled ruleset</b>, so the answer is computed — and it is not where the headline number suggests. The income threshold is 150, but a household at 724 still qualifies, because a second condition carries: income plus resources below the shelter cost. At 725 it stops. <b>That is the policy, and reading it off the contract is the point</b> — a state can check its own interpretation here before writing any code.',
+    needs: () => offered.evaluate,
+    control: () => {
+      const wrap = el('span');
+      const income = el('input');
+      income.type = 'number';
+      income.value = '720';
+      income.style.width = '6rem';
+      income.setAttribute('aria-label', 'monthly gross income');
+      wrap.append(el('span', 'monthly income '), income);
+      return { node: wrap, value: () => Number(income.value) };
+    },
+    run: async (control) => {
+      const income = control?.value?.() ?? 720;
+      const household = (monthlyGrossIncome) => ({
+        monthlyGrossIncome,
+        liquidResources: 75,
+        monthlyShelterCost: 800,
+        isMigrantFarmworker: false,
+      });
+      const policy = { incomeThreshold: 150, resourceThreshold: 100 };
+      const decide = async (value) => {
+        const result = await call('POST', offered.evaluate, { household: household(value), policy });
+        const [first] = Object.values(result.body ?? {});
+        return first?.value ?? JSON.stringify(result.body);
+      };
+
+      return {
+        facts: [
+          ['income threshold the policy names', '150'],
+          [`your figure: income ${income} + resources 75 vs shelter 800`, String(await decide(income))],
+          ['income 724 (799 < 800)', String(await decide(724))],
+          ['income 725 (800, not under)', String(await decide(725))],
+          ['so the boundary is 724, not 150', 'a second condition carries'],
+        ],
+      };
+    },
+  },
+
+  {
+    title: 'Attach proof of income',
+    what: 'Upload a file as real multipart/form-data.',
+    why: 'The bytes are hashed while being read and then <b>discarded</b>. What is kept is a description — name, type, size, hash. Deliberate: a bundled artifact is a public artefact, so it must not be able to carry a real document.',
+    needs: () => offered.upload,
+    run: async () => {
+      const form = new FormData();
+      form.append('file', new File([`pay stub for ${tour.ref ?? 'this household'}`], 'pay-stub.txt', { type: 'text/plain' }));
+      form.append('documentTypeId', 'proof-of-income');
+      form.append('title', 'Pay stub');
+
+      const uploaded = await call('POST', offered.upload, form);
+      const document = uploaded.body ?? {};
+
+      // The upload creates two records: the document, and a version holding
+      // what was measured about the bytes.
+      const facts = [
+        ['uploaded', String(uploaded.status)],
+        ['document', String(document.title ?? '—')],
+        ['first version', String(document.latestVersionId ?? '—').slice(0, 8) + '…'],
+        ['lifecycle state', String(document.lifecycleState ?? '—')],
+        ['bytes written anywhere', 'none'],
+      ];
+      return { facts };
+    },
+  },
+
+  {
+    title: 'Close it, and look at the trail',
+    what: 'The last transition. It needs an outcome, because the action says so.',
+    why: '<code>close</code> declares a request schema requiring <b>outcome</b>, so closing without one is refused — the action\'s own contract, enforced. And across the whole story: four states, two refusals, an evaluated ruleset, a document and a chain of events, with <b>not a line of it written as mock code</b>. Change a contract and this behaviour changes with it, which is the difference between mocking an API and mocking a system.',
+    needs: () => tour.id && offered.story,
+    run: async () => {
+      // Without a body first, to show the action's request schema being applied.
+      const current = await call('GET', `${offered.collection}/${tour.id}`);
+      const action = offered.story.actions.find((a) => a.from.includes(current.body.status));
+      if (!action) return { facts: [['nothing left to run from', String(current.body.status)]] };
+
+      // Without a body first, to show the action's own request schema applied.
+      const refused = await call('POST', action.path.replace(/\{[^}]+\}/, tour.id), {});
+      const closed = await call('POST', action.path.replace(/\{[^}]+\}/, tour.id), { outcome: 'approved' });
+      const final = await call('GET', `${offered.collection}/${tour.id}`);
+      if (final.body.status !== current.body.status) tour.path?.push(final.body.status);
+      const log = offered.events ? await call('GET', offered.events) : null;
+
+      const transitions = offered.machines
+        .flatMap((m) => m.actions.length)
+        .reduce((a, b) => a + b, 0);
+
+      return {
+        facts: [
+          [`POST …/${action.id} with no body`, `${refused.status} — ${refused.body?.message ?? ''}`],
+          [`POST …/${action.id} with outcome approved`, String(closed.status)],
+          ['final status', String(final.body.status)],
+          ['the path it took', (tour.path ?? []).join(' → ')],
+          ['events emitted along the way', String(log?.body?.total ?? '—')],
+          ['routes, all generated from contracts', String(mock.routes.size)],
+          ['transitions the contracts declare', String(transitions)],
+          ['lines of mock code behind any of it', '0'],
+        ],
+      };
+    },
+  },
+];
+
+// ── Rendering ───────────────────────────────────────────────────────────────
+
+/** Build a step's card. Returns the pieces the runner updates. */
+const renderStep = (step, index) => {
+  const section = el('section', '', 'step');
+
+  const heading = el('h2');
+  heading.append(el('span', String(index + 1).padStart(2, '0'), 'n'), el('span', step.title));
+  section.append(heading, el('p', step.what, 'what'));
+
+  const controls = el('div', '', 'controls');
+  controls.style.margin = '.3rem 0 0';
+
+  // A step may offer a choice. Built here so the step's run() can read it.
+  let control = null;
+  if (step.control) {
+    control = step.control();
+    if (control?.node) controls.append(control.node);
+  }
+
+  const button = el('button', 'Run');
+  controls.append(button);
+  section.append(controls);
+
+  const facts = el('ul', '', 'facts');
+  const detail = el('pre');
+  detail.hidden = true;
+  const toggle = el('button', 'Show the requests');
+  toggle.hidden = true;
+  toggle.onclick = () => {
+    detail.hidden = !detail.hidden;
+    toggle.textContent = detail.hidden ? 'Show the requests' : 'Hide the requests';
+  };
+  controls.append(toggle);
+
+  const why = el('p', '', 'why');
+  // The only place markup is allowed, and it is authored above, not data.
+  why.insertAdjacentHTML('afterbegin', step.why);
+
+  section.append(facts, detail, why);
+  return { section, button, facts, detail, toggle, control };
+};
+
+const runStep = async (step, parts) => {
+  const from = calls.length;
+  parts.button.disabled = true;
+  parts.button.textContent = 'Running…';
+
+  try {
+    const unsupported = step.needs && !step.needs();
+    if (unsupported) {
+      parts.section.classList.add('cannot');
+      parts.facts.replaceChildren(fact('not in this contract set', 'the endpoint this step needs is not declared'));
+      parts.button.textContent = 'Nothing to run';
+      return false;
+    }
+
+    const { facts } = await step.run(parts.control);
+    parts.facts.replaceChildren(...facts.map(([label, value]) => fact(label, value)));
+
+    const made = calls.slice(from);
+    parts.detail.textContent = made
+      .map((c) => `${c.line}\n  → ${c.status}\n${JSON.stringify(c.body, null, 2)}`)
+      .join('\n\n');
+    parts.toggle.hidden = made.length === 0;
+
+    parts.section.classList.add('done');
+    parts.button.textContent = 'Run again';
+    return true;
+  } catch (error) {
+    parts.section.classList.add('failed');
+    parts.facts.replaceChildren(fact('failed', error.message));
+    parts.button.textContent = 'Run again';
+    return false;
+  } finally {
+    parts.button.disabled = false;
+  }
+};
+
+const fact = (label, value) => {
+  const li = el('li');
+  li.append(el('span', label + ': '), el('code', String(value)));
+  return li;
+};
+
+// ── Boot ────────────────────────────────────────────────────────────────────
+
 const boot = async () => {
   const started = performance.now();
-  const contracts = await loadContracts();
+  contracts = await loadContracts();
   mock = await createMockServer({ contracts, basePath });
-  offered = survey(mock.routes);
+  offered = survey();
 
   const ms = Math.round(performance.now() - started);
-  const seeded = (await call(offered.list ?? '/health')).body?.items?.length ?? null;
-
   const status = $('boot');
   status.replaceChildren(
     el('span', 'ready', 'pass'),
-    document.createTextNode(
-      ` — ${contracts.docs.length} contract documents, ${mock.routes.size} routes, booted in ${ms} ms`
-    )
+    document.createTextNode(` — ${contracts.docs.length} documents, ${mock.routes.size} routes, no server, booted in ${ms} ms`)
   );
-  if (seeded === 0) {
-    status.append(
-      document.createTextNode(' · '),
-      el('span', 'this contract set ships no mock data, so collections start empty', 'note')
-    );
-  }
 
-  // Sections the contract set cannot support say so rather than 404ing.
-  for (const [id, available, what] of [
-    ['create', offered.create, 'a POST collection endpoint'],
-    ['event-publish', offered.events, 'an events endpoint'],
-    ['upload', offered.upload, 'a document upload endpoint'],
-  ]) {
-    if (available) continue;
-    $(id).disabled = true;
-    $(id).title = `This contract set declares no ${what}`;
-  }
+  const container = $('steps');
+  container.replaceChildren();
+  const rendered = STEPS.map((step, i) => {
+    const parts = renderStep(step, i);
+    parts.button.onclick = () => runStep(step, parts);
+    container.append(parts.section);
+    return { step, parts };
+  });
 
-  $('routes').textContent = offered.all.join('\n');
+  $('run-all').onclick = async () => {
+    $('run-all').disabled = true;
+    let done = 0;
+    for (const { step, parts } of rendered) {
+      $('progress').textContent = `step ${done + 1} of ${rendered.length}`;
+      parts.section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      await runStep(step, parts);
+      done += 1;
+    }
+    $('progress').textContent = `${done} of ${rendered.length} complete`;
+    $('run-all').disabled = false;
+  };
+
+  $('reset-tour').onclick = () => {
+    calls.length = 0;
+    for (const key of Object.keys(tour)) delete tour[key];
+    boot();
+  };
+
+  // Say what this contract set cannot demonstrate, rather than offering a
+  // button that fails. An adapter call and a timer need endpoints a set has to
+  // declare; this one declares neither.
+  const gaps = [];
+  if (!offered.adapter) {
+    gaps.push('An HTTP stub stands in for an adapter call a state machine makes outbound — this contract set declares no adapter endpoint, so there is nothing to intercept.');
+  }
+  if (!offered.evaluate) gaps.push('No rules endpoint is declared, so the evaluator cannot be shown.');
+  gaps.push('A timer stub fires an SLA callback immediately instead of at its deadline. No action in this contract set requests a timer, so none fires here.');
+  $('cannot').textContent = gaps.join(' ');
+
   window.mock = mock;
 };
 
-// ── What it answers ─────────────────────────────────────────────────────────
-$('run-probes').onclick = async () => {
-  const probes = [
-    ['GET', '/health', 'platform — liveness'],
-    offered.list && ['GET', offered.list, 'a generated collection endpoint'],
-    offered.list && ['GET', offered.list + '?limit=1', 'pagination, as the contract declares it'],
-    offered.events && ['GET', offered.events, 'the event log'],
-    ['GET', '/mock/stubs/http', 'registered HTTP stubs'],
-    ['GET', '/nope/not-a-route', 'an unknown path — should be 404'],
-  ].filter(Boolean);
-
-  const body = $('probes').querySelector('tbody');
-  body.replaceChildren();
-
-  for (const [method, path, what] of probes) {
-    const { status, body: payload } = await call(path, { method });
-    const expected404 = path.includes('not-a-route');
-    const ok = expected404 ? status === 404 : status < 400;
-    const summary = Array.isArray(payload?.items)
-      ? `${payload.items.length} item(s) of ${payload.total ?? '?'}`
-      : String(payload?.status ?? payload?.code ?? typeof payload);
-
-    const request = el('td');
-    request.append(el('code', `${method} ${path}`));
-
-    const row = el('tr');
-    row.append(
-      el('td', String(status), `status ${ok ? 'pass' : 'fail'}`),
-      request,
-      el('td', what),
-      el('td', summary)
-    );
-    body.append(row);
-  }
-  $('probe-note').textContent = 'every one of these went through mock.fetch — no network involved';
-};
-
-// ── Create a record ─────────────────────────────────────────────────────────
-$('create').onclick = async () => {
-  // A minimal body: the contract's own validation decides whether it is
-  // acceptable, and a 422 listing what is missing is as good a demonstration
-  // as a 201.
-  const result = await call(offered.create, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({}),
-  });
-  show('create-out', result);
-  $('list-after').disabled = false;
-};
-$('list-after').onclick = async () => show('create-out', await call(offered.list));
-
-// ── Stubs ───────────────────────────────────────────────────────────────────
-const stubPath = () => $('stub-path').value || offered.list || '/health';
-$('stub-add').onclick = async () => show('stub-out', await call('/mock/stubs/http', {
-  method: 'POST',
-  headers: { 'content-type': 'application/json' },
-  // `match.url` is the full request path and `response` is what to return —
-  // the shape registerHttpStub declares. A stub is consumed when it matches,
-  // so one registration answers one request.
-  body: JSON.stringify({
-    match: { method: 'GET', url: stubPath() },
-    response: {
-      status: Number($('stub-status').value),
-      body: { code: 'STUBBED', message: 'answered by a stub, not by a handler' },
-    },
-  }),
-}));
-$('stub-call').onclick = async () => show('stub-out', await call(stubPath()));
-$('stub-clear').onclick = async () => {
-  await call('/mock/stubs/http', { method: 'DELETE' });
-  show('stub-out', await call(stubPath()));
-};
-
-// ── Events ──────────────────────────────────────────────────────────────────
-$('event-publish').onclick = async () => show('event-out', await call(offered.events, {
-  method: 'POST',
-  headers: { 'content-type': 'application/json' },
-  // A CloudEvents 1.0 envelope: the mock checks `specversion` and `type`
-  // before publishing, and a subscriber reads the same envelope back.
-  body: JSON.stringify({
-    specversion: '1.0',
-    type: $('event-type').value,
-    source: 'this-page',
-    data: { note: 'injected from the browser' },
-  }),
-}));
-$('event-list').onclick = async () => show('event-out', await call(offered.events ?? '/health'));
-
-// ── Upload ──────────────────────────────────────────────────────────────────
-$('upload').onclick = async () => {
-  const file = $('file').files[0]
-    ?? new File([`created in the browser at ${new Date().toISOString()}`], 'from-the-page.txt', { type: 'text/plain' });
-
-  const form = new FormData();
-  form.append('file', file);
-  // Both required by the upload handler, which classifies a document before
-  // storing its description.
-  form.append('documentTypeId', 'proof-of-income');
-  form.append('title', file.name);
-  show('upload-out', await call(offered.upload, { method: 'POST', body: form }));
-};
-
-// ── Admin ───────────────────────────────────────────────────────────────────
-$('reseed').onclick = async () => show('admin-out', {
-  reseed: await call('/mock/reseed', { method: 'POST' }),
-  afterwards: await call(offered.list ?? '/health'),
-});
-$('reset').onclick = async () => show('admin-out', {
-  reset: await call('/mock/reset', { method: 'POST' }),
-  afterwards: await call(offered.list ?? '/health'),
-});
-
 boot().catch((error) => {
-  $('boot').replaceChildren(
-    el('span', 'failed to start', 'fail'),
-    document.createTextNode(` — ${error.message}`)
-  );
+  $('boot').replaceChildren(el('span', 'failed to start', 'fail'), document.createTextNode(` — ${error.message}`));
   console.error(error);
 });
 </script>

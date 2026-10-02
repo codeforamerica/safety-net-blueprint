@@ -162,19 +162,20 @@
       "description": "Document Management API"
     },
     {
-      "name": "Determinations",
+      "name": "Eligibility",
       "item": [
         {
-          "name": "List All Determinations",
+          "name": "List All Eligibility",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/determinations",
+              "raw": "{{baseUrl}}/eligibility/determinations",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "eligibility",
                 "determinations"
               ],
               "variables": [],
@@ -219,16 +220,17 @@
           ]
         },
         {
-          "name": "List Determinations (Paginated)",
+          "name": "List Eligibility (Paginated)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/determinations",
+              "raw": "{{baseUrl}}/eligibility/determinations",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "eligibility",
                 "determinations"
               ],
               "variables": [],
@@ -278,11 +280,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/determinations",
+              "raw": "{{baseUrl}}/eligibility/determinations",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "eligibility",
                 "determinations"
               ],
               "variables": [],
@@ -327,11 +330,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/determinations",
+              "raw": "{{baseUrl}}/eligibility/determinations",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "eligibility",
                 "determinations"
               ],
               "variables": [],
@@ -371,16 +375,17 @@
           ]
         },
         {
-          "name": "Get Non-Existent Determination (404)",
+          "name": "Get Non-Existent Eligibility (404)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/determinations/00000000-0000-0000-0000-000000000000",
+              "raw": "{{baseUrl}}/eligibility/determinations/00000000-0000-0000-0000-000000000000",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "eligibility",
                 "determinations",
                 "00000000-0000-0000-0000-000000000000"
               ],
@@ -409,16 +414,17 @@
           ]
         },
         {
-          "name": "Get Non-Existent Determination (404)",
+          "name": "Get Non-Existent Eligibility (404)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/determinations/00000000-0000-0000-0000-000000000000/decisions",
+              "raw": "{{baseUrl}}/eligibility/determinations/00000000-0000-0000-0000-000000000000/decisions",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "eligibility",
                 "determinations",
                 "00000000-0000-0000-0000-000000000000",
                 "decisions"
@@ -448,16 +454,17 @@
           ]
         },
         {
-          "name": "Get Non-Existent Determination (404)",
+          "name": "Get Non-Existent Eligibility (404)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/determinations/00000000-0000-0000-0000-000000000000/decisions/{{decisionId}}",
+              "raw": "{{baseUrl}}/eligibility/determinations/00000000-0000-0000-0000-000000000000/decisions/{{decisionId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "eligibility",
                 "determinations",
                 "00000000-0000-0000-0000-000000000000",
                 "decisions",
@@ -489,7 +496,7 @@
           ]
         },
         {
-          "name": "Complete Determination",
+          "name": "Complete Eligibility",
           "request": {
             "method": "POST",
             "header": [
@@ -500,11 +507,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/determinations/{{determinationId}}/complete",
+              "raw": "{{baseUrl}}/eligibility/determinations/{{determinationId}}/complete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "eligibility",
                 "determinations",
                 "{{determinationId}}",
                 "complete"
@@ -537,19 +545,20 @@
       "description": "Eligibility API"
     },
     {
-      "name": "Applications",
+      "name": "Intake",
       "item": [
         {
-          "name": "List All Applications",
+          "name": "List All Intake",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/applications",
+              "raw": "{{baseUrl}}/intake/applications",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications"
               ],
               "variables": [],
@@ -594,16 +603,17 @@
           ]
         },
         {
-          "name": "List Applications (Paginated)",
+          "name": "List Intake (Paginated)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/applications",
+              "raw": "{{baseUrl}}/intake/applications",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications"
               ],
               "variables": [],
@@ -653,11 +663,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/applications",
+              "raw": "{{baseUrl}}/intake/applications",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications"
               ],
               "variables": [],
@@ -702,11 +713,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/applications",
+              "raw": "{{baseUrl}}/intake/applications",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications"
               ],
               "variables": [],
@@ -746,16 +758,17 @@
           ]
         },
         {
-          "name": "Get Non-Existent Application (404)",
+          "name": "Get Non-Existent Intake (404)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/applications/00000000-0000-0000-0000-000000000000",
+              "raw": "{{baseUrl}}/intake/applications/00000000-0000-0000-0000-000000000000",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications",
                 "00000000-0000-0000-0000-000000000000"
               ],
@@ -784,16 +797,17 @@
           ]
         },
         {
-          "name": "Get Non-Existent Application (404)",
+          "name": "Get Non-Existent Intake (404)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/applications/00000000-0000-0000-0000-000000000000/members",
+              "raw": "{{baseUrl}}/intake/applications/00000000-0000-0000-0000-000000000000/members",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications",
                 "00000000-0000-0000-0000-000000000000",
                 "members"
@@ -823,16 +837,17 @@
           ]
         },
         {
-          "name": "Get Non-Existent Application (404)",
+          "name": "Get Non-Existent Intake (404)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/applications/00000000-0000-0000-0000-000000000000/members/{{memberId}}",
+              "raw": "{{baseUrl}}/intake/applications/00000000-0000-0000-0000-000000000000/members/{{memberId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications",
                 "00000000-0000-0000-0000-000000000000",
                 "members",
@@ -864,16 +879,17 @@
           ]
         },
         {
-          "name": "Get Non-Existent Application (404)",
+          "name": "Get Non-Existent Intake (404)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/applications/00000000-0000-0000-0000-000000000000/summary",
+              "raw": "{{baseUrl}}/intake/applications/00000000-0000-0000-0000-000000000000/summary",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications",
                 "00000000-0000-0000-0000-000000000000",
                 "summary"
@@ -903,16 +919,17 @@
           ]
         },
         {
-          "name": "Get Non-Existent Application (404)",
+          "name": "Get Non-Existent Intake (404)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/applications/00000000-0000-0000-0000-000000000000/review",
+              "raw": "{{baseUrl}}/intake/applications/00000000-0000-0000-0000-000000000000/review",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications",
                 "00000000-0000-0000-0000-000000000000",
                 "review"
@@ -942,16 +959,17 @@
           ]
         },
         {
-          "name": "Get Non-Existent Application (404)",
+          "name": "Get Non-Existent Intake (404)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/applications/00000000-0000-0000-0000-000000000000/review/demographics",
+              "raw": "{{baseUrl}}/intake/applications/00000000-0000-0000-0000-000000000000/review/demographics",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications",
                 "00000000-0000-0000-0000-000000000000",
                 "review",
@@ -982,16 +1000,17 @@
           ]
         },
         {
-          "name": "Get Non-Existent Application (404)",
+          "name": "Get Non-Existent Intake (404)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/applications/00000000-0000-0000-0000-000000000000/review/contact",
+              "raw": "{{baseUrl}}/intake/applications/00000000-0000-0000-0000-000000000000/review/contact",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications",
                 "00000000-0000-0000-0000-000000000000",
                 "review",
@@ -1022,16 +1041,17 @@
           ]
         },
         {
-          "name": "Get Non-Existent Application (404)",
+          "name": "Get Non-Existent Intake (404)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/applications/00000000-0000-0000-0000-000000000000/review-progress/{{section}}",
+              "raw": "{{baseUrl}}/intake/applications/00000000-0000-0000-0000-000000000000/review-progress/{{section}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications",
                 "00000000-0000-0000-0000-000000000000",
                 "review-progress",
@@ -1063,16 +1083,17 @@
           ]
         },
         {
-          "name": "Get Non-Existent Application (404)",
+          "name": "Get Non-Existent Intake (404)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/applications/00000000-0000-0000-0000-000000000000/review-progress/{{section}}/{{itemId}}",
+              "raw": "{{baseUrl}}/intake/applications/00000000-0000-0000-0000-000000000000/review-progress/{{section}}/{{itemId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications",
                 "00000000-0000-0000-0000-000000000000",
                 "review-progress",
@@ -1106,7 +1127,7 @@
           ]
         },
         {
-          "name": "Submit Application",
+          "name": "Submit Intake",
           "request": {
             "method": "POST",
             "header": [
@@ -1117,11 +1138,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/applications/{{applicationId}}/submit",
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/submit",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications",
                 "{{applicationId}}",
                 "submit"
@@ -1151,7 +1173,7 @@
           ]
         },
         {
-          "name": "Open Application",
+          "name": "Open Intake",
           "request": {
             "method": "POST",
             "header": [
@@ -1162,11 +1184,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/applications/{{applicationId}}/open",
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/open",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications",
                 "{{applicationId}}",
                 "open"
@@ -1196,7 +1219,7 @@
           ]
         },
         {
-          "name": "Close Application",
+          "name": "Close Intake",
           "request": {
             "method": "POST",
             "header": [
@@ -1207,11 +1230,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/applications/{{applicationId}}/close",
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/close",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications",
                 "{{applicationId}}",
                 "close"
@@ -1241,7 +1265,7 @@
           ]
         },
         {
-          "name": "Withdraw Application (409 Conflict)",
+          "name": "Withdraw Intake (409 Conflict)",
           "request": {
             "method": "POST",
             "header": [
@@ -1252,11 +1276,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/applications/{{applicationId}}/withdraw",
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/withdraw",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "intake",
                 "applications",
                 "{{applicationId}}",
                 "withdraw"

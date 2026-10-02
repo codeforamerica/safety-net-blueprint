@@ -6,6 +6,14 @@ info:
   x-status: stable
   x-visibility: public
 
+# The localhost URL is where the domain path prefix comes from, and the mock
+# server reads it again to build an event's `source`. Without it the prefix is
+# empty, and a creation event came out typed ".application.created" — a leading
+# dot and no domain, which nothing can subscribe to (#448).
+servers:
+  - url: http://localhost:1080/intake
+    description: Local development server
+
 x-events:
   # CRUD lifecycle events — auto-emitted for every POST, PATCH, DELETE
   application.created:

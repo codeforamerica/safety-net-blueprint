@@ -77,7 +77,11 @@ export function emitEvent({ domain, object, action, resourceId, subject, source,
   const timestamp = now || new Date().toISOString();
   const normalizedDomain = domain.replace(/-/g, '_');
   const normalizedObject = object.replace(/-/g, '_');
-  const type = `${normalizedDomain}.${normalizedObject}.${action}`;
+  // An empty domain would produce ".application.created" — a CloudEvents type
+  // with a leading dot and no domain, which nothing can subscribe to. A spec
+  // declaring no localhost server URL has no domain prefix to contribute, so
+  // the segment is left out rather than emitted empty (#448).
+  const type = [normalizedDomain, normalizedObject, action].filter(Boolean).join('.');
 
   const authtype = callerId ? deriveAuthtype(callerRoles) : null;
 

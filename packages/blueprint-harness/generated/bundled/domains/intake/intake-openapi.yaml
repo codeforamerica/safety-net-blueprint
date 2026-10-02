@@ -5,6 +5,9 @@ info:
   x-domain: intake
   x-status: stable
   x-visibility: public
+servers:
+  - url: http://localhost:1080/intake
+    description: Local development server
 x-events:
   application.created:
     type: org.codeforamerica.safety-net-blueprint.intake.application.created

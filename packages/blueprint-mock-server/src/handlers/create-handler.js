@@ -91,6 +91,10 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const callerId = callerHeader(request, 'x-caller-id');
       const now = new Date().toISOString();
       const traceparent = callerHeader(request, 'traceparent');
+      // A spec with no localhost server URL has no domain prefix, and
+      // prefixing with an empty string produced ".application.created" — a
+      // malformed CloudEvents type with a leading dot. Better to emit an
+      // unprefixed type than a broken one (#448).
       const domain = (apiMetadata.serverBasePath ?? '').replace(/^\//, '');
       const object = endpoint.collectionName.replace(/s$/, '');
 
