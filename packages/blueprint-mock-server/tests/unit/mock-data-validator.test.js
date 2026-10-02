@@ -26,7 +26,8 @@ test('Mock Data Validator Tests', async (t) => {
     const { mkdtempSync, writeFileSync } = require('fs');
     const { tmpdir } = require('os');
     const yaml = (await import('js-yaml')).default;
-    const { loadAllSpecs } = await import('../../src/spec-loader.js');
+    const { apiSpecsFromDocs } = await import('../../src/spec-loader.js');
+    const { discover, load } = await import('@codeforamerica/blueprint-core');
 
     const dir = mkdtempSync(join(tmpdir(), 'mock-data-'));
     writeFileSync(join(dir, 'platform-openapi.yaml'), yaml.dump({
@@ -48,17 +49,18 @@ test('Mock Data Validator Tests', async (t) => {
         required: ['id'], additionalProperties: false } } },
     }));
     writeFileSync(join(dir, 'platform-mock-data.yaml'), yaml.dump(mockData));
-    return { dir, apiSpecs: await loadAllSpecs({ specsDir: dir }) };
+    const docs = discover(dir).map(load);
+    return { dir, docs, apiSpecs: apiSpecsFromDocs(docs) };
   }
 
   await t.test('validateMockData - reports a key that matches no schema', async () => {
     // The failure this exists for: a platform event sat in the workflow seed
     // file keyed DomainEventExample1 while the schema is Event. It matched no
     // collection, was seeded nowhere, and nothing said so.
-    const { dir, apiSpecs } = await contractSet({
+    const { docs, apiSpecs } = await contractSet({
       DomainEventExample1: { id: '0000000a-0000-4000-8000-000000000001' },
     });
-    const errors = validateMockData(dir, apiSpecs);
+    const errors = validateMockData(docs, apiSpecs);
 
     assert.strictEqual(errors.length, 1, 'the orphaned key must be reported');
     assert.strictEqual(errors[0].key, 'DomainEventExample1');
@@ -69,10 +71,10 @@ test('Mock Data Validator Tests', async (t) => {
     // Not against a schema guessed from the key. Records keyed
     // RegistryPolicyExample1 are `Policy`, so a key-derived lookup finds
     // nothing and skips validation in silence.
-    const { dir, apiSpecs } = await contractSet({
+    const { docs, apiSpecs } = await contractSet({
       EventExample1: { id: 'e1', bogusField: 1 },
     });
-    const errors = validateMockData(dir, apiSpecs);
+    const errors = validateMockData(docs, apiSpecs);
 
     assert.strictEqual(errors.length, 1, 'the record must be checked against Event');
     assert.strictEqual(errors[0].key, 'EventExample1');
@@ -80,8 +82,8 @@ test('Mock Data Validator Tests', async (t) => {
   });
 
   await t.test('validateMockData - accepts a conforming record', async () => {
-    const { dir, apiSpecs } = await contractSet({ EventExample1: { id: 'e1' } });
-    assert.deepStrictEqual(validateMockData(dir, apiSpecs), []);
+    const { docs, apiSpecs } = await contractSet({ EventExample1: { id: 'e1' } });
+    assert.deepStrictEqual(validateMockData(docs, apiSpecs), []);
   });
 
   await t.test('validateMockData - returns no errors when no mock data files exist', () => {
@@ -95,21 +97,23 @@ test('Mock Data Validator Tests', async (t) => {
         },
       },
     });
-    // fixtureSpecDir has no *-mock-data.yaml files, so no errors expected
-    const errors = validateMockData(fixtureSpecDir, [api]);
-    assert.strictEqual(errors.length, 0, 'Should have no errors when no mock data files exist');
+    // A set with no mock-data documents has nothing to check.
+    const errors = validateMockData([], [api]);
+    assert.strictEqual(errors.length, 0, 'Should have no errors when no mock data documents exist');
   });
 
   await t.test('validateMockData - skips API with no matching mock data file', () => {
     const api = makeApiSpec('nonexistent-api', { Foo: { type: 'object' } });
-    const errors = validateMockData(fixtureSpecDir, [api]);
-    assert.strictEqual(errors.length, 0, 'Should skip APIs with no mock data file');
+    const errors = validateMockData([], [api]);
+    assert.strictEqual(errors.length, 0, 'Should skip APIs with no mock data document');
   });
 
   await t.test('validateMockData - validates fixture spec dir successfully', async () => {
-    const { loadAllSpecs } = await import('../../src/spec-loader.js');
-    const apiSpecs = await loadAllSpecs({ specsDir: fixtureSpecDir });
-    const errors = validateMockData(fixtureSpecDir, apiSpecs);
+    const { apiSpecsFromDocs } = await import('../../src/spec-loader.js');
+    const { discover, load } = await import('@codeforamerica/blueprint-core');
+    const docs = discover(fixtureSpecDir).map(load);
+    const apiSpecs = apiSpecsFromDocs(docs);
+    const errors = validateMockData(docs, apiSpecs);
 
     if (errors.length > 0) {
       const detail = errors.map(e => `  ${e.api}${e.key ? ` [${e.key}]` : ''}: ${e.message}`).join('\n');

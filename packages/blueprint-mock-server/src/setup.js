@@ -19,16 +19,22 @@ import { contractsOfType, graphsOf, unresolvedRulesWarning } from './contract-vi
  * @param {boolean} options.skipValidation - Skip validation step
  * @returns {Promise<Object>} Setup result with apiSpecs and summary
  */
-export async function performSetup({ specsDir, seedDir, verbose = true, skipValidation = false, store } = {}) {
-  if (!specsDir) {
-    throw new Error('specsDir is required — pass --spec <dir> to specify the spec file or directory');
+export async function performSetup({ specsDir, seedDir, docs: providedDocs = null, verbose = true, skipValidation = false, store } = {}) {
+  // Documents can arrive already loaded — from a contracts artifact, which is
+  // a contract set someone else already walked and parsed (#448). Everything
+  // after this point reads `docs` and cannot tell the difference.
+  if (!specsDir && !providedDocs) {
+    throw new Error('specsDir is required — pass --spec <dir> to specify the spec file or directory, or supply docs');
   }
   seedDir = seedDir || specsDir;
   // Check environment variable for skip validation
   if (process.env.SKIP_VALIDATION === 'true') {
     skipValidation = true;
   }
-  if (verbose) {
+  if (verbose && providedDocs) {
+    console.log(`\nReading ${providedDocs.length} document(s) from the contracts artifact...`);
+    console.log('  Validated when the artifact was built; not re-checked here.');
+  } else if (verbose) {
     console.log('\nDiscovering OpenAPI specifications...');
     console.log(`  Specs: ${specsDir}`);
     if (seedDir !== specsDir) console.log(`  Seed:  ${seedDir}`);
@@ -42,7 +48,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   // The seed directory's documents belong in the same set: seeding reads
   // mock-data documents through `extract(docs, 'examples')`, so they have to
   // be here rather than discovered separately inside the seeder.
-  const docs = [
+  const docs = providedDocs ?? [
     ...discover(specsDir),
     ...(seedDir && seedDir !== specsDir ? discover(seedDir) : []),
   ].map(load);
@@ -63,8 +69,14 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     apiSpecs.forEach(api => console.log(`  - ${api.title} (${api.name})`));
   }
 
-  // Validate specs (unless skipped)
-  if (!skipValidation) {
+  // Validate specs (unless skipped, or unless there are no files to validate).
+  //
+  // This check reads the spec files off disk — it dereferences each one to
+  // confirm every $ref resolves, which is a question about the tree rather
+  // than about the documents. An artifact has no tree: it was validated when
+  // `blueprint-bundle-contracts` built it, which is the point at which the
+  // files still existed, and it refuses to write an invalid set (#448).
+  if (!skipValidation && !providedDocs) {
     if (verbose) {
       console.log('\nValidating specifications...');
     }
@@ -134,7 +146,11 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   }
 
   // Seed databases from example files
-  const summary = seedAllDatabases(docs, store, { seeded: Boolean(seedDir) });
+  // Seeding was asked for if a seed directory was given — or if the documents
+  // were handed over already loaded, which is what a contracts artifact does.
+  // An artifact has no seed directory and carries its mock-data documents in
+  // the set, so keying off the directory alone left the store empty (#448).
+  const summary = seedAllDatabases(docs, store, { seeded: Boolean(seedDir) || providedDocs !== null });
 
   // Seed config-managed resources (after seedAllDatabases, which clears collections first)
   const configs = extract(docs, 'config');
@@ -168,7 +184,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
 
   // Validate seed data against schemas
   if (!skipValidation) {
-    const seedErrors = validateMockData(specsDir, apiSpecs);
+    const seedErrors = validateMockData(docs, apiSpecs);
     if (seedErrors.length > 0) {
       const msg = seedErrors
         .map(e => `  ${e.api}${e.key ? ` [${e.key}]` : ''}: ${e.message}`)

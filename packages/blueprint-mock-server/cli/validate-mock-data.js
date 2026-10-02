@@ -4,7 +4,8 @@
  */
 
 import { resolve } from 'path';
-import { loadAllSpecs } from '../src/spec-loader.js';
+import { apiSpecsFromDocs } from '../src/spec-loader.js';
+import { discover, load } from '@codeforamerica/blueprint-core';
 import { validateMockData } from '../src/mock-data-validator.js';
 
 async function main() {
@@ -38,8 +39,8 @@ Flags:
   console.log(`  Specs: ${specsDir}`);
 
   try {
-    const apiSpecs = await loadAllSpecs({ specsDir });
-    const errors = validateMockData(specsDir, apiSpecs);
+    const docs = discover(specsDir).map(load);
+    const errors = validateMockData(docs, apiSpecsFromDocs(docs));
 
     if (errors.length === 0) {
       console.log('✓ All mock data valid');

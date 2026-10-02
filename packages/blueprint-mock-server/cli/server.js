@@ -6,7 +6,7 @@
 
 import http from 'http';
 import { execSync, spawn } from 'child_process';
-import { realpathSync, openSync, statSync } from 'fs';
+import { realpathSync, openSync, statSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
@@ -17,7 +17,7 @@ import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoute
 import { createDispatcher, wrapRoute, overrideByOperationId } from '../src/http/route-table.js';
 import { registerPlatformRoutes, contractOverrides } from '../src/platform-routes.js';
 import { jsonBody, readJsonBody, invalidJson } from '../src/http/request.js';
-import { discover, load } from '@codeforamerica/blueprint-core';
+import { discover, load, extract } from '@codeforamerica/blueprint-core';
 import { createNodeServer } from '../src/http/node-server.js';
 import { initRulesIndex } from '../src/state-machine-engine.js';
 import { registerEventSubscriptions } from '../src/event-subscription.js';
@@ -40,7 +40,8 @@ Usage:
   npm run mock:start [-- --spec=<dir> ...]
 
 Options:
-  --spec=<dir>      File or directory containing *-openapi.yaml files (repeatable)
+  --spec=<path>     Directory of contracts, a single spec file, or a contracts.json
+                    artifact from blueprint-bundle-contracts (repeatable)
                     Default: packages/contracts
   --seed=<dir>      Directory containing seed data files (default: same as --spec)
                     Override with MOCK_UPLOADS_DIR env var
@@ -95,7 +96,7 @@ function parseSpecDirs() {
   // renamed long ago, so omitting --spec failed later and obscurely with an
   // empty contract set rather than saying what was missing.
   if (specDirs.length === 0) {
-    console.error('Error: --spec=<dir> is required (a directory of resolved contracts)');
+    console.error('Error: --spec=<path> is required (a directory of resolved contracts, or a contracts.json artifact)');
     process.exit(1);
   }
 
@@ -116,6 +117,41 @@ function parseSpecDirs() {
 let httpServer = null;
 /** The store this process is using; closed on shutdown. */
 let store = null;
+
+/**
+ * Whether a `--spec` value names a contracts artifact rather than a directory.
+ *
+ * One JSON file instead of a tree: `blueprint-bundle-contracts` writes it, and
+ * booting from it skips the walk entirely — the server gets exactly the
+ * documents the artifact was built from rather than whatever is on disk now.
+ * The same file a browser boots from (#448).
+ *
+ * @param {string} value
+ * @returns {boolean}
+ */
+function isArtifactPath(value) {
+  return typeof value === 'string' && value.endsWith('.json');
+}
+
+/**
+ * The documents inside a contracts artifact.
+ *
+ * Reading and parsing is this command's job; rebuilding the documents is
+ * core's, through `extract(artifact, 'docs')`, which also checks the version
+ * and shape and puts back the methods JSON could not carry.
+ *
+ * @param {string} path
+ * @returns {import('@codeforamerica/blueprint-core').Doc[]}
+ */
+function docsFromArtifactFile(path) {
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(path, 'utf8'));
+  } catch (error) {
+    throw new Error(`Could not read contracts artifact ${path}: ${error.message}`);
+  }
+  return extract(parsed, 'docs');
+}
 
 /**
  * Start the mock server
@@ -155,11 +191,15 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
       console.log('  Store: in-memory (data will not survive this process)');
     }
     // How /mock/reseed gets its documents. A function rather than a value so
-    // Node re-reads the directory on each call; the browser entry supplies one
-    // that returns the artifact's documents.
-    const readDocs = () => [...new Set([...specDirs, seedDir].filter(Boolean))]
-      .flatMap((dir) => discover(dir))
-      .map(load);
+    // a directory is re-read on each call, picking up edits since boot. An
+    // artifact has nothing to re-read, so it is parsed again instead — which
+    // still answers the question honestly: these are the documents this server
+    // was started from.
+    const readDocs = () => specDirs.flatMap((dir) => (
+      isArtifactPath(dir)
+        ? docsFromArtifactFile(dir)
+        : [...new Set([dir, seedDir].filter(Boolean))].flatMap((d) => discover(d)).map(load)
+    ));
     let apiSpecs = [];
     let allStateMachines = [];
     let allSlaTypes = [];
@@ -170,7 +210,9 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
     let allGraphs = [];
     let allPolicies = {};
     for (const specsDir of specDirs) {
-      const result = await performSetup({ specsDir, seedDir, verbose: true, store });
+      const result = isArtifactPath(specsDir)
+        ? await performSetup({ docs: docsFromArtifactFile(specsDir), seedDir, verbose: true, store })
+        : await performSetup({ specsDir, seedDir, verbose: true, store });
       apiSpecs = apiSpecs.concat(result.apiSpecs);
       allStateMachines = allStateMachines.concat(result.stateMachines);
       allSlaTypes = allSlaTypes.concat(result.slaTypes);

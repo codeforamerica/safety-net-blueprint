@@ -2,36 +2,42 @@
  * Mock data validator — validates *-mock-data.yaml records against API schemas.
  */
 
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { readdirSync, statSync } from 'fs';
-import yaml from 'js-yaml';
-import { discover, extract, load } from '@codeforamerica/blueprint-core';
+import { extract } from '@codeforamerica/blueprint-core';
 import { errorsFrom } from './example-validator.js';
 import { createAjv, registerDocuments, validatorFor } from './schema-registry.js';
 
 /**
- * Recursively find all *-mock-data.yaml files under rootDir.
- * Returns an array of { apiName, filePath } objects.
+ * The mock-data documents in a set, with the API each is named after.
+ *
+ * Reads them out of `docs` rather than walking the tree for
+ * `*-mock-data.yaml`. The documents are already loaded and parsed — walking
+ * again read the same files a second time, and meant this could not run at
+ * all against a contracts artifact, which has documents but no directory
+ * (#448).
+ *
+ * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
+ * @returns {{ apiName: string, examples: object }[]}
  */
-function findMockDataFiles(rootDir) {
-  const results = [];
-  function walk(dir) {
-    for (const entry of readdirSync(dir)) {
-      const full = join(dir, entry);
-      if (statSync(full).isDirectory()) {
-        walk(full);
-      } else if (entry.endsWith('-mock-data.yaml')) {
-        const apiName = entry.replace(/-mock-data\.yaml$/, '');
-        results.push({ apiName, filePath: full });
-      }
-    }
-  }
-  walk(rootDir);
-  return results;
+function mockDataDocuments(docs) {
+  return docs
+    .filter((doc) => doc.type === 'mock-data')
+    .map((doc) => ({
+      // The filename names the API, as it always did: intake-mock-data.yaml
+      // is intake's. Taken from relativePath so it is the same answer whether
+      // the document came off disk or out of an artifact.
+      apiName: (doc.relativePath ?? doc.path).split('/').pop().replace(/-mock-data\.yaml$/, ''),
+      examples: doc.content ?? {},
+    }));
 }
 
-export function validateMockData(specsDir, apiSpecs) {
+/**
+ * Check every seeded record against the schema it claims to exemplify.
+ *
+ * @param {import('@codeforamerica/blueprint-core').Doc[]} docs - The contract set
+ * @param {object[]} apiSpecs - From `apiSpecsFromDocs`
+ * @returns {{ api: string, key: string|null, message: string }[]}
+ */
+export function validateMockData(docs, apiSpecs) {
   const errors = [];
 
   // Where each schema is declared, rather than the schema object. A record is
@@ -50,8 +56,6 @@ export function validateMockData(specsDir, apiSpecs) {
   // check against is the one it was grouped under. Deriving a schema name
   // from the key looked right and was not: records keyed RegistryPolicy* are
   // `Policy`, so the lookup found nothing and skipped validation in silence.
-  const docs = discover(specsDir).map(load);
-
   const ajv = createAjv();
   registerDocuments(ajv, docs);
 
@@ -60,14 +64,7 @@ export function validateMockData(specsDir, apiSpecs) {
     for (const record of records) schemaOf.set(record.key, schema);
   }
 
-  for (const { apiName, filePath } of findMockDataFiles(specsDir)) {
-    let examples;
-    try {
-      examples = yaml.load(readFileSync(filePath, 'utf8')) || {};
-    } catch (err) {
-      errors.push({ api: apiName, key: null, message: `Failed to parse mock data file: ${err.message}` });
-      continue;
-    }
+  for (const { apiName, examples } of mockDataDocuments(docs)) {
 
     for (const [key, value] of Object.entries(examples)) {
       if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
