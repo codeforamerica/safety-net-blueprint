@@ -1,50 +1,33 @@
 /**
  * The mock server's runtime view of an OpenAPI spec.
  *
- * Discovery and parsing are blueprint-core's `discover` and `load`; what is
- * `basename` is local rather than from `node:path` so this module carries no
- * Node-only import: the only thing needed is the last path segment, with an
- * optional suffix removed.
+ * What the server itself needs out of a spec — server base path, endpoint
+ * list, schemas, error responses, pagination defaults. A runtime concern
+ * rather than a contract one, which is why it lives with the server and not
+ * in blueprint-core.
  *
- * here is the shape the server itself needs — server base path, endpoint
- * list, schemas, error responses, pagination defaults. That is a runtime
- * concern, not a contract one, which is why it lives with the server.
+ * Nothing here reads a file, deliberately. The browser entry reaches this
+ * module for `apiSpecsFromDocs`, and a bundler resolves every import in a
+ * graph before it tree-shakes — so a single Node import here would fail a
+ * page build even though nothing in a page would call it. The functions that
+ * do walk a directory are in `spec-discovery.js` (#448).
  */
 
-import { discover, load } from '@codeforamerica/blueprint-core';
 import { resolverFor } from './schema-refs.js';
 
 /**
- * Discover all API specification files in the given specs directory.
- * Matches files ending in -openapi.yaml (the naming convention for OpenAPI specs).
- * @param {Object} options
- * @param {string} options.specsDir - Path to the specs file or directory (required)
- */
-/**
- * The last segment of a path, with an optional suffix removed.
+ * The name an API is known by, from the path of its OpenAPI document.
+ *
+ * `domains/intake/intake-openapi.yaml` is `intake`. Written out rather than
+ * taken from `node:path` so this module carries no Node import, and both
+ * separators are treated as separators because `doc.path` is an OS path.
  *
  * @param {string} path
- * @param {string} [suffix]
  * @returns {string}
  */
-function basename(path, suffix = '') {
-  const last = path.split('/').pop() ?? '';
-  return suffix && last.endsWith(suffix) ? last.slice(0, -suffix.length) : last;
-}
-
-export function discoverApiSpecs({ specsDir } = {}) {
-  if (!specsDir) {
-    throw new Error('specsDir is required — pass --spec <path> to specify the specs file or directory');
-  }
-
-  // discover() identifies type from content rather than filename, so a spec
-  // without the -openapi.yaml suffix is still found, and it already skips
-  // deprecated documents.
-  return discover(specsDir, 'openapi')
-    .map((file) => ({
-      name: basename(file.path, '-openapi.yaml'),
-      specPath: file.path,
-    }));
+export function specNameOf(path) {
+  const last = String(path ?? '').split(/[/\\]/).pop() ?? '';
+  return last.endsWith('-openapi.yaml') ? last.slice(0, -'-openapi.yaml'.length) : last;
 }
 
 
@@ -205,18 +188,6 @@ export function extractMetadata(spec, resourceName, resolve = null) {
 
 
 
-/**
- * Load all API specifications
- * @param {Object} options
- * @param {string} options.specsDir - Path to the specs directory (required)
- * @returns {Promise<Array>} Array of API metadata objects
- */
-export async function loadAllSpecs({ specsDir } = {}) {
-  if (!specsDir) {
-    throw new Error('specsDir is required — pass --spec <path> to specify the specs file or directory');
-  }
-  return apiSpecsFromDocs(discover(specsDir).map(load));
-}
 
 /**
  * The server's view of every OpenAPI document in a set.
@@ -238,7 +209,7 @@ export function apiSpecsFromDocs(docs) {
   const loaded = [];
 
   for (const doc of docs.filter((d) => d.type === 'openapi')) {
-    const name = basename(doc.path, '-openapi.yaml');
+    const name = specNameOf(doc.path);
     try {
       const resolve = resolverFor(doc, docs);
       loaded.push({ ...extractMetadata(doc.content, name, resolve), resolve, relativePath: doc.relativePath });

@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { validateSpec, validateAll } from '../../src/spec-validator.js';
-import { discoverApiSpecs } from '../../src/spec-loader.js';
+import { discoverApiSpecs } from '../../src/spec-discovery.js';
 import { join } from 'path';
 
 const fixturesArg = process.argv.find(a => a.startsWith('--fixtures='));

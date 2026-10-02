@@ -18,7 +18,7 @@ import { startMockServer, stopServer, isServerRunning } from '../cli/server.js';
  * this is the same loader the server itself runs, so a test cannot disagree
  * with the routes that exist.
  */
-export { loadAllSpecs } from './spec-loader.js';
+export { loadAllSpecs } from './spec-discovery.js';
 
 export const BASE_URL = 'http://localhost:1080';
 // Event types are short-form (no org prefix). The x-event-type-prefix overlay config

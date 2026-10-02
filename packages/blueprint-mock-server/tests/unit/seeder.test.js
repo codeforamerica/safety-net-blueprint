@@ -13,7 +13,7 @@ import { createMemoryStore } from '../../src/stores/memory-store.js';
 const store = createMemoryStore();
 import { discover, load } from '@codeforamerica/blueprint-core';
 import { seedAllDatabases } from '../../src/seeder.js';
-import { loadAllSpecs } from '../../src/spec-loader.js';
+import { loadAllSpecs } from '../../src/spec-discovery.js';
 import { join } from 'path';
 
 const fixturesArg = process.argv.find(a => a.startsWith('--fixtures='));

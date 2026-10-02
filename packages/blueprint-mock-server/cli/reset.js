@@ -9,7 +9,7 @@ import { createSqliteStore } from '../src/stores/sqlite-store.js';
 // One store for the life of this command.
 const store = createSqliteStore();
 import { performSetup, displaySetupSummary } from '../src/setup.js';
-import { loadAllSpecs } from '../src/spec-loader.js';
+import { loadAllSpecs } from '../src/spec-discovery.js';
 
 function parseSpecDir() {
   const args = process.argv.slice(2);

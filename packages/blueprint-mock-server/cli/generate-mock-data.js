@@ -24,7 +24,7 @@ import { createHash } from 'crypto';
 import yaml from 'js-yaml';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { faker } from '@faker-js/faker';
-import { discoverApiSpecs } from '../src/spec-loader.js';
+import { discoverApiSpecs } from '../src/spec-discovery.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 

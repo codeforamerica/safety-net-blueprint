@@ -3,7 +3,8 @@
  * Handles loading specs and seeding databases
  */
 
-import { apiSpecsFromDocs, discoverApiSpecs } from './spec-loader.js';
+import { apiSpecsFromDocs } from './spec-loader.js';
+import { discoverApiSpecs } from './spec-discovery.js';
 import { seedAllDatabases } from './seeder.js';
 import { validateMockData } from './mock-data-validator.js';
 import { validateAll, getValidationStatus } from './spec-validator.js';

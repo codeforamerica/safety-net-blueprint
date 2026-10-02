@@ -2,7 +2,7 @@
  * Data seeder - loads example data from YAML files into SQLite
  */
 
-import { extract } from '@codeforamerica/blueprint-core';
+import { extract } from '@codeforamerica/blueprint-core/browser';
 import { deriveCollectionName } from './collection-utils.js';
 import { resolveTimeTokens } from './time-tokens.js';
 

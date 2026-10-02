@@ -15,7 +15,7 @@ import { createMemoryStore } from '../../src/stores/memory-store.js';
 import { registerPlatformRoutes, contractOverrides } from '../../src/platform-routes.js';
 import { registerAllRoutes } from '../../src/route-generator.js';
 import { overrideByOperationId, createDispatcher } from '../../src/http/route-table.js';
-import { loadAllSpecs } from '../../src/spec-loader.js';
+import { loadAllSpecs } from '../../src/spec-discovery.js';
 
 const contractsArg = process.argv.find((a) => a.startsWith('--contracts='));
 const contractsDir = contractsArg?.slice('--contracts='.length);
