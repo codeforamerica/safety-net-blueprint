@@ -146,10 +146,29 @@ export function matchRoute(routes, method, pathname) {
  * @param {Map<string, object>} routes
  * @returns {(request: Request) => Promise<Response>} Same signature as `fetch`
  */
-export function createDispatcher(routes) {
+export function createDispatcher(routes, { basePath = '' } = {}) {
+  // A prefix the route table knows nothing about, stripped before matching.
+  // A page served from a subdirectory — GitHub Pages puts a project site at
+  // /<repo>/ — resolves `/intake/applications` to `/<repo>/intake/applications`,
+  // and the route table is keyed on the contract's own paths. Without this the
+  // hosted page 404s every request while the same page works locally, which is
+  // the worst shape for a bug to take (#448).
+  const prefix = basePath.replace(/\/+$/, '');
+
   return async function fetch(request) {
     const { pathname } = new URL(request.url);
-    const match = matchRoute(routes, request.method, pathname);
+    const routable = prefix && pathname.startsWith(prefix)
+      ? pathname.slice(prefix.length) || '/'
+      : pathname;
+
+    // Strip once, here, and hand the handler a request that has never heard of
+    // the prefix. Matching the route on a stripped path while handlers read the
+    // original left the two disagreeing: a handler consults the HTTP stub table
+    // with `new URL(request.url).pathname`, so a stub registered for
+    // `/determinations` never matched a request for `/repo/mock/determinations`
+    // — the route resolved and the stub silently did not.
+    const forwarded = routable === pathname ? request : withPathname(request, routable);
+    const match = matchRoute(routes, request.method, routable);
 
     if (match === null) {
       return Response.json({
@@ -159,7 +178,7 @@ export function createDispatcher(routes) {
     }
 
     try {
-      return await match.entry.handler(request, { params: match.params });
+      return await match.entry.handler(forwarded, { params: match.params });
     } catch (error) {
       console.error(`Unhandled error in ${match.key}:`, error);
       return Response.json({
@@ -171,6 +190,30 @@ export function createDispatcher(routes) {
   };
 }
 
+
+/**
+ * The same request at a different path.
+ *
+ * Rebuilt rather than mutated, because a `Request`'s url is read-only. The
+ * body is passed through as a stream with `duplex: 'half'` instead of being
+ * buffered, so an upload stays an upload — reading it here would consume it
+ * before the handler saw it.
+ *
+ * @param {Request} request
+ * @param {string} pathname
+ * @returns {Request}
+ */
+function withPathname(request, pathname) {
+  const url = new URL(request.url);
+  url.pathname = pathname;
+
+  const init = { method: request.method, headers: request.headers, signal: request.signal };
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    init.body = request.body;
+    init.duplex = 'half';
+  }
+  return new Request(url, init);
+}
 
 /**
  * Replace a route's handler with one wrapping the original.

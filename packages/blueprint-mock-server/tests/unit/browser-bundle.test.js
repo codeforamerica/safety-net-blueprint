@@ -132,3 +132,108 @@ describe('the browser entry', () => {
     assert.strictEqual(viaGlobal.status, 200);
   });
 });
+
+describe('a page served from a subdirectory', () => {
+  /** A minimal artifact with one postable collection. */
+  const contracts = {
+    artifactVersion: 1,
+    docs: [{
+      path: '/x/domains/demo/demo-openapi.yaml',
+      relativePath: 'domains/demo/demo-openapi.yaml',
+      domain: 'demo', type: 'openapi', provenance: null,
+      content: {
+        openapi: '3.1.0',
+        info: { title: 'Demo', version: '1.0.0', 'x-domain': 'demo' },
+        // The localhost server URL is where the domain prefix comes from, so
+        // routes land at /demo/widgets as they do in a real contract set.
+        servers: [{ url: 'http://localhost:1080/demo' }],
+        paths: {
+          '/widgets': {
+            get: { operationId: 'listWidgets', responses: { 200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/WidgetList' } } } } } },
+            post: {
+              operationId: 'createWidget',
+              requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/WidgetCreate' } } } },
+              responses: { 201: { content: { 'application/json': { schema: { $ref: '#/components/schemas/Widget' } } } } },
+            },
+          },
+        },
+        components: {
+          schemas: {
+            Widget: { type: 'object', required: ['id'], properties: { id: { type: 'string' }, label: { type: 'string' } } },
+            WidgetCreate: { type: 'object', required: ['label'], properties: { label: { type: 'string' } } },
+            WidgetList: { type: 'object', properties: { items: { type: 'array', items: { $ref: '#/components/schemas/Widget' } } } },
+          },
+        },
+      },
+    }],
+  };
+
+  // GitHub Pages serves a project site from /<repo>/, so this is the shape a
+  // hosted page actually sees.
+  const basePath = '/safety-net-blueprint/mock';
+  const at = (path) => new URL(basePath + path, 'https://org.github.io');
+
+  const serverAt = async () => {
+    const { createMockServer } = await import('../../src/browser.js');
+    return createMockServer({ contracts, basePath, seed: false });
+  };
+
+  test('routes resolve under the prefix', async () => {
+    // Without stripping, every request 404s when hosted while the same page
+    // works locally — the worst shape for a bug to take.
+    const mock = await serverAt();
+    assert.strictEqual((await mock.fetch(new Request(at('/demo/widgets')))).status, 200);
+    assert.strictEqual((await mock.fetch(new Request(at('/health')))).status, 200);
+  });
+
+  test('a request without the prefix still resolves', async () => {
+    // Called directly rather than through a hosted page — the mock should not
+    // require the prefix it is told to tolerate.
+    const mock = await serverAt();
+    assert.strictEqual((await mock.fetch(new Request('https://org.github.io/demo/widgets'))).status, 200);
+  });
+
+  test('a stub registered on the contract path matches a prefixed request', async () => {
+    // The interaction that was broken: routes matched on the stripped path
+    // while handlers read the original, so a handler consulted the stub table
+    // with `/safety-net-blueprint/mock/demo/widgets` and a stub registered for
+    // `/demo/widgets` never matched. The route resolved; the stub silently
+    // did not.
+    const mock = await serverAt();
+
+    const registered = await mock.fetch(new Request(at('/mock/stubs/http'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        match: { method: 'GET', url: '/demo/widgets' },
+        response: { status: 503, body: { code: 'STUBBED' } },
+      }),
+    }));
+    assert.strictEqual(registered.status, 201);
+
+    const stubbed = await mock.fetch(new Request(at('/demo/widgets')));
+    assert.strictEqual(stubbed.status, 503, 'the stub should have answered');
+    assert.strictEqual((await stubbed.json()).code, 'STUBBED');
+
+    // A stub is consumed when it matches, so the handler answers next time.
+    assert.strictEqual((await mock.fetch(new Request(at('/demo/widgets')))).status, 200);
+  });
+
+  test('a body survives the rewrite', async () => {
+    // The request is rebuilt to change its path, and a buffered rebuild would
+    // consume the body before the handler read it.
+    const mock = await serverAt();
+    const created = await mock.fetch(new Request(at('/demo/widgets'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ label: 'from a hosted page' }),
+    }));
+    assert.strictEqual(created.status, 201);
+    assert.strictEqual((await created.json()).label, 'from a hosted page');
+  });
+
+  test('an unknown path under the prefix is still a 404', async () => {
+    const mock = await serverAt();
+    assert.strictEqual((await mock.fetch(new Request(at('/demo/nothing-here')))).status, 404);
+  });
+});

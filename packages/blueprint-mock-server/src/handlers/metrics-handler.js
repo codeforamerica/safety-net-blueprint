@@ -57,6 +57,35 @@ function applyQueryFilters(records, queryFilters, collection) {
 }
 
 /**
+ * Every collection name the metric definitions reference.
+ *
+ * A metric names its source collection, a ratio names a second for its
+ * denominator, a duration names both ends, and a breakdown can name its own.
+ * Collecting them from the definitions means a contract set can count whatever
+ * it likes without this handler being taught about it.
+ *
+ * @param {{ metrics?: object[] }[]} entries - From `extract(docs, 'metrics')`
+ * @returns {Set<string>}
+ */
+function collectionNamesIn(entries) {
+  const names = new Set();
+  const add = (definition) => {
+    if (definition?.collection) names.add(definition.collection);
+  };
+
+  for (const entry of entries ?? []) {
+    for (const metric of entry.metrics ?? []) {
+      add(metric.source);
+      add(metric.total);
+      add(metric.from);
+      add(metric.to);
+      for (const breakdown of metric.breakdowns ?? []) add(breakdown.source ?? breakdown);
+    }
+  }
+  return names;
+}
+
+/**
  * Get all records from a named collection.
  */
 function getCollection(name) {
@@ -77,16 +106,16 @@ function getCollection(name) {
 function computeScalar(metric, collections, queryFilters) {
   switch (metric.aggregate) {
     case 'count': {
-      const col = applyQueryFilters(collections[metric.source.collection], queryFilters, metric.source.collection);
+      const col = applyQueryFilters(collections[metric.source.collection] ?? [], queryFilters, metric.source.collection);
       return applyFilter(col, metric.source.filter).length;
     }
 
     case 'ratio': {
-      const sourceCol = applyQueryFilters(collections[metric.source.collection], queryFilters, metric.source.collection);
+      const sourceCol = applyQueryFilters(collections[metric.source.collection] ?? [], queryFilters, metric.source.collection);
       const numerator = applyFilter(sourceCol, metric.source.filter).length;
 
       const totalDefinition = metric.total ?? { collection: metric.source.collection };
-      const totalCol = applyQueryFilters(collections[totalDefinition.collection], queryFilters, totalDefinition.collection);
+      const totalCol = applyQueryFilters(collections[totalDefinition.collection] ?? [], queryFilters, totalDefinition.collection);
       const denominator = applyFilter(totalCol, totalDefinition.filter).length;
 
       if (denominator === 0) return 0;
@@ -94,8 +123,8 @@ function computeScalar(metric, collections, queryFilters) {
     }
 
     case 'duration': {
-      const fromCol = applyQueryFilters(collections[metric.from.collection], queryFilters, metric.from.collection);
-      const toCol = applyQueryFilters(collections[metric.to.collection], queryFilters, metric.to.collection);
+      const fromCol = applyQueryFilters(collections[metric.from.collection] ?? [], queryFilters, metric.from.collection);
+      const toCol = applyQueryFilters(collections[metric.to.collection] ?? [], queryFilters, metric.to.collection);
 
       const fromEvents = applyFilter(fromCol, metric.from.filter);
       const toEvents = applyFilter(toCol, metric.to.filter);
@@ -153,7 +182,7 @@ function computeScalar(metric, collections, queryFilters) {
 function computeBreakdown(metric, collections, groupBy, queryFilters) {
   // Determine the primary collection for groupBy
   const primaryCollectionName = metric.source?.collection ?? metric.from?.collection ?? 'tasks';
-  const primaryCol = applyQueryFilters(collections[primaryCollectionName], queryFilters, primaryCollectionName);
+  const primaryCol = applyQueryFilters(collections[primaryCollectionName] ?? [], queryFilters, primaryCollectionName);
 
   // Get unique group values
   const groupValues = [...new Set(primaryCol.map(r => r[groupBy]).filter(v => v != null))];
@@ -209,10 +238,17 @@ export function createMetricsListHandler(allMetrics, { store } = {}) {
       const offset = parseInt(query.offset) || 0;
 
       const computedAt = new Date().toISOString();
-      const collections = {
-        tasks: getCollection('tasks'),
-        events: getCollection('events')
-      };
+
+      // Every collection the metric definitions actually name, rather than a
+      // fixed pair. This used to prepare `tasks` and `events` only, so a
+      // metric counting anything else indexed `undefined` and the list
+      // endpoint answered 500 — which is what the sample contracts do, since
+      // they count applications and determinations (#448). Looked up once per
+      // request rather than per metric, which is why it is a map and not a
+      // call inside the aggregation.
+      const collections = Object.fromEntries(
+        [...collectionNamesIn(allMetrics)].map((name) => [name, getCollection(name)])
+      );
 
       // Collect all metric definitions, optionally filtered by domain
       let entries = allMetrics;
@@ -293,10 +329,17 @@ export function createMetricsGetHandler(allMetrics, { store } = {}) {
       }
 
       const computedAt = new Date().toISOString();
-      const collections = {
-        tasks: getCollection('tasks'),
-        events: getCollection('events')
-      };
+
+      // Every collection the metric definitions actually name, rather than a
+      // fixed pair. This used to prepare `tasks` and `events` only, so a
+      // metric counting anything else indexed `undefined` and the list
+      // endpoint answered 500 — which is what the sample contracts do, since
+      // they count applications and determinations (#448). Looked up once per
+      // request rather than per metric, which is why it is a map and not a
+      // call inside the aggregation.
+      const collections = Object.fromEntries(
+        [...collectionNamesIn(allMetrics)].map((name) => [name, getCollection(name)])
+      );
 
       const breakdown = groupBy
         ? computeBreakdown(found.metric, collections, groupBy, queryFilters)

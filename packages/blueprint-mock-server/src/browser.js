@@ -42,6 +42,9 @@ import { contractsOfType, graphsOf, unresolvedRulesWarning } from './contract-vi
  * @param {object} options.contracts - Parsed output of `blueprint-bundle-contracts`
  * @param {object} [options.store] - Defaults to a fresh in-memory store
  * @param {string} [options.baseUrl] - Base for Location headers
+ * @param {string} [options.basePath] - Path prefix to strip before matching,
+ *   for a page served from a subdirectory. On GitHub Pages this is the project
+ *   path: `basePath: location.pathname.replace(/\/[^/]*$/, '')`
  * @param {boolean} [options.seed] - Seed from the artifact's mock-data documents
  * @param {boolean} [options.verifyHash] - Check the payload against its hash
  * @returns {Promise<{ fetch: (request: Request) => Promise<Response>, routes: Map, store: object, endpoints: object[] }>}
@@ -50,6 +53,7 @@ export async function createMockServer({
   contracts,
   store = createMemoryStore(),
   baseUrl = '',
+  basePath = '',
   seed = true,
 } = {}) {
   // Core owns the artifact format, both halves: `generate(docs, 'artifact')`
@@ -118,5 +122,5 @@ export async function createMockServer({
   registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaTypes, { store });
   overrideByOperationId(routes, contractOverrides({ store }));
 
-  return { fetch: createDispatcher(routes), routes, store, endpoints };
+  return { fetch: createDispatcher(routes, { basePath }), routes, store, endpoints };
 }

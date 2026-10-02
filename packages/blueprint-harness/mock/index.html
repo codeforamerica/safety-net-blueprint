@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blueprint mock server — in the browser</title>
+<!--
+  A page that runs the mock server with no server.
+
+  Plain JavaScript on purpose. The point being demonstrated is that the mock
+  is reachable without a backend, and a framework would put something between
+  the claim and the evidence. Everything below calls `mock.fetch` the way any
+  application would call `fetch`.
+
+  Served from a CDN this is three static files: this page, the bundle, and the
+  contracts artifact. Each visitor gets their own store, so there is no shared
+  state to reason about — and no compute to pay for (#448).
+-->
+<style>
+  :root {
+    --ink: #1a1a1a; --muted: #5a5a5a; --line: #d8d8d8; --bg: #fbfbfb;
+    --ok: #0a7d32; --bad: #b3261e; --accent: #1a4f8a;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2rem 1.5rem 4rem; background: var(--bg); color: var(--ink);
+    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  main { max-width: 60rem; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
+  h2 { font-size: 1.05rem; margin: 2.5rem 0 .75rem; padding-bottom: .3rem; border-bottom: 1px solid var(--line); }
+  p.lede { color: var(--muted); margin: 0 0 1.5rem; }
+  #boot { padding: .75rem 1rem; border: 1px solid var(--line); border-radius: 6px; background: #fff; font-family: var(--mono); font-size: .85rem; }
+  .row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .5rem 0; }
+  button {
+    font: inherit; font-size: .9rem; padding: .35rem .8rem; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 5px; background: #fff; color: var(--accent);
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  input, select {
+    font: inherit; font-size: .9rem; padding: .3rem .5rem;
+    border: 1px solid var(--line); border-radius: 5px; background: #fff;
+  }
+  pre {
+    margin: .5rem 0 0; padding: .75rem; max-height: 22rem; overflow: auto;
+    background: #fff; border: 1px solid var(--line); border-radius: 6px;
+    font-family: var(--mono); font-size: .78rem; line-height: 1.5; white-space: pre-wrap;
+  }
+  table { border-collapse: collapse; width: 100%; font-size: .85rem; }
+  th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  td.status { font-family: var(--mono); width: 4rem; }
+  .pass { color: var(--ok); font-weight: 600; }
+  .fail { color: var(--bad); font-weight: 600; }
+  .note { color: var(--muted); font-size: .85rem; margin: .4rem 0 0; }
+  code { font-family: var(--mono); font-size: .85em; background: #f0f0f0; padding: .1em .3em; border-radius: 3px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Blueprint mock server, running in this page</h1>
+  <p class="lede">
+    No server is involved. The contract set was bundled into a JSON file, and
+    the mock server was bundled into JavaScript — both static files served from
+    wherever this page came from.
+  </p>
+
+  <div id="boot">starting…</div>
+
+  <h2>What it answers</h2>
+  <div class="row">
+    <button id="run-probes">Request every kind of endpoint</button>
+    <span class="note" id="probe-note"></span>
+  </div>
+  <table id="probes"><tbody></tbody></table>
+
+  <h2>Create a record</h2>
+  <p class="note">
+    A <code>POST</code> through the same <code>mock.fetch</code>, validated
+    against the contract's request schema, then read back.
+  </p>
+  <div class="row">
+    <button id="create">POST an application</button>
+    <button id="list-after" disabled>GET the list again</button>
+  </div>
+  <pre id="create-out">—</pre>
+
+  <h2>Stub an endpoint</h2>
+  <p class="note">
+    Register an HTTP stub and the mock answers from it instead of its own
+    handler, which is how a test forces a response the contract allows but the
+    data does not produce.
+  </p>
+  <div class="row">
+    <input id="stub-path" placeholder="(a path from this contract set)" size="30" aria-label="path to stub">
+    <select id="stub-status" aria-label="status to return">
+      <option>500</option><option>404</option><option>422</option><option>503</option>
+    </select>
+    <button id="stub-add">Add stub</button>
+    <button id="stub-call">Call it</button>
+    <button id="stub-clear">Clear stubs</button>
+  </div>
+  <pre id="stub-out">—</pre>
+
+  <h2>Inject an event</h2>
+  <p class="note">
+    The event bus runs in the page too. Publishing an event is how a test
+    drives a state machine without performing the action that would emit it.
+  </p>
+  <div class="row">
+    <input id="event-type" value="intake.application.submitted" size="34" aria-label="event type">
+    <button id="event-publish">Publish</button>
+    <button id="event-list">Read the event log</button>
+  </div>
+  <pre id="event-out">—</pre>
+
+  <h2>Upload a document</h2>
+  <p class="note">
+    A real <code>multipart/form-data</code> request. The bytes are hashed and
+    discarded — the mock stores a description of the file, never its contents,
+    so nothing in a shared fixture can carry real data.
+  </p>
+  <div class="row">
+    <input type="file" id="file" aria-label="file to upload">
+    <button id="upload">Upload</button>
+  </div>
+  <pre id="upload-out">—</pre>
+
+  <h2>Every route this artifact produced</h2>
+  <p class="note">Built from the contract set at boot — no route is written by hand.</p>
+  <pre id="routes">—</pre>
+
+  <h2>Reset and reseed</h2>
+  <div class="row">
+    <button id="reseed">Reseed from the artifact</button>
+    <button id="reset">Reset to empty</button>
+  </div>
+  <pre id="admin-out">—</pre>
+</main>
+
+<script type="module">
+import { createMockServer } from './mock.js';
+
+const $ = (id) => document.getElementById(id);
+const show = (id, value) => {
+  $(id).textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+};
+
+/**
+ * Everything below the directory this page is served from.
+ *
+ * GitHub Pages puts a project site at /<repo>/, so a request for
+ * `/applications` resolves to `/<repo>/mock/applications` while the route
+ * table is keyed on the contract's own paths. Handing the prefix to the mock
+ * keeps the hosted page behaving like a local one.
+ */
+const basePath = location.pathname.replace(/\/[^/]*$/, '');
+
+let mock;
+
+/** Call the mock the way an application would: a path in, a Response out. */
+const call = async (path, init) => {
+  const response = await mock.fetch(new Request(new URL(basePath + path, location.origin), init));
+  const text = await response.text();
+  let body;
+  try { body = JSON.parse(text); } catch { body = text; }
+  return { status: response.status, body };
+};
+
+/**
+ * What this artifact actually offers.
+ *
+ * Nothing below is hard-coded to a particular contract set. The page reads the
+ * route table the mock just built, so it demonstrates whatever it was handed —
+ * the sample contracts here, or a state's own. Hard-coded paths made the page
+ * work against one set and silently 404 against another.
+ */
+const survey = (routes) => {
+  const keys = [...routes.keys()];
+  const find = (method, test) => keys.find((k) => k.startsWith(method + ' ') && test(k.slice(method.length + 1)));
+  const path = (key) => key?.slice(key.indexOf(' ') + 1) ?? null;
+
+  // A collection endpoint, preferring one that can also be posted to — that
+  // is what makes the create and stub sections demonstrate anything. Metrics
+  // and search endpoints are GET-only and would otherwise win on ordering.
+  const isCollection = (p) => !p.includes('{') && !p.startsWith('/mock/') && p !== '/health';
+  const postable = keys
+    .filter((k) => k.startsWith('POST ') && isCollection(k.slice(5)))
+    .map((k) => k.slice(5))
+    .find((p) => keys.includes('GET ' + p));
+  const list = postable ?? path(find('GET', isCollection));
+
+  return {
+    all: keys,
+    list,
+    create: postable ?? null,
+    // The platform event log, not the stub admin endpoints that also end in
+    // /events — those are the mock's own control surface.
+    events: path(find('GET', (p) => p.endsWith('/events') && !p.startsWith('/mock/'))),
+    upload: path(find('POST', (p) => p.includes('document') && !p.includes('{'))),
+  };
+};
+
+let offered;
+
+const boot = async () => {
+  const started = performance.now();
+  const contracts = await (await fetch('./contracts.json')).json();
+  mock = await createMockServer({ contracts, basePath });
+  offered = survey(mock.routes);
+
+  const ms = Math.round(performance.now() - started);
+  const seeded = (await call(offered.list ?? '/health')).body?.items?.length ?? null;
+
+  $('boot').innerHTML =
+    `<span class="pass">ready</span> — ${contracts.docs.length} contract documents, ` +
+    `${mock.routes.size} routes, booted in ${ms} ms` +
+    (seeded === 0 ? ' · <span class="note">this contract set ships no mock data, so collections start empty</span>' : '');
+
+  // Sections the contract set cannot support say so rather than 404ing.
+  for (const [id, available, what] of [
+    ['create', offered.create, 'a POST collection endpoint'],
+    ['event-publish', offered.events, 'an events endpoint'],
+    ['upload', offered.upload, 'a document upload endpoint'],
+  ]) {
+    if (available) continue;
+    $(id).disabled = true;
+    $(id).title = `This contract set declares no ${what}`;
+  }
+
+  $('routes').textContent = offered.all.join('\n');
+  window.mock = mock;
+};
+
+// ── What it answers ─────────────────────────────────────────────────────────
+$('run-probes').onclick = async () => {
+  const probes = [
+    ['GET', '/health', 'platform — liveness'],
+    offered.list && ['GET', offered.list, 'a generated collection endpoint'],
+    offered.list && ['GET', offered.list + '?limit=1', 'pagination, as the contract declares it'],
+    offered.events && ['GET', offered.events, 'the event log'],
+    ['GET', '/mock/stubs/http', 'registered HTTP stubs'],
+    ['GET', '/nope/not-a-route', 'an unknown path — should be 404'],
+  ].filter(Boolean);
+
+  const body = $('probes').querySelector('tbody');
+  body.innerHTML = '';
+  for (const [method, path, what] of probes) {
+    const { status, body: payload } = await call(path, { method });
+    const expected404 = path.includes('not-a-route');
+    const ok = expected404 ? status === 404 : status < 400;
+    const summary = Array.isArray(payload?.items)
+      ? `${payload.items.length} item(s) of ${payload.total ?? '?'}`
+      : (payload?.status ?? payload?.code ?? typeof payload);
+
+    body.insertAdjacentHTML('beforeend',
+      `<tr><td class="status ${ok ? 'pass' : 'fail'}">${status}</td>` +
+      `<td><code>${method} ${path}</code></td><td>${what}</td><td>${summary}</td></tr>`);
+  }
+  $('probe-note').textContent = 'every one of these went through mock.fetch — no network involved';
+};
+
+// ── Create a record ─────────────────────────────────────────────────────────
+$('create').onclick = async () => {
+  // A minimal body: the contract's own validation decides whether it is
+  // acceptable, and a 422 listing what is missing is as good a demonstration
+  // as a 201.
+  const result = await call(offered.create, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  show('create-out', result);
+  $('list-after').disabled = false;
+};
+$('list-after').onclick = async () => show('create-out', await call(offered.list));
+
+// ── Stubs ───────────────────────────────────────────────────────────────────
+const stubPath = () => $('stub-path').value || offered.list || '/health';
+$('stub-add').onclick = async () => show('stub-out', await call('/mock/stubs/http', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  // `match.url` is the full request path and `response` is what to return —
+  // the shape registerHttpStub declares. A stub is consumed when it matches,
+  // so one registration answers one request.
+  body: JSON.stringify({
+    match: { method: 'GET', url: stubPath() },
+    response: {
+      status: Number($('stub-status').value),
+      body: { code: 'STUBBED', message: 'answered by a stub, not by a handler' },
+    },
+  }),
+}));
+$('stub-call').onclick = async () => show('stub-out', await call(stubPath()));
+$('stub-clear').onclick = async () => {
+  await call('/mock/stubs/http', { method: 'DELETE' });
+  show('stub-out', await call(stubPath()));
+};
+
+// ── Events ──────────────────────────────────────────────────────────────────
+$('event-publish').onclick = async () => show('event-out', await call(offered.events, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ type: $('event-type').value, source: 'this-page', data: { note: 'injected from the browser' } }),
+}));
+$('event-list').onclick = async () => show('event-out', await call(offered.events ?? '/health'));
+
+// ── Upload ──────────────────────────────────────────────────────────────────
+$('upload').onclick = async () => {
+  const file = $('file').files[0]
+    ?? new File([`created in the browser at ${new Date().toISOString()}`], 'from-the-page.txt', { type: 'text/plain' });
+
+  const form = new FormData();
+  form.append('file', file);
+  show('upload-out', await call(offered.upload, { method: 'POST', body: form }));
+};
+
+// ── Admin ───────────────────────────────────────────────────────────────────
+$('reseed').onclick = async () => show('admin-out', {
+  reseed: await call('/mock/reseed', { method: 'POST' }),
+  afterwards: await call(offered.list ?? '/health'),
+});
+$('reset').onclick = async () => show('admin-out', {
+  reset: await call('/mock/reset', { method: 'POST' }),
+  afterwards: await call(offered.list ?? '/health'),
+});
+
+boot().catch((error) => {
+  $('boot').innerHTML = `<span class="fail">failed to start</span> — ${error.message}`;
+  console.error(error);
+});
+</script>
+</body>
+</html>
