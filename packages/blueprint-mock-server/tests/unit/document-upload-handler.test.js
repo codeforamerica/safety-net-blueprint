@@ -1,359 +1,175 @@
 /**
  * Unit tests for document upload and content handlers.
+ *
+ * Multipart is parsed with `request.formData()` (#448 step 5), so these cases
+ * build real `FormData` rather than a mock `req.file`. The behaviour that
+ * matters most is negative: no file bytes are stored anywhere.
  */
 
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { createMemoryStore } from '../../src/stores/memory-store.js';
-
-// A store of this file's own, rather than one shared through a module-level
-// singleton. In memory because these cases do not need a database — and
-// because a fresh one per file is isolation they did not have before.
-const store = createMemoryStore();
-import { mkdtempSync, rmSync, existsSync, readFileSync } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
-
-// The handler takes its store as a parameter now. These cases seed through the
-// shim's module-level exports, so they must hand the handler that same store or
-// it would read an empty one.
-const deps = { store: store };
-import { PassThrough } from 'stream';
 import {
   createDocumentUploadHandler,
   createDocumentVersionUploadHandler,
-  resolveUploadsDir
 } from '../../src/handlers/document-upload-handler.js';
 import { createDocumentContentHandler } from '../../src/handlers/document-content-handler.js';
+import { readResponse } from '../helpers/fetch.js';
 
-// =============================================================================
-// Helpers
-// =============================================================================
+const store = createMemoryStore();
+const deps = { store };
+const BASE = 'http://localhost:1080';
+const DOC_TYPE = 'a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5';
+const CONTENT = 'hello, world!';
 
-function makeReq(overrides = {}) {
-  return {
-    file: {
-      originalname: 'test.txt',
-      mimetype: 'text/plain',
-      size: 13,
-      buffer: Buffer.from('hello, world!')
-    },
-    body: {
-      documentTypeId: 'a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5',
-      title: 'Test Document'
-    },
+/**
+ * Build a multipart upload request.
+ *
+ * @param {object} [options]
+ * @param {boolean} [options.file] - Include the file part
+ * @param {Record<string,string>} [options.fields] - Replaces the default fields
+ */
+function uploadRequest({ file = true, fields } = {}) {
+  const form = new FormData();
+  if (file) form.set('file', new File([CONTENT], 'test.txt', { type: 'text/plain' }));
+  for (const [k, v] of Object.entries(fields ?? { documentTypeId: DOC_TYPE, title: 'Test Document' })) {
+    form.set(k, v);
+  }
+  return new Request(`${BASE}/document-management/documents`, {
+    method: 'POST',
+    body: form,
     headers: { 'x-caller-id': 'user-1' },
-    params: {},
-    ...overrides
-  };
+  });
 }
 
-function makeRes() {
-  const res = {
-    _status: 200,
-    _headers: {},
-    _body: null,
-    status(code) { this._status = code; return this; },
-    set(key, value) { this._headers[key] = value; return this; },
-    setHeader(key, value) { this._headers[key] = value; },
-    json(body) { this._body = body; return this; }
-  };
-  return res;
-}
-
-// =============================================================================
-// resolveUploadsDir
-// =============================================================================
-
-test('resolveUploadsDir — returns MOCK_UPLOADS_DIR env var when set', () => {
-  const original = process.env.MOCK_UPLOADS_DIR;
-  process.env.MOCK_UPLOADS_DIR = '/custom/uploads';
-  assert.strictEqual(resolveUploadsDir('/default'), '/custom/uploads');
-  if (original === undefined) delete process.env.MOCK_UPLOADS_DIR;
-  else process.env.MOCK_UPLOADS_DIR = original;
-});
-
-test('resolveUploadsDir — falls back to defaultDir when env var not set', () => {
-  const original = process.env.MOCK_UPLOADS_DIR;
-  delete process.env.MOCK_UPLOADS_DIR;
-  assert.strictEqual(resolveUploadsDir('/default'), '/default');
-  if (original !== undefined) process.env.MOCK_UPLOADS_DIR = original;
-});
+const upload = () => createDocumentUploadHandler(BASE, deps);
 
 // =============================================================================
 // uploadDocument
 // =============================================================================
 
-test('uploadDocument — creates document and version records, saves file to disk', () => {
-  store.clearAll('documents');
-  store.clearAll('document-versions');
+test('uploadDocument — creates document and version records from the file metadata', async () => {
+  const { status, body, headers } = await readResponse(upload()(uploadRequest(), { params: {} }));
 
-  const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
-  try {
-    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080', deps);
-    const req = makeReq();
-    const res = makeRes();
+  assert.strictEqual(status, 201);
+  assert.ok(headers.get('Location').endsWith(`/document-management/documents/${body.id}`));
+  assert.strictEqual(body.title, 'Test Document');
+  assert.strictEqual(body.documentTypeId, DOC_TYPE);
+  assert.strictEqual(body.lifecycleState, 'active');
 
-    handler(req, res);
-
-    assert.strictEqual(res._status, 201);
-    assert.ok(res._body.id, 'document has id');
-    assert.strictEqual(res._body.title, 'Test Document');
-    assert.strictEqual(res._body.lifecycleState, 'active');
-    assert.strictEqual(res._body.legalHold, false);
-    assert.ok(res._body.latestVersionId, 'document has latestVersionId');
-    assert.ok(res._headers['Location']?.includes(res._body.id), 'Location header set');
-
-    // Version record created
-    const version = store.findById('document-versions', res._body.latestVersionId);
-    assert.ok(version, 'version record exists');
-    assert.strictEqual(version.versionNumber, 1);
-    assert.strictEqual(version.fileName, 'test.txt');
-    assert.strictEqual(version.mimeType, 'text/plain');
-    assert.strictEqual(version.sizeBytes, 13);
-    assert.strictEqual(version.uploadedById, 'user-1');
-
-    // File saved to disk
-    const filePath = join(uploadsDir, res._body.id, version.id);
-    assert.ok(existsSync(filePath), 'file exists on disk');
-    assert.strictEqual(readFileSync(filePath).toString(), 'hello, world!');
-  } finally {
-    rmSync(uploadsDir, { recursive: true, force: true });
-  }
+  const version = store.findById('document-versions', body.latestVersionId);
+  assert.strictEqual(version.fileName, 'test.txt');
+  assert.strictEqual(version.mimeType, 'text/plain');
+  assert.strictEqual(version.sizeBytes, CONTENT.length);
+  assert.strictEqual(version.versionNumber, 1);
+  assert.strictEqual(version.uploadedById, 'user-1');
+  assert.match(version.contentHash, /^[0-9a-f]{64}$/, 'content is hashed in flight');
 });
 
-test('uploadDocument — returns 422 when file is missing', () => {
-  const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
-  try {
-    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080', deps);
-    const req = makeReq({ file: null });
-    const res = makeRes();
+test('uploadDocument — stores no file bytes anywhere', async () => {
+  // The guarantee the metadata-only design exists for: a snapshot is made to be
+  // shared, so uploaded content must never be able to reach one.
+  const { body } = await readResponse(upload()(uploadRequest(), { params: {} }));
+  const serialised = JSON.stringify(store.snapshot());
 
-    handler(req, res);
-
-    assert.strictEqual(res._status, 422);
-    assert.strictEqual(res._body.code, 'VALIDATION_ERROR');
-  } finally {
-    rmSync(uploadsDir, { recursive: true, force: true });
-  }
+  assert.ok(!serialised.includes(CONTENT), 'uploaded content must not appear in the store');
+  assert.strictEqual(store.findById('document-versions', body.latestVersionId).content, undefined);
 });
 
-test('uploadDocument — returns 422 when documentTypeId is missing', () => {
-  const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
-  try {
-    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080', deps);
-    const req = makeReq({ body: { title: 'Test' } });
-    const res = makeRes();
-
-    handler(req, res);
-
-    assert.strictEqual(res._status, 422);
-    assert.ok(res._body.details.some(d => d.field === 'documentTypeId'));
-  } finally {
-    rmSync(uploadsDir, { recursive: true, force: true });
-  }
+test('uploadDocument — returns 422 when file is missing', async () => {
+  const { status, body } = await readResponse(upload()(uploadRequest({ file: false }), { params: {} }));
+  assert.strictEqual(status, 422);
+  assert.strictEqual(body.details[0].field, 'file');
 });
 
-test('uploadDocument — returns 422 when title is missing', () => {
-  const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
-  try {
-    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080', deps);
-    const req = makeReq({ body: { documentTypeId: 'a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5' } });
-    const res = makeRes();
-
-    handler(req, res);
-
-    assert.strictEqual(res._status, 422);
-    assert.ok(res._body.details.some(d => d.field === 'title'));
-  } finally {
-    rmSync(uploadsDir, { recursive: true, force: true });
-  }
+test('uploadDocument — returns 422 when documentTypeId is missing', async () => {
+  const request = uploadRequest({ fields: { title: 'Test Document' } });
+  const { status, body } = await readResponse(upload()(request, { params: {} }));
+  assert.strictEqual(status, 422);
+  assert.strictEqual(body.details[0].field, 'documentTypeId');
 });
 
-test('uploadDocument — returns 400 when metadata is invalid JSON', () => {
-  const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
-  try {
-    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080', deps);
-    const req = makeReq({ body: { documentTypeId: 'a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5', title: 'Test', metadata: 'not-json' } });
-    const res = makeRes();
-
-    handler(req, res);
-
-    assert.strictEqual(res._status, 400);
-    assert.ok(res._body.details.some(d => d.field === 'metadata'));
-  } finally {
-    rmSync(uploadsDir, { recursive: true, force: true });
-  }
+test('uploadDocument — returns 422 when title is missing', async () => {
+  const request = uploadRequest({ fields: { documentTypeId: DOC_TYPE } });
+  const { status, body } = await readResponse(upload()(request, { params: {} }));
+  assert.strictEqual(status, 422);
+  assert.strictEqual(body.details[0].field, 'title');
 });
 
-test('uploadDocument — parses metadata JSON string onto document record', () => {
-  store.clearAll('documents');
-  store.clearAll('document-versions');
+test('uploadDocument — returns 400 when metadata is invalid JSON', async () => {
+  const request = uploadRequest({
+    fields: { documentTypeId: DOC_TYPE, title: 'T', metadata: '{not json' },
+  });
+  const { status, body } = await readResponse(upload()(request, { params: {} }));
+  assert.strictEqual(status, 400);
+  assert.strictEqual(body.code, 'BAD_REQUEST');
+});
 
-  const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
-  try {
-    const [, handler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080', deps);
-    const req = makeReq({
-      body: {
-        documentTypeId: 'a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5',
-        title: 'Test',
-        metadata: JSON.stringify({ intake: { verificationId: 'ver-123' } })
-      }
-    });
-    const res = makeRes();
-
-    handler(req, res);
-
-    assert.deepStrictEqual(res._body.metadata, { intake: { verificationId: 'ver-123' } });
-  } finally {
-    rmSync(uploadsDir, { recursive: true, force: true });
-  }
+test('uploadDocument — parses metadata JSON string onto the document record', async () => {
+  const request = uploadRequest({
+    fields: { documentTypeId: DOC_TYPE, title: 'T', metadata: '{"source":"scanner"}' },
+  });
+  const { body } = await readResponse(upload()(request, { params: {} }));
+  assert.deepStrictEqual(body.metadata, { source: 'scanner' });
 });
 
 // =============================================================================
 // uploadDocumentVersion
 // =============================================================================
 
-test('uploadDocumentVersion — adds version to existing document, increments versionNumber', () => {
-  store.clearAll('documents');
-  store.clearAll('document-versions');
+test('uploadDocumentVersion — adds a version and increments versionNumber', async () => {
+  const { body: document } = await readResponse(upload()(uploadRequest(), { params: {} }));
 
-  const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
-  try {
-    // Seed a document and first version
-    const [, uploadHandler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080', deps);
-    const uploadReq = makeReq();
-    const uploadRes = makeRes();
-    uploadHandler(uploadReq, uploadRes);
-    const documentId = uploadRes._body.id;
+  const handler = createDocumentVersionUploadHandler(BASE, deps);
+  const { status, body: version } = await readResponse(
+    handler(uploadRequest(), { params: { documentId: document.id } })
+  );
 
-    // Add second version
-    const [, versionHandler] = createDocumentVersionUploadHandler(uploadsDir, 'http://localhost:1080', deps);
-    const req = makeReq({
-      params: { documentId },
-      file: { originalname: 'v2.txt', mimetype: 'text/plain', size: 5, buffer: Buffer.from('hello') }
-    });
-    const res = makeRes();
-
-    versionHandler(req, res);
-
-    assert.strictEqual(res._status, 201);
-    assert.strictEqual(res._body.versionNumber, 2);
-    assert.strictEqual(res._body.documentId, documentId);
-
-    // Document latestVersionId updated
-    const doc = store.findById('documents', documentId);
-    assert.strictEqual(doc.latestVersionId, res._body.id);
-
-    // File on disk
-    const filePath = join(uploadsDir, documentId, res._body.id);
-    assert.ok(existsSync(filePath));
-  } finally {
-    rmSync(uploadsDir, { recursive: true, force: true });
-  }
+  assert.strictEqual(status, 201);
+  assert.strictEqual(version.versionNumber, 2);
+  assert.strictEqual(version.documentId, document.id);
+  assert.strictEqual(store.findById('documents', document.id).latestVersionId, version.id);
 });
 
-test('uploadDocumentVersion — returns 404 when document does not exist', () => {
-  store.clearAll('documents');
-
-  const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
-  try {
-    const [, handler] = createDocumentVersionUploadHandler(uploadsDir, 'http://localhost:1080', deps);
-    const req = makeReq({ params: { documentId: '00000000-0000-0000-0000-000000000000' } });
-    const res = makeRes();
-
-    handler(req, res);
-
-    assert.strictEqual(res._status, 404);
-  } finally {
-    rmSync(uploadsDir, { recursive: true, force: true });
-  }
+test('uploadDocumentVersion — returns 404 when the document does not exist', async () => {
+  const handler = createDocumentVersionUploadHandler(BASE, deps);
+  const { status, body } = await readResponse(
+    handler(uploadRequest(), { params: { documentId: 'missing' } })
+  );
+  assert.strictEqual(status, 404);
+  assert.strictEqual(body.code, 'NOT_FOUND');
 });
 
 // =============================================================================
 // getDocumentVersionContent
 // =============================================================================
 
-test('getDocumentVersionContent — sets Content-Type and Content-Disposition headers', (t, done) => {
-  store.clearAll('documents');
-  store.clearAll('document-versions');
+test('getDocumentVersionContent — returns a placeholder describing the file', async () => {
+  const { body: document } = await readResponse(upload()(uploadRequest(), { params: {} }));
+  const handler = createDocumentContentHandler(deps);
+  const request = new Request(`${BASE}/document-management/document-versions/x/content`);
 
-  const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
+  const { status, body, headers } = await readResponse(
+    handler(request, { params: { documentVersionId: document.latestVersionId } })
+  );
 
-  // Upload a document to seed DB and disk
-  const [, uploadHandler] = createDocumentUploadHandler(uploadsDir, 'http://localhost:1080', deps);
-  const uploadReq = makeReq();
-  const uploadRes = makeRes();
-  uploadHandler(uploadReq, uploadRes);
-  const versionId = uploadRes._body.latestVersionId;
+  assert.strictEqual(status, 200);
+  assert.strictEqual(body.placeholder, true);
+  assert.strictEqual(body.fileName, 'test.txt');
+  assert.strictEqual(body.mimeType, 'text/plain');
+  assert.strictEqual(body.sizeBytes, CONTENT.length);
+  assert.ok(!JSON.stringify(body).includes(CONTENT), 'the placeholder must not carry the content');
 
-  // Use a PassThrough as the response so the ReadStream can pipe into it
-  const res = new PassThrough();
-  res._headers = {};
-  res.setHeader = (k, v) => { res._headers[k] = v; };
-
-  const contentHandler = createDocumentContentHandler(uploadsDir, deps);
-  contentHandler({ params: { documentVersionId: versionId } }, res);
-
-  res.on('finish', () => {
-    try {
-      assert.strictEqual(res._headers['Content-Type'], 'text/plain');
-      assert.ok(res._headers['Content-Disposition']?.includes('test.txt'));
-      rmSync(uploadsDir, { recursive: true, force: true });
-      done();
-    } catch (err) {
-      rmSync(uploadsDir, { recursive: true, force: true });
-      done(err);
-    }
-  });
+  // JSON, not the recorded MIME type — claiming text/plain over a JSON body is
+  // the one option a client would be misled by.
+  assert.match(headers.get('Content-Type'), /application\/json/);
+  assert.strictEqual(headers.get('Content-Disposition'), 'attachment; filename="test.txt.placeholder.json"');
 });
 
-test('getDocumentVersionContent — returns 404 when version does not exist', () => {
-  store.clearAll('document-versions');
-
-  const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
-  try {
-    const handler = createDocumentContentHandler(uploadsDir, deps);
-    const req = { params: { documentVersionId: '00000000-0000-0000-0000-000000000000' } };
-    const res = makeRes();
-
-    handler(req, res);
-
-    assert.strictEqual(res._status, 404);
-  } finally {
-    rmSync(uploadsDir, { recursive: true, force: true });
-  }
-});
-
-test('getDocumentVersionContent — returns 404 when file is missing from disk', () => {
-  store.clearAll('documents');
-  store.clearAll('document-versions');
-
-  const uploadsDir = mkdtempSync(join(tmpdir(), 'doc-test-'));
-  try {
-    // Insert a version record with no corresponding file on disk
-    const versionId = '11111111-1111-4111-8111-111111111111';
-    store.insertResource('document-versions', {
-      id: versionId,
-      documentId: '22222222-2222-4222-8222-222222222222',
-      versionNumber: 1,
-      fileName: 'ghost.txt',
-      mimeType: 'text/plain',
-      sizeBytes: 0,
-      contentHash: 'abc',
-      uploadedById: 'user-1',
-      createdAt: new Date().toISOString()
-    });
-
-    const handler = createDocumentContentHandler(uploadsDir, deps);
-    const req = { params: { documentVersionId: versionId } };
-    const res = makeRes();
-
-    handler(req, res);
-
-    assert.strictEqual(res._status, 404);
-    assert.strictEqual(res._body.message, 'File content not available');
-  } finally {
-    rmSync(uploadsDir, { recursive: true, force: true });
-  }
+test('getDocumentVersionContent — returns 404 when the version does not exist', async () => {
+  const handler = createDocumentContentHandler(deps);
+  const request = new Request(`${BASE}/document-management/document-versions/missing/content`);
+  const { status, body } = await readResponse(handler(request, { params: { documentVersionId: 'missing' } }));
+  assert.strictEqual(status, 404);
+  assert.strictEqual(body.code, 'NOT_FOUND');
 });

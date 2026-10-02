@@ -6,6 +6,7 @@
  */
 
 import { executeSearch, parsePagination, STATE_RECORDS_LIMIT_MAX } from '../search-engine.js';
+import { assertFetchShaped, queryOf } from '../http/request.js';
 
 /**
  * Resource mapping configuration.
@@ -92,12 +93,12 @@ const ALL_TYPES = Object.keys(RESOURCE_MAP);
 /**
  * Create the cross-resource search handler.
  * @param {Object} apiMetadata - API metadata from the search OpenAPI spec
- * @returns {Function} Express handler
+ * @returns {(request: Request) => Response}
  */
 export function createSearchHandler(apiMetadata, { store } = {}) {
-  return (req, res) => {
+  return (request) => {
     try {
-      const queryParams = req.query || {};
+      const queryParams = queryOf(assertFetchShaped(request, 'createSearchHandler'));
       const paginationDefaults = apiMetadata.pagination || {
         limitDefault: 25,
         limitMax: 100,
@@ -190,7 +191,7 @@ export function createSearchHandler(apiMetadata, { store } = {}) {
         count: facetCounts[type] || 0,
       }));
 
-      res.json({
+      return Response.json({
         items,
         total,
         limit,
@@ -199,8 +200,10 @@ export function createSearchHandler(apiMetadata, { store } = {}) {
         facets,
       });
     } catch (error) {
+      // Search degrades to an empty result rather than a 500 — preserved from
+      // the Express version, where this was also a 200.
       console.error('Search handler error:', error);
-      res.json({
+      return Response.json({
         items: [],
         total: 0,
         limit: 25,

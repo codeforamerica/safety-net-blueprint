@@ -4,23 +4,22 @@
  * Dynamic Express server that automatically discovers and serves OpenAPI specifications
  */
 
-import express from 'express';
-import cors from 'cors';
 import http from 'http';
 import { execSync, spawn } from 'child_process';
-import { realpathSync, openSync, statSync, mkdirSync } from 'fs';
+import { realpathSync, openSync, statSync } from 'fs';
 import { resolve } from 'path';
-import { resolveUploadsDir } from '../src/handlers/document-upload-handler.js';
 import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
 import { subscribeStubDispatch } from '../src/mock-stub-engine.js';
 import { createMemoryStore } from '../src/stores/memory-store.js';
 import { createSqliteStore } from '../src/stores/sqlite-store.js';
 import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes, registerRulesRoutes, buildRulesIndex } from '../src/route-generator.js';
+import { addRoute, createDispatcher, wrapRoute } from '../src/http/route-table.js';
+import { jsonBody, readJsonBody, invalidJson } from '../src/http/request.js';
+import { createNodeServer } from '../src/http/node-server.js';
 import { initRulesIndex } from '../src/state-machine-engine.js';
 import { registerEventSubscriptions } from '../src/event-subscription.js';
 import { seedAllDatabases } from '../src/seeder.js';
-import { validateJSON } from '../src/validator.js';
 import { createSseHandler } from '../src/handlers/sse-handler.js';
 import { emitEventEnvelope } from '../src/emit-event.js';
 import { registerStub, registerHttpStub, listStubs, listHttpStubs, removeStub, removeHttpStub, clearStubs, clearHttpStubs, clearAllStubs } from '../src/mock-stub-engine.js';
@@ -42,7 +41,6 @@ Options:
   --spec=<dir>      File or directory containing *-openapi.yaml files (repeatable)
                     Default: packages/contracts
   --seed=<dir>      Directory containing seed data files (default: same as --spec)
-  --uploads=<dir>   Directory to store uploaded files (default: blueprint-mock-server/uploads)
                     Override with MOCK_UPLOADS_DIR env var
   --store=<kind>    Where resources are held: sqlite (default) or memory
                     sqlite keeps one .db file per collection, so data survives a
@@ -59,7 +57,6 @@ Options:
 Environment:
   MOCK_SERVER_HOST    Host to bind to (default: localhost)
   MOCK_SERVER_PORT    Port to listen on (default: 1080)
-  MOCK_UPLOADS_DIR    Override uploads directory (takes precedence over --uploads)
   MOCK_STORE          sqlite | memory (takes precedence over --store)
 
 Examples:
@@ -81,7 +78,7 @@ function parseSpecDirs() {
   const unknown = args.filter(a =>
     a !== '--help' && a !== '-h' &&
     a !== '--detach' && a !== '--stop' &&
-    !a.startsWith('--spec=') && !a.startsWith('--seed=') && !a.startsWith('--uploads=') &&
+    !a.startsWith('--spec=') && !a.startsWith('--seed=') &&
     !a.startsWith('--log=') && !a.startsWith('--store=')
   );
   if (unknown.length > 0) {
@@ -103,10 +100,7 @@ function parseSpecDirs() {
   const seedArg = args.find(a => a.startsWith('--seed='));
   const seedDir = seedArg ? resolve(seedArg.split('=')[1]) : null;
 
-  const uploadsArg = args.find(a => a.startsWith('--uploads='));
-  const uploadsDir = uploadsArg ? resolve(uploadsArg.split('=')[1]) : null;
 
-  // Env wins over the flag, matching how MOCK_UPLOADS_DIR overrides --uploads.
   const storeArg = args.find(a => a.startsWith('--store='));
   const storeKind = process.env.MOCK_STORE || (storeArg ? storeArg.split('=')[1] : 'sqlite');
   if (storeKind !== 'sqlite' && storeKind !== 'memory') {
@@ -114,10 +108,10 @@ function parseSpecDirs() {
     process.exit(1);
   }
 
-  return { specDirs, seedDir, uploadsDir, storeKind };
+  return { specDirs, seedDir, storeKind };
 }
 
-let expressServer = null;
+let httpServer = null;
 /** The store this process is using; closed on shutdown. */
 let store = null;
 
@@ -125,11 +119,10 @@ let store = null;
  * Start the mock server
  * @param {string[]|null} specDirs - Spec directories to load. Defaults to parseSpecDirs() (from process.argv).
  * @param {string|null} seedDir - Directory containing seed data files. Defaults to each specDir.
- * @param {string|null} uploadsDir - Directory to store uploaded files. Defaults to blueprint-mock-server/uploads.
  * @param {'sqlite'|'memory'|null} storeKind - Where resources are held. Defaults to
  *   --store / MOCK_STORE, and to sqlite when neither is given.
  */
-async function startMockServer(specDirs = null, seedDir = null, uploadsDir = null, storeKind = null) {
+async function startMockServer(specDirs = null, seedDir = null, storeKind = null) {
   console.log('='.repeat(70));
   console.log('🚀 Starting Mock API Server');
   console.log('='.repeat(70));
@@ -140,7 +133,6 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
       const parsed = parseSpecDirs();
       specDirs = parsed.specDirs;
       seedDir = seedDir ?? parsed.seedDir;
-      uploadsDir = uploadsDir ?? parsed.uploadsDir;
       storeKind = storeKind ?? parsed.storeKind;
     }
 
@@ -183,95 +175,85 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
     }
 
 
-    // Create Express app
-    const app = express();
 
-    // Middleware
-    app.use(cors({
-      origin: '*',
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Caller-Id', 'X-Caller-Roles', 'X-Mock-Now', 'traceparent'],
-      credentials: true
-    }));
-
-    app.use(express.json());
-
-    // JSON parse error handler
-    app.use(validateJSON);
+    // One route table for the whole server. Registration order is priority:
+    // addRoute keeps the first entry for a key, which is what Express's
+    // first-match-wins resolution did.
+    const routes = new Map();
 
     // Health check endpoint
-    app.get('/health', (req, res) => {
-      res.json({ status: 'ok', apis: apiSpecs.map(a => a.name) });
-    });
+    addRoute(routes, 'GET', '/health', () =>
+      Response.json({ status: 'ok', apis: apiSpecs.map(a => a.name) }));
 
     // Register SSE stream endpoint before item routes to avoid :id capture
-    app.get('/platform/events/stream', createSseHandler());
+    addRoute(routes, 'GET', '/platform/events/stream', createSseHandler(),
+      { description: 'Domain event stream (SSE)' });
     console.log('  GET    /platform/events/stream - Domain event stream (SSE)');
 
     // Register event injection endpoint — accepts a CloudEvents 1.0 envelope and
     // fires it to the event bus so event-triggered rule sets can respond to it.
     // Useful for simulating events from external domains during integration testing.
-    app.post('/platform/events', (req, res) => {
-      const event = req.body;
+    addRoute(routes, 'POST', '/platform/events', async (request) => {
+      const parsed = await readJsonBody(request);
+      if (!parsed.ok) return invalidJson();
+      const event = parsed.value;
       if (!event?.type || !event?.specversion) {
         const missing = ['specversion', 'type'].filter(f => !event?.[f]);
-        return res.status(422).json({
+        return Response.json({
           code: 'VALIDATION_ERROR',
           message: 'Request body must be a CloudEvents 1.0 envelope',
           details: missing.map(f => ({ field: f, message: 'required' }))
-        });
+        }, { status: 422 });
       }
-      try {
-        const stored = emitEventEnvelope(event, store);
-        res.status(201).json(stored);
-      } catch (err) {
-        console.error('Failed to emit injected event:', err.message);
-        res.status(500).json({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: [{ message: err.message }] });
-      }
+      return Response.json(emitEventEnvelope(event, store), { status: 201 });
     });
     console.log('  POST   /platform/events - Inject external domain event (testing)');
 
     // Event stub registry — pre-program event responses for integration tests.
-    app.post('/mock/stubs/events', (req, res) => {
+    addRoute(routes, 'POST', '/mock/stubs/events', async (request) => {
       try {
-        res.status(201).json(registerStub(req.body));
+        return Response.json(registerStub(await jsonBody(request)), { status: 201 });
       } catch (err) {
-        res.status(422).json({ code: 'VALIDATION_ERROR', message: err.message });
+        return Response.json({ code: 'VALIDATION_ERROR', message: err.message }, { status: 422 });
       }
     });
-    app.get('/mock/stubs/events', (req, res) => {
+    addRoute(routes, 'GET', '/mock/stubs/events', () => {
       const items = listStubs();
-      res.json({ items, total: items.length });
+      return Response.json({ items, total: items.length });
     });
-    app.delete('/mock/stubs/events', (req, res) => { clearStubs(); res.status(204).end(); });
-    app.delete('/mock/stubs/events/:id', (req, res) => {
-      const removed = removeStub(req.params.id);
-      if (!removed) return res.status(404).json({ code: 'NOT_FOUND', message: `Stub "${req.params.id}" not found` });
-      res.status(204).end();
+    addRoute(routes, 'DELETE', '/mock/stubs/events', () => {
+      clearStubs();
+      return new Response(null, { status: 204 });
     });
+    addRoute(routes, 'DELETE', '/mock/stubs/events/{id}', (request, { params }) =>
+      removeStub(params.id)
+        ? new Response(null, { status: 204 })
+        : Response.json({ code: 'NOT_FOUND', message: `Stub "${params.id}" not found` }, { status: 404 }));
     console.log('  POST   /mock/stubs/events - Register an event stub');
     console.log('  GET    /mock/stubs/events - List active event stubs');
     console.log('  DELETE /mock/stubs/events/:id - Remove an event stub');
     console.log('  DELETE /mock/stubs/events - Clear all event stubs');
 
     // HTTP stub registry — intercept any inbound request and return a pre-programmed response.
-    app.post('/mock/stubs/http', (req, res) => {
+    addRoute(routes, 'POST', '/mock/stubs/http', async (request) => {
       try {
-        res.status(201).json(registerHttpStub(req.body));
+        return Response.json(registerHttpStub(await jsonBody(request)), { status: 201 });
       } catch (err) {
-        res.status(422).json({ code: 'VALIDATION_ERROR', message: err.message });
+        return Response.json({ code: 'VALIDATION_ERROR', message: err.message }, { status: 422 });
       }
     });
-    app.get('/mock/stubs/http', (req, res) => {
+    addRoute(routes, 'GET', '/mock/stubs/http', () => {
       const items = listHttpStubs();
-      res.json({ items, total: items.length });
+      return Response.json({ items, total: items.length });
     });
-    app.delete('/mock/stubs/http', (req, res) => { clearHttpStubs(); res.status(204).end(); });
-    app.delete('/mock/stubs/http/:id', (req, res) => {
-      const removed = removeHttpStub(req.params.id);
-      if (!removed) return res.status(404).json({ code: 'NOT_FOUND', message: `Stub "${req.params.id}" not found` });
-      res.status(204).end();
+    addRoute(routes, 'DELETE', '/mock/stubs/http', () => {
+      clearHttpStubs();
+      return new Response(null, { status: 204 });
     });
+    addRoute(routes, 'DELETE', '/mock/stubs/http/{id}', (request, { params }) =>
+      removeHttpStub(params.id)
+        ? new Response(null, { status: 204 })
+        : Response.json({ code: 'NOT_FOUND', message: `Stub "${params.id}" not found` }, { status: 404 }));
     console.log('  POST   /mock/stubs/http - Register an HTTP stub');
     console.log('  GET    /mock/stubs/http - List active HTTP stubs');
     console.log('  DELETE /mock/stubs/http/:id - Remove an HTTP stub');
@@ -280,7 +262,7 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
     // Reset endpoint — clears all runtime data and restores config-managed resources.
     // Config-managed items (queues, services, document types) are restored; all other
     // data is wiped. Useful for putting tests into a known-clean state without restarting.
-    app.post('/mock/reset', (req, res) => {
+    addRoute(routes, 'POST', '/mock/reset', () => {
       for (const collection of Object.keys(store.snapshot())) store.clearAll(collection);
       clearAllStubs();
       for (const config of allConfigs) {
@@ -299,15 +281,15 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
         store.insertResource('registry-policies', { id, ...policy, source: 'system' });
         registerConfigManaged('registry-policies', id);
       }
-      res.status(204).end();
+      return new Response(null, { status: 204 });
     });
     console.log('  POST   /mock/reset - Reset all runtime data (keeps config-managed resources)');
 
     // Reseed endpoint — re-inserts seed data without clearing anything else.
     // Useful after a reset when tests need baseline data present.
-    app.post('/mock/reseed', (req, res) => {
+    addRoute(routes, 'POST', '/mock/reseed', () => {
       seedAllDatabases(specDirs, seedDir, store);
-      res.status(204).end();
+      return new Response(null, { status: 204 });
     });
     console.log('  POST   /mock/reseed - Re-seed all collections from seed files');
 
@@ -319,69 +301,56 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
     // stub emits an event and emitting writes through a store.
     subscribeStubDispatch(store);
 
-    // Enrich service call creation with catalog-derived fields (after schema validation).
-    // Copies serviceType and callMode from the referenced ExternalService, sets status to pending.
-    // Uses req.enrichmentData so these fields bypass ExternalServiceCallCreate validation
-    // (they're server-derived, not client-provided) but are stored in the resource.
-    app.post('/data-exchange/service-calls', (req, res, next) => {
-      const service = req.body?.serviceId ? store.findById('services', req.body.serviceId) : null;
-      if (service) {
-        req.enrichmentData = {
-          serviceType: service.serviceType,
-          callMode: req.body.callMode ?? service.defaultCallMode,
-          status: 'pending',
-        };
-      }
-      next();
-    });
-
     // Register API routes dynamically
     const baseUrl = `http://${HOST}:${PORT}`;
-    const resolvedUploadsDir = resolveUploadsDir(uploadsDir ?? resolve(import.meta.dirname, '..', 'uploads'));
-    mkdirSync(resolvedUploadsDir, { recursive: true });
-
-    // Register composition routes BEFORE standard routes so sectionView handlers
-    // take priority over the standard sub-resource handlers that the route generator
-    // would otherwise register for the same composition-generated paths.
     if (allCompositions.length > 0) {
       console.log('\nRegistering composition routes...');
-      registerCompositionRoutes(app, allCompositions, apiSpecs, { store });
+      registerCompositionRoutes(routes, allCompositions, apiSpecs, { store });
     }
 
     // Register rules evaluation routes and initialize the state machine rules index
     if (allRulesFiles.length > 0) {
       console.log('\nRegistering rules evaluation routes...');
-      registerRulesRoutes(app, allRulesFiles, apiSpecs, allGraphs);
+      registerRulesRoutes(routes, allRulesFiles, apiSpecs, allGraphs);
       initRulesIndex(buildRulesIndex(allGraphs));
     }
 
-    const allEndpoints = registerAllRoutes(app, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics, resolvedUploadsDir, { store });
+    const allEndpoints = registerAllRoutes(routes, apiSpecs, baseUrl, allStateMachines, allSlaTypes, allMetrics, { store });
 
     // Register state machine RPC routes
-    const rpcEndpoints = registerStateMachineRoutes(app, allStateMachines, apiSpecs, allSlaTypes, { store });
+    const rpcEndpoints = registerStateMachineRoutes(routes, allStateMachines, apiSpecs, allSlaTypes, { store });
 
-
-    // 404 handler for undefined routes
-    app.use((req, res) => {
-      res.status(404).json({
-        code: 'NOT_FOUND',
-        message: 'The requested endpoint does not exist'
+    // Service-call creation is enriched with catalog-derived fields: serviceType
+    // and callMode come from the referenced ExternalService, and status starts
+    // pending. They are server-derived rather than client-provided, so they are
+    // passed around the request schema rather than through it.
+    //
+    // This was Express middleware. It is route-level composition now — wrapping
+    // one table entry instead of matching a path prefix — which is both more
+    // precise and the same mechanism #283 uses to substitute a real endpoint.
+    wrapRoute(routes, 'POST /data-exchange/service-calls', (next) => async (request, ctx) => {
+      const body = await jsonBody(request);
+      const service = body?.serviceId ? store.findById('services', body.serviceId) : null;
+      // The body is already read, so it is handed on through ctx — a Request
+      // body cannot be read twice.
+      return next(request, {
+        ...ctx,
+        body,
+        enrichmentData: service && {
+          serviceType: service.serviceType,
+          callMode: body.callMode ?? service.defaultCallMode,
+          status: 'pending',
+        },
       });
     });
 
-    // Global error handler
-    app.use((err, req, res, next) => {
-      console.error('Unhandled error:', err);
-      res.status(500).json({
-        code: 'INTERNAL_ERROR',
-        message: 'An unexpected error occurred',
-        details: [{ message: err.message }]
-      });
-    });
+    // The route table is the server. 404 and unhandled-throw live in the
+    // dispatcher, so there are no trailing middleware layers to fall through to.
+    const server = createNodeServer(createDispatcher(routes));
 
-    // Start Express server — if port is already in use, kill the existing process and retry once.
+    // Start the server — if the port is in use, kill the existing process and retry once.
     await new Promise((resolve, reject) => {
-      expressServer = app.listen(PORT, HOST, () => {
+      httpServer = server.listen(PORT, HOST, () => {
         console.log('\n' + '='.repeat(70));
         console.log('✓ Mock API Server Started Successfully!');
         console.log('='.repeat(70));
@@ -389,13 +358,13 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
         console.log(`❤️  Health Check:   http://${HOST}:${PORT}/health`);
         resolve();
       });
-      expressServer.once('error', (err) => {
+      httpServer.once('error', (err) => {
         if (err.code === 'EADDRINUSE') {
           console.warn(`\nPort ${PORT} is already in use — killing existing process and retrying...`);
           try {
             execSync(`npx kill-port ${PORT}`, { stdio: 'ignore' });
           } catch { /* ignore if nothing to kill */ }
-          expressServer = app.listen(PORT, HOST, () => {
+          httpServer = server.listen(PORT, HOST, () => {
             console.log('\n' + '='.repeat(70));
             console.log('✓ Mock API Server Started Successfully!');
             console.log('='.repeat(70));
@@ -403,7 +372,7 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
             console.log(`❤️  Health Check:   http://${HOST}:${PORT}/health`);
             resolve();
           });
-          expressServer.once('error', reject);
+          httpServer.once('error', reject);
         } else {
           reject(err);
         }
@@ -460,6 +429,11 @@ async function startMockServer(specDirs = null, seedDir = null, uploadsDir = nul
     console.log('\n' + '='.repeat(70));
     console.log('\n✓ Server ready to accept requests!\n');
 
+    // The live route table. Returned so a caller can substitute an endpoint —
+    // `routes.get('GET /x').handler = fetch` — which is what #283 needs and is
+    // the reason handlers have `fetch`'s signature.
+    return { routes };
+
   } catch (error) {
     console.error('\n❌ Failed to start mock server:', error.message);
     console.error(error);
@@ -479,17 +453,17 @@ async function stopServer(exitProcess = true) {
     console.log('✓ Databases closed');
 
     // Stop Express server
-    if (expressServer) {
+    if (httpServer) {
       return new Promise((resolve) => {
-        expressServer.close(() => {
+        httpServer.close(() => {
           console.log('✓ Mock server stopped');
-          expressServer = null;
+          httpServer = null;
           resolve();
         });
         // Force-close all open connections so the port is released immediately.
         // Without this, keep-alive connections delay the 'close' event and leave
         // the port bound, causing EADDRINUSE on the next startMockServer call.
-        expressServer.closeAllConnections?.();
+        httpServer.closeAllConnections?.();
       });
     }
   } catch (error) {

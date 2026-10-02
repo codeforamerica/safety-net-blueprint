@@ -111,6 +111,22 @@ case against both implementations, and a new store is correct when it passes.
 That suite found three real defects on the day it was written, so it is worth
 running against anything new rather than reading the contract and trusting it.
 
+## Routing
+
+Every endpoint is a function from a `Request` to a `Response` — the same
+signature as `fetch` — held in a table keyed by method and path:
+
+```
+'GET /intake/applications/{applicationId}'  →  { operationId, handler }
+```
+
+So making an endpoint real is assigning a different function to `entry.handler`,
+with no adapter, and anything that can hand the table a `Request` can serve it:
+a Node server, a service worker, or a direct call in a test.
+
+[ROUTING.md](./ROUTING.md) covers the resolution rules and why the matcher is
+~40 lines rather than a dependency.
+
 ## Environment Variables
 
 | Variable | Default | Description |

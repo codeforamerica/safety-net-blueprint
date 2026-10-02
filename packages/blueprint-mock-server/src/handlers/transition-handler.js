@@ -4,7 +4,8 @@
 
 import { executeTransition } from '../state-machine-runner.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { extractCallerRoles } from '../auth-context.js';
+import { extractCallerRoles, callerHeader } from '../auth-context.js';
+import { assertFetchShaped, jsonBody } from '../http/request.js';
 
 /**
  * Create a transition handler for an RPC endpoint.
@@ -13,59 +14,52 @@ import { extractCallerRoles } from '../auth-context.js';
  * @param {string} trigger - Transition trigger name (e.g., "claim")
  * @param {string} paramName - URL parameter name for the resource ID
  * @param {Array} [slaTypes] - SLA types from discoverSlaTypes()
- * @returns {Function} Express handler
+ * @returns {(request: Request, ctx: { params: Record<string,string> }) => Promise<Response>}
  */
 export function createTransitionHandler(resourceName, stateMachine, trigger, paramName, slaTypes = [], machine = null, { store } = {}) {
-  return (req, res) => {
-    try {
-      const httpStub = matchAndPopHttp(req.method, req.path);
-      if (httpStub) {
-        return res.status(httpStub.response?.status ?? 200).json(httpStub.response?.body ?? {});
-      }
+  return async (request, { params }) => {
+    const { pathname } = new URL(assertFetchShaped(request, 'createTransitionHandler').url);
 
-      const resourceId = req.params[paramName];
-
-      const callerId = req.headers['x-caller-id'];
-      if (!callerId) {
-        return res.status(400).json({
-          code: 'BAD_REQUEST',
-          message: 'X-Caller-Id header is required for state transitions'
-        });
-      }
-
-      const callerRoles = extractCallerRoles(req);
-
-      const now = new Date().toISOString();
-      const traceparent = req.headers['traceparent'] || null;
-
-      const { success, result, status, error } = executeTransition({
-        store,
-        resourceName,
-        resourceId,
-        trigger,
-        callerId,
-        callerRoles,
-        now,
-        stateMachine,
-        machine,
-        slaTypes,
-        requestBody: req.body || {},
-        traceparent
-      });
-
-      if (!success) {
-        return res.status(status).json({ code: statusCode(status), message: error });
-      }
-
-      res.json(result);
-    } catch (error) {
-      console.error('Transition handler error:', error);
-      res.status(500).json({
-        code: 'INTERNAL_ERROR',
-        message: 'An unexpected error occurred',
-        details: [{ message: error.message }]
-      });
+    const httpStub = matchAndPopHttp(request.method, pathname);
+    if (httpStub) {
+      return Response.json(httpStub.response?.body ?? {}, { status: httpStub.response?.status ?? 200 });
     }
+
+    const resourceId = params[paramName];
+
+    const callerId = callerHeader(request, 'x-caller-id');
+    if (!callerId) {
+      return Response.json({
+        code: 'BAD_REQUEST',
+        message: 'X-Caller-Id header is required for state transitions'
+      }, { status: 400 });
+    }
+
+    const callerRoles = extractCallerRoles(request);
+
+    const now = new Date().toISOString();
+    const traceparent = callerHeader(request, 'traceparent');
+
+    const { success, result, status, error } = executeTransition({
+      store,
+      resourceName,
+      resourceId,
+      trigger,
+      callerId,
+      callerRoles,
+      now,
+      stateMachine,
+      machine,
+      slaTypes,
+      requestBody: await jsonBody(request),
+      traceparent
+    });
+
+    if (!success) {
+      return Response.json({ code: statusCode(status), message: error }, { status });
+    }
+
+    return Response.json(result);
   };
 }
 

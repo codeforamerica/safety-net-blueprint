@@ -5,73 +5,85 @@
  *   uploadDocument         — POST /documents (create document + first version atomically)
  *   uploadDocumentVersion  — POST /documents/{documentId}/document-versions (add version)
  *
- * Files are stored at {uploadsDir}/{documentId}/{versionId}.
- * MIME type is preserved on the version record; no file extension is stored on disk.
+ * **No file bytes are stored.** A version records what was uploaded — file name,
+ * MIME type, size, and a hash of the content — and nothing else. The bytes are
+ * hashed in flight and discarded (#448 step 5).
+ *
+ * That is a deliberate constraint rather than a simplification. Anything the
+ * mock holds can end up in a `snapshot()`, and a snapshot is made to be shared;
+ * a real uploaded paystub in a fixture is a PII leak waiting to be emailed.
+ * Not storing bytes makes that impossible rather than discouraged, and it keeps
+ * the store serialisable and bounded.
+ *
+ * Multipart is parsed with `request.formData()`, which is why `multer` is gone.
  */
 
-import multer from 'multer';
-import { createHash, randomUUID } from 'crypto';
-import { mkdirSync, writeFileSync } from 'fs';
-import { join } from 'path';
 import { emitEvent } from '../emit-event.js';
-
-const upload = multer({ storage: multer.memoryStorage() });
+import { assertFetchShaped } from '../http/request.js';
+import { callerHeader } from '../auth-context.js';
 
 /**
- * Resolve the uploads directory from env or default.
- * @param {string} [defaultDir] - Fallback path (typically {mockServerRoot}/uploads)
- * @returns {string}
+ * Pull the uploaded file out of a multipart body.
+ *
+ * @param {Request} request
+ * @returns {Promise<{ file: File|null, fields: Record<string,string> }>}
  */
-export function resolveUploadsDir(defaultDir) {
-  return process.env.MOCK_UPLOADS_DIR || defaultDir;
+async function readUpload(request) {
+  let form;
+  try {
+    form = await request.formData();
+  } catch {
+    return { file: null, fields: {} };
+  }
+
+  const fields = {};
+  let file = null;
+  for (const [name, value] of form) {
+    if (name === 'file' && typeof value === 'object' && value !== null) file = value;
+    else if (typeof value === 'string') fields[name] = value;
+  }
+  return { file, fields };
 }
 
 /**
- * Create handler for POST /documents (uploadDocument).
- * Parses multipart/form-data, creates document + first version atomically.
+ * Describe an uploaded file without keeping it.
  *
- * @param {string} uploadsDir - Directory to store uploaded files
- * @param {string} baseUrl - Base URL for Location header
- * @returns {Array} [multerMiddleware, expressHandler]
+ * @param {File} file
+ * @returns {Promise<{ fileName: string, mimeType: string, sizeBytes: number, contentHash: string }>}
  */
-export function createDocumentUploadHandler(uploadsDir, baseUrl, { store } = {}) {
-  const middleware = upload.single('file');
+async function describe(file) {
+  const bytes = await file.arrayBuffer();
+  // Web Crypto rather than node:crypto — `crypto.subtle.digest` produces the
+  // identical SHA-256 and exists in browsers, where `createHash` does not.
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return {
+    fileName: file.name,
+    mimeType: file.type || 'application/octet-stream',
+    sizeBytes: bytes.byteLength,
+    contentHash: [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join(''),
+  };
+}
 
-  const handler = (req, res) => {
-    if (!req.file) {
-      return res.status(422).json({
-        code: 'VALIDATION_ERROR',
-        message: 'Missing required field: file',
-        details: [{ field: 'file', message: 'required' }]
-      });
-    }
+const missingField = (field) => Response.json({
+  code: 'VALIDATION_ERROR',
+  message: `Missing required field: ${field}`,
+  details: [{ field, message: 'required' }],
+}, { status: 422 });
 
-    const { documentTypeId, title, documentDate, metadata } = req.body;
+/**
+ * Create handler for POST /documents (uploadDocument).
+ *
+ * @param {string} baseUrl - Base URL for Location header
+ * @returns {(request: Request) => Promise<Response>}
+ */
+export function createDocumentUploadHandler(baseUrl, { store } = {}) {
+  return async (request) => {
+    const { file, fields } = await readUpload(assertFetchShaped(request, 'createDocumentUploadHandler'));
+    if (!file) return missingField('file');
 
-    if (!documentTypeId) {
-      return res.status(422).json({
-        code: 'VALIDATION_ERROR',
-        message: 'Missing required field: documentTypeId',
-        details: [{ field: 'documentTypeId', message: 'required' }]
-      });
-    }
-
-    if (!title) {
-      return res.status(422).json({
-        code: 'VALIDATION_ERROR',
-        message: 'Missing required field: title',
-        details: [{ field: 'title', message: 'required' }]
-      });
-    }
-
-    const documentId = randomUUID();
-    const versionId = randomUUID();
-    const now = new Date().toISOString();
-
-    // Persist file bytes to disk
-    const docDir = join(uploadsDir, documentId);
-    mkdirSync(docDir, { recursive: true });
-    writeFileSync(join(docDir, versionId), req.file.buffer);
+    const { documentTypeId, title, documentDate, metadata } = fields;
+    if (!documentTypeId) return missingField('documentTypeId');
+    if (!title) return missingField('title');
 
     // Parse optional metadata JSON string
     let parsedMetadata = {};
@@ -79,26 +91,25 @@ export function createDocumentUploadHandler(uploadsDir, baseUrl, { store } = {})
       try {
         parsedMetadata = JSON.parse(metadata);
       } catch {
-        return res.status(400).json({
+        return Response.json({
           code: 'BAD_REQUEST',
           message: 'Invalid JSON in metadata field',
-          details: [{ field: 'metadata', message: 'must be valid JSON' }]
-        });
+          details: [{ field: 'metadata', message: 'must be valid JSON' }],
+        }, { status: 400 });
       }
     }
 
-    const contentHash = createHash('sha256').update(req.file.buffer).digest('hex');
+    const documentId = crypto.randomUUID();
+    const versionId = crypto.randomUUID();
+    const now = new Date().toISOString();
 
     const version = {
       id: versionId,
       documentId,
       versionNumber: 1,
-      fileName: req.file.originalname,
-      mimeType: req.file.mimetype,
-      sizeBytes: req.file.size,
-      contentHash,
-      uploadedById: req.headers['x-caller-id'] || 'anonymous',
-      createdAt: now
+      ...(await describe(file)),
+      uploadedById: callerHeader(request, 'x-caller-id') ?? 'anonymous',
+      createdAt: now,
     };
     store.insertResource('document-versions', version);
 
@@ -115,82 +126,66 @@ export function createDocumentUploadHandler(uploadsDir, baseUrl, { store } = {})
       dispositionApprovedBy: null,
       dispositionApprovedAt: null,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     };
     store.insertResource('documents', document);
 
     emitEvent({
-        store, domain: 'document-management', object: 'document', action: 'created', resourceId: document.id, source: '/document-management', data: { documentId, latestVersionId: versionId } });
+      store, domain: 'document-management', object: 'document', action: 'created',
+      resourceId: document.id, source: '/document-management',
+      data: { documentId, latestVersionId: versionId },
+    });
 
-    res.status(201)
-      .set('Location', `${baseUrl}/document-management/documents/${documentId}`)
-      .json(document);
+    return Response.json(document, {
+      status: 201,
+      headers: { Location: `${baseUrl}/document-management/documents/${documentId}` },
+    });
   };
-
-  return [middleware, handler];
 }
 
 /**
- * Create handler for POST /documents/{documentId}/document-versions (uploadDocumentVersion).
- * Adds a new version to an existing document.
+ * Create handler for POST /documents/{documentId}/document-versions.
  *
- * @param {string} uploadsDir - Directory to store uploaded files
  * @param {string} baseUrl - Base URL for Location header
- * @returns {Array} [multerMiddleware, expressHandler]
+ * @returns {(request: Request, ctx: object) => Promise<Response>}
  */
-export function createDocumentVersionUploadHandler(uploadsDir, baseUrl, { store } = {}) {
-  const middleware = upload.single('file');
-
-  const handler = (req, res) => {
-    const { documentId } = req.params;
+export function createDocumentVersionUploadHandler(baseUrl, { store } = {}) {
+  return async (request, { params }) => {
+    const { documentId } = params;
 
     const document = store.findById('documents', documentId);
     if (!document) {
-      return res.status(404).json({ code: 'NOT_FOUND', message: 'Document not found' });
+      return Response.json({ code: 'NOT_FOUND', message: 'Document not found' }, { status: 404 });
     }
 
-    if (!req.file) {
-      return res.status(422).json({
-        code: 'VALIDATION_ERROR',
-        message: 'Missing required field: file',
-        details: [{ field: 'file', message: 'required' }]
-      });
-    }
+    const { file } = await readUpload(assertFetchShaped(request, 'createDocumentVersionUploadHandler'));
+    if (!file) return missingField('file');
 
     const { items: existingVersions } = store.findAll('document-versions', { documentId }, { limit: 1000 });
     const versionNumber = existingVersions.length + 1;
-    const versionId = randomUUID();
+    const versionId = crypto.randomUUID();
     const now = new Date().toISOString();
-
-    // Persist file bytes to disk
-    const docDir = join(uploadsDir, documentId);
-    mkdirSync(docDir, { recursive: true });
-    writeFileSync(join(docDir, versionId), req.file.buffer);
-
-    const contentHash = createHash('sha256').update(req.file.buffer).digest('hex');
 
     const version = {
       id: versionId,
       documentId,
       versionNumber,
-      fileName: req.file.originalname,
-      mimeType: req.file.mimetype,
-      sizeBytes: req.file.size,
-      contentHash,
-      uploadedById: req.headers['x-caller-id'] || 'anonymous',
-      createdAt: now
+      ...(await describe(file)),
+      uploadedById: callerHeader(request, 'x-caller-id') ?? 'anonymous',
+      createdAt: now,
     };
     store.insertResource('document-versions', version);
-
     store.update('documents', documentId, { latestVersionId: versionId, updatedAt: now });
 
     emitEvent({
-        store, domain: 'document-management', object: 'document-version', action: 'uploaded', resourceId: versionId, source: '/document-management', data: { documentId, versionId, versionNumber } });
+      store, domain: 'document-management', object: 'document-version', action: 'uploaded',
+      resourceId: versionId, source: '/document-management',
+      data: { documentId, versionId, versionNumber },
+    });
 
-    res.status(201)
-      .set('Location', `${baseUrl}/document-management/document-versions/${versionId}`)
-      .json(version);
+    return Response.json(version, {
+      status: 201,
+      headers: { Location: `${baseUrl}/document-management/document-versions/${versionId}` },
+    });
   };
-
-  return [middleware, handler];
 }

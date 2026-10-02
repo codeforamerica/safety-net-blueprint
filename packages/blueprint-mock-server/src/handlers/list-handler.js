@@ -6,6 +6,7 @@ import { executeSearch, PAGINATION_DEFAULTS } from '../search-engine.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractAuthContext } from '../auth-context.js';
 import { extractExpandFields, applyExpand, getItemSchema, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
+import { assertFetchShaped, queryOf } from '../http/request.js';
 
 /**
  * Extract all string-typed field paths from an OpenAPI schema.
@@ -35,26 +36,26 @@ function extractStringFields(schemas) {
  * Create list handler for a resource
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
  * @param {Object} endpoint - Endpoint metadata
- * @returns {Function} Express handler
+ * @returns {(request: Request) => Response}
  */
 export function createListHandler(apiMetadata, endpoint, { store } = {}) {
   // Derive searchable fields from schema string properties
   const schemaFields = extractStringFields(apiMetadata.schemas || {});
 
-  return (req, res) => {
+  return (request) => {
+    const { pathname } = new URL(assertFetchShaped(request, 'createListHandler').url);
+    const query = queryOf(request);
     try {
-      const httpStub = matchAndPopHttp(req.method, req.path);
+      const httpStub = matchAndPopHttp(request.method, pathname);
       if (httpStub) {
-        return res.status(httpStub.response?.status ?? 200).json(httpStub.response?.body ?? {});
+        return Response.json(httpStub.response?.body ?? {}, { status: httpStub.response?.status ?? 200 });
       }
-
-      // Get database (this will create it if it doesn't exist)
 
       // Resolve "me" in the q param to the authenticated user's ID.
       // e.g. q=assignedTo:me → q=assignedTo:<callerId>
-      const queryParams = { ...(req.query || {}) };
+      const queryParams = { ...query };
       if (queryParams.q && queryParams.q.includes(':me')) {
-        const auth = extractAuthContext(req);
+        const auth = extractAuthContext(request);
         if (auth) {
           queryParams.q = queryParams.q.replace(/:me(?=[ ,]|$)/g, `:${auth.userId}`);
         }
@@ -105,11 +106,11 @@ export function createListHandler(apiMetadata, endpoint, { store } = {}) {
         const details = result.error.field !== undefined
           ? [{ field: result.error.field, message: result.error.message }]
           : [];
-        return res.status(400).json({
+        return Response.json({
           code: result.error.code,
           message: result.error.message,
           details
-        });
+        }, { status: 400 });
       }
 
       // Ensure result has all required fields
@@ -134,17 +135,19 @@ export function createListHandler(apiMetadata, endpoint, { store } = {}) {
         });
       }
 
-      res.json(safeResult);
+      return Response.json(safeResult);
     } catch (error) {
+      // Kept rather than left to the adapter: the API name and query params are
+      // what make a list failure diagnosable, and the adapter cannot see them.
       console.error('List handler error:', error);
       console.error('Error stack:', error.stack);
       console.error('API:', apiMetadata.name);
-      console.error('Query params:', req.query);
-      res.status(500).json({
+      console.error('Query params:', query);
+      return Response.json({
         code: 'INTERNAL_ERROR',
         message: 'An unexpected error occurred',
         details: [{ message: error.message }]
-      });
+      }, { status: 500 });
     }
   };
 }

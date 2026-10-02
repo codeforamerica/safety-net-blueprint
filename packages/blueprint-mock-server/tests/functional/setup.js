@@ -80,7 +80,7 @@ export async function setupFunctional() {
  * @returns {Promise<void>}
  */
 export async function startFunctionalServer(storeKind = null) {
-  await startMockServer([resolvedDir], null, null, storeKind);
+  await startMockServer([resolvedDir], null, storeKind);
 }
 
 /**

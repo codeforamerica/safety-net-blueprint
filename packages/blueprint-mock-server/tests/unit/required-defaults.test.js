@@ -31,6 +31,7 @@ const store = createMemoryStore();
 const DEPS = { store: store };
 import { extractRequiredDefaults } from '../../src/route-generator.js';
 import { createCreateHandler } from '../../src/handlers/create-handler.js';
+import { makeRequest, readResponse } from '../helpers/fetch.js';
 
 // =============================================================================
 // Existing behavior: required arrays default to []
@@ -202,22 +203,10 @@ function makeHandler(schema) {
   return { handler, collection };
 }
 
-function callHandler(handler, body) {
-  return new Promise((resolve) => {
-    let statusCode, responseBody;
-    const res = {
-      status: (code) => {
-        statusCode = code;
-        return {
-          header: () => ({ json: (b) => { responseBody = b; resolve({ statusCode, responseBody }); } }),
-          json: (b) => { responseBody = b; resolve({ statusCode, responseBody }); }
-        };
-      },
-      json: (b) => { responseBody = b; resolve({ statusCode: 200, responseBody }); }
-    };
-    const req = { body, params: {}, path: '/test', headers: {}, query: {} };
-    handler(req, res);
-  });
+async function callHandler(handler, body) {
+  const request = makeRequest('/test', { method: 'POST', body });
+  const { status, body: responseBody } = await readResponse(handler(request, { params: {} }));
+  return { statusCode: status, responseBody };
 }
 
 test('create handler — optional non-nullable field is omitted from stored record', async () => {

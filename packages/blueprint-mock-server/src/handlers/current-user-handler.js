@@ -4,46 +4,41 @@
 
 import { extractAuthContext } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
+import { assertFetchShaped } from '../http/request.js';
 
 /**
  * Create a handler for the current-user singleton endpoint.
+ *
+ * Fetch-shaped: `(request, ctx) => Response` (#448).
+ *
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
  * @param {Object} endpoint - Endpoint metadata
- * @returns {Function} Express handler
+ * @returns {(request: Request) => Response}
  */
 export function createCurrentUserHandler(apiMetadata, endpoint, { store } = {}) {
-  return (req, res) => {
-    try {
-      const auth = extractAuthContext(req);
-      if (!auth) {
-        return res.status(401).json({
-          code: 'UNAUTHORIZED',
-          message: 'Authentication required'
-        });
-      }
-
-      const resource = store.findById(endpoint.collectionName, auth.userId);
-      if (!resource) {
-        return res.status(404).json({
-          code: 'NOT_FOUND',
-          message: 'User not found'
-        });
-      }
-
-      const expandFields = extractExpandFields(endpoint.responseSchema);
-      const linksFields = extractLinksFields(endpoint.responseSchema);
-      const derivedFields = extractDerivedFields(endpoint.responseSchema);
-      let responseBody = expandFields.length > 0 ? applyExpand(resource, expandFields, (c, id) => store.findById(c, id)) : resource;
-      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
-      if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
-      res.json(responseBody);
-    } catch (error) {
-      console.error('Current user handler error:', error);
-      res.status(500).json({
-        code: 'INTERNAL_ERROR',
-        message: 'An unexpected error occurred',
-        details: [{ message: error.message }]
-      });
+  return (request) => {
+    const auth = extractAuthContext(assertFetchShaped(request, 'createCurrentUserHandler'));
+    if (!auth) {
+      return Response.json({
+        code: 'UNAUTHORIZED',
+        message: 'Authentication required'
+      }, { status: 401 });
     }
+
+    const resource = store.findById(endpoint.collectionName, auth.userId);
+    if (!resource) {
+      return Response.json({
+        code: 'NOT_FOUND',
+        message: 'User not found'
+      }, { status: 404 });
+    }
+
+    const expandFields = extractExpandFields(endpoint.responseSchema);
+    const linksFields = extractLinksFields(endpoint.responseSchema);
+    const derivedFields = extractDerivedFields(endpoint.responseSchema);
+    let responseBody = expandFields.length > 0 ? applyExpand(resource, expandFields, (c, id) => store.findById(c, id)) : resource;
+    if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+    if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
+    return Response.json(responseBody);
   };
 }

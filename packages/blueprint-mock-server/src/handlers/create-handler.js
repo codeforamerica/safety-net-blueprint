@@ -10,8 +10,9 @@ import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
 import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { extractCallerRoles } from '../auth-context.js';
+import { extractCallerRoles, callerHeader } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
+import { assertFetchShaped, readJsonBody } from '../http/request.js';
 
 
 /**
@@ -20,42 +21,47 @@ import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extra
  * @param {Object} endpoint - Endpoint metadata
  * @param {string} baseUrl - Base URL for Location header
  * @param {Object|null} stateMachine - State machine contract (null for APIs without one)
- * @returns {Function} Express handler
+ * @returns {(request: Request, ctx: object) => Promise<Response>}
  */
 export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine, slaTypes = [], machine = null, { store } = {}, options = {}) {
-  return (req, res) => {
+  return async (request, ctx = {}) => {
+    const { params = {}, enrichmentData, body: bodyOverride } = ctx;
+    const { pathname } = new URL(assertFetchShaped(request, 'createCreateHandler').url);
     try {
       // HTTP stub intercept — if a stub is registered for this method + path, return it
       // before normal processing. Used in tests to simulate adapter responses.
-      const httpStub = matchAndPopHttp(req.method, req.path);
+      const httpStub = matchAndPopHttp(request.method, pathname);
       if (httpStub) {
-        return res.status(httpStub.response?.status ?? 200).json(httpStub.response?.body ?? {});
+        return Response.json(httpStub.response?.body ?? {}, { status: httpStub.response?.status ?? 200 });
       }
 
+      // A sub-resource POST passes its parent path params already merged in.
+      const requestBody = bodyOverride !== undefined ? bodyOverride : (await readJsonBody(request)).value;
+
       // Check if request body is an object (400 for malformed request)
-      if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
-        return res.status(400).json({
+      if (!requestBody || typeof requestBody !== 'object' || Array.isArray(requestBody)) {
+        return Response.json({
           code: 'BAD_REQUEST',
           message: 'Request body must be a JSON object',
           details: [{ field: 'body', message: 'must be object' }]
-        });
+        }, { status: 400 });
       }
 
       // Validate request body (422 for validation errors)
       if (endpoint.requestSchema) {
         const { valid, errors } = validate(
-          req.body,
+          requestBody,
           endpoint.requestSchema,
           `${endpoint.collectionName}-create`
         );
 
         if (!valid) {
-          return res.status(422).json(createErrorResponse(errors, 422));
+          return Response.json(createErrorResponse(errors, 422), { status: 422 });
         }
       }
 
       // Merge enrichment data (catalog-derived fields, path params for sub-resources)
-      const mergedBody = req.enrichmentData ? { ...req.body, ...req.enrichmentData } : req.body;
+      const mergedBody = enrichmentData ? { ...requestBody, ...enrichmentData } : requestBody;
 
       // Optional non-nullable fields not provided in the request body are intentionally
       // omitted from the stored record (absent ≠ null per OpenAPI 3.1).
@@ -81,25 +87,25 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       }
 
 
-      const callerId = req.headers['x-caller-id'] || null;
+      const callerId = callerHeader(request, 'x-caller-id');
       const now = new Date().toISOString();
-      const traceparent = req.headers['traceparent'] || null;
-      const domain = apiMetadata.serverBasePath.replace(/^\//, '');
+      const traceparent = callerHeader(request, 'traceparent');
+      const domain = (apiMetadata.serverBasePath ?? '').replace(/^\//, '');
       const object = endpoint.collectionName.replace(/s$/, '');
 
       const onCreate = machine?.triggers?.onCreate ?? stateMachine?.onCreate;
 
       // Execute onCreate steps/effects if this resource has a state machine
       if (onCreate) {
-        const callerRoles = extractCallerRoles(req);
+        const callerRoles = extractCallerRoles(request);
 
         // Enforce onCreate actors if defined
         if (onCreate.actors && onCreate.actors.length > 0) {
           if (!callerRoles.some(r => onCreate.actors.includes(r))) {
-            return res.status(403).json({
+            return Response.json({
               code: 'FORBIDDEN',
               message: `Creating this resource requires one of the following roles: ${onCreate.actors.join(', ')}`
-            });
+            }, { status: 403 });
           }
         }
 
@@ -109,7 +115,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         const baseContext = {
           caller: { id: callerId, roles: callerRoles },
           object: { ...resource },
-          request: req.body || {},
+          request: requestBody,
           now
         };
 
@@ -121,7 +127,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         );
         if (entities === null) {
           console.error('onCreate: required context binding failed — skipping trigger');
-          return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Context binding failed', details: [] });
+          return Response.json({ code: 'INTERNAL_ERROR', message: 'Context binding failed', details: [] }, { status: 500 });
         }
         const context = { ...baseContext, entities };
 
@@ -162,7 +168,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       }
 
       // Auto-emit created event with full resource snapshot (after effects applied)
-      const callerRoles = extractCallerRoles(req);
+      const callerRoles = extractCallerRoles(request);
       try {
         emitEvent({
         store,
@@ -181,9 +187,10 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         console.error('Failed to emit created event:', eventError.message);
       }
 
-      // Build Location header — use req.path (actual URL) rather than endpoint.path
-      // so sub-resource POSTs like /applications/app-123/documents get the right URL.
-      const location = `${baseUrl}${req.path}/${resource.id}`;
+      // Build Location header — use the request path (actual URL) rather than
+      // endpoint.path, so sub-resource POSTs like /applications/app-123/documents
+      // get the right URL.
+      const location = `${baseUrl}${pathname}/${resource.id}`;
 
       // Re-read from DB so the response reflects any mutations made by event subscriptions
       // (e.g. assignToQueue running synchronously in response to the created event)
@@ -197,25 +204,23 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
       if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
 
-      res.status(201)
-        .header('Location', location)
-        .json(responseBody);
+      return Response.json(responseBody, { status: 201, headers: { Location: location } });
     } catch (error) {
       console.error('Create handler error:', error);
 
       // Handle unique constraint violations
       if (error.message?.includes('UNIQUE constraint')) {
-        return res.status(409).json({
+        return Response.json({
           code: 'CONFLICT',
           message: 'A resource with this identifier already exists'
-        });
+        }, { status: 409 });
       }
 
-      res.status(500).json({
+      return Response.json({
         code: 'INTERNAL_ERROR',
         message: 'An unexpected error occurred',
         details: [{ message: error.message }]
-      });
+      }, { status: 500 });
     }
   };
 }

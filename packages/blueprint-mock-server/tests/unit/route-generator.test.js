@@ -5,6 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
+import { makeRequest, readResponse } from '../helpers/fetch.js';
 import { createMemoryStore } from '../../src/stores/memory-store.js';
 
 // A store of this file's own, rather than one shared through a module-level
@@ -44,19 +45,21 @@ function graphsFor(rulesDoc) {
   }
 }
 
-// Mock Express app to capture registered routes
-function createMockApp() {
-  const routes = [];
-  const app = {
-    get: (path, handler) => routes.push({ method: 'GET', path, handler }),
-    post: (path, handler) => routes.push({ method: 'POST', path, handler }),
-    patch: (path, handler) => routes.push({ method: 'PATCH', path, handler }),
-    delete: (path, handler) => routes.push({ method: 'DELETE', path, handler }),
-    put: (path, handler) => routes.push({ method: 'PUT', path, handler }),
-    getRoutes: () => routes,
-    clear: () => routes.length = 0
-  };
-  return app;
+/**
+ * Read a route table back in registration order.
+ *
+ * `registerRoutes` populates a table rather than an Express app (#448 step 2),
+ * so a handler is called the way the dispatcher calls it: with a `Request` and
+ * the matched path params.
+ */
+function listRoutes(table) {
+  return [...table].map(([key, entry]) => ({
+    method: key.slice(0, key.indexOf(' ')),
+    path: entry.expressPath,
+    template: key.slice(key.indexOf(' ') + 1),
+    operationId: entry.operationId,
+    handler: entry.handler,
+  }));
 }
 
 // Sample API metadata for testing
@@ -76,13 +79,13 @@ test('Route Generator Tests', async (t) => {
   // ==========================================================================
 
   await t.test('registerRoutes - converts OpenAPI path params to Express format', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/persons/{personId}', method: 'get', operationId: 'getPerson' }
     ]);
 
-    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
-    const routes = app.getRoutes();
+    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
+    const routes = listRoutes(table);
 
     assert.strictEqual(routes.length, 1);
     assert.strictEqual(routes[0].path, '/persons/:personId');
@@ -90,27 +93,27 @@ test('Route Generator Tests', async (t) => {
   });
 
   await t.test('registerRoutes - handles multiple path parameters', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/orgs/{orgId}/users/{userId}', method: 'get', operationId: 'getOrgUser' }
     ]);
 
-    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
-    const routes = app.getRoutes();
+    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
+    const routes = listRoutes(table);
 
     assert.strictEqual(routes[0].path, '/orgs/:orgId/users/:userId');
     console.log('  ✓ Converts multiple path parameters');
   });
 
   await t.test('registerRoutes - preserves paths without parameters', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/health', method: 'get', operationId: 'healthCheck' }
     ]);
 
     // Note: This will be treated as a collection endpoint and get a list handler
-    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
-    const routes = app.getRoutes();
+    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
+    const routes = listRoutes(table);
 
     assert.strictEqual(routes[0].path, '/health');
     console.log('  ✓ Preserves paths without parameters');
@@ -121,60 +124,60 @@ test('Route Generator Tests', async (t) => {
   // ==========================================================================
 
   await t.test('registerRoutes - assigns list handler to collection GET', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/persons', method: 'get', operationId: 'listPersons' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
 
     assert.strictEqual(registered[0].description, 'List/search resources');
     console.log('  ✓ Assigns list handler to collection GET');
   });
 
   await t.test('registerRoutes - assigns get handler to item GET', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/persons/{personId}', method: 'get', operationId: 'getPerson' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
 
     assert.strictEqual(registered[0].description, 'Get resource by ID');
     console.log('  ✓ Assigns get handler to item GET');
   });
 
   await t.test('registerRoutes - assigns create handler to collection POST', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/persons', method: 'post', operationId: 'createPerson' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
 
     assert.strictEqual(registered[0].description, 'Create resource');
     console.log('  ✓ Assigns create handler to collection POST');
   });
 
   await t.test('registerRoutes - assigns update handler to item PATCH', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/persons/{personId}', method: 'patch', operationId: 'updatePerson' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
 
     assert.strictEqual(registered[0].description, 'Update resource');
     console.log('  ✓ Assigns update handler to item PATCH');
   });
 
   await t.test('registerRoutes - assigns delete handler to item DELETE', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/persons/{personId}', method: 'delete', operationId: 'deletePerson' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
 
     assert.strictEqual(registered[0].description, 'Delete resource');
     console.log('  ✓ Assigns delete handler to item DELETE');
@@ -185,37 +188,37 @@ test('Route Generator Tests', async (t) => {
   // ==========================================================================
 
   await t.test('registerRoutes - skips unsupported endpoints (POST to item)', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/persons/{personId}', method: 'post', operationId: 'postToItem' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
 
     assert.strictEqual(registered.length, 0, 'Should not register unsupported endpoint');
-    assert.strictEqual(app.getRoutes().length, 0);
+    assert.strictEqual(listRoutes(table).length, 0);
     console.log('  ✓ Skips POST to item endpoint (unsupported)');
   });
 
   await t.test('registerRoutes - skips unsupported endpoints (PATCH to collection)', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/persons', method: 'patch', operationId: 'patchCollection' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
 
     assert.strictEqual(registered.length, 0, 'Should not register unsupported endpoint');
     console.log('  ✓ Skips PATCH to collection endpoint (unsupported)');
   });
 
   await t.test('registerRoutes - skips unsupported endpoints (DELETE to collection)', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/persons', method: 'delete', operationId: 'deleteCollection' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
 
     assert.strictEqual(registered.length, 0, 'Should not register unsupported endpoint');
     console.log('  ✓ Skips DELETE to collection endpoint (unsupported)');
@@ -226,7 +229,7 @@ test('Route Generator Tests', async (t) => {
   // ==========================================================================
 
   await t.test('registerRoutes - registers full CRUD API', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/persons', method: 'get', operationId: 'listPersons' },
       { path: '/persons', method: 'post', operationId: 'createPerson' },
@@ -235,8 +238,8 @@ test('Route Generator Tests', async (t) => {
       { path: '/persons/{personId}', method: 'delete', operationId: 'deletePerson' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
-    const routes = app.getRoutes();
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
+    const routes = listRoutes(table);
 
     assert.strictEqual(registered.length, 5, 'Should register all 5 CRUD endpoints');
     assert.strictEqual(routes.length, 5);
@@ -252,12 +255,12 @@ test('Route Generator Tests', async (t) => {
   });
 
   await t.test('registerRoutes - returns registered endpoint info', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/persons', method: 'get', operationId: 'listPersons' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
 
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].method, 'GET');
@@ -274,7 +277,7 @@ test('Route Generator Tests', async (t) => {
   // ==========================================================================
 
   await t.test('registerAllRoutes - registers multiple APIs', () => {
-    const app = createMockApp();
+    const table = new Map();
     const apiSpecs = [
       createTestMetadata([
         { path: '/persons', method: 'get', operationId: 'listPersons' },
@@ -291,8 +294,8 @@ test('Route Generator Tests', async (t) => {
       }
     ];
 
-    const allEndpoints = registerAllRoutes(app, apiSpecs, 'http://localhost:1080');
-    const routes = app.getRoutes();
+    const allEndpoints = registerAllRoutes(table, apiSpecs, 'http://localhost:1080');
+    const routes = listRoutes(table);
 
     assert.strictEqual(routes.length, 4, 'Should register all 4 endpoints');
     assert.strictEqual(allEndpoints.length, 2, 'Should return info for 2 APIs');
@@ -303,14 +306,14 @@ test('Route Generator Tests', async (t) => {
   });
 
   await t.test('registerAllRoutes - returns grouped endpoint info', () => {
-    const app = createMockApp();
+    const table = new Map();
     const apiSpecs = [
       createTestMetadata([
         { path: '/persons', method: 'get', operationId: 'listPersons' }
       ])
     ];
 
-    const allEndpoints = registerAllRoutes(app, apiSpecs, 'http://localhost:1080');
+    const allEndpoints = registerAllRoutes(table, apiSpecs, 'http://localhost:1080');
 
     assert.ok(Array.isArray(allEndpoints));
     assert.strictEqual(allEndpoints[0].apiName, 'test-api');
@@ -321,12 +324,12 @@ test('Route Generator Tests', async (t) => {
   });
 
   await t.test('registerAllRoutes - handles empty specs array', () => {
-    const app = createMockApp();
+    const table = new Map();
 
-    const allEndpoints = registerAllRoutes(app, [], 'http://localhost:1080');
+    const allEndpoints = registerAllRoutes(table, [], 'http://localhost:1080');
 
     assert.strictEqual(allEndpoints.length, 0);
-    assert.strictEqual(app.getRoutes().length, 0);
+    assert.strictEqual(listRoutes(table).length, 0);
 
     console.log('  ✓ Handles empty specs array');
   });
@@ -336,7 +339,7 @@ test('Route Generator Tests', async (t) => {
   // ==========================================================================
 
   await t.test('registerRoutes - creates handlers as functions', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/persons', method: 'get', operationId: 'listPersons' },
       { path: '/persons', method: 'post', operationId: 'createPerson' },
@@ -345,8 +348,8 @@ test('Route Generator Tests', async (t) => {
       { path: '/persons/{personId}', method: 'delete', operationId: 'deletePerson' }
     ]);
 
-    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
-    const routes = app.getRoutes();
+    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
+    const routes = listRoutes(table);
 
     for (const route of routes) {
       assert.strictEqual(typeof route.handler, 'function', `Handler for ${route.method} ${route.path} should be a function`);
@@ -360,14 +363,14 @@ test('Route Generator Tests', async (t) => {
   // ==========================================================================
 
   await t.test('registerRoutes - handles mixed case HTTP methods', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/persons', method: 'GET', operationId: 'listPersons' },
       { path: '/persons', method: 'POST', operationId: 'createPerson' }
     ]);
 
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
-    const routes = app.getRoutes();
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
+    const routes = listRoutes(table);
 
     assert.strictEqual(registered.length, 2);
     assert.strictEqual(routes.length, 2);
@@ -376,13 +379,13 @@ test('Route Generator Tests', async (t) => {
   });
 
   await t.test('registerRoutes - handles paths with multiple segments', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/api/v1/users/{userId}/posts/{postId}', method: 'get', operationId: 'getUserPost' }
     ]);
 
-    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
-    const routes = app.getRoutes();
+    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
+    const routes = listRoutes(table);
 
     assert.strictEqual(routes[0].path, '/api/v1/users/:userId/posts/:postId');
 
@@ -394,7 +397,7 @@ test('Route Generator Tests', async (t) => {
   // ==========================================================================
 
   await t.test('registerRoutes - derives collection name by stripping serverBasePath', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = {
       name: 'applications',
       title: 'Applications API',
@@ -406,8 +409,8 @@ test('Route Generator Tests', async (t) => {
       ]
     };
 
-    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
-    const routes = app.getRoutes();
+    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
+    const routes = listRoutes(table);
 
     // All routes should be registered at the full prefixed path
     const paths = routes.map(r => r.path);
@@ -422,170 +425,153 @@ test('Route Generator Tests', async (t) => {
   // ==========================================================================
 
   await t.test('registerRoutes - registers sub-collection GET as list sub-resources', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/documents', method: 'get', operationId: 'listDocuments' }
     ]);
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].description, 'List sub-resources');
-    assert.strictEqual(app.getRoutes()[0].path, '/applications/:applicationId/documents');
+    assert.strictEqual(listRoutes(table)[0].path, '/applications/:applicationId/documents');
     console.log('  ✓ Sub-collection GET registered as list sub-resources');
   });
 
   await t.test('registerRoutes - registers sub-collection POST as create sub-resource', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/documents', method: 'post', operationId: 'createDocument' }
     ]);
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].description, 'Create sub-resource');
     console.log('  ✓ Sub-collection POST registered as create sub-resource');
   });
 
   await t.test('registerRoutes - registers sub-item GET as get sub-resource by ID', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/documents/{documentId}', method: 'get', operationId: 'getDocument' }
     ]);
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].description, 'Get sub-resource by ID');
-    assert.strictEqual(app.getRoutes()[0].path, '/applications/:applicationId/documents/:documentId');
+    assert.strictEqual(listRoutes(table)[0].path, '/applications/:applicationId/documents/:documentId');
     console.log('  ✓ Sub-item GET registered as get sub-resource by ID');
   });
 
   await t.test('registerRoutes - registers sub-item PATCH as update sub-resource', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/documents/{documentId}', method: 'patch', operationId: 'updateDocument' }
     ]);
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     assert.strictEqual(registered[0].description, 'Update sub-resource');
     console.log('  ✓ Sub-item PATCH registered as update sub-resource');
   });
 
   await t.test('registerRoutes - registers sub-item DELETE as delete sub-resource', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/documents/{documentId}', method: 'delete', operationId: 'deleteDocument' }
     ]);
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     assert.strictEqual(registered[0].description, 'Delete sub-resource');
     console.log('  ✓ Sub-item DELETE registered as delete sub-resource');
   });
 
   await t.test('registerRoutes - registers singleton GET as get singleton sub-resource', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/interview', method: 'get', operationId: 'getInterview' }
     ]);
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].description, 'Get singleton sub-resource');
-    assert.strictEqual(app.getRoutes()[0].path, '/applications/:applicationId/interview');
+    assert.strictEqual(listRoutes(table)[0].path, '/applications/:applicationId/interview');
     console.log('  ✓ Singleton GET registered as get singleton sub-resource');
   });
 
   await t.test('registerRoutes - registers singleton PATCH as update singleton sub-resource', () => {
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/interview', method: 'patch', operationId: 'updateInterview' }
     ]);
-    const registered = registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
+    const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     assert.strictEqual(registered[0].description, 'Update singleton sub-resource');
     console.log('  ✓ Singleton PATCH registered as update singleton sub-resource');
   });
 
-  await t.test('registerRoutes - derives sub-collection name as parent-prefixed (not bare child)', () => {
+  await t.test('registerRoutes - derives sub-collection name as parent-prefixed (not bare child)', async () => {
     // GET /applications/{applicationId}/documents → collection 'application-documents', not 'documents'.
     // Prefix prevents cross-domain DB collisions. Verified by checking parent existence:
     // a missing parent returns 404, confirming "applications" is correctly the parent collection.
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/documents', method: 'get', operationId: 'listDocuments' }
     ]);
-    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
-    const routes = app.getRoutes();
+    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
+    const routes = listRoutes(table);
     assert.strictEqual(routes.length, 1);
-    let statusCode = null;
-    const mockReq = { params: { applicationId: 'nonexistent-app' }, query: {} };
-    const mockRes = {
-      status: (code) => { statusCode = code; return { json: () => {} }; },
-      json: () => {}
-    };
-    routes[0].handler(mockReq, mockRes);
+    const { status } = await readResponse(
+      routes[0].handler(makeRequest('/applications/nonexistent-app/documents'), { params: { applicationId: 'nonexistent-app' } })
+    );
     // Parent doesn't exist → 404 from parent collection check (not 500 from wrong collection)
-    assert.strictEqual(statusCode, 404);
+    assert.strictEqual(status, 404);
     console.log('  ✓ Sub-collection GET uses prefixed collection "application-documents"');
   });
 
-  await t.test('registerRoutes - singleton handler lazy-initializes when no record exists for parent', () => {
-    const app = createMockApp();
+  await t.test('registerRoutes - singleton handler lazy-initializes when no record exists for parent', async () => {
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/interview', method: 'get', operationId: 'getInterview' }
     ]);
-    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
-    const routes = app.getRoutes();
+    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
+    const routes = listRoutes(table);
 
-    let responseBody = null;
-    const mockReq = { params: { applicationId: 'nonexistent-app' } };
-    const mockRes = {
-      status: () => ({ json: () => {} }),
-      json: (body) => { responseBody = body; }
-    };
-    routes[0].handler(mockReq, mockRes);
+    const { body: responseBody } = await readResponse(
+      routes[0].handler(makeRequest('/applications/nonexistent-app/interview'), { params: { applicationId: 'nonexistent-app' } })
+    );
     assert.ok(responseBody, 'Singleton GET returns a body on first access');
     assert.ok(responseBody.id, 'Singleton GET returns a record with an id');
     assert.strictEqual(responseBody.applicationId, 'nonexistent-app', 'Singleton GET sets parent FK');
     console.log('  ✓ Singleton GET lazy-initializes empty record on first access');
   });
 
-  await t.test('registerRoutes - sub-collection GET returns 404 when parent does not exist', () => {
+  await t.test('registerRoutes - sub-collection GET returns 404 when parent does not exist', async () => {
     // When the parent application doesn't exist, the sub-collection GET returns 404
     // instead of an empty list. Filtering by parent ID is verified in integration tests.
-    const app = createMockApp();
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/documents', method: 'get', operationId: 'listDocuments' }
     ]);
-    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
-    const routes = app.getRoutes();
+    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
+    const routes = listRoutes(table);
 
-    let statusCode = null;
-    const mockReq = { params: { applicationId: 'nonexistent-app' }, query: {} };
-    const mockRes = {
-      status: (code) => { statusCode = code; return { json: () => {} }; },
-      json: () => {}
-    };
-    routes[0].handler(mockReq, mockRes);
-    assert.strictEqual(statusCode, 404, 'Returns 404 when parent application does not exist');
+    const { status } = await readResponse(
+      routes[0].handler(makeRequest('/applications/nonexistent-app/documents'), { params: { applicationId: 'nonexistent-app' } })
+    );
+    assert.strictEqual(status, 404, 'Returns 404 when parent application does not exist');
     console.log('  ✓ Sub-collection GET returns 404 when parent does not exist');
   });
 
-  await t.test('registerRoutes - sub-collection POST injects parent ID into body', () => {
-    const app = createMockApp();
+  await t.test('registerRoutes - sub-collection POST injects parent ID into body', async () => {
+    const table = new Map();
     const metadata = createTestMetadata([
       { path: '/applications/{applicationId}/documents', method: 'post', operationId: 'createDocument' }
     ]);
-    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
-    const routes = app.getRoutes();
+    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
+    const routes = listRoutes(table);
 
-    let capturedBody = null;
-    const mockReq = {
-      params: { applicationId: 'app-456' },
-      body: { category: 'income' },
-      path: '/applications/app-456/documents',
-      headers: {}
-    };
-    // The create handler will try to create a resource — we just verify body mutation
-    // by checking after the wrapper injects the parent ID before calling base handler.
-    const mockRes = {
-      status: () => ({ header: () => ({ json: () => {} }), json: () => {} }),
-      json: () => {}
-    };
-    routes[0].handler(mockReq, mockRes);
-    assert.strictEqual(mockReq.body.applicationId, 'app-456', 'Parent ID injected into request body');
+    // A Request body cannot be reassigned, so the parent ID now rides through
+    // ctx rather than by mutating req.body. Assert the outcome instead: the
+    // created resource carries the parent FK.
+    store.clearAll('application-documents');
+    const request = makeRequest('/applications/app-456/documents', { method: 'POST', body: { category: 'income' } });
+    const { status, body: created } = await readResponse(
+      routes[0].handler(request, { params: { applicationId: 'app-456' } })
+    );
+    assert.strictEqual(status, 201, 'sub-collection POST returns 201');
+    assert.strictEqual(created.applicationId, 'app-456', 'Parent ID injected into created resource');
     console.log('  ✓ Sub-collection POST injects parent ID into body');
   });
 
@@ -593,7 +579,7 @@ test('Route Generator Tests', async (t) => {
     // Verify that a GET handler uses "applications" as collection, not "intake"
     // by checking the handler invokes findById with the right collection name.
     // We do this by registering, then calling the GET handler with a mock req/res.
-    const app = createMockApp();
+    const table = new Map();
     const metadata = {
       name: 'applications',
       title: 'Applications API',
@@ -603,22 +589,18 @@ test('Route Generator Tests', async (t) => {
       ]
     };
 
-    registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, DEPS);
-    const routes = app.getRoutes();
+    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
+    const routes = listRoutes(table);
 
     assert.strictEqual(routes.length, 1);
     // The handler should reference collectionName "applications" not "intake"
     // We can verify this by reading the endpointWithCollection from the closure
     // by triggering it and observing that it looks in the right collection
     // (a missing resource in "applications" returns 404, not 500)
-    let statusCode = null;
-    const mockReq = { params: { applicationId: 'nonexistent-id' } };
-    const mockRes = {
-      status: (code) => { statusCode = code; return { json: () => {} }; },
-      json: () => {}
-    };
-    routes[0].handler(mockReq, mockRes);
-    assert.strictEqual(statusCode, 404, 'Should return 404 for missing resource (not 500 from wrong collection)');
+    const { status } = await readResponse(
+      routes[0].handler(makeRequest('/intake/applications/nonexistent-id'), { params: { applicationId: 'nonexistent-id' } })
+    );
+    assert.strictEqual(status, 404, 'Should return 404 for missing resource (not 500 from wrong collection)');
 
     console.log('  ✓ Handler uses "applications" collection (not "intake")');
   });
@@ -655,50 +637,44 @@ const minimalRulesDoc = {
 test('registerRulesRoutes', async (t) => {
 
   await t.test('registers no routes when rulesFiles is empty', () => {
-    const app = createMockApp();
-    const result = registerRulesRoutes(app, []);
-    assert.strictEqual(app.getRoutes().length, 0);
+    const table = new Map();
+    const result = registerRulesRoutes(table, []);
+    assert.strictEqual(listRoutes(table).length, 0);
     assert.strictEqual(result.length, 0);
   });
 
   await t.test('skips rulesets without an endpoint declaration', () => {
-    const app = createMockApp();
-    registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
+    const table = new Map();
+    registerRulesRoutes(table, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
     // Only snapEligibility has endpoint; noEndpointRuleset is skipped
-    assert.strictEqual(app.getRoutes().length, 1);
+    assert.strictEqual(listRoutes(table).length, 1);
   });
 
   await t.test('falls back to /domain prefix when no apiSpec found', () => {
-    const app = createMockApp();
-    registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
-    const routes = app.getRoutes();
+    const table = new Map();
+    registerRulesRoutes(table, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
+    const routes = listRoutes(table);
     assert.strictEqual(routes.length, 1);
     assert.strictEqual(routes[0].method, 'POST');
     assert.strictEqual(routes[0].path, '/eligibility/assess-snap-eligibility');
   });
 
   await t.test('uses serverBasePath from apiSpec when available', () => {
-    const app = createMockApp();
+    const table = new Map();
     const apiSpecs = [{ name: 'eligibility', serverBasePath: '/eligibility' }];
-    registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }], apiSpecs, graphsFor(minimalRulesDoc));
-    const routes = app.getRoutes();
+    registerRulesRoutes(table, [{ domain: 'eligibility', doc: minimalRulesDoc }], apiSpecs, graphsFor(minimalRulesDoc));
+    const routes = listRoutes(table);
     assert.strictEqual(routes[0].path, '/eligibility/assess-snap-eligibility');
   });
 
   await t.test('handler returns evaluate result as JSON for complete inputs', async () => {
-    const app = createMockApp();
-    registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
-    const handler = app.getRoutes()[0].handler;
+    const table = new Map();
+    registerRulesRoutes(table, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
+    const handler = listRoutes(table)[0].handler;
 
-    let responseBody;
-    let statusCode = 200;
-    const req = { body: { household: { monthlyIncome: 800 } } };
-    const res = {
-      json: (body) => { responseBody = body; },
-      status: (code) => { statusCode = code; return { json: (b) => { responseBody = b; } }; },
-    };
-
-    await handler(req, res);
+    const { status: statusCode, body: responseBody } = await readResponse(
+      handler(makeRequest('/eligibility/evaluate', { method: 'POST', body: { household: { monthlyIncome: 800 } } }), { params: {} })
+    );
     assert.ok(responseBody.eligible, 'result must have eligible');
     assert.strictEqual(responseBody.eligible.state, 'complete');
     assert.strictEqual(responseBody.eligible.value, true);
@@ -706,7 +682,7 @@ test('registerRulesRoutes', async (t) => {
   });
 
   await t.test('handler puts broken expressions in errors (not a 500)', async () => {
-    const app = createMockApp();
+    const table = new Map();
     // The evaluator catches CEL errors internally — they appear in result.errors, not as thrown exceptions
     const brokenDoc = {
       $schema: 'https://blueprint.codeforamerica.org/schemas/rules-schema.yaml',
@@ -720,26 +696,20 @@ test('registerRulesRoutes', async (t) => {
         },
       },
     };
-    registerRulesRoutes(app, [{ domain: 'eligibility', doc: brokenDoc }], [], graphsFor(brokenDoc));
-    const handler = app.getRoutes()[0].handler;
+    registerRulesRoutes(table, [{ domain: 'eligibility', doc: brokenDoc }], [], graphsFor(brokenDoc));
+    const handler = listRoutes(table)[0].handler;
 
-    let statusCode = 200;
-    let responseBody;
-    const req = { body: { x: { v: 1 } } };
-    const res = {
-      json: (body) => { responseBody = body; },
-      status: (code) => { statusCode = code; return { json: (b) => { responseBody = b; } }; },
-    };
-
-    await handler(req, res);
+    const { status: statusCode, body: responseBody } = await readResponse(
+      handler(makeRequest('/eligibility/evaluate', { method: 'POST', body: { x: { v: 1 } } }), { params: {} })
+    );
     assert.strictEqual(statusCode, 200);
     assert.ok(responseBody.result, 'broken expression must appear in result');
     assert.strictEqual(responseBody.result.state, 'error');
   });
 
   await t.test('returns registered endpoint descriptors', () => {
-    const app = createMockApp();
-    const result = registerRulesRoutes(app, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
+    const table = new Map();
+    const result = registerRulesRoutes(table, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
     assert.strictEqual(result.length, 1);
     assert.strictEqual(result[0].method, 'POST');
     assert.ok(result[0].path.includes('assess-snap-eligibility'));
