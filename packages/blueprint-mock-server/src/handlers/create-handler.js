@@ -52,7 +52,8 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         const { valid, errors } = validate(
           requestBody,
           endpoint.requestSchema,
-          `${endpoint.collectionName}-create`
+          `${endpoint.collectionName}-create`,
+          { relativePath: apiMetadata.relativePath, ref: endpoint.requestSchemaRef }
         );
 
         if (!valid) {

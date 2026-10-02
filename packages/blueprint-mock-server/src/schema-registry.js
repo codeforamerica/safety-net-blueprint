@@ -172,3 +172,28 @@ export function validatorFor(ajv, relativePath, pointer) {
     return null;
   }
 }
+
+/**
+ * A validator for the schema a `$ref` names, resolved from a document.
+ *
+ * The ref is resolved as a URI against the referring document's identifier,
+ * which is what makes both forms work from one call: `#/components/schemas/X`
+ * stays in the document, and `../intake/intake-schema.yaml#/$defs/Application`
+ * crosses to another. Ordinary URI arithmetic, because the identifiers were
+ * built to make it so.
+ *
+ * @param {import('ajv').default} ajv
+ * @param {string} relativePath - The document the ref was written in
+ * @param {string} ref - A `$ref` value
+ * @returns {import('ajv').ValidateFunction|null} Null when it does not resolve
+ */
+export function validatorForRef(ajv, relativePath, ref) {
+  if (!relativePath || typeof ref !== 'string' || !ref) return null;
+
+  try {
+    const resolved = new URL(ref, schemaIdFor(relativePath)).href;
+    return ajv.getSchema(resolved) ?? null;
+  } catch {
+    return null;
+  }
+}

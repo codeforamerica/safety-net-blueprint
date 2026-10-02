@@ -29,6 +29,7 @@ import { seedAllDatabases } from './seeder.js';
 import { registerEventSubscriptions } from './event-subscription.js';
 import { subscribeStubDispatch } from './mock-stub-engine.js';
 import { registerConfigManaged } from './config-registry.js';
+import { initSchemaRegistry } from './validator.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 import { contractsOfType, graphsOf, unresolvedRulesWarning } from './contract-views.js';
 
@@ -66,6 +67,9 @@ export async function createMockServer({
   }
 
   const docs = contracts.docs;
+
+  // The request validator resolves $refs against the set, same as in Node.
+  initSchemaRegistry(docs);
   const apiSpecs = specsFromArtifact(contracts);
 
   const stateMachines = extract(docs, 'state-machines');

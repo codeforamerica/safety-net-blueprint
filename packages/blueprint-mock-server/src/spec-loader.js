@@ -165,19 +165,28 @@ export function extractMetadata(spec, resourceName, resolve = null) {
         // the list handler / executeSearch reject ?sort= for such endpoints.
         sortable: operation['x-sortable'],
         requestSchema: null,
+        // The ref as written, when the schema was one. `requestSchema` is the
+        // object it names, for anything walking it; this is how ajv is told
+        // which document to resolve the refs *inside* it against (#448).
+        requestSchemaRef: null,
         responseSchema: null,
+        responseSchemaRef: null,
         errorSchemas: {}
       };
 
       // Extract request schema
-      if (operation.requestBody?.content?.['application/json']?.schema) {
-        endpoint.requestSchema = follow(operation.requestBody.content['application/json'].schema);
+      const rawRequest = operation.requestBody?.content?.['application/json']?.schema;
+      if (rawRequest) {
+        endpoint.requestSchema = follow(rawRequest);
+        endpoint.requestSchemaRef = typeof rawRequest.$ref === 'string' ? rawRequest.$ref : null;
       }
 
       // Extract response schema (200/201)
       const successStatus = method === 'post' ? '201' : '200';
-      if (operation.responses?.[successStatus]?.content?.['application/json']?.schema) {
-        endpoint.responseSchema = follow(operation.responses[successStatus].content['application/json'].schema);
+      const rawResponse = operation.responses?.[successStatus]?.content?.['application/json']?.schema;
+      if (rawResponse) {
+        endpoint.responseSchema = follow(rawResponse);
+        endpoint.responseSchemaRef = typeof rawResponse.$ref === 'string' ? rawResponse.$ref : null;
       }
       
       // Extract error schemas

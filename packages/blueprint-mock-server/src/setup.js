@@ -3,10 +3,11 @@
  * Handles loading specs and seeding databases
  */
 
-import { loadAllSpecs, discoverApiSpecs } from './spec-loader.js';
+import { apiSpecsFromDocs, discoverApiSpecs } from './spec-loader.js';
 import { seedAllDatabases } from './seeder.js';
 import { validateMockData } from './mock-data-validator.js';
 import { validateAll, getValidationStatus } from './spec-validator.js';
+import { initSchemaRegistry } from './validator.js';
 import { registerConfigManaged } from './config-registry.js';
 import { discover, load, extract } from '@codeforamerica/blueprint-core';
 import { contractsOfType, graphsOf, unresolvedRulesWarning } from './contract-views.js';
@@ -46,7 +47,12 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     ...(seedDir && seedDir !== specsDir ? discover(seedDir) : []),
   ].map(load);
 
-  const apiSpecs = await loadAllSpecs({ specsDir });
+  // Hand the request validator the set before any route is registered, so a
+  // schema that still carries $refs can be resolved against it.
+  initSchemaRegistry(docs);
+
+  // From the documents already loaded, not a second walk of the same tree.
+  const apiSpecs = apiSpecsFromDocs(docs);
 
   if (apiSpecs.length === 0) {
     throw new Error('No OpenAPI specifications found in specs directory');

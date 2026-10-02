@@ -128,7 +128,8 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
         const { valid, errors } = validate(
           dataForValidation,
           endpoint.requestSchema,
-          `${endpoint.collectionName}-update`
+          `${endpoint.collectionName}-update`,
+          { relativePath: apiMetadata.relativePath, ref: endpoint.requestSchemaRef }
         );
 
         if (!valid) {
