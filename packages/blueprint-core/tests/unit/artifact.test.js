@@ -177,3 +177,127 @@ describe('generate(docs, \'artifact\') and extract(artifact, \'docs\')', () => {
     }
   });
 });
+
+describe('generate(docs, \'artifact\', { domains })', () => {
+  /**
+   * A set shaped like the real one: a domain whose spec reaches into shared
+   * files belonging to no domain, a second domain to exclude, and platform.
+   */
+  const SPLIT = {
+    'base/components/parameters.yaml': { LimitParam: { in: 'query', name: 'limit', schema: { type: 'integer' } } },
+    'common/schemas/shared.yaml': {
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      $defs: { Money: { type: 'object', properties: { cents: { type: 'integer' } } } },
+    },
+    'domains/intake/intake-openapi.yaml': {
+      openapi: '3.1.0',
+      info: { title: 'Intake', version: '1.0.0', 'x-domain': 'intake' },
+      paths: {
+        '/applications': {
+          get: {
+            operationId: 'listApplications',
+            parameters: [{ $ref: '../../base/components/parameters.yaml#/LimitParam' }],
+            responses: {},
+          },
+        },
+      },
+      components: {
+        schemas: { Application: { type: 'object', properties: { fee: { $ref: '../../common/schemas/shared.yaml#/$defs/Money' } } } },
+      },
+    },
+    'domains/intake/intake-mock-data.yaml': { ApplicationExample1: { value: { fee: { cents: 1 } } } },
+    'domains/billing/billing-openapi.yaml': {
+      openapi: '3.1.0',
+      info: { title: 'Billing', version: '1.0.0', 'x-domain': 'billing' },
+      paths: { '/invoices': { get: { operationId: 'listInvoices', responses: {} } } },
+      components: { schemas: { Invoice: { type: 'object' } } },
+    },
+    'domains/platform/platform-registry-policies.yaml': {
+      $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
+      domain: 'platform',
+      type: 'policies',
+      entries: { 'a-policy': { title: 'A policy' } },
+    },
+  };
+
+  const pathsOf = (artifact) => artifact.docs.map((d) => d.relativePath).sort();
+
+  test('keeps the named domain, and the shared files it references', () => {
+    const dir = contractsIn(SPLIT);
+    try {
+      const docs = discover(dir).map(load);
+      const kept = pathsOf(generate(docs, 'artifact', { domains: ['intake'] }));
+
+      assert.ok(kept.includes('domains/intake/intake-openapi.yaml'));
+      assert.ok(kept.includes('domains/intake/intake-mock-data.yaml'),
+        'seed data for the domain must come along, or the store boots empty');
+      assert.ok(kept.includes('base/components/parameters.yaml'),
+        'a parameter referenced from the spec belongs to no domain and must still be kept');
+      assert.ok(kept.includes('common/schemas/shared.yaml'),
+        'and so does a schema referenced from components');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('drops a domain that was not asked for', () => {
+    const dir = contractsIn(SPLIT);
+    try {
+      const docs = discover(dir).map(load);
+      const kept = pathsOf(generate(docs, 'artifact', { domains: ['intake'] }));
+      assert.ok(!kept.includes('domains/billing/billing-openapi.yaml'));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('always keeps platform, which nothing references', () => {
+    // The mock seeds platform registries and task queues whatever domain is
+    // being shown, and no $ref points at them — so a closure alone would
+    // never reach them.
+    const dir = contractsIn(SPLIT);
+    try {
+      const docs = discover(dir).map(load);
+      const kept = pathsOf(generate(docs, 'artifact', { domains: ['intake'] }));
+      assert.ok(kept.includes('domains/platform/platform-registry-policies.yaml'));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('every ref in the result resolves within the result', () => {
+    // The property that makes this safe. A plain domain filter produces an
+    // artifact that parses and then cannot follow a ref, which surfaces at
+    // runtime in a page rather than at build time.
+    const dir = contractsIn(SPLIT);
+    try {
+      const docs = discover(dir).map(load);
+      const kept = extract(generate(docs, 'artifact', { domains: ['intake'] }), 'docs');
+
+      const dangling = [];
+      for (const doc of kept) {
+        for (const ref of doc.refs().values()) {
+          if (!ref.external || !ref.file) continue;
+          if (ref.file.startsWith('http://') || ref.file.startsWith('https://')) continue;
+          if (Object.keys(doc.resolveRef(ref.file + '#', kept) ?? {}).length === 0) {
+            dangling.push(`${doc.relativePath} → ${ref.file}`);
+          }
+        }
+      }
+      assert.deepEqual(dangling, []);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('no domains means the whole set', () => {
+    const dir = contractsIn(SPLIT);
+    try {
+      const docs = discover(dir).map(load);
+      assert.equal(generate(docs, 'artifact').docs.length, docs.length);
+      assert.equal(generate(docs, 'artifact', { domains: [] }).docs.length, docs.length);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

@@ -26,6 +26,7 @@
  */
 
 import { toDoc } from './doc.js';
+import { followRef, indexByRelativePath, isRemoteRef } from './ref-lookup.js';
 
 /** Bumped when the layout below changes in a way a reader must notice. */
 export const ARTIFACT_VERSION = 1;
@@ -51,15 +52,72 @@ function plainDoc(doc) {
 }
 
 /**
+ * The documents one or more domains need, and nothing else.
+ *
+ * A domain filter alone is not enough and fails in a way that only shows up at
+ * runtime: `intake`'s specs reference `base/components/parameters.yaml` and
+ * `common/schemas/income.yaml`, which belong to no domain. Dropping those
+ * leaves an artifact that parses and then cannot resolve a ref. So the named
+ * domains are a starting set, and this follows every `$ref` out of them until
+ * nothing new is reached.
+ *
+ * `platform` always comes along. The mock server seeds platform registries and
+ * task queues whatever domain is being demonstrated, and nothing `$ref`s them,
+ * so a closure would never pull them in.
+ *
+ * Resolution goes through `followRef`, the same path everything else uses, so
+ * a ref this keeps is a ref that will resolve later — including the forms it
+ * tolerates, like one written a level too shallow.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @param {string[]} domains - Domain names to keep
+ * @returns {import('../types.js').Doc[]} The closure, in the original order
+ */
+export function domainClosure(docs, domains) {
+  const wanted = new Set([...domains, 'platform']);
+  const byRelativePath = indexByRelativePath(docs);
+  const positioned = new Map(docs.filter((d) => d.relativePath).map((d) => [d.relativePath, d]));
+
+  const keep = new Set(
+    docs.filter((doc) => doc.relativePath && wanted.has(doc.domain)).map((doc) => doc.relativePath)
+  );
+
+  // Fixed point: a document pulled in can itself reference another.
+  let growing = true;
+  while (growing) {
+    growing = false;
+    for (const relativePath of [...keep]) {
+      const doc = positioned.get(relativePath);
+      if (!doc) continue;
+
+      for (const ref of doc.refs().values()) {
+        if (!ref.external || !ref.file || isRemoteRef(ref.file)) continue;
+        const found = followRef(ref.file, byRelativePath, relativePath);
+        if (found && !keep.has(found.relativePath)) {
+          keep.add(found.relativePath);
+          growing = true;
+        }
+      }
+    }
+  }
+
+  return docs.filter((doc) => keep.has(doc.relativePath));
+}
+
+/**
  * The whole contract set, reduced to data.
  *
  * @param {import('../types.js').Doc[]} docs
+ * @param {object} [options]
+ * @param {string[]} [options.domains] - Keep only these domains, plus
+ *   `platform`, plus whatever they reference. Omit for the whole set.
  * @returns {{ artifactVersion: number, docs: object[] }}
  */
-export function buildArtifact(docs) {
+export function buildArtifact(docs, { domains = null } = {}) {
+  const selected = domains?.length ? domainClosure(docs, domains) : docs;
   return {
     artifactVersion: ARTIFACT_VERSION,
-    docs: docs.map(plainDoc),
+    docs: selected.map(plainDoc),
   };
 }
 

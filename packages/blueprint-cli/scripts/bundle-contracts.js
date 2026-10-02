@@ -33,12 +33,13 @@ import { writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 function parseArgs(argv) {
-  const options = { specDirs: [], seedDir: null, out: null, skipValidation: false, help: false };
+  const options = { specDirs: [], seedDir: null, out: null, domains: [], skipValidation: false, help: false };
   for (const arg of argv) {
     if (arg === '--help' || arg === '-h') options.help = true;
     else if (arg === '--skip-validation') options.skipValidation = true;
     else if (arg.startsWith('--spec=')) options.specDirs.push(arg.slice('--spec='.length));
     else if (arg.startsWith('--seed=')) options.seedDir = arg.slice('--seed='.length);
+    else if (arg.startsWith('--domain=')) options.domains.push(arg.slice('--domain='.length));
     else if (arg.startsWith('--out=')) options.out = arg.slice('--out='.length);
     else throw new Error(`Unknown argument: ${arg}`);
   }
@@ -54,6 +55,9 @@ Usage:
 Options:
   --spec=<dir>        Contracts directory. Repeatable.
   --seed=<dir>        Directory of *-mock-data.yaml. Defaults to --spec.
+  --domain=<name>     Keep only this domain. Repeatable. Omit for every domain.
+                      The platform domain is always included, as are the shared
+                      schemas and components the named domains reference.
   --out=<file>        Where to write the artifact.
   --skip-validation   Write the artifact even if the contract set has errors.
   --help              Show this message.
@@ -112,9 +116,29 @@ async function main() {
     console.log(`  ✓ ${docs.length} document(s), no errors`);
   }
 
+  if (options.domains.length > 0) {
+    const known = new Set(docs.map((doc) => doc.domain).filter(Boolean));
+    const unknown = options.domains.filter((name) => !known.has(name));
+    if (unknown.length > 0) {
+      console.error(`\nNo documents belong to: ${unknown.join(', ')}`);
+      console.error(`Domains in this contract set: ${[...known].sort().join(', ')}`);
+      process.exit(1);
+    }
+  }
+
   // `createdAt` is this command's, not the format's — provenance for whoever
   // finds the file later. Nothing reads it.
-  const artifact = { ...generate(docs, 'artifact'), createdAt: new Date().toISOString() };
+  const artifact = {
+    ...generate(docs, 'artifact', { domains: options.domains }),
+    createdAt: new Date().toISOString(),
+  };
+
+  if (options.domains.length > 0) {
+    const kept = new Set(artifact.docs.map((doc) => doc.domain ?? '(shared)'));
+    console.log(`\nKept ${artifact.docs.length} of ${docs.length} documents for ` +
+      `${options.domains.join(', ')}:`);
+    console.log(`  domains: ${[...kept].sort().join(', ')}`);
+  }
 
   const serialised = JSON.stringify(artifact);
   const outPath = resolve(options.out);
