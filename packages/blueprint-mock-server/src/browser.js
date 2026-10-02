@@ -29,24 +29,10 @@ import { seedAllDatabases } from './seeder.js';
 import { registerEventSubscriptions } from './event-subscription.js';
 import { subscribeStubDispatch } from './mock-stub-engine.js';
 import { registerConfigManaged } from './config-registry.js';
-import { extract, generate } from '@codeforamerica/blueprint-core/browser';
+import { extract } from '@codeforamerica/blueprint-core/browser';
+import { contractsOfType, registryEntries, graphsOf, unresolvedRulesWarning } from './contract-views.js';
 
-/** Documents the mock server's registry helper, kept in step with setup.js. */
-function registryEntries(docs, type) {
-  const merged = {};
-  for (const doc of docs) {
-    if (doc.type !== 'registry' || doc.content?.type !== type) continue;
-    Object.assign(merged, doc.content.entries ?? {});
-  }
-  return merged;
-}
 
-/** Documents of one contract type carrying a given section, as setup.js reads them. */
-function contractsOfType(docs, type, section) {
-  return docs
-    .filter((doc) => doc.type === type && doc.content?.[section])
-    .map((doc) => ({ filePath: doc.path, domain: doc.content.domain, doc: doc.content }));
-}
 
 /**
  * Build a mock server from a contracts artifact.
@@ -88,7 +74,9 @@ export async function createMockServer({
   const configs = extract(docs, 'config');
   const compositions = contractsOfType(docs, 'compositions', 'compositions');
   const rulesFiles = contractsOfType(docs, 'rules', 'rulesets');
-  const graphs = rulesFiles.length > 0 ? generate(docs, 'graph').map(({ graph }) => graph) : [];
+  const graphs = graphsOf(docs);
+  const unresolved = unresolvedRulesWarning(rulesFiles, graphs);
+  if (unresolved) console.warn(`Warning: ${unresolved}`);
   const policies = registryEntries(docs, 'policies');
 
   // Seed before routing so a list endpoint answers on the first request.

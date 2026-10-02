@@ -8,7 +8,8 @@ import { seedAllDatabases } from './seeder.js';
 import { validateMockData } from './mock-data-validator.js';
 import { validateAll, getValidationStatus } from './spec-validator.js';
 import { registerConfigManaged } from './config-registry.js';
-import { discover, generate, load, extract } from '@codeforamerica/blueprint-core';
+import { discover, load, extract } from '@codeforamerica/blueprint-core';
+import { contractsOfType, registryEntries, graphsOf, unresolvedRulesWarning } from './contract-views.js';
 /**
  * Perform setup: load specs and seed databases
  * @param {Object} options - Setup options
@@ -38,7 +39,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   // policy registry. The loaders are gone; `extract` reads the same facts from
   // documents already in memory.
   // The seed directory's documents belong in the same set: seeding reads
-  // mock-data documents through `generate(docs, 'examples')`, so they have to
+  // mock-data documents through `extract(docs, 'examples')`, so they have to
   // be here rather than discovered separately inside the seeder.
   const docs = [
     ...discover(specsDir),
@@ -106,13 +107,14 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     compositions.forEach(c => console.log(`  - ${c.domain} (${Object.keys(c.doc.compositions || {}).length} composition(s))`));
   }
 
-  // Discover rules files. Their decision graphs are compiled by generate —
-  // the same build step the resolve pipeline runs — so the server evaluates
-  // exactly what the pipeline would have written.
+  // Decision graphs are read from the set, not compiled here. resolve wrote
+  // one per ruleset beside its rules document, so recompiling produced the
+  // identical bytes — and could stop doing so if the two ran under different
+  // versions of the compiler.
   const rulesFiles = contractsOfType(docs, 'rules', 'rulesets');
-  const graphs = rulesFiles.length > 0
-    ? generate(docs, 'graph').map(({ graph }) => graph)
-    : [];
+  const graphs = graphsOf(docs);
+  const unresolved = unresolvedRulesWarning(rulesFiles, graphs);
+  if (unresolved) console.warn(`\nWarning: ${unresolved}`);
   if (verbose && rulesFiles.length > 0) {
     console.log(`\n✓ Discovered ${rulesFiles.length} rules file(s):`);
     rulesFiles.forEach(r => console.log(`  - ${r.domain} (${Object.keys(r.doc.rulesets || {}).length} ruleset(s))`));
@@ -185,24 +187,6 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   return { docs, apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, policies, summary };
 }
 
-/**
- * Contract documents of one type, in the shape the server's consumers expect.
- *
- * `discover` already knows the type from the document's own $schema, so the
- * only thing left is to skip documents that declare none of the section the
- * caller wants. Takes the loaded set rather than a directory, so this costs no
- * extra walk.
- *
- * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
- * @param {string} type - Contract type to select
- * @param {string} section - Top-level key a usable document must declare
- * @returns {{ filePath: string, domain: string, doc: object }[]}
- */
-function contractsOfType(docs, type, section) {
-  return docs
-    .filter((doc) => doc.type === type && doc.content?.[section])
-    .map((doc) => ({ filePath: doc.path, domain: doc.content.domain, doc: doc.content }));
-}
 
 /**
  * Display setup summary
@@ -218,22 +202,3 @@ export function displaySetupSummary(summary) {
   }
 }
 
-/**
- * Merge every registry of one type into a map of ID to entry.
- *
- * Later documents override earlier ones per ID, which is how a state replaces
- * a baseline entry. `registry` is a contract type, so `discover` has already
- * tagged these; all that is left is the merge.
- *
- * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
- * @param {string} type - Registry type, e.g. 'policies'
- * @returns {Record<string, object>}
- */
-function registryEntries(docs, type) {
-  const merged = {};
-  for (const doc of docs) {
-    if (doc.type !== 'registry' || doc.content?.type !== type) continue;
-    Object.assign(merged, doc.content.entries ?? {});
-  }
-  return merged;
-}
