@@ -392,7 +392,6 @@ describe('the pipeline end to end', () => {
 
       assert.equal(resolved.docs[0].content.servers.length, 1);
       assert.equal(resolved.docs[0].content.servers[0].url, 'https://api.example.com');
-      assert.equal(resolved.manifest.envTarget, 'production');
 
       // The resolved document reports its own state, not the one it was
       // loaded with — the reason refs() and model() are methods.

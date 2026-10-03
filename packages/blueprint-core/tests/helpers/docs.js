@@ -27,8 +27,6 @@ export function doc(content, { relativePath = 'domains/test/test.yaml', type, mo
     content,
     refs() { return new Map(); },
     model() { return model ?? null; },
-    resolved: false,
-    provenance: null,
   };
 }
 

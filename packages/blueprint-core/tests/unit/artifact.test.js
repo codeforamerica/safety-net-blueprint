@@ -155,7 +155,7 @@ describe('generate(docs, \'artifact\') and extract(artifact, \'docs\')', () => {
     const [doc] = generate(fromDisk, 'artifact').docs;
     assert.deepEqual(
       Object.keys(doc).sort(),
-      ['content', 'domain', 'provenance', 'relativePath', 'type']
+      ['content', 'domain', 'relativePath', 'type']
     );
   });
 

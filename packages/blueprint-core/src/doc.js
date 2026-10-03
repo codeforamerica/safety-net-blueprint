@@ -37,10 +37,9 @@ import { followRef, indexByRelativePath, resolveRef, isRemoteRef } from './ref-l
  * @param {string|null} [fields.domain] - Falls back to what the content declares
  * @param {string} fields.type - From `detectType`
  * @param {*} fields.content - The parsed document
- * @param {object|null} [fields.provenance] - Resolve manifest, when one governs it
  * @returns {import('../types.js').Doc}
  */
-export function toDoc({ path, relativePath = null, domain = null, type, content, provenance = null }) {
+export function toDoc({ path, relativePath = null, domain = null, type, content }) {
   return {
     path: path ?? relativePath,
     relativePath,
@@ -54,8 +53,6 @@ export function toDoc({ path, relativePath = null, domain = null, type, content,
     externalRefs(docs) { return externalRefs(this, docs); },
     resolveRef(ref, docs) { return resolveRef(ref, docs, this.relativePath); },
     model() { return buildModel(this.type, this.content); },
-    resolved: provenance !== null,
-    provenance,
   };
 }
 

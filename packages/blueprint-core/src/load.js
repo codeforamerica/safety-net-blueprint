@@ -25,13 +25,11 @@
  * parallel representation would only need converting back.
  */
 
-import { readFileSync, existsSync } from 'fs';
-import { basename, dirname, join, parse as parsePath } from 'path';
+import { readFileSync } from 'fs';
+import { basename } from 'path';
 import yaml from 'js-yaml';
 import { detectType } from './contract-types.js';
 import { toDoc } from './doc.js';
-
-export const MANIFEST_FILENAME = '.blueprint-resolved.json';
 
 /**
  * Read a contract file and build its Doc.
@@ -61,37 +59,6 @@ export function load(file) {
     domain,
     type: detectType(basename(path), content),
     content,
-    provenance: readManifest(path),
   });
 }
 
-/**
- * Find the resolve manifest governing a file.
- *
- * Walks up from the file's directory. A resolved contract sits inside the
- * output directory resolve wrote, so the manifest is at or above it. A file
- * copied away from that directory has no manifest and is reported unresolved —
- * which is correct, since its provenance genuinely is unknown.
- *
- * @param {string} filePath - Absolute path to the contract file
- * @returns {object|null} Manifest contents, or null if none governs this file
- */
-function readManifest(filePath) {
-  let dir = dirname(filePath);
-  const { root } = parsePath(dir);
-
-  while (true) {
-    const candidate = join(dir, MANIFEST_FILENAME);
-    if (existsSync(candidate)) {
-      try {
-        return JSON.parse(readFileSync(candidate, 'utf8'));
-      } catch {
-        return null;
-      }
-    }
-    if (dir === root) return null;
-    const parent = dirname(dir);
-    if (parent === dir) return null;
-    dir = parent;
-  }
-}

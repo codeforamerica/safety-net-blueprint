@@ -53,7 +53,6 @@ function plainDoc(doc) {
     domain: doc.domain,
     type: doc.type,
     content: doc.content,
-    provenance: doc.provenance ?? null,
   };
 }
 
