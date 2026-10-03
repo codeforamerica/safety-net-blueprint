@@ -120,7 +120,19 @@ function executePendingAppend({ path, body }, store) {
  * @param {Array} allStateMachines - from discoverStateMachines()
  * @param {Array} [allSlaTypes]    - from discoverSlaTypes()
  */
+let currentDispatch = null;
+
 export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], apiSpecs = [], store) {
+  // Replace rather than accumulate. Registering twice — a second server in
+  // the same process, or a page rebooting one from an edited contract set —
+  // otherwise leaves the first set of handlers attached, so every event is
+  // handled twice and every subscription acts twice on it. Mirrors what
+  // `subscribeStubDispatch` already does.
+  if (currentDispatch) {
+    eventBus.off('domain-event', currentDispatch);
+    currentDispatch = null;
+  }
+
   // Collect events entries from new-format state machines
   const machineEventSubs = [];
   for (const smEntry of allStateMachines) {
@@ -140,7 +152,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
     console.log(`  - ${smEntry.domain}/${smEntry.machine.object} onEvent → on: ${entry.type}`);
   }
 
-  eventBus.on('domain-event', (event) => {
+  currentDispatch = (event) => {
     // Machine event subscriptions
     for (const { smEntry, entry } of machineEventSubs) {
       if (!eventTypeMatches(event.type, entry.type)) continue;
@@ -304,7 +316,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
               traceparent: event.traceparent,
               causationid: event.id,
               time: now,
-            });
+            }, store);
           } catch (e) {
             console.error(`onEvent emit "${evt.type}" failed:`, e.message);
           }
@@ -313,5 +325,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         console.error(`Machine onEvent "${entry.type}" failed:`, e.message);
       }
     }
-  });
+  };
+
+  eventBus.on('domain-event', currentDispatch);
 }
