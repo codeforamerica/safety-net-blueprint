@@ -36,7 +36,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync, statSync, existsSync } from 'node:fs';
 import yaml from 'js-yaml';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -65,6 +65,9 @@ Usage:
 
 Options:
   --spec=<dir>      Resolved contracts directory. Repeatable.
+  --source=<dir>    The authored contracts, carried alongside the resolved
+                    ones so the page can show what a document looked like
+                    before resolve touched it. Optional.
   --overlay=<dir>   Authored overlays, carried alongside the artifact so the
                     page can show how this deployment customizes the base
                     contracts. Optional — resolve has already applied them.
@@ -82,10 +85,11 @@ standalone.html as a single file that works from file://.
 `.trim();
 
 function parseArgs(argv) {
-  const options = { specDirs: [], overlayDir: null, sourceUrl: null, domains: [], out: null, help: false };
+  const options = { specDirs: [], sourceDir: null, overlayDir: null, sourceUrl: null, domains: [], out: null, help: false };
   for (const arg of argv) {
     if (arg === '--help' || arg === '-h') options.help = true;
     else if (arg.startsWith('--spec=')) options.specDirs.push(arg.slice('--spec='.length));
+    else if (arg.startsWith('--source=')) options.sourceDir = arg.slice('--source='.length);
     else if (arg.startsWith('--overlay=')) options.overlayDir = arg.slice('--overlay='.length);
     else if (arg.startsWith('--source-url=')) options.sourceUrl = arg.slice('--source-url='.length).replace(/\/$/, '');
     else if (arg.startsWith('--domain=')) options.domains.push(arg.slice('--domain='.length));
@@ -140,6 +144,19 @@ function main() {
     `--out=${join(outDir, 'contracts.json')}`,
   ]);
 
+  // The authored set, for showing what resolve changed. Not validated: these
+  // are pre-resolve, so they legitimately carry `${VAR}` placeholders and
+  // refs that only resolve once the pipeline has run.
+  if (options.sourceDir) {
+    console.log('\nBundling the authored contracts...');
+    run(process.execPath, [
+      BUNDLE_CONTRACTS,
+      `--spec=${options.sourceDir}`,
+      '--skip-validation',
+      `--out=${join(outDir, 'authored.json')}`,
+    ]);
+  }
+
   // Overlays are an input, not part of the resolved set — resolve applies them
   // and strips them from its output, which is right. But "this field exists
   // because a state added it" is one of the more interesting things the page
@@ -151,7 +168,13 @@ function main() {
     const overlays = existsSync(dir)
       ? readdirSync(dir)
           .filter((name) => name.endsWith('.yaml'))
-          .map((name) => ({ name, content: yaml.load(readFileSync(join(dir, name), 'utf8')) }))
+          // `dir` is the overlay directory's own name, so the page can build a
+          // link relative to --source-url without being told the layout.
+          .map((name) => ({
+            name,
+            dir: basename(dir),
+            content: yaml.load(readFileSync(join(dir, name), 'utf8')),
+          }))
       : [];
     writeFileSync(join(outDir, 'overlays.json'), JSON.stringify(overlays));
     console.log(`  ${overlays.length} overlay document(s) from ${dir}`);
@@ -178,6 +201,8 @@ function main() {
   const contracts = readFileSync(join(outDir, 'contracts.json'), 'utf8');
   const overlaysPath = join(outDir, 'overlays.json');
   const overlays = existsSync(overlaysPath) ? readFileSync(overlaysPath, 'utf8') : null;
+  const authoredPath = join(outDir, 'authored.json');
+  const authoredSet = existsSync(authoredPath) ? readFileSync(authoredPath, 'utf8') : null;
 
   const inlined = [
     // `</script` escaped so a browser cannot end the element early. Inside a
@@ -190,6 +215,9 @@ function main() {
     // same way the artifact does.
     ...(overlays
       ? [`<script type="application/json" id="overlays-data">${overlays.replace(/</g, '\\u003c')}</script>`]
+      : []),
+    ...(authoredSet
+      ? [`<script type="application/json" id="authored-data">${authoredSet.replace(/</g, '\\u003c')}</script>`]
       : []),
     '<script type="module">',
   ].join('\n');

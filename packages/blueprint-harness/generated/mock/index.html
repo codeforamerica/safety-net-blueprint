@@ -82,6 +82,7 @@
     display: block; font-family: inherit; font-size: .68rem; letter-spacing: .04em;
     text-transform: uppercase; color: var(--warm); margin-bottom: .35rem; font-weight: 600;
   }
+  .step .contract .label a { color: var(--warm); text-transform: none; letter-spacing: 0; }
   .step .source span { color: var(--accent); }
   .step .why { font-size: .88rem; margin: .8rem 0 0; padding-left: .8rem; border-left: 2px solid var(--line); color: var(--muted); }
   .step .why b { color: var(--ink); font-weight: 600; }
@@ -107,17 +108,17 @@
 <main>
   <h1>Not your average mock server</h1>
   <p class="lede">
-    Returning canned JSON is a solved problem. This does something else: it is
-    <b>generated from contracts</b>, so it knows your application is in the
-    wrong state to be closed, that a 72-hour deadline just elapsed, and which
-    regulation a timestamp exists to satisfy.
+    Returning canned JSON is a solved problem. This is <b>a working backend</b>
+    — it enforces state transitions, evaluates rules, validates requests,
+    emits events and refuses what the contracts say to refuse. There is real
+    logic here, and none of it was written as mock code.
   </p>
   <p class="lede">
-    Nothing below was configured or hand-written. Every route, rule, state
-    transition and response shape was derived from the same contract documents
-    an implementation would be built against — which is the point: if the mock
-    works, the contracts are <b>executable</b>, not just documentation.
-    Each step shows the contract first, then runs it.
+    It is <b>built from the contracts at runtime</b>, so the logic is theirs:
+    the routes, the transitions, the rules and the response shapes all come
+    from the same documents an implementation would be built against. Which is
+    the point — if this runs, the contracts are executable rather than
+    descriptive. Every step shows the contract first, then runs it.
   </p>
   <p class="lede">
     And it is all running in this tab. No server, no network, no install.
@@ -185,6 +186,25 @@ const loadContracts = async () => {
  * to show — and keeping them apart means nothing walking the set meets a
  * document that is not part of it. Absent when the build was given none.
  */
+/**
+ * The contract set as authored, before resolve touched it.
+ *
+ * Carried so a step can show what a document looked like going in, not only
+ * what came out. Same artifact shape as the resolved set — it is the same
+ * function that produced it — so the page reads both the same way. Absent
+ * when the build was given no `--source`.
+ */
+const loadAuthored = async () => {
+  const inlined = document.getElementById('authored-data');
+  if (inlined) return JSON.parse(inlined.textContent);
+  try {
+    const response = await fetch('./authored.json');
+    return response.ok ? await response.json() : null;
+  } catch {
+    return null;
+  }
+};
+
 const loadOverlays = async () => {
   const inlined = document.getElementById('overlays-data');
   if (inlined) return JSON.parse(inlined.textContent);
@@ -231,6 +251,7 @@ const basePath = location.pathname.replace(/\/[^/]*$/, '');
 let mock;
 let contracts;
 let overlays = [];
+let authored = null;
 
 /** Requests carry a caller: the server refuses a state transition without one. */
 const CALLER = 'the-guided-tour';
@@ -680,53 +701,104 @@ let offered;
  */
 const STEPS = [
   {
+    title: 'What this deployment changed',
+    shows: 'Overlays',
+    runLabel: 'Inspect',
+    what: 'Before anything runs: these contracts are not the base set. A state customizes without forking, and resolve applied that at build time.',
+    contract: () => {
+      // One overlay action, not every one: the three boxes read as before,
+      // the change, after, and a second unrelated action in the middle is
+      // something this step never mentions. The count is in the facts.
+      const excerpts = [];
+      const responsible = overlays
+        .flatMap((overlay) => (overlay.content?.actions ?? [])
+          .map((action) => ({ overlay, action })))
+        .find(({ action }) => action.update && action.target?.startsWith('$.'));
+
+      if (responsible) {
+        excerpts.push({
+          label: `what ${responsible.overlay.name} changes`,
+          file: [responsible.overlay.dir, responsible.overlay.name].filter(Boolean).join('/'),
+          node: { target: responsible.action.target, update: responsible.action.update },
+        });
+      }
+      // Before and after, located by the overlay's own target rather than by
+      // guessing which schema it means. `$.components.schemas.X.properties`
+      // is a path, so the same node can be read out of the authored set and
+      // the resolved one and shown either side of the change.
+      const adding = responsible?.action;
+      if (!adding) return excerpts;
+
+      const walk = (doc) => adding.target.slice(2).split('.')
+        .reduce((node, segment) => (node ?? {})[segment], doc.content);
+
+      const at = (set) => {
+        for (const doc of set?.docs ?? []) {
+          const node = walk(doc);
+          if (node && typeof node === 'object') return { doc, node };
+        }
+        return null;
+      };
+
+      const before = at(authored);
+      const after = at(contracts);
+      const added = Object.keys(adding.update);
+
+      if (before && added.some((name) => !(name in before.node))) {
+        excerpts.unshift({
+          label: `as authored upstream — ${Object.keys(before.node).length} fields, none of them ${added.join(', ')}`,
+          file: before.doc.relativePath,
+          node: Object.keys(before.node),
+        });
+      }
+      if (after && added.every((name) => name in after.node)) {
+        excerpts.push({
+          label: `after resolve merged it in — ${Object.keys(after.node).length} fields`,
+          file: after.doc.relativePath,
+          node: Object.keys(after.node),
+        });
+      }
+      return excerpts;
+    },
+    why: 'An overlay is how a state adds what its program needs without forking the contracts it shares with everyone else. The base set never mentions <code>countyCode</code>; this deployment does, and <b>resolve merged the two before any of this shipped</b>. That is why the artifact the page booted from has a field the published contracts do not — and why a state can take an upstream change without losing its own.',
+    needs: () => overlays.length > 0,
+    run: async () => {
+      const targets = overlays.flatMap((overlay) => (overlay.content?.actions ?? []).map((a) => a.target));
+      return {
+        facts: [
+          ['overlay documents applied', String(overlays.length)],
+          ['targets they rewrite', String(targets.length)],
+          ['when that happened', 'at resolve, before this page was built'],
+          ['documents the page booted from', String(contracts.docs.length)],
+          ['requests made to learn this', '0 — it is all in the artifact'],
+        ],
+      };
+    },
+  },
+
+  {
     title: 'Start an application',
     shows: 'REST',
     contract: () => {
-      // Both fields the request never sent, found by looking rather than by
-      // being told which they are: one carries a derivation expression, the
-      // other is the field this deployment added.
-      //
-      // The overlay that added it is not here to show. Resolve applies
-      // overlays and strips them from its output, so the artifact carries
-      // what they produced and not the documents themselves — which is worth
-      // being plain about rather than implying the page is showing one.
-      const shown = {};
+      // The field the response carries that the request never sent.
       for (const doc of contracts.docs.filter((d) => d.type === 'openapi')) {
         for (const schema of Object.values(doc.content?.components?.schemas ?? {})) {
           for (const part of [schema, ...(schema.allOf ?? [])]) {
             for (const [name, property] of Object.entries(part?.properties ?? {})) {
-              if (property?.['x-derived'] && !shown[name]) shown[name] = property;
-              if (name === 'countyCode' && !shown[name]) shown[name] = { type: property.type };
+              if (property?.['x-derived']) {
+                return {
+                  label: 'computed on the way out, never stored',
+                  file: doc.relativePath,
+                  node: { [name]: property },
+                };
+              }
             }
           }
         }
       }
-      // The overlay action responsible, when the build carried the overlays.
-      // Found by looking for the one whose update names a field the base
-      // contracts do not have, rather than by knowing its name.
-      const added = Object.keys(shown).filter((name) => !shown[name]['x-derived']);
-      for (const overlay of overlays) {
-        for (const action of overlay.content?.actions ?? []) {
-          const updated = Object.keys(action.update ?? {});
-          const match = added.find((name) => updated.includes(name));
-          if (match) {
-            return {
-              label: `${overlay.name} — how ${match} got there, and the derived field beside it`,
-              node: { [overlay.name]: { target: action.target, update: action.update }, 'resolved into': shown },
-            };
-          }
-        }
-      }
-
-      return Object.keys(shown).length > 0 && {
-        label: 'two fields the request never sent, in the resolved spec',
-        node: shown,
-      };
+      return null;
     },
-    what: 'One POST. Nothing existed before this.',
-    source: () => [offered.specFor(offered.collection)],
-    why: 'Two fields in the response were not sent. <b>programCount</b> is computed from <code>programsAppliedFor</code> by an <code>x-derived</code> expression on the schema — a field of the response that is a function of the request. And <b>countyCode</b> exists at all only because a state overlay added it to this deployment. Neither is mock code.',
+    why: 'The response carries a field the request did not send. <b>programCount</b> is computed from <code>programsAppliedFor</code> by an expression on the schema, evaluated on the way out and stored nowhere — so it cannot drift from the list it summarizes. And <code>countyCode</code> is there because of the overlay in the step above.',
     run: async () => {
       // The create body comes from the contract's required fields, so this
       // works for a collection with different requirements.
@@ -748,8 +820,7 @@ const STEPS = [
           [`the state ${(offered.story?.object ?? 'record').toLowerCase()}s start in`, String(created.body.status)],
           ['programsAppliedFor, as sent', JSON.stringify(created.body.programsAppliedFor)],
           ['programCount, derived from it by the contract', String(created.body.programCount)],
-          ['countyCode, added by this deployment\'s overlay', String(created.body.countyCode)],
-          ['overlays this deployment applies', String(overlays.length)],
+          ['countyCode, from the overlay in step one', String(created.body.countyCode)],
         ],
       };
     },
@@ -1405,10 +1476,29 @@ const renderStep = (step, index) => {
   // The contract first, then the behaviour. A step that can point at the
   // exact node responsible shows it before anything runs, so pressing Run is
   // checking a claim rather than taking one.
-  const excerpt = step.contract?.();
-  if (excerpt?.node !== undefined) {
+  //
+  // One box per document. A step whose behaviour comes from two contracts —
+  // a field a state's overlay added and the spec it landed in — shows two,
+  // because folding them into one implies a single source that does not
+  // exist.
+  const excerpts = [step.contract?.()].flat().filter((excerpt) => excerpt?.node !== undefined);
+  for (const excerpt of excerpts) {
     const block = el('pre', '', 'contract');
-    if (excerpt.label) block.append(el('span', excerpt.label, 'label'));
+    if (excerpt.label) {
+      const label = el('span', '', 'label');
+      label.append(document.createTextNode(excerpt.label));
+      if (excerpt.file && pageConfig.sourceUrl) {
+        label.append(document.createTextNode(' — '));
+        const link = el('a', excerpt.file);
+        link.href = `${pageConfig.sourceUrl}/${excerpt.file}`;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        label.append(link);
+      } else if (excerpt.file) {
+        label.append(document.createTextNode(` — ${excerpt.file}`));
+      }
+      block.append(label);
+    }
     block.append(document.createTextNode(asYaml(essential(excerpt.node)).replace(/^\n/, '')));
     section.append(block);
   }
@@ -1423,7 +1513,7 @@ const renderStep = (step, index) => {
     if (control?.node) controls.append(control.node);
   }
 
-  const button = el('button', 'Run');
+  const button = el('button', step.runLabel ?? 'Run');
   controls.append(button);
   section.append(controls);
 
@@ -1514,6 +1604,7 @@ const boot = async () => {
   const started = performance.now();
   contracts = await loadContracts();
   overlays = await loadOverlays();
+  authored = await loadAuthored();
   mock = await createMockServer({ contracts, basePath });
   offered = survey();
 

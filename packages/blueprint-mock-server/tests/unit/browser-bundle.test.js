@@ -307,11 +307,14 @@ describe('the single-file build', () => {
     const out = buildPage();
     const html = readFileSync(join(out, 'standalone.html'), 'utf8');
 
-    // Four elements: the bundle, the artifact, the page's module, and nothing
-    // else. More closes than that means something inlined ended an element.
+    // Every element that opens, closes, and nothing else closes one. A count
+    // derived from the opens rather than written down: the build gained an
+    // overlays payload and a config payload after this was first written, and
+    // a literal number only told us the number had changed.
+    const opens = html.match(/<script[\s>]/g) ?? [];
     const closes = html.match(/<\/script>/g) ?? [];
-    assert.strictEqual(closes.length, 3,
-      `expected exactly 3 </script> closes, found ${closes.length} — an inlined payload ended an element early`);
+    assert.strictEqual(closes.length, opens.length,
+      `${opens.length} <script> opens against ${closes.length} closes — an inlined payload ended an element early`);
   });
 
   test('inlines an artifact that still parses', () => {

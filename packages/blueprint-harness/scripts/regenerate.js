@@ -119,6 +119,7 @@ run(join(CLI, 'export-schemas.js'), [
 console.log('  [8/8] Building the browser mock page...');
 run(join(__dirname, 'build-mock-page.js'), [
   `--spec=${join(HARNESS, 'generated/resolved')}`,
+  `--source=${join(HARNESS, 'contracts')}`,
   `--overlay=${join(HARNESS, 'contracts/overlays')}`,
   ...(sourceUrl() ? [`--source-url=${sourceUrl()}`] : []),
   `--out=${join(HARNESS, 'generated/mock')}`,
