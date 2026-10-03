@@ -75,17 +75,6 @@ export interface RefEntry {
   target: unknown;
 }
 
-/** What produced a resolved document set. */
-export interface Provenance {
-  resolvedAt: string;
-  /** Titles of the overlays applied, in order. */
-  overlays: string[];
-  /** Environment filtered to, or null if unfiltered. */
-  envTarget: string | null;
-  /** Names of the variables substituted. */
-  variables: string[];
-}
-
 /**
  * A loaded contract document.
  *
@@ -119,9 +108,6 @@ export interface Doc {
    * back for the tools that already speak them.
    */
   model(): StateMachineModel | null;
-  /** True when a resolve manifest governs this document's location. */
-  resolved: boolean;
-  provenance: Provenance | null;
 }
 
 /** A step in a state machine, with branch and loop bodies under `children`. */
@@ -180,7 +166,7 @@ export interface Graph {
  */
 export interface ContractsArtifact {
   artifactVersion: number;
-  docs: Array<Omit<Doc, 'path' | 'refs' | 'externalRefs' | 'resolveRef' | 'model' | 'resolved'>>;
+  docs: Array<Omit<Doc, 'path' | 'refs' | 'externalRefs' | 'resolveRef' | 'model'>>;
 }
 
 /** One example record, as `extract(docs, 'examples')` groups them. */
@@ -217,12 +203,16 @@ export interface ResolveOptions {
 
 export interface ResolveResult {
   docs: Doc[];
-  /** Write alongside the output; `load` reads it back as provenance. */
-  manifest: Provenance;
   /** Conditions worth attention that did not stop resolution. */
   warnings: string[];
   /** What each pass did, for a caller that reports progress. */
   applied: string[];
+  /**
+   * Names of `${VAR}` placeholders that found no value, in documents or in
+   * overlay config. Left literal in the output, so a caller that writes the
+   * result should treat a non-empty list as a failure.
+   */
+  unresolved: string[];
 }
 
 /** One finding. `rule` identifies the check, for grouping and filtering. */

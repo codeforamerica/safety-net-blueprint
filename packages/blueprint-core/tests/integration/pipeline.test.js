@@ -252,10 +252,12 @@ describe('resolve', () => {
     );
   });
 
-  test('records what it did', () => {
-    assert.equal(resolved.manifest.envTarget, 'production');
-    assert.deepEqual(resolved.manifest.variables, ['SUPPORT_EMAIL']);
-    assert.ok(resolved.manifest.overlays.includes('Test state overlay'));
+  test('records what each pass did', () => {
+    assert.ok(resolved.applied.length > 0, 'passes should report what they applied');
+    assert.ok(
+      resolved.applied.some((line) => /Substituted \d+ variable reference/.test(line)),
+      'substitution should be reported'
+    );
   });
 
   test('a resolved document reports its own state, not the one it was loaded with', () => {
@@ -270,6 +272,30 @@ describe('resolve', () => {
     const before = docs.find((d) => d.type === 'sla-types');
     const after = resolved.docs.find((d) => d.type === 'sla-types');
     assert.equal(before, after);
+  });
+});
+
+describe('resolve reports unresolved placeholders', () => {
+  // The names, not only the warning prose: a caller decides whether to write
+  // the result, and `${VAR}` reaching an artifact fails far from its cause —
+  // a prefix placeholder stamped onto every event type still matches the
+  // channel it was stamped onto, so validation would pass.
+  test('names a placeholder nothing supplied', () => {
+    const result = resolve(docs, {
+      overlays: [OVERLAY, ...generate(docs, 'overlay')],
+      envVariables: {},
+    });
+
+    assert.ok(result.unresolved.includes('SUPPORT_EMAIL'), 'should name the unsupplied variable');
+  });
+
+  test('nothing is unresolved once every placeholder has a value', () => {
+    const result = resolve(docs, {
+      overlays: [OVERLAY, ...generate(docs, 'overlay')],
+      envVariables: { SUPPORT_EMAIL: 'help@example.gov' },
+    });
+
+    assert.deepEqual(result.unresolved, []);
   });
 });
 

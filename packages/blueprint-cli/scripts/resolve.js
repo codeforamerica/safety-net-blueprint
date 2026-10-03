@@ -460,6 +460,17 @@ async function main() {
   // mid-edit, and would hide the very artifacts you need to see to understand
   // why they are wrong. They are written, reported, and the command still
   // exits non-zero so CI cannot mistake them for good.
+  // A placeholder with no value is left exactly as written, which is right —
+  // blanking it would fail somewhere far from the cause. But writing it is
+  // not: the literal reaches an artifact, and `${EVENT_PREFIX}` stamped onto
+  // every event type still matches the channel it was stamped onto, so
+  // validation passes and the failure surfaces on a message bus instead.
+  if (resolved.unresolved.length > 0) {
+    console.error(`\nUnresolved placeholder(s): ${resolved.unresolved.map((n) => '${' + n + '}').join(', ')}`);
+    console.error('Supply them with --env-variables=<file>, or remove the references.');
+    process.exit(1);
+  }
+
   const validation = validate(resolved.docs);
   console.log('');
   console.log(validation.report);
@@ -583,5 +594,14 @@ function readEnvVariables(path) {
     process.exit(1);
   }
   console.log(`Env file:   ${envFilePath}`);
-  return { ...parseEnvFile(envFilePath), ...process.env };
+
+  // The file declares which variables this contract set has; the environment
+  // supplies values for those and nothing else. Spreading all of process.env
+  // meant any `${VAR}` in a contract could pick up a machine value — `${HOME}`
+  // resolved to whoever ran the command. The documented behaviour was always
+  // "process.env overrides file values", which is what this does.
+  const declared = parseEnvFile(envFilePath);
+  return Object.fromEntries(
+    Object.entries(declared).map(([name, value]) => [name, process.env[name] ?? value])
+  );
 }
