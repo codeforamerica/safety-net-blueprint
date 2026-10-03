@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>A guided tour of the blueprint mock server</title>
+<title>Not your average mock server</title>
 <!--
   The mock server, running in this page, with no server.
 
@@ -36,9 +36,18 @@
   h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 .5rem; }
   .lede { color: var(--muted); margin: 0 0 1.25rem; max-width: 42rem; }
   #boot {
-    padding: .7rem .9rem; border: 1px solid var(--line); border-left: 3px solid var(--accent);
-    border-radius: 4px; background: var(--card); font-family: var(--mono); font-size: .82rem;
+    padding: .8rem .9rem; border: 1px solid var(--line); border-left: 3px solid var(--accent);
+    border-radius: 4px; background: var(--card); font-family: var(--mono); font-size: .8rem;
+    display: flex; flex-wrap: wrap; gap: .45rem; align-items: center;
   }
+  #boot .from { font-weight: 600; color: var(--ink); }
+  #boot .arrow { color: var(--accent); font-weight: 700; }
+  #boot .got {
+    background: #eef4fb; border: 1px solid #d6e4f3; border-radius: 999px;
+    padding: .1rem .5rem; color: var(--accent);
+  }
+  #boot .got.zero { background: #eaf6ee; border-color: #cfe8d8; color: var(--ok); font-weight: 600; }
+  #boot .aside { color: var(--faint); margin-left: auto; }
   .controls { display: flex; gap: .6rem; align-items: center; margin: 1.5rem 0 .5rem; flex-wrap: wrap; }
   button {
     font: inherit; font-size: .88rem; padding: .4rem .85rem; cursor: pointer;
@@ -56,8 +65,23 @@
   .step.failed { border-left: 3px solid var(--bad); }
   .step h2 { font-size: 1.02rem; margin: 0 0 .1rem; display: flex; gap: .55rem; align-items: baseline; }
   .step h2 .n { color: var(--faint); font-family: var(--mono); font-size: .85rem; }
+  .step h2 .shows {
+    margin-left: auto; font-size: .7rem; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--accent); background: #eef4fb; border: 1px solid #d6e4f3;
+    border-radius: 999px; padding: .12rem .5rem; white-space: nowrap; font-weight: 600;
+  }
   .step .what { color: var(--muted); font-size: .92rem; margin: .4rem 0 .5rem; }
   .step .source { font-family: var(--mono); font-size: .74rem; color: var(--faint); margin: 0; }
+  .step .source a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted currentColor; }
+  .step .source a:hover { border-bottom-style: solid; }
+  .step .contract {
+    margin: .6rem 0 .2rem; background: #fcfbf7; border-color: #e6ded0;
+    border-left: 3px solid var(--warm); max-height: none; font-size: .74rem;
+  }
+  .step .contract .label {
+    display: block; font-family: inherit; font-size: .68rem; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--warm); margin-bottom: .35rem; font-weight: 600;
+  }
   .step .source span { color: var(--accent); }
   .step .why { font-size: .88rem; margin: .8rem 0 0; padding-left: .8rem; border-left: 2px solid var(--line); color: var(--muted); }
   .step .why b { color: var(--ink); font-weight: 600; }
@@ -81,12 +105,22 @@
 </head>
 <body>
 <main>
-  <h1>A guided tour of the blueprint mock server</h1>
+  <h1>Not your average mock server</h1>
   <p class="lede">
-    Everything below runs in this page. No server, no network — the contract set
-    was bundled into a JSON file and the mock server into JavaScript, both
-    static. The steps follow a record through the pipeline, because that is what
-    makes this different from a mock that returns canned JSON.
+    Returning canned JSON is a solved problem. This does something else: it is
+    <b>generated from contracts</b>, so it knows your application is in the
+    wrong state to be closed, that a 72-hour deadline just elapsed, and which
+    regulation a timestamp exists to satisfy.
+  </p>
+  <p class="lede">
+    Nothing below was configured or hand-written. Every route, rule, state
+    transition and response shape was derived from the same contract documents
+    an implementation would be built against — which is the point: if the mock
+    works, the contracts are <b>executable</b>, not just documentation.
+    Each step shows the contract first, then runs it.
+  </p>
+  <p class="lede">
+    And it is all running in this tab. No server, no network, no install.
   </p>
 
   <div id="boot">starting…</div>
@@ -105,6 +139,21 @@
     <p>
       The route table, the handlers and the store are the same code the Node
       server runs. <code>window.mock</code> is on the console.
+    </p>
+
+    <h2>This copy is yours</h2>
+    <p>
+      There is no server, so there is nothing shared. Everything above runs in
+      this tab against its own in-memory store — <b>another person opening this
+      page cannot affect your run, and you cannot affect theirs</b>. Two tabs
+      are two independent systems. That is worth noting because it is the usual
+      failure of a hosted mock: one person resetting the data or registering a
+      stub disrupts everyone else using it.
+    </p>
+    <p>
+      Refreshing starts over from the contracts. Nothing persists, nothing is
+      uploaded, and no request leaves the page — including the document in the
+      upload step, whose bytes are measured and discarded.
     </p>
   </footer>
 </main>
@@ -126,7 +175,40 @@ const loadContracts = async () => {
   return inlined ? JSON.parse(inlined.textContent) : (await fetch('./contracts.json')).json();
 };
 
+/**
+ * The overlays this deployment applied, carried beside the artifact.
+ *
+ * Not part of it: resolve applies an overlay and strips it from its output,
+ * so the contract set describes the running system and an overlay describes
+ * how it came to differ from the base. The page wants both — one to run, one
+ * to show — and keeping them apart means nothing walking the set meets a
+ * document that is not part of it. Absent when the build was given none.
+ */
+const loadOverlays = async () => {
+  const inlined = document.getElementById('overlays-data');
+  if (inlined) return JSON.parse(inlined.textContent);
+  try {
+    const response = await fetch('./overlays.json');
+    return response.ok ? await response.json() : [];
+  } catch {
+    return [];
+  }
+};
+
 const $ = (id) => document.getElementById(id);
+
+/**
+ * Build-time settings, injected by the page builder.
+ *
+ * `sourceUrl` is where this contract set's authored files are browsable. The
+ * page cannot guess it — a state building this against its own contracts
+ * publishes them somewhere else, or nowhere — so without it the steps name
+ * their files without linking.
+ */
+const pageConfig = (() => {
+  const tag = document.getElementById('page-config');
+  try { return tag ? JSON.parse(tag.textContent) : {}; } catch { return {}; }
+})();
 
 /**
  * An element with text in it, built rather than parsed.
@@ -147,6 +229,7 @@ const basePath = location.pathname.replace(/\/[^/]*$/, '');
 
 let mock;
 let contracts;
+let overlays = [];
 
 /** Requests carry a caller: the server refuses a state transition without one. */
 const CALLER = 'the-guided-tour';
@@ -214,6 +297,61 @@ const call = async (method, path, body) => {
   calls.push(record);
   return record;
 };
+
+/**
+ * Print a contract node the way it was authored.
+ *
+ * The artifact is parsed data, so there is no original text to quote — this
+ * renders the node back to YAML. Only the shapes contracts actually use are
+ * handled, which is the whole point: it is here to show four lines of a state
+ * machine, not to be a serializer.
+ */
+const asYaml = (node, indent = 0) => {
+  const pad = '  '.repeat(indent);
+  if (node === null || node === undefined) return 'null';
+  if (Array.isArray(node)) {
+    if (node.every((v) => v === null || typeof v !== 'object')) return `[${node.join(', ')}]`;
+    return '\n' + node.map((v) => `${pad}- ${asYaml(v, indent + 1).replace(/^\n/, '').trimStart()}`).join('\n');
+  }
+  if (typeof node === 'object') {
+    const entries = Object.entries(node).filter(([, v]) => v !== undefined);
+    if (entries.length === 0) return '{}';
+    return '\n' + entries
+      .map(([k, v]) => {
+        const printed = asYaml(v, indent + 1);
+        return printed.startsWith('\n')
+          ? `${pad}${k}:${printed}`
+          : `${pad}${k}: ${printed}`;
+      })
+      .join('\n');
+  }
+  if (typeof node === 'string' && (node === '' || /[:#]/.test(node))) return JSON.stringify(node);
+  return String(node);
+};
+
+/**
+ * Strip what the step does not talk about.
+ *
+ * Every contract node carries a `description`, and no step narrates one — the
+ * step has its own prose for that, and the excerpt is there to show structure.
+ * Leaving them in buries the two lines that matter under paragraphs nobody
+ * reads at that moment.
+ */
+const essential = (node) => {
+  if (Array.isArray(node)) return node.map(essential);
+  if (node === null || typeof node !== 'object') return node;
+  return Object.fromEntries(
+    Object.entries(node)
+      .filter(([key]) => key !== 'description')
+      .map(([key, value]) => [key, essential(value)])
+  );
+};
+
+/** The document a step cites, as a Doc from the artifact. */
+const docAt = (relativePath) => contracts.docs.find((doc) => doc.relativePath === relativePath) ?? null;
+
+/** A named action on the story's machine, for a step that wants to show it. */
+const actionNamed = (id) => (offered.story?.actions ?? []).find((a) => a.id === id) ?? null;
 
 /** Shared state between steps: a record created in one is transitioned in the next. */
 const tour = {};
@@ -285,6 +423,10 @@ const survey = () => {
       source: doc.relativePath,
       object: machine.object,
       initialState: machine.initialState,
+      // The states it declares, which is what makes editing a transition a
+      // choice between declared values rather than free text that can be
+      // wrong.
+      states: (machine.states ?? []).map((state) => state.id).filter(Boolean),
       actions: (machine.actions ?? [])
         .filter((a) => a.transition?.from && a.transition?.to)
         // `from` may name several states — `withdraw` is reachable from
@@ -407,10 +549,109 @@ const survey = () => {
         source: doc.relativePath,
       }))));
 
+  /**
+   * The timer this contract set asks for, if it asks for one.
+   *
+   * Read off the action's own steps: a `call` step carrying a callback names
+   * the event a scheduler would publish when the deadline elapses, and the
+   * duration beside it is the deadline. The request type is matched by name
+   * against the declared channels, which is the one place here that leans on
+   * a convention rather than a declaration — a timer request is
+   * `*.timer.requested` by agreement, not because anything says so.
+   */
+  const timer = (() => {
+    for (const machine of machines) {
+      for (const action of machine.actions ?? []) {
+        for (const step of action.steps ?? []) {
+          const event = step.call && step.with?.callback?.event;
+          if (!event) continue;
+          const requested = eventTypes.find((type) => type.endsWith('timer.requested'));
+          if (!requested) continue;
+          const after = step.with.fireAfter;
+          return {
+            requested,
+            callback: event,
+            action: action.id,
+            deadline: after ? `${after.amount} ${after.unit}` : null,
+          };
+        }
+      }
+    }
+    return null;
+  })();
+
+  /**
+   * A composition endpoint: a GET whose response is assembled rather than
+   * stored. Found by asking the compositions documents what they declared,
+   * not by guessing at path shapes.
+   */
+  const compositions = contracts.docs
+    .filter((doc) => doc.type === 'compositions')
+    .flatMap((doc) => Object.entries(doc.content?.compositions ?? {}).map(([id, composition]) => ({
+      id,
+      source: doc.relativePath,
+      fields: composition.fields ?? [],
+      include: Object.keys(composition.include ?? {}),
+      // The declared path is domain-relative; the route table carries the
+      // served one, so the page matches on the tail rather than rebuilding it.
+      // Both sides have their parameters blanked first, since the names need
+      // not agree and only the shape is being compared.
+      path: (() => {
+        const declared = composition.endpoint?.path;
+        if (!declared) return null;
+        const shape = (path) => path.replace(/\{[^}]+\}/g, '{}');
+        const tail = shape(declared);
+        return keys
+          .filter((key) => key.startsWith('GET '))
+          .map((key) => key.slice('GET '.length))
+          .find((served) => shape(served).endsWith(tail)) ?? null;
+      })(),
+    })))
+    .filter((composition) => composition.path && composition.include.length > 0);
+
+  /**
+   * Field-level annotations, with the policies they cite already resolved.
+   *
+   * Two documents meet here: an annotations file attaches policy ids to a
+   * field, and a registry holds what those ids mean. Neither is reachable
+   * through the API — they are contract artifacts — so the page reads them
+   * out of the same artifact it booted the server from.
+   */
+  const policies = {};
+  for (const doc of contracts.docs) {
+    if (doc.type === 'registry' && doc.content?.type === 'policies') {
+      Object.assign(policies, doc.content.entries ?? {});
+    }
+  }
+
+  const annotatedFields = contracts.docs
+    .filter((doc) => doc.type === 'annotations')
+    .flatMap((doc) => Object.entries(doc.content?.schema ?? {})
+      .filter(([, entry]) => Array.isArray(entry?.policies) && entry.policies.length > 0)
+      .map(([field, entry]) => ({
+        field,
+        name: field.split('.').pop(),
+        source: doc.relativePath,
+        patterns: entry.patterns ?? [],
+        cited: entry.policies.map((id) => ({ id, ...(policies[id] ?? {}) })),
+      })));
+
+  // The story walks one object, so an annotation on that object is the one
+  // worth showing — otherwise the excerpt cites one field and the facts
+  // report another.
+  const storyPrefix = story?.object ? story.object.charAt(0).toLowerCase() + story.object.slice(1) : null;
+  annotatedFields.sort((a, b) => {
+    const rank = (field) => (storyPrefix && field.field.startsWith(storyPrefix + '.') ? 0 : 1);
+    return rank(a) - rank(b);
+  });
+
   return {
     keys,
     eventTypes,
     subscriptions,
+    timer,
+    compositions,
+    annotatedFields,
     collection: story?.collection ?? collection,
     story,
     machines: usable,
@@ -439,6 +680,49 @@ let offered;
 const STEPS = [
   {
     title: 'Start an application',
+    shows: 'REST',
+    contract: () => {
+      // Both fields the request never sent, found by looking rather than by
+      // being told which they are: one carries a derivation expression, the
+      // other is the field this deployment added.
+      //
+      // The overlay that added it is not here to show. Resolve applies
+      // overlays and strips them from its output, so the artifact carries
+      // what they produced and not the documents themselves — which is worth
+      // being plain about rather than implying the page is showing one.
+      const shown = {};
+      for (const doc of contracts.docs.filter((d) => d.type === 'openapi')) {
+        for (const schema of Object.values(doc.content?.components?.schemas ?? {})) {
+          for (const part of [schema, ...(schema.allOf ?? [])]) {
+            for (const [name, property] of Object.entries(part?.properties ?? {})) {
+              if (property?.['x-derived'] && !shown[name]) shown[name] = property;
+              if (name === 'countyCode' && !shown[name]) shown[name] = { type: property.type };
+            }
+          }
+        }
+      }
+      // The overlay action responsible, when the build carried the overlays.
+      // Found by looking for the one whose update names a field the base
+      // contracts do not have, rather than by knowing its name.
+      const added = Object.keys(shown).filter((name) => !shown[name]['x-derived']);
+      for (const overlay of overlays) {
+        for (const action of overlay.content?.actions ?? []) {
+          const updated = Object.keys(action.update ?? {});
+          const match = added.find((name) => updated.includes(name));
+          if (match) {
+            return {
+              label: `${overlay.name} — how ${match} got there, and the derived field beside it`,
+              node: { [overlay.name]: { target: action.target, update: action.update }, 'resolved into': shown },
+            };
+          }
+        }
+      }
+
+      return Object.keys(shown).length > 0 && {
+        label: 'two fields the request never sent, in the resolved spec',
+        node: shown,
+      };
+    },
     what: 'One POST. Nothing existed before this.',
     source: () => [offered.specFor(offered.collection)],
     why: 'Two fields in the response were not sent. <b>programCount</b> is computed from <code>programsAppliedFor</code> by an <code>x-derived</code> expression on the schema — a field of the response that is a function of the request. And <b>countyCode</b> exists at all only because a state overlay added it to this deployment. Neither is mock code.',
@@ -458,11 +742,13 @@ const STEPS = [
 
       return {
         facts: [
-          ['created', `${created.status} — ${String(created.body.id).slice(0, 8)}…`],
-          ['status the machine starts in', String(created.body.status)],
+          ['created', `${created.status} — nothing existed before this`],
+          ['id the server assigned', String(created.body.id)],
+          [`the state ${(offered.story?.object ?? 'record').toLowerCase()}s start in`, String(created.body.status)],
           ['programsAppliedFor, as sent', JSON.stringify(created.body.programsAppliedFor)],
           ['programCount, derived from it by the contract', String(created.body.programCount)],
-          ['countyCode, added by a state overlay', String(created.body.countyCode)],
+          ['countyCode, added by this deployment\'s overlay', String(created.body.countyCode)],
+          ['overlays this deployment applies', String(overlays.length)],
         ],
       };
     },
@@ -470,6 +756,7 @@ const STEPS = [
 
   {
     title: 'An event came out of it',
+    shows: 'Events',
     what: 'Read the event log. Nothing posted to it, and no broker is running.',
     source: () => [offered.specFor(offered.collection)],
     why: 'That write already emitted, and the event carries the record. The bus runs in this page, so the <b>asynchronous half of the system is observable before anything is deployed</b> — and a subscriber reads the same CloudEvents envelope it would read from a real broker. The types a domain may publish are a declared set: an AsyncAPI channel address <i>is</i> an event type, which is why the stub step further down offers a list rather than a text box.',
@@ -500,6 +787,14 @@ const STEPS = [
 
   {
     title: 'Try to close it',
+    shows: 'State machines',
+    contract: () => {
+      const action = actionNamed('close');
+      return action && {
+        label: 'the action, as the contract declares it',
+        node: { id: action.id, transition: action.transition },
+      };
+    },
     what: 'Skip to the end and close the application that was just created.',
     source: () => [offered.story?.source],
     why: 'This is the part a REST mock cannot do. A mock returns the response you configured; it has no idea what state the record is in. <b>This one refuses</b>, because the contract says <code>close</code> runs from <code>under_review</code> and the record is in <code>draft</code>. So the mock is a conformance check on your client, not a stand-in for a server.',
@@ -534,7 +829,48 @@ const STEPS = [
   },
 
   {
+    title: 'Nobody waits 72 hours',
+    shows: 'Timers, stubbed',
+    contract: () => {
+      const action = actionNamed(offered.timer?.action);
+      const step = (action?.steps ?? []).find((candidate) => candidate.call && candidate.with?.callback);
+      return step && { label: 'the step that asks for the deadline', node: { call: step.call, with: step.with } };
+    },
+    what: 'The submit action asks a scheduler for an escalation deadline. Nothing here implements one, so stand in for it first.',
+    source: () => [offered.story?.source, offered.asyncapiFor(offered.timer?.requested)],
+    why: 'A deadline is the hardest thing to test in a benefits system: the behaviour is correct only after days of nothing happening. Here the contract asks for the timer as an <b>event</b> — so whatever provides scheduling answers it, and in a test that is a stub. <b>Seventy-two hours collapses to zero</b>, and what follows is not scripted: the callback lands, a subscription guarded on <code>submitted</code> picks it up, and the escalation it emits is a second declared reaction firing off the first one\'s answer.',
+    needs: () => !!offered.timer,
+    run: async () => {
+      const { requested, callback, deadline } = offered.timer;
+
+      // No `respond` block: for a timer request the stub fires the callback
+      // envelope carried inside the request, which is the scheduler's whole
+      // job. Registered before the submit, because the request is broadcast
+      // for interception and never stored — there is nothing to replay after.
+      const registered = await call('POST', '/mock/stubs/events', { on: requested });
+
+      return {
+        facts: [
+          ['the action requests', requested],
+          ['deadline the contract asks for', deadline ?? '—'],
+          ['what the scheduler would call back with', callback ?? '—'],
+          ['stub registered', `${registered.status} — fires the moment the request is made`],
+          ['so the wait becomes', 'nothing at all'],
+        ],
+      };
+    },
+  },
+
+  {
     title: 'Submit it',
+    shows: 'State machines',
+    contract: () => {
+      const action = actionNamed('submit');
+      return action && {
+        label: 'every effect of submitting, declared',
+        node: { id: action.id, transition: action.transition, steps: action.steps },
+      };
+    },
     what: 'The one transition the contract allows from here.',
     source: () => [offered.story?.source],
     why: 'The action declares <code>draft → submitted</code>, and the steps inside it write <b>submittedAt</b>. The timestamp is the evidence that an action ran rather than a field being set — it came from a step in the state machine, not from the request.',
@@ -578,7 +914,7 @@ const STEPS = [
         for (const type of emitted) {
           const declared = offered.eventTypes.includes(type);
           facts.push([
-            'emitted by a step in the action',
+            'emitted while the action ran',
             declared ? `${type} (a channel the contract declares)` : type,
           ]);
         }
@@ -592,6 +928,13 @@ const STEPS = [
 
   {
     title: 'Eligibility reacted, in its own domain',
+    shows: 'Cross-domain subscriptions',
+    contract: () => {
+      const machine = (docAt(offered.subscriptions[0]?.source)?.content?.machines ?? [])
+        .find((m) => (m.events ?? []).length > 0);
+      const entry = (machine?.events ?? [])[0];
+      return entry && { label: 'the subscription, in the other domain', node: entry };
+    },
     what: 'Nothing was called. Read the other domain\'s collection and see what appeared there.',
     // Both halves of the wiring: the machine that emits and the machine that
     // subscribes, which are different documents in different domains.
@@ -648,6 +991,13 @@ const STEPS = [
 
   {
     title: 'Stand in for a service nobody has built',
+    shows: 'Stubs',
+    contract: () => {
+      const chosen = unsubscribedEvent();
+      const action = actionNamed(chosen?.action);
+      const step = (action?.steps ?? []).find((candidate) => candidate.emit);
+      return step && { label: `emitted by ${action.id}, and subscribed to by nothing`, node: step };
+    },
     what: 'One stub, on the one event this contract set declares and nothing subscribes to.',
     source: () => [offered.story?.source, offered.asyncapiFor(unsubscribedEvent()?.type)],
     why: 'Eligibility answered on its own because a contract declares that it should. <b>Nothing declares a subscriber for the closing notice</b> — in a deployment that is a service someone else is still building, and a scenario that needs it cannot run. A stub takes its place, and this one is <b>registered now and fires in the last step</b>, when the application actually closes. It is consumed on match, one registration for one occurrence, so a test cannot pass twice by accident.',
@@ -680,7 +1030,50 @@ const STEPS = [
   },
 
   {
+    title: 'A shape nothing stores',
+    shows: 'Compositions',
+    contract: () => {
+      const composition = offered.compositions[0];
+      const declared = docAt(composition?.source)?.content?.compositions?.[composition?.id];
+      if (!declared) return null;
+      const { parentLink, ...endpoint } = declared.endpoint ?? {};
+      return { label: 'the whole endpoint, declared', node: { ...declared, endpoint } };
+    },
+    what: 'One GET returning the application and its household together, assembled per a contract.',
+    source: () => [offered.compositions[0]?.source],
+    why: 'No table holds this shape and no handler was written for it. A composition declares which fields to project and which related resources to inline, and the endpoint is generated from that — so the view a consumer needs is a contract change, not a ticket. <b>This is the part teams usually solve with a bespoke backend-for-frontend</b>, and it is three lines of YAML.',
+    needs: () => tour.id && offered.compositions.length > 0,
+    run: async () => {
+      const composition = offered.compositions[0];
+      const view = await call('GET', composition.path.replace(/:[A-Za-z0-9_]+/, tour.id));
+      const body = view.body ?? {};
+
+      const inlined = composition.include
+        .map((name) => `${name}: ${Array.isArray(body[name]) ? body[name].length : (body[name] ? 1 : 0)}`)
+        .join(', ');
+
+      return {
+        facts: [
+          ['composition', composition.id],
+          [`GET …${composition.path.slice(composition.path.lastIndexOf('/'))}`, String(view.status)],
+          ['fields the contract projects', composition.fields.join(', ')],
+          ['related resources inlined', inlined || '—'],
+          ['handlers written for this endpoint', '0'],
+        ],
+      };
+    },
+  },
+
+  {
     title: 'Open it for review',
+    shows: 'State machines',
+    contract: () => {
+      const action = actionNamed('open');
+      return action && {
+        label: 'why this one is allowed now and close still is not',
+        node: { id: action.id, transition: action.transition },
+      };
+    },
     what: 'The next transition the contract allows, and the one that makes closing reachable.',
     source: () => [offered.story?.source],
     why: 'Nothing here chose the order. Each step asks which action declares a <code>from</code> that includes the state the record is actually in, and there is one — so the <b>lifecycle walks itself</b>. This is the state that <code>close</code> needed, which is why the refusal in step three becomes a success in the last step.',
@@ -706,6 +1099,16 @@ const STEPS = [
 
   {
     title: 'Decide whether the household qualifies',
+    shows: 'Rules',
+    contract: () => {
+      const doc = contracts.docs.find((d) => d.type === 'rules' && d.content?.rulesets);
+      const ruleset = Object.values(doc?.content?.rulesets ?? {})[0];
+      // Every fact, because the surprise is only visible with all the
+      // qualifying conditions on screen at once: the headline threshold is
+      // 150, and the boundary is 724, because a different condition carries.
+      const shown = (ruleset?.facts ?? []).map((fact) => ({ path: fact.path, expression: fact.expression }));
+      return shown.length > 0 && { label: 'the policy, as the contract states it', node: shown };
+    },
     what: 'Run the expedited SNAP ruleset. Move the income and watch the answer change.',
     source: () => [offered.graphFor(offered.evaluate), offered.rulesFor(offered.evaluate)],
     why: 'A mock would return a fixed <code>{ eligible: true }</code>. This <b>evaluates the compiled ruleset</b>, so the answer is computed — and it is not where the headline number suggests. The income threshold is 150, but a household at 724 still qualifies, because a second condition carries: income plus resources below the shelter cost. At 725 it stops. <b>That is the policy, and reading it off the contract is the point</b> — a state can check its own interpretation here before writing any code.',
@@ -749,6 +1152,34 @@ const STEPS = [
 
   {
     title: 'Attach proof of income',
+    shows: 'REST, multipart',
+    contract: () => {
+      for (const doc of contracts.docs.filter((d) => d.type === 'openapi')) {
+        for (const operations of Object.values(doc.content?.paths ?? {})) {
+          const post = operations?.post;
+          const content = post?.requestBody?.content ?? {};
+          const multipart = Object.keys(content).find((type) => type.startsWith('multipart/'));
+          if (multipart) {
+            const schema = content[multipart].schema ?? {};
+            return {
+              label: `${post.operationId}, the one body that is not JSON`,
+              node: {
+                operationId: post.operationId,
+                requestBody: { content: { [multipart]: { schema: {
+                  type: schema.type,
+                  required: schema.required,
+                  // Names and types only. The descriptions belong in the API
+                  // reference; here they would bury the point.
+                  properties: Object.fromEntries(Object.entries(schema.properties ?? {})
+                    .map(([name, property]) => [name, [property.type, property.format].filter(Boolean).join(', ')])),
+                } } } },
+              },
+            };
+          }
+        }
+      }
+      return null;
+    },
     source: () => [offered.specFor(offered.upload)],
     what: 'Upload a file as real multipart/form-data.',
     why: 'The bytes are hashed while being read and then <b>discarded</b>. What is kept is a description — name, type, size, hash. Deliberate: a bundled artifact is a public artefact, so it must not be able to carry a real document.',
@@ -767,7 +1198,7 @@ const STEPS = [
       const facts = [
         ['uploaded', String(uploaded.status)],
         ['document', String(document.title ?? '—')],
-        ['first version', String(document.latestVersionId ?? '—').slice(0, 8) + '…'],
+        ['version the upload created', String(document.latestVersionId ?? '—')],
         ['lifecycle state', String(document.lifecycleState ?? '—')],
         ['bytes written anywhere', 'none'],
       ];
@@ -776,7 +1207,121 @@ const STEPS = [
   },
 
   {
+    title: 'Why that timestamp matters',
+    shows: 'Annotations',
+    contract: () => {
+      const annotated = offered.annotatedFields[0];
+      const declared = docAt(annotated?.source)?.content?.schema?.[annotated?.field];
+      return declared && { label: `the annotation on ${annotated.field}`, node: declared };
+    },
+    what: 'The field a state machine wrote back in step five, and the law attached to it.',
+    source: () => [offered.annotatedFields[0]?.source],
+    why: 'A field name tells you what a value is; it does not tell you why it is collected or what rule governs it. An annotation attaches that to the field itself, and the citation resolves out of a shared policy registry rather than being retyped per domain. <b>This is what makes a determination defensible</b> — and it is also why the deadline in step four is 72 hours rather than a number someone chose.',
+    needs: () => offered.annotatedFields.length > 0,
+    run: async () => {
+      // Prefer a field this story actually produced, so the annotation is
+      // attached to something on screen rather than an arbitrary example.
+      const current = tour.id ? (await call('GET', `${offered.collection}/${tour.id}`)).body : {};
+      const annotated = offered.annotatedFields.find((field) => current[field.name] != null)
+        ?? offered.annotatedFields[0];
+
+      const facts = [
+        ['field', annotated.field],
+        ['its value on this application', String(current[annotated.name] ?? '—')],
+        ['patterns it declares', annotated.patterns.join(', ') || '—'],
+      ];
+      for (const policy of annotated.cited) {
+        facts.push([policy.citation ?? policy.id, (policy.description ?? '').trim().split('\n')[0]]);
+      }
+      facts.push(['where the citation came from', 'a policy registry, not this page']);
+      return { facts };
+    },
+  },
+
+  {
+    title: 'Change the contract. Watch the system change.',
+    shows: 'The whole point',
+    what: 'Edit the transition below and reboot. Nothing is rebuilt, redeployed, or restarted — the server is re-derived from the edited contract, here, now.',
+    source: () => [offered.story?.source],
+    contract: () => {
+      const action = actionNamed('close');
+      return action && { label: 'the line you are about to change', node: { id: action.id, transition: action.transition } };
+    },
+    why: 'Every step above claimed its behaviour came from a contract. This is where that claim is checkable: move <code>close</code> to run from <code>draft</code>, reboot, and the refusal in step three becomes a success — because the refusal was never written anywhere, it was <b>derived from the line you just edited</b>. A mock you configure cannot do this: there is no contract to change, the behaviour <i>is</i> the configuration. <b>This is also what a state gets when it adopts the contracts</b> — the system follows the policy, rather than the policy being re-implemented inside the system.',
+    needs: () => !!actionNamed('close') && (offered.story?.states ?? []).length > 0,
+    control: () => {
+      const select = el('select');
+      select.setAttribute('aria-label', 'state the close action runs from');
+      const action = actionNamed('close');
+      for (const state of offered.story.states) select.append(el('option', state));
+      select.value = action?.from?.[0] ?? offered.story.states[0];
+      const wrap = el('span');
+      wrap.append(el('span', 'close runs from '), select);
+      return { node: wrap, value: () => select.value };
+    },
+    run: async (control) => {
+      const action = actionNamed('close');
+      const was = action.from.join(', ');
+      const now = control?.value?.() ?? was;
+
+      // Edit the artifact in place. This is the same object the page booted
+      // from — there is no source tree here, and no build step between the
+      // contract and the server.
+      const doc = docAt(offered.story.source);
+      const machine = (doc?.content?.machines ?? []).find((m) => m.object === offered.story.object);
+      const declared = (machine?.actions ?? []).find((a) => a.id === 'close');
+      if (!declared) return { facts: [['could not find the action in the artifact', 'close']] };
+      declared.transition.from = now;
+
+      // Reboot: a new server, from the edited documents, with a new store.
+      const started = performance.now();
+      mock = await createMockServer({ contracts, basePath });
+      const ms = Math.round(performance.now() - started);
+      offered = survey();
+
+      // The old store is gone with the old server, so the story restarts.
+      calls.length = 0;
+      for (const key of Object.keys(tour)) delete tour[key];
+
+      const created = await call('POST', offered.collection, {
+        programsAppliedFor: ['snap'], channel: 'online', countyCode: '001',
+      });
+      tour.id = created.body?.id;
+      tour.path = [created.body?.status];
+
+      const closePath = actionNamed('close').path.replace(/\{[^}]+\}/, tour.id);
+      const attempt = await call('POST', closePath, { outcome: 'approved' });
+      const after = await call('GET', `${offered.collection}/${tour.id}`);
+
+      return {
+        facts: [
+          ['the contract said', `close: from ${was}`],
+          ['the contract now says', `close: from ${now}`],
+          ['whole API re-derived in', `${ms} ms — no build, no restart`],
+          ['a brand new draft application', String(created.status)],
+          ['closing it immediately', `${attempt.status}${attempt.status >= 400 ? ` — ${attempt.body?.message ?? ''}` : ' — allowed now'}`],
+          ['its status', String(after.body?.status ?? '—')],
+          ['lines of code changed to do this', '0'],
+        ],
+      };
+    },
+  },
+
+  {
     title: 'Close it, and look at the trail',
+    shows: 'Everything above',
+    contract: () => {
+      const action = actionNamed('close');
+      const ref = action?.schema?.request?.$ref;
+      if (!ref) return action?.schema && { label: 'why an empty body is refused', node: action.schema };
+
+      // A `#/$defs/...` pointer is not the answer to "why was that refused" —
+      // the required list is. Follow it within the document that declared it.
+      const doc = docAt(offered.story.source);
+      const target = ref.replace(/^#\//, '').split('/')
+        .reduce((node, segment) => (node ?? {})[segment], doc?.content);
+      return target && { label: 'why an empty body is refused', node: target };
+    },
     what: 'The last transition. It needs an outcome, because the action says so.',
     source: () => [offered.story?.source],
     why: '<b>This is the call that was refused in step three</b> — same call, same record, different answer, because the state changed in between. So that 409 was not a canned response; it was the contract applied to the record as it then was. And <code>close</code> declares a request schema requiring <b>outcome</b>, so closing without one is still refused, by the action\'s own contract. Across the whole story: four states, two refusals, an evaluated ruleset, a document and a chain of events, with <b>not a line of it written as mock code</b>.',
@@ -828,6 +1373,7 @@ const renderStep = (step, index) => {
 
   const heading = el('h2');
   heading.append(el('span', String(index + 1).padStart(2, '0'), 'n'), el('span', step.title));
+  if (step.shows) heading.append(el('span', step.shows, 'shows'));
   section.append(heading, el('p', step.what, 'what'));
 
   // The document that drives the step, named from the artifact rather than
@@ -836,8 +1382,34 @@ const renderStep = (step, index) => {
   const cited = [...new Set((step.source?.() ?? []).filter(Boolean))];
   if (cited.length > 0) {
     const source = el('p', '', 'source');
-    source.append(el('span', 'declared in '), document.createTextNode(cited.join('  ·  ')));
+    source.append(el('span', 'declared in '));
+    cited.forEach((relativePath, i) => {
+      if (i > 0) source.append(document.createTextNode('  ·  '));
+      // A link when the build knows where these files live, plain text when
+      // it does not. The excerpt above is post-resolve; the file linked here
+      // is the one someone would edit.
+      if (pageConfig.sourceUrl) {
+        const link = el('a', relativePath);
+        link.href = `${pageConfig.sourceUrl}/${relativePath}`;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        source.append(link);
+      } else {
+        source.append(document.createTextNode(relativePath));
+      }
+    });
     section.append(source);
+  }
+
+  // The contract first, then the behaviour. A step that can point at the
+  // exact node responsible shows it before anything runs, so pressing Run is
+  // checking a claim rather than taking one.
+  const excerpt = step.contract?.();
+  if (excerpt?.node !== undefined) {
+    const block = el('pre', '', 'contract');
+    if (excerpt.label) block.append(el('span', excerpt.label, 'label'));
+    block.append(document.createTextNode(asYaml(essential(excerpt.node)).replace(/^\n/, '')));
+    section.append(block);
   }
 
   const controls = el('div', '', 'controls');
@@ -940,14 +1512,26 @@ const transcript = (c) => {
 const boot = async () => {
   const started = performance.now();
   contracts = await loadContracts();
+  overlays = await loadOverlays();
   mock = await createMockServer({ contracts, basePath });
   offered = survey();
 
   const ms = Math.round(performance.now() - started);
+  const transitions = offered.machines.reduce((n, m) => n + m.actions.length, 0);
+
+  // What was derived, and from how little. The arrow is the whole claim: the
+  // left side is what a team authors, the right side is what runs.
   const status = $('boot');
-  status.replaceChildren(
-    el('span', 'ready', 'pass'),
-    document.createTextNode(` — ${contracts.docs.length} documents, ${mock.routes.size} routes, no server, booted in ${ms} ms`)
+  status.replaceChildren();
+  status.append(
+    el('span', `${contracts.docs.length} contract documents`, 'from'),
+    el('span', '→', 'arrow'),
+    el('span', `${mock.routes.size} routes`, 'got'),
+    el('span', `${transitions} transitions`, 'got'),
+    el('span', `${offered.subscriptions.length} subscriptions`, 'got'),
+    el('span', `${offered.eventTypes.length} event types`, 'got'),
+    el('span', '0 lines of handler code', 'got zero'),
+    el('span', `booted in this tab in ${ms} ms`, 'aside')
   );
 
   const container = $('steps');

@@ -78,12 +78,12 @@ export const Annotations = {
     }
   },
   "events": {
-    "ca.intake.application.submitted": {
+    "intake.application.submitted": {
       "patterns": [
         "state-machine-subscription"
       ]
     },
-    "ca.eligibility.determination.complete": {
+    "eligibility.determination.complete": {
       "policies": [
         "snap-notice-of-eligibility",
         "medicaid-notice-of-eligibility"

@@ -7,15 +7,15 @@ info:
     Event catalog for the Eligibility domain.
     Add payload schemas below.
 channels:
-  ca.eligibility.determination.complete:
-    address: ca.eligibility.determination.complete
+  eligibility.determination.complete:
+    address: eligibility.determination.complete
     messages:
       DeterminationComplete:
         $ref: "#/components/messages/DeterminationCompleteMessage"
 components:
   messages:
     DeterminationCompleteMessage:
-      name: ca.eligibility.determination.complete
+      name: eligibility.determination.complete
       summary: TODO — describe when this event is emitted and who consumes it.
       payload:
         $ref: "#/components/schemas/DeterminationCompleteEvent"
@@ -27,4 +27,4 @@ components:
           properties:
             type:
               type: string
-              const: ca.eligibility.determination.complete
+              const: eligibility.determination.complete

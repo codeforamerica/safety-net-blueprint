@@ -34,7 +34,8 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync, rmSync, statSync, existsSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync, statSync, existsSync } from 'node:fs';
+import yaml from 'js-yaml';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -64,6 +65,13 @@ Usage:
 
 Options:
   --spec=<dir>      Resolved contracts directory. Repeatable.
+  --overlay=<dir>   Authored overlays, carried alongside the artifact so the
+                    page can show how this deployment customizes the base
+                    contracts. Optional — resolve has already applied them.
+  --source-url=<u>  Base URL the authored contracts are browsable at, so each
+                    step can link to the file it cites. Omit and the page
+                    names the file without linking — it cannot guess where a
+                    given contract set is published.
   --domain=<name>   Bundle only this domain. Repeatable. Passed to
                     blueprint-bundle-contracts.
   --out=<dir>       Where to write the page.
@@ -74,10 +82,12 @@ standalone.html as a single file that works from file://.
 `.trim();
 
 function parseArgs(argv) {
-  const options = { specDirs: [], domains: [], out: null, help: false };
+  const options = { specDirs: [], overlayDir: null, sourceUrl: null, domains: [], out: null, help: false };
   for (const arg of argv) {
     if (arg === '--help' || arg === '-h') options.help = true;
     else if (arg.startsWith('--spec=')) options.specDirs.push(arg.slice('--spec='.length));
+    else if (arg.startsWith('--overlay=')) options.overlayDir = arg.slice('--overlay='.length);
+    else if (arg.startsWith('--source-url=')) options.sourceUrl = arg.slice('--source-url='.length).replace(/\/$/, '');
     else if (arg.startsWith('--domain=')) options.domains.push(arg.slice('--domain='.length));
     else if (arg.startsWith('--out=')) options.out = arg.slice('--out='.length);
     else throw new Error(`Unknown argument: ${arg}`);
@@ -130,10 +140,35 @@ function main() {
     `--out=${join(outDir, 'contracts.json')}`,
   ]);
 
+  // Overlays are an input, not part of the resolved set — resolve applies them
+  // and strips them from its output, which is right. But "this field exists
+  // because a state added it" is one of the more interesting things the page
+  // has to say, and it could only assert it. Carried separately rather than
+  // folded into the artifact, so nothing walking the contract set meets a
+  // document that does not describe the running system.
+  if (options.overlayDir) {
+    const dir = resolve(options.overlayDir);
+    const overlays = existsSync(dir)
+      ? readdirSync(dir)
+          .filter((name) => name.endsWith('.yaml'))
+          .map((name) => ({ name, content: yaml.load(readFileSync(join(dir, name), 'utf8')) }))
+      : [];
+    writeFileSync(join(outDir, 'overlays.json'), JSON.stringify(overlays));
+    console.log(`  ${overlays.length} overlay document(s) from ${dir}`);
+  }
+
   console.log('\nBundling the mock server...');
   bundle('esm', join(outDir, 'mock.js'));
 
-  const page = readFileSync(PAGE, 'utf8');
+  const authored = readFileSync(PAGE, 'utf8');
+  const config = JSON.stringify({ sourceUrl: options.sourceUrl ?? null });
+  const configTag =
+    `<script type="application/json" id="page-config">${config.replace(/</g, '\\u003c')}</script>\n`;
+
+  // Injected into both builds, so the served page and the single file behave
+  // the same. A replacer function, for the reason the standalone build below
+  // documents at length.
+  const page = authored.replace('<script type="module">', () => configTag + '<script type="module">');
   writeFileSync(join(outDir, 'index.html'), page);
 
   console.log('Building the single-file version...');
@@ -141,6 +176,8 @@ function main() {
   bundle('iife', iife, ['--global-name=BlueprintMock']);
 
   const contracts = readFileSync(join(outDir, 'contracts.json'), 'utf8');
+  const overlaysPath = join(outDir, 'overlays.json');
+  const overlays = existsSync(overlaysPath) ? readFileSync(overlaysPath, 'utf8') : null;
 
   const inlined = [
     // `</script` escaped so a browser cannot end the element early. Inside a
@@ -149,6 +186,11 @@ function main() {
     `<script>${readFileSync(iife, 'utf8').replace(/<\/script/gi, '<\\/script')}</script>`,
     // `<` escaped for the same reason, which JSON permits as \u003c.
     `<script type="application/json" id="contracts-data">${contracts.replace(/</g, '\\u003c')}</script>`,
+    // The single file has no siblings to fetch, so the overlays travel the
+    // same way the artifact does.
+    ...(overlays
+      ? [`<script type="application/json" id="overlays-data">${overlays.replace(/</g, '\\u003c')}</script>`]
+      : []),
     '<script type="module">',
   ].join('\n');
 

@@ -10,9 +10,9 @@ Domain: `eligibility` | API spec: [eligibility-openapi.yaml](../../../contracts/
 
 - **complete** — Marks the determination as complete once all program results are resolved.
   - Transition: `pending` → `completed`
-  - Emit: `ca.eligibility.determination.complete` — Signals that all program eligibility results are ready for caseworker review.
+  - Emit: `eligibility.determination.complete` — Signals that all program eligibility results are ready for caseworker review.
 
 ### Event subscriptions
 
-- **`ca.intake.application.submitted`**
+- **`intake.application.submitted`**
   - Create a pending determination for the submitted application.

@@ -1,4 +1,6 @@
 $schema: state-machine-schema.yaml
+# Inherits the platform procedures — `requestTimer` is used by `submit` below.
+extends: ../platform/platform-state-machine.yaml
 version: "1.0"
 domain: intake
 apiSpec: intake-openapi.yaml
@@ -50,6 +52,16 @@ machines:
                 id: $object.id
                 programsAppliedFor: $object.programsAppliedFor
               description: Triggers eligibility screening, caseworker task creation, and confirmation notice.
+          # The regulatory clock starts here, so the escalation deadline is set
+          # here too. Nothing waits: the request is an event, and the machine's
+          # `intake.review_reminder` subscription below handles the callback.
+          - call: requestTimer
+            with:
+              timerId: review_reminder
+              fireAfter: {amount: 72, unit: hours}
+              callback:
+                event: intake.review_reminder
+            description: Escalate if no caseworker has opened this application in 72 hours.
 
       - id: open
         description: Moves a submitted application into active caseworker review.
