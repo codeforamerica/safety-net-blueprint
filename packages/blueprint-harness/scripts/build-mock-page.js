@@ -41,8 +41,16 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-/** The authored page, which is this package's own input. */
-const PAGE = resolve(here, '../mock/index.html');
+/**
+ * The authored pages, which are this package's own input.
+ *
+ * A list rather than a constant because pages share one `mock.js` and one
+ * `contracts.json`: a second one costs a template, not another copy of the
+ * server and the contract set.
+ */
+const PAGES = ['index.html']
+  .map((name) => ({ name, path: resolve(here, '../mock', name) }))
+  .filter((page) => existsSync(page.path));
 
 /**
  * The mock server's browser entry, resolved by the name a consumer would use
@@ -50,9 +58,12 @@ const PAGE = resolve(here, '../mock/index.html');
  * being exported, this fails here instead of producing a page that cannot be
  * built the documented way.
  */
-const MOCK_ENTRY = fileURLToPath(
-  import.meta.resolve('@codeforamerica/blueprint-mock-server/browser')
-);
+const MOCK_ENTRY = resolve(here, '../mock/runtime.js');
+
+// Asserted rather than used: the runtime shim imports by package name, and
+// this fails the build loudly if that export ever stops existing.
+import.meta.resolve('@codeforamerica/blueprint-mock-server/browser');
+import.meta.resolve('@codeforamerica/blueprint-core/browser');
 
 /** Where `blueprint-bundle-contracts` lives in this workspace. */
 const BUNDLE_CONTRACTS = resolve(here, '../../blueprint-cli/scripts/bundle-contracts.js');
@@ -183,18 +194,21 @@ function main() {
   console.log('\nBundling the mock server...');
   bundle('esm', join(outDir, 'mock.js'));
 
-  const authored = readFileSync(PAGE, 'utf8');
   const config = JSON.stringify({ sourceUrl: options.sourceUrl ?? null });
   const configTag =
     `<script type="application/json" id="page-config">${config.replace(/</g, '\\u003c')}</script>\n`;
 
-  // Injected into both builds, so the served page and the single file behave
+  // Injected into every build, so a served page and its single file behave
   // the same. A replacer function, for the reason the standalone build below
   // documents at length.
-  const page = authored.replace('<script type="module">', () => configTag + '<script type="module">');
-  writeFileSync(join(outDir, 'index.html'), page);
+  const served = PAGES.map((entry) => {
+    const page = readFileSync(entry.path, 'utf8')
+      .replace('<script type="module">', () => configTag + '<script type="module">');
+    writeFileSync(join(outDir, entry.name), page);
+    return { ...entry, page };
+  });
 
-  console.log('Building the single-file version...');
+  console.log('Building the single-file versions...');
   const iife = join(outDir, '.mock.iife.js');
   bundle('iife', iife, ['--global-name=BlueprintMock']);
 
@@ -204,37 +218,57 @@ function main() {
   const authoredPath = join(outDir, 'authored.json');
   const authoredSet = existsSync(authoredPath) ? readFileSync(authoredPath, 'utf8') : null;
 
-  const inlined = [
-    // `</script` escaped so a browser cannot end the element early. Inside a
-    // JavaScript string or regex `<\/script` means the same thing, and
-    // minified output can only contain the sequence in one of those.
-    `<script>${readFileSync(iife, 'utf8').replace(/<\/script/gi, '<\\/script')}</script>`,
-    // `<` escaped for the same reason, which JSON permits as \u003c.
-    `<script type="application/json" id="contracts-data">${contracts.replace(/</g, '\\u003c')}</script>`,
-    // The single file has no siblings to fetch, so the overlays travel the
-    // same way the artifact does.
-    ...(overlays
-      ? [`<script type="application/json" id="overlays-data">${overlays.replace(/</g, '\\u003c')}</script>`]
-      : []),
-    ...(authoredSet
-      ? [`<script type="application/json" id="authored-data">${authoredSet.replace(/</g, '\\u003c')}</script>`]
-      : []),
-    '<script type="module">',
-  ].join('\n');
+  /**
+   * A data island, but only for a page that looks for it.
+   *
+   * The single file has no siblings to fetch, so whatever a page reads has
+   * to travel inside it. The converse is the part worth enforcing: a page
+   * that never mentions an island should not carry one. The authored set
+   * alone is 87 KB, and it stayed inlined for a while after the page that
+   * read it was replaced — weight in a file whose whole point is being
+   * small enough to send someone.
+   *
+   * `<` is escaped, which JSON permits as \u003c, so a browser cannot end
+   * the element early.
+   */
+  const island = (page, id, json) => (json && page.includes(id)
+    ? [`<script type="application/json" id="${id}">${json.replace(/</g, '\\u003c')}</script>`]
+    : []);
+
+  // `</script` escaped for the same reason. Inside a JavaScript string or
+  // regex `<\/script` means the same thing, and minified output can only
+  // contain the sequence in one of those.
+  const bundled = `<script>${readFileSync(iife, 'utf8').replace(/<\/script/gi, '<\\/script')}</script>`;
 
   // A replacer *function*, not a string. A string replacement treats `$&`,
   // backtick-dollar and `$'` as substitution patterns, and a minified bundle
   // is full of `$` sequences — which spliced the page into the middle of
   // itself and truncated the bundle to 82 KB of 543 KB. Silently: the file
   // was written, looked plausible, and did not run.
-  const standalone = page.replace('<script type="module">', () => inlined);
-  writeFileSync(join(outDir, 'standalone.html'), standalone);
+  for (const entry of served) {
+    const name = entry.name === 'index.html'
+      ? 'standalone.html'
+      : entry.name.replace(/\.html$/, '-standalone.html');
+    const inlined = [
+      bundled,
+      ...island(entry.page, 'contracts-data', contracts),
+      ...island(entry.page, 'overlays-data', overlays),
+      ...island(entry.page, 'authored-data', authoredSet),
+      '<script type="module">',
+    ].join('\n');
+    writeFileSync(join(outDir, name), entry.page.replace('<script type="module">', () => inlined));
+  }
   rmSync(iife);
 
   const kb = (file) => Math.round(statSync(join(outDir, file)).size / 1024);
   console.log(`\n✓ ${outDir}`);
-  console.log(`  served:     index.html ${kb('index.html')} KB + mock.js ${kb('mock.js')} KB + contracts.json ${kb('contracts.json')} KB`);
-  console.log(`  standalone: standalone.html ${kb('standalone.html')} KB`);
+  console.log(`  shared:     mock.js ${kb('mock.js')} KB + contracts.json ${kb('contracts.json')} KB`);
+  for (const entry of served) {
+    const alone = entry.name === 'index.html'
+      ? 'standalone.html'
+      : entry.name.replace(/\.html$/, '-standalone.html');
+    console.log(`  ${entry.name.padEnd(13)} ${kb(entry.name)} KB    ${alone} ${kb(alone)} KB`);
+  }
   console.log(`\n  npx serve ${options.out}`);
   console.log(`  open ${join(options.out, 'standalone.html')}`);
 }
