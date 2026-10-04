@@ -14,6 +14,13 @@ paths:
   /documents:
     get:
       operationId: listDocuments
+      x-sortable:
+        fields:
+          - uploadedAt
+          - title
+          - sizeBytes
+          - documentTypeId
+        default: "-uploadedAt"
       tags:
         - Documents
       summary: List documents

@@ -21,6 +21,9 @@ paths:
   /events:
     get:
       operationId: listEvents
+      x-sortable:
+        fields: [time, type, subject]
+        default: '-time'
       tags: [Events]
       summary: List events
       description: Every event published so far, newest first.

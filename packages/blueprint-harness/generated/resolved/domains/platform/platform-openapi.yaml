@@ -14,6 +14,12 @@ paths:
   /events:
     get:
       operationId: listEvents
+      x-sortable:
+        fields:
+          - time
+          - type
+          - subject
+        default: "-time"
       tags:
         - Events
       summary: List events

@@ -50,6 +50,9 @@ paths:
     get:
       summary: List applications
       operationId: listApplications
+      x-sortable:
+        fields: [createdAt, updatedAt, submittedAt, status, channel, countyCode]
+        default: '-createdAt'
       tags: [Applications]
       parameters:
         - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam'
@@ -168,6 +171,9 @@ paths:
     get:
       summary: List household members
       operationId: listApplicationMembers
+      x-sortable:
+        fields: [createdAt, updatedAt, lastName, dateOfBirth]
+        default: 'createdAt'
       tags: [Household Members]
       parameters:
         - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam'

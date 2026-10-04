@@ -17,6 +17,13 @@ paths:
     get:
       summary: List determinations
       operationId: listDeterminations
+      x-sortable:
+        fields:
+          - createdAt
+          - updatedAt
+          - determinedAt
+          - status
+        default: "-createdAt"
       tags:
         - Determinations
       parameters:

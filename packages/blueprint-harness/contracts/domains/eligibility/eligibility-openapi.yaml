@@ -24,6 +24,9 @@ paths:
     get:
       summary: List determinations
       operationId: listDeterminations
+      x-sortable:
+        fields: [createdAt, updatedAt, determinedAt, status]
+        default: '-createdAt'
       tags: [Determinations]
       parameters:
         - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam'

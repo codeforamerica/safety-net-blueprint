@@ -7,7 +7,6 @@ compositions:
     fields:
       - id
       - status
-      - programCount
       - programsAppliedFor
       - channel
       - submittedAt
