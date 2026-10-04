@@ -224,6 +224,11 @@ components:
           type: string
           format: uuid
           description: The intake application this determination is for.
+          # links-only, not expand: expanding across domains copies the
+          # intake Application schema into this document and leaves its
+          # sibling refs pointing at this directory, where they resolve to
+          # nothing. Same-domain expand works and is exercised on
+          # ApplicationMember.
           x-relationship:
             type: fk
             domain: intake

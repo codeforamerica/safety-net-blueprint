@@ -318,6 +318,17 @@ components:
         contactInfo:
           # External $ref — ContactInfo is defined in common/schemas/shared.yaml.
           $ref: '../../common/schemas/shared.yaml#/$defs/ContactInfo'
+        proofOfIncomeDocumentId:
+          type: string
+          format: uuid
+          description: The uploaded document evidencing household income, if one is attached.
+          # Expanded across domains: somebody reading an application wants to
+          # see what was filed with it, not a link to go and fetch.
+          x-relationship:
+            type: fk
+            domain: document-management
+            resource: Document
+            style: expand
         labels:
           # additionalProperties map — arbitrary key-value labels for state-specific tagging.
           type: object
@@ -509,11 +520,19 @@ components:
               type: string
               format: uuid
               description: The application this member belongs to.
-              # x-relationship — intra-domain link from member back to its parent application.
+              # Expanded, not linked: a household member is read by somebody
+              # looking at the application it belongs to, so the application
+              # comes with it. Resolve renames this field to `application`
+              # and the server inlines the record at read time, which is one
+              # request where a link would be two.
               x-relationship:
                 type: fk
                 resource: Application
-                style: links-only
+                style: expand
+                # Bounded, because this points back at the parent and the
+                # parent lists its members: expanding everything would chase
+                # that circle. Naming the fields says how far to go.
+                fields: [id, status, programsAppliedFor, programCount]
             createdAt:
               type: string
               format: date-time
