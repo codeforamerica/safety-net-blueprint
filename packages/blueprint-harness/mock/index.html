@@ -29,10 +29,10 @@
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; padding: 2.5rem 1.5rem 6rem; background: var(--bg); color: var(--ink);
+    margin: 0; padding: 2.2rem 0 6rem; background: var(--bg); color: var(--ink);
     font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   }
-  main { max-width: 54rem; margin: 0 auto; }
+  /* The shell owns the width now; main is one column inside it. */
   h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 .5rem; }
   .lede { color: var(--muted); margin: 0 0 1.25rem; max-width: 42rem; }
   #boot {
@@ -65,12 +65,76 @@
   .step.failed { border-left: 3px solid var(--bad); }
   .step h2 { font-size: 1.02rem; margin: 0 0 .1rem; display: flex; gap: .55rem; align-items: baseline; }
   .step h2 .n { color: var(--faint); font-family: var(--mono); font-size: .85rem; }
-  .step h2 .shows {
-    margin-left: auto; font-size: .7rem; letter-spacing: .04em; text-transform: uppercase;
-    color: var(--accent); background: #eef4fb; border: 1px solid #d6e4f3;
-    border-radius: 999px; padding: .12rem .5rem; white-space: nowrap; font-weight: 600;
+  .step .what { color: var(--muted); font-size: .95rem; margin: .4rem 0 1rem; max-width: 52rem; }
+  .step .what b, .chapter .blurb b { color: var(--ink); font-weight: 600; }
+  /* Shell: masthead across the top, contents down the left, one story to the
+     right of it. Under 60rem the whole thing stacks, because two columns of
+     JSON in a phone-width viewport is worse than scrolling. */
+  #masthead {
+    max-width: 86rem; margin: 0 auto; padding: 0 1.2rem 1.2rem;
+    border-bottom: 1px solid var(--line);
   }
-  .step .what { color: var(--muted); font-size: .92rem; margin: .4rem 0 .5rem; }
+  #masthead h1 { margin: 0; }
+  #trouble { margin: .6rem 0 0; }
+  #reset-tour { margin-top: 1.5rem; font-size: .78rem; }
+  #shell {
+    display: grid; grid-template-columns: 15rem minmax(0, 1fr);
+    gap: 2rem; max-width: 86rem; margin: 1.5rem auto 0; padding: 0 1.2rem;
+  }
+  #contents {
+    position: sticky; top: 1rem; align-self: start;
+    max-height: calc(100vh - 2rem); overflow: auto;
+    border-right: 1px solid var(--line); padding-right: .8rem;
+  }
+  .nav-chapter {
+    margin: 1rem 0 .3rem; font-size: .68rem; letter-spacing: .07em;
+    text-transform: uppercase; color: var(--faint); font-weight: 600;
+  }
+  .nav-chapter:first-child { margin-top: 0; }
+  .nav-stories { list-style: none; margin: 0; padding: 0; }
+  .nav-story {
+    display: block; width: 100%; text-align: left; border: 0; background: none;
+    padding: .28rem .5rem; border-radius: 4px; cursor: pointer;
+    font: inherit; font-size: .84rem; color: var(--muted); line-height: 1.3;
+  }
+  .nav-story:hover { background: #f1f4f8; color: var(--ink); }
+  .nav-story.here { background: #eef4fb; color: var(--accent); font-weight: 600; }
+  #stage { min-width: 0; }
+  .page { min-width: 0; }
+  .chapter-tag {
+    margin: 0 0 .4rem; font-size: .68rem; letter-spacing: .07em;
+    text-transform: uppercase; color: var(--faint); font-weight: 600;
+  }
+
+  /* Claim on the left, evidence on the right. */
+  .columns { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 1.4rem; }
+  .col { min-width: 0; }
+  .col.claim { align-self: start; position: sticky; top: 1rem; }
+
+  @media (max-width: 60rem) {
+    #shell { grid-template-columns: 1fr; }
+    #contents { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--line); padding-bottom: .8rem; }
+    .columns { grid-template-columns: 1fr; }
+    .col.claim { position: static; }
+  }
+
+  .chapter { margin: 0 0 1.4rem; }
+  .chapter:first-child { margin-top: 0; }
+  .chapter h2 { font-size: 1.5rem; margin: 0; letter-spacing: -.01em; }
+  .chapter .because {
+    margin: 0 0 .5rem; padding-left: .9rem; border-left: 3px solid var(--warm);
+    color: var(--ink); font-size: 1rem; max-width: 40rem;
+  }
+  .chapter .blurb { margin: .35rem 0 0; color: var(--muted); font-size: .95rem; max-width: 40rem; }
+  .step .gate {
+    font-size: .8rem; margin: .5rem 0 0; padding: .4rem .6rem;
+    color: var(--warm); background: #fdfbf5; border: 1px dashed #e6ded0; border-radius: 4px;
+    display: flex; gap: .5rem; align-items: center; flex-wrap: wrap;
+  }
+  .step .gate[hidden] { display: none; }
+  .step .gate button { font-size: .76rem; padding: .22rem .6rem; }
+  .step .gate .fold { border: 0; background: none; color: var(--warm); text-decoration: underline; }
+  .step button:disabled { opacity: .45; cursor: not-allowed; }
   .step .source { font-family: var(--mono); font-size: .74rem; color: var(--faint); margin: 0; }
   .step .source a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted currentColor; }
   .step .source a:hover { border-bottom-style: solid; }
@@ -83,9 +147,23 @@
     text-transform: uppercase; color: var(--warm); margin-bottom: .35rem; font-weight: 600;
   }
   .step .contract .label a { color: var(--warm); text-transform: none; letter-spacing: 0; }
+  .step .wire { margin: .7rem 0 0; background: #f7f9fc; border-color: #dbe4f0; }
+  .step .wire .label {
+    display: block; font-family: inherit; font-size: .68rem; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: .35rem; font-weight: 600;
+  }
+  .step .wire .label a { color: var(--accent); text-transform: none; letter-spacing: 0; }
+  /* A panel is a listing, not an excerpt: it scrolls at the same height on
+     either side, so the two columns of a side-by-side card stay level. */
+  .step .panel { max-height: 20rem; }
+  /* The impact of an action, under the answer it gave. */
+  .step .changed { background: #f6faf6; border-color: #d6e8d6; }
+  .step .changed .label { color: var(--ok); }
+  .step .notice-heading {
+    font-size: .72rem; letter-spacing: .04em; text-transform: uppercase; font-weight: 600;
+    color: var(--accent); margin: 1.1rem 0 0;
+  }
   .step .source span { color: var(--accent); }
-  .step .why { font-size: .88rem; margin: .8rem 0 0; padding-left: .8rem; border-left: 2px solid var(--line); color: var(--muted); }
-  .step .why b { color: var(--ink); font-weight: 600; }
   .cannot { background: #fdfbf5; border-left: 3px solid var(--warm); }
   pre {
     margin: .6rem 0 0; padding: .7rem .8rem; max-height: 20rem; overflow: auto;
@@ -93,6 +171,9 @@
     font-family: var(--mono); font-size: .76rem; line-height: 1.5; white-space: pre-wrap;
   }
   .facts { margin: .7rem 0 0; padding: 0; list-style: none; font-size: .88rem; }
+  /* Nothing to notice until something has run; an empty list still claimed
+     its margin, which left a gap in the column where the answer goes. */
+  .facts:empty { display: none; margin: 0; }
   .facts li { padding: .18rem 0; }
   .facts code { font-family: var(--mono); font-size: .9em; background: #f0f0f0; padding: .08em .3em; border-radius: 3px; }
   .pass { color: var(--ok); font-weight: 600; }
@@ -105,59 +186,41 @@
 </style>
 </head>
 <body>
-<main>
-  <h1>Not your average mock server</h1>
-  <p class="lede">
-    Returning canned JSON is a solved problem. This is <b>a working backend</b>
-    — it enforces state transitions, evaluates rules, validates requests,
-    emits events and refuses what the contracts say to refuse. There is real
-    logic here, and none of it was written as mock code.
-  </p>
-  <p class="lede">
-    It is <b>built from the contracts at runtime</b>, so the logic is theirs:
-    the routes, the transitions, the rules and the response shapes all come
-    from the same documents an implementation would be built against. Which is
-    the point — if this runs, the contracts are executable rather than
-    descriptive. Every step shows the contract first, then runs it.
-  </p>
-  <p class="lede">
-    And it is all running in this tab. No server, no network, no install.
-  </p>
+<header id="masthead">
+  <h1>Not your average Mock Server</h1>
+  <p id="trouble" class="fail" hidden></p>
+</header>
 
-  <div id="boot">starting…</div>
-
-  <div class="controls">
-    <button id="run-all" class="primary">Run the whole tour</button>
+<div id="shell">
+  <nav id="contents" aria-label="Contents">
+    <div id="contents-list"></div>
     <button id="reset-tour">Start over</button>
-    <span id="progress" class="req"></span>
-  </div>
+  </nav>
+  <main id="stage">
+    <div id="steps"></div>
 
-  <div id="steps"></div>
-
-  <footer>
-    <h2>What this tour cannot show</h2>
-    <p id="cannot">—</p>
-    <p>
-      The route table, the handlers and the store are the same code the Node
-      server runs. <code>window.mock</code> is on the console.
-    </p>
-
-    <h2>This copy is yours</h2>
-    <p>
-      There is no server, so there is nothing shared. Everything above runs in
-      this tab against its own in-memory store — <b>another person opening this
-      page cannot affect your run, and you cannot affect theirs</b>. Two tabs
-      are two independent systems. That is worth noting because it is the usual
-      failure of a hosted mock: one person resetting the data or registering a
-      stub disrupts everyone else using it.
-    </p>
-    <p>
-      Refreshing starts over from the contracts. Nothing persists, nothing is
-      uploaded, and no request leaves the page — including the document in the
-      upload step, whose bytes are measured and discarded.
-    </p>
-  </footer>
-</main>
+    <article id="about" class="page" hidden>
+      <h2>This copy is yours</h2>
+      <p>
+        There is no server, so there is nothing shared. Everything here runs in
+        this tab against its own in-memory store — <b>another person opening
+        this page cannot affect your run, and you cannot affect theirs</b>. Two
+        tabs are two independent systems. That is worth noting because it is the
+        usual failure of a hosted mock: one person resetting the data or
+        registering a stub disrupts everyone else using it.
+      </p>
+      <p>
+        Refreshing starts over from the contracts. Nothing persists, nothing is
+        uploaded, and no request leaves the page — including the document in the
+        upload story, whose bytes are measured and discarded.
+      </p>
+      <p>
+        The route table, the handlers and the store are the same code the Node
+        server runs. <code>window.mock</code> is on the console.
+      </p>
+    </article>
+  </main>
+</div>
 
 <script type="module">
 /**
@@ -237,6 +300,22 @@ const pageConfig = (() => {
  * containing markup would be executed if it were interpolated into innerHTML,
  * so it never is: `textContent` assigns a string as a string.
  */
+/**
+ * A paragraph that may carry one emphasised phrase.
+ *
+ * `el` assigns textContent, so `<b>` in a description printed as four
+ * characters and nothing was ever emphasised. These strings are authored
+ * above and are never data. The emphasis is rationed to one key point per
+ * paragraph, because a page where everything is bold has nothing worth
+ * reading twice.
+ */
+const prose = (text, className) => {
+  const node = document.createElement('p');
+  node.className = className;
+  node.insertAdjacentHTML('afterbegin', text);
+  return node;
+};
+
 const el = (tag, text = '', className = '') => {
   const node = document.createElement(tag);
   if (text !== '') node.textContent = text;
@@ -249,6 +328,19 @@ const basePath = location.pathname.replace(/\/[^/]*$/, '');
 
 let mock;
 let contracts;
+
+/**
+ * The documents the live server was derived from.
+ *
+ * Normally the same object as `contracts`. The contract-editing story
+ * derives from a modified copy, and everything that describes the server —
+ * the survey, and so every story that reads it — has to follow the server
+ * rather than the documents the page booted with.
+ */
+let live;
+
+/** How long deriving the server took at boot, reported by the first story. */
+let bootMs = 0;
 let overlays = [];
 let authored = null;
 
@@ -256,34 +348,14 @@ let authored = null;
 const CALLER = 'the-guided-tour';
 
 /**
- * A request body as it would read in a transcript.
+ * One request through the mock.
  *
- * `FormData` has no serialization — and a document upload is one of the steps —
- * so its parts are described instead, which is also the honest thing to show:
- * the file's bytes are what the mock measures and never stores.
+ * Ordinary `fetch` calls, with a caller header because the server refuses a
+ * state transition without one. Steps read the status and the parsed body;
+ * what the server is holding afterwards is asked of the server itself, not
+ * accumulated here.
  */
-const printableBody = (body) => {
-  if (body === undefined) return null;
-  if (body instanceof FormData) {
-    return [...body.entries()]
-      .map(([name, value]) => (value instanceof File
-        ? `${name}: ${value.name} (${value.type || 'application/octet-stream'}, ${value.size} bytes)`
-        : `${name}: ${value}`))
-      .join('\n');
-  }
-  return JSON.stringify(body, null, 2);
-};
-
-/**
- * One request through the mock, recorded so a step can show the exchange.
- *
- * Both halves are kept — the request line, its headers and its body, then the
- * status, the response headers and the response body — because the request is
- * half the evidence: the caller header is why a transition is allowed, and the
- * content type is why a body is validated. The point being that these are
- * ordinary `fetch` calls and nothing is special about them.
- */
-const calls = [];
+let exchanges = [];
 const call = async (method, path, body) => {
   const init = { method, headers: { 'X-Caller-Id': CALLER } };
   if (body !== undefined && !(body instanceof FormData)) {
@@ -293,30 +365,64 @@ const call = async (method, path, body) => {
     init.body = body;
   }
 
-  // Built before it is sent so the transcript can read the headers the Request
-  // itself added — a multipart boundary is not in `init`.
-  const request = new Request(new URL(basePath + path, location.origin), init);
-  const response = await mock.fetch(request);
+  const response = await mock.fetch(new Request(new URL(basePath + path, location.origin), init));
   const text = await response.text();
   let parsed;
   try { parsed = JSON.parse(text); } catch { parsed = text; }
 
-  const record = {
-    line: `${method} ${path}`,
+  exchanges.push({
+    method,
+    // The contract's path, not where this page happens to be served from.
+    // `basePath` is a deployment detail — on `file://` it is the reader's own
+    // home directory — and it is no part of the API being demonstrated.
+    path,
+    body,
     status: response.status,
-    body: parsed,
-    request: {
-      line: `${method} ${basePath}${path}`,
-      headers: [...request.headers],
-      body: printableBody(body),
-    },
-    response: {
-      statusText: response.statusText,
-      headers: [...response.headers],
-    },
-  };
-  calls.push(record);
-  return record;
+    statusText: response.statusText,
+    responseBody: parsed,
+  });
+  return { line: `${method} ${path}`, status: response.status, body: parsed };
+};
+
+/** A request or response body as it reads on the wire. */
+const printBody = (body) => {
+  if (body === undefined || body === null) return null;
+  if (body instanceof FormData) {
+    return [...body.entries()]
+      .map(([name, value]) => (value instanceof File
+        ? `${name}: ${value.name} (${value.type || 'application/octet-stream'}, ${value.size} bytes)`
+        : `${name}: ${value}`))
+      .join('\n');
+  }
+  if (typeof body === 'string') return body;
+  return JSON.stringify(body, null, 2);
+};
+
+/** One request, written out before it is sent. */
+const printRequest = ({ method, path, body }) => {
+  const lines = [`${method} ${path}`];
+  if (body !== undefined && !(body instanceof FormData)) lines.push('content-type: application/json');
+  lines.push('x-caller-id: ' + CALLER);
+  const printed = printBody(body);
+  if (printed) lines.push('', printed);
+  return lines.join('\n');
+};
+
+/** A response. The request that produced it is already on screen above. */
+const printResponse = ({ status, statusText, body }) => {
+  const lines = [`${status}${statusText ? ' ' + statusText : ''}`];
+  const received = printBody(body);
+  if (received) lines.push('', received);
+  return lines.join('\n');
+};
+
+/** One exchange, for a step that makes several calls of its own. */
+const printExchange = (exchange) => {
+  const lines = [`${exchange.method} ${exchange.path}`];
+  const sent = printBody(exchange.body);
+  if (sent) lines.push('', sent);
+  lines.push('', `→ ${printResponse({ status: exchange.status, statusText: exchange.statusText, body: exchange.responseBody })}`);
+  return lines.join('\n');
 };
 
 /**
@@ -371,11 +477,214 @@ const essential = (node) => {
 /** The document a step cites, as a Doc from the artifact. */
 const docAt = (relativePath) => contracts.docs.find((doc) => doc.relativePath === relativePath) ?? null;
 
+/**
+ * A field whose contract lists the values it will accept, and which the demo
+ * request actually sends one of.
+ *
+ * The opening story edits this, because a list of allowed values is the one
+ * piece of contract that needs nothing explained first. A reader who has
+ * never seen this system knows what it means to take an item off a list, and
+ * can predict what should happen to a request that sends it.
+ *
+ * Returns the location as well as the values, so the same property can be
+ * found again inside an edited copy of the documents.
+ */
+const constrainedField = () => {
+  const body = newApplication();
+  for (const doc of live.docs.filter((d) => d.type === 'openapi')) {
+    for (const [schemaName, schema] of Object.entries(doc.content?.components?.schemas ?? {})) {
+      for (const part of [schema, ...(schema.allOf ?? [])]) {
+        for (const [name, property] of Object.entries(part?.properties ?? {})) {
+          if (Array.isArray(property.enum) && property.enum.includes(body[name])) {
+            return { name, values: property.enum, sending: body[name], file: doc.relativePath, schemaName };
+          }
+        }
+      }
+    }
+  }
+  return null;
+};
+
+/** The same property, inside whichever copy of the documents is passed. */
+const findField = (docs, { file, schemaName, name }) => {
+  const schema = docs.find((d) => d.relativePath === file)?.content?.components?.schemas?.[schemaName];
+  for (const part of [schema, ...(schema?.allOf ?? [])]) {
+    if (part?.properties?.[name]) return part.properties[name];
+  }
+  return null;
+};
+
 /** A named action on the story's machine, for a step that wants to show it. */
 const actionNamed = (id) => (offered.story?.actions ?? []).find((a) => a.id === id) ?? null;
 
-/** Shared state between steps: a record created in one is transitioned in the next. */
-const tour = {};
+/**
+ * What a story is waiting for, as a noun, or null when it can run.
+ *
+ * This answers a different question from `needs`. `needs` asks whether this
+ * contract set declares the thing at all — no rules document means no rules
+ * story, and no amount of clicking will change that. This asks whether the
+ * story has its own data yet, and the answer changes as the reader works.
+ *
+ * It returns the noun rather than false because a disabled button that does
+ * not say why is the thing being fixed: the noun becomes the label on the
+ * button that produces it.
+ */
+const needsApplication = (story) => (story.id ? null : 'an application');
+
+/** The body every story opens with. One place, so resets are comparable. */
+const newApplication = () => ({ programsAppliedFor: ['snap'], channel: 'online', countyCode: '001' });
+
+/**
+ * Empty the store, so a story starts from nothing.
+ *
+ * A declared mock-control endpoint rather than something the page reaches in
+ * and does, which is why it can be shown on the wire like any other request.
+ * It clears records and leaves config-managed resources — document types,
+ * policy registries — because those are configuration, not data.
+ *
+ * Note what it does *not* touch: the contracts. Changing one of those is a
+ * different kind of act and needs the heavier thing below.
+ */
+const emptyTheStore = async () => {
+  // If the contract-editing story is the one that ran last, the live server
+  // is not the one these documents describe. Clearing its records would
+  // leave every story after it quietly demonstrating an edited contract, so
+  // the heavier thing is the only honest way back.
+  if (live !== contracts) {
+    await rederive();
+    return;
+  }
+  await call('POST', '/mock/reset', {});
+  forgetEveryStory();
+};
+
+/**
+ * Build the server again from the documents.
+ *
+ * There is no endpoint for this, because it is not something the API does —
+ * it is the API being derived. Everything the old server held goes with it.
+ *
+ * @param {object} [from] - Documents to derive from. Defaults to the ones the
+ *   page booted with; the contract-editing story passes a modified copy.
+ */
+const rederive = async (from = contracts) => {
+  const started = performance.now();
+  mock = await createMockServer({ contracts: from, basePath, seed: false });
+  const ms = Math.round(performance.now() - started);
+
+  // Before the survey, not after: `survey` reads `live`, and a survey of the
+  // documents the server was *not* built from is how the page came to claim
+  // `close` runs from one state while the server enforced another.
+  live = from;
+  offered = survey();
+  forgetEveryStory();
+  return ms;
+};
+
+/**
+ * The lifecycle the machine declares, walked from its start.
+ *
+ * The start is the state no action leads to, rather than the first one listed
+ * — ordering in a document is not a promise. At each state it takes the first
+ * action declared from there, which is the same rule every story already uses
+ * at run time, so a setup lands where the story expects without either of
+ * them naming a state.
+ */
+const happyPath = () => {
+  const actions = offered.story?.actions ?? [];
+  const reachable = new Set(actions.map((a) => a.transition.to));
+  const start = (offered.story?.states ?? []).find((state) => !reachable.has(state));
+  const path = start ? [start] : [];
+
+  let current = start;
+  while (current) {
+    const action = actions.find((a) => a.from.includes(current));
+    if (!action || path.includes(action.transition.to)) break;
+    current = action.transition.to;
+    path.push(current);
+  }
+  return path;
+};
+
+/**
+ * A story's own application, advanced along the lifecycle as far as it needs.
+ *
+ * Every story that touches a record builds its own rather than inheriting one
+ * from further up the page. That is what lets a reader open any story first,
+ * run it twice, or reset it without breaking the others — and it costs two
+ * requests a reader has already watched once, which is why the page summarises
+ * them instead of replaying them in full.
+ *
+ * `advance` is a count, not a state name. Naming `submitted` here would be
+ * this page deciding what the lifecycle looks like; a count asks the machine.
+ */
+const anApplication = ({ advance = 0, several = false } = {}) => ({
+  provides: () => {
+    if (several) return 'a few applications to search through';
+    const reached = happyPath()[advance];
+    return reached ? `an application in ${reached}` : 'an application';
+  },
+  run: async (story) => {
+    // A story about searching needs more than one record, and records that
+    // differ — one row sorts and filters identically whatever you ask for.
+    if (several) {
+      const field = constrainedField();
+      const values = field ? field.values.slice(0, 3) : [];
+      for (const value of values.length ? values : [null]) {
+        const body = { ...newApplication(), ...(value ? { [field.name]: value } : {}) };
+        const made = await call('POST', offered.collection, body);
+        story.id ??= made.body?.id;
+        // Distinct createdAt, so sorting by it has something to order.
+        await new Promise((done) => setTimeout(done, 3));
+      }
+      return;
+    }
+
+    const created = await call('POST', offered.collection, newApplication());
+    story.id = created.body?.id;
+    story.path = [created.body?.status];
+    if (!story.id) return;
+
+    for (let i = 0; i < advance; i += 1) {
+      const before = await call('GET', `${offered.collection}/${story.id}`);
+      const action = (offered.story?.actions ?? [])
+        .find((a) => a.from.includes(before.body?.status));
+      if (!action) break;
+
+      // What the transition emitted, for a story whose whole point is that
+      // something elsewhere reacted to it.
+      const logged = () => (offered.events
+        ? call('GET', offered.events).then((r) => (r.body.items ?? []).map((e) => e.type))
+        : Promise.resolve([]));
+      const typesBefore = await logged();
+
+      await call('POST', action.path.replace(/\{[^}]+\}/, story.id), {});
+      const after = await call('GET', `${offered.collection}/${story.id}`);
+      story.path.push(after.body?.status);
+
+      const fresh = (await logged()).slice(typesBefore.length);
+      story.emitted = fresh.find((type) => offered.eventTypes.includes(type)) ?? fresh[0] ?? story.emitted;
+    }
+  },
+});
+
+/**
+ * Re-check every story's gate.
+ *
+ * A story's own setup unblocks only itself, but a reset has to put the page
+ * back, and the whole-tour button walks all of them. Assigned once the cards
+ * exist; a no-op before that.
+ */
+let revalidate = () => {};
+
+/**
+ * Throw away every story's data.
+ *
+ * Only one thing needs this: rebooting the server replaces the store, so
+ * every record every story created is gone whatever the cards still believe.
+ * Nothing else should reach across stories — that is the point of them.
+ */
+let forgetEveryStory = () => {};
 
 /**
  * A declared event that nothing in the contract set subscribes to.
@@ -435,7 +744,7 @@ const survey = () => {
   // Reading the contract gives the action's declared transition too, which is
   // the thing worth showing: the contract says draft → submitted, the record
   // was draft, and afterwards it is submitted.
-  const machines = contracts.docs
+  const machines = live.docs
     .filter((doc) => doc.type === 'state-machine')
     .flatMap((doc) => (doc.content?.machines ?? []).map((machine) => ({
       domain: doc.domain,
@@ -470,7 +779,7 @@ const survey = () => {
   // the stub step offers a list to choose from rather than a text box to
   // mistype.
   const eventTypes = [...new Set(
-    contracts.docs
+    live.docs
       .filter((doc) => doc.type === 'asyncapi')
       .flatMap((doc) => Object.keys(doc.content?.channels ?? {}))
   )].sort();
@@ -497,7 +806,7 @@ const survey = () => {
   // taken at its word, which is the opposite of the point.
 
   /** Every document of a type, by its place in the set. */
-  const sourcesOfType = (type) => contracts.docs
+  const sourcesOfType = (type) => live.docs
     .filter((doc) => doc.type === type)
     .map((doc) => doc.relativePath)
     .filter(Boolean);
@@ -509,22 +818,152 @@ const survey = () => {
    * pathname — `http://localhost:1080/intake` is why `/applications` is served
    * at `/intake/applications`.
    */
-  const specFor = (routePath) => {
-    for (const doc of contracts.docs.filter((d) => d.type === 'openapi')) {
+  const locate = (routePath) => {
+    for (const doc of live.docs.filter((d) => d.type === 'openapi')) {
       const prefixes = (doc.content?.servers ?? [{ url: '' }]).map((server) => {
         try { return new URL(server.url).pathname.replace(/\/$/, ''); } catch { return server.url ?? ''; }
       });
-      for (const declared of Object.keys(doc.content?.paths ?? {})) {
-        if (prefixes.some((prefix) => prefix + declared === routePath)) return doc.relativePath;
+      for (const [declared, item] of Object.entries(doc.content?.paths ?? {})) {
+        if (prefixes.some((prefix) => prefix + declared === routePath)) return { doc, item };
       }
     }
     return null;
   };
 
+  const specFor = (routePath) => locate(routePath)?.doc.relativePath ?? null;
+
+  /**
+   * What the spec calls one operation, and where it says it.
+   *
+   * The request pane is labelled with this rather than the word "request",
+   * which a reader looking at `POST /intake/applications` can already see.
+   * The summary is the spec's own one-line description of the endpoint, so
+   * the label is the contract talking, not the page.
+   */
+  const operationFor = (method, routePath) => {
+    const found = locate(routePath);
+    const operation = found?.item?.[method.toLowerCase()];
+    if (!operation) return null;
+    return {
+      summary: operation.summary ?? operation.operationId ?? null,
+      file: found.doc.relativePath,
+    };
+  };
+
+  /**
+   * The single-record route under a collection, as the spec writes it —
+   * `/intake/applications/{applicationId}`, not a guess at the parameter's
+   * name. Used to label and to print a request whose id does not exist yet.
+   */
+  const itemPathFor = (routePath) => {
+    for (const doc of live.docs.filter((d) => d.type === 'openapi')) {
+      const prefixes = (doc.content?.servers ?? [{ url: '' }]).map((server) => {
+        try { return new URL(server.url).pathname.replace(/\/$/, ''); } catch { return server.url ?? ''; }
+      });
+      for (const declared of Object.keys(doc.content?.paths ?? {})) {
+        for (const prefix of prefixes) {
+          const full = prefix + declared;
+          // One segment past the collection, and that segment a parameter:
+          // the record route, not a sub-collection or a transition.
+          if (full.startsWith(`${routePath}/{`) && full.indexOf('/', routePath.length + 1) === -1) {
+            return full;
+          }
+        }
+      }
+    }
+    return null;
+  };
+
+  /**
+   * The ruleset the rules chapter is about: the one whose endpoint this set
+   * puts forward for evaluation, found by its declared path rather than by
+   * name, so another contract set brings its own.
+   */
+  const ruleset = () => {
+    for (const doc of live.docs.filter((d) => d.type === 'rules')) {
+      for (const [name, declared] of Object.entries(doc.content?.rulesets ?? {})) {
+        if (declared?.inputs?.policy) return { name, ruleset: declared, file: doc.relativePath };
+      }
+    }
+    return null;
+  };
+
+  /** The evaluate route belonging to the policy-bearing ruleset. */
+  const evaluateEndpoint = () => {
+    const declared = ruleset()?.ruleset?.endpoint?.path;
+    const posts = keys.filter((k) => k.startsWith('POST ')).map((k) => k.slice(5));
+    if (declared) {
+      const match = posts.find((candidate) => candidate.endsWith(declared));
+      if (match) return match;
+    }
+    return posts.find((candidate) => candidate.includes('/evaluate')) ?? null;
+  };
+
+  /** The thresholds the ruleset declares, as the contract has them. */
+  const policyDefaults = () => Object.fromEntries(
+    Object.entries(ruleset()?.ruleset?.inputs?.policy?.properties ?? {})
+      .map(([key, spec]) => [key, spec.default])
+      .filter(([, value]) => value !== undefined)
+  );
+
+  /** The fields the operation says may be sorted, and the default order. */
+  const sortableFor = (routePath) => locate(routePath)?.item?.get?.['x-sortable']?.fields ?? null;
+
+  /**
+   * Everything the operation declares about querying it, in one node.
+   *
+   * A `$ref`'d parameter shows as a pointer, which tells a reader nothing, so
+   * each one is followed to the name and type it resolves to.
+   */
+  const queryContract = (routePath) => {
+    const found = locate(routePath);
+    const operation = found?.item?.get;
+    if (!operation) return null;
+
+    const parameters = {};
+    for (const parameter of operation.parameters ?? []) {
+      const resolved = parameter?.$ref
+        ? followRef(parameter.$ref, found.doc) ?? { name: parameter.$ref.split('/').pop() }
+        : parameter;
+      if (resolved?.in !== 'query' && !parameter?.$ref) continue;
+      if (!resolved?.name) continue;
+      parameters[resolved.name] = resolved.schema?.type ?? 'string';
+    }
+
+    return {
+      file: found.doc.relativePath,
+      node: {
+        parameters,
+        ...(operation['x-sortable'] ? { 'x-sortable': operation['x-sortable'] } : {}),
+      },
+    };
+  };
+
+  /** A `#/components/...` pointer, resolved inside its own document. */
+  const followRef = (ref, doc) => {
+    if (typeof ref !== 'string' || !ref.startsWith('#/')) return null;
+    return ref.slice(2).split('/').reduce((node, key) => node?.[key], doc.content);
+  };
+
+  /**
+   * The filters a collection endpoint accepts, named by the spec.
+   *
+   * Nothing implements these. A query parameter declared on the operation is
+   * a filter the mock applies, which is why the demo can hand one to a reader
+   * instead of describing it. The paging and search parameters are left out —
+   * they are on every collection and say nothing about this one.
+   */
+  const filtersFor = (routePath) => {
+    const paging = new Set(['q', 'search', 'limit', 'offset', 'page', 'sort']);
+    return (locate(routePath)?.item?.get?.parameters ?? [])
+      .filter((parameter) => parameter?.in === 'query' && !paging.has(parameter.name))
+      .map((parameter) => parameter.name);
+  };
+
   /** The AsyncAPI document that declares an event type as a channel. */
   const asyncapiFor = (type) => {
     if (!type) return null;
-    const doc = contracts.docs.find((d) => d.type === 'asyncapi'
+    const doc = live.docs.find((d) => d.type === 'asyncapi'
       && Object.keys(d.content?.channels ?? {}).includes(type));
     return doc?.relativePath ?? null;
   };
@@ -538,7 +977,7 @@ const survey = () => {
     const graph = graphFor(routePath);
     if (!graph) return null;
     const domain = graph.slice(0, graph.lastIndexOf('/'));
-    const doc = contracts.docs.find((d) => d.type === 'rules' && d.relativePath?.startsWith(domain + '/'));
+    const doc = live.docs.find((d) => d.type === 'rules' && d.relativePath?.startsWith(domain + '/'));
     return doc?.relativePath ?? null;
   };
 
@@ -552,7 +991,7 @@ const survey = () => {
     const flat = (value) => String(value).toLowerCase().replace(/-/g, '');
     const wanted = flat((routePath ?? '').split('/').pop()?.replace(/^evaluate-/, '') ?? '');
     if (!wanted) return null;
-    const doc = contracts.docs.find((d) => d.type === 'graph' && flat(d.relativePath).includes(wanted));
+    const doc = live.docs.find((d) => d.type === 'graph' && flat(d.relativePath).includes(wanted));
     return doc?.relativePath ?? null;
   };
 
@@ -560,7 +999,7 @@ const survey = () => {
   // subscriptions, so the contract set says which domain answers which event
   // — the tour names the subscriber instead of asking the reader to imagine
   // one.
-  const subscriptions = contracts.docs
+  const subscriptions = live.docs
     .filter((doc) => doc.type === 'state-machine')
     .flatMap((doc) => (doc.content?.machines ?? []).flatMap((machine) =>
       (machine.events ?? []).map((entry) => ({
@@ -606,7 +1045,7 @@ const survey = () => {
    * stored. Found by asking the compositions documents what they declared,
    * not by guessing at path shapes.
    */
-  const compositions = contracts.docs
+  const compositions = live.docs
     .filter((doc) => doc.type === 'compositions')
     .flatMap((doc) => Object.entries(doc.content?.compositions ?? {}).map(([id, composition]) => ({
       id,
@@ -639,13 +1078,13 @@ const survey = () => {
    * out of the same artifact it booted the server from.
    */
   const policies = {};
-  for (const doc of contracts.docs) {
+  for (const doc of live.docs) {
     if (doc.type === 'registry' && doc.content?.type === 'policies') {
       Object.assign(policies, doc.content.entries ?? {});
     }
   }
 
-  const annotatedFields = contracts.docs
+  const annotatedFields = live.docs
     .filter((doc) => doc.type === 'annotations')
     .flatMap((doc) => Object.entries(doc.content?.schema ?? {})
       .filter(([, entry]) => Array.isArray(entry?.policies) && entry.policies.length > 0)
@@ -666,21 +1105,78 @@ const survey = () => {
     return rank(a) - rank(b);
   });
 
+  /**
+   * A derived field, and the field its expression reads.
+   *
+   * The expression names its inputs, so the field to change in order to move
+   * the derived one can be read out of the contract instead of chosen here.
+   */
+  const derived = (() => {
+    for (const doc of live.docs.filter((d) => d.type === 'openapi')) {
+      for (const schema of Object.values(doc.content?.components?.schemas ?? {})) {
+        for (const part of [schema, ...(schema.allOf ?? [])]) {
+          for (const [name, property] of Object.entries(part?.properties ?? {})) {
+            const expression = property?.['x-derived'];
+            if (!expression) continue;
+            // `$this.programsAppliedFor.size()` → programsAppliedFor
+            const reads = expression.match(/\$this\.([A-Za-z0-9_]+)/);
+            if (reads) return { name, from: reads[1], expression };
+          }
+        }
+      }
+    }
+    return null;
+  })();
+
+  /** The values a field's schema permits, when it declares an enum. */
+  const enumFor = (field) => {
+    for (const doc of live.docs.filter((d) => d.type === 'openapi')) {
+      for (const schema of Object.values(doc.content?.components?.schemas ?? {})) {
+        for (const part of [schema, ...(schema.allOf ?? [])]) {
+          const property = part?.properties?.[field];
+          const values = property?.enum ?? property?.items?.enum;
+          if (Array.isArray(values)) return values;
+        }
+      }
+    }
+    return null;
+  };
+
   return {
     keys,
     eventTypes,
     subscriptions,
     timer,
+    derived,
+    enumFor,
+    // Every list endpoint, which is as close as the page gets to asking the
+    // server what it is holding. A stream is excluded: it never finishes.
+    collections: keys
+      .filter((key) => key.startsWith('GET '))
+      .map((key) => key.slice('GET '.length))
+      .filter((path) => !path.includes('{') && !path.startsWith('/mock/')
+        && path !== '/health' && !path.endsWith('/stream')),
     compositions,
     annotatedFields,
     collection: story?.collection ?? collection,
     story,
     machines: usable,
     events: path('GET', (p) => p.endsWith('/events') && !p.startsWith('/mock/')),
-    evaluate: path('POST', (p) => p.includes('/evaluate')),
+    // Two rulesets, two endpoints. The one the rules chapter decides with is
+    // the one whose ruleset declares policy inputs; the other is whatever is
+    // left, matched on its own declared path rather than on its name.
+    evaluate: evaluateEndpoint(),
+    prompts: path('POST', (p) => p.includes('/evaluate') && p !== evaluateEndpoint()),
     upload: path('POST', (p) => p.includes('document') && !p.includes('{')),
     adapter: path('POST', (p) => p.includes('adapter')),
     specFor,
+    operationFor,
+    itemPathFor,
+    filtersFor,
+    sortableFor,
+    queryContract,
+    ruleset,
+    policyDefaults,
     graphFor,
     rulesFor,
     asyncapiFor,
@@ -692,6 +1188,42 @@ const survey = () => {
 let offered;
 
 /**
+ * The chapters, and why each one exists.
+ *
+ * `because` is the thing the chapter before it cannot do. A page that just
+ * lists capabilities leaves a reader to work out why anyone would want the
+ * next one; naming the limitation first means "why state machines" is
+ * answered by the chapter's existence rather than by a paragraph inside it.
+ *
+ * The first chapter has no `because` — nothing precedes it.
+ */
+/**
+ * The parts, and what each one is called on the page.
+ *
+ * The key is the short name, which is what the contents has room for. The
+ * `heading` is the part's argument — the thing the part before it could not
+ * do — and it is the headline rather than a line above one, because a bridge
+ * printed above a title reads as throat-clearing before the real heading.
+ */
+const CHAPTERS = {
+  'What this is': {
+    blurb: 'A dynamic server, generated from a set of contracts. Not a prototype of one, not a picture of one — the API itself, running in this tab. Specs are usually written late, or never, because nothing depends on them. Here everything does: <b>this refuses what the real implementation will refuse</b>, because both are reading the same documents. Which means a client team can start building on day one, against something that will still be right when the real backend turns up — and find out today, not at integration, if they have read the contract differently.',
+  },
+  'One OpenAPI document': {
+    heading: 'But a mock server is not new',
+    blurb: '<b>Anyone can stand one up this afternoon.</b> So start there — the mock you would reach for on a Tuesday to unblock a frontend team — and keep going.',
+  },
+  'Nouns, then verbs': {
+    heading: 'Nobody applies for benefits so it can be stored',
+    blurb: 'They apply so that something will happen. <b>What happens next is not a field you set; it is a move</b>, and which moves are legal depends on where the record already is. An OpenAPI document cannot say that — it can only give you nouns.',
+  },
+  'Rules': {
+    heading: 'Eligibility is not simple logic',
+    blurb: 'A state machine\'s steps are simple logic: set a field, emit an event. <b>Eligibility is hundreds of conditions that change every legislative session</b>, and in most systems it lives buried in code — which is why a policy change takes nine months, and why nobody can tell a family exactly why they were denied.',
+  },
+};
+
+/**
  * The tour.
  *
  * Each step says what it does, runs it, reports the facts that make the point,
@@ -700,93 +1232,263 @@ let offered;
  */
 const STEPS = [
   {
-    title: 'What this deployment changed',
-    shows: 'Overlays',
-    runLabel: 'Inspect',
-    what: 'Before anything runs: these contracts are not the base set. A state customizes without forking, and resolve applied that at build time.',
-    contract: () => {
-      // One overlay action, not every one: the three boxes read as before,
-      // the change, after, and a second unrelated action in the middle is
-      // something this step never mentions. The count is in the facts.
-      const excerpts = [];
-      const responsible = overlays
-        .flatMap((overlay) => (overlay.content?.actions ?? [])
-          .map((action) => ({ overlay, action })))
-        .find(({ action }) => action.update && action.target?.startsWith('$.'));
+    chapter: 'What this is',
+    title: 'A dynamic server, generated from contracts',
+    what: 'On the left, every contract document this page read. On the right, the API it derived from them while it was loading.',
+    panels: () => {
+      // Both sides come off the running system rather than a list kept here,
+      // so neither can quietly stop being true.
+      const inputs = live.docs
+        .map((doc) => doc.relativePath)
+        .filter(Boolean)
+        .sort()
+        .join('\n');
 
-      if (responsible) {
-        excerpts.push({
-          label: `what ${responsible.overlay.name} changes`,
-          file: [responsible.overlay.dir, responsible.overlay.name].filter(Boolean).join('/'),
-          node: { target: responsible.action.target, update: responsible.action.update },
-        });
-      }
-      // Before and after, located by the overlay's own target rather than by
-      // guessing which schema it means. `$.components.schemas.X.properties`
-      // is a path, so the same node can be read out of the authored set and
-      // the resolved one and shown either side of the change.
-      const adding = responsible?.action;
-      if (!adding) return excerpts;
+      const routes = [...mock.routes.keys()]
+        .map((key) => {
+          const [method, ...rest] = String(key).split(' ');
+          return `${method.toUpperCase().padEnd(7)}${rest.join(' ')}`;
+        })
+        .sort((a, b) => a.slice(7).localeCompare(b.slice(7)) || a.localeCompare(b));
 
-      const walk = (doc) => adding.target.slice(2).split('.')
-        .reduce((node, segment) => (node ?? {})[segment], doc.content);
-
-      const at = (set) => {
-        for (const doc of set?.docs ?? []) {
-          const node = walk(doc);
-          if (node && typeof node === 'object') return { doc, node };
-        }
-        return null;
-      };
-
-      const before = at(authored);
-      const after = at(contracts);
-      const added = Object.keys(adding.update);
-
-      if (before && added.some((name) => !(name in before.node))) {
-        excerpts.unshift({
-          label: `as authored upstream — ${Object.keys(before.node).length} fields, none of them ${added.join(', ')}`,
-          file: before.doc.relativePath,
-          node: Object.keys(before.node),
-        });
-      }
-      if (after && added.every((name) => name in after.node)) {
-        excerpts.push({
-          label: `after resolve merged it in — ${Object.keys(after.node).length} fields`,
-          file: after.doc.relativePath,
-          node: Object.keys(after.node),
-        });
-      }
-      return excerpts;
+      return [
+        { side: 'left', label: `authored — ${live.docs.length} documents`, text: inputs },
+        {
+          side: 'right',
+          label: `derived — ${mock.routes.size} routes, in ${bootMs} ms`,
+          text: routes.join('\n'),
+        },
+      ];
     },
-    why: 'An overlay is how a state adds what its program needs without forking the contracts it shares with everyone else. The base set never mentions <code>countyCode</code>; this deployment does, and <b>resolve merged the two before any of this shipped</b>. That is why the artifact the page booted from has a field the published contracts do not — and why a state can take an upstream change without losing its own.',
-    needs: () => overlays.length > 0,
-    run: async () => {
-      const targets = overlays.flatMap((overlay) => (overlay.content?.actions ?? []).map((a) => a.target));
+  },
+
+  {
+    chapter: 'What this is',
+    title: 'It works',
+    what: 'Call one of the generated routes. This one lists a collection, and <b>nothing was written to make it do that</b>.',
+    source: () => [offered.specFor(offered.collection)],
+    requests: () => [
+      { method: 'GET', path: `${offered.collection}?limit=1`, template: offered.collection },
+    ],
+    notice: () => [
+      ['items, total, limit, offset', 'the page envelope, declared in the spec'],
+      ['limit, offset', 'paging, with the defaults the spec sets'],
+    ],
+  },
+
+  {
+    chapter: 'What this is',
+    title: 'It remembers',
+    what: 'Create something, then read the collection. Do it again. <b>A canned mock gives the same answer every time</b>; this one answers differently because something is keeping what you did.',
+    requests: () => {
+      const filter = offered.filtersFor(offered.collection).find((name) => name in newApplication());
+      const body = newApplication();
+      const query = [filter && `${filter}=${encodeURIComponent(body[filter])}`, 'limit=1']
+        .filter(Boolean).join('&');
+      return [
+        { method: 'POST', path: offered.collection, body },
+        { method: 'GET', path: `${offered.collection}?${query}`, template: offered.collection },
+      ];
+    },
+    notice: () => [
+      ['total', 'everything stored, not everything returned'],
+      ['id, createdAt, updatedAt, status', 'server-managed; the request set none of them'],
+    ],
+  },
+
+  {
+    chapter: 'What this is',
+    title: 'It forgets',
+    what: 'The mock declares its own control endpoints. This one empties the store and <b>leaves the contracts alone</b> — which is how every story here starts, and why each can be read on its own and in any order.',
+    setup: anApplication(),
+    requests: () => [
+      { method: 'POST', path: '/mock/reset' },
+      { method: 'GET', path: `${offered.collection}?limit=1`, template: offered.collection },
+    ],
+    notice: () => [
+      ['POST /mock/reset', 'a declared endpoint, not a page trick'],
+      ['total', 'back to zero'],
+      ['the route table', `still ${mock.routes.size} — records went, contracts did not`],
+    ],
+  },
+
+  {
+    chapter: 'What this is',
+    title: 'Make it your own',
+    needs: () => !!constrainedField(),
+    contract: () => {
+      const field = constrainedField();
+      return field && {
+        label: `the values ${field.name} will accept`,
+        file: field.file,
+        node: { [field.name]: { enum: field.values } },
+      };
+    },
+    source: () => [constrainedField()?.file],
+    what: 'Send a request the contract allows. Then take that value off the list the contract allows, derive the server again, and send the identical request.',
+    control: () => {
+      const field = constrainedField();
+      const select = el('select');
+      select.setAttribute('aria-label', `value to remove from ${field.name}`);
+      for (const value of field.values) select.append(el('option', value));
+      select.value = field.sending;
+      const wrap = el('span');
+      wrap.append(el('span', `remove from ${field.name}: `), select);
+      return { node: wrap, value: () => select.value };
+    },
+    run: async (story, { control }) => {
+      const field = constrainedField();
+      const dropping = control?.value?.() ?? field.sending;
+      const body = newApplication();
+
+      const before = await call('POST', offered.collection, body);
+
+      // Edit a copy. The documents the page booted from are never touched,
+      // so moving to another story needs nothing put back.
+      const edited = structuredClone(contracts);
+      const property = findField(edited.docs, field);
+      if (!property) return { facts: [['could not find the field in the artifact', field.name]] };
+      property.enum = field.values.filter((value) => value !== dropping);
+
+      const ms = await rederive(edited);
+      const after = await call('POST', offered.collection, body);
+      story.id = after.body?.id;
+
       return {
         facts: [
-          ['overlay documents applied', String(overlays.length)],
-          ['targets they rewrite', String(targets.length)],
-          ['when that happened', 'at resolve, before this page was built'],
-          ['documents the page booted from', String(contracts.docs.length)],
-          ['requests made to learn this', '0 — it is all in the artifact'],
+          [`${field.name} accepted`, field.values.join(' | ')],
+          [`POST with ${field.name}: ${body[field.name]}`, String(before.status)],
+          [`${field.name} now accepts`, property.enum.join(' | ') || '(nothing)'],
+          ['whole API derived again, in this tab, in', `${ms} ms — no build, no deploy`],
+          ['the identical request', `${after.status}${after.status >= 400 ? ` — ${after.body?.message ?? ''}` : ''}`],
+          ['lines of code changed to do this', '0'],
         ],
       };
     },
   },
 
   {
-    title: 'Start an application',
-    shows: 'REST',
+    chapter: 'One OpenAPI document',
+    title: 'The mock you expected',
+    what: 'Create one, then read the collection back. <b>Nothing was written for either</b> — nor for the filter and the paging on the second. Execute them in either order, as often as you like.',
+    // Three requests, each executable on its own and as often as you like.
+    // Create one, read the collection, read the record. Create another and
+    // the collection answers differently — which is the difference between a
+    // demonstration and a recording.
+    requests: (story) => {
+      const body = { programsAppliedFor: ['snap'], channel: 'online', countyCode: '001' };
+
+      // Filter by a parameter the spec declares, with a value this request
+      // actually sent, rather than a query string written here. Nothing
+      // implements the filter; it works because it is declared.
+      const filter = offered.filtersFor(offered.collection).find((name) => name in body);
+      const query = [filter && `${filter}=${encodeURIComponent(body[filter])}`, 'limit=1']
+        .filter(Boolean).join('&');
+      const item = offered.itemPathFor(offered.collection);
+
+      return [
+        {
+          method: 'POST',
+          path: offered.collection,
+          body,
+          after: (result) => {
+            if (result.status >= 400) return;
+            // The rest of the story follows this record.
+            story.id = result.body.id;
+            story.path = [result.body.status];
+          },
+        },
+        { method: 'GET', path: `${offered.collection}?${query}`, template: offered.collection },
+        {
+          method: 'GET',
+          path: () => (story.id ? `${offered.collection}/${story.id}` : null),
+          template: item,
+          waiting: item,
+          until: 'create an application first — this reads the one you made',
+        },
+      ];
+    },
+    notice: (story) => [
+      ['programCount', 'is in the response and not in the request — the schema computes it'],
+      ['countyCode', 'added by this deployment\'s overlay, not by the base contracts'],
+      ['id, createdAt, updatedAt, status', 'are server-managed; the request set none of them'],
+      ['total and hasNext', 'come back with the page — limit=1 returns one record and still counts the rest'],
+      ['execute the POST again', 'then the list again: total grows, because this is a real store'],
+    ],
+  },
+
+  {
+    chapter: 'One OpenAPI document',
+    title: 'But wait — there\'s more!',
+    what: 'Nobody implemented a search, a filter or a sort. Each one is <b>a parameter the operation declares</b>, and declaring it is all it took.',
+    source: () => [offered.specFor(offered.collection)],
     contract: () => {
-      // The field the response carries that the request never sent.
+      const declared = offered.queryContract(offered.collection);
+      return declared && { label: 'what the operation accepts', file: declared.file, node: declared.node };
+    },
+    setup: anApplication({ several: true }),
+    requests: () => {
+      const filter = offered.filtersFor(offered.collection).find((name) => name in newApplication());
+      const sortable = offered.sortableFor(offered.collection) ?? [];
+      const by = sortable.find((name) => name !== 'createdAt') ?? sortable[0];
+      const made = [
+        { method: 'GET', path: `${offered.collection}?q=${encodeURIComponent(newApplication().countyCode)}`, template: offered.collection },
+      ];
+      if (filter) {
+        made.push({ method: 'GET', path: `${offered.collection}?${filter}=phone`, template: offered.collection });
+      }
+      if (by) {
+        made.push({ method: 'GET', path: `${offered.collection}?sort=-${by}&limit=2`, template: offered.collection });
+        made.push({ method: 'GET', path: `${offered.collection}?sort=nothing-like-this`, template: offered.collection });
+      }
+      return made;
+    },
+    notice: () => [
+      ['q', 'full-text search across the schema\'s string fields'],
+      ['channel', 'a filter, because the operation declares the parameter'],
+      ['sort', 'ordered by the allowlist in x-sortable, ascending or descending'],
+      ['an undeclared sort field', 'refused, and named in the error'],
+    ],
+  },
+
+  {
+    chapter: 'One OpenAPI document',
+    title: '…and it enforces the contract',
+    what: 'Send a body the schema does not allow. A mock that accepts anything teaches a client team the wrong lesson and they find out at integration; <b>this refuses exactly what the real implementation will refuse</b>, because both read the same schema.',
+    source: () => [offered.specFor(offered.collection)],
+    contract: () => {
+      const field = constrainedField();
+      return field && {
+        label: `what ${field.name} will accept`,
+        file: field.file,
+        node: { [field.name]: { enum: field.values } },
+      };
+    },
+    requests: () => {
+      const body = newApplication();
+      const field = constrainedField();
+      return [
+        { method: 'POST', path: offered.collection, body: { ...body, [field?.name ?? 'channel']: 'carrier-pigeon' } },
+        { method: 'POST', path: offered.collection, body: { channel: body.channel } },
+      ];
+    },
+    notice: () => [
+      ['enum', 'a value outside the declared list is refused'],
+      ['required', 'a missing field is refused, and named'],
+    ],
+  },
+  {
+    chapter: 'One OpenAPI document',
+    title: '…and a field nothing ever stored',
+    what: 'Change the list the record was created with, and watch a second field follow it.',
+    contract: () => {
       for (const doc of contracts.docs.filter((d) => d.type === 'openapi')) {
         for (const schema of Object.values(doc.content?.components?.schemas ?? {})) {
           for (const part of [schema, ...(schema.allOf ?? [])]) {
             for (const [name, property] of Object.entries(part?.properties ?? {})) {
               if (property?.['x-derived']) {
                 return {
-                  label: 'computed on the way out, never stored',
+                  label: 'computed on the way out, by an expression on the schema',
                   file: doc.relativePath,
                   node: { [name]: property },
                 };
@@ -797,45 +1499,141 @@ const STEPS = [
       }
       return null;
     },
-    why: 'The response carries a field the request did not send. <b>programCount</b> is computed from <code>programsAppliedFor</code> by an expression on the schema, evaluated on the way out and stored nowhere — so it cannot drift from the list it summarizes. And <code>countyCode</code> is there because of the overlay in the step above.',
-    run: async () => {
-      // The create body comes from the contract's required fields, so this
-      // works for a collection with different requirements.
-      const created = await call('POST', offered.collection, {
-        programsAppliedFor: ['snap'],
-        channel: 'online',
-        countyCode: '001',
-      });
-      if (created.status >= 400) return { facts: [['refused', JSON.stringify(created.body)]] };
+    needs: () => !!offered.derived,
+    setup: anApplication(),
+    run: async (story) => {
+      const { name, from } = offered.derived;
+      const before = await call('GET', `${offered.collection}/${story.id}`);
+      const list = before.body?.[from] ?? [];
 
-      tour.id = created.body.id;
-      // The states this record actually passes through, appended as it moves.
-      tour.path = [created.body.status];
+      // Add to the list the expression counts, using a value the schema
+      // already permits rather than one invented here.
+      const allowed = offered.enumFor(from) ?? [];
+      const addition = allowed.find((value) => !list.includes(value));
+      const facts = [
+        [`${from}, as created`, JSON.stringify(list)],
+        [`${name}, read back`, String(before.body?.[name])],
+      ];
+
+      if (!addition) {
+        facts.push(['nothing left in the enum to add', 'so the list is unchanged']);
+        return { facts };
+      }
+
+      const patched = await call('PATCH', `${offered.collection}/${story.id}`, { [from]: [...list, addition] });
+      const after = await call('GET', `${offered.collection}/${story.id}`);
+
+      facts.push(
+        [`PATCH adding ${addition}`, String(patched.status)],
+        [`${from}, now`, JSON.stringify(after.body?.[from])],
+        [`${name}, now`, String(after.body?.[name])],
+        ['requests that wrote it', '0 — it is computed on every read'],
+      );
+      return { facts };
+    },
+  },
+
+  {
+    chapter: 'One OpenAPI document',
+    title: '…and file uploads',
+    contract: () => {
+      for (const doc of contracts.docs.filter((d) => d.type === 'openapi')) {
+        for (const operations of Object.values(doc.content?.paths ?? {})) {
+          const post = operations?.post;
+          const content = post?.requestBody?.content ?? {};
+          const multipart = Object.keys(content).find((type) => type.startsWith('multipart/'));
+          if (multipart) {
+            const schema = content[multipart].schema ?? {};
+            return {
+              label: `${post.operationId}, the one body that is not JSON`,
+              node: {
+                operationId: post.operationId,
+                requestBody: { content: { [multipart]: { schema: {
+                  type: schema.type,
+                  required: schema.required,
+                  // Names and types only. The descriptions belong in the API
+                  // reference; here they would bury the point.
+                  properties: Object.fromEntries(Object.entries(schema.properties ?? {})
+                    .map(([name, property]) => [name, [property.type, property.format].filter(Boolean).join(', ')])),
+                } } } },
+              },
+            };
+          }
+        }
+      }
+      return null;
+    },
+    source: () => [offered.specFor(offered.upload)],
+    what: 'Upload a file as real multipart/form-data.',
+    needs: () => offered.upload,
+    run: async (story) => {
+      const form = new FormData();
+      form.append('file', new File(['pay stub for the household on this application'], 'pay-stub.txt', { type: 'text/plain' }));
+      form.append('documentTypeId', 'proof-of-income');
+      form.append('title', 'Pay stub');
+
+      const uploaded = await call('POST', offered.upload, form);
+      const document = uploaded.body ?? {};
+
+      // The upload creates two records: the document, and a version holding
+      // what was measured about the bytes.
+      const facts = [
+        ['uploaded', String(uploaded.status)],
+        ['document', String(document.title ?? '—')],
+        ['version the upload created', String(document.latestVersionId ?? '—')],
+        ['lifecycle state', String(document.lifecycleState ?? '—')],
+        ['bytes written anywhere', 'none'],
+      ];
+      return { facts };
+    },
+  },
+
+  {
+    chapter: 'One OpenAPI document',
+    title: '…and shapes that aren\'t resources',
+    contract: () => {
+      const composition = offered.compositions[0];
+      const declared = docAt(composition?.source)?.content?.compositions?.[composition?.id];
+      if (!declared) return null;
+      const { parentLink, ...endpoint } = declared.endpoint ?? {};
+      return { label: 'the whole endpoint, declared', node: { ...declared, endpoint } };
+    },
+    what: 'One GET returning the application and its household together, assembled per a contract.',
+    source: () => [offered.compositions[0]?.source],
+    needs: () => offered.compositions.length > 0,
+    setup: anApplication(),
+    run: async (story) => {
+      const composition = offered.compositions[0];
+      const view = await call('GET', composition.path.replace(/:[A-Za-z0-9_]+/, story.id));
+      const body = view.body ?? {};
+
+      const inlined = composition.include
+        .map((name) => `${name}: ${Array.isArray(body[name]) ? body[name].length : (body[name] ? 1 : 0)}`)
+        .join(', ');
 
       return {
         facts: [
-          ['created', `${created.status} — nothing existed before this`],
-          ['id the server assigned', String(created.body.id)],
-          [`the state ${(offered.story?.object ?? 'record').toLowerCase()}s start in`, String(created.body.status)],
-          ['programsAppliedFor, as sent', JSON.stringify(created.body.programsAppliedFor)],
-          ['programCount, derived from it by the contract', String(created.body.programCount)],
-          ['countyCode, from the overlay in step one', String(created.body.countyCode)],
+          ['composition', composition.id],
+          [`GET …${composition.path.slice(composition.path.lastIndexOf('/'))}`, String(view.status)],
+          ['fields the contract projects', composition.fields.join(', ')],
+          ['related resources inlined', inlined || '—'],
+          ['handlers written for this endpoint', '0'],
         ],
       };
     },
   },
 
   {
-    title: 'An event came out of it',
-    shows: 'Events',
+    chapter: 'One OpenAPI document',
+    title: '…and events nobody asked for',
     what: 'Read the event log. Nothing posted to it, and no broker is running.',
     source: () => [offered.specFor(offered.collection)],
-    why: 'That write already emitted, and the event carries the record. The bus runs in this page, so the <b>asynchronous half of the system is observable before anything is deployed</b> — and a subscriber reads the same CloudEvents envelope it would read from a real broker. The types a domain may publish are a declared set: an AsyncAPI channel address <i>is</i> an event type, which is why the stub step further down offers a list rather than a text box.',
-    needs: () => offered.events && tour.id,
-    run: async () => {
+    needs: () => offered.events,
+    setup: anApplication(),
+    run: async (story) => {
       const log = await call('GET', offered.events);
       const items = log.body.items ?? [];
-      const mine = items.filter((event) => JSON.stringify(event.data ?? {}).includes(tour.id));
+      const mine = items.filter((event) => JSON.stringify(event.data ?? {}).includes(story.id));
       const [first] = mine;
 
       // The log is the record of what happened, so the step reports what is
@@ -848,7 +1646,7 @@ const STEPS = [
         facts.push(
           ['type', String(first.type)],
           ['envelope', `CloudEvents ${first.specversion ?? '?'}`],
-          ['it carries the record', first.data?.id === tour.id ? 'yes' : 'no'],
+          ['it carries the record', first.data?.id === story.id ? 'yes' : 'no'],
           ['event types the contract declares', String(offered.eventTypes.length)],
         );
       }
@@ -857,8 +1655,121 @@ const STEPS = [
   },
 
   {
+    chapter: 'Nouns, then verbs',
+    title: 'Something was listening',
+    contract: () => {
+      const machine = (docAt(offered.subscriptions[0]?.source)?.content?.machines ?? [])
+        .find((m) => (m.events ?? []).length > 0);
+      const entry = (machine?.events ?? [])[0];
+      return entry && { label: 'the subscription, in the other domain', node: entry };
+    },
+    what: 'Nothing was called. Read the other domain\'s collection and see what appeared there.',
+    // Both halves of the wiring: the machine that emits and the machine that
+    // subscribes, which are different documents in different domains.
+    source: () => [offered.story?.source, ...new Set(offered.subscriptions.map((s) => s.source))],
+    needs: () => offered.subscriptions.length > 0,
+    setup: anApplication({ advance: 1 }),
+    run: async (story) => {
+      // The subscriber the contract names for the event the transition
+      // emitted. Matched on a suffix because a deployment prefixes event
+      // types with its jurisdiction and a subscription is declared without it.
+      const subscriber = offered.subscriptions.find((s) => story.emitted?.endsWith(s.type))
+        ?? offered.subscriptions[0];
+
+      // Its collection, found in the route table rather than named here.
+      const collectionOf = (sub) => {
+        const plural = sub.object.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's';
+        return offered.keys
+          .filter((k) => k.startsWith('GET '))
+          .map((k) => k.slice(4))
+          .find((p) => !p.includes('{') && p.endsWith('/' + plural)) ?? null;
+      };
+
+      const path = collectionOf(subscriber);
+      if (!path) return { facts: [['no collection in the route table for', subscriber.object]] };
+
+      const listed = await call('GET', path);
+      const mine = (listed.body.items ?? []).filter((item) =>
+        Object.values(item).includes(story.id));
+
+      const facts = [
+        ['the contract declares', `${subscriber.domain}/${subscriber.object} reacts to ${subscriber.type}`],
+        ['it was triggered by', String(story.emitted ?? '—')],
+        [`records in ${path} for this application`, String(mine.length)],
+      ];
+      for (const record of mine) {
+        facts.push([`${subscriber.object.toLowerCase()} created by the subscription`, `${record.id} — ${record.status ?? ''}`]);
+        story.reaction = record;
+      }
+
+      if (offered.events) {
+        const log = await call('GET', offered.events);
+        const chain = (log.body.items ?? [])
+          .filter((event) => event.subject === story.id || event.subject === story.reaction?.id)
+          // By `time`, not by log order: a subscription's event is written
+          // while the transition that triggered it is still running, so the
+          // list comes back with the effect ahead of its cause.
+          .sort((a, b) => String(a.time).localeCompare(String(b.time)))
+          .map((event) => event.type);
+        facts.push(['the chain, across both domains', [...new Set(chain)].join(' → ') || '—']);
+      }
+      return { facts };
+    },
+  },
+
+  {
+    chapter: 'Nouns, then verbs',
+    title: 'Verbs, generated',
+    what: 'Alongside the REST routes, there is a second kind: one endpoint per action the lifecycle declares.',
+    source: () => [offered.story?.source],
+    needs: () => (offered.story?.actions ?? []).length > 0,
+    panels: () => {
+      const actions = offered.story?.actions ?? [];
+      return [{
+        side: 'right',
+        label: `${actions.length} actions, ${actions.length} endpoints`,
+        text: actions
+          .map((a) => `POST   ${a.path}\n       ${a.from.join(', ')} → ${a.transition.to}`)
+          .join('\n\n'),
+      }];
+    },
+  },
+
+  {
+    chapter: 'Nouns, then verbs',
+    title: 'What a state machine declares',
+    what: 'One document. <b>Every story in this part is one line of it.</b>',
+    source: () => [offered.story?.source],
+    needs: () => !!offered.story,
+    contract: () => {
+      const doc = docAt(offered.story.source);
+      const machine = (doc?.content?.machines ?? []).find((m) => m.object === offered.story.object);
+      if (!machine) return null;
+      const action = (machine.actions ?? [])[0];
+      return [
+        {
+          label: 'the shape of it',
+          file: offered.story.source,
+          node: {
+            object: machine.object,
+            initialState: machine.initialState,
+            states: (machine.states ?? []).map((state) => state.id ?? state),
+            actions: (machine.actions ?? []).map((a) => a.id),
+            events: (machine.events ?? []).map((e) => e.on ?? e),
+            timers: Object.keys(machine.timers ?? {}),
+          },
+        },
+        action && {
+          label: 'one action, in full',
+          file: offered.story.source,
+          node: { id: action.id, transition: action.transition, steps: action.steps },
+        },
+      ].filter(Boolean);
+    },
+  },
+  {
+    chapter: 'Nouns, then verbs',
     title: 'Try to close it',
-    shows: 'State machines',
     contract: () => {
       const action = actionNamed('close');
       return action && {
@@ -868,10 +1779,10 @@ const STEPS = [
     },
     what: 'Skip to the end and close the application that was just created.',
     source: () => [offered.story?.source],
-    why: 'This is the part a REST mock cannot do. A mock returns the response you configured; it has no idea what state the record is in. <b>This one refuses</b>, because the contract says <code>close</code> runs from <code>under_review</code> and the record is in <code>draft</code>. So the mock is a conformance check on your client, not a stand-in for a server.',
-    needs: () => tour.id && offered.story,
-    run: async () => {
-      const record = await call('GET', `${offered.collection}/${tour.id}`);
+    needs: () => offered.story,
+    setup: anApplication(),
+    run: async (story) => {
+      const record = await call('GET', `${offered.collection}/${story.id}`);
       const status = record.body.status;
 
       // One attempt, and the action that ends the story rather than whichever
@@ -884,8 +1795,8 @@ const STEPS = [
       const action = blocked.find(endsTheStory) ?? blocked[0];
       if (!action) return { facts: [['every action is allowed from', String(status)]] };
 
-      const attempt = await call('POST', action.path.replace(/\{[^}]+\}/, tour.id), {});
-      const after = await call('GET', `${offered.collection}/${tour.id}`);
+      const attempt = await call('POST', action.path.replace(/\{[^}]+\}/, story.id), {});
+      const after = await call('GET', `${offered.collection}/${story.id}`);
 
       return {
         facts: [
@@ -900,41 +1811,8 @@ const STEPS = [
   },
 
   {
-    title: 'Nobody waits 72 hours',
-    shows: 'Timers, stubbed',
-    contract: () => {
-      const action = actionNamed(offered.timer?.action);
-      const step = (action?.steps ?? []).find((candidate) => candidate.call && candidate.with?.callback);
-      return step && { label: 'the step that asks for the deadline', node: { call: step.call, with: step.with } };
-    },
-    what: 'The submit action asks a scheduler for an escalation deadline. Nothing here implements one, so stand in for it first.',
-    source: () => [offered.story?.source, offered.asyncapiFor(offered.timer?.requested)],
-    why: 'A deadline is the hardest thing to test in a benefits system: the behaviour is correct only after days of nothing happening. Here the contract asks for the timer as an <b>event</b> — so whatever provides scheduling answers it, and in a test that is a stub. <b>Seventy-two hours collapses to zero</b>, and what follows is not scripted: the callback lands, a subscription guarded on <code>submitted</code> picks it up, and the escalation it emits is a second declared reaction firing off the first one\'s answer.',
-    needs: () => !!offered.timer,
-    run: async () => {
-      const { requested, callback, deadline } = offered.timer;
-
-      // No `respond` block: for a timer request the stub fires the callback
-      // envelope carried inside the request, which is the scheduler's whole
-      // job. Registered before the submit, because the request is broadcast
-      // for interception and never stored — there is nothing to replay after.
-      const registered = await call('POST', '/mock/stubs/events', { on: requested });
-
-      return {
-        facts: [
-          ['the action requests', requested],
-          ['deadline the contract asks for', deadline ?? '—'],
-          ['what the scheduler would call back with', callback ?? '—'],
-          ['stub registered', `${registered.status} — fires the moment the request is made`],
-          ['so the wait becomes', 'nothing at all'],
-        ],
-      };
-    },
-  },
-
-  {
+    chapter: 'Nouns, then verbs',
     title: 'Submit it',
-    shows: 'State machines',
     contract: () => {
       const action = actionNamed('submit');
       return action && {
@@ -944,10 +1822,10 @@ const STEPS = [
     },
     what: 'The one transition the contract allows from here.',
     source: () => [offered.story?.source],
-    why: 'The action declares <code>draft → submitted</code>, and the steps inside it write <b>submittedAt</b>. The timestamp is the evidence that an action ran rather than a field being set — it came from a step in the state machine, not from the request.',
-    needs: () => tour.id && offered.story,
-    run: async () => {
-      const before = await call('GET', `${offered.collection}/${tour.id}`);
+    needs: () => offered.story,
+    setup: anApplication(),
+    run: async (story) => {
+      const before = await call('GET', `${offered.collection}/${story.id}`);
       const action = offered.story.actions.find((a) => a.from.includes(before.body.status));
       if (!action) return { facts: [['no action allowed from', String(before.body.status)]] };
 
@@ -957,10 +1835,10 @@ const STEPS = [
         ? ((await call('GET', offered.events)).body.items ?? []).map((event) => event.type)
         : [];
 
-      const acted = await call('POST', action.path.replace(/\{[^}]+\}/, tour.id), {});
-      const after = await call('GET', `${offered.collection}/${tour.id}`);
+      const acted = await call('POST', action.path.replace(/\{[^}]+\}/, story.id), {});
+      const after = await call('GET', `${offered.collection}/${story.id}`);
 
-      if (after.body.status !== before.body.status) tour.path?.push(after.body.status);
+      if (after.body.status !== before.body.status) story.path?.push(after.body.status);
 
       const facts = [
         ['the contract allows', `${action.id}: ${action.from.join('|')} → ${action.transition.to}`],
@@ -991,78 +1869,80 @@ const STEPS = [
         }
         // What the transition emitted, so later steps can act on that exact
         // event rather than offering a choice the story has already made.
-        tour.emitted = emitted.find((type) => offered.eventTypes.includes(type)) ?? emitted[0] ?? null;
+        story.emitted = emitted.find((type) => offered.eventTypes.includes(type)) ?? emitted[0] ?? null;
       }
       return { facts };
     },
   },
 
   {
-    title: 'Eligibility reacted, in its own domain',
-    shows: 'Cross-domain subscriptions',
+    chapter: 'Nouns, then verbs',
+    title: 'Open it for review',
     contract: () => {
-      const machine = (docAt(offered.subscriptions[0]?.source)?.content?.machines ?? [])
-        .find((m) => (m.events ?? []).length > 0);
-      const entry = (machine?.events ?? [])[0];
-      return entry && { label: 'the subscription, in the other domain', node: entry };
-    },
-    what: 'Nothing was called. Read the other domain\'s collection and see what appeared there.',
-    // Both halves of the wiring: the machine that emits and the machine that
-    // subscribes, which are different documents in different domains.
-    source: () => [offered.story?.source, ...new Set(offered.subscriptions.map((s) => s.source))],
-    why: 'This is the part that is hard to fake. The eligibility machine declares a subscription to <code>intake.application.submitted</code> and a step that creates a determination, so submitting an application <b>produced a record in a different domain</b> — and that create emitted its own event in turn. Two domains, one chain, and the only thing connecting them is a contract: no handler here knows that eligibility exists.',
-    needs: () => tour.id && offered.subscriptions.length > 0,
-    run: async () => {
-      // The subscriber the contract names for the event the transition
-      // emitted. Matched on a suffix because a deployment prefixes event
-      // types with its jurisdiction and a subscription is declared without it.
-      const subscriber = offered.subscriptions.find((s) => tour.emitted?.endsWith(s.type))
-        ?? offered.subscriptions[0];
-
-      // Its collection, found in the route table rather than named here.
-      const collectionOf = (sub) => {
-        const plural = sub.object.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase() + 's';
-        return offered.keys
-          .filter((k) => k.startsWith('GET '))
-          .map((k) => k.slice(4))
-          .find((p) => !p.includes('{') && p.endsWith('/' + plural)) ?? null;
+      const action = actionNamed('open');
+      return action && {
+        label: 'why this one is allowed now and close still is not',
+        node: { id: action.id, transition: action.transition },
       };
+    },
+    what: 'The next transition the contract allows, and the one that makes closing reachable.',
+    source: () => [offered.story?.source],
+    needs: () => offered.story,
+    setup: anApplication({ advance: 1 }),
+    run: async (story) => {
+      const current = await call('GET', `${offered.collection}/${story.id}`);
+      const action = offered.story.actions.find((a) => a.from.includes(current.body.status));
+      if (!action) return { facts: [['nothing allowed from', String(current.body.status)]] };
 
-      const path = collectionOf(subscriber);
-      if (!path) return { facts: [['no collection in the route table for', subscriber.object]] };
+      const acted = await call('POST', action.path.replace(/\{[^}]+\}/, story.id), {});
+      const after = await call('GET', `${offered.collection}/${story.id}`);
+      if (after.body.status !== current.body.status) story.path?.push(after.body.status);
 
-      const listed = await call('GET', path);
-      const mine = (listed.body.items ?? []).filter((item) =>
-        Object.values(item).includes(tour.id));
-
-      const facts = [
-        ['the contract declares', `${subscriber.domain}/${subscriber.object} reacts to ${subscriber.type}`],
-        ['it was triggered by', String(tour.emitted ?? '—')],
-        [`records in ${path} for this application`, String(mine.length)],
-      ];
-      for (const record of mine) {
-        facts.push([`${subscriber.object.toLowerCase()} created by the subscription`, `${record.id} — ${record.status ?? ''}`]);
-        tour.reaction = record;
-      }
-
-      if (offered.events) {
-        const log = await call('GET', offered.events);
-        const chain = (log.body.items ?? [])
-          .filter((event) => event.subject === tour.id || event.subject === tour.reaction?.id)
-          // By `time`, not by log order: a subscription's event is written
-          // while the transition that triggered it is still running, so the
-          // list comes back with the effect ahead of its cause.
-          .sort((a, b) => String(a.time).localeCompare(String(b.time)))
-          .map((event) => event.type);
-        facts.push(['the chain, across both domains', [...new Set(chain)].join(' → ') || '—']);
-      }
-      return { facts };
+      return {
+        facts: [
+          [`POST …/${action.id}`, String(acted.status)],
+          ['the action was chosen by', `its declared from: ${action.from.join('|')}`],
+          ['status', String(after.body.status)],
+        ],
+      };
     },
   },
 
   {
-    title: 'Stand in for a service nobody has built',
-    shows: 'Stubs',
+    chapter: 'Nouns, then verbs',
+    title: 'Nobody waits 72 hours',
+    contract: () => {
+      const action = actionNamed(offered.timer?.action);
+      const step = (action?.steps ?? []).find((candidate) => candidate.call && candidate.with?.callback);
+      return step && { label: 'the step that asks for the deadline', node: { call: step.call, with: step.with } };
+    },
+    what: 'The submit action asks a scheduler for an escalation deadline. Nothing here implements one, so stand in for it first.',
+    source: () => [offered.story?.source, offered.asyncapiFor(offered.timer?.requested)],
+    needs: () => !!offered.timer,
+    run: async (story) => {
+      const { requested, callback, deadline } = offered.timer;
+
+      // No `respond` block: for a timer request the stub fires the callback
+      // envelope carried inside the request, which is the scheduler's whole
+      // job. Registered before the submit, because the request is broadcast
+      // for interception and never stored — there is nothing to replay after.
+      const registered = await call('POST', '/mock/stubs/events', { on: requested });
+
+      return {
+        facts: [
+          ['the action requests', requested],
+          ['deadline the contract asks for', deadline ?? '—'],
+          ['what the scheduler would call back with', callback ?? '—'],
+          ['stub registered', `${registered.status} — fires the moment the request is made`],
+          ['so the wait becomes', 'nothing at all'],
+        ],
+      };
+    },
+  },
+
+  {
+    chapter: 'Nouns, then verbs',
+    title: 'Stand in for a service nobody built',
     contract: () => {
       const chosen = unsubscribedEvent();
       const action = actionNamed(chosen?.action);
@@ -1071,9 +1951,8 @@ const STEPS = [
     },
     what: 'One stub, on the one event this contract set declares and nothing subscribes to.',
     source: () => [offered.story?.source, offered.asyncapiFor(unsubscribedEvent()?.type)],
-    why: 'Eligibility answered on its own because a contract declares that it should. <b>Nothing declares a subscriber for the closing notice</b> — in a deployment that is a service someone else is still building, and a scenario that needs it cannot run. A stub takes its place, and this one is <b>registered now and fires in the last step</b>, when the application actually closes. It is consumed on match, one registration for one occurrence, so a test cannot pass twice by accident.',
     needs: () => offered.events && !!unsubscribedEvent(),
-    run: async () => {
+    run: async (story) => {
       const { type: trigger, action } = unsubscribedEvent();
       const reply = `${trigger.replace(/\.[^.]+$/, '')}.notice-sent`;
 
@@ -1083,7 +1962,7 @@ const STEPS = [
       });
       // The last step looks for this, which is what makes the two steps one
       // story rather than two demonstrations.
-      tour.stub = { on: trigger, reply };
+      story.stub = { on: trigger, reply };
 
       const pending = await call('GET', '/mock/stubs/events');
 
@@ -1101,76 +1980,92 @@ const STEPS = [
   },
 
   {
-    title: 'A shape nothing stores',
-    shows: 'Compositions',
+    chapter: 'Nouns, then verbs',
+    title: 'Close it, and look at the trail',
     contract: () => {
-      const composition = offered.compositions[0];
-      const declared = docAt(composition?.source)?.content?.compositions?.[composition?.id];
-      if (!declared) return null;
-      const { parentLink, ...endpoint } = declared.endpoint ?? {};
-      return { label: 'the whole endpoint, declared', node: { ...declared, endpoint } };
-    },
-    what: 'One GET returning the application and its household together, assembled per a contract.',
-    source: () => [offered.compositions[0]?.source],
-    why: 'No table holds this shape and no handler was written for it. A composition declares which fields to project and which related resources to inline, and the endpoint is generated from that — so the view a consumer needs is a contract change, not a ticket. <b>This is the part teams usually solve with a bespoke backend-for-frontend</b>, and it is three lines of YAML.',
-    needs: () => tour.id && offered.compositions.length > 0,
-    run: async () => {
-      const composition = offered.compositions[0];
-      const view = await call('GET', composition.path.replace(/:[A-Za-z0-9_]+/, tour.id));
-      const body = view.body ?? {};
+      const action = actionNamed('close');
+      const ref = action?.schema?.request?.$ref;
+      if (!ref) return action?.schema && { label: 'why an empty body is refused', node: action.schema };
 
-      const inlined = composition.include
-        .map((name) => `${name}: ${Array.isArray(body[name]) ? body[name].length : (body[name] ? 1 : 0)}`)
-        .join(', ');
-
-      return {
-        facts: [
-          ['composition', composition.id],
-          [`GET …${composition.path.slice(composition.path.lastIndexOf('/'))}`, String(view.status)],
-          ['fields the contract projects', composition.fields.join(', ')],
-          ['related resources inlined', inlined || '—'],
-          ['handlers written for this endpoint', '0'],
-        ],
-      };
+      // A `#/$defs/...` pointer is not the answer to "why was that refused" —
+      // the required list is. Follow it within the document that declared it.
+      const doc = docAt(offered.story.source);
+      const target = ref.replace(/^#\//, '').split('/')
+        .reduce((node, segment) => (node ?? {})[segment], doc?.content);
+      return target && { label: 'why an empty body is refused', node: target };
     },
-  },
-
-  {
-    title: 'Open it for review',
-    shows: 'State machines',
-    contract: () => {
-      const action = actionNamed('open');
-      return action && {
-        label: 'why this one is allowed now and close still is not',
-        node: { id: action.id, transition: action.transition },
-      };
-    },
-    what: 'The next transition the contract allows, and the one that makes closing reachable.',
+    what: 'The last transition. It needs an outcome, because the action says so.',
     source: () => [offered.story?.source],
-    why: 'Nothing here chose the order. Each step asks which action declares a <code>from</code> that includes the state the record is actually in, and there is one — so the <b>lifecycle walks itself</b>. This is the state that <code>close</code> needed, which is why the refusal in step three becomes a success in the last step.',
-    needs: () => tour.id && offered.story,
-    run: async () => {
-      const current = await call('GET', `${offered.collection}/${tour.id}`);
+    needs: () => offered.story,
+    setup: anApplication({ advance: 2 }),
+    run: async (story) => {
+      // Without a body first, to show the action's request schema being applied.
+      const current = await call('GET', `${offered.collection}/${story.id}`);
       const action = offered.story.actions.find((a) => a.from.includes(current.body.status));
-      if (!action) return { facts: [['nothing allowed from', String(current.body.status)]] };
+      if (!action) return { facts: [['nothing left to run from', String(current.body.status)]] };
 
-      const acted = await call('POST', action.path.replace(/\{[^}]+\}/, tour.id), {});
-      const after = await call('GET', `${offered.collection}/${tour.id}`);
-      if (after.body.status !== current.body.status) tour.path?.push(after.body.status);
+      // Without a body first, to show the action's own request schema applied.
+      const refused = await call('POST', action.path.replace(/\{[^}]+\}/, story.id), {});
+      const closed = await call('POST', action.path.replace(/\{[^}]+\}/, story.id), { outcome: 'approved' });
+      const final = await call('GET', `${offered.collection}/${story.id}`);
+      if (final.body.status !== current.body.status) story.path?.push(final.body.status);
+      const log = offered.events ? await call('GET', offered.events) : null;
+      const stubFired = story.stub
+        && (log?.body.items ?? []).some((event) => event.type === story.stub.reply);
+
+      const transitions = offered.machines
+        .flatMap((m) => m.actions.length)
+        .reduce((a, b) => a + b, 0);
 
       return {
         facts: [
-          [`POST …/${action.id}`, String(acted.status)],
-          ['the action was chosen by', `its declared from: ${action.from.join('|')}`],
-          ['status', String(after.body.status)],
+          [`POST …/${action.id} with no body`, `${refused.status} — ${refused.body?.message ?? ''}`],
+          [`POST …/${action.id} with outcome approved`, String(closed.status)],
+          ['final status', String(final.body.status)],
+          ...(story.stub ? [[
+            `the stub registered earlier, on ${story.stub.on}`,
+            stubFired ? `fired — ${story.stub.reply}` : 'did not fire',
+          ]] : []),
+          ['the path it took', (story.path ?? []).join(' → ')],
+          ['events emitted along the way', String(log?.body?.total ?? '—')],
+          ['routes, all generated from contracts', String(mock.routes.size)],
+          ['transitions the contracts declare', String(transitions)],
+          ['code written for any of this', 'none'],
         ],
       };
     },
   },
 
   {
+    chapter: 'Rules',
+    title: 'What a ruleset declares',
+    what: 'Inputs, facts, outputs. The facts are the interesting part: named intermediate conclusions, each one an expression, each one a reason you can quote.',
+    needs: () => !!offered.ruleset(),
+    source: () => [offered.ruleset()?.file],
+    contract: () => {
+      const found = offered.ruleset();
+      if (!found) return null;
+      const { ruleset, file, name } = found;
+      return [
+        {
+          label: `${name} — the policy knobs, and what they cite`,
+          file,
+          node: Object.fromEntries(
+            Object.entries(ruleset.inputs?.policy?.properties ?? {})
+              .map(([key, spec]) => [key, { default: spec.default, authority: spec.description }])
+          ),
+        },
+        {
+          label: 'the reasoning, in order',
+          file,
+          node: (ruleset.facts ?? []).map((fact) => `${fact.path} = ${fact.expression}`),
+        },
+      ];
+    },
+  },
+  {
+    chapter: 'Rules',
     title: 'Decide whether the household qualifies',
-    shows: 'Rules',
     contract: () => {
       const doc = contracts.docs.find((d) => d.type === 'rules' && d.content?.rulesets);
       const ruleset = Object.values(doc?.content?.rulesets ?? {})[0];
@@ -1182,7 +2077,6 @@ const STEPS = [
     },
     what: 'Run the expedited SNAP ruleset. Move the income and watch the answer change.',
     source: () => [offered.graphFor(offered.evaluate), offered.rulesFor(offered.evaluate)],
-    why: 'A mock would return a fixed <code>{ eligible: true }</code>. This <b>evaluates the compiled ruleset</b>, so the answer is computed — and it is not where the headline number suggests. The income threshold is 150, but a household at 724 still qualifies, because a second condition carries: income plus resources below the shelter cost. At 725 it stops. <b>That is the policy, and reading it off the contract is the point</b> — a state can check its own interpretation here before writing any code.',
     needs: () => offered.evaluate,
     control: () => {
       const wrap = el('span');
@@ -1194,7 +2088,7 @@ const STEPS = [
       wrap.append(el('span', 'monthly income '), income);
       return { node: wrap, value: () => Number(income.value) };
     },
-    run: async (control) => {
+    run: async (story, { control }) => {
       const income = control?.value?.() ?? 720;
       const household = (monthlyGrossIncome) => ({
         monthlyGrossIncome,
@@ -1222,77 +2116,48 @@ const STEPS = [
   },
 
   {
-    title: 'Attach proof of income',
-    shows: 'REST, multipart',
-    contract: () => {
-      for (const doc of contracts.docs.filter((d) => d.type === 'openapi')) {
-        for (const operations of Object.values(doc.content?.paths ?? {})) {
-          const post = operations?.post;
-          const content = post?.requestBody?.content ?? {};
-          const multipart = Object.keys(content).find((type) => type.startsWith('multipart/'));
-          if (multipart) {
-            const schema = content[multipart].schema ?? {};
-            return {
-              label: `${post.operationId}, the one body that is not JSON`,
-              node: {
-                operationId: post.operationId,
-                requestBody: { content: { [multipart]: { schema: {
-                  type: schema.type,
-                  required: schema.required,
-                  // Names and types only. The descriptions belong in the API
-                  // reference; here they would bury the point.
-                  properties: Object.fromEntries(Object.entries(schema.properties ?? {})
-                    .map(([name, property]) => [name, [property.type, property.format].filter(Boolean).join(', ')])),
-                } } } },
-              },
-            };
-          }
-        }
-      }
-      return null;
-    },
-    source: () => [offered.specFor(offered.upload)],
-    what: 'Upload a file as real multipart/form-data.',
-    why: 'The bytes are hashed while being read and then <b>discarded</b>. What is kept is a description — name, type, size, hash. Deliberate: a bundled artifact is a public artefact, so it must not be able to carry a real document.',
-    needs: () => offered.upload,
+    chapter: 'Rules',
+    title: 'It knows what it does not know',
+    what: 'The same household, asked twice. Once without supplying the thresholds, once with them.',
+    needs: () => offered.evaluate && !!offered.ruleset(),
+    source: () => [offered.ruleset()?.file],
     run: async () => {
-      const form = new FormData();
-      form.append('file', new File(['pay stub for the household on this application'], 'pay-stub.txt', { type: 'text/plain' }));
-      form.append('documentTypeId', 'proof-of-income');
-      form.append('title', 'Pay stub');
+      const household = { monthlyGrossIncome: 140, liquidResources: 90, monthlyShelterCost: 100, isMigrantFarmworker: false };
+      const policy = offered.policyDefaults();
 
-      const uploaded = await call('POST', offered.upload, form);
-      const document = uploaded.body ?? {};
+      const assumed = await call('POST', offered.evaluate, { household });
+      const supplied = await call('POST', offered.evaluate, { household, policy });
+      const read = (body) => {
+        const node = Object.values(body ?? {})[0] ?? {};
+        return `${node.value} — ${node.state}`;
+      };
 
-      // The upload creates two records: the document, and a version holding
-      // what was measured about the bytes.
-      const facts = [
-        ['uploaded', String(uploaded.status)],
-        ['document', String(document.title ?? '—')],
-        ['version the upload created', String(document.latestVersionId ?? '—')],
-        ['lifecycle state', String(document.lifecycleState ?? '—')],
-        ['bytes written anywhere', 'none'],
-      ];
-      return { facts };
+      return {
+        facts: [
+          ['thresholds not supplied', read(assumed.body)],
+          ['thresholds supplied', read(supplied.body)],
+          ['same answer', 'different confidence'],
+          ['what placeholder means', 'resolved, but something it read fell back to a declared default'],
+        ],
+      };
     },
   },
 
   {
-    title: 'Why that timestamp matters',
-    shows: 'Annotations',
+    chapter: 'Rules',
+    title: 'Why that deadline is 72 hours',
     contract: () => {
       const annotated = offered.annotatedFields[0];
       const declared = docAt(annotated?.source)?.content?.schema?.[annotated?.field];
       return declared && { label: `the annotation on ${annotated.field}`, node: declared };
     },
-    what: 'The field a state machine wrote back in step five, and the law attached to it.',
+    what: 'A field a transition wrote, and <b>the law attached to the field itself</b>.',
     source: () => [offered.annotatedFields[0]?.source],
-    why: 'A field name tells you what a value is; it does not tell you why it is collected or what rule governs it. An annotation attaches that to the field itself, and the citation resolves out of a shared policy registry rather than being retyped per domain. <b>This is what makes a determination defensible</b> — and it is also why the deadline in step four is 72 hours rather than a number someone chose.',
     needs: () => offered.annotatedFields.length > 0,
-    run: async () => {
+    run: async (story) => {
       // Prefer a field this story actually produced, so the annotation is
       // attached to something on screen rather than an arbitrary example.
-      const current = tour.id ? (await call('GET', `${offered.collection}/${tour.id}`)).body : {};
+      const current = story.id ? (await call('GET', `${offered.collection}/${story.id}`)).body : {};
       const annotated = offered.annotatedFields.find((field) => current[field.name] != null)
         ?? offered.annotatedFields[0];
 
@@ -1310,126 +2175,68 @@ const STEPS = [
   },
 
   {
-    title: 'Change the contract. Watch the system change.',
-    shows: 'The whole point',
-    what: 'Edit the transition below and reboot. Nothing is rebuilt, redeployed, or restarted — the server is re-derived from the edited contract, here, now.',
-    source: () => [offered.story?.source],
-    contract: () => {
-      const action = actionNamed('close');
-      return action && { label: 'the line you are about to change', node: { id: action.id, transition: action.transition } };
-    },
-    why: 'Every step above claimed its behaviour came from a contract. This is where that claim is checkable: move <code>close</code> to run from <code>draft</code>, reboot, and the refusal in step three becomes a success — because the refusal was never written anywhere, it was <b>derived from the line you just edited</b>. A mock you configure cannot do this: there is no contract to change, the behaviour <i>is</i> the configuration. <b>This is also what a state gets when it adopts the contracts</b> — the system follows the policy, rather than the policy being re-implemented inside the system.',
-    needs: () => !!actionNamed('close') && (offered.story?.states ?? []).length > 0,
-    control: () => {
-      const select = el('select');
-      select.setAttribute('aria-label', 'state the close action runs from');
-      const action = actionNamed('close');
-      for (const state of offered.story.states) select.append(el('option', state));
-      select.value = action?.from?.[0] ?? offered.story.states[0];
-      const wrap = el('span');
-      wrap.append(el('span', 'close runs from '), select);
-      return { node: wrap, value: () => select.value };
-    },
-    run: async (control) => {
-      const action = actionNamed('close');
-      const was = action.from.join(', ');
-      const now = control?.value?.() ?? was;
-
-      // Edit the artifact in place. This is the same object the page booted
-      // from — there is no source tree here, and no build step between the
-      // contract and the server.
-      const doc = docAt(offered.story.source);
-      const machine = (doc?.content?.machines ?? []).find((m) => m.object === offered.story.object);
-      const declared = (machine?.actions ?? []).find((a) => a.id === 'close');
-      if (!declared) return { facts: [['could not find the action in the artifact', 'close']] };
-      declared.transition.from = now;
-
-      // Reboot: a new server, from the edited documents, with a new store.
-      const started = performance.now();
-      mock = await createMockServer({ contracts, basePath });
-      const ms = Math.round(performance.now() - started);
-      offered = survey();
-
-      // The old store is gone with the old server, so the story restarts.
-      calls.length = 0;
-      for (const key of Object.keys(tour)) delete tour[key];
-
-      const created = await call('POST', offered.collection, {
-        programsAppliedFor: ['snap'], channel: 'online', countyCode: '001',
+    chapter: 'Rules',
+    title: 'A different job entirely',
+    what: 'Another ruleset, in another domain, doing something that is not a decision at all.',
+    needs: () => !!offered.prompts,
+    source: () => [offered.rulesFor(offered.prompts)],
+    run: async () => {
+      const members = [
+        { age: 34, isEmployed: false, isStudent: false, isNonCitizen: false },
+        { age: 19, isEmployed: false, isStudent: true, isNonCitizen: false },
+      ];
+      const answered = await call('POST', offered.prompts, {
+        household: { monthlyIncome: 0, monthlyExpenses: 1400, members },
+        application: { hasChangedCircumstances: true },
       });
-      tour.id = created.body?.id;
-      tour.path = [created.body?.status];
 
-      const closePath = actionNamed('close').path.replace(/\{[^}]+\}/, tour.id);
-      const attempt = await call('POST', closePath, { outcome: 'approved' });
-      const after = await call('GET', `${offered.collection}/${tour.id}`);
-
-      return {
-        facts: [
-          ['the contract said', `close: from ${was}`],
-          ['the contract now says', `close: from ${now}`],
-          ['whole API re-derived in', `${ms} ms — no build, no restart`],
-          ['a brand new draft application', String(created.status)],
-          ['closing it immediately', `${attempt.status}${attempt.status >= 400 ? ` — ${attempt.body?.message ?? ''}` : ' — allowed now'}`],
-          ['its status', String(after.body?.status ?? '—')],
-          ['lines of code changed to do this', '0'],
-        ],
-      };
+      const facts = [['household', '2 members, no income, $1,400 of monthly expenses, circumstances changed']];
+      for (const [name, node] of Object.entries(answered.body ?? {})) {
+        if (!name.endsWith('Prompt')) continue;
+        facts.push([name.replace(/Prompt$/, ''), node.value === true ? 'ask about this' : 'skip']);
+      }
+      return { facts };
     },
   },
 
   {
-    title: 'Close it, and look at the trail',
-    shows: 'Everything above',
-    contract: () => {
-      const action = actionNamed('close');
-      const ref = action?.schema?.request?.$ref;
-      if (!ref) return action?.schema && { label: 'why an empty body is refused', node: action.schema };
-
-      // A `#/$defs/...` pointer is not the answer to "why was that refused" —
-      // the required list is. Follow it within the document that declared it.
-      const doc = docAt(offered.story.source);
-      const target = ref.replace(/^#\//, '').split('/')
-        .reduce((node, segment) => (node ?? {})[segment], doc?.content);
-      return target && { label: 'why an empty body is refused', node: target };
+    chapter: 'Rules',
+    title: 'Change the number',
+    what: 'The income threshold is a declared input with a default and a citation, because it is a number Congress changes. Move it, and send the identical household again.',
+    needs: () => offered.evaluate && !!offered.ruleset(),
+    source: () => [offered.ruleset()?.file],
+    control: () => {
+      const defaults = offered.policyDefaults();
+      const wrap = el('span');
+      const field = el('input');
+      field.type = 'number';
+      field.value = String(defaults.incomeThreshold ?? 150);
+      field.style.width = '6rem';
+      field.setAttribute('aria-label', 'income threshold');
+      wrap.append(el('span', 'income threshold '), field);
+      return { node: wrap, value: () => Number(field.value) };
     },
-    what: 'The last transition. It needs an outcome, because the action says so.',
-    source: () => [offered.story?.source],
-    why: '<b>This is the call that was refused in step three</b> — same call, same record, different answer, because the state changed in between. So that 409 was not a canned response; it was the contract applied to the record as it then was. And <code>close</code> declares a request schema requiring <b>outcome</b>, so closing without one is still refused, by the action\'s own contract. Across the whole story: four states, two refusals, an evaluated ruleset, a document and a chain of events, with <b>not a line of it written as mock code</b>.',
-    needs: () => tour.id && offered.story,
-    run: async () => {
-      // Without a body first, to show the action's request schema being applied.
-      const current = await call('GET', `${offered.collection}/${tour.id}`);
-      const action = offered.story.actions.find((a) => a.from.includes(current.body.status));
-      if (!action) return { facts: [['nothing left to run from', String(current.body.status)]] };
+    run: async (story, { control }) => {
+      const defaults = offered.policyDefaults();
+      const household = { monthlyGrossIncome: 140, liquidResources: 90, monthlyShelterCost: 100, isMigrantFarmworker: false };
+      const ask = async (incomeThreshold) => {
+        const answered = await call('POST', offered.evaluate, {
+          household,
+          policy: { ...defaults, incomeThreshold },
+        });
+        return Object.values(answered.body ?? {})[0]?.value;
+      };
 
-      // Without a body first, to show the action's own request schema applied.
-      const refused = await call('POST', action.path.replace(/\{[^}]+\}/, tour.id), {});
-      const closed = await call('POST', action.path.replace(/\{[^}]+\}/, tour.id), { outcome: 'approved' });
-      const final = await call('GET', `${offered.collection}/${tour.id}`);
-      if (final.body.status !== current.body.status) tour.path?.push(final.body.status);
-      const log = offered.events ? await call('GET', offered.events) : null;
-      const stubFired = tour.stub
-        && (log?.body.items ?? []).some((event) => event.type === tour.stub.reply);
-
-      const transitions = offered.machines
-        .flatMap((m) => m.actions.length)
-        .reduce((a, b) => a + b, 0);
-
+      const asWritten = defaults.incomeThreshold ?? 150;
+      const asChanged = control?.value?.() ?? 100;
       return {
         facts: [
-          [`POST …/${action.id} with no body`, `${refused.status} — ${refused.body?.message ?? ''}`],
-          [`POST …/${action.id} with outcome approved`, String(closed.status)],
-          ['final status', String(final.body.status)],
-          ...(tour.stub ? [[
-            `the stub registered earlier, on ${tour.stub.on}`,
-            stubFired ? `fired — ${tour.stub.reply}` : 'did not fire',
-          ]] : []),
-          ['the path it took', (tour.path ?? []).join(' → ')],
-          ['events emitted along the way', String(log?.body?.total ?? '—')],
-          ['routes, all generated from contracts', String(mock.routes.size)],
-          ['transitions the contracts declare', String(transitions)],
-          ['lines of mock code behind any of it', '0'],
+          ['the household', '$140 monthly income, $90 in resources'],
+          [`threshold ${asWritten}, as the contract has it`, String(await ask(asWritten))],
+          [`threshold ${asChanged}`, String(await ask(asChanged))],
+          ['requests that changed', '0'],
+          ['code that changed', '0'],
+          ['anything deployed', 'no'],
         ],
       };
     },
@@ -1442,15 +2249,41 @@ const STEPS = [
 const renderStep = (step, index) => {
   const section = el('section', '', 'step');
 
+  // This story's own data. Every story that touches a record creates one, so
+  // reading them in any order works and resetting one leaves the rest alone.
+  const story = {};
+
   const heading = el('h2');
   heading.append(el('span', String(index + 1).padStart(2, '0'), 'n'), el('span', step.title));
-  if (step.shows) heading.append(el('span', step.shows, 'shows'));
-  section.append(heading, el('p', step.what, 'what'));
+  // Two columns. Left is what the contracts say; right is what the server
+  // did about it. A reader comparing a claim with its evidence should not
+  // have to scroll between them.
+  const columns = el('div', '', 'columns');
+  const left = el('div', '', 'col claim');
+  const right = el('div', '', 'col evidence');
+  columns.append(left, right);
+
+  section.append(heading);
+  if (step.what) section.append(prose(step.what, 'what'));
+  section.append(columns);
+
+  // What this story is waiting for, and the button that produces it. Once
+  // that has run the same strip reports what it did, in one line, because
+  // these are requests the reader has already watched in full once.
+  const gate = el('div', '', 'gate');
+  gate.hidden = true;
+  const gateText = el('span');
+  const prepare = el('button', 'Set up');
+  gate.append(gateText, prepare);
+  right.append(gate);
 
   // The document that drives the step, named from the artifact rather than
   // written here. A step claiming "the contract declares this" without saying
   // which file is asking to be taken at its word.
-  const cited = [...new Set((step.source?.() ?? []).filter(Boolean))];
+  // Only when nothing else on the card names the file. A step with request
+  // panes has it in every pane label already, and saying it twice reads like
+  // two different claims.
+  const cited = step.requests ? [] : [...new Set((step.source?.() ?? []).filter(Boolean))];
   if (cited.length > 0) {
     const source = el('p', '', 'source');
     source.append(el('span', 'declared in '));
@@ -1469,7 +2302,7 @@ const renderStep = (step, index) => {
         source.append(document.createTextNode(relativePath));
       }
     });
-    section.append(source);
+    left.append(source);
   }
 
   // The contract first, then the behaviour. A step that can point at the
@@ -1480,6 +2313,17 @@ const renderStep = (step, index) => {
   // a field a state's overlay added and the spec it landed in — shows two,
   // because folding them into one implies a single source that does not
   // exist.
+  // Panels: plain text the step wants shown, on whichever side it belongs.
+  // The route table is neither a contract excerpt nor a response, and
+  // forcing it into either shape would misdescribe it.
+  for (const panel of step.panels?.() ?? []) {
+    if (!panel?.text) continue;
+    const box = el('pre', '', panel.side === 'right' ? 'wire panel' : 'contract panel');
+    box.append(el('span', panel.label ?? '', 'label'));
+    box.append(document.createTextNode(panel.text));
+    (panel.side === 'right' ? right : left).append(box);
+  }
+
   const excerpts = [step.contract?.()].flat().filter((excerpt) => excerpt?.node !== undefined);
   for (const excerpt of excerpts) {
     const block = el('pre', '', 'contract');
@@ -1499,7 +2343,7 @@ const renderStep = (step, index) => {
       block.append(label);
     }
     block.append(document.createTextNode(asYaml(essential(excerpt.node)).replace(/^\n/, '')));
-    section.append(block);
+    left.append(block);
   }
 
   const controls = el('div', '', 'controls');
@@ -1512,35 +2356,262 @@ const renderStep = (step, index) => {
     if (control?.node) controls.append(control.node);
   }
 
-  const button = el('button', step.runLabel ?? 'Run');
-  controls.append(button);
-  section.append(controls);
-
+  // Declared up here because each Execute writes into them.
+  const noticeHeading = el('p', 'What to notice', 'notice-heading');
+  noticeHeading.hidden = true;
   const facts = el('ul', '', 'facts');
-  const detail = el('pre');
-  detail.hidden = true;
-  const toggle = el('button', 'Show the requests and responses');
-  toggle.hidden = true;
-  toggle.onclick = () => {
-    detail.hidden = !detail.hidden;
-    toggle.textContent = detail.hidden
-      ? 'Show the requests and responses'
-      : 'Hide the requests and responses';
+
+  // One request, its own Execute, and its own response beneath it. Each can
+  // be run on its own and as often as you like, so a reader can create a
+  // record, read the list, create another and read it again — which is the
+  // difference between a demonstration and a recording.
+  // A path may be a string, or a function of what earlier requests produced —
+  // a request against a record this step just created cannot know its URL
+  // until it exists. A function returning nothing means "not yet", and the
+  // pane says so rather than offering a button that would 404.
+  const resolve = (declared) => {
+    const path = typeof declared.path === 'function' ? declared.path() : declared.path;
+    return path ? { ...declared, path } : null;
   };
-  controls.append(toggle);
 
-  const why = el('p', '', 'why');
-  // The only place markup is allowed, and it is authored above, not data.
-  why.insertAdjacentHTML('afterbegin', step.why);
+  // Whether this story has taken the store over yet.
+  let started = false;
 
-  section.append(facts, detail, why);
-  return { section, button, facts, detail, toggle, control };
+  // Why this step cannot be pressed yet, or null. Read by every Execute.
+  let blocked = null;
+
+  /**
+   * Take the store over, once, at whichever of setup, Execute or Run comes
+   * first. Every story starts from an empty one so that what it shows is its
+   * own doing — which is also why this invalidates the other cards: one
+   * story is live at a time, and the rest now describe records that are gone.
+   */
+  const begin = async () => {
+    if (started) return;
+    await (step.freshStart ?? emptyTheStore)();
+    // After, not before: taking the store over invalidates every card, this
+    // one included, and `invalidate` clears this flag. Setting it first meant
+    // the second Execute in a story began again and wiped what the first had
+    // just created — which is precisely what "It remembers" is there to show.
+    started = true;
+  };
+
+  const calls = (step.requests?.(story) ?? []).map((declared) => {
+    const pane = el('pre', '', 'wire');
+
+    // The spec's own name for the operation, and the file it is named in.
+    // "REQUEST" told a reader nothing the line below it does not already
+    // say, and the separate "declared in" line said the same thing twice
+    // for a step whose every request comes out of one document.
+    const operation = offered.operationFor(declared.method, declared.template ?? resolve(declared)?.path);
+    const label = el('span', '', 'label');
+    label.append(document.createTextNode(operation?.summary ?? 'request'));
+    if (operation?.file && pageConfig.sourceUrl) {
+      label.append(document.createTextNode(' — '));
+      const link = el('a', operation.file);
+      link.href = `${pageConfig.sourceUrl}/${operation.file}`;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      label.append(link);
+    } else if (operation?.file) {
+      label.append(document.createTextNode(` — ${operation.file}`));
+    }
+
+    pane.append(label);
+    const printed = document.createTextNode('');
+    pane.append(printed);
+    right.append(pane);
+
+    const response = el('pre', '', 'wire response');
+    response.hidden = true;
+
+    const execute = el('button', 'Execute');
+
+    // Keep the pane honest: what it prints is what pressing Execute sends,
+    // so a path that fills in once a record exists has to be reprinted when
+    // it does.
+    const refresh = () => {
+      const ready = resolve(declared);
+      printed.textContent = ready
+        ? printRequest(ready)
+        : printRequest({ ...declared, path: declared.waiting ?? '…' });
+      execute.disabled = !ready || blocked !== null;
+      execute.title = blocked ?? (ready ? '' : (declared.until ?? 'run the request above first'));
+    };
+
+    execute.onclick = async () => {
+      const sending = resolve(declared);
+      if (!sending) return;
+      execute.disabled = true;
+      execute.textContent = 'Working…';
+
+      await begin();
+      const before = await snapshotStore();
+      const result = await call(sending.method, sending.path, sending.body);
+      declared.after?.(result);
+      const after = await snapshotStore();
+
+      response.replaceChildren(
+        el('span', 'response', 'label'),
+        document.createTextNode(printResponse({ status: result.status, body: result.body }))
+      );
+      response.hidden = false;
+      execute.disabled = false;
+      execute.textContent = 'Execute again';
+      section.classList.add('done');
+
+      // Every pane and every other step, not just this one: this request may
+      // be what another was waiting for.
+      revalidate();
+
+      // What the action did to the server, beside what it answered. A
+      // response says what came back; it cannot show the determination
+      // another domain created, or the event that went out. Shown only when
+      // something moved, so reads stay quiet.
+      const moved = describeChanges(before, after);
+      changed.replaceChildren();
+      if (moved) {
+        changed.append(el('span', 'what changed on the server', 'label'));
+        changed.append(document.createTextNode(moved));
+      }
+      changed.hidden = !moved;
+
+      if (step.notice) {
+        facts.replaceChildren(...step.notice(story).map(([label, prose]) => noticed(label, prose)));
+        noticeHeading.hidden = false;
+      }
+    };
+
+    const row = el('div', '', 'controls');
+    row.style.margin = '.4rem 0 0';
+    row.append(execute);
+
+    // Its own, under its own response: each Execute reports its own impact.
+    const changed = el('pre', '', 'wire changed');
+    changed.hidden = true;
+
+    right.append(row, response, changed);
+    return { declared, execute, response, changed, refresh };
+  });
+  for (const made of calls) made.refresh();
+
+
+  const button = el('button', 'Run');
+  // A step with no run() states its case and offers no button: there is
+  // nothing to execute and nothing a second press would change. A step that
+  // declares its requests has one Execute each instead.
+  if (step.run && calls.length === 0) controls.append(button);
+  right.append(controls);
+
+  const result = el('pre', '', 'wire result');
+  result.hidden = true;
+  right.append(result);
+
+  if (!step.run && calls.length === 0) section.classList.add('done');
+
+  // What to notice belongs with the claims: it is the page talking about the
+  // response rather than part of it.
+  left.append(noticeHeading, facts);
+  /**
+   * Say what the step is waiting for, and stop it being pressed until it is.
+   *
+   * Two kinds of unavailable, and they read differently on purpose. A step
+   * this contract set cannot demonstrate is never going to work and says so
+   * flatly. A step waiting on a record is fine, and names where to get one —
+   * previously it offered a button that produced a 404 or a dull "no action
+   * allowed from", which taught a reader nothing about the system and quite
+   * a lot about the page.
+   */
+  const refreshGate = () => {
+    const unsupported = step.needs && !step.needs();
+    const wanted = step.setup && !story.id ? step.setup.provides() : null;
+    blocked = unsupported
+      ? 'nothing in this contract set declares it'
+      : (wanted ?? step.requires?.(story) ?? null);
+
+    section.classList.toggle('cannot', !!unsupported);
+    gate.hidden = !blocked && !story.ready;
+    prepare.hidden = !wanted || !!unsupported;
+
+    if (unsupported) {
+      gateText.textContent = 'Not in this contract set — nothing here declares it.';
+    } else if (wanted) {
+      gateText.textContent = `This story needs ${wanted} of its own. `;
+    } else if (story.ready) {
+      // The setup, in one line. Two requests the reader watched in full in
+      // the REST story; repeating them per story would be most of the page.
+      gateText.textContent = `Ready — ${story.ready} `;
+    }
+
+    button.disabled = !!blocked;
+    for (const made of calls) made.refresh();
+  };
+
+  prepare.onclick = async () => {
+    prepare.disabled = true;
+    prepare.textContent = 'Setting up…';
+
+    await begin();
+    const from = exchanges.length;
+    try {
+      await step.setup.run(story);
+    } finally {
+      // One line, naming only what the setup changed. Its reads are how it
+      // knew where the record had got to — bookkeeping, not story.
+      const made = exchanges.slice(from);
+      const wrote = made.filter((x) => x.method !== 'GET');
+      const reads = made.length - wrote.length;
+      story.ready = [
+        wrote.map((x) => `${x.method} ${x.path.split('?')[0].replace(story.id ?? ' ', '…')} → ${x.status}`).join('  ·  '),
+        reads > 0 ? `(and ${reads} read${reads === 1 ? '' : 's'})` : '',
+      ].filter(Boolean).join('  ');
+      prepare.disabled = false;
+      prepare.textContent = 'Set up';
+      revalidate();
+    }
+  };
+
+  /**
+   * Forget everything this card is showing.
+   *
+   * Called on every other card when a story takes over the store: their
+   * responses describe records that no longer exist, and leaving them on
+   * screen would be the page lying about the server. Clearing `started` is
+   * what makes a card begin again if the reader comes back to it.
+   */
+  const invalidate = () => {
+    for (const key of Object.keys(story)) delete story[key];
+    started = false;
+    for (const made of calls) {
+      made.response.hidden = true;
+      made.changed.hidden = true;
+      made.execute.textContent = 'Execute';
+    }
+    facts.replaceChildren();
+    noticeHeading.hidden = true;
+    result.hidden = true;
+    section.classList.remove('done', 'failed');
+    refreshGate();
+  };
+
+  refreshGate();
+
+  return {
+    section, button, facts, noticeHeading, calls, result,
+    control, refreshGate, story, prepare, begin, invalidate,
+  };
 };
 
 const runStep = async (step, parts) => {
-  const from = calls.length;
   parts.button.disabled = true;
-  parts.button.textContent = 'Running…';
+  parts.button.textContent = 'Working…';
+
+  // Either side of the run, so the panel can report what moved rather than
+  // listing everything the server holds. `begin` is separate: it is what the
+  // story's Reset measures against, and it survives repeated runs.
+  await parts.begin();
+  const before = await snapshotStore();
+  exchanges = [];
 
   try {
     const unsupported = step.needs && !step.needs();
@@ -1551,12 +2622,31 @@ const runStep = async (step, parts) => {
       return false;
     }
 
-    const { facts } = await step.run(parts.control);
-    parts.facts.replaceChildren(...facts.map(([label, value]) => fact(label, value)));
+    // `send` performs the request the step declared, so the one shown above
+    // is the one that goes. Only a step that declares one gets it.
+    const send = step.request
+      ? (overrides = {}) => {
+        const declared = { ...step.request(), ...overrides };
+        return call(declared.method, declared.path, declared.body);
+      }
+      : () => { throw new Error('send() needs the step to declare a request'); };
 
-    const made = calls.slice(from);
-    parts.detail.textContent = made.map(transcript).join('\n\n' + '─'.repeat(60) + '\n\n');
-    parts.toggle.hidden = made.length === 0;
+    const outcome = await step.run(parts.story, { control: parts.control, send });
+    const notice = outcome.notice ?? outcome.facts ?? [];
+    parts.facts.replaceChildren(...notice.map(([label, value]) => fact(label, value)));
+    parts.noticeHeading.hidden = notice.length === 0;
+
+    if (exchanges.length > 0) {
+      parts.result.replaceChildren(
+        el('span', exchanges.length === 1 ? 'response' : 'what was sent, and what came back', 'label'),
+        document.createTextNode(exchanges.map(printExchange).join('\n\n' + '─'.repeat(52) + '\n\n'))
+      );
+      parts.result.hidden = false;
+    }
+
+    const after = await snapshotStore();
+    const changes = describeChanges(before, after);
+    if (changes) parts.facts.append(fact('on the server', changes.split('\n')[0].trim()));
 
     parts.section.classList.add('done');
     parts.button.textContent = 'Run again';
@@ -1568,9 +2658,117 @@ const runStep = async (step, parts) => {
     return false;
   } finally {
     parts.button.disabled = false;
+    // After the button is re-enabled, not before: this step may have been
+    // what another was waiting for, and its own gate may still be shut.
+    revalidate();
   }
 };
 
+/**
+ * What the server holds, keyed by collection and record id.
+ *
+ * One GET per collection in the route table — nothing reaches into the store
+ * directly, so this is the view any client would get.
+ */
+const snapshotStore = async () => {
+  const snapshot = new Map();
+  for (const path of offered.collections) {
+    const response = await mock.fetch(
+      new Request(new URL(basePath + path, location.origin), { headers: { 'X-Caller-Id': CALLER } })
+    );
+    if (!response.ok) continue;
+    const body = await response.json();
+    snapshot.set(path, new Map((body.items ?? []).map((item) => [item.id, item])));
+  }
+  return snapshot;
+};
+
+/** Fields worth reporting a change in: everything but the record's own id. */
+const changedFields = (before, after) => {
+  const names = new Set([...Object.keys(before), ...Object.keys(after)]);
+  const changed = [];
+  for (const name of names) {
+    if (name === 'id') continue;
+    const was = JSON.stringify(before[name]);
+    const now = JSON.stringify(after[name]);
+    if (was !== now) changed.push({ name, was, now });
+  }
+  return changed;
+};
+
+/** A record in one line: its id, and whatever best identifies it. */
+const describe = (record) => {
+  const name = record.type ?? record.title ?? record.name ?? record.status ?? null;
+  const id = String(record.id ?? '').slice(0, 8);
+  return [id && id + '…', name].filter(Boolean).join('  ');
+};
+
+/**
+ * What moved in one collection, or null if nothing a reader would call a
+ * change did.
+ *
+ * Shared by both panels below, because a collection one of them reports and
+ * the other hides is a bug waiting to be noticed on screen — which is how the
+ * metrics noise got here in the first place.
+ */
+const diffCollection = (was, now) => {
+  const added = [...now.keys()].filter((id) => !was.has(id));
+  const removed = [...was.keys()].filter((id) => !now.has(id));
+  const changed = [...now.entries()]
+    .filter(([id]) => was.has(id))
+    .map(([id, record]) => ({ id, fields: changedFields(was.get(id), record) }))
+    .filter(({ fields }) => fields.length > 0);
+
+  if (added.length === 0 && removed.length === 0 && changed.length === 0) return null;
+
+  // Some collections are computed on read rather than stored — metrics
+  // recompute a `computedAt` every time they are fetched, so taking a
+  // snapshot is itself enough to make every record look changed. The
+  // signature is specific: nothing added or removed, every record changed,
+  // and all of them in the same single field. That is reading, not a step
+  // doing something, and naming the field here instead would only work for
+  // this contract set.
+  const everyRecordChanged = changed.length === now.size && now.size > 0;
+  const sameLoneField = changed.every(({ fields }) =>
+    fields.length === 1 && fields[0].name === changed[0].fields[0].name);
+  if (added.length === 0 && removed.length === 0 && everyRecordChanged && sameLoneField) return null;
+
+  return { added, removed, changed };
+};
+
+/**
+ * What a step did to the server, by comparing before and after.
+ *
+ * A dump of everything buries the one record that matters under seed data and
+ * computed metrics. This reports only what moved — which is also the honest
+ * answer to "what did that button actually do".
+ */
+const describeChanges = (before, after) => {
+  const lines = [];
+
+  for (const [path, now] of after) {
+    const was = before.get(path) ?? new Map();
+    const moved = diffCollection(was, now);
+    if (!moved) continue;
+    const { added, removed, changed } = moved;
+
+    lines.push(path);
+    for (const id of added) lines.push(`  + created   ${describe(now.get(id))}`);
+    for (const id of removed) lines.push(`  - removed   ${describe(was.get(id))}`);
+    for (const { id, fields } of changed) {
+      lines.push(`  ~ changed   ${describe(now.get(id))}`);
+      for (const { name, was: before_, now: after_ } of fields) {
+        lines.push(`      ${name}: ${before_} → ${after_}`);
+      }
+    }
+    lines.push('');
+  }
+
+  return lines.length > 0 ? lines.join('\n').trimEnd() : null;
+};
+
+
+/** A measurement a story took: a label, and the value it read. */
 const fact = (label, value) => {
   const li = el('li');
   li.append(el('span', label + ': '), el('code', String(value)));
@@ -1578,24 +2776,20 @@ const fact = (label, value) => {
 };
 
 /**
- * One exchange, written the way an HTTP exchange reads.
+ * Something to notice, which is a different shape from a measurement: the
+ * label is the thing being pointed at and the rest is prose about it.
  *
- * Request line, request headers, request body; then the status line, the
- * response headers and the response body. Assembled as text and assigned with
- * `textContent`, so a response body containing markup is shown, not run.
+ * Both went through `fact`, which puts the second half in `code` — so every
+ * notice rendered an entire sentence in monospace on a grey background. With
+ * everything highlighted, nothing was. Only an identifier gets code here.
  */
-const transcript = (c) => {
-  const lines = [c.request.line];
-  for (const [name, value] of c.request.headers) lines.push(`${name}: ${value}`);
-  if (c.request.body) lines.push('', c.request.body);
-
-  lines.push('', `→ ${c.status}${c.response.statusText ? ' ' + c.response.statusText : ''}`);
-  for (const [name, value] of c.response.headers) lines.push(`${name}: ${value}`);
-  if (c.body !== '' && c.body !== undefined) {
-    lines.push('', typeof c.body === 'string' ? c.body : JSON.stringify(c.body, null, 2));
-  }
-  return lines.join('\n');
+const noticed = (label, prose) => {
+  const li = el('li');
+  const name = /^[A-Za-z_$][\w$.]*(, ?[A-Za-z_$][\w$.]*)*$/.test(label);
+  li.append(el(name ? 'code' : 'b', label), el('span', ' — '), el('span', String(prose)));
+  return li;
 };
+
 
 // ── Boot ────────────────────────────────────────────────────────────────────
 
@@ -1604,71 +2798,113 @@ const boot = async () => {
   contracts = await loadContracts();
   overlays = await loadOverlays();
   authored = await loadAuthored();
-  mock = await createMockServer({ contracts, basePath });
+
+  // Empty, not seeded. The story starts with nothing so "nothing existed
+  // before this" is literally true and the collection growing is visible
+  // from zero. Config-managed resources — registries, policy catalogs — are
+  // inserted regardless, because they are configuration rather than data.
+  mock = await createMockServer({ contracts, basePath, seed: false });
+  live = contracts;
   offered = survey();
 
-  const ms = Math.round(performance.now() - started);
-  const transitions = offered.machines.reduce((n, m) => n + m.actions.length, 0);
-
-  // What was derived, and from how little. The arrow is the whole claim: the
-  // left side is what a team authors, the right side is what runs.
-  const status = $('boot');
-  status.replaceChildren();
-  status.append(
-    el('span', `${contracts.docs.length} contract documents`, 'from'),
-    el('span', '→', 'arrow'),
-    el('span', `${mock.routes.size} routes`, 'got'),
-    el('span', `${transitions} transitions`, 'got'),
-    el('span', `${offered.subscriptions.length} subscriptions`, 'got'),
-    el('span', `${offered.eventTypes.length} event types`, 'got'),
-    el('span', '0 lines of handler code', 'got zero'),
-    el('span', `booted in this tab in ${ms} ms`, 'aside')
-  );
+  // How long that took, for the story that is about it. It used to be a
+  // banner above every page, which made it furniture rather than evidence.
+  bootMs = Math.round(performance.now() - started);
 
   const container = $('steps');
   container.replaceChildren();
+
+  // One story on screen at a time, chosen from the contents. That is not a
+  // presentation choice: a story empties the store when it starts, so the
+  // others are describing records that no longer exist. Showing them all at
+  // once was the page contradicting itself sixteen times over.
   const rendered = STEPS.map((step, i) => {
     const parts = renderStep(step, i);
     parts.button.onclick = () => runStep(step, parts);
-    container.append(parts.section);
-    return { step, parts };
+
+    // Every page in a part carries that part's heading and what it is about.
+    // Only one story is on screen at a time, so a reader can arrive at any of
+    // them — a small uppercase tag told them which part they were in without
+    // telling them what it was for.
+    //
+    // `because` is the exception: it is a transition from the part before,
+    // which only reads as one on the way in.
+    const about = CHAPTERS[step.chapter] ?? {};
+    const page = el('article', '', 'page');
+    const header = el('header', '', 'chapter');
+    header.append(el('h2', about.heading ?? step.chapter ?? ''));
+    if (about.blurb) header.append(prose(about.blurb, 'blurb'));
+    page.append(header);
+    page.append(parts.section);
+    page.hidden = true;
+    container.append(page);
+    return { step, parts, page, link: null };
   });
 
-  $('run-all').onclick = async () => {
-    $('run-all').disabled = true;
-    let done = 0;
-    for (const { step, parts } of rendered) {
-      $('progress').textContent = `step ${done + 1} of ${rendered.length}`;
-      parts.section.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      await runStep(step, parts);
-      done += 1;
+  // Everything the contents can turn to. The stories, and the note about
+  // this copy being yours — which is a page of its own rather than a footer,
+  // because with one story on screen a footer is under every one of them.
+  const pages = [
+    ...rendered.map((entry) => ({ ...entry, chapter: entry.step.chapter, title: entry.step.title })),
+    { page: $('about'), chapter: 'About', title: 'This copy is yours' },
+  ];
+
+  const slug = (title) => title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+  const show = (entry) => {
+    for (const other of pages) {
+      other.page.hidden = other !== entry;
+      other.link?.classList.toggle('here', other === entry);
     }
-    $('progress').textContent = `${done} of ${rendered.length} complete`;
-    $('run-all').disabled = false;
+    location.hash = slug(entry.title);
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
-  $('reset-tour').onclick = () => {
-    calls.length = 0;
-    for (const key of Object.keys(tour)) delete tour[key];
-    boot();
-  };
-
-  // Say what this contract set cannot demonstrate, rather than offering a
-  // button that fails. An adapter call and a timer need endpoints a set has to
-  // declare; this one declares neither.
-  const gaps = [];
-  if (!offered.adapter) {
-    gaps.push('An HTTP stub stands in for an adapter call a state machine makes outbound — this contract set declares no adapter endpoint, so there is nothing to intercept.');
+  /** The contents, grouped by chapter, built from the pages themselves. */
+  const nav = $('contents-list');
+  nav.replaceChildren();
+  let listed = null;
+  let list = null;
+  for (const entry of pages) {
+    if (entry.chapter !== listed) {
+      listed = entry.chapter;
+      nav.append(el('p', listed ?? '', 'nav-chapter'));
+      list = el('ol', '', 'nav-stories');
+      nav.append(list);
+    }
+    const link = el('button', entry.title, 'nav-story');
+    link.onclick = () => show(entry);
+    const item = el('li');
+    item.append(link);
+    list.append(item);
+    entry.link = link;
   }
-  if (!offered.evaluate) gaps.push('No rules endpoint is declared, so the evaluator cannot be shown.');
-  gaps.push('A timer stub fires an SLA callback immediately instead of at its deadline. No action in this contract set requests a timer, so none fires here.');
-  $('cannot').textContent = gaps.join(' ');
+
+  const wanted = pages.find((entry) => slug(entry.title) === location.hash.replace(/^#/, ''));
+  show(wanted ?? pages[0]);
+
+  revalidate = () => { for (const { parts } of rendered) parts.refreshGate(); };
+  forgetEveryStory = () => {
+    for (const { parts } of rendered) parts.invalidate();
+    revalidate();
+  };
+  revalidate();
+
+  // A fresh server and fresh cards. Per-story resets undo one story against
+  // a running mock; this throws the whole thing away and starts over.
+  $('reset-tour').onclick = () => { boot(); };
+
+  // A page-wide list of what this contract set cannot demonstrate used to
+  // sit at the bottom. A story that cannot run already says so on its own
+  // card, where it is about something the reader is looking at.
 
   window.mock = mock;
 };
 
 boot().catch((error) => {
-  $('boot').replaceChildren(el('span', 'failed to start', 'fail'), document.createTextNode(` — ${error.message}`));
+  const trouble = $('trouble');
+  trouble.textContent = `failed to start — ${error.message}`;
+  trouble.hidden = false;
   console.error(error);
 });
 </script>
