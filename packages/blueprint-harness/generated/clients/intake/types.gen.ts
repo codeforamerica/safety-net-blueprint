@@ -312,10 +312,6 @@ export type Application = {
          */
         readonly id: string;
         /**
-         * The application this member belongs to.
-         */
-        applicationId: string;
-        /**
          * Timestamp when the member was added.
          */
         readonly createdAt: string;
@@ -324,13 +320,22 @@ export type Application = {
          */
         readonly updatedAt: string;
         /**
-         * Related resource links.
+         * Expanded Application (subset).
          */
-        readonly links?: {
+        application: {
             /**
-             * Link to the related Application resource.
+             * Unique identifier (server-generated).
              */
-            application?: string;
+            readonly id?: string;
+            /**
+             * Current lifecycle status of the application.
+             */
+            status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+            programsAppliedFor?: string;
+            /**
+             * How many programs this application covers, from programsAppliedFor.
+             */
+            readonly programCount?: number;
         };
     }>;
     /**
@@ -740,10 +745,6 @@ export type ApplicationList = {
              */
             readonly id: string;
             /**
-             * The application this member belongs to.
-             */
-            applicationId: string;
-            /**
              * Timestamp when the member was added.
              */
             readonly createdAt: string;
@@ -752,13 +753,22 @@ export type ApplicationList = {
              */
             readonly updatedAt: string;
             /**
-             * Related resource links.
+             * Expanded Application (subset).
              */
-            readonly links?: {
+            application: {
                 /**
-                 * Link to the related Application resource.
+                 * Unique identifier (server-generated).
                  */
-                application?: string;
+                readonly id?: string;
+                /**
+                 * Current lifecycle status of the application.
+                 */
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                programsAppliedFor?: string;
+                /**
+                 * How many programs this application covers, from programsAppliedFor.
+                 */
+                readonly programCount?: number;
             };
         }>;
         /**
@@ -1065,10 +1075,6 @@ export type ApplicationMember = {
      */
     readonly id: string;
     /**
-     * The application this member belongs to.
-     */
-    applicationId: string;
-    /**
      * Timestamp when the member was added.
      */
     readonly createdAt: string;
@@ -1077,13 +1083,22 @@ export type ApplicationMember = {
      */
     readonly updatedAt: string;
     /**
-     * Related resource links.
+     * Expanded Application (subset).
      */
-    readonly links?: {
+    application: {
         /**
-         * Link to the related Application resource.
+         * Unique identifier (server-generated).
          */
-        application?: string;
+        readonly id?: string;
+        /**
+         * Current lifecycle status of the application.
+         */
+        status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+        programsAppliedFor?: string;
+        /**
+         * How many programs this application covers, from programsAppliedFor.
+         */
+        readonly programCount?: number;
     };
 };
 
@@ -1468,10 +1483,6 @@ export type ApplicationMemberList = {
          */
         readonly id: string;
         /**
-         * The application this member belongs to.
-         */
-        applicationId: string;
-        /**
          * Timestamp when the member was added.
          */
         readonly createdAt: string;
@@ -1480,13 +1491,22 @@ export type ApplicationMemberList = {
          */
         readonly updatedAt: string;
         /**
-         * Related resource links.
+         * Expanded Application (subset).
          */
-        readonly links?: {
+        application: {
             /**
-             * Link to the related Application resource.
+             * Unique identifier (server-generated).
              */
-            application?: string;
+            readonly id?: string;
+            /**
+             * Current lifecycle status of the application.
+             */
+            status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+            programsAppliedFor?: string;
+            /**
+             * How many programs this application covers, from programsAppliedFor.
+             */
+            readonly programCount?: number;
         };
     }>;
     /**
@@ -1954,9 +1974,11 @@ export type ApplicationWritable2 = {
         };
     } & {
         /**
-         * The application this member belongs to.
+         * Expanded Application (subset).
          */
-        applicationId: string;
+        application: {
+            programsAppliedFor?: string;
+        };
     }>;
 };
 
@@ -2149,9 +2171,11 @@ export type ApplicationListWritable = {
             };
         } & {
             /**
-             * The application this member belongs to.
+             * Expanded Application (subset).
              */
-            applicationId: string;
+            application: {
+                programsAppliedFor?: string;
+            };
         }>;
     }>;
     /**
@@ -2298,9 +2322,11 @@ export type ApplicationMemberWritable2 = {
     };
 } & {
     /**
-     * The application this member belongs to.
+     * Expanded Application (subset).
      */
-    applicationId: string;
+    application: {
+        programsAppliedFor?: string;
+    };
 };
 
 export type ApplicationMemberListWritable = {
@@ -2430,9 +2456,11 @@ export type ApplicationMemberListWritable = {
         };
     } & {
         /**
-         * The application this member belongs to.
+         * Expanded Application (subset).
          */
-        applicationId: string;
+        application: {
+            programsAppliedFor?: string;
+        };
     }>;
     /**
      * Total number of matching household members.
@@ -2887,10 +2915,6 @@ export type ListApplicationsResponses = {
                  */
                 readonly id: string;
                 /**
-                 * The application this member belongs to.
-                 */
-                applicationId: string;
-                /**
                  * Timestamp when the member was added.
                  */
                 readonly createdAt: string;
@@ -2899,13 +2923,22 @@ export type ListApplicationsResponses = {
                  */
                 readonly updatedAt: string;
                 /**
-                 * Related resource links.
+                 * Expanded Application (subset).
                  */
-                readonly links?: {
+                application: {
                     /**
-                     * Link to the related Application resource.
+                     * Unique identifier (server-generated).
                      */
-                    application?: string;
+                    readonly id?: string;
+                    /**
+                     * Current lifecycle status of the application.
+                     */
+                    status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                    programsAppliedFor?: string;
+                    /**
+                     * How many programs this application covers, from programsAppliedFor.
+                     */
+                    readonly programCount?: number;
                 };
             }>;
             /**
@@ -3301,10 +3334,6 @@ export type CreateApplicationResponses = {
              */
             readonly id: string;
             /**
-             * The application this member belongs to.
-             */
-            applicationId: string;
-            /**
              * Timestamp when the member was added.
              */
             readonly createdAt: string;
@@ -3313,13 +3342,22 @@ export type CreateApplicationResponses = {
              */
             readonly updatedAt: string;
             /**
-             * Related resource links.
+             * Expanded Application (subset).
              */
-            readonly links?: {
+            application: {
                 /**
-                 * Link to the related Application resource.
+                 * Unique identifier (server-generated).
                  */
-                application?: string;
+                readonly id?: string;
+                /**
+                 * Current lifecycle status of the application.
+                 */
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                programsAppliedFor?: string;
+                /**
+                 * How many programs this application covers, from programsAppliedFor.
+                 */
+                readonly programCount?: number;
             };
         }>;
         /**
@@ -3675,10 +3713,6 @@ export type GetApplicationResponses = {
              */
             readonly id: string;
             /**
-             * The application this member belongs to.
-             */
-            applicationId: string;
-            /**
              * Timestamp when the member was added.
              */
             readonly createdAt: string;
@@ -3687,13 +3721,22 @@ export type GetApplicationResponses = {
              */
             readonly updatedAt: string;
             /**
-             * Related resource links.
+             * Expanded Application (subset).
              */
-            readonly links?: {
+            application: {
                 /**
-                 * Link to the related Application resource.
+                 * Unique identifier (server-generated).
                  */
-                application?: string;
+                readonly id?: string;
+                /**
+                 * Current lifecycle status of the application.
+                 */
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                programsAppliedFor?: string;
+                /**
+                 * How many programs this application covers, from programsAppliedFor.
+                 */
+                readonly programCount?: number;
             };
         }>;
         /**
@@ -4083,10 +4126,6 @@ export type UpdateApplicationResponses = {
              */
             readonly id: string;
             /**
-             * The application this member belongs to.
-             */
-            applicationId: string;
-            /**
              * Timestamp when the member was added.
              */
             readonly createdAt: string;
@@ -4095,13 +4134,22 @@ export type UpdateApplicationResponses = {
              */
             readonly updatedAt: string;
             /**
-             * Related resource links.
+             * Expanded Application (subset).
              */
-            readonly links?: {
+            application: {
                 /**
-                 * Link to the related Application resource.
+                 * Unique identifier (server-generated).
                  */
-                application?: string;
+                readonly id?: string;
+                /**
+                 * Current lifecycle status of the application.
+                 */
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                programsAppliedFor?: string;
+                /**
+                 * How many programs this application covers, from programsAppliedFor.
+                 */
+                readonly programCount?: number;
             };
         }>;
         /**
@@ -4419,10 +4467,6 @@ export type ListApplicationMembersResponses = {
              */
             readonly id: string;
             /**
-             * The application this member belongs to.
-             */
-            applicationId: string;
-            /**
              * Timestamp when the member was added.
              */
             readonly createdAt: string;
@@ -4431,13 +4475,22 @@ export type ListApplicationMembersResponses = {
              */
             readonly updatedAt: string;
             /**
-             * Related resource links.
+             * Expanded Application (subset).
              */
-            readonly links?: {
+            application: {
                 /**
-                 * Link to the related Application resource.
+                 * Unique identifier (server-generated).
                  */
-                application?: string;
+                readonly id?: string;
+                /**
+                 * Current lifecycle status of the application.
+                 */
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                programsAppliedFor?: string;
+                /**
+                 * How many programs this application covers, from programsAppliedFor.
+                 */
+                readonly programCount?: number;
             };
         }>;
         /**
@@ -4756,10 +4809,6 @@ export type CreateApplicationMemberResponses = {
          */
         readonly id: string;
         /**
-         * The application this member belongs to.
-         */
-        applicationId: string;
-        /**
          * Timestamp when the member was added.
          */
         readonly createdAt: string;
@@ -4768,13 +4817,22 @@ export type CreateApplicationMemberResponses = {
          */
         readonly updatedAt: string;
         /**
-         * Related resource links.
+         * Expanded Application (subset).
          */
-        readonly links?: {
+        application: {
             /**
-             * Link to the related Application resource.
+             * Unique identifier (server-generated).
              */
-            application?: string;
+            readonly id?: string;
+            /**
+             * Current lifecycle status of the application.
+             */
+            status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+            programsAppliedFor?: string;
+            /**
+             * How many programs this application covers, from programsAppliedFor.
+             */
+            readonly programCount?: number;
         };
     };
 };
@@ -4987,10 +5045,6 @@ export type GetApplicationMemberResponses = {
          */
         readonly id: string;
         /**
-         * The application this member belongs to.
-         */
-        applicationId: string;
-        /**
          * Timestamp when the member was added.
          */
         readonly createdAt: string;
@@ -4999,13 +5053,22 @@ export type GetApplicationMemberResponses = {
          */
         readonly updatedAt: string;
         /**
-         * Related resource links.
+         * Expanded Application (subset).
          */
-        readonly links?: {
+        application: {
             /**
-             * Link to the related Application resource.
+             * Unique identifier (server-generated).
              */
-            application?: string;
+            readonly id?: string;
+            /**
+             * Current lifecycle status of the application.
+             */
+            status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+            programsAppliedFor?: string;
+            /**
+             * How many programs this application covers, from programsAppliedFor.
+             */
+            readonly programCount?: number;
         };
     };
 };
@@ -5311,10 +5374,6 @@ export type UpdateApplicationMemberResponses = {
          */
         readonly id: string;
         /**
-         * The application this member belongs to.
-         */
-        applicationId: string;
-        /**
          * Timestamp when the member was added.
          */
         readonly createdAt: string;
@@ -5323,13 +5382,22 @@ export type UpdateApplicationMemberResponses = {
          */
         readonly updatedAt: string;
         /**
-         * Related resource links.
+         * Expanded Application (subset).
          */
-        readonly links?: {
+        application: {
             /**
-             * Link to the related Application resource.
+             * Unique identifier (server-generated).
              */
-            application?: string;
+            readonly id?: string;
+            /**
+             * Current lifecycle status of the application.
+             */
+            status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+            programsAppliedFor?: string;
+            /**
+             * How many programs this application covers, from programsAppliedFor.
+             */
+            readonly programCount?: number;
         };
     };
 };
@@ -5675,10 +5743,6 @@ export type SubmitApplicationResponses = {
              */
             readonly id: string;
             /**
-             * The application this member belongs to.
-             */
-            applicationId: string;
-            /**
              * Timestamp when the member was added.
              */
             readonly createdAt: string;
@@ -5687,13 +5751,22 @@ export type SubmitApplicationResponses = {
              */
             readonly updatedAt: string;
             /**
-             * Related resource links.
+             * Expanded Application (subset).
              */
-            readonly links?: {
+            application: {
                 /**
-                 * Link to the related Application resource.
+                 * Unique identifier (server-generated).
                  */
-                application?: string;
+                readonly id?: string;
+                /**
+                 * Current lifecycle status of the application.
+                 */
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                programsAppliedFor?: string;
+                /**
+                 * How many programs this application covers, from programsAppliedFor.
+                 */
+                readonly programCount?: number;
             };
         }>;
         /**
@@ -6072,10 +6145,6 @@ export type OpenApplicationResponses = {
              */
             readonly id: string;
             /**
-             * The application this member belongs to.
-             */
-            applicationId: string;
-            /**
              * Timestamp when the member was added.
              */
             readonly createdAt: string;
@@ -6084,13 +6153,22 @@ export type OpenApplicationResponses = {
              */
             readonly updatedAt: string;
             /**
-             * Related resource links.
+             * Expanded Application (subset).
              */
-            readonly links?: {
+            application: {
                 /**
-                 * Link to the related Application resource.
+                 * Unique identifier (server-generated).
                  */
-                application?: string;
+                readonly id?: string;
+                /**
+                 * Current lifecycle status of the application.
+                 */
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                programsAppliedFor?: string;
+                /**
+                 * How many programs this application covers, from programsAppliedFor.
+                 */
+                readonly programCount?: number;
             };
         }>;
         /**
@@ -6478,10 +6556,6 @@ export type CloseApplicationResponses = {
              */
             readonly id: string;
             /**
-             * The application this member belongs to.
-             */
-            applicationId: string;
-            /**
              * Timestamp when the member was added.
              */
             readonly createdAt: string;
@@ -6490,13 +6564,22 @@ export type CloseApplicationResponses = {
              */
             readonly updatedAt: string;
             /**
-             * Related resource links.
+             * Expanded Application (subset).
              */
-            readonly links?: {
+            application: {
                 /**
-                 * Link to the related Application resource.
+                 * Unique identifier (server-generated).
                  */
-                application?: string;
+                readonly id?: string;
+                /**
+                 * Current lifecycle status of the application.
+                 */
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                programsAppliedFor?: string;
+                /**
+                 * How many programs this application covers, from programsAppliedFor.
+                 */
+                readonly programCount?: number;
             };
         }>;
         /**
@@ -6875,10 +6958,6 @@ export type WithdrawApplicationResponses = {
              */
             readonly id: string;
             /**
-             * The application this member belongs to.
-             */
-            applicationId: string;
-            /**
              * Timestamp when the member was added.
              */
             readonly createdAt: string;
@@ -6887,13 +6966,22 @@ export type WithdrawApplicationResponses = {
              */
             readonly updatedAt: string;
             /**
-             * Related resource links.
+             * Expanded Application (subset).
              */
-            readonly links?: {
+            application: {
                 /**
-                 * Link to the related Application resource.
+                 * Unique identifier (server-generated).
                  */
-                application?: string;
+                readonly id?: string;
+                /**
+                 * Current lifecycle status of the application.
+                 */
+                status?: 'draft' | 'submitted' | 'under_review' | 'withdrawn' | 'closed';
+                programsAppliedFor?: string;
+                /**
+                 * How many programs this application covers, from programsAppliedFor.
+                 */
+                readonly programCount?: number;
             };
         }>;
         /**

@@ -161,12 +161,20 @@ export const zApplication = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
-        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
-        links: z.optional(z.object({
-            application: z.optional(z.string())
-        }).readonly())
+        application: z.object({
+            id: z.optional(z.uuid().readonly()),
+            status: z.optional(z.enum([
+                'draft',
+                'submitted',
+                'under_review',
+                'withdrawn',
+                'closed'
+            ])),
+            programsAppliedFor: z.optional(z.string()),
+            programCount: z.optional(z.int().readonly())
+        })
     })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
@@ -373,12 +381,20 @@ export const zApplicationList = z.object({
             ]))
         }).and(z.object({
             id: z.uuid().readonly(),
-            applicationId: z.uuid(),
             createdAt: z.iso.datetime({ offset: true }).readonly(),
             updatedAt: z.iso.datetime({ offset: true }).readonly(),
-            links: z.optional(z.object({
-                application: z.optional(z.string())
-            }).readonly())
+            application: z.object({
+                id: z.optional(z.uuid().readonly()),
+                status: z.optional(z.enum([
+                    'draft',
+                    'submitted',
+                    'under_review',
+                    'withdrawn',
+                    'closed'
+                ])),
+                programsAppliedFor: z.optional(z.string()),
+                programCount: z.optional(z.int().readonly())
+            })
         })))),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly()
@@ -540,12 +556,20 @@ export const zApplicationMember = z.object({
     ]))
 }).and(z.object({
     id: z.uuid().readonly(),
-    applicationId: z.uuid(),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
-    links: z.optional(z.object({
-        application: z.optional(z.string())
-    }).readonly())
+    application: z.object({
+        id: z.optional(z.uuid().readonly()),
+        status: z.optional(z.enum([
+            'draft',
+            'submitted',
+            'under_review',
+            'withdrawn',
+            'closed'
+        ])),
+        programsAppliedFor: z.optional(z.string()),
+        programCount: z.optional(z.int().readonly())
+    })
 }));
 
 export const zApplicationMemberCreate = z.object({
@@ -753,12 +777,20 @@ export const zApplicationMemberList = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
-        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
-        links: z.optional(z.object({
-            application: z.optional(z.string())
-        }).readonly())
+        application: z.object({
+            id: z.optional(z.uuid().readonly()),
+            status: z.optional(z.enum([
+                'draft',
+                'submitted',
+                'under_review',
+                'withdrawn',
+                'closed'
+            ])),
+            programsAppliedFor: z.optional(z.string()),
+            programCount: z.optional(z.int().readonly())
+        })
     }))),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
@@ -1024,7 +1056,9 @@ export const zApplicationWritable2 = z.object({
             })
         ]))
     }).and(z.object({
-        applicationId: z.uuid()
+        application: z.object({
+            programsAppliedFor: z.optional(z.string())
+        })
     }))))
 }));
 
@@ -1127,7 +1161,9 @@ export const zApplicationListWritable = z.object({
                 })
             ]))
         }).and(z.object({
-            applicationId: z.uuid()
+            application: z.object({
+                programsAppliedFor: z.optional(z.string())
+            })
         }))))
     }))),
     total: z.int().gte(0),
@@ -1206,7 +1242,9 @@ export const zApplicationMemberWritable2 = z.object({
         })
     ]))
 }).and(z.object({
-    applicationId: z.uuid()
+    application: z.object({
+        programsAppliedFor: z.optional(z.string())
+    })
 }));
 
 export const zApplicationMemberListWritable = z.object({
@@ -1277,7 +1315,9 @@ export const zApplicationMemberListWritable = z.object({
             })
         ]))
     }).and(z.object({
-        applicationId: z.uuid()
+        application: z.object({
+            programsAppliedFor: z.optional(z.string())
+        })
     }))),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
@@ -1466,12 +1506,20 @@ export const zListApplicationsResponse = z.object({
             ]))
         }).and(z.object({
             id: z.uuid().readonly(),
-            applicationId: z.uuid(),
             createdAt: z.iso.datetime({ offset: true }).readonly(),
             updatedAt: z.iso.datetime({ offset: true }).readonly(),
-            links: z.optional(z.object({
-                application: z.optional(z.string())
-            }).readonly())
+            application: z.object({
+                id: z.optional(z.uuid().readonly()),
+                status: z.optional(z.enum([
+                    'draft',
+                    'submitted',
+                    'under_review',
+                    'withdrawn',
+                    'closed'
+                ])),
+                programsAppliedFor: z.optional(z.string()),
+                programCount: z.optional(z.int().readonly())
+            })
         })))),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly()
@@ -1657,12 +1705,20 @@ export const zCreateApplicationResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
-        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
-        links: z.optional(z.object({
-            application: z.optional(z.string())
-        }).readonly())
+        application: z.object({
+            id: z.optional(z.uuid().readonly()),
+            status: z.optional(z.enum([
+                'draft',
+                'submitted',
+                'under_review',
+                'withdrawn',
+                'closed'
+            ])),
+            programsAppliedFor: z.optional(z.string()),
+            programCount: z.optional(z.int().readonly())
+        })
     })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
@@ -1828,12 +1884,20 @@ export const zGetApplicationResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
-        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
-        links: z.optional(z.object({
-            application: z.optional(z.string())
-        }).readonly())
+        application: z.object({
+            id: z.optional(z.uuid().readonly()),
+            status: z.optional(z.enum([
+                'draft',
+                'submitted',
+                'under_review',
+                'withdrawn',
+                'closed'
+            ])),
+            programsAppliedFor: z.optional(z.string()),
+            programCount: z.optional(z.int().readonly())
+        })
     })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
@@ -2016,12 +2080,20 @@ export const zUpdateApplicationResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
-        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
-        links: z.optional(z.object({
-            application: z.optional(z.string())
-        }).readonly())
+        application: z.object({
+            id: z.optional(z.uuid().readonly()),
+            status: z.optional(z.enum([
+                'draft',
+                'submitted',
+                'under_review',
+                'withdrawn',
+                'closed'
+            ])),
+            programsAppliedFor: z.optional(z.string()),
+            programCount: z.optional(z.int().readonly())
+        })
     })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
@@ -2124,12 +2196,20 @@ export const zListApplicationMembersResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
-        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
-        links: z.optional(z.object({
-            application: z.optional(z.string())
-        }).readonly())
+        application: z.object({
+            id: z.optional(z.uuid().readonly()),
+            status: z.optional(z.enum([
+                'draft',
+                'submitted',
+                'under_review',
+                'withdrawn',
+                'closed'
+            ])),
+            programsAppliedFor: z.optional(z.string()),
+            programCount: z.optional(z.int().readonly())
+        })
     }))),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
@@ -2282,12 +2362,20 @@ export const zCreateApplicationMemberResponse = z.object({
     ]))
 }).and(z.object({
     id: z.uuid().readonly(),
-    applicationId: z.uuid(),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
-    links: z.optional(z.object({
-        application: z.optional(z.string())
-    }).readonly())
+    application: z.object({
+        id: z.optional(z.uuid().readonly()),
+        status: z.optional(z.enum([
+            'draft',
+            'submitted',
+            'under_review',
+            'withdrawn',
+            'closed'
+        ])),
+        programsAppliedFor: z.optional(z.string()),
+        programCount: z.optional(z.int().readonly())
+    })
 }));
 
 export const zDeleteApplicationMemberData = z.object({
@@ -2384,12 +2472,20 @@ export const zGetApplicationMemberResponse = z.object({
     ]))
 }).and(z.object({
     id: z.uuid().readonly(),
-    applicationId: z.uuid(),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
-    links: z.optional(z.object({
-        application: z.optional(z.string())
-    }).readonly())
+    application: z.object({
+        id: z.optional(z.uuid().readonly()),
+        status: z.optional(z.enum([
+            'draft',
+            'submitted',
+            'under_review',
+            'withdrawn',
+            'closed'
+        ])),
+        programsAppliedFor: z.optional(z.string()),
+        programCount: z.optional(z.int().readonly())
+    })
 }));
 
 export const zUpdateApplicationMemberData = z.object({
@@ -2538,12 +2634,20 @@ export const zUpdateApplicationMemberResponse = z.object({
     ]))
 }).and(z.object({
     id: z.uuid().readonly(),
-    applicationId: z.uuid(),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
-    links: z.optional(z.object({
-        application: z.optional(z.string())
-    }).readonly())
+    application: z.object({
+        id: z.optional(z.uuid().readonly()),
+        status: z.optional(z.enum([
+            'draft',
+            'submitted',
+            'under_review',
+            'withdrawn',
+            'closed'
+        ])),
+        programsAppliedFor: z.optional(z.string()),
+        programCount: z.optional(z.int().readonly())
+    })
 }));
 
 export const zSubmitApplicationData = z.object({
@@ -2681,12 +2785,20 @@ export const zSubmitApplicationResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
-        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
-        links: z.optional(z.object({
-            application: z.optional(z.string())
-        }).readonly())
+        application: z.object({
+            id: z.optional(z.uuid().readonly()),
+            status: z.optional(z.enum([
+                'draft',
+                'submitted',
+                'under_review',
+                'withdrawn',
+                'closed'
+            ])),
+            programsAppliedFor: z.optional(z.string()),
+            programCount: z.optional(z.int().readonly())
+        })
     })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
@@ -2839,12 +2951,20 @@ export const zOpenApplicationResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
-        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
-        links: z.optional(z.object({
-            application: z.optional(z.string())
-        }).readonly())
+        application: z.object({
+            id: z.optional(z.uuid().readonly()),
+            status: z.optional(z.enum([
+                'draft',
+                'submitted',
+                'under_review',
+                'withdrawn',
+                'closed'
+            ])),
+            programsAppliedFor: z.optional(z.string()),
+            programCount: z.optional(z.int().readonly())
+        })
     })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
@@ -3000,12 +3120,20 @@ export const zCloseApplicationResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
-        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
-        links: z.optional(z.object({
-            application: z.optional(z.string())
-        }).readonly())
+        application: z.object({
+            id: z.optional(z.uuid().readonly()),
+            status: z.optional(z.enum([
+                'draft',
+                'submitted',
+                'under_review',
+                'withdrawn',
+                'closed'
+            ])),
+            programsAppliedFor: z.optional(z.string()),
+            programCount: z.optional(z.int().readonly())
+        })
     })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
@@ -3158,12 +3286,20 @@ export const zWithdrawApplicationResponse = z.object({
         ]))
     }).and(z.object({
         id: z.uuid().readonly(),
-        applicationId: z.uuid(),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
-        links: z.optional(z.object({
-            application: z.optional(z.string())
-        }).readonly())
+        application: z.object({
+            id: z.optional(z.uuid().readonly()),
+            status: z.optional(z.enum([
+                'draft',
+                'submitted',
+                'under_review',
+                'withdrawn',
+                'closed'
+            ])),
+            programsAppliedFor: z.optional(z.string()),
+            programCount: z.optional(z.int().readonly())
+        })
     })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()

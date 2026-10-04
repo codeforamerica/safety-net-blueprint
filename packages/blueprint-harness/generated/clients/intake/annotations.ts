@@ -121,7 +121,7 @@ export const Annotations = {
         "external-ref-defs-oneof"
       ]
     },
-    "applicationMember.applicationId": {
+    "applicationMember.application": {
       "patterns": [
         "intra-domain-fk"
       ]

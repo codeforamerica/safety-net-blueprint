@@ -3,7 +3,7 @@
   "unevaluatedProperties": false,
   "required": [
     "id",
-    "applicationId",
+    "application",
     "firstName",
     "lastName",
     "relationship",
@@ -274,11 +274,6 @@
           "readOnly": true,
           "description": "Unique identifier (server-generated)."
         },
-        "applicationId": {
-          "type": "string",
-          "format": "uuid",
-          "description": "The application this member belongs to."
-        },
         "createdAt": {
           "type": "string",
           "format": "date-time",
@@ -291,15 +286,35 @@
           "readOnly": true,
           "description": "Timestamp when the member was last updated."
         },
-        "links": {
+        "application": {
           "type": "object",
-          "readOnly": true,
-          "description": "Related resource links.",
+          "description": "Expanded Application (subset).",
           "properties": {
-            "application": {
+            "id": {
               "type": "string",
-              "format": "uri-reference",
-              "description": "Link to the related Application resource."
+              "format": "uuid",
+              "readOnly": true,
+              "description": "Unique identifier (server-generated)."
+            },
+            "status": {
+              "type": "string",
+              "readOnly": true,
+              "description": "Current lifecycle status of the application.",
+              "enum": [
+                "draft",
+                "submitted",
+                "under_review",
+                "withdrawn",
+                "closed"
+              ]
+            },
+            "programsAppliedFor": {
+              "type": "string"
+            },
+            "programCount": {
+              "type": "integer",
+              "readOnly": true,
+              "description": "How many programs this application covers, from programsAppliedFor."
             }
           }
         }

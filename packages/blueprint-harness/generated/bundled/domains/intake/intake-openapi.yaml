@@ -435,7 +435,7 @@ paths:
                                 unevaluatedProperties: false
                                 required:
                                   - id
-                                  - applicationId
+                                  - application
                                   - firstName
                                   - lastName
                                   - relationship
@@ -635,14 +635,6 @@ paths:
                                         format: uuid
                                         readOnly: true
                                         description: Unique identifier (server-generated).
-                                      applicationId:
-                                        type: string
-                                        format: uuid
-                                        description: The application this member belongs to.
-                                        x-relationship:
-                                          type: fk
-                                          resource: Application
-                                          style: links-only
                                       createdAt:
                                         type: string
                                         format: date-time
@@ -653,15 +645,41 @@ paths:
                                         format: date-time
                                         readOnly: true
                                         description: Timestamp when the member was last updated.
-                                      links:
+                                      application:
                                         type: object
-                                        readOnly: true
-                                        description: Related resource links.
+                                        description: Expanded Application (subset).
                                         properties:
-                                          application:
+                                          id:
                                             type: string
-                                            format: uri-reference
-                                            description: Link to the related Application resource.
+                                            format: uuid
+                                            readOnly: true
+                                            description: Unique identifier (server-generated).
+                                          status:
+                                            type: string
+                                            readOnly: true
+                                            description: Current lifecycle status of the application.
+                                            enum:
+                                              - draft
+                                              - submitted
+                                              - under_review
+                                              - withdrawn
+                                              - closed
+                                          programsAppliedFor:
+                                            type: string
+                                          programCount:
+                                            type: integer
+                                            readOnly: true
+                                            x-derived: $this.programsAppliedFor.size()
+                                            description: How many programs this application covers, from programsAppliedFor.
+                                        x-relationship:
+                                          type: fk
+                                          resource: Application
+                                          style: expand
+                                          fields:
+                                            - id
+                                            - status
+                                            - programsAppliedFor
+                                            - programCount
                               description: Household members on this application.
                             createdAt:
                               type: string
@@ -1017,7 +1035,7 @@ paths:
                           unevaluatedProperties: false
                           required:
                             - id
-                            - applicationId
+                            - application
                             - firstName
                             - lastName
                             - relationship
@@ -1217,14 +1235,6 @@ paths:
                                   format: uuid
                                   readOnly: true
                                   description: Unique identifier (server-generated).
-                                applicationId:
-                                  type: string
-                                  format: uuid
-                                  description: The application this member belongs to.
-                                  x-relationship:
-                                    type: fk
-                                    resource: Application
-                                    style: links-only
                                 createdAt:
                                   type: string
                                   format: date-time
@@ -1235,15 +1245,41 @@ paths:
                                   format: date-time
                                   readOnly: true
                                   description: Timestamp when the member was last updated.
-                                links:
+                                application:
                                   type: object
-                                  readOnly: true
-                                  description: Related resource links.
+                                  description: Expanded Application (subset).
                                   properties:
-                                    application:
+                                    id:
                                       type: string
-                                      format: uri-reference
-                                      description: Link to the related Application resource.
+                                      format: uuid
+                                      readOnly: true
+                                      description: Unique identifier (server-generated).
+                                    status:
+                                      type: string
+                                      readOnly: true
+                                      description: Current lifecycle status of the application.
+                                      enum:
+                                        - draft
+                                        - submitted
+                                        - under_review
+                                        - withdrawn
+                                        - closed
+                                    programsAppliedFor:
+                                      type: string
+                                    programCount:
+                                      type: integer
+                                      readOnly: true
+                                      x-derived: $this.programsAppliedFor.size()
+                                      description: How many programs this application covers, from programsAppliedFor.
+                                  x-relationship:
+                                    type: fk
+                                    resource: Application
+                                    style: expand
+                                    fields:
+                                      - id
+                                      - status
+                                      - programsAppliedFor
+                                      - programCount
                         description: Household members on this application.
                       createdAt:
                         type: string
@@ -1514,7 +1550,7 @@ paths:
                           unevaluatedProperties: false
                           required:
                             - id
-                            - applicationId
+                            - application
                             - firstName
                             - lastName
                             - relationship
@@ -1714,14 +1750,6 @@ paths:
                                   format: uuid
                                   readOnly: true
                                   description: Unique identifier (server-generated).
-                                applicationId:
-                                  type: string
-                                  format: uuid
-                                  description: The application this member belongs to.
-                                  x-relationship:
-                                    type: fk
-                                    resource: Application
-                                    style: links-only
                                 createdAt:
                                   type: string
                                   format: date-time
@@ -1732,15 +1760,41 @@ paths:
                                   format: date-time
                                   readOnly: true
                                   description: Timestamp when the member was last updated.
-                                links:
+                                application:
                                   type: object
-                                  readOnly: true
-                                  description: Related resource links.
+                                  description: Expanded Application (subset).
                                   properties:
-                                    application:
+                                    id:
                                       type: string
-                                      format: uri-reference
-                                      description: Link to the related Application resource.
+                                      format: uuid
+                                      readOnly: true
+                                      description: Unique identifier (server-generated).
+                                    status:
+                                      type: string
+                                      readOnly: true
+                                      description: Current lifecycle status of the application.
+                                      enum:
+                                        - draft
+                                        - submitted
+                                        - under_review
+                                        - withdrawn
+                                        - closed
+                                    programsAppliedFor:
+                                      type: string
+                                    programCount:
+                                      type: integer
+                                      readOnly: true
+                                      x-derived: $this.programsAppliedFor.size()
+                                      description: How many programs this application covers, from programsAppliedFor.
+                                  x-relationship:
+                                    type: fk
+                                    resource: Application
+                                    style: expand
+                                    fields:
+                                      - id
+                                      - status
+                                      - programsAppliedFor
+                                      - programCount
                         description: Household members on this application.
                       createdAt:
                         type: string
@@ -2072,7 +2126,7 @@ paths:
                           unevaluatedProperties: false
                           required:
                             - id
-                            - applicationId
+                            - application
                             - firstName
                             - lastName
                             - relationship
@@ -2272,14 +2326,6 @@ paths:
                                   format: uuid
                                   readOnly: true
                                   description: Unique identifier (server-generated).
-                                applicationId:
-                                  type: string
-                                  format: uuid
-                                  description: The application this member belongs to.
-                                  x-relationship:
-                                    type: fk
-                                    resource: Application
-                                    style: links-only
                                 createdAt:
                                   type: string
                                   format: date-time
@@ -2290,15 +2336,41 @@ paths:
                                   format: date-time
                                   readOnly: true
                                   description: Timestamp when the member was last updated.
-                                links:
+                                application:
                                   type: object
-                                  readOnly: true
-                                  description: Related resource links.
+                                  description: Expanded Application (subset).
                                   properties:
-                                    application:
+                                    id:
                                       type: string
-                                      format: uri-reference
-                                      description: Link to the related Application resource.
+                                      format: uuid
+                                      readOnly: true
+                                      description: Unique identifier (server-generated).
+                                    status:
+                                      type: string
+                                      readOnly: true
+                                      description: Current lifecycle status of the application.
+                                      enum:
+                                        - draft
+                                        - submitted
+                                        - under_review
+                                        - withdrawn
+                                        - closed
+                                    programsAppliedFor:
+                                      type: string
+                                    programCount:
+                                      type: integer
+                                      readOnly: true
+                                      x-derived: $this.programsAppliedFor.size()
+                                      description: How many programs this application covers, from programsAppliedFor.
+                                  x-relationship:
+                                    type: fk
+                                    resource: Application
+                                    style: expand
+                                    fields:
+                                      - id
+                                      - status
+                                      - programsAppliedFor
+                                      - programCount
                         description: Household members on this application.
                       createdAt:
                         type: string
@@ -2415,6 +2487,13 @@ paths:
     get:
       summary: List household members
       operationId: listApplicationMembers
+      x-sortable:
+        fields:
+          - createdAt
+          - updatedAt
+          - lastName
+          - dateOfBirth
+        default: createdAt
       tags:
         - Household Members
       parameters:
@@ -2613,7 +2692,7 @@ paths:
                       unevaluatedProperties: false
                       required:
                         - id
-                        - applicationId
+                        - application
                         - firstName
                         - lastName
                         - relationship
@@ -2813,14 +2892,6 @@ paths:
                               format: uuid
                               readOnly: true
                               description: Unique identifier (server-generated).
-                            applicationId:
-                              type: string
-                              format: uuid
-                              description: The application this member belongs to.
-                              x-relationship:
-                                type: fk
-                                resource: Application
-                                style: links-only
                             createdAt:
                               type: string
                               format: date-time
@@ -2831,15 +2902,41 @@ paths:
                               format: date-time
                               readOnly: true
                               description: Timestamp when the member was last updated.
-                            links:
+                            application:
                               type: object
-                              readOnly: true
-                              description: Related resource links.
+                              description: Expanded Application (subset).
                               properties:
-                                application:
+                                id:
                                   type: string
-                                  format: uri-reference
-                                  description: Link to the related Application resource.
+                                  format: uuid
+                                  readOnly: true
+                                  description: Unique identifier (server-generated).
+                                status:
+                                  type: string
+                                  readOnly: true
+                                  description: Current lifecycle status of the application.
+                                  enum:
+                                    - draft
+                                    - submitted
+                                    - under_review
+                                    - withdrawn
+                                    - closed
+                                programsAppliedFor:
+                                  type: string
+                                programCount:
+                                  type: integer
+                                  readOnly: true
+                                  x-derived: $this.programsAppliedFor.size()
+                                  description: How many programs this application covers, from programsAppliedFor.
+                              x-relationship:
+                                type: fk
+                                resource: Application
+                                style: expand
+                                fields:
+                                  - id
+                                  - status
+                                  - programsAppliedFor
+                                  - programCount
                   total:
                     type: integer
                     minimum: 0
@@ -3086,7 +3183,7 @@ paths:
                 unevaluatedProperties: false
                 required:
                   - id
-                  - applicationId
+                  - application
                   - firstName
                   - lastName
                   - relationship
@@ -3286,14 +3383,6 @@ paths:
                         format: uuid
                         readOnly: true
                         description: Unique identifier (server-generated).
-                      applicationId:
-                        type: string
-                        format: uuid
-                        description: The application this member belongs to.
-                        x-relationship:
-                          type: fk
-                          resource: Application
-                          style: links-only
                       createdAt:
                         type: string
                         format: date-time
@@ -3304,15 +3393,41 @@ paths:
                         format: date-time
                         readOnly: true
                         description: Timestamp when the member was last updated.
-                      links:
+                      application:
                         type: object
-                        readOnly: true
-                        description: Related resource links.
+                        description: Expanded Application (subset).
                         properties:
-                          application:
+                          id:
                             type: string
-                            format: uri-reference
-                            description: Link to the related Application resource.
+                            format: uuid
+                            readOnly: true
+                            description: Unique identifier (server-generated).
+                          status:
+                            type: string
+                            readOnly: true
+                            description: Current lifecycle status of the application.
+                            enum:
+                              - draft
+                              - submitted
+                              - under_review
+                              - withdrawn
+                              - closed
+                          programsAppliedFor:
+                            type: string
+                          programCount:
+                            type: integer
+                            readOnly: true
+                            x-derived: $this.programsAppliedFor.size()
+                            description: How many programs this application covers, from programsAppliedFor.
+                        x-relationship:
+                          type: fk
+                          resource: Application
+                          style: expand
+                          fields:
+                            - id
+                            - status
+                            - programsAppliedFor
+                            - programCount
         "400":
           description: Bad request — validation failed
           content:
@@ -3382,7 +3497,7 @@ paths:
                 unevaluatedProperties: false
                 required:
                   - id
-                  - applicationId
+                  - application
                   - firstName
                   - lastName
                   - relationship
@@ -3582,14 +3697,6 @@ paths:
                         format: uuid
                         readOnly: true
                         description: Unique identifier (server-generated).
-                      applicationId:
-                        type: string
-                        format: uuid
-                        description: The application this member belongs to.
-                        x-relationship:
-                          type: fk
-                          resource: Application
-                          style: links-only
                       createdAt:
                         type: string
                         format: date-time
@@ -3600,15 +3707,41 @@ paths:
                         format: date-time
                         readOnly: true
                         description: Timestamp when the member was last updated.
-                      links:
+                      application:
                         type: object
-                        readOnly: true
-                        description: Related resource links.
+                        description: Expanded Application (subset).
                         properties:
-                          application:
+                          id:
                             type: string
-                            format: uri-reference
-                            description: Link to the related Application resource.
+                            format: uuid
+                            readOnly: true
+                            description: Unique identifier (server-generated).
+                          status:
+                            type: string
+                            readOnly: true
+                            description: Current lifecycle status of the application.
+                            enum:
+                              - draft
+                              - submitted
+                              - under_review
+                              - withdrawn
+                              - closed
+                          programsAppliedFor:
+                            type: string
+                          programCount:
+                            type: integer
+                            readOnly: true
+                            x-derived: $this.programsAppliedFor.size()
+                            description: How many programs this application covers, from programsAppliedFor.
+                        x-relationship:
+                          type: fk
+                          resource: Application
+                          style: expand
+                          fields:
+                            - id
+                            - status
+                            - programsAppliedFor
+                            - programCount
         "404":
           description: Resource not found
           content:
@@ -3836,7 +3969,7 @@ paths:
                 unevaluatedProperties: false
                 required:
                   - id
-                  - applicationId
+                  - application
                   - firstName
                   - lastName
                   - relationship
@@ -4036,14 +4169,6 @@ paths:
                         format: uuid
                         readOnly: true
                         description: Unique identifier (server-generated).
-                      applicationId:
-                        type: string
-                        format: uuid
-                        description: The application this member belongs to.
-                        x-relationship:
-                          type: fk
-                          resource: Application
-                          style: links-only
                       createdAt:
                         type: string
                         format: date-time
@@ -4054,15 +4179,41 @@ paths:
                         format: date-time
                         readOnly: true
                         description: Timestamp when the member was last updated.
-                      links:
+                      application:
                         type: object
-                        readOnly: true
-                        description: Related resource links.
+                        description: Expanded Application (subset).
                         properties:
-                          application:
+                          id:
                             type: string
-                            format: uri-reference
-                            description: Link to the related Application resource.
+                            format: uuid
+                            readOnly: true
+                            description: Unique identifier (server-generated).
+                          status:
+                            type: string
+                            readOnly: true
+                            description: Current lifecycle status of the application.
+                            enum:
+                              - draft
+                              - submitted
+                              - under_review
+                              - withdrawn
+                              - closed
+                          programsAppliedFor:
+                            type: string
+                          programCount:
+                            type: integer
+                            readOnly: true
+                            x-derived: $this.programsAppliedFor.size()
+                            description: How many programs this application covers, from programsAppliedFor.
+                        x-relationship:
+                          type: fk
+                          resource: Application
+                          style: expand
+                          fields:
+                            - id
+                            - status
+                            - programsAppliedFor
+                            - programCount
         "400":
           description: Bad request — validation failed
           content:
@@ -4323,7 +4474,7 @@ paths:
                           unevaluatedProperties: false
                           required:
                             - id
-                            - applicationId
+                            - application
                             - firstName
                             - lastName
                             - relationship
@@ -4523,14 +4674,6 @@ paths:
                                   format: uuid
                                   readOnly: true
                                   description: Unique identifier (server-generated).
-                                applicationId:
-                                  type: string
-                                  format: uuid
-                                  description: The application this member belongs to.
-                                  x-relationship:
-                                    type: fk
-                                    resource: Application
-                                    style: links-only
                                 createdAt:
                                   type: string
                                   format: date-time
@@ -4541,15 +4684,41 @@ paths:
                                   format: date-time
                                   readOnly: true
                                   description: Timestamp when the member was last updated.
-                                links:
+                                application:
                                   type: object
-                                  readOnly: true
-                                  description: Related resource links.
+                                  description: Expanded Application (subset).
                                   properties:
-                                    application:
+                                    id:
                                       type: string
-                                      format: uri-reference
-                                      description: Link to the related Application resource.
+                                      format: uuid
+                                      readOnly: true
+                                      description: Unique identifier (server-generated).
+                                    status:
+                                      type: string
+                                      readOnly: true
+                                      description: Current lifecycle status of the application.
+                                      enum:
+                                        - draft
+                                        - submitted
+                                        - under_review
+                                        - withdrawn
+                                        - closed
+                                    programsAppliedFor:
+                                      type: string
+                                    programCount:
+                                      type: integer
+                                      readOnly: true
+                                      x-derived: $this.programsAppliedFor.size()
+                                      description: How many programs this application covers, from programsAppliedFor.
+                                  x-relationship:
+                                    type: fk
+                                    resource: Application
+                                    style: expand
+                                    fields:
+                                      - id
+                                      - status
+                                      - programsAppliedFor
+                                      - programCount
                         description: Household members on this application.
                       createdAt:
                         type: string
@@ -4887,7 +5056,7 @@ paths:
                           unevaluatedProperties: false
                           required:
                             - id
-                            - applicationId
+                            - application
                             - firstName
                             - lastName
                             - relationship
@@ -5087,14 +5256,6 @@ paths:
                                   format: uuid
                                   readOnly: true
                                   description: Unique identifier (server-generated).
-                                applicationId:
-                                  type: string
-                                  format: uuid
-                                  description: The application this member belongs to.
-                                  x-relationship:
-                                    type: fk
-                                    resource: Application
-                                    style: links-only
                                 createdAt:
                                   type: string
                                   format: date-time
@@ -5105,15 +5266,41 @@ paths:
                                   format: date-time
                                   readOnly: true
                                   description: Timestamp when the member was last updated.
-                                links:
+                                application:
                                   type: object
-                                  readOnly: true
-                                  description: Related resource links.
+                                  description: Expanded Application (subset).
                                   properties:
-                                    application:
+                                    id:
                                       type: string
-                                      format: uri-reference
-                                      description: Link to the related Application resource.
+                                      format: uuid
+                                      readOnly: true
+                                      description: Unique identifier (server-generated).
+                                    status:
+                                      type: string
+                                      readOnly: true
+                                      description: Current lifecycle status of the application.
+                                      enum:
+                                        - draft
+                                        - submitted
+                                        - under_review
+                                        - withdrawn
+                                        - closed
+                                    programsAppliedFor:
+                                      type: string
+                                    programCount:
+                                      type: integer
+                                      readOnly: true
+                                      x-derived: $this.programsAppliedFor.size()
+                                      description: How many programs this application covers, from programsAppliedFor.
+                                  x-relationship:
+                                    type: fk
+                                    resource: Application
+                                    style: expand
+                                    fields:
+                                      - id
+                                      - status
+                                      - programsAppliedFor
+                                      - programCount
                         description: Household members on this application.
                       createdAt:
                         type: string
@@ -5469,7 +5656,7 @@ paths:
                           unevaluatedProperties: false
                           required:
                             - id
-                            - applicationId
+                            - application
                             - firstName
                             - lastName
                             - relationship
@@ -5669,14 +5856,6 @@ paths:
                                   format: uuid
                                   readOnly: true
                                   description: Unique identifier (server-generated).
-                                applicationId:
-                                  type: string
-                                  format: uuid
-                                  description: The application this member belongs to.
-                                  x-relationship:
-                                    type: fk
-                                    resource: Application
-                                    style: links-only
                                 createdAt:
                                   type: string
                                   format: date-time
@@ -5687,15 +5866,41 @@ paths:
                                   format: date-time
                                   readOnly: true
                                   description: Timestamp when the member was last updated.
-                                links:
+                                application:
                                   type: object
-                                  readOnly: true
-                                  description: Related resource links.
+                                  description: Expanded Application (subset).
                                   properties:
-                                    application:
+                                    id:
                                       type: string
-                                      format: uri-reference
-                                      description: Link to the related Application resource.
+                                      format: uuid
+                                      readOnly: true
+                                      description: Unique identifier (server-generated).
+                                    status:
+                                      type: string
+                                      readOnly: true
+                                      description: Current lifecycle status of the application.
+                                      enum:
+                                        - draft
+                                        - submitted
+                                        - under_review
+                                        - withdrawn
+                                        - closed
+                                    programsAppliedFor:
+                                      type: string
+                                    programCount:
+                                      type: integer
+                                      readOnly: true
+                                      x-derived: $this.programsAppliedFor.size()
+                                      description: How many programs this application covers, from programsAppliedFor.
+                                  x-relationship:
+                                    type: fk
+                                    resource: Application
+                                    style: expand
+                                    fields:
+                                      - id
+                                      - status
+                                      - programsAppliedFor
+                                      - programCount
                         description: Household members on this application.
                       createdAt:
                         type: string
@@ -6033,7 +6238,7 @@ paths:
                           unevaluatedProperties: false
                           required:
                             - id
-                            - applicationId
+                            - application
                             - firstName
                             - lastName
                             - relationship
@@ -6233,14 +6438,6 @@ paths:
                                   format: uuid
                                   readOnly: true
                                   description: Unique identifier (server-generated).
-                                applicationId:
-                                  type: string
-                                  format: uuid
-                                  description: The application this member belongs to.
-                                  x-relationship:
-                                    type: fk
-                                    resource: Application
-                                    style: links-only
                                 createdAt:
                                   type: string
                                   format: date-time
@@ -6251,15 +6448,41 @@ paths:
                                   format: date-time
                                   readOnly: true
                                   description: Timestamp when the member was last updated.
-                                links:
+                                application:
                                   type: object
-                                  readOnly: true
-                                  description: Related resource links.
+                                  description: Expanded Application (subset).
                                   properties:
-                                    application:
+                                    id:
                                       type: string
-                                      format: uri-reference
-                                      description: Link to the related Application resource.
+                                      format: uuid
+                                      readOnly: true
+                                      description: Unique identifier (server-generated).
+                                    status:
+                                      type: string
+                                      readOnly: true
+                                      description: Current lifecycle status of the application.
+                                      enum:
+                                        - draft
+                                        - submitted
+                                        - under_review
+                                        - withdrawn
+                                        - closed
+                                    programsAppliedFor:
+                                      type: string
+                                    programCount:
+                                      type: integer
+                                      readOnly: true
+                                      x-derived: $this.programsAppliedFor.size()
+                                      description: How many programs this application covers, from programsAppliedFor.
+                                  x-relationship:
+                                    type: fk
+                                    resource: Application
+                                    style: expand
+                                    fields:
+                                      - id
+                                      - status
+                                      - programsAppliedFor
+                                      - programCount
                         description: Household members on this application.
                       createdAt:
                         type: string
@@ -8559,7 +8782,7 @@ components:
                 unevaluatedProperties: false
                 required:
                   - id
-                  - applicationId
+                  - application
                   - firstName
                   - lastName
                   - relationship
@@ -8759,14 +8982,6 @@ components:
                         format: uuid
                         readOnly: true
                         description: Unique identifier (server-generated).
-                      applicationId:
-                        type: string
-                        format: uuid
-                        description: The application this member belongs to.
-                        x-relationship:
-                          type: fk
-                          resource: Application
-                          style: links-only
                       createdAt:
                         type: string
                         format: date-time
@@ -8777,15 +8992,41 @@ components:
                         format: date-time
                         readOnly: true
                         description: Timestamp when the member was last updated.
-                      links:
+                      application:
                         type: object
-                        readOnly: true
-                        description: Related resource links.
+                        description: Expanded Application (subset).
                         properties:
-                          application:
+                          id:
                             type: string
-                            format: uri-reference
-                            description: Link to the related Application resource.
+                            format: uuid
+                            readOnly: true
+                            description: Unique identifier (server-generated).
+                          status:
+                            type: string
+                            readOnly: true
+                            description: Current lifecycle status of the application.
+                            enum:
+                              - draft
+                              - submitted
+                              - under_review
+                              - withdrawn
+                              - closed
+                          programsAppliedFor:
+                            type: string
+                          programCount:
+                            type: integer
+                            readOnly: true
+                            x-derived: $this.programsAppliedFor.size()
+                            description: How many programs this application covers, from programsAppliedFor.
+                        x-relationship:
+                          type: fk
+                          resource: Application
+                          style: expand
+                          fields:
+                            - id
+                            - status
+                            - programsAppliedFor
+                            - programCount
               description: Household members on this application.
             createdAt:
               type: string
@@ -9174,7 +9415,7 @@ components:
                       unevaluatedProperties: false
                       required:
                         - id
-                        - applicationId
+                        - application
                         - firstName
                         - lastName
                         - relationship
@@ -9374,14 +9615,6 @@ components:
                               format: uuid
                               readOnly: true
                               description: Unique identifier (server-generated).
-                            applicationId:
-                              type: string
-                              format: uuid
-                              description: The application this member belongs to.
-                              x-relationship:
-                                type: fk
-                                resource: Application
-                                style: links-only
                             createdAt:
                               type: string
                               format: date-time
@@ -9392,15 +9625,41 @@ components:
                               format: date-time
                               readOnly: true
                               description: Timestamp when the member was last updated.
-                            links:
+                            application:
                               type: object
-                              readOnly: true
-                              description: Related resource links.
+                              description: Expanded Application (subset).
                               properties:
-                                application:
+                                id:
                                   type: string
-                                  format: uri-reference
-                                  description: Link to the related Application resource.
+                                  format: uuid
+                                  readOnly: true
+                                  description: Unique identifier (server-generated).
+                                status:
+                                  type: string
+                                  readOnly: true
+                                  description: Current lifecycle status of the application.
+                                  enum:
+                                    - draft
+                                    - submitted
+                                    - under_review
+                                    - withdrawn
+                                    - closed
+                                programsAppliedFor:
+                                  type: string
+                                programCount:
+                                  type: integer
+                                  readOnly: true
+                                  x-derived: $this.programsAppliedFor.size()
+                                  description: How many programs this application covers, from programsAppliedFor.
+                              x-relationship:
+                                type: fk
+                                resource: Application
+                                style: expand
+                                fields:
+                                  - id
+                                  - status
+                                  - programsAppliedFor
+                                  - programCount
                     description: Household members on this application.
                   createdAt:
                     type: string
@@ -9650,7 +9909,7 @@ components:
       unevaluatedProperties: false
       required:
         - id
-        - applicationId
+        - application
         - firstName
         - lastName
         - relationship
@@ -9850,14 +10109,6 @@ components:
               format: uuid
               readOnly: true
               description: Unique identifier (server-generated).
-            applicationId:
-              type: string
-              format: uuid
-              description: The application this member belongs to.
-              x-relationship:
-                type: fk
-                resource: Application
-                style: links-only
             createdAt:
               type: string
               format: date-time
@@ -9868,15 +10119,41 @@ components:
               format: date-time
               readOnly: true
               description: Timestamp when the member was last updated.
-            links:
+            application:
               type: object
-              readOnly: true
-              description: Related resource links.
+              description: Expanded Application (subset).
               properties:
-                application:
+                id:
                   type: string
-                  format: uri-reference
-                  description: Link to the related Application resource.
+                  format: uuid
+                  readOnly: true
+                  description: Unique identifier (server-generated).
+                status:
+                  type: string
+                  readOnly: true
+                  description: Current lifecycle status of the application.
+                  enum:
+                    - draft
+                    - submitted
+                    - under_review
+                    - withdrawn
+                    - closed
+                programsAppliedFor:
+                  type: string
+                programCount:
+                  type: integer
+                  readOnly: true
+                  x-derived: $this.programsAppliedFor.size()
+                  description: How many programs this application covers, from programsAppliedFor.
+              x-relationship:
+                type: fk
+                resource: Application
+                style: expand
+                fields:
+                  - id
+                  - status
+                  - programsAppliedFor
+                  - programCount
     ApplicationMemberCreate:
       allOf:
         - type: object
@@ -10276,7 +10553,7 @@ components:
             unevaluatedProperties: false
             required:
               - id
-              - applicationId
+              - application
               - firstName
               - lastName
               - relationship
@@ -10476,14 +10753,6 @@ components:
                     format: uuid
                     readOnly: true
                     description: Unique identifier (server-generated).
-                  applicationId:
-                    type: string
-                    format: uuid
-                    description: The application this member belongs to.
-                    x-relationship:
-                      type: fk
-                      resource: Application
-                      style: links-only
                   createdAt:
                     type: string
                     format: date-time
@@ -10494,15 +10763,41 @@ components:
                     format: date-time
                     readOnly: true
                     description: Timestamp when the member was last updated.
-                  links:
+                  application:
                     type: object
-                    readOnly: true
-                    description: Related resource links.
+                    description: Expanded Application (subset).
                     properties:
-                      application:
+                      id:
                         type: string
-                        format: uri-reference
-                        description: Link to the related Application resource.
+                        format: uuid
+                        readOnly: true
+                        description: Unique identifier (server-generated).
+                      status:
+                        type: string
+                        readOnly: true
+                        description: Current lifecycle status of the application.
+                        enum:
+                          - draft
+                          - submitted
+                          - under_review
+                          - withdrawn
+                          - closed
+                      programsAppliedFor:
+                        type: string
+                      programCount:
+                        type: integer
+                        readOnly: true
+                        x-derived: $this.programsAppliedFor.size()
+                        description: How many programs this application covers, from programsAppliedFor.
+                    x-relationship:
+                      type: fk
+                      resource: Application
+                      style: expand
+                      fields:
+                        - id
+                        - status
+                        - programsAppliedFor
+                        - programCount
         total:
           type: integer
           minimum: 0
