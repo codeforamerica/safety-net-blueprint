@@ -57,6 +57,32 @@ describe('types.d.ts and the runtime surface', () => {
     );
   });
 
+  test('declares every type string extract dispatches on', () => {
+    // The same drift as a missing export, one level down: `types.d.ts` listed
+    // only 'relationships' while the registry had grown four more, so
+    // `extract(docs, 'sla-types')` worked at runtime and failed to compile.
+    // The registry is module-private, so it is read from the error it throws.
+    let known = [];
+    try {
+      core.extract([], '__not_a_type__');
+    } catch (err) {
+      known = err.message.match(/Known types: (.+)\.$/)?.[1].split(', ') ?? [];
+    }
+    assert.ok(known.length > 1, 'should have recovered the registry from the error message');
+
+    const source = readFileSync(join(packageRoot, 'types.d.ts'), 'utf8');
+    const declared = new Set(
+      [...source.matchAll(/type: '([a-z-]+)'/g)].map((m) => m[1])
+    );
+
+    const missing = known.filter((type) => !declared.has(type));
+    assert.deepEqual(
+      missing,
+      [],
+      `extract accepts these at runtime but types.d.ts does not declare them: ${missing.join(', ')}`
+    );
+  });
+
   test('the package entry points at the file this checks', () => {
     // A types path that does not resolve would make the two sets agree
     // vacuously, since no consumer would be reading this file at all.

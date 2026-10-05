@@ -24,7 +24,8 @@ import { validateEvents } from './validator/event-validator.js';
 import { validateSlaTypeFields, validateMetricFields } from './validator/field-reference-validator.js';
 import { validateAnnotations } from './validator/annotation-validator.js';
 import { validateSchemas } from './validator/json-schema-validator.js';
-import { stemOf, setRootOf, isDeprecated } from './contract-types.js';
+import { stemOf, setRootOf, isDeprecated, isReservedResource } from './contract-types.js';
+import { indexByRelativePath, followRef, isRemoteRef } from './ref-lookup.js';
 import {
   buildSchemaIndex,
   buildCollectionIndex,
@@ -66,9 +67,9 @@ const VALIDATED_ELSEWHERE = new Map([
  * @returns {import('../types.js').ValidationResult}
  */
 export function validate(docs) {
-  // filePath is what lets an external $ref be resolved relative to the document
-  // that declares it. Without it a schema composed via allOf of a sibling file
-  // looks like it has no properties at all.
+  // relativePath is what lets an external $ref be resolved relative to the
+  // document that declares it. Without it a schema composed via allOf of a
+  // sibling file looks like it has no properties at all.
   const yamlFiles = docs.map((doc) => ({
     relativePath: doc.relativePath ?? doc.path,
     filePath: doc.path,
@@ -76,10 +77,15 @@ export function validate(docs) {
     spec: doc.content,
   }));
 
+  // The set itself, so a cross-file $ref resolves by naming a document rather
+  // than by being read off disk.
+  const byRelativePath = indexByRelativePath(yamlFiles);
+
   const schemaIndex = buildSchemaIndex(docs);
   const collectionIndex = buildCollectionIndex(docs);
 
   const context = {
+    byRelativePath,
     schemaIndex,
     collectionIndex,
     collectionProperties: buildCollectionPropertyIndex(collectionIndex, schemaIndex),
@@ -93,6 +99,7 @@ export function validate(docs) {
     channels: buildChannelIndex(docs),
     annotations: {
       specsByDomain: buildSpecsByDomain(docs),
+      byRelativePath,
       actions: buildActionIndex(docs),
       channels: buildChannelIndex(docs).all,
       graphs: buildGraphIndex(docs),
@@ -198,6 +205,92 @@ function brokenFragmentRefs(doc) {
 }
 
 /**
+ * External refs that name no document in the set.
+ *
+ * The companion to `brokenFragmentRefs`, which says external refs are left to
+ * "the checks that can see it" — this is that check, now that the whole set is
+ * in hand. A `$ref` is a contract naming another document by path; if the
+ * document is not there, the contract is broken, and nothing downstream says
+ * so. Fifty-six such refs sat in this repo's AsyncAPI documents unnoticed
+ * because no pass ever followed a ref in an AsyncAPI file.
+ *
+ * Canonical `https://` refs are skipped: they resolve through the schema
+ * registry against the directories core ships, not by path within the set.
+ *
+ * Overlays are exempt for the same reason as fragment refs — they reference
+ * their target spec by design and are not self-contained.
+ *
+ * @param {import('../types.js').Doc} doc
+ * @param {Map<string, *>} byRelativePath - The set
+ * @returns {{ rule: string, message: string, path: string }[]}
+ */
+function brokenExternalRefs(doc, byRelativePath) {
+  if (doc.type === 'overlay') return [];
+
+  return [...doc.refs()]
+    .filter(([, ref]) => ref.external && ref.file && !isRemoteRef(ref.file))
+    .filter(([literal]) => followRef(literal, byRelativePath, doc.relativePath) === null)
+    .map(([literal, ref]) => ({
+      rule: 'unresolved-external-ref',
+      message:
+        `$ref "${literal}" names no document in the contract set. ` +
+        `Check the path — it is resolved relative to this document's directory.`,
+      path: ref.pointer || (doc.relativePath ?? doc.path),
+    }));
+}
+
+/**
+ * `x-relationship.resource` values naming no schema in the set.
+ *
+ * `relationships.js:793` already notices these, but only as a warning emitted
+ * during `resolve`, which is why five of them survived in
+ * `document-management-openapi.yaml` from before #447 was filed until it was
+ * fixed. A relationship whose resource does not resolve is inert: no transform
+ * is applied, the field stays a bare scalar, and generation proceeds. That is
+ * the same shape of failure as an unresolvable `$ref`, so it gets the same
+ * treatment.
+ *
+ * The predicate is deliberately identical to the one in `relationships.js`,
+ * reserved values and all — this escalates an existing warning rather than
+ * introducing a stricter rule, so it cannot flag anything that was not already
+ * being reported.
+ *
+ * @param {import('../types.js').Doc} doc
+ * @param {Map<string, *>} schemaIndex - Schemas by name
+ * @returns {{ rule: string, message: string, path: string }[]}
+ */
+function unresolvedRelationshipResources(doc, schemaIndex) {
+  const findings = [];
+
+  const walk = (node, path) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) {
+      node.forEach((item, i) => walk(item, `${path}/${i}`));
+      return;
+    }
+
+    const resource = node['x-relationship']?.resource;
+    if (resource && !isReservedResource(resource) && !schemaIndex.has(resource)) {
+      findings.push({
+        rule: 'unresolved-relationship-resource',
+        message:
+          `x-relationship.resource "${resource}" names no schema in the contract set, ` +
+          `so the relationship is inert. Use the schema name in PascalCase; ` +
+          `cross-domain references name the domain separately.`,
+        path,
+      });
+    }
+
+    for (const [key, value] of Object.entries(node)) {
+      if (key !== 'x-relationship') walk(value, `${path}/${key}`);
+    }
+  };
+
+  walk(doc.content, doc.relativePath ?? doc.path);
+  return findings;
+}
+
+/**
  * Give every finding the same shape: { rule, message, path }.
  *
  * `rule` falls back to the contract type, so a finding from a validator that
@@ -263,7 +356,7 @@ function findRoleTypeEnum(docs) {
  * Run the checks that apply to one document's type.
  *
  * @param {import('../types.js').Doc} doc
- * @param {{ schemaIndex: Map, collectionIndex: Map, domainSchemas: Map, validRoles: Set|null }} context
+ * @param {{ schemaIndex: Map, collectionIndex: Map, domainSchemas: Map, validRoles: Set|null, byRelativePath: Map }} context
  * @returns {{ errors: object[], warnings: object[] }}
  */
 function validateDoc(doc, context) {
@@ -271,6 +364,8 @@ function validateDoc(doc, context) {
   const warnings = [];
 
   errors.push(...brokenFragmentRefs(doc));
+  errors.push(...brokenExternalRefs(doc, context.byRelativePath));
+  errors.push(...unresolvedRelationshipResources(doc, context.schemaIndex));
   const conformance = context.schemaConformance.get(doc.relativePath ?? doc.path);
   if (conformance) {
     errors.push(...conformance.errors);

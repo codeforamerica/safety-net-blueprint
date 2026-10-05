@@ -238,7 +238,7 @@ components:
     # subject: applicationId
     ApplicationMemberCreatedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -248,7 +248,7 @@ components:
     # subject: applicationId
     ApplicationClosedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -259,7 +259,7 @@ components:
     # subject: applicationId; data is the full resource at creation time.
     ApplicationCreatedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -269,7 +269,7 @@ components:
     # subject: applicationId
     ApplicationDeletedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -279,7 +279,7 @@ components:
     # subject: applicationId
     ApplicationOpenedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -306,7 +306,7 @@ components:
     # subject: applicationId
     ApplicationReviewCompletedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -316,7 +316,7 @@ components:
     # subject: applicationId
     ApplicationSubmittedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -357,19 +357,19 @@ components:
     # subject: applicationId
     ApplicationUpdatedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
               type: string
               const: intake.application.updated
             data:
-              $ref: '../../schemas/events.yaml#/ResourceUpdatedEvent'
+              $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/ResourceUpdatedEvent'
 
     # subject: applicationId
     ApplicationWithdrawnEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -389,7 +389,7 @@ components:
     # subject: determinationId
     DeterminationApprovalNeededEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -399,7 +399,7 @@ components:
     # subject: determinationId
     DeterminationRejectedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -409,7 +409,7 @@ components:
     # subject: memberId
     MemberIncomeCreatedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -419,7 +419,7 @@ components:
     # subject: verificationId
     VerificationCreatedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -429,7 +429,7 @@ components:
     # subject: verificationId
     VerificationInconclusiveEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -440,7 +440,7 @@ components:
     # subject: verificationId
     VerificationCannotVerifyEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -449,7 +449,7 @@ components:
 
     VerificationSatisfiedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -459,7 +459,7 @@ components:
     # subject: verificationId
     VerificationWaivedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -471,7 +471,7 @@ components:
     # subject: verificationId
     VerificationAcceptedEvent:
       allOf:
-        - $ref: './schemas/platform-events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:

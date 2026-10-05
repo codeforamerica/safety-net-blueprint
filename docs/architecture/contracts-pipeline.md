@@ -1,66 +1,59 @@
 # Contracts Build and Validation Pipeline
 
-This document describes the pipeline that transforms source contract files in `packages/contracts/` into validated, resolved deployment artifacts. It covers the validation layers run against base specs, the resolve process that applies state-specific overlays, and the toolchain choices for each stage.
+This document describes the pipeline that transforms source contract files in `packages/safety-net-contracts/src/` into validated, resolved deployment artifacts. It covers the resolve process that applies state-specific overlays, the validation layers run against its output, and the toolchain choices for each stage.
 
 ## Overview
 
-The pipeline validates source contracts, applies state-specific overlays to produce customized output specs, validates the resolved output to catch overlay-introduced issues, and generates downstream artifacts.
+The pipeline applies state-specific overlays to the source contracts to produce customized output specs, validates that output, and generates downstream artifacts.
 
 ## Pipeline
 
 ```
-packages/contracts/
-  *-openapi.yaml  *-asyncapi.yaml
-  *-state-machine.yaml
-  components/  schemas/
+packages/safety-net-contracts/src/
+  domains/*/
+    *-openapi.yaml  *-asyncapi.yaml
+    *-state-machine.yaml
+  common/  overlays/
         │
         ▼
 ┌─────────────────────────────┐
-│  1. Validate base specs      │  AJV, Redocly CLI, custom scripts
-│     npm run validate         │  syntax, lint, patterns, schemas, events
-└─────────────┬───────────────┘
-              │
-┌─────────────▼───────────────┐
-│  2. Overlay resolve          │  resolve.js
+│  1. Overlay resolve          │  resolve.js
 │     npm run resolve          │  state overlay merge → relationship resolution
 └─────────────┬───────────────┘
               │
 ┌─────────────▼───────────────┐
-│  3. Validate resolved output │  AJV, custom scripts
-│     npm run validate:        │  syntax + patterns on resolved specs
-│     resolved                 │  catches overlay-introduced violations
+│  2. Validate resolved output │  AJV, blueprint-core validators
+│     npm run validate         │  syntax, lint, patterns, schemas, events
 └─────────────┬───────────────┘
               │
 ┌─────────────▼───────────────┐
-│  4. Artifact generation      │  @hey-api/openapi-ts, generate-postman.js
-│     npm run clients:*        │  TypeScript clients, Postman collection
-│     npm run postman:generate │
+│  3. Artifact generation      │  @hey-api/openapi-ts,
+│     npm run clients:typescript  generate-postman-collection.js
+│     npm run postman:generate │  TypeScript clients, Postman collection
 └─────────────────────────────┘
 ```
 
-`npm run validate` covers Stage 1 in full. `npm run validate:resolved` covers Stage 3. `npm run preflight` runs all stages end to end before a pull request.
+Validation runs against the resolved output rather than the source, because that is what a deployment serves: an overlay can remove a required response code or add a list endpoint without pagination parameters, and only the merged result shows it. `npm run preflight` runs every stage end to end before a pull request.
 
 ## Pipeline stages
 
-### Stage 1: Validate base specs
-
-`npm run validate` runs all checks against the source contracts:
-
-- **Syntax** (`validate:syntax`) — validates OpenAPI 3.1 structure, resolves all `$ref` references, and checks that inline examples match the schemas they annotate. Uses AJV and `@apidevtools/json-schema-ref-parser`.
-- **Lint** (`validate:lint`) — enforces design conventions: POST returns 201, DELETE returns 204, GET single-resource handles 404, path segments are kebab-case, operation IDs are camelCase, schemas are PascalCase, request/response content types are `application/json`. See [Decision 1](#decision-1-openapi-linter) for the choice of linting tool.
-- **Patterns** (`validate:patterns`, `validate:schemas`) — enforces blueprint-specific invariants that require cross-file analysis: list endpoint pagination shapes, shared error `$ref` usage, state machine event type references resolving to declared AsyncAPI channels. See [Decision 2](#decision-2-three-validation-layers) for the rationale.
-- **Events** (`validate:events`) — validates AsyncAPI 3.0 event contract files and checks cross-references between state machines, OpenAPI specs, and AsyncAPI files.
-- **Cross-artifact** (`validate:state-machines`, `validate:annotations`, `validate:sla-metrics`) — validates that field references in state machine transitions resolve to properties declared in the OpenAPI schemas, that annotation paths point to valid schema fields, and that SLA metric definitions are internally consistent. These checks require reading across multiple contract files and are not expressible as single-file lint rules.
-
-### Stage 2: Overlay resolve
+### Stage 1: Overlay resolve
 
 Applies state-specific customizations to the base specs and writes fully-merged output artifacts to the directory specified by `--out` (conventionally `packages/generated/contracts/` in this repository; states pass their own path). The resolver warns when an overlay action targets a path that does not exist in the base spec. See [Resolve Pipeline Architecture](resolve-pipeline.md) for a full description of the overlay merge stages.
 
-### Stage 3: Validate resolved output
+### Stage 2: Validate resolved output
 
-`npm run validate:resolved` runs syntax and pattern validation against the resolved specs. This catches violations introduced by overlay application — for example, an overlay that removes a required response code or adds a list endpoint without pagination parameters. Lint is not re-run on resolved output because resolved specs include RPC transition endpoints generated by the resolver, which use POST for state transitions (returning 200, not 201) and would produce false positives.
+`npm run validate` runs every check over the resolved contract set at once, because several of them read across documents — a state machine's event types have to resolve against the AsyncAPI channels that declare them, and neither file can answer that alone:
 
-### Stage 4: Artifact generation
+- **Syntax** — validates OpenAPI 3.1 structure, follows `$ref` references through the loaded set, and checks that inline examples match the schemas they annotate. Uses AJV.
+- **Lint** — enforces design conventions: POST returns 201, DELETE returns 204, GET single-resource handles 404, path segments are kebab-case, operation IDs are camelCase, schemas are PascalCase, request/response content types are `application/json`. See [Decision 1](#decision-1-openapi-linter) for where these rules came from. RPC transition endpoints generated by the resolver are exempt from the POST-returns-201 rule, since a state transition returns 200.
+- **Patterns** — enforces blueprint-specific invariants that require cross-file analysis: list endpoint pagination shapes, shared error `$ref` usage, state machine event type references resolving to declared AsyncAPI channels. See [Decision 2](#decision-2-three-validation-layers) for the rationale.
+- **Events** — validates AsyncAPI 3.0 event contract files and checks cross-references between state machines, OpenAPI specs, and AsyncAPI files.
+- **Cross-artifact** — validates that field references in state machine transitions resolve to properties declared in the OpenAPI schemas, that annotation paths point to valid schema fields, and that SLA metric definitions are internally consistent. These checks require reading across multiple contract files and are not expressible as single-file lint rules.
+
+`npm run validate:mock-data` is separate, and checks the mock server's seed records against the same resolved schemas.
+
+### Stage 3: Artifact generation
 
 Produces downstream artifacts from the resolved specs:
 
@@ -71,13 +64,14 @@ Produces downstream artifacts from the resolved specs:
 
 | Tool | Package | Stage | Purpose |
 |---|---|---|---|
-| JSON Schema validator | `ajv` + `ajv-formats` | 1, 3 | Validates spec syntax and example data against schemas |
-| $ref resolver | `@apidevtools/json-schema-ref-parser` | 1, 3 | Dereferences all `$ref` chains before validation |
-| OpenAPI linter | `@redocly/cli` | 1 | Enforces naming and HTTP design rules. See [Decision 1](#decision-1-openapi-linter). |
-| Pattern validator | Custom scripts in `packages/contracts/scripts/` | 1, 3 | Enforces blueprint-specific API patterns |
-| Overlay resolver | `resolve.js` (local) | 2 | Merges state overlay files and resolves relationships |
-| TypeScript client generator | `@hey-api/openapi-ts` | 4 | Generates typed API clients from resolved specs |
-| Postman generator | `generate-postman.js` (local) | 4 | Generates Postman collection from resolved specs |
+| Overlay resolver | `resolve.js` (local) | 1 | Merges state overlay files and resolves relationships |
+| JSON Schema validator | `ajv` + `ajv-formats` | 2 | Validates spec syntax and example data against schemas |
+| Contract validator | `packages/blueprint-core/src/validator/` | 2 | Enforces design conventions and blueprint-specific patterns, across files |
+| $ref resolver | `@apidevtools/json-schema-ref-parser` | 3 | Inlines `$ref` chains when bundling a spec for client generation |
+| TypeScript client generator | `@hey-api/openapi-ts` | 3 | Generates typed API clients from resolved specs |
+| Postman generator | `generate-postman-collection.js` (local) | 3 | Generates Postman collection from resolved specs |
+
+Validation resolves `$ref`s against the loaded contract set rather than dereferencing specs up front, so a reference naming a document the set does not contain is reported instead of being looked for on disk. Dereferencing survives only in Stage 3, where the client generator needs a bundled spec.
 
 ## Key design decisions
 
@@ -90,7 +84,7 @@ Produces downstream artifacts from the resolved specs:
 
 ### Decision 1: OpenAPI linter
 
-**Status:** Decided: B
+**Status:** Decided: B — superseded in practice. The rules below are now implemented in the contract validator, which reads the whole set rather than one file at a time. `@redocly/cli` and `.redocly.yaml` are still in the repository but nothing runs them.
 
 **What's being decided:** Which tool to use for OpenAPI design rule enforcement (naming conventions, HTTP method rules, content type requirements), given that the previous tool had an unresolved platform-specific crash bug blocking CI on Linux.
 
@@ -109,7 +103,7 @@ Produces downstream artifacts from the resolved specs:
 
 ### Decision 2: Three validation layers
 
-**Status:** Decided: A
+**Status:** Decided: A — superseded in practice. The three kinds of check remain, and the reasoning below still describes why they are distinct, but they run together in one pass over the loaded set rather than as three tools.
 
 **What's being decided:** Whether to consolidate all contract checks into a single linting tool (with custom rules for everything) or keep separate layers for syntax, lint, and pattern validation.
 
@@ -130,16 +124,18 @@ The blueprint's CI pipeline runs `npm run preflight` on every pull request to `m
 
 ```
 npm run preflight
-├── npm run validate          # Stage 1 (syntax, lint, patterns, schemas, events)
-├── npm test                  # Unit tests
-├── npm run resolve           # Stage 2
-├── npm run validate:resolved # Stage 3 (syntax + patterns on resolved output)
-├── npm run validate:seed     # Mock server seed data consistency
-├── npm run postman:generate  # Stage 4
-└── npm run test:integration  # Integration tests (mock server + newman)
+├── resolve + generate artifacts   # Stage 1 and Stage 3, from a clean slate
+├── check artifacts are committed  # the generated output must match its source
+├── npm test                       # Unit tests
+├── npm run validate               # Stage 2 (syntax, lint, patterns, schemas, events)
+├── npm run validate:mock-data     # Mock server seed data consistency
+├── npm run postman:generate       # Stage 3
+└── mock server and contract tests # Integration tests
 ```
 
-For adopting state CI, run `npm run validate` against the base specs, `npm run resolve` with your overlay path, then `npm run validate:resolved` against the resolved output. See [CI/CD for Backend](../guides/ci-cd-backend.md) for full GitHub Actions and GitLab CI examples.
+Resolve comes first because there is nothing to validate until it has run: `packages/generated/contracts/` is build output and is not committed, so `npm run validate` on a fresh checkout reports no contract documents found.
+
+For adopting state CI, run `npm run resolve` with your overlay path, then `npm run validate` against the resolved output. See [CI/CD for Backend](../guides/ci-cd-backend.md) for full GitHub Actions and GitLab CI examples.
 
 ## References
 

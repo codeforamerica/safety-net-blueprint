@@ -293,6 +293,42 @@ export const baseContractsDir: string;
 // ---------------------------------------------------------------------------
 
 
+/** One SLA type contract's declarations. */
+export interface SlaTypesEntry {
+  domain: string;
+  slaTypes: object[];
+  relativePath: string | null;
+}
+
+/** One metrics contract's declarations. */
+export interface MetricsEntry {
+  domain: string;
+  metrics: object[];
+  relativePath: string | null;
+}
+
+/** One config contract's catalogs, keyed by the top-level array that holds them. */
+export interface ConfigEntry {
+  domain: string;
+  version: string;
+  catalogs: Record<string, object[]>;
+  relativePath: string | null;
+}
+
+/**
+ * One state machine, with `machine` pointing at the machine itself and
+ * `stateMachine` at the document declaring it. `extends` and the `$ref`s in
+ * action schemas are already resolved.
+ */
+export interface StateMachineEntry {
+  domain: string;
+  object: string;
+  apiSpec: string | null;
+  stateMachine: Record<string, unknown>;
+  machine: Record<string, unknown>;
+  relativePath: string | null;
+}
+
 /**
  * Read out a fact the documents already state.
  *
@@ -300,9 +336,17 @@ export const baseContractsDir: string;
  * contract artifact that generated them, keyed `{type}:{domain}:{id}` from
  * each operation's `x-relationship`; plain `fk` relationships are
  * field-level, not endpoint-level, and are skipped.
+ *
+ * The other four name contract types, so they read the same vocabulary as
+ * `discover(dir, type)`, and each returns one entry per document declaring
+ * that section — except `state-machines`, which returns one per machine.
  */
 export function extract(
   docs: Doc[],
   type: 'relationships'
 ): Map<string, { path: string; method: string }>;
+export function extract(docs: Doc[], type: 'state-machines'): StateMachineEntry[];
+export function extract(docs: Doc[], type: 'sla-types'): SlaTypesEntry[];
+export function extract(docs: Doc[], type: 'metrics'): MetricsEntry[];
+export function extract(docs: Doc[], type: 'config'): ConfigEntry[];
 

@@ -92,7 +92,7 @@ components:
     # subject: applicationId
     ApplicationExpeditedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -102,7 +102,7 @@ components:
     # subject: decisionId
     DecisionCompletedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -157,7 +157,7 @@ components:
     # subject: determinationId
     DeterminationCreatedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -167,7 +167,7 @@ components:
     # subject: decisionId
     DecisionCreatedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -177,7 +177,7 @@ components:
     # subject: applicationId
     DeterminationCompletedEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
@@ -187,7 +187,7 @@ components:
     # subject: determinationId
     DeterminationWithdrawnEvent:
       allOf:
-        - $ref: '../../schemas/events.yaml#/$defs/Event'
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
         - type: object
           properties:
             type:
