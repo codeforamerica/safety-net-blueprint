@@ -2,7 +2,7 @@
 
 The resolve pipeline transforms base OpenAPI specifications and state-specific overlay files into fully-resolved output artifacts. It is the central mechanism by which the blueprint becomes customizable for individual state deployments.
 
-> This document covers Stage 4 of the contracts build pipeline. For the full pipeline (validation, lint, resolve, and artifact generation), see [Contracts Build and Validation Pipeline](contracts-pipeline.md).
+> This document covers Stage 1 of the contracts build pipeline. For the full pipeline (resolve, validation, and artifact generation), see [Contracts Build and Validation Pipeline](contracts-pipeline.md).
 
 ## Overview
 
