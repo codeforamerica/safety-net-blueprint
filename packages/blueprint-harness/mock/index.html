@@ -134,15 +134,43 @@
     font-weight: 700; color: var(--ok);
   }
   .panel .watch ul { margin: 0; padding-left: 1.1rem; }
-  .panel .watch li { margin: 0 0 .45rem; line-height: 1.55; }
+  /* The anchor for the cards below: they span the bullet rather than hang
+     off the word, so one near the right-hand edge has nowhere to overflow
+     to and every card opens in the same place. */
+  .panel .watch li { margin: 0 0 .45rem; line-height: 1.55; position: relative; }
   .panel .watch li:last-child { margin-bottom: 0; }
   .panel .watch code { background: #e4efe4; padding: .08em .3em; border-radius: 3px; }
-  .panel .watch code a.named {
-    color: inherit; text-decoration: none; border-bottom: 1px dotted var(--ok);
+  .panel .watch .ref > code {
+    border-bottom: 1px dotted var(--ok); cursor: help; outline: none;
   }
-  .panel .watch code a.named:hover { border-bottom-style: solid; }
+  .panel .watch .ref > code:hover, .panel .watch .ref > code:focus { background: #cfe4cf; }
+  .panel .watch .ref .card {
+    display: none; position: absolute; left: 0; right: 0; top: calc(100% + .25rem);
+    z-index: 5; background: var(--card); border: 1px solid #cfd6de; border-radius: 4px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .13); padding: .55rem .7rem .6rem;
+  }
+  .panel .watch .ref:hover .card, .panel .watch .ref:focus-within .card { display: block; }
+  .panel .watch .card .excerpt {
+    margin: 0; background: #fcfbf7; border-color: #e6ded0; border-left: 3px solid var(--warm);
+    max-height: 18rem; font-size: .73rem;
+  }
+  .panel .watch .card .whole {
+    display: inline-block; margin: .45rem 0 0; font-family: var(--mono); font-size: .7rem;
+    color: var(--accent); text-decoration: none; border-bottom: 1px dotted currentColor;
+  }
+  .panel .watch .card code { background: none; padding: 0; }
   .op .n.run { color: var(--ok); font-weight: 700; }
   .to-come { margin: .5rem 0 0 .45rem; font-size: .78rem; color: var(--faint); font-style: italic; }
+  .row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+  /* The other way through: dashed, because it is the alternative route and
+     should not compete with the step you are being offered. */
+  button.run-all {
+    font: inherit; font-size: .8rem; cursor: pointer; padding: .4rem .8rem;
+    border-radius: 4px; border: 1px dashed #c3cdd8; background: var(--card); color: var(--muted);
+  }
+  button.run-all:hover { color: var(--accent); border-color: var(--accent); border-style: solid; }
+  button.run-all:disabled { opacity: .6; cursor: progress; }
+  #groups button.run-all { display: block; width: 100%; margin: .7rem 0 .3rem; }
   .pager {
     display: flex; gap: .6rem; align-items: center; justify-content: space-between;
     margin-top: 1rem;
@@ -210,6 +238,10 @@
   }
   textarea { min-height: 9rem; resize: vertical; line-height: 1.5; }
   textarea.fixed { background: #f3f3f3; color: var(--muted); cursor: default; }
+  /* The parts of a body that is not JSON, listed rather than serialized:
+     there is no text form of a multipart request worth showing anybody. */
+  pre.parts { background: #f3f3f3; border-color: var(--line); color: var(--muted); }
+  input[type=file] { font: inherit; font-size: .8rem; color: var(--muted); }
 
   button.primary {
     font: inherit; font-size: .85rem; cursor: pointer; padding: .4rem 1rem;
@@ -292,8 +324,12 @@ let seeded = true; // whether the last derive loaded the shipped records
 let showAll = false;  // the walk-through, or the whole reference
 const done = new Set(); // steps of the walk already run, by method and path
 const made = new Map();  // collection → the id the walk created there
+const built = new Map(); // schema name → the id the walk created of that shape
 const answers = new Map(); // step → what it answered, so going back shows it
 let selected = null;
+let transcript = false; // the whole walk at once, rather than a step at a time
+let ran = 0;            // how long running it that way took
+let ranCount = 0;       // how many of the steps that run actually sent
 
 /**
  * The contract set, inlined by the single-file build or fetched beside the
@@ -374,6 +410,10 @@ const actions = () => {
           object: machine.object,
           from: Array.isArray(from) ? from : String(from ?? '').split(',').map((s) => s.trim()),
           to: action.transition?.to,
+          // What the move does on the way through, which is how one
+          // transition differs from the next. Without these every move in a
+          // lifecycle has the same thing said about it.
+          steps: action.steps ?? [],
           doc: doc.relativePath,
         });
       }
@@ -501,7 +541,7 @@ const exampleBody = (op) => {
   // teaches nothing.
   if (op.kind === 'edit') {
     const counted = countedArray(op);
-    if (counted) return { [counted.field]: counted.allowed.slice(0, 2) };
+    if (counted) return attaching(op, { [counted.field]: counted.allowed.slice(0, 2) });
   }
 
   // A ruleset's inputs are nested and nobody can type them from memory. The
@@ -527,14 +567,75 @@ const exampleBody = (op) => {
       const body = Object.fromEntries(
         Object.entries(record).filter(([key]) => writable.has(key) && !managed.has(key))
       );
-      if (Object.keys(body).length > 0) return body;
+      if (Object.keys(body).length > 0) return attaching(op, body);
     }
   }
 
   if (op.operation.requestBody?.content?.['application/json']?.example) {
     return op.operation.requestBody.content['application/json'].example;
   }
-  return fromSchema(schema, op.doc);
+  return attaching(op, fromSchema(schema, op.doc));
+};
+
+/**
+ * Fill in a foreign key the walk can already satisfy.
+ *
+ * A field the contract says points at something, where the walk has made
+ * one of those: send its id. This is what makes a relationship visible
+ * rather than described — the request carries the id of the document
+ * uploaded a step ago, and the record comes back with the document in it.
+ */
+const attaching = (op, body) => {
+  const schema = requestSchema(op);
+  if (!schema) return body;
+  for (const [name, property] of Object.entries(collectProperties(schema, op.doc))) {
+    const relationship = property['x-relationship'];
+    if (relationship?.type !== 'fk') continue;
+    const id = built.get(relationship.resource);
+    if (id) body[name] = id;
+  }
+  return body;
+};
+
+/**
+ * The parts of a body that is not JSON.
+ *
+ * One operation in the set declares `multipart/form-data`, and a textarea
+ * full of JSON is the wrong affordance for it entirely. The parts and their
+ * values come off the contract the same way a JSON body does; the bytes are
+ * the one thing that cannot, because no contract can carry a file and
+ * nothing in a shipped artifact should.
+ */
+const SENT_BYTES = 'Hashed on the way in, and then thrown away.\n';
+
+const uploadParts = (op) => {
+  const declared = op.operation?.requestBody?.content?.['multipart/form-data']?.schema;
+  if (!declared) return null;
+  const properties = collectProperties(deref(declared, op.doc), op.doc);
+
+  const parts = [];
+  for (const [name, property] of Object.entries(properties)) {
+    const resolved = deref(property, op.doc);
+    if (resolved?.format === 'binary') { parts.push({ name, bytes: true }); continue; }
+    parts.push({ name, value: String(resolved?.example ?? valueFor(resolved, op.doc) ?? '') });
+  }
+
+  // Named after what it is, which the contract already says: a part called
+  // `title` holding "April pay stub" makes april-pay-stub.txt.
+  const titled = parts.find((part) => /title|name/i.test(part.name))?.value;
+  const fileName = `${(titled || 'upload').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.txt`;
+  for (const part of parts) if (part.bytes) part.fileName = fileName;
+  return parts;
+};
+
+/** What `uploadParts` describes, as something `fetch` can send. */
+const asFormData = (parts) => {
+  const form = new FormData();
+  for (const part of parts) {
+    if (part.bytes) form.append(part.name, part.file ?? new File([SENT_BYTES], part.fileName, { type: 'text/plain' }));
+    else form.append(part.name, part.value);
+  }
+  return form;
 };
 
 /** Every property on a schema, following allOf. */
@@ -670,7 +771,14 @@ const derive = async ({ seed = true, artifact } = {}) => {
     el('p', `derived in ${ms} ms · ${seed ? `${examples} examples seeded` : 'started empty'}`, 'when')
   );
 
+  // The system is new, so nothing the walk did to the old one still holds:
+  // the records it made are gone with the store that held them.
   selected = null;
+  transcript = false;
+  done.clear();
+  made.clear();
+  built.clear();
+  answers.clear();
   renderGroups();
   renderStage();
 };
@@ -741,18 +849,25 @@ const curate = (ops) => {
   const mine = ops.filter((op) => op.domain === lead);
   const shortest = (candidates) => [...candidates].sort((a, b) => a.path.length - b.path.length)[0];
 
+  // The one body in the set that is not JSON, wherever it lives. A mock
+  // that only parses JSON fails on the first file a client sends, so if the
+  // contracts declare an upload, the walk does it.
+  const upload = shortest(ops.filter((op) => op.kind === 'upload'));
+  if (upload) picked.push(upload);
+
   // One of each kind, preferring the least nested, which is the one whose
   // point is easiest to see.
   for (const kind of ['create', 'collection', 'composition']) {
     const one = shortest(mine.filter((op) => op.kind === kind));
     if (one) picked.push(one);
   }
-  // Reading one back and changing it are different things to learn, so the
-  // walk gets both rather than whichever item route happened to be shortest.
-  for (const method of ['GET', 'PATCH']) {
-    const one = shortest(mine.filter((op) => op.kind === 'item' && op.method === method));
-    if (one) picked.push(one);
-  }
+  // The edit, not the plain read. Reading a record straight back shows the
+  // record you were just shown: this one declares no parameters to vary the
+  // request with, so the step was a second look at the answer above it.
+  // Everything it had to say — a derived field worked out again rather than
+  // stored — the edit says while something is actually changing.
+  const edit = shortest(mine.filter((op) => op.kind === 'item' && op.method === 'PATCH'));
+  if (edit) picked.push(edit);
   // Every move, because a lifecycle with one move in it is not a lifecycle.
   picked.push(...mine.filter((op) => op.kind === 'transition'));
   // Every ruleset, wherever it lives: they do genuinely different jobs.
@@ -764,8 +879,15 @@ const curate = (ops) => {
   return picked;
 };
 
-/** What identifies a step, for remembering it has been run. */
-const keyOf = (op) => `${op.method} ${op.path}`;
+/**
+ * What identifies a step, for remembering it has been run.
+ *
+ * The walk visits one operation twice — the event log whole, then narrowed
+ * — so the method and path alone do not tell two steps apart. The variant
+ * does, and unlike the query string it does not change as the walk fills
+ * in the record it is following.
+ */
+const keyOf = (op) => `${op.method} ${op.path}${op.variant ? ` (${op.variant})` : ''}`;
 
 /**
  * Print a contract node the way it was authored.
@@ -847,17 +969,18 @@ const subjectOf = (op) => {
  * is an enum the records actually carry, the sort field is one `x-sortable`
  * permits.
  */
-const listQuery = (op) => {
+const listQuery = (op, searchFor) => {
   const declared = new Set((op.operation.parameters ?? [])
     .map((parameter) => deref(parameter, op.doc)?.name)
     .filter(Boolean));
 
   const schema = responseSchema(op);
   const props = schema ? collectProperties(schema, op.doc) : {};
-  const [term] = Object.values(props)
+  const [declaredTerm] = Object.values(props)
     .map((prop) => deref(prop, op.doc))
     .filter((prop) => Array.isArray(prop?.enum) && !prop.readOnly)
     .map((prop) => prop.enum[0]);
+  const term = searchFor ?? declaredTerm;
 
   const sortable = op.operation['x-sortable']?.fields ?? [];
   const parts = [];
@@ -992,6 +1115,28 @@ const responseSchema = (op) => {
 
 const listOf = (names) => names.map((name) => `\`${name}\``).join(', ');
 
+/**
+ * The field a pause condition watches, and the values that trigger it.
+ *
+ * These are written as JsonLogic. Printed raw in a sentence —
+ * `{"in":[{"var":"status"},["withdrawn"]]}` — it is unreadable, and no
+ * reader is going to parse it mid-paragraph. This pulls out the two parts
+ * worth saying and leaves the rest to the excerpt.
+ */
+const pausedOn = (rule) => {
+  if (!rule) return null;
+  const field = JSON.stringify(rule).match(/"var":"([^"]+)"/)?.[1];
+  const values = [];
+  const walk = (node) => {
+    if (typeof node === 'string') values.push(node);
+    else if (Array.isArray(node)) node.forEach(walk);
+    else if (node && typeof node === 'object') Object.values(node).forEach(walk);
+  };
+  walk(rule);
+  const wanted = values.filter((value) => value !== field);
+  return wanted.length > 0 ? { field, values: wanted } : null;
+};
+
 /** The name a schema is declared under, from a `$ref`. */
 const refName = (node) => (typeof node?.$ref === 'string' ? node.$ref.split('/').pop() : null);
 
@@ -1012,7 +1157,7 @@ const shapesOf = (op) => {
  * they can go and look at — a flag on a property, an expression, a state, a
  * citation — rather than describing the idea in the abstract.
  */
-const noticesFor = (op) => {
+const noticesFor = (op, wasSent) => {
   const out = [];
   const schema = responseSchema(op);
   const props = schema ? collectProperties(schema, op.doc) : {};
@@ -1020,8 +1165,10 @@ const noticesFor = (op) => {
     Object.entries(props).map(([name, declared]) => [name, deref(declared, op.doc)])
   );
 
+  // `links` and `_links` are the resolver's work, not an author's — naming
+  // them in a list of fields somebody declared is misleading twice over.
   const readOnly = Object.entries(resolved)
-    .filter(([, declared]) => declared?.readOnly && !declared['x-derived'])
+    .filter(([name, declared]) => declared?.readOnly && !declared['x-derived'] && !/^_?links$/.test(name))
     .map(([name]) => name);
   const derived = Object.entries(resolved).filter(([, declared]) => declared?.['x-derived']);
   const enums = Object.entries(resolved).filter(([, declared]) => Array.isArray(declared?.enum));
@@ -1038,6 +1185,42 @@ const noticesFor = (op) => {
         + 'schemas, not one. The contract declares the shape a client may write separately from '
         + 'the shape the system keeps.'
       : `A third shape: \`${sent}\` is what you may send here, and it is not \`${got}\` either.`);
+  }
+
+  if (op.kind === 'upload') {
+    const parts = uploadParts(op) ?? [];
+    const file = parts.find((part) => part.bytes);
+    if (file) {
+      out.push(`This body is \`multipart/form-data\`, not JSON. The contract declares \`${file.name}\` `
+        + 'with `format: binary`, which is how an OpenAPI document says bytes, and '
+        + `${listOf(parts.filter((part) => !part.bytes).map((part) => part.name))} alongside it as `
+        + 'ordinary fields. One operation in the whole set sends something that is not JSON, and '
+        + 'it is the one most mocks fall over on.');
+    }
+    out.push('What came back describes the upload and does not contain it. The bytes were hashed '
+      + 'as they were read and then dropped — `contentHash` and `sizeBytes` are kept on the '
+      + 'version this created, which `latestVersionId` names, and the file itself is nowhere. '
+      + 'Nothing the mock holds can leak something nobody meant to share.');
+  }
+
+  // Whichever step actually carries a foreign key to something the walk has
+  // made — read off the body being sent rather than placed on a step, so
+  // moving the upload moves this with it.
+  if (['create', 'edit'].includes(op.kind)) {
+    const sending = wasSent ?? exampleBody(op) ?? {};
+    for (const [name, property] of Object.entries(collectProperties(requestSchema(op) ?? {}, op.doc))) {
+      if (property['x-relationship']?.type !== 'fk' || sending[name] === undefined) continue;
+      const { resource, domain } = property['x-relationship'];
+      // The read shape renames an expanded field, so the one to point at is
+      // not the one that was sent.
+      const expanded = Object.entries(props)
+        .find(([, declared]) => declared?.['x-relationship']?.style === 'expand')?.[0];
+      out.push(`\`${name}\` is the id of the \`${resource}\` you uploaded a moment ago, and `
+        + `${expanded ? `\`${expanded}\`` : 'what came back'} is the whole record. The `
+        + `${domain ?? op.domain} domain declares that shape, this one declares a relationship to `
+        + 'it, and the mock put what the id points at where the id was — one request rather than '
+        + 'two, and nothing joining them in a client.');
+    }
   }
 
   if (op.kind === 'create') {
@@ -1057,23 +1240,12 @@ const noticesFor = (op) => {
     }
   }
 
-  if (op.kind === 'item') {
-    const counted = countedArray(op);
-    for (const [name, declared] of derived) {
-      out.push(`You already saw \`${name}\` change on the edit. It is the same `
-        + `${counted ? `${counted.allowed.slice(0, 2).length} ` : 'value '}here, but the mock worked `
-        + `it out again — \`${declared['x-derived']}\`, on a request that wrote nothing. The value `
-        + 'exists only for as long as it takes to answer; there is no copy of it to go stale.');
-    }
-    out.push('Same record, same id — nothing else about it changed.');
-  }
-
   if (op.kind === 'edit') {
     const counted = countedArray(op);
     if (counted) {
-      out.push(`You sent one field and three came back different: \`${counted.field}\` because you `
-        + `sent it, \`${counted.derived}\` because the mock evaluated its declared expression on `
-        + 'the way out, and `updatedAt` because the server moved it. Nothing else.');
+      out.push(`\`${counted.field}\` changed because you sent it, \`${counted.derived}\` because the `
+        + 'mock evaluated its declared expression on the way out, and `updatedAt` because the '
+        + 'server moved it. Nothing the request did not mention.');
     } else {
       out.push('`updatedAt` moved on its own. Everything the request did not mention is as it was.');
     }
@@ -1096,20 +1268,51 @@ const noticesFor = (op) => {
     const sortable = op.operation['x-sortable'];
     if (sortable?.fields) {
       out.push(`\`x-sortable\` lists ${listOf(sortable.fields.slice(0, 5))} as the fields that may be `
-        + `sorted, defaulting to \`${sortable.default}\`. Ask for one outside that list and it names it.`);
+        + `sorted, and \`${sortable.default}\` as the order when a request does not say. Any other `
+        + 'field is refused by name. The allowlist is that declaration — there is no check written '
+        + 'for this endpoint.');
     }
     out.push('`items`, `total`, `limit`, `offset` — the page envelope is the contract\'s shape, not a convention the mock chose.');
   }
 
-  if (op.kind === 'transition') {
-    out.push(`The contract declares this move as \`${op.action.from.join(' | ')} → ${op.action.to}\`. `
-      + 'From any other state the mock refuses it — not from a check somebody wrote for this '
-      + 'endpoint, but by reading that line.');
+  // The move the contract does not allow from here. Shown rather than
+  // claimed: the refusal below came out of the same line the moves that
+  // work are read from.
+  if (op.kind === 'transition' && op.variant === 'refused') {
+    out.push(`The contract declares this move as \`${op.action.from.join(' | ')} → ${op.action.to}\`, `
+      + 'and the record is not in that state yet. Nothing checked for this case on purpose — the '
+      + 'mock reads that line and answers from it, the same line the moves that worked read.');
+    out.push('Every lifecycle in the set is enforced this way, so a state machine nobody '
+      + 'implemented is still a state machine you cannot get around.');
+  }
+
+  if (op.kind === 'transition' && op.variant !== 'refused') {
+    if (op.firstTransition) {
+      out.push(`The contract declares this move as \`${op.action.from.join(' | ')} → ${op.action.to}\`. `
+        + 'From any other state the mock refuses it — not from a check somebody wrote for this '
+        + 'endpoint, but by reading that line.');
+    }
+    // What this move does on the way through, which is how one differs from
+    // the next. Three transitions sharing one sentence about `from` and `to`
+    // taught the same thing three times. The first has plenty to say
+    // already, so these go to the ones that otherwise had nothing.
+    for (const step of op.firstTransition ? [] : op.action.steps ?? []) {
+      if (step.set) {
+        out.push(`\`${step.set.field}\` was null until now. The lifecycle declares `
+          + `\`set: ${step.set.field} = ${step.set.value}\` on this move, so the field is written `
+          + 'because the state machine says so — there is no handler here that writes it.');
+      }
+      if (step.emit?.type) {
+        out.push(`This move emits \`${step.emit.type}\`, which the log a few steps on will have in `
+          + 'it. Nothing subscribed to it and nothing called a publisher: the action declares an '
+          + '`emit` and the mock does it.');
+      }
+    }
     const timer = timerRequest();
     if (timer && timer.action === op.action.id) {
-      out.push(`This action also calls \`${'requestTimer'}\` with \`fireAfter: ${timer.after}\`, which emits `
-        + `\`${timer.on}\`. The stand-in you registered answers it immediately, so \`${timer.callback}\` `
-        + 'is already in the event log rather than three days away.');
+      out.push(`This action also calls \`requestTimer\` with a \`fireAfter\` of ${timer.after}, which `
+        + `emits \`${timer.on}\`. The stand-in you registered answers it immediately, so `
+        + `\`${timer.callback}\` is already in the event log rather than three days away.`);
     }
   }
 
@@ -1143,6 +1346,26 @@ const noticesFor = (op) => {
       out.push(`The answer is not one expression but a chain of named facts. The last is `
         + `\`${last.path} = ${last.expression}\` — so the system can say which condition carried, not just what it concluded.`);
     }
+    // What a fact is for, which lives in the annotations rather than in the
+    // ruleset. Without this the second ruleset step said one thing about
+    // itself, and the most useful part of the contract set went unmentioned.
+    const annotated = docs
+      .filter((doc) => doc.type === 'annotations')
+      .flatMap((doc) => Object.entries(doc.content?.facts ?? {}))
+      .filter(([path]) => facts.some((fact) => path.endsWith(`.${fact.path}`)));
+    let written = null;
+    for (const [path, entry] of annotated) {
+      const spoken = Object.entries(entry).find(([name, value]) => !['policies', 'patterns'].includes(name)
+        && Array.isArray(value) && typeof value[0] === 'string');
+      if (spoken) { written = { path, entry, key: spoken[0], lines: spoken[1] }; break; }
+    }
+    if (written) {
+      out.push(`\`${written.path}\` carries more than a true or false. The annotations attach `
+        + `${listOf(written.entry.policies ?? [])} to it and ${written.lines.length} `
+        + `${inWords(written.key)} to go with it, so the rule that raises a prompt and the words `
+        + 'somebody says out loud are one declaration rather than two that drift apart.');
+    }
+
     for (const [name, declared] of policy.slice(0, 2)) {
       const cites = (declared.description ?? '').match(/\d+\s*CFR\s*§?\s*[\d.()a-z]+/i);
       let citation = cites ? cites[0].replace(/\.+$/, '') : null;
@@ -1154,22 +1377,42 @@ const noticesFor = (op) => {
         + `${citation ? `, citing ${citation}` : ''}. It is a number Congress changes, so the contract `
         + 'treats it as one rather than burying it in code.');
     }
+    // Said about what is on screen. This used to explain `placeholder`
+    // against an answer in which every fact came back `complete`, which
+    // is a note about a thing the reader cannot see.
     if (op.explainPlaceholder ?? true) {
-      out.push('A `placeholder` state means it answered, but something it read fell back to a '
-        + 'declared default rather than a value you gave it.');
+      out.push('Every fact comes back as a `state` and a `value` rather than a bare answer. '
+        + '`complete` means everything it needed was given to it; a fact that fell back to a '
+        + 'declared default says `placeholder` instead, so a caller can tell a real conclusion '
+        + 'from a provisional one.');
     }
   }
 
-  if (op.kind === 'events') {
+  if (op.kind === 'events' && op.variant !== 'filtered') {
     const channels = docs
       .filter((doc) => doc.type === 'asyncapi')
       .flatMap((doc) => Object.keys(doc.content?.channels ?? {}));
-    out.push('Every change you made emitted one of these. Nothing asked for them.');
+    out.push('Every change you made emitted one of these, and nothing asked for them. Uploading '
+      + 'a document wrote to this log; so did submitting, opening and closing.');
     if (channels.length > 0) {
       out.push(`The types are declared as channels in the contract set — ${listOf(channels.slice(0, 4))}`
         + `${channels.length > 4 ? `, and ${channels.length - 4} more` : ''}.`);
     }
     out.push('One log, every domain. Nothing wired them together.');
+  }
+
+  if (op.kind === 'events' && op.variant === 'filtered') {
+    out.push('`q` is full text over the whole log, narrowed here to the application you created. '
+      + 'The document upload drops out — it happened, but to a different subject.');
+    out.push('What is left was written by more than one domain. Submitting the application is '
+      + 'what made eligibility start a determination, and neither domain was wired to the other: '
+      + 'each declares its own channel, and this log is all they share.');
+    const sortable = op.operation['x-sortable'];
+    if (sortable?.fields) {
+      out.push(`\`sort\` works here for the same reason it worked on the applications — this `
+        + `operation declares its own \`x-sortable\`, over ${listOf(sortable.fields)}. Nothing was `
+        + 'written twice to make both endpoints sortable.');
+    }
   }
 
   if (op.kind === 'stub') {
@@ -1200,14 +1443,21 @@ const noticesFor = (op) => {
 
   // A deadline clock declared as a document rather than as a job somewhere.
   if (op.firstTransition && (resolved.slaTypeCode || resolved.slaInfo)) {
-    for (const doc of docs.filter((d) => d.type === 'sla-types')) {
-      const [sla] = doc.content?.slaTypes ?? [];
-      if (!sla) continue;
-      const pause = sla.pauseWhen ? JSON.stringify(sla.pauseWhen) : null;
+    // The one this record is actually under. Taking the first SLA in the
+    // set named a seven-day expedited clock from another domain, while the
+    // field in front of the reader said `snap_standard`.
+    const allowed = new Set(resolved.slaTypeCode?.enum ?? []);
+    const governing = docs
+      .filter((doc) => doc.type === 'sla-types')
+      .flatMap((doc) => doc.content?.slaTypes ?? [])
+      .filter((sla) => allowed.size === 0 || allowed.has(sla.id));
+
+    for (const sla of governing.slice(0, 1)) {
+      const paused = pausedOn(sla.pauseWhen);
       out.push(`\`slaTypeCode\` and \`slaInfo\` are filled from an SLA contract: \`${sla.id}\` runs `
-        + `${sla.duration.amount} ${sla.duration.unit}, warns at ${sla.warningThresholdPercent}% of it`
-        + `${pause ? `, and stops when \`${pause}\`` : ''}. The clock is a declaration, not a cron job.`);
-      break;
+        + `${sla.duration.amount} ${sla.duration.unit}, warns at ${sla.warningThresholdPercent}% of `
+        + `it${paused ? `, and stops while \`${paused.field}\` is ${listOf(paused.values)}` : ''}. `
+        + 'The clock is a declaration, not a cron job somebody remembered to write.');
     }
   }
 
@@ -1223,7 +1473,7 @@ const noticesFor = (op) => {
       .map(([name, declared]) => ({ name, path: declared.endpoint.path }));
     if (linked.length > 0) {
       out.push(`This is where the \`_links\` on the application came from. `
-        + `${listOf(linked.map((entry) => entry.name))} set \`parentLink: true\`, so the mock added `
+        + `${listOf(linked.map((entry) => entry.name))} set \`parentLink\`, so the mock added `
         + `${listOf(linked.map((entry) => entry.path.replace(/^.*\}/, '')))} to every application it `
         + 'returns. The application\'s own schema says nothing about either of them.');
     }
@@ -1353,6 +1603,53 @@ const controlSteps = () => [
  * The walk-through: the curated operations, in the order someone would do
  * them, each named for what it does rather than for what it is.
  */
+/**
+ * The resource a step will attach, if an earlier one makes it.
+ *
+ * Worth saying in the title: "Edit the application" undersells a request
+ * that also files a document against it. Worked out from the contracts and
+ * the order rather than written down, so moving the upload moves this with
+ * it, and a set with no upload in it never says anything.
+ */
+const attachesIn = (op, earlier) => {
+  const already = new Set(earlier
+    .map((step) => refName(step.operation?.responses?.['201']?.content?.['application/json']?.schema))
+    .filter(Boolean));
+  for (const property of Object.values(collectProperties(requestSchema(op) ?? {}, op.doc))) {
+    const relationship = property['x-relationship'];
+    if (relationship?.type === 'fk' && already.has(relationship.resource)) return relationship.resource;
+  }
+  return null;
+};
+
+/** `ApplicationMember` → `application member`, for a title. */
+const inWords = (name) => name.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
+
+/**
+ * The last move, attempted one step before the contract allows it.
+ *
+ * Three transitions in a row say the same thing three times: the contract
+ * declares `a → b`, and from anywhere else the mock refuses. Asserting a
+ * refusal is far weaker than being shown one, and the states it takes to
+ * get there are not themselves the interesting part. So the move that needs
+ * the most setup is tried early, refused, and then done properly.
+ *
+ * Inserted only where the operation declares a conflict, because without a
+ * declared answer there is nothing to show and the step would just look
+ * broken.
+ */
+const guarded = (moves) => {
+  if (moves.length < 2) return moves;
+  const last = moves[moves.length - 1];
+  const conflict = Object.keys(last.operation?.responses ?? {}).find((code) => code === '409');
+  if (!conflict) return moves;
+  return [
+    ...moves.slice(0, -2),
+    { ...last, variant: 'refused', expects: Number(conflict) },
+    ...moves.slice(-2),
+  ];
+};
+
 const tourSteps = (ops) => {
   const kindOf = (op) => {
     if (op.kind === 'collection' && /\/events$/.test(op.path)) return 'events';
@@ -1360,44 +1657,74 @@ const tourSteps = (ops) => {
     return op.kind;
   };
   const take = (kind) => ops.filter((op) => kindOf(op) === kind);
-  const title = (op) => {
+  const title = (op, earlier = []) => {
     const subject = subjectOf(op);
     switch (kindOf(op)) {
+      case 'upload': return `Upload a ${subject}`;
       case 'create': return `Create an ${subject}`;
       case 'collection': return `List the ${subject}s`;
-      case 'edit': return `Edit the ${subject}`;
+      case 'edit': {
+        const attached = attachesIn(op, earlier);
+        // Not "Edit the application and attach the document" — the subject
+        // is the one the whole walk is about and saying it again costs a
+        // wrapped line in a 17rem column.
+        return attached ? `Edit and attach the ${inWords(attached)}` : `Edit the ${subject}`;
+      }
       case 'item': return op.method === 'DELETE' ? `Delete the ${subject}` : `Read the ${subject} back`;
       case 'composition': return `Build a view of the ${subject}`;
-      case 'transition': return `${op.action.id.charAt(0).toUpperCase()}${op.action.id.slice(1)} the ${subject}`;
+      case 'transition': {
+        const named = `${op.action.id.charAt(0).toUpperCase()}${op.action.id.slice(1)}`;
+        return op.variant === 'refused'
+          ? `${named} it from the wrong state`
+          : `${named} the ${subject}`;
+      }
       case 'rules': return `Evaluate ${op.ruleset?.name ?? 'the rules'}`;
-      case 'events': return 'See the events that were created';
+      case 'events': return op.variant === 'filtered'
+        ? 'Narrow the log to one record'
+        : 'See what the walk emitted';
       default: return op.summary;
     }
   };
 
   const ordered = [
     ...take('create'),
+    // The record exists before anything is filed against it, which is both
+    // the order of the dependency and the order of the story: you start an
+    // application, then you send your proof of income.
+    ...take('upload'),
     // Editing before reading back, so the read has something to show: the
-    // edit adds a program and the derived count moves with it. Reading an
-    // unchanged record back only proves it is still there.
+    // edit adds a program, attaches what was just uploaded, and the derived
+    // count moves. Reading an unchanged record back only proves it is there.
     ...take('edit'),
     ...take('item'),
     ...take('collection'),
     // Before the moves, because a move that asks for a timer needs
     // something on the other end of it by the time it runs.
     ...stubStep(),
-    ...lifecycleOrder(take('transition'), { happyPathOnly: true }),
+    ...guarded(lifecycleOrder(take('transition'), { happyPathOnly: true })),
     ...take('composition'),
     ...take('rules'),
-    ...take('events'),
+    // The log, and then the log narrowed. Two questions, not one: what did
+    // all of this write without being asked, and what of it belongs to the
+    // record you followed. By this point four domains have written to it,
+    // so the second is a genuinely different answer from the first.
+    ...take('events').flatMap((op) => [op, { ...op, variant: 'filtered' }]),
   ];
 
-  const walked = ordered.map((op) => {
+  const walked = ordered.map((op, index) => {
     if (op.kind === 'stub') return op;
-    const step = { ...op, kind: kindOf(op), step: title(op) };
-    // A collection step sends the parameters its notes talk about.
+    const step = { ...op, kind: kindOf(op), step: title(op, ordered.slice(0, index)) };
+    // A collection step sends the parameters its notes talk about. The
+    // event log gets the same treatment with the record the walk has been
+    // following as the search term — the log is every domain's, and the
+    // interesting view of it is the one narrowed to what you did.
     if (step.kind === 'collection') {
       const query = listQuery(op);
+      if (query) step.query = query;
+    }
+    if (step.kind === 'events' && step.variant === 'filtered') {
+      const [following] = made.values();
+      const query = listQuery(op, following);
       if (query) step.query = query;
     }
     return step;
@@ -1487,7 +1814,7 @@ const renderGroups = () => {
         el('span', op.step)
       );
       if (selected && keyOf(selected) === keyOf(op)) button.classList.add('here');
-      button.onclick = () => { selected = op; renderGroups(); renderStage(); };
+      button.onclick = () => { transcript = false; selected = op; renderGroups(); renderStage(); };
       item.append(button);
       list.append(item);
     }
@@ -1495,6 +1822,20 @@ const renderGroups = () => {
 
     const left = steps.length - upTo;
     if (left > 0) nav.append(el('p', `${left} more, once you have run this one`, 'to-come'));
+
+    // Fourteen presses of Next is sometimes thirteen too many. This runs
+    // whatever is left — the same requests, in the same order — and lays
+    // the whole thing out as one page to read through.
+    const unrun = steps.filter((op) => !done.has(keyOf(op))).length;
+    const wholeThing = el('button',
+      unrun > 0 ? `Run all ${steps.length} now` : 'Show the whole walk at once', 'run-all');
+    wholeThing.onclick = async () => {
+      wholeThing.disabled = true;
+      await runWholeWalk((saying) => { wholeThing.textContent = saying; });
+      renderGroups();
+      await renderStage();
+    };
+    nav.append(wholeThing);
     return;
   }
 
@@ -1532,11 +1873,466 @@ const renderGroups = () => {
   }
 };
 
+// ── Showing a contract ──────────────────────────────────────────────────────
+
+/**
+ * A schema with its `allOf` parts folded in.
+ *
+ * Printed as written, the interesting schemas are three lines of `allOf`
+ * and a `$ref`, which tells a reader to go and look somewhere else — the
+ * thing opening it in place was meant to avoid. Composition is how these
+ * documents are written, so the excerpt assembles what the reader would
+ * have assembled by hand.
+ */
+const flattened = (schema, doc) => {
+  if (!schema) return null;
+  const folded = (schema.allOf ?? []).length > 0;
+  const parts = [schema, ...(schema.allOf ?? [])].map((part) => deref(part, doc));
+  const merged = { properties: {} };
+  for (const part of parts) {
+    for (const [key, value] of Object.entries(part ?? {})) {
+      if (key === 'allOf') continue;
+      if (key === 'properties') Object.assign(merged.properties, value);
+      else if (key === 'required') merged.required = [...(merged.required ?? []), ...value];
+      else merged[key] = value;
+    }
+  }
+  if (Object.keys(merged.properties).length === 0) delete merged.properties;
+  return { schema: merged, folded };
+};
+
+/**
+ * What a given status answers with, named and located.
+ *
+ * A success is declared inline and lives in this document. A failure is a
+ * `$ref` to `common/components/responses.yaml`, which every operation in
+ * every domain shares — so the response object has to be followed before
+ * there is a schema to name, and the file it is named in is not this one.
+ * Without that, the page showed a shape for the happy path and nothing at
+ * all for the four declared ways to fail.
+ */
+const responseShape = (operation, status) => {
+  const declared = operation.operation.responses?.[String(status)]
+    ?? operation.operation.responses?.default;
+  if (!declared) return null;
+
+  const where = typeof declared.$ref === 'string'
+    ? (declared.$ref.split('#')[0] || operation.doc.relativePath)
+    : operation.doc.relativePath;
+  const named = typeof declared.$ref === 'string' ? declared.$ref.split('/').pop() : null;
+
+  const response = deref(declared, operation.doc);
+  const schema = response?.content?.['application/json']?.schema;
+  if (!schema) return null;
+
+  const inline = typeof schema.$ref === 'string' ? schema.$ref.split('/').pop() : null;
+  const name = inline ?? named;
+  if (!name) return null;
+
+  return {
+    name,
+    path: fileNamed(where, operation.doc),
+    node: flattened(deref(schema, operation.doc), operation.doc),
+  };
+};
+
+/**
+ * `ApplicationCreate — domains/intake/intake-openapi.yaml`, which opens.
+ *
+ * The link alone cost a tab, a round trip and your place in the walk, to
+ * read four lines. Those four lines are already in the artifact, so the
+ * declaration opens in place and the link stays inside it for anyone who
+ * wants the whole file.
+ */
+const shapeLine = (name, path, className, node) => {
+  const box = el('details', '', className);
+  const head = el('summary');
+  head.append(el('code', name), el('span', ' — '), el('span', path));
+  box.append(head);
+
+  if (node?.schema) {
+    // Named, so the excerpt is a thing rather than a fragment: `properties:`
+    // on its own line reads like something torn out of a file, and leaves
+    // the summary above doing work the snippet should do itself.
+    const yaml = el('pre', '', 'excerpt');
+    const body = asYaml(essential({ [name]: node.schema })).replace(/^\n/, '');
+    // And said plainly where this is not what the file looks like. The
+    // link is one line below; a snippet that quietly disagrees with it
+    // would be found out immediately.
+    yaml.append(document.createTextNode(
+      node.folded ? `# allOf folded in, for reading\n${body}` : body
+    ));
+    box.append(yaml);
+  }
+  // The summary above already names the file, so without somewhere to send
+  // a reader there is nothing to add.
+  if (pageConfig.sourceUrl) box.append(openLink(path));
+  return box;
+};
+
+/** A link to the whole file, where the build knew where the files are. */
+const openLink = (path) => {
+  if (!pageConfig.sourceUrl) return el('span', path, 'whole');
+  const link = el('a', `open ${path}`, 'whole');
+  link.href = `${pageConfig.sourceUrl}/${path}`;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  return link;
+};
+
+/** A `$ref`'s file, as the set keys it: relative paths are written from a document. */
+const fileNamed = (where, from) => {
+  if (!where || !where.startsWith('.')) return where || from.relativePath;
+  const tail = where.replace(/^(\.\.\/)+/, '');
+  return docs.find((doc) => doc.relativePath?.endsWith(tail))?.relativePath ?? from.relativePath;
+};
+
+/** `programCount:\n  type: integer`, printed the way the file has it. */
+const snippet = (name, node, { prose = false } = {}) =>
+  asYaml(prose ? { [name]: node } : essential({ [name]: node })).replace(/^\n/, '').trimEnd();
+
+/**
+ * One entry of a list, printed as one.
+ *
+ * An action and a fact are both items in a sequence and both carry their own
+ * `id` or `path`. Printed under that name as a key they appear to say it
+ * twice, which is not what the file looks like.
+ */
+const asList = (node) => asYaml([node]).replace(/^\n/, '').trimEnd();
+
+/**
+ * Where a name in the notes is declared, and what it says there.
+ *
+ * The notes are full of things a reader might want to look at — a field, an
+ * extension, a policy id, a procedure, a status code — and naming one in
+ * backticks and then leaving it inert asks a question the page could have
+ * answered. Only schema names used to resolve, which meant the two names
+ * with an excerpt already open above them were linked and nothing else was.
+ *
+ * Order matters: a token is looked for in this operation first, because the
+ * same word can be a query parameter here and a column somewhere else, and
+ * the one a reader means is the one on the screen in front of them.
+ */
+const locate = (token, op) => {
+  const doc = op.doc;
+  const here = doc?.relativePath;
+
+  // A parameter this operation declares. The shared ones live in a base
+  // components file, which is the more interesting answer: `limit` is
+  // declared once for every list endpoint in every domain.
+  for (const parameter of op.operation?.parameters ?? []) {
+    const resolved = deref(parameter, doc);
+    if (resolved?.name !== token) continue;
+    const from = typeof parameter.$ref === 'string' ? parameter.$ref.split('#')[0] : null;
+    return { path: fileNamed(from, doc), yaml: snippet(token, resolved) };
+  }
+
+  // A field of what this operation takes or gives back — including the page
+  // envelope, whose `items`/`total`/`limit` are a declared shape rather than
+  // a convention the mock settled on.
+  const answers = op.operation?.responses ?? {};
+  const envelope = deref((answers['200'] ?? answers['201'] ?? answers['202'])
+    ?.content?.['application/json']?.schema, doc);
+  // The body that is not JSON counts as a source too: `file` is declared in
+  // a multipart schema, which `requestSchema` does not look at.
+  const multipart = op.operation?.requestBody?.content?.['multipart/form-data']?.schema;
+  if (token === 'multipart/form-data' && multipart) {
+    return { path: here, yaml: snippet(token, deref(multipart, doc)) };
+  }
+  const sources = [envelope, responseSchema(op), requestSchema(op), multipart && deref(multipart, doc)]
+    .filter(Boolean);
+  const asProperty = (name, declared) => {
+    // Printed as authored: a property that is nothing but a `$ref` says
+    // nothing, so that one is followed, and one carrying its own keywords
+    // is left alone — the keywords are why it was named.
+    const only = Object.keys(declared).length === 1 && declared.$ref;
+    return { path: here, yaml: snippet(name, only ? deref(declared, doc) : declared) };
+  };
+  for (const schema of sources) {
+    for (const [name, declared] of Object.entries(collectProperties(schema, doc))) {
+      // By name, or by the expression it declares: the notes quote
+      // `$this.programsAppliedFor.size()` on its own, and the thing a reader
+      // wants when they read that is the field it was written on.
+      if (name === token || deref(declared, doc)?.['x-derived'] === token) {
+        return asProperty(name, declared);
+      }
+    }
+  }
+
+  // Things declared under an id of their own, looked for before the guard
+  // below: `snap_standard` is a value of the `slaTypeCode` enum *and* the
+  // name of an SLA document, and the SLA is what a reader wants.
+  for (const candidate of docs.filter((d) => d.type === 'sla-types')) {
+    const sla = (candidate.content?.slaTypes ?? []).find((one) => one.id === token);
+    if (sla) return { path: candidate.relativePath, yaml: asList(essential(sla)) };
+  }
+  for (const candidate of docs.filter((d) => d.type === 'registry')) {
+    const entry = candidate.content?.entries?.[token];
+    if (entry) return { path: candidate.relativePath, yaml: snippet(token, entry, { prose: true }) };
+  }
+
+  // A value one of those fields may hold is not a reference to anything, and
+  // looking further finds coincidences: `phone` is a channel here and a
+  // contact detail two schemas over. Stop rather than point at the wrong one.
+  for (const schema of sources) {
+    for (const declared of Object.values(collectProperties(schema, doc))) {
+      const resolved = deref(declared, doc);
+      const values = resolved?.enum ?? deref(resolved?.items, doc)?.enum;
+      if (Array.isArray(values) && values.includes(token)) return null;
+    }
+  }
+
+  // An extension keyword: on the operation, or on one of its fields.
+  if (token.startsWith('x-')) {
+    if (op.operation?.[token]) return { path: here, yaml: snippet(token, op.operation[token]) };
+    for (const schema of sources) {
+      for (const [name, declared] of Object.entries(collectProperties(schema, doc))) {
+        const carrying = declared[token] ?? deref(declared, doc)?.[token];
+        if (carrying === undefined) continue;
+        return { path: here, yaml: snippet(name, { [token]: carrying }) };
+      }
+    }
+  }
+
+  // A declared status, which is a `$ref` to the shared response for every
+  // way of failing. Its description is the whole of what it says.
+  if (/^\d{3}$/.test(token) && op.operation?.responses?.[token]) {
+    return { path: here, yaml: snippet(token, op.operation.responses[token], { prose: true }) };
+  }
+
+  // The move this operation is, in the document that declares it: the action
+  // by name, the states it joins, or whichever of its steps mentions the
+  // token — which is how `intake.review_reminder` leads to the `timerId` it
+  // was assembled from rather than to nothing at all.
+  const move = op.action ?? (op.timer ? { id: op.timer.action } : null);
+  if (move) {
+    for (const candidate of docs.filter((d) => d.type === 'state-machine')) {
+      for (const machine of candidate.content?.machines ?? []) {
+        const declared = (machine.actions ?? []).find((one) => one.id === move.id);
+        if (!declared) continue;
+        const at = candidate.relativePath;
+        if (token === declared.id || token.includes('→')) {
+          return { path: at, yaml: asList(essential({ ...declared, steps: undefined })) };
+        }
+        // Against the declaration rather than the prose around it: every one
+        // of these steps carries a sentence explaining itself, and matching
+        // inside those turns a number quoted in a note into a false lead.
+        for (const step of declared.steps ?? []) {
+          const bare = essential(step);
+          if (JSON.stringify(bare).includes(token)) return { path: at, yaml: asList(bare) };
+        }
+      }
+    }
+  }
+
+  // A composition, reached from one of its own parts: the path it serves, or
+  // a flag on the endpoint it declares.
+  for (const candidate of docs.filter((d) => d.type === 'compositions')) {
+    for (const [name, declared] of Object.entries(candidate.content?.compositions ?? {})) {
+      const endpoint = declared.endpoint ?? {};
+      const mine = token === name
+        || (typeof endpoint.path === 'string' && endpoint.path.endsWith(token))
+        || endpoint[token] !== undefined
+        || declared.include?.[token] !== undefined;
+      if (!mine) continue;
+      let node = essential(declared);
+      if (endpoint[token] !== undefined) node = { endpoint };
+      if (declared.include?.[token] !== undefined) node = { include: { [token]: declared.include[token] } };
+      return { path: candidate.relativePath, yaml: snippet(name, node) };
+    }
+  }
+
+  // A file, named the way the set names a family of them. There is nothing
+  // to excerpt — the answer is which files those are.
+  if (token.includes('*')) {
+    const pattern = new RegExp(`${token.split('*').map((part) =>
+      part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*')}$`);
+    const matched = docs.filter((candidate) => pattern.test(candidate.relativePath ?? ''));
+    if (matched.length > 0) return { paths: matched.map((candidate) => candidate.relativePath) };
+  }
+
+  // A fact in the ruleset this operation evaluates. The notes quote one as
+  // `path = expression`; what is wanted is the declaration behind it.
+  const factPath = token.split(' = ')[0];
+  for (const fact of op.ruleset?.ruleset?.facts ?? []) {
+    if (fact.path !== factPath) continue;
+    return { path: op.ruleset.doc, yaml: asList(essential(fact)) };
+  }
+  for (const [name, declared] of Object.entries(op.ruleset?.ruleset?.inputs?.policy?.properties ?? {})) {
+    if (name !== token) continue;
+    return { path: op.ruleset.doc, yaml: snippet(name, declared, { prose: true }) };
+  }
+
+  // A schema anywhere in the set.
+  for (const candidate of docs) {
+    const schema = candidate.content?.components?.schemas?.[token];
+    if (!schema) continue;
+    const node = flattened(schema, candidate);
+    const body = asYaml(essential({ [token]: node.schema })).replace(/^\n/, '');
+    return {
+      path: candidate.relativePath,
+      yaml: node.folded ? `# allOf folded in, for reading\n${body}` : body,
+    };
+  }
+
+  // A field of something else this document declares. A composition names
+  // fields of the record it projects, and those are not on the shape the
+  // composition answers with — they are on the resource it reads them off.
+  for (const [name, schema] of Object.entries(doc?.content?.components?.schemas ?? {})) {
+    const declared = schema.properties?.[token];
+    if (!declared) continue;
+    return { path: here, yaml: `# ${name}\n${snippet(token, declared)}` };
+  }
+
+  // A procedure a state machine calls, and the machine's own states.
+  for (const candidate of docs.filter((d) => d.type === 'state-machine')) {
+    const procedure = (candidate.content?.procedures ?? []).find((one) => one.id === token);
+    if (procedure) {
+      return { path: candidate.relativePath, yaml: snippet(token, essential(procedure)) };
+    }
+  }
+
+  // An event type, declared as a channel or alongside the API that emits it.
+  for (const candidate of docs) {
+    const channel = candidate.content?.channels?.[token] ?? candidate.content?.['x-events']?.[token];
+    if (channel) {
+      return { path: candidate.relativePath, yaml: snippet(token, channel, { prose: true }) };
+    }
+  }
+
+  // An annotation, keyed by the object and field it is about.
+  for (const candidate of docs.filter((d) => d.type === 'annotations')) {
+    const declared = candidate.content?.schema?.[token]
+      ?? candidate.content?.facts?.[token]
+      ?? candidate.content?.operations?.[token];
+    if (declared) {
+      return { path: candidate.relativePath, yaml: snippet(token, declared, { prose: true }) };
+    }
+  }
+
+  return null;
+};
+
 // ── The stage ───────────────────────────────────────────────────────────────
+
+/** The walk, as a list, from wherever the contracts currently stand. */
+const walkSteps = () => tourSteps(curate(operations()
+  .map((op) => ({ ...op, ...classify(op) }))
+  .filter((op) => op.kind !== 'stream')));
+
+/**
+ * Where a step sends and what it sends.
+ *
+ * Shared, because running the whole walk has to build exactly the requests
+ * the panels would have built one at a time — two versions of this would
+ * drift, and the transcript would stop being a record of what happened.
+ */
+const requestFor = async (op) => {
+  const names = [...op.template.matchAll(/\{([^}]+)\}/g)].map((m) => m[1]);
+  const collection = names.length > 0 ? collectionOf(op) : null;
+  const records = collection ? await recordsIn(collection) : [];
+  const target = collection ? (made.get(collection) ?? records[0]?.id) : null;
+  const params = {};
+  if (target) for (const name of names) params[name] = target;
+
+  // A control step carries its own body: no contract declares these, so
+  // there is no schema to read one off. A read carries none at all, and
+  // `fetch` will not let one be attached to a GET.
+  const carries = op.method !== 'GET' && op.method !== 'DELETE';
+  const parts = carries ? uploadParts(op) : null;
+  const example = carries && !parts ? (op.body ?? exampleBody(op)) : null;
+
+  return {
+    names,
+    collection,
+    records,
+    target,
+    parts,
+    path: withParams(op.path, params) + (op.query ? `?${op.query}` : ''),
+    body: parts ? asFormData(parts) : (example === null ? undefined : example),
+  };
+};
+
+/**
+ * What a step produced.
+ *
+ * The walk follows one record, so remembering what each step made is what
+ * lets the next eight act on it without asking which — by collection, for
+ * the path parameters, and by the shape it answered with, for a foreign key
+ * in some other domain that points at it.
+ */
+const remember = (op, result, sent) => {
+  if (result.status === 201 && result.body?.id) {
+    made.set(op.path, result.body.id);
+    const shape = refName(op.operation?.responses?.['201']?.content?.['application/json']?.schema);
+    if (shape) built.set(shape, result.body.id);
+  }
+  // What was sent, as well as what came back. A body is worked out from
+  // what the walk has made so far, so recomputing one to redraw a step
+  // shows the body that step *would* send now — and step one came out
+  // carrying an id for a document uploaded after it ran.
+  answers.set(keyOf(op), { result, sent });
+};
+
+/**
+ * Run the whole walk without being asked fourteen times.
+ *
+ * The steps are in dependency order and each one is a real request, so
+ * running them is exactly what pressing Next through all of them does —
+ * the only thing lost is the pacing, which is the thing being objected to.
+ * Afterwards every step is on screen at once, and the contents on the left
+ * jump to any of them.
+ */
+const runWholeWalk = async (say) => {
+  const steps = walkSteps();
+  const started = performance.now();
+  ranCount = 0;
+  for (const [index, op] of steps.entries()) {
+    if (done.has(keyOf(op))) continue;
+    say?.(`Running… ${index + 1} of ${steps.length}`);
+    const { path, body } = await requestFor(op);
+    const result = await call(op.method, path, body);
+    remember(op, result, body);
+    ranCount += 1;
+    // A step that failed stops the run rather than carrying on into the
+    // ones that needed it: eight 404s in a row explain nothing. One step
+    // is meant to be refused, and that refusal is the step working.
+    if (result.status >= 400 && result.status !== op.expects) break;
+    done.add(keyOf(op));
+  }
+  ran = Math.round(performance.now() - started);
+  transcript = true;
+  selected = null;
+};
 
 const renderStage = async () => {
   const stage = $('stage');
   stage.replaceChildren();
+
+  // Every step at once, each showing what it answered. Same panels as the
+  // walk, with nothing left to press.
+  if (transcript) {
+    const steps = walkSteps();
+    const panel = el('div', '', 'panel');
+    panel.append(el('h2', 'The whole walk'));
+    const sent = ranCount === steps.length ? 'all of them sent just now'
+      : `the last ${ranCount} of them sent just now`;
+    panel.append(el('p',
+      `${steps.length} requests, in the order you would do them${ranCount > 0
+        ? `, ${sent} in ${ran} ms` : ''}. Each one below shows what it sent, what came back, and `
+      + 'which line of which contract decided that. Anything on the left opens on its own again.',
+      'note'));
+    const again = el('button', 'One step at a time', 'primary');
+    again.onclick = () => { transcript = false; selected = steps[0]; renderGroups(); renderStage(); };
+    panel.append(again);
+    stage.append(panel);
+
+    for (const [index, op] of steps.entries()) {
+      if (!answers.has(keyOf(op))) continue;
+      stage.append(await stepPanel(op, { live: false, number: index + 1 }));
+    }
+    return;
+  }
 
   if (!selected) {
     const panel = el('div', '', 'panel');
@@ -1554,165 +2350,76 @@ const renderStage = async () => {
       const all = operations()
         .map((candidate) => ({ ...candidate, ...classify(candidate) }))
         .filter((candidate) => candidate.kind !== 'stream');
-      const steps = tourSteps(curate(all)).length;
+      const steps = walkSteps();
       const total = all.length + stubStep().length + controlSteps().length;
 
       panel.append(el('h2', 'Start at step one'));
       panel.append(el('p',
-        `${steps} steps, in the order you would actually do them. Each one sends a real request `
-        + 'to the server this page derived a moment ago, and afterwards tells you which line of '
-        + 'which contract made it answer that way. Run one and the next appears.', 'note'));
+        `${steps.length} steps, in the order you would actually do them. Each one sends a real `
+        + 'request to the server this page derived a moment ago, and afterwards tells you which '
+        + 'line of which contract made it answer that way. Run one and the next appears.', 'note'));
       panel.append(el('p',
         `Or press Let me explore for all ${total} operations, with nothing held back `
         + 'and everything editable.', 'note'));
 
-      const [first] = tourSteps(curate(all));
+      const [first] = steps;
       if (first) {
+        const pair = el('div', '', 'row');
         const begin = el('button', `Start the tour — ${first.step}`, 'primary');
         begin.onclick = () => { selected = first; renderGroups(); renderStage(); };
-        panel.append(begin);
+        const whole = el('button', 'Or run all of it now', 'run-all');
+        whole.onclick = async () => {
+          whole.disabled = true;
+          await runWholeWalk((saying) => { whole.textContent = saying; });
+          renderGroups();
+          await renderStage();
+        };
+        pair.append(begin, whole);
+        panel.append(pair);
       }
     }
     stage.append(panel);
     return;
   }
 
-  const op = selected;
+  stage.append(await stepPanel(selected));
+};
+
+/**
+ * One step: what it sends, what it answered, and what to notice about it.
+ *
+ * Built rather than rendered, because the same panel is both the thing you
+ * press Execute on and one entry in a transcript of all fourteen.
+ */
+const stepPanel = async (op, { live = true, number = null } = {}) => {
   const group = GROUPS.find((candidate) => candidate.holds(op.kind));
   const panel = el('div', '', 'panel');
 
   // Everything the request needs, worked out before any of it is drawn.
   // The path line used to render above this and printed `{applicationId}`,
   // because the values it was interpolating did not exist yet.
+  const { names, records, target, parts, body: fresh } = await requestFor(op);
+
+  // Once a step has run, the pair on screen is the pair that happened. A
+  // body is derived from what the walk has made, so rebuilding one to
+  // redraw a finished step answers "what would this send now", which is a
+  // different question and sometimes a different body.
+  const already = answers.get(keyOf(op));
+  const example = already && !showAll ? already.sent : fresh;
   const params = {};
-  const names = [...op.template.matchAll(/\{([^}]+)\}/g)].map((m) => m[1]);
-  const collection = names.length > 0 ? collectionOf(op) : null;
-  const held = collection ? await recordsIn(collection) : [];
 
   // On the walk there is nothing to choose: it is the record step one made.
   // Offering a dropdown of everything in the store, labeled with a uuid
   // and a status, asks a reader to decide something the walk decided for
   // them — and the reference is where deciding belongs.
-  const fixed = !showAll && collection ? (made.get(collection) ?? held[0]?.id) : null;
+  const fixed = showAll ? null : target;
+  const held = fixed ? [] : records;
   if (fixed) for (const name of names) params[name] = fixed;
 
   if (group) panel.append(el('p', group.title, 'kindline'));
-  panel.append(el('h2', op.step ?? op.summary));
+  panel.append(el('h2', number ? `${String(number).padStart(2, '0')} · ${op.step}` : (op.step ?? op.summary)));
   const sending = withParams(op.path, params) + (op.query ? `?${op.query}` : '');
   panel.append(el('p', `${op.method} ${sending}`, 'path'));
-
-  /**
-   * What governs this operation, named and linked.
-   *
-   * Each entry is the thing itself and the file it lives in, because a bare
-   * path makes a reader open the document to find out which part of it
-   * mattered. For a plain resource that is the request schema; for a move
-   * it is also the lifecycle, for a decision the ruleset, for a projection
-   * the composition — and those second documents are the ones nobody would
-   * otherwise find, because the behavior is not in the file the endpoint
-   * is declared in.
-   */
-  /**
-   * What a given status answers with, named and located.
-   *
-   * A success is declared inline and lives in this document. A failure is a
-   * `$ref` to `common/components/responses.yaml`, which every operation in
-   * every domain shares — so the response object has to be followed before
-   * there is a schema to name, and the file it is named in is not this one.
-   * Without that, the page showed a shape for the happy path and nothing at
-   * all for the four declared ways to fail.
-   */
-  const responseShape = (operation, status) => {
-    const declared = operation.operation.responses?.[String(status)]
-      ?? operation.operation.responses?.default;
-    if (!declared) return null;
-
-    const where = typeof declared.$ref === 'string'
-      ? (declared.$ref.split('#')[0] || operation.doc.relativePath)
-      : operation.doc.relativePath;
-    const named = typeof declared.$ref === 'string' ? declared.$ref.split('/').pop() : null;
-
-    const response = deref(declared, operation.doc);
-    const schema = response?.content?.['application/json']?.schema;
-    if (!schema) return null;
-
-    const inline = typeof schema.$ref === 'string' ? schema.$ref.split('/').pop() : null;
-    const name = inline ?? named;
-    if (!name) return null;
-
-    // A relative path is written from this document; the page keys files by
-    // their place in the set.
-    const path = where.startsWith('.')
-      ? (docs.find((candidate) => candidate.relativePath?.endsWith(
-          where.replace(/^(\.\.\/)+/, '')))?.relativePath ?? operation.doc.relativePath)
-      : where;
-
-    return { name, path, node: flattened(deref(schema, operation.doc)) };
-  };
-
-  /**
-   * A schema with its `allOf` parts folded in.
-   *
-   * Printed as written, the interesting schemas are three lines of `allOf`
-   * and a `$ref`, which tells a reader to go and look somewhere else — the
-   * thing opening it in place was meant to avoid. Composition is how these
-   * documents are written, so the excerpt assembles what the reader would
-   * have assembled by hand.
-   */
-  const flattened = (schema) => {
-    if (!schema) return null;
-    const folded = (schema.allOf ?? []).length > 0;
-    const parts = [schema, ...(schema.allOf ?? [])].map((part) => deref(part, op.doc));
-    const merged = { properties: {} };
-    for (const part of parts) {
-      for (const [key, value] of Object.entries(part ?? {})) {
-        if (key === 'allOf') continue;
-        if (key === 'properties') Object.assign(merged.properties, value);
-        else if (key === 'required') merged.required = [...(merged.required ?? []), ...value];
-        else merged[key] = value;
-      }
-    }
-    if (Object.keys(merged.properties).length === 0) delete merged.properties;
-    return { schema: merged, folded };
-  };
-
-  /**
-   * `ApplicationCreate — domains/intake/intake-openapi.yaml`, which opens.
-   *
-   * The link alone cost a tab, a round trip and your place in the walk, to
-   * read four lines. Those four lines are already in the artifact, so the
-   * declaration opens in place and the link stays inside it for anyone who
-   * wants the whole file.
-   */
-  const shapeLine = (name, path, className, node) => {
-    const box = el('details', '', className);
-    const head = el('summary');
-    head.append(el('code', name), el('span', ' — '), el('span', path));
-    box.append(head);
-
-    if (node?.schema) {
-      // Named, so the excerpt is a thing rather than a fragment: `properties:`
-      // on its own line reads like something torn out of a file, and leaves
-      // the summary above doing work the snippet should do itself.
-      const yaml = el('pre', '', 'excerpt');
-      const body = asYaml(essential({ [name]: node.schema })).replace(/^\n/, '');
-      // And said plainly where this is not what the file looks like. The
-      // link is one line below; a snippet that quietly disagrees with it
-      // would be found out immediately.
-      yaml.append(document.createTextNode(
-        node.folded ? `# allOf folded in, for reading\n${body}` : body
-      ));
-      box.append(yaml);
-    }
-    if (pageConfig.sourceUrl) {
-      const link = el('a', `open ${path}`, 'whole');
-      link.href = `${pageConfig.sourceUrl}/${path}`;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      box.append(link);
-    }
-    return box;
-  };
 
   const bodyRef = op.operation.requestBody?.content?.['application/json']?.schema?.$ref;
   const cited = [
@@ -1772,18 +2479,53 @@ const renderStage = async () => {
     }
   }
 
+  // A body that is not JSON, shown as the parts it is actually made of. A
+  // textarea of JSON here would misdescribe the request entirely, which is
+  // the whole reason this step is in the walk.
+  if (parts) {
+    const declared = op.operation.requestBody.content['multipart/form-data'].schema;
+    panel.append(shapeLine('multipart/form-data', op.doc.relativePath, 'shape',
+      flattened(deref(declared, op.doc), op.doc)));
+
+    const sized = new TextEncoder().encode(SENT_BYTES).length;
+    if (showAll) {
+      for (const part of parts) {
+        const row = el('label', '', 'field');
+        row.append(el('span', part.name));
+        if (part.bytes) {
+          const picker = el('input');
+          picker.type = 'file';
+          picker.onchange = () => { part.file = picker.files?.[0] ?? null; };
+          row.append(picker);
+          row.append(el('p', `Nothing chosen sends ${part.fileName} — ${sized} bytes of filler, `
+            + 'because the point is what happens to the bytes, not what is in them.', 'note'));
+        } else {
+          const box = el('input');
+          box.type = 'text';
+          box.value = part.value;
+          box.oninput = () => { part.value = box.value; };
+          row.append(box);
+        }
+        panel.append(row);
+      }
+    } else {
+      const listing = el('pre', '', 'parts');
+      listing.append(document.createTextNode(parts.map((part) => (part.bytes
+        ? `${part.name.padEnd(16)}${part.fileName}  ·  text/plain  ·  ${sized} bytes`
+        : `${part.name.padEnd(16)}${part.value}`)).join('\n')));
+      panel.append(listing);
+    }
+  }
+
   // A body, prefilled, so nobody has to guess the shape.
   let bodyBox = null;
-  // A control step carries its own body: no contract declares these, so
-  // there is no schema to read one off.
-  const example = op.body ?? exampleBody(op);
-  if (example !== null && op.method !== 'GET' && op.method !== 'DELETE') {
+  if (!parts && example !== undefined) {
     const field = el('label', '', 'field');
 
     const requestShape = typeof bodyRef === 'string' ? bodyRef.split('/').pop() : null;
     if (requestShape && op.doc?.relativePath) {
       field.append(shapeLine(requestShape, op.doc.relativePath, 'shape',
-        flattened(op.doc.content?.components?.schemas?.[requestShape])));
+        flattened(op.doc.content?.components?.schemas?.[requestShape], op.doc)));
     }
 
     // On the walk the body is fixed: the step is about what the server does
@@ -1799,8 +2541,11 @@ const renderStage = async () => {
     panel.append(field);
   }
 
+  // Nothing to press in a transcript: every one of these has already run,
+  // and a button offering to run it again is a lie about what you are
+  // reading.
   const send = el('button', 'Execute', 'primary');
-  panel.append(send);
+  if (live) panel.append(send);
 
   // Named before the block it describes, the same as the request is.
   const shapeAbove = el('div');
@@ -1836,7 +2581,7 @@ const renderStage = async () => {
     );
     answer.hidden = false;
     watch.hidden = false;
-    if (onward && result.status < 400) onward.hidden = false;
+    if (onward && (result.status < 400 || result.status === op.expects)) onward.hidden = false;
   };
 
   // One box, below the answer, only on the walk. Exploring is for people who
@@ -1844,51 +2589,45 @@ const renderStage = async () => {
   const watch = el('div', '', 'watch');
   watch.hidden = true;
   let onward = null;
-  const bullets = showAll ? [] : noticesFor(op);
+  const bullets = showAll ? [] : noticesFor(op, example);
   if (bullets.length > 0) {
     watch.append(el('p', 'What to notice', 'watch-title'));
-    /**
-     * Where a named schema is declared, across the whole set.
-     *
-     * The notes name shapes — `ApplicationCreate`, `Document` — and until
-     * now those were inert. A reader who wants to see one has the same
-     * question they had before the excerpts existed.
-     */
-    const declares = (what) => docs.find((doc) => doc.content?.components?.schemas?.[what]);
 
     const list = el('ul');
     for (const line of bullets) {
       const item = el('li');
-      // Backticks mark the bits a reader can go and find in a contract, so
-      // where that is a schema the page knows, it goes there.
+      // Backticks mark the bits a reader can go and find in a contract. Where
+      // the page can find one too, the declaration itself is under the word:
+      // hovering shows the lines, and the file is a link inside them.
       for (const [index, part] of line.split('`').entries()) {
         if (part === '') continue;
         if (index % 2 === 0) { item.append(el('span', part)); continue; }
 
-        const home = pageConfig.sourceUrl ? declares(part) : null;
-        if (home) {
-          const link = el('a', part, 'named');
-          link.href = `${pageConfig.sourceUrl}/${home.relativePath}`;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          link.title = `declared in ${home.relativePath}`;
-          const code = el('code');
-          code.append(link);
-          item.append(code);
-        } else {
-          item.append(el('code', part));
-        }
+        const found = locate(part, op);
+        if (!found) { item.append(el('code', part)); continue; }
+
+        const chipped = el('span', '', 'ref');
+        const chip = el('code', part);
+        // Reachable without a mouse, and on a touch screen, where there is
+        // no hover at all and focus is the only thing a tap can produce.
+        chip.tabIndex = 0;
+        const card = el('span', '', 'card');
+        if (found.yaml) card.append(el('pre', found.yaml, 'excerpt'));
+        for (const where of found.paths ?? [found.path]) card.append(openLink(where));
+        chipped.append(chip, card);
+        item.append(chipped);
       }
       list.append(item);
     }
     watch.append(list);
     panel.append(watch);
+  }
 
-    // Below the box, not inside it: the walk moves on from here, but it is
-    // an action like any other and should look like one.
-    const steps = tourSteps(curate(operations()
-      .map((candidate) => ({ ...candidate, ...classify(candidate) }))
-      .filter((candidate) => candidate.kind !== 'stream')));
+  // Below the box, not inside it: the walk moves on from here, but it is
+  // an action like any other and should look like one. A transcript has
+  // nowhere to move on to — the next step is the next thing on the page.
+  if (bullets.length > 0 && live) {
+    const steps = walkSteps();
     const at = steps.findIndex((candidate) => keyOf(candidate) === keyOf(op));
     const back = at > 0 ? steps[at - 1] : null;
     const then = at === -1 ? null : steps[at + 1];
@@ -1920,7 +2659,8 @@ const renderStage = async () => {
     send.disabled = true;
     send.textContent = 'Working…';
     let body;
-    if (bodyBox) {
+    if (parts) body = asFormData(parts);
+    else if (bodyBox) {
       try {
         body = JSON.parse(bodyBox.value);
       } catch (error) {
@@ -1935,17 +2675,16 @@ const renderStage = async () => {
     }
 
     const result = await call(op.method, sending, body);
-    // The walk follows one record. Remembering what it made is what lets
-    // the next eight steps act on it without asking which.
-    if (result.status === 201 && result.body?.id) made.set(op.path, result.body.id);
-    answers.set(keyOf(op), result);
+    remember(op, result, body);
     present(result);
 
     // On the walk a step runs once. Pressing create twice leaves two
     // applications and a reader wondering which one the next step is
     // talking about; pressing submit twice answers 409 and looks broken.
-    // A failure is the exception — that is worth another go.
-    const worked = result.status < 400;
+    // A failure is the exception — that is worth another go. Unless the
+    // step is the one being refused on purpose, where the refusal is the
+    // answer and pressing it again would only get it twice.
+    const worked = result.status < 400 || result.status === op.expects;
     if (!showAll && worked) {
       send.disabled = true;
       send.textContent = 'Done';
@@ -1959,14 +2698,13 @@ const renderStage = async () => {
 
   // Coming back to a step already run: it stays done, stays locked, and
   // shows what it showed.
-  const already = answers.get(keyOf(op));
   if (!showAll && already) {
     send.disabled = true;
     send.textContent = 'Done';
-    present(already);
+    present(already.result);
   }
 
-  stage.append(panel);
+  return panel;
 };
 
 let contracts;
@@ -1987,6 +2725,7 @@ const boot = async () => {
       $(id).title = wanted ? '' : 'The walk does this itself, at the end';
     }
     selected = null;
+    transcript = false;
     if (!mock) return;
     renderGroups();
     renderStage();
