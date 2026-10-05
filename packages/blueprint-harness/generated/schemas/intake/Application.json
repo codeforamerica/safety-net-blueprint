@@ -91,6 +91,11 @@
             }
           }
         },
+        "proofOfIncomeDocumentId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The uploaded document evidencing household income, if one is attached."
+        },
         "labels": {
           "type": "object",
           "additionalProperties": {
@@ -102,6 +107,18 @@
           "type": "string",
           "maxLength": 10,
           "description": "County code for routing this application to the correct local office."
+        },
+        "links": {
+          "type": "object",
+          "readOnly": true,
+          "description": "Related resource links.",
+          "properties": {
+            "proofOfIncomeDocument": {
+              "type": "string",
+              "format": "uri-reference",
+              "description": "Link to the related Document resource."
+            }
+          }
         }
       }
     },
@@ -548,6 +565,105 @@
           "format": "date-time",
           "readOnly": true,
           "description": "Timestamp when the application was last updated."
+        },
+        "proofOfIncomeDocument": {
+          "allOf": [
+            {
+              "type": "object",
+              "required": [
+                "documentTypeId",
+                "title"
+              ],
+              "properties": {
+                "documentTypeId": {
+                  "type": "string",
+                  "description": "What kind of document this is."
+                },
+                "title": {
+                  "type": "string",
+                  "description": "A human-readable name for the document."
+                },
+                "documentDate": {
+                  "type": "string",
+                  "format": "date",
+                  "nullable": true,
+                  "description": "The date the document itself bears, which is not the date it arrived."
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "id",
+                "lifecycleState",
+                "latestVersionId",
+                "createdAt",
+                "updatedAt"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "readOnly": true
+                },
+                "lifecycleState": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "superseded",
+                    "disposed"
+                  ],
+                  "readOnly": true,
+                  "description": "Where this document is in its retention lifecycle."
+                },
+                "legalHold": {
+                  "type": "boolean",
+                  "readOnly": true,
+                  "description": "Whether disposition is suspended pending litigation."
+                },
+                "latestVersionId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "readOnly": true,
+                  "description": "The most recent version, which is what describes the file."
+                },
+                "retentionDeadline": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true,
+                  "readOnly": true,
+                  "description": "When this document becomes eligible for disposition."
+                },
+                "metadata": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "Arbitrary key-value metadata supplied at upload."
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "readOnly": true
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "readOnly": true
+                },
+                "links": {
+                  "type": "object",
+                  "readOnly": true,
+                  "description": "Related resource links.",
+                  "properties": {
+                    "latestVersion": {
+                      "type": "string",
+                      "format": "uri-reference",
+                      "description": "Link to the related DocumentVersion resource."
+                    }
+                  }
+                }
+              }
+            }
+          ]
         }
       }
     },

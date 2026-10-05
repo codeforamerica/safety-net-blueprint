@@ -192,7 +192,7 @@
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/document-management.html#field-document.documentTypeId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentTypeId</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
         <span style="font-size:11px;color:#555;margin-left:2px;">What kind of document this is.</span>
       </div>
@@ -210,6 +210,16 @@
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.documentDate" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentDate</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The date the document itself bears, which is not the date it arrived.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/document-management.html#field-document.id" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">id</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
@@ -220,51 +230,91 @@
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/document-management.html#field-document.fileName" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">fileName</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <a href="../data-dictionaries/document-management.html#field-document.lifecycleState" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">lifecycleState</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">The name the file was uploaded under.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Where this document is in its retention lifecycle.</span>
       </div>
-      
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">active</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">superseded</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">disposed</code></div>
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/document-management.html#field-document.mimeType" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">mimeType</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <a href="../data-dictionaries/document-management.html#field-document.legalHold" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">legalHold</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
         
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether disposition is suspended pending litigation.</span>
       </div>
       
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/document-management.html#field-document.sizeBytes" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">sizeBytes</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
+        <a href="../data-dictionaries/document-management.html#field-document.latestVersionId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersionId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">How many bytes were received, before they were discarded.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The most recent version, which is what describes the file.</span>
       </div>
       
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/document-management.html#field-document.contentHash" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">contentHash</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">SHA-256 of the bytes, computed while reading them.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/document-management.html#field-document.uploadedAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">uploadedAt</a>
+        <a href="../data-dictionaries/document-management.html#field-document.retentionDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">retentionDeadline</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">When this document becomes eligible for disposition.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.metadata" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">metadata</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Arbitrary key-value metadata supplied at upload.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.createdAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">createdAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.updatedAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">updatedAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.links.latestVersion" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersion</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related DocumentVersion resource.</span>
       </div>
       
     </div>
@@ -387,7 +437,7 @@
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/document-management.html#field-document.documentTypeId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentTypeId</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
         <span style="font-size:11px;color:#555;margin-left:2px;">What kind of document this is.</span>
       </div>
@@ -405,6 +455,16 @@
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.documentDate" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentDate</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The date the document itself bears, which is not the date it arrived.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/document-management.html#field-document.id" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">id</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
@@ -415,51 +475,91 @@
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/document-management.html#field-document.fileName" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">fileName</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <a href="../data-dictionaries/document-management.html#field-document.lifecycleState" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">lifecycleState</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">The name the file was uploaded under.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Where this document is in its retention lifecycle.</span>
       </div>
-      
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">active</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">superseded</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">disposed</code></div>
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/document-management.html#field-document.mimeType" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">mimeType</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <a href="../data-dictionaries/document-management.html#field-document.legalHold" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">legalHold</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
         
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether disposition is suspended pending litigation.</span>
       </div>
       
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/document-management.html#field-document.sizeBytes" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">sizeBytes</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
+        <a href="../data-dictionaries/document-management.html#field-document.latestVersionId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersionId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">How many bytes were received, before they were discarded.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The most recent version, which is what describes the file.</span>
       </div>
       
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/document-management.html#field-document.contentHash" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">contentHash</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">SHA-256 of the bytes, computed while reading them.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/document-management.html#field-document.uploadedAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">uploadedAt</a>
+        <a href="../data-dictionaries/document-management.html#field-document.retentionDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">retentionDeadline</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">When this document becomes eligible for disposition.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.metadata" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">metadata</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Arbitrary key-value metadata supplied at upload.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.createdAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">createdAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.updatedAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">updatedAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.links.latestVersion" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersion</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related DocumentVersion resource.</span>
       </div>
       
     </div>
@@ -544,7 +644,7 @@
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/document-management.html#field-document.documentTypeId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentTypeId</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
         <span style="font-size:11px;color:#555;margin-left:2px;">What kind of document this is.</span>
       </div>
@@ -562,6 +662,16 @@
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.documentDate" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentDate</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The date the document itself bears, which is not the date it arrived.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/document-management.html#field-document.id" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">id</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
@@ -572,51 +682,91 @@
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/document-management.html#field-document.fileName" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">fileName</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <a href="../data-dictionaries/document-management.html#field-document.lifecycleState" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">lifecycleState</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">The name the file was uploaded under.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Where this document is in its retention lifecycle.</span>
       </div>
-      
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">active</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">superseded</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">disposed</code></div>
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/document-management.html#field-document.mimeType" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">mimeType</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <a href="../data-dictionaries/document-management.html#field-document.legalHold" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">legalHold</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
         
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether disposition is suspended pending litigation.</span>
       </div>
       
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/document-management.html#field-document.sizeBytes" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">sizeBytes</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
+        <a href="../data-dictionaries/document-management.html#field-document.latestVersionId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersionId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
         <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">How many bytes were received, before they were discarded.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The most recent version, which is what describes the file.</span>
       </div>
       
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/document-management.html#field-document.contentHash" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">contentHash</a>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
-        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
-        <span style="font-size:11px;color:#555;margin-left:2px;">SHA-256 of the bytes, computed while reading them.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <a href="../data-dictionaries/document-management.html#field-document.uploadedAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">uploadedAt</a>
+        <a href="../data-dictionaries/document-management.html#field-document.retentionDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">retentionDeadline</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
         
         <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">When this document becomes eligible for disposition.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.metadata" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">metadata</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
         
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Arbitrary key-value metadata supplied at upload.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.createdAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">createdAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.updatedAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">updatedAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/document-management.html#field-document.links.latestVersion" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersion</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related DocumentVersion resource.</span>
       </div>
       
     </div>

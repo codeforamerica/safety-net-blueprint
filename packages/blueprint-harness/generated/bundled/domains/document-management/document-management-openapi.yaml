@@ -216,6 +216,7 @@ paths:
                       allOf:
                         - type: object
                           required:
+                            - documentTypeId
                             - title
                           properties:
                             documentTypeId:
@@ -224,37 +225,72 @@ paths:
                             title:
                               type: string
                               description: A human-readable name for the document.
+                            documentDate:
+                              type: string
+                              format: date
+                              nullable: true
+                              description: The date the document itself bears, which is not the date it arrived.
                         - type: object
                           required:
                             - id
-                            - fileName
-                            - mimeType
-                            - sizeBytes
-                            - contentHash
+                            - lifecycleState
+                            - latestVersionId
+                            - createdAt
+                            - updatedAt
                           properties:
                             id:
                               type: string
                               format: uuid
                               readOnly: true
-                            fileName:
+                            lifecycleState:
                               type: string
+                              enum:
+                                - active
+                                - superseded
+                                - disposed
                               readOnly: true
-                              description: The name the file was uploaded under.
-                            mimeType:
+                              description: Where this document is in its retention lifecycle.
+                            legalHold:
+                              type: boolean
+                              readOnly: true
+                              description: Whether disposition is suspended pending litigation.
+                            latestVersionId:
                               type: string
+                              format: uuid
                               readOnly: true
-                            sizeBytes:
-                              type: integer
-                              readOnly: true
-                              description: How many bytes were received, before they were discarded.
-                            contentHash:
+                              description: The most recent version, which is what describes the file.
+                              x-relationship:
+                                type: fk
+                                domain: document-management
+                                resource: DocumentVersion
+                                style: links-only
+                            retentionDeadline:
                               type: string
+                              format: date-time
+                              nullable: true
                               readOnly: true
-                              description: SHA-256 of the bytes, computed while reading them.
-                            uploadedAt:
+                              description: When this document becomes eligible for disposition.
+                            metadata:
+                              type: object
+                              additionalProperties: true
+                              description: Arbitrary key-value metadata supplied at upload.
+                            createdAt:
                               type: string
                               format: date-time
                               readOnly: true
+                            updatedAt:
+                              type: string
+                              format: date-time
+                              readOnly: true
+                            links:
+                              type: object
+                              readOnly: true
+                              description: Related resource links.
+                              properties:
+                                latestVersion:
+                                  type: string
+                                  format: uri-reference
+                                  description: Link to the related DocumentVersion resource.
                   total:
                     type: integer
                   limit:
@@ -287,10 +323,12 @@ paths:
                   description: The file to upload.
                 documentTypeId:
                   type: string
+                  example: proof-of-income
                   description: |
                     What kind of document this is. Required by the upload handler, which classifies before it stores.
                 title:
                   type: string
+                  example: April pay stub
                   description: A human-readable name for the document.
       responses:
         "201":
@@ -307,6 +345,7 @@ paths:
                 allOf:
                   - type: object
                     required:
+                      - documentTypeId
                       - title
                     properties:
                       documentTypeId:
@@ -315,37 +354,72 @@ paths:
                       title:
                         type: string
                         description: A human-readable name for the document.
+                      documentDate:
+                        type: string
+                        format: date
+                        nullable: true
+                        description: The date the document itself bears, which is not the date it arrived.
                   - type: object
                     required:
                       - id
-                      - fileName
-                      - mimeType
-                      - sizeBytes
-                      - contentHash
+                      - lifecycleState
+                      - latestVersionId
+                      - createdAt
+                      - updatedAt
                     properties:
                       id:
                         type: string
                         format: uuid
                         readOnly: true
-                      fileName:
+                      lifecycleState:
                         type: string
+                        enum:
+                          - active
+                          - superseded
+                          - disposed
                         readOnly: true
-                        description: The name the file was uploaded under.
-                      mimeType:
+                        description: Where this document is in its retention lifecycle.
+                      legalHold:
+                        type: boolean
+                        readOnly: true
+                        description: Whether disposition is suspended pending litigation.
+                      latestVersionId:
                         type: string
+                        format: uuid
                         readOnly: true
-                      sizeBytes:
-                        type: integer
-                        readOnly: true
-                        description: How many bytes were received, before they were discarded.
-                      contentHash:
+                        description: The most recent version, which is what describes the file.
+                        x-relationship:
+                          type: fk
+                          domain: document-management
+                          resource: DocumentVersion
+                          style: links-only
+                      retentionDeadline:
                         type: string
+                        format: date-time
+                        nullable: true
                         readOnly: true
-                        description: SHA-256 of the bytes, computed while reading them.
-                      uploadedAt:
+                        description: When this document becomes eligible for disposition.
+                      metadata:
+                        type: object
+                        additionalProperties: true
+                        description: Arbitrary key-value metadata supplied at upload.
+                      createdAt:
                         type: string
                         format: date-time
                         readOnly: true
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          latestVersion:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related DocumentVersion resource.
         "422":
           description: Unprocessable entity — business rule validation failed
           content:
@@ -377,6 +451,7 @@ paths:
                 allOf:
                   - type: object
                     required:
+                      - documentTypeId
                       - title
                     properties:
                       documentTypeId:
@@ -385,37 +460,72 @@ paths:
                       title:
                         type: string
                         description: A human-readable name for the document.
+                      documentDate:
+                        type: string
+                        format: date
+                        nullable: true
+                        description: The date the document itself bears, which is not the date it arrived.
                   - type: object
                     required:
                       - id
-                      - fileName
-                      - mimeType
-                      - sizeBytes
-                      - contentHash
+                      - lifecycleState
+                      - latestVersionId
+                      - createdAt
+                      - updatedAt
                     properties:
                       id:
                         type: string
                         format: uuid
                         readOnly: true
-                      fileName:
+                      lifecycleState:
                         type: string
+                        enum:
+                          - active
+                          - superseded
+                          - disposed
                         readOnly: true
-                        description: The name the file was uploaded under.
-                      mimeType:
+                        description: Where this document is in its retention lifecycle.
+                      legalHold:
+                        type: boolean
+                        readOnly: true
+                        description: Whether disposition is suspended pending litigation.
+                      latestVersionId:
                         type: string
+                        format: uuid
                         readOnly: true
-                      sizeBytes:
-                        type: integer
-                        readOnly: true
-                        description: How many bytes were received, before they were discarded.
-                      contentHash:
+                        description: The most recent version, which is what describes the file.
+                        x-relationship:
+                          type: fk
+                          domain: document-management
+                          resource: DocumentVersion
+                          style: links-only
+                      retentionDeadline:
                         type: string
+                        format: date-time
+                        nullable: true
                         readOnly: true
-                        description: SHA-256 of the bytes, computed while reading them.
-                      uploadedAt:
+                        description: When this document becomes eligible for disposition.
+                      metadata:
+                        type: object
+                        additionalProperties: true
+                        description: Arbitrary key-value metadata supplied at upload.
+                      createdAt:
                         type: string
                         format: date-time
                         readOnly: true
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        readOnly: true
+                      links:
+                        type: object
+                        readOnly: true
+                        description: Related resource links.
+                        properties:
+                          latestVersion:
+                            type: string
+                            format: uri-reference
+                            description: Link to the related DocumentVersion resource.
         "404":
           description: Resource not found
           content:
@@ -430,6 +540,7 @@ components:
     DocumentWritable:
       type: object
       required:
+        - documentTypeId
         - title
       properties:
         documentTypeId:
@@ -438,10 +549,16 @@ components:
         title:
           type: string
           description: A human-readable name for the document.
+        documentDate:
+          type: string
+          format: date
+          nullable: true
+          description: The date the document itself bears, which is not the date it arrived.
     Document:
       allOf:
         - type: object
           required:
+            - documentTypeId
             - title
           properties:
             documentTypeId:
@@ -450,37 +567,131 @@ components:
             title:
               type: string
               description: A human-readable name for the document.
+            documentDate:
+              type: string
+              format: date
+              nullable: true
+              description: The date the document itself bears, which is not the date it arrived.
         - type: object
           required:
             - id
-            - fileName
-            - mimeType
-            - sizeBytes
-            - contentHash
+            - lifecycleState
+            - latestVersionId
+            - createdAt
+            - updatedAt
           properties:
             id:
               type: string
               format: uuid
               readOnly: true
-            fileName:
+            lifecycleState:
               type: string
+              enum:
+                - active
+                - superseded
+                - disposed
               readOnly: true
-              description: The name the file was uploaded under.
-            mimeType:
+              description: Where this document is in its retention lifecycle.
+            legalHold:
+              type: boolean
+              readOnly: true
+              description: Whether disposition is suspended pending litigation.
+            latestVersionId:
               type: string
+              format: uuid
               readOnly: true
-            sizeBytes:
-              type: integer
-              readOnly: true
-              description: How many bytes were received, before they were discarded.
-            contentHash:
+              description: The most recent version, which is what describes the file.
+              x-relationship:
+                type: fk
+                domain: document-management
+                resource: DocumentVersion
+                style: links-only
+            retentionDeadline:
               type: string
+              format: date-time
+              nullable: true
               readOnly: true
-              description: SHA-256 of the bytes, computed while reading them.
-            uploadedAt:
+              description: When this document becomes eligible for disposition.
+            metadata:
+              type: object
+              additionalProperties: true
+              description: Arbitrary key-value metadata supplied at upload.
+            createdAt:
               type: string
               format: date-time
               readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+            links:
+              type: object
+              readOnly: true
+              description: Related resource links.
+              properties:
+                latestVersion:
+                  type: string
+                  format: uri-reference
+                  description: Link to the related DocumentVersion resource.
+    DocumentVersion:
+      type: object
+      required:
+        - id
+        - documentId
+        - versionNumber
+        - fileName
+        - mimeType
+        - sizeBytes
+        - contentHash
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        documentId:
+          type: string
+          format: uuid
+          readOnly: true
+          x-relationship:
+            type: fk
+            resource: Document
+            style: links-only
+        versionNumber:
+          type: integer
+          readOnly: true
+          description: Which upload this was, counting from one.
+        fileName:
+          type: string
+          readOnly: true
+          description: The name the file was uploaded under.
+        mimeType:
+          type: string
+          readOnly: true
+        sizeBytes:
+          type: integer
+          readOnly: true
+          description: How many bytes were received, before they were discarded.
+        contentHash:
+          type: string
+          readOnly: true
+          description: SHA-256 of the bytes, computed while reading them.
+        uploadedById:
+          type: string
+          readOnly: true
+          description: Whoever sent it, from the caller identity on the request.
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        links:
+          type: object
+          readOnly: true
+          description: Related resource links.
+          properties:
+            document:
+              type: string
+              format: uri-reference
+              description: Link to the related Document resource.
     DocumentList:
       type: object
       required:
@@ -493,6 +704,7 @@ components:
             allOf:
               - type: object
                 required:
+                  - documentTypeId
                   - title
                 properties:
                   documentTypeId:
@@ -501,37 +713,72 @@ components:
                   title:
                     type: string
                     description: A human-readable name for the document.
+                  documentDate:
+                    type: string
+                    format: date
+                    nullable: true
+                    description: The date the document itself bears, which is not the date it arrived.
               - type: object
                 required:
                   - id
-                  - fileName
-                  - mimeType
-                  - sizeBytes
-                  - contentHash
+                  - lifecycleState
+                  - latestVersionId
+                  - createdAt
+                  - updatedAt
                 properties:
                   id:
                     type: string
                     format: uuid
                     readOnly: true
-                  fileName:
+                  lifecycleState:
                     type: string
+                    enum:
+                      - active
+                      - superseded
+                      - disposed
                     readOnly: true
-                    description: The name the file was uploaded under.
-                  mimeType:
+                    description: Where this document is in its retention lifecycle.
+                  legalHold:
+                    type: boolean
+                    readOnly: true
+                    description: Whether disposition is suspended pending litigation.
+                  latestVersionId:
                     type: string
+                    format: uuid
                     readOnly: true
-                  sizeBytes:
-                    type: integer
-                    readOnly: true
-                    description: How many bytes were received, before they were discarded.
-                  contentHash:
+                    description: The most recent version, which is what describes the file.
+                    x-relationship:
+                      type: fk
+                      domain: document-management
+                      resource: DocumentVersion
+                      style: links-only
+                  retentionDeadline:
                     type: string
+                    format: date-time
+                    nullable: true
                     readOnly: true
-                    description: SHA-256 of the bytes, computed while reading them.
-                  uploadedAt:
+                    description: When this document becomes eligible for disposition.
+                  metadata:
+                    type: object
+                    additionalProperties: true
+                    description: Arbitrary key-value metadata supplied at upload.
+                  createdAt:
                     type: string
                     format: date-time
                     readOnly: true
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    readOnly: true
+                  links:
+                    type: object
+                    readOnly: true
+                    description: Related resource links.
+                    properties:
+                      latestVersion:
+                        type: string
+                        format: uri-reference
+                        description: Link to the related DocumentVersion resource.
         total:
           type: integer
         limit:

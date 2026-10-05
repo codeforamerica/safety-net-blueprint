@@ -310,6 +310,16 @@
       </div>
       <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">phone</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">email</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">mail</code></div>
     </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocumentId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocumentId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The uploaded document evidencing household income, if one is attached.</span>
+      </div>
+      
+    </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application.labels" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">labels</a>
@@ -332,6 +342,26 @@
         
         
         <span style="font-size:11px;color:#555;margin-left:2px;">County code for routing this application to the correct local office.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related Document resource.</span>
       </div>
       
     </div>
@@ -970,7 +1000,149 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Document</span>
+            
+            
+            
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.documentTypeId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentTypeId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">What kind of document this is.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.title" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">title</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">A human-readable name for the document.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.documentDate" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentDate</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The date the document itself bears, which is not the date it arrived.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.id" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">id</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.lifecycleState" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">lifecycleState</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Where this document is in its retention lifecycle.</span>
+      </div>
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">active</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">superseded</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">disposed</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.legalHold" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">legalHold</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether disposition is suspended pending litigation.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.latestVersionId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersionId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The most recent version, which is what describes the file.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.retentionDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">retentionDeadline</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">When this document becomes eligible for disposition.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.metadata" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">metadata</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Arbitrary key-value metadata supplied at upload.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.createdAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">createdAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.updatedAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">updatedAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 72px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.links.latestVersion" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersion</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related DocumentVersion resource.</span>
+      </div>
+      
+    </div>
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application._links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">_links</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
@@ -1259,6 +1431,16 @@
       </div>
       <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">phone</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">email</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">mail</code></div>
     </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocumentId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocumentId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The uploaded document evidencing household income, if one is attached.</span>
+      </div>
+      
+    </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application.labels" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">labels</a>
@@ -1281,6 +1463,26 @@
         
         
         <span style="font-size:11px;color:#555;margin-left:2px;">County code for routing this application to the correct local office.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related Document resource.</span>
       </div>
       
     </div>
@@ -1409,6 +1611,16 @@
       </div>
       <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">phone</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">email</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">mail</code></div>
     </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocumentId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocumentId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The uploaded document evidencing household income, if one is attached.</span>
+      </div>
+      
+    </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application.labels" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">labels</a>
@@ -1431,6 +1643,26 @@
         
         
         <span style="font-size:11px;color:#555;margin-left:2px;">County code for routing this application to the correct local office.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related Document resource.</span>
       </div>
       
     </div>
@@ -2069,7 +2301,149 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Document</span>
+            
+            
+            
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.documentTypeId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentTypeId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">What kind of document this is.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.title" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">title</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">A human-readable name for the document.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.documentDate" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentDate</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The date the document itself bears, which is not the date it arrived.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.id" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">id</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.lifecycleState" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">lifecycleState</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Where this document is in its retention lifecycle.</span>
+      </div>
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">active</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">superseded</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">disposed</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.legalHold" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">legalHold</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether disposition is suspended pending litigation.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.latestVersionId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersionId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The most recent version, which is what describes the file.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.retentionDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">retentionDeadline</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">When this document becomes eligible for disposition.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.metadata" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">metadata</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Arbitrary key-value metadata supplied at upload.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.createdAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">createdAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.updatedAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">updatedAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.links.latestVersion" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersion</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related DocumentVersion resource.</span>
+      </div>
+      
+    </div>
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application._links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">_links</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
@@ -2360,6 +2734,16 @@
       </div>
       <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">phone</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">email</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">mail</code></div>
     </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocumentId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocumentId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The uploaded document evidencing household income, if one is attached.</span>
+      </div>
+      
+    </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application.labels" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">labels</a>
@@ -2382,6 +2766,26 @@
         
         
         <span style="font-size:11px;color:#555;margin-left:2px;">County code for routing this application to the correct local office.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related Document resource.</span>
       </div>
       
     </div>
@@ -3020,7 +3424,149 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Document</span>
+            
+            
+            
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.documentTypeId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentTypeId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">What kind of document this is.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.title" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">title</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">A human-readable name for the document.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.documentDate" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentDate</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The date the document itself bears, which is not the date it arrived.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.id" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">id</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.lifecycleState" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">lifecycleState</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Where this document is in its retention lifecycle.</span>
+      </div>
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">active</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">superseded</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">disposed</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.legalHold" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">legalHold</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether disposition is suspended pending litigation.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.latestVersionId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersionId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The most recent version, which is what describes the file.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.retentionDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">retentionDeadline</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">When this document becomes eligible for disposition.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.metadata" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">metadata</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Arbitrary key-value metadata supplied at upload.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.createdAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">createdAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.updatedAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">updatedAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.links.latestVersion" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersion</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related DocumentVersion resource.</span>
+      </div>
+      
+    </div>
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application._links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">_links</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
@@ -3285,6 +3831,16 @@
       </div>
       <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">phone</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">email</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">mail</code></div>
     </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocumentId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocumentId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The uploaded document evidencing household income, if one is attached.</span>
+      </div>
+      
+    </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application.labels" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">labels</a>
@@ -3307,6 +3863,26 @@
         
         
         <span style="font-size:11px;color:#555;margin-left:2px;">County code for routing this application to the correct local office.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related Document resource.</span>
       </div>
       
     </div>
@@ -3435,6 +4011,16 @@
       </div>
       <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">phone</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">email</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">mail</code></div>
     </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocumentId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocumentId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The uploaded document evidencing household income, if one is attached.</span>
+      </div>
+      
+    </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application.labels" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">labels</a>
@@ -3457,6 +4043,26 @@
         
         
         <span style="font-size:11px;color:#555;margin-left:2px;">County code for routing this application to the correct local office.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related Document resource.</span>
       </div>
       
     </div>
@@ -4095,7 +4701,149 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Document</span>
+            
+            
+            
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.documentTypeId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentTypeId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">What kind of document this is.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.title" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">title</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">A human-readable name for the document.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.documentDate" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentDate</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The date the document itself bears, which is not the date it arrived.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.id" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">id</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.lifecycleState" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">lifecycleState</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Where this document is in its retention lifecycle.</span>
+      </div>
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">active</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">superseded</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">disposed</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.legalHold" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">legalHold</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether disposition is suspended pending litigation.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.latestVersionId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersionId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The most recent version, which is what describes the file.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.retentionDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">retentionDeadline</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">When this document becomes eligible for disposition.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.metadata" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">metadata</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Arbitrary key-value metadata supplied at upload.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.createdAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">createdAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.updatedAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">updatedAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.links.latestVersion" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersion</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related DocumentVersion resource.</span>
+      </div>
+      
+    </div>
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application._links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">_links</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
@@ -4501,6 +5249,16 @@
       </div>
       <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">phone</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">email</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">mail</code></div>
     </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocumentId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocumentId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The uploaded document evidencing household income, if one is attached.</span>
+      </div>
+      
+    </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application.labels" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">labels</a>
@@ -4523,6 +5281,26 @@
         
         
         <span style="font-size:11px;color:#555;margin-left:2px;">County code for routing this application to the correct local office.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related Document resource.</span>
       </div>
       
     </div>
@@ -5161,7 +5939,149 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Document</span>
+            
+            
+            
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.documentTypeId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentTypeId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">What kind of document this is.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.title" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">title</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">A human-readable name for the document.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.documentDate" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentDate</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The date the document itself bears, which is not the date it arrived.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.id" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">id</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.lifecycleState" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">lifecycleState</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Where this document is in its retention lifecycle.</span>
+      </div>
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">active</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">superseded</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">disposed</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.legalHold" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">legalHold</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether disposition is suspended pending litigation.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.latestVersionId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersionId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The most recent version, which is what describes the file.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.retentionDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">retentionDeadline</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">When this document becomes eligible for disposition.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.metadata" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">metadata</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Arbitrary key-value metadata supplied at upload.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.createdAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">createdAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.updatedAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">updatedAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.links.latestVersion" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersion</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related DocumentVersion resource.</span>
+      </div>
+      
+    </div>
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application._links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">_links</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
@@ -5554,6 +6474,16 @@
       </div>
       <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">phone</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">email</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">mail</code></div>
     </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocumentId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocumentId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The uploaded document evidencing household income, if one is attached.</span>
+      </div>
+      
+    </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application.labels" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">labels</a>
@@ -5576,6 +6506,26 @@
         
         
         <span style="font-size:11px;color:#555;margin-left:2px;">County code for routing this application to the correct local office.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related Document resource.</span>
       </div>
       
     </div>
@@ -6214,7 +7164,149 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Document</span>
+            
+            
+            
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.documentTypeId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentTypeId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">What kind of document this is.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.title" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">title</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">A human-readable name for the document.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.documentDate" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentDate</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The date the document itself bears, which is not the date it arrived.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.id" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">id</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.lifecycleState" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">lifecycleState</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Where this document is in its retention lifecycle.</span>
+      </div>
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">active</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">superseded</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">disposed</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.legalHold" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">legalHold</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether disposition is suspended pending litigation.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.latestVersionId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersionId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The most recent version, which is what describes the file.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.retentionDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">retentionDeadline</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">When this document becomes eligible for disposition.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.metadata" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">metadata</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Arbitrary key-value metadata supplied at upload.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.createdAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">createdAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.updatedAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">updatedAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.links.latestVersion" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersion</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related DocumentVersion resource.</span>
+      </div>
+      
+    </div>
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application._links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">_links</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
@@ -6638,6 +7730,16 @@
       </div>
       <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">phone</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">email</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">mail</code></div>
     </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocumentId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocumentId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The uploaded document evidencing household income, if one is attached.</span>
+      </div>
+      
+    </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application.labels" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">labels</a>
@@ -6660,6 +7762,26 @@
         
         
         <span style="font-size:11px;color:#555;margin-left:2px;">County code for routing this application to the correct local office.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related Document resource.</span>
       </div>
       
     </div>
@@ -7298,7 +8420,149 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Document</span>
+            
+            
+            
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.documentTypeId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentTypeId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">What kind of document this is.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.title" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">title</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">A human-readable name for the document.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.documentDate" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentDate</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The date the document itself bears, which is not the date it arrived.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.id" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">id</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.lifecycleState" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">lifecycleState</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Where this document is in its retention lifecycle.</span>
+      </div>
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">active</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">superseded</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">disposed</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.legalHold" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">legalHold</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether disposition is suspended pending litigation.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.latestVersionId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersionId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The most recent version, which is what describes the file.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.retentionDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">retentionDeadline</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">When this document becomes eligible for disposition.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.metadata" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">metadata</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Arbitrary key-value metadata supplied at upload.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.createdAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">createdAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.updatedAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">updatedAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.links.latestVersion" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersion</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related DocumentVersion resource.</span>
+      </div>
+      
+    </div>
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application._links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">_links</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
@@ -7691,6 +8955,16 @@
       </div>
       <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">phone</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">email</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">mail</code></div>
     </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocumentId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocumentId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The uploaded document evidencing household income, if one is attached.</span>
+      </div>
+      
+    </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application.labels" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">labels</a>
@@ -7713,6 +8987,26 @@
         
         
         <span style="font-size:11px;color:#555;margin-left:2px;">County code for routing this application to the correct local office.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.links.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related Document resource.</span>
       </div>
       
     </div>
@@ -8351,7 +9645,149 @@
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+    <div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">proofOfIncomeDocument</a>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Document</span>
+            
+            
+            
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.documentTypeId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentTypeId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">What kind of document this is.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.title" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">title</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">A human-readable name for the document.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.documentDate" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">documentDate</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The date the document itself bears, which is not the date it arrived.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.id" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">id</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.lifecycleState" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">lifecycleState</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Where this document is in its retention lifecycle.</span>
+      </div>
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">active</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">superseded</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">disposed</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.legalHold" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">legalHold</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether disposition is suspended pending litigation.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.latestVersionId" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersionId</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uuid)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The most recent version, which is what describes the file.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.retentionDeadline" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">retentionDeadline</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">When this document becomes eligible for disposition.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.metadata" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">metadata</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Arbitrary key-value metadata supplied at upload.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.createdAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">createdAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.updatedAt" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">updatedAt</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date-time)</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">links</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        <span style="font-size:9px;color:#888;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:0 4px;margin-left:2px;">read-only</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Related resource links.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <a href="../data-dictionaries/intake.html#field-application.proofOfIncomeDocument.links.latestVersion" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">latestVersion</a>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (uri-reference)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Link to the related DocumentVersion resource.</span>
+      </div>
+      
+    </div>
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <a href="../data-dictionaries/intake.html#field-application._links" style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">_links</a>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>

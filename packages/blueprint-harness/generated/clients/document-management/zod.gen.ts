@@ -3,33 +3,69 @@
 import { z } from 'zod';
 
 export const zDocumentWritable = z.object({
-    documentTypeId: z.optional(z.string()),
-    title: z.string()
+    documentTypeId: z.string(),
+    title: z.string(),
+    documentDate: z.optional(z.iso.date().nullable())
 });
 
 export const zDocument = z.object({
-    documentTypeId: z.optional(z.string()),
-    title: z.string()
+    documentTypeId: z.string(),
+    title: z.string(),
+    documentDate: z.optional(z.iso.date().nullable())
 }).and(z.object({
     id: z.uuid().readonly(),
+    lifecycleState: z.enum([
+        'active',
+        'superseded',
+        'disposed'
+    ]),
+    legalHold: z.optional(z.boolean().readonly()),
+    latestVersionId: z.uuid().readonly(),
+    retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    metadata: z.optional(z.record(z.string(), z.unknown())),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        latestVersion: z.optional(z.string())
+    }).readonly())
+}));
+
+export const zDocumentVersion = z.object({
+    id: z.uuid().readonly(),
+    documentId: z.uuid().readonly(),
+    versionNumber: z.int().readonly(),
     fileName: z.string().readonly(),
     mimeType: z.string().readonly(),
     sizeBytes: z.int().readonly(),
     contentHash: z.string().readonly(),
-    uploadedAt: z.optional(z.iso.datetime({ offset: true }).readonly())
-}));
+    uploadedById: z.optional(z.string().readonly()),
+    createdAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    links: z.optional(z.object({
+        document: z.optional(z.string())
+    }).readonly())
+});
 
 export const zDocumentList = z.object({
     items: z.array(z.object({
-        documentTypeId: z.optional(z.string()),
-        title: z.string()
+        documentTypeId: z.string(),
+        title: z.string(),
+        documentDate: z.optional(z.iso.date().nullable())
     }).and(z.object({
         id: z.uuid().readonly(),
-        fileName: z.string().readonly(),
-        mimeType: z.string().readonly(),
-        sizeBytes: z.int().readonly(),
-        contentHash: z.string().readonly(),
-        uploadedAt: z.optional(z.iso.datetime({ offset: true }).readonly())
+        lifecycleState: z.enum([
+            'active',
+            'superseded',
+            'disposed'
+        ]),
+        legalHold: z.optional(z.boolean().readonly()),
+        latestVersionId: z.uuid().readonly(),
+        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        metadata: z.optional(z.record(z.string(), z.unknown())),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            latestVersion: z.optional(z.string())
+        }).readonly())
     }))),
     total: z.int(),
     limit: z.optional(z.int()),
@@ -38,15 +74,23 @@ export const zDocumentList = z.object({
 });
 
 export const zDocumentWritable2 = z.object({
-    documentTypeId: z.optional(z.string()),
-    title: z.string()
-});
+    documentTypeId: z.string(),
+    title: z.string(),
+    documentDate: z.optional(z.iso.date().nullable())
+}).and(z.object({
+    metadata: z.optional(z.record(z.string(), z.unknown()))
+}));
+
+export const zDocumentVersionWritable = z.record(z.string(), z.unknown());
 
 export const zDocumentListWritable = z.object({
     items: z.array(z.object({
-        documentTypeId: z.optional(z.string()),
-        title: z.string()
-    })),
+        documentTypeId: z.string(),
+        title: z.string(),
+        documentDate: z.optional(z.iso.date().nullable())
+    }).and(z.object({
+        metadata: z.optional(z.record(z.string(), z.unknown()))
+    }))),
     total: z.int(),
     limit: z.optional(z.int()),
     offset: z.optional(z.int()),
@@ -69,15 +113,25 @@ export const zListDocumentsData = z.object({
  */
 export const zListDocumentsResponse = z.object({
     items: z.array(z.object({
-        documentTypeId: z.optional(z.string()),
-        title: z.string()
+        documentTypeId: z.string(),
+        title: z.string(),
+        documentDate: z.optional(z.iso.date().nullable())
     }).and(z.object({
         id: z.uuid().readonly(),
-        fileName: z.string().readonly(),
-        mimeType: z.string().readonly(),
-        sizeBytes: z.int().readonly(),
-        contentHash: z.string().readonly(),
-        uploadedAt: z.optional(z.iso.datetime({ offset: true }).readonly())
+        lifecycleState: z.enum([
+            'active',
+            'superseded',
+            'disposed'
+        ]),
+        legalHold: z.optional(z.boolean().readonly()),
+        latestVersionId: z.uuid().readonly(),
+        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        metadata: z.optional(z.record(z.string(), z.unknown())),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            latestVersion: z.optional(z.string())
+        }).readonly())
     }))),
     total: z.int(),
     limit: z.optional(z.int()),
@@ -99,15 +153,25 @@ export const zUploadDocumentData = z.object({
  * The stored description of the upload.
  */
 export const zUploadDocumentResponse = z.object({
-    documentTypeId: z.optional(z.string()),
-    title: z.string()
+    documentTypeId: z.string(),
+    title: z.string(),
+    documentDate: z.optional(z.iso.date().nullable())
 }).and(z.object({
     id: z.uuid().readonly(),
-    fileName: z.string().readonly(),
-    mimeType: z.string().readonly(),
-    sizeBytes: z.int().readonly(),
-    contentHash: z.string().readonly(),
-    uploadedAt: z.optional(z.iso.datetime({ offset: true }).readonly())
+    lifecycleState: z.enum([
+        'active',
+        'superseded',
+        'disposed'
+    ]),
+    legalHold: z.optional(z.boolean().readonly()),
+    latestVersionId: z.uuid().readonly(),
+    retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    metadata: z.optional(z.record(z.string(), z.unknown())),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        latestVersion: z.optional(z.string())
+    }).readonly())
 }));
 
 export const zGetDocumentData = z.object({
@@ -122,13 +186,23 @@ export const zGetDocumentData = z.object({
  * The document.
  */
 export const zGetDocumentResponse = z.object({
-    documentTypeId: z.optional(z.string()),
-    title: z.string()
+    documentTypeId: z.string(),
+    title: z.string(),
+    documentDate: z.optional(z.iso.date().nullable())
 }).and(z.object({
     id: z.uuid().readonly(),
-    fileName: z.string().readonly(),
-    mimeType: z.string().readonly(),
-    sizeBytes: z.int().readonly(),
-    contentHash: z.string().readonly(),
-    uploadedAt: z.optional(z.iso.datetime({ offset: true }).readonly())
+    lifecycleState: z.enum([
+        'active',
+        'superseded',
+        'disposed'
+    ]),
+    legalHold: z.optional(z.boolean().readonly()),
+    latestVersionId: z.uuid().readonly(),
+    retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    metadata: z.optional(z.record(z.string(), z.unknown())),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        latestVersion: z.optional(z.string())
+    }).readonly())
 }));

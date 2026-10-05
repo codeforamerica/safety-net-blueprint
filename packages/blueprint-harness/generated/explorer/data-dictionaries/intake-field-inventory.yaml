@@ -3,6 +3,7 @@
 
 # ── Application ─────────────────────────────────────────────────────────────────
 
+application.proofOfIncomeDocumentId: { type: uuid, relationship: Document }
 application.id: { type: uuid }
 application.programsAppliedFor[]: { type: enum, values: [snap, medicaid, chip, tanf] }
 application.channel: { type: enum, values: [online, phone, in_person, mail] }
@@ -17,6 +18,8 @@ application.contactInfo.email: { type: email }
 application.contactInfo.preferredContact: { type: enum, values: [phone, email, mail] }
 application.labels: { type: object }
 application.countyCode: { type: string }
+application.links: { type: object }
+application.links.proofOfIncomeDocument: { type: string }
 application.programCount: { type: integer }
 application.confirmationNumber: { type: string }
 application.status: { type: enum, values: [draft, submitted, under_review, withdrawn, closed] }
@@ -28,6 +31,7 @@ application.slaInfo[].slaTypeCode: { type: enum, values: [snap_standard, medicai
 application.slaInfo[].status: { type: enum, values: [active, warning, paused, breached, completed] }
 application.slaInfo[].clockStartedAt: { type: datetime }
 application.slaInfo[].deadline: { type: datetime }
+application.proofOfIncomeDocument: { type: string, relationship: Document }
 
 # ── ApplicationMember ───────────────────────────────────────────────────────────
 

@@ -8,24 +8,74 @@ export type DocumentWritable = {
     /**
      * What kind of document this is.
      */
-    documentTypeId?: string;
+    documentTypeId: string;
     /**
      * A human-readable name for the document.
      */
     title: string;
+    /**
+     * The date the document itself bears, which is not the date it arrived.
+     */
+    documentDate?: string;
 };
 
 export type Document = {
     /**
      * What kind of document this is.
      */
-    documentTypeId?: string;
+    documentTypeId: string;
     /**
      * A human-readable name for the document.
      */
     title: string;
+    /**
+     * The date the document itself bears, which is not the date it arrived.
+     */
+    documentDate?: string;
 } & {
     readonly id: string;
+    /**
+     * Where this document is in its retention lifecycle.
+     */
+    lifecycleState: 'active' | 'superseded' | 'disposed';
+    /**
+     * Whether disposition is suspended pending litigation.
+     */
+    readonly legalHold?: boolean;
+    /**
+     * The most recent version, which is what describes the file.
+     */
+    readonly latestVersionId: string;
+    /**
+     * When this document becomes eligible for disposition.
+     */
+    readonly retentionDeadline?: string;
+    /**
+     * Arbitrary key-value metadata supplied at upload.
+     */
+    metadata?: {
+        [key: string]: unknown;
+    };
+    readonly createdAt: string;
+    readonly updatedAt: string;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related DocumentVersion resource.
+         */
+        latestVersion?: string;
+    };
+};
+
+export type DocumentVersion = {
+    readonly id: string;
+    readonly documentId: string;
+    /**
+     * Which upload this was, counting from one.
+     */
+    readonly versionNumber: number;
     /**
      * The name the file was uploaded under.
      */
@@ -39,7 +89,20 @@ export type Document = {
      * SHA-256 of the bytes, computed while reading them.
      */
     readonly contentHash: string;
-    readonly uploadedAt?: string;
+    /**
+     * Whoever sent it, from the caller identity on the request.
+     */
+    readonly uploadedById?: string;
+    readonly createdAt?: string;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related Document resource.
+         */
+        document?: string;
+    };
 };
 
 export type DocumentList = {
@@ -47,27 +110,50 @@ export type DocumentList = {
         /**
          * What kind of document this is.
          */
-        documentTypeId?: string;
+        documentTypeId: string;
         /**
          * A human-readable name for the document.
          */
         title: string;
+        /**
+         * The date the document itself bears, which is not the date it arrived.
+         */
+        documentDate?: string;
     } & {
         readonly id: string;
         /**
-         * The name the file was uploaded under.
+         * Where this document is in its retention lifecycle.
          */
-        readonly fileName: string;
-        readonly mimeType: string;
+        lifecycleState: 'active' | 'superseded' | 'disposed';
         /**
-         * How many bytes were received, before they were discarded.
+         * Whether disposition is suspended pending litigation.
          */
-        readonly sizeBytes: number;
+        readonly legalHold?: boolean;
         /**
-         * SHA-256 of the bytes, computed while reading them.
+         * The most recent version, which is what describes the file.
          */
-        readonly contentHash: string;
-        readonly uploadedAt?: string;
+        readonly latestVersionId: string;
+        /**
+         * When this document becomes eligible for disposition.
+         */
+        readonly retentionDeadline?: string;
+        /**
+         * Arbitrary key-value metadata supplied at upload.
+         */
+        metadata?: {
+            [key: string]: unknown;
+        };
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related DocumentVersion resource.
+             */
+            latestVersion?: string;
+        };
     }>;
     total: number;
     limit?: number;
@@ -79,11 +165,26 @@ export type DocumentWritable2 = {
     /**
      * What kind of document this is.
      */
-    documentTypeId?: string;
+    documentTypeId: string;
     /**
      * A human-readable name for the document.
      */
     title: string;
+    /**
+     * The date the document itself bears, which is not the date it arrived.
+     */
+    documentDate?: string;
+} & {
+    /**
+     * Arbitrary key-value metadata supplied at upload.
+     */
+    metadata?: {
+        [key: string]: unknown;
+    };
+};
+
+export type DocumentVersionWritable = {
+    [key: string]: unknown;
 };
 
 export type DocumentListWritable = {
@@ -91,11 +192,22 @@ export type DocumentListWritable = {
         /**
          * What kind of document this is.
          */
-        documentTypeId?: string;
+        documentTypeId: string;
         /**
          * A human-readable name for the document.
          */
         title: string;
+        /**
+         * The date the document itself bears, which is not the date it arrived.
+         */
+        documentDate?: string;
+    } & {
+        /**
+         * Arbitrary key-value metadata supplied at upload.
+         */
+        metadata?: {
+            [key: string]: unknown;
+        };
     }>;
     total: number;
     limit?: number;
@@ -233,27 +345,50 @@ export type ListDocumentsResponses = {
             /**
              * What kind of document this is.
              */
-            documentTypeId?: string;
+            documentTypeId: string;
             /**
              * A human-readable name for the document.
              */
             title: string;
+            /**
+             * The date the document itself bears, which is not the date it arrived.
+             */
+            documentDate?: string;
         } & {
             readonly id: string;
             /**
-             * The name the file was uploaded under.
+             * Where this document is in its retention lifecycle.
              */
-            readonly fileName: string;
-            readonly mimeType: string;
+            lifecycleState: 'active' | 'superseded' | 'disposed';
             /**
-             * How many bytes were received, before they were discarded.
+             * Whether disposition is suspended pending litigation.
              */
-            readonly sizeBytes: number;
+            readonly legalHold?: boolean;
             /**
-             * SHA-256 of the bytes, computed while reading them.
+             * The most recent version, which is what describes the file.
              */
-            readonly contentHash: string;
-            readonly uploadedAt?: string;
+            readonly latestVersionId: string;
+            /**
+             * When this document becomes eligible for disposition.
+             */
+            readonly retentionDeadline?: string;
+            /**
+             * Arbitrary key-value metadata supplied at upload.
+             */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            readonly createdAt: string;
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related DocumentVersion resource.
+                 */
+                latestVersion?: string;
+            };
         }>;
         total: number;
         limit?: number;
@@ -304,27 +439,50 @@ export type UploadDocumentResponses = {
         /**
          * What kind of document this is.
          */
-        documentTypeId?: string;
+        documentTypeId: string;
         /**
          * A human-readable name for the document.
          */
         title: string;
+        /**
+         * The date the document itself bears, which is not the date it arrived.
+         */
+        documentDate?: string;
     } & {
         readonly id: string;
         /**
-         * The name the file was uploaded under.
+         * Where this document is in its retention lifecycle.
          */
-        readonly fileName: string;
-        readonly mimeType: string;
+        lifecycleState: 'active' | 'superseded' | 'disposed';
         /**
-         * How many bytes were received, before they were discarded.
+         * Whether disposition is suspended pending litigation.
          */
-        readonly sizeBytes: number;
+        readonly legalHold?: boolean;
         /**
-         * SHA-256 of the bytes, computed while reading them.
+         * The most recent version, which is what describes the file.
          */
-        readonly contentHash: string;
-        readonly uploadedAt?: string;
+        readonly latestVersionId: string;
+        /**
+         * When this document becomes eligible for disposition.
+         */
+        readonly retentionDeadline?: string;
+        /**
+         * Arbitrary key-value metadata supplied at upload.
+         */
+        metadata?: {
+            [key: string]: unknown;
+        };
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related DocumentVersion resource.
+             */
+            latestVersion?: string;
+        };
     };
 };
 
@@ -358,27 +516,50 @@ export type GetDocumentResponses = {
         /**
          * What kind of document this is.
          */
-        documentTypeId?: string;
+        documentTypeId: string;
         /**
          * A human-readable name for the document.
          */
         title: string;
+        /**
+         * The date the document itself bears, which is not the date it arrived.
+         */
+        documentDate?: string;
     } & {
         readonly id: string;
         /**
-         * The name the file was uploaded under.
+         * Where this document is in its retention lifecycle.
          */
-        readonly fileName: string;
-        readonly mimeType: string;
+        lifecycleState: 'active' | 'superseded' | 'disposed';
         /**
-         * How many bytes were received, before they were discarded.
+         * Whether disposition is suspended pending litigation.
          */
-        readonly sizeBytes: number;
+        readonly legalHold?: boolean;
         /**
-         * SHA-256 of the bytes, computed while reading them.
+         * The most recent version, which is what describes the file.
          */
-        readonly contentHash: string;
-        readonly uploadedAt?: string;
+        readonly latestVersionId: string;
+        /**
+         * When this document becomes eligible for disposition.
+         */
+        readonly retentionDeadline?: string;
+        /**
+         * Arbitrary key-value metadata supplied at upload.
+         */
+        metadata?: {
+            [key: string]: unknown;
+        };
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related DocumentVersion resource.
+             */
+            latestVersion?: string;
+        };
     };
 };
 

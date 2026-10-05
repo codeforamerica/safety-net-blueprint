@@ -52,6 +52,10 @@ export type ApplicationWritable = {
         preferredContact?: 'phone' | 'email' | 'mail';
     };
     /**
+     * The uploaded document evidencing household income, if one is attached.
+     */
+    proofOfIncomeDocumentId?: string;
+    /**
      * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
      *
      */
@@ -62,6 +66,15 @@ export type ApplicationWritable = {
      * County code for routing this application to the correct local office.
      */
     countyCode?: string;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related Document resource.
+         */
+        proofOfIncomeDocument?: string;
+    };
 };
 
 /**
@@ -115,6 +128,10 @@ export type Application = {
         preferredContact?: 'phone' | 'email' | 'mail';
     };
     /**
+     * The uploaded document evidencing household income, if one is attached.
+     */
+    proofOfIncomeDocumentId?: string;
+    /**
      * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
      *
      */
@@ -125,6 +142,15 @@ export type Application = {
      * County code for routing this application to the correct local office.
      */
     countyCode?: string;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related Document resource.
+         */
+        proofOfIncomeDocument?: string;
+    };
 } & {
     /**
      * Unique identifier (server-generated).
@@ -346,6 +372,55 @@ export type Application = {
      * Timestamp when the application was last updated.
      */
     readonly updatedAt: string;
+    proofOfIncomeDocument?: {
+        /**
+         * What kind of document this is.
+         */
+        documentTypeId: string;
+        /**
+         * A human-readable name for the document.
+         */
+        title: string;
+        /**
+         * The date the document itself bears, which is not the date it arrived.
+         */
+        documentDate?: string;
+    } & {
+        readonly id: string;
+        /**
+         * Where this document is in its retention lifecycle.
+         */
+        lifecycleState: 'active' | 'superseded' | 'disposed';
+        /**
+         * Whether disposition is suspended pending litigation.
+         */
+        readonly legalHold?: boolean;
+        /**
+         * The most recent version, which is what describes the file.
+         */
+        readonly latestVersionId: string;
+        /**
+         * When this document becomes eligible for disposition.
+         */
+        readonly retentionDeadline?: string;
+        /**
+         * Arbitrary key-value metadata supplied at upload.
+         */
+        metadata?: {
+            [key: string]: unknown;
+        };
+        readonly createdAt: string;
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related DocumentVersion resource.
+             */
+            latestVersion?: string;
+        };
+    };
 } & {
     /**
      * Generated composition links.
@@ -420,6 +495,10 @@ export type ApplicationCreate = {
         preferredContact?: 'phone' | 'email' | 'mail';
     };
     /**
+     * The uploaded document evidencing household income, if one is attached.
+     */
+    proofOfIncomeDocumentId?: string;
+    /**
      * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
      *
      */
@@ -430,8 +509,15 @@ export type ApplicationCreate = {
      * County code for routing this application to the correct local office.
      */
     countyCode?: string;
-} & {
-    [key: string]: unknown;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related Document resource.
+         */
+        proofOfIncomeDocument?: string;
+    };
 };
 
 export type ApplicationUpdate = {
@@ -482,6 +568,10 @@ export type ApplicationUpdate = {
         preferredContact?: 'phone' | 'email' | 'mail';
     };
     /**
+     * The uploaded document evidencing household income, if one is attached.
+     */
+    proofOfIncomeDocumentId?: string;
+    /**
      * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
      *
      */
@@ -492,8 +582,15 @@ export type ApplicationUpdate = {
      * County code for routing this application to the correct local office.
      */
     countyCode?: string;
-} & {
-    [key: string]: unknown;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related Document resource.
+         */
+        proofOfIncomeDocument?: string;
+    };
 };
 
 export type ApplicationList = {
@@ -548,6 +645,10 @@ export type ApplicationList = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * The uploaded document evidencing household income, if one is attached.
+         */
+        proofOfIncomeDocumentId?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -558,6 +659,15 @@ export type ApplicationList = {
          * County code for routing this application to the correct local office.
          */
         countyCode?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Document resource.
+             */
+            proofOfIncomeDocument?: string;
+        };
     } & {
         /**
          * Unique identifier (server-generated).
@@ -779,6 +889,55 @@ export type ApplicationList = {
          * Timestamp when the application was last updated.
          */
         readonly updatedAt: string;
+        proofOfIncomeDocument?: {
+            /**
+             * What kind of document this is.
+             */
+            documentTypeId: string;
+            /**
+             * A human-readable name for the document.
+             */
+            title: string;
+            /**
+             * The date the document itself bears, which is not the date it arrived.
+             */
+            documentDate?: string;
+        } & {
+            readonly id: string;
+            /**
+             * Where this document is in its retention lifecycle.
+             */
+            lifecycleState: 'active' | 'superseded' | 'disposed';
+            /**
+             * Whether disposition is suspended pending litigation.
+             */
+            readonly legalHold?: boolean;
+            /**
+             * The most recent version, which is what describes the file.
+             */
+            readonly latestVersionId: string;
+            /**
+             * When this document becomes eligible for disposition.
+             */
+            readonly retentionDeadline?: string;
+            /**
+             * Arbitrary key-value metadata supplied at upload.
+             */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            readonly createdAt: string;
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related DocumentVersion resource.
+                 */
+                latestVersion?: string;
+            };
+        };
     } & {
         /**
          * Generated composition links.
@@ -1786,6 +1945,135 @@ export type InterviewPromptsResponse = Array<{
     message: string;
 }>;
 
+export type Document = {
+    /**
+     * What kind of document this is.
+     */
+    documentTypeId: string;
+    /**
+     * A human-readable name for the document.
+     */
+    title: string;
+    /**
+     * The date the document itself bears, which is not the date it arrived.
+     */
+    documentDate?: string;
+} & {
+    readonly id: string;
+    /**
+     * Where this document is in its retention lifecycle.
+     */
+    lifecycleState: 'active' | 'superseded' | 'disposed';
+    /**
+     * Whether disposition is suspended pending litigation.
+     */
+    readonly legalHold?: boolean;
+    /**
+     * The most recent version, which is what describes the file.
+     */
+    readonly latestVersionId: string;
+    /**
+     * When this document becomes eligible for disposition.
+     */
+    readonly retentionDeadline?: string;
+    /**
+     * Arbitrary key-value metadata supplied at upload.
+     */
+    metadata?: {
+        [key: string]: unknown;
+    };
+    readonly createdAt: string;
+    readonly updatedAt: string;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related DocumentVersion resource.
+         */
+        latestVersion?: string;
+    };
+};
+
+export type DocumentWritable = {
+    /**
+     * What kind of document this is.
+     */
+    documentTypeId: string;
+    /**
+     * A human-readable name for the document.
+     */
+    title: string;
+    /**
+     * The date the document itself bears, which is not the date it arrived.
+     */
+    documentDate?: string;
+};
+
+export type ApplicationWritableWritable = {
+    /**
+     * Benefit programs the household is applying for.
+     */
+    programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+    /**
+     * Channel through which the application was submitted.
+     */
+    channel?: 'online' | 'phone' | 'in_person' | 'mail';
+    /**
+     * Mailing or residential address.
+     */
+    address?: {
+        /**
+         * Street address including apartment or unit number.
+         */
+        street: string;
+        /**
+         * City name.
+         */
+        city: string;
+        /**
+         * Two-letter US state abbreviation.
+         */
+        state: string;
+        /**
+         * ZIP code or ZIP+4.
+         */
+        zip: string;
+    };
+    /**
+     * Contact details for the primary applicant.
+     */
+    contactInfo?: {
+        /**
+         * Primary phone number.
+         */
+        phone?: string;
+        /**
+         * Email address.
+         */
+        email?: string;
+        /**
+         * Applicant's preferred method of contact.
+         */
+        preferredContact?: 'phone' | 'email' | 'mail';
+    };
+    /**
+     * The uploaded document evidencing household income, if one is attached.
+     */
+    proofOfIncomeDocumentId?: string;
+    /**
+     * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+     *
+     */
+    labels?: {
+        [key: string]: string;
+    };
+    /**
+     * County code for routing this application to the correct local office.
+     */
+    countyCode?: string;
+};
+
 /**
  * A benefit application record, including server-managed fields.
  */
@@ -1836,6 +2124,10 @@ export type ApplicationWritable2 = {
          */
         preferredContact?: 'phone' | 'email' | 'mail';
     };
+    /**
+     * The uploaded document evidencing household income, if one is attached.
+     */
+    proofOfIncomeDocumentId?: string;
     /**
      * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
      *
@@ -1980,6 +2272,155 @@ export type ApplicationWritable2 = {
             programsAppliedFor?: string;
         };
     }>;
+    proofOfIncomeDocument?: {
+        /**
+         * What kind of document this is.
+         */
+        documentTypeId: string;
+        /**
+         * A human-readable name for the document.
+         */
+        title: string;
+        /**
+         * The date the document itself bears, which is not the date it arrived.
+         */
+        documentDate?: string;
+    } & {
+        /**
+         * Arbitrary key-value metadata supplied at upload.
+         */
+        metadata?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type ApplicationCreateWritable = {
+    /**
+     * Benefit programs the household is applying for.
+     */
+    programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+    /**
+     * Channel through which the application was submitted.
+     */
+    channel?: 'online' | 'phone' | 'in_person' | 'mail';
+    /**
+     * Mailing or residential address.
+     */
+    address?: {
+        /**
+         * Street address including apartment or unit number.
+         */
+        street: string;
+        /**
+         * City name.
+         */
+        city: string;
+        /**
+         * Two-letter US state abbreviation.
+         */
+        state: string;
+        /**
+         * ZIP code or ZIP+4.
+         */
+        zip: string;
+    };
+    /**
+     * Contact details for the primary applicant.
+     */
+    contactInfo?: {
+        /**
+         * Primary phone number.
+         */
+        phone?: string;
+        /**
+         * Email address.
+         */
+        email?: string;
+        /**
+         * Applicant's preferred method of contact.
+         */
+        preferredContact?: 'phone' | 'email' | 'mail';
+    };
+    /**
+     * The uploaded document evidencing household income, if one is attached.
+     */
+    proofOfIncomeDocumentId?: string;
+    /**
+     * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+     *
+     */
+    labels?: {
+        [key: string]: string;
+    };
+    /**
+     * County code for routing this application to the correct local office.
+     */
+    countyCode?: string;
+};
+
+export type ApplicationUpdateWritable = {
+    /**
+     * Benefit programs the household is applying for.
+     */
+    programsAppliedFor?: Array<'snap' | 'medicaid' | 'chip' | 'tanf'>;
+    /**
+     * Channel through which the application was submitted.
+     */
+    channel?: 'online' | 'phone' | 'in_person' | 'mail';
+    /**
+     * Mailing or residential address.
+     */
+    address?: {
+        /**
+         * Street address including apartment or unit number.
+         */
+        street: string;
+        /**
+         * City name.
+         */
+        city: string;
+        /**
+         * Two-letter US state abbreviation.
+         */
+        state: string;
+        /**
+         * ZIP code or ZIP+4.
+         */
+        zip: string;
+    };
+    /**
+     * Contact details for the primary applicant.
+     */
+    contactInfo?: {
+        /**
+         * Primary phone number.
+         */
+        phone?: string;
+        /**
+         * Email address.
+         */
+        email?: string;
+        /**
+         * Applicant's preferred method of contact.
+         */
+        preferredContact?: 'phone' | 'email' | 'mail';
+    };
+    /**
+     * The uploaded document evidencing household income, if one is attached.
+     */
+    proofOfIncomeDocumentId?: string;
+    /**
+     * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
+     *
+     */
+    labels?: {
+        [key: string]: string;
+    };
+    /**
+     * County code for routing this application to the correct local office.
+     */
+    countyCode?: string;
 };
 
 export type ApplicationListWritable = {
@@ -2033,6 +2474,10 @@ export type ApplicationListWritable = {
              */
             preferredContact?: 'phone' | 'email' | 'mail';
         };
+        /**
+         * The uploaded document evidencing household income, if one is attached.
+         */
+        proofOfIncomeDocumentId?: string;
         /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
@@ -2177,6 +2622,27 @@ export type ApplicationListWritable = {
                 programsAppliedFor?: string;
             };
         }>;
+        proofOfIncomeDocument?: {
+            /**
+             * What kind of document this is.
+             */
+            documentTypeId: string;
+            /**
+             * A human-readable name for the document.
+             */
+            title: string;
+            /**
+             * The date the document itself bears, which is not the date it arrived.
+             */
+            documentDate?: string;
+        } & {
+            /**
+             * Arbitrary key-value metadata supplied at upload.
+             */
+            metadata?: {
+                [key: string]: unknown;
+            };
+        };
     }>;
     /**
      * Total number of matching applications.
@@ -2506,6 +2972,28 @@ export type ReviewProgressListResponseWritable = {
     hasNext: boolean;
 };
 
+export type DocumentWritable2 = {
+    /**
+     * What kind of document this is.
+     */
+    documentTypeId: string;
+    /**
+     * A human-readable name for the document.
+     */
+    title: string;
+    /**
+     * The date the document itself bears, which is not the date it arrived.
+     */
+    documentDate?: string;
+} & {
+    /**
+     * Arbitrary key-value metadata supplied at upload.
+     */
+    metadata?: {
+        [key: string]: unknown;
+    };
+};
+
 /**
  * Unique identifier of the application.
  */
@@ -2718,6 +3206,10 @@ export type ListApplicationsResponses = {
                 preferredContact?: 'phone' | 'email' | 'mail';
             };
             /**
+             * The uploaded document evidencing household income, if one is attached.
+             */
+            proofOfIncomeDocumentId?: string;
+            /**
              * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
              *
              */
@@ -2728,6 +3220,15 @@ export type ListApplicationsResponses = {
              * County code for routing this application to the correct local office.
              */
             countyCode?: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related Document resource.
+                 */
+                proofOfIncomeDocument?: string;
+            };
         } & {
             /**
              * Unique identifier (server-generated).
@@ -2949,6 +3450,55 @@ export type ListApplicationsResponses = {
              * Timestamp when the application was last updated.
              */
             readonly updatedAt: string;
+            proofOfIncomeDocument?: {
+                /**
+                 * What kind of document this is.
+                 */
+                documentTypeId: string;
+                /**
+                 * A human-readable name for the document.
+                 */
+                title: string;
+                /**
+                 * The date the document itself bears, which is not the date it arrived.
+                 */
+                documentDate?: string;
+            } & {
+                readonly id: string;
+                /**
+                 * Where this document is in its retention lifecycle.
+                 */
+                lifecycleState: 'active' | 'superseded' | 'disposed';
+                /**
+                 * Whether disposition is suspended pending litigation.
+                 */
+                readonly legalHold?: boolean;
+                /**
+                 * The most recent version, which is what describes the file.
+                 */
+                readonly latestVersionId: string;
+                /**
+                 * When this document becomes eligible for disposition.
+                 */
+                readonly retentionDeadline?: string;
+                /**
+                 * Arbitrary key-value metadata supplied at upload.
+                 */
+                metadata?: {
+                    [key: string]: unknown;
+                };
+                readonly createdAt: string;
+                readonly updatedAt: string;
+                /**
+                 * Related resource links.
+                 */
+                readonly links?: {
+                    /**
+                     * Link to the related DocumentVersion resource.
+                     */
+                    latestVersion?: string;
+                };
+            };
         } & {
             /**
              * Generated composition links.
@@ -3044,6 +3594,10 @@ export type CreateApplicationData = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * The uploaded document evidencing household income, if one is attached.
+         */
+        proofOfIncomeDocumentId?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -3054,6 +3608,15 @@ export type CreateApplicationData = {
          * County code for routing this application to the correct local office.
          */
         countyCode?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Document resource.
+             */
+            proofOfIncomeDocument?: string;
+        };
     } & {
         [key: string]: unknown;
     };
@@ -3137,6 +3700,10 @@ export type CreateApplicationResponses = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * The uploaded document evidencing household income, if one is attached.
+         */
+        proofOfIncomeDocumentId?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -3147,6 +3714,15 @@ export type CreateApplicationResponses = {
          * County code for routing this application to the correct local office.
          */
         countyCode?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Document resource.
+             */
+            proofOfIncomeDocument?: string;
+        };
     } & {
         /**
          * Unique identifier (server-generated).
@@ -3368,6 +3944,55 @@ export type CreateApplicationResponses = {
          * Timestamp when the application was last updated.
          */
         readonly updatedAt: string;
+        proofOfIncomeDocument?: {
+            /**
+             * What kind of document this is.
+             */
+            documentTypeId: string;
+            /**
+             * A human-readable name for the document.
+             */
+            title: string;
+            /**
+             * The date the document itself bears, which is not the date it arrived.
+             */
+            documentDate?: string;
+        } & {
+            readonly id: string;
+            /**
+             * Where this document is in its retention lifecycle.
+             */
+            lifecycleState: 'active' | 'superseded' | 'disposed';
+            /**
+             * Whether disposition is suspended pending litigation.
+             */
+            readonly legalHold?: boolean;
+            /**
+             * The most recent version, which is what describes the file.
+             */
+            readonly latestVersionId: string;
+            /**
+             * When this document becomes eligible for disposition.
+             */
+            readonly retentionDeadline?: string;
+            /**
+             * Arbitrary key-value metadata supplied at upload.
+             */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            readonly createdAt: string;
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related DocumentVersion resource.
+                 */
+                latestVersion?: string;
+            };
+        };
     } & {
         /**
          * Generated composition links.
@@ -3516,6 +4141,10 @@ export type GetApplicationResponses = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * The uploaded document evidencing household income, if one is attached.
+         */
+        proofOfIncomeDocumentId?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -3526,6 +4155,15 @@ export type GetApplicationResponses = {
          * County code for routing this application to the correct local office.
          */
         countyCode?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Document resource.
+             */
+            proofOfIncomeDocument?: string;
+        };
     } & {
         /**
          * Unique identifier (server-generated).
@@ -3747,6 +4385,55 @@ export type GetApplicationResponses = {
          * Timestamp when the application was last updated.
          */
         readonly updatedAt: string;
+        proofOfIncomeDocument?: {
+            /**
+             * What kind of document this is.
+             */
+            documentTypeId: string;
+            /**
+             * A human-readable name for the document.
+             */
+            title: string;
+            /**
+             * The date the document itself bears, which is not the date it arrived.
+             */
+            documentDate?: string;
+        } & {
+            readonly id: string;
+            /**
+             * Where this document is in its retention lifecycle.
+             */
+            lifecycleState: 'active' | 'superseded' | 'disposed';
+            /**
+             * Whether disposition is suspended pending litigation.
+             */
+            readonly legalHold?: boolean;
+            /**
+             * The most recent version, which is what describes the file.
+             */
+            readonly latestVersionId: string;
+            /**
+             * When this document becomes eligible for disposition.
+             */
+            readonly retentionDeadline?: string;
+            /**
+             * Arbitrary key-value metadata supplied at upload.
+             */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            readonly createdAt: string;
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related DocumentVersion resource.
+                 */
+                latestVersion?: string;
+            };
+        };
     } & {
         /**
          * Generated composition links.
@@ -3825,6 +4512,10 @@ export type UpdateApplicationData = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * The uploaded document evidencing household income, if one is attached.
+         */
+        proofOfIncomeDocumentId?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -3835,6 +4526,15 @@ export type UpdateApplicationData = {
          * County code for routing this application to the correct local office.
          */
         countyCode?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Document resource.
+             */
+            proofOfIncomeDocument?: string;
+        };
     } & {
         [key: string]: unknown;
     };
@@ -3929,6 +4629,10 @@ export type UpdateApplicationResponses = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * The uploaded document evidencing household income, if one is attached.
+         */
+        proofOfIncomeDocumentId?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -3939,6 +4643,15 @@ export type UpdateApplicationResponses = {
          * County code for routing this application to the correct local office.
          */
         countyCode?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Document resource.
+             */
+            proofOfIncomeDocument?: string;
+        };
     } & {
         /**
          * Unique identifier (server-generated).
@@ -4160,6 +4873,55 @@ export type UpdateApplicationResponses = {
          * Timestamp when the application was last updated.
          */
         readonly updatedAt: string;
+        proofOfIncomeDocument?: {
+            /**
+             * What kind of document this is.
+             */
+            documentTypeId: string;
+            /**
+             * A human-readable name for the document.
+             */
+            title: string;
+            /**
+             * The date the document itself bears, which is not the date it arrived.
+             */
+            documentDate?: string;
+        } & {
+            readonly id: string;
+            /**
+             * Where this document is in its retention lifecycle.
+             */
+            lifecycleState: 'active' | 'superseded' | 'disposed';
+            /**
+             * Whether disposition is suspended pending litigation.
+             */
+            readonly legalHold?: boolean;
+            /**
+             * The most recent version, which is what describes the file.
+             */
+            readonly latestVersionId: string;
+            /**
+             * When this document becomes eligible for disposition.
+             */
+            readonly retentionDeadline?: string;
+            /**
+             * Arbitrary key-value metadata supplied at upload.
+             */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            readonly createdAt: string;
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related DocumentVersion resource.
+                 */
+                latestVersion?: string;
+            };
+        };
     } & {
         /**
          * Generated composition links.
@@ -5546,6 +6308,10 @@ export type SubmitApplicationResponses = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * The uploaded document evidencing household income, if one is attached.
+         */
+        proofOfIncomeDocumentId?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -5556,6 +6322,15 @@ export type SubmitApplicationResponses = {
          * County code for routing this application to the correct local office.
          */
         countyCode?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Document resource.
+             */
+            proofOfIncomeDocument?: string;
+        };
     } & {
         /**
          * Unique identifier (server-generated).
@@ -5777,6 +6552,55 @@ export type SubmitApplicationResponses = {
          * Timestamp when the application was last updated.
          */
         readonly updatedAt: string;
+        proofOfIncomeDocument?: {
+            /**
+             * What kind of document this is.
+             */
+            documentTypeId: string;
+            /**
+             * A human-readable name for the document.
+             */
+            title: string;
+            /**
+             * The date the document itself bears, which is not the date it arrived.
+             */
+            documentDate?: string;
+        } & {
+            readonly id: string;
+            /**
+             * Where this document is in its retention lifecycle.
+             */
+            lifecycleState: 'active' | 'superseded' | 'disposed';
+            /**
+             * Whether disposition is suspended pending litigation.
+             */
+            readonly legalHold?: boolean;
+            /**
+             * The most recent version, which is what describes the file.
+             */
+            readonly latestVersionId: string;
+            /**
+             * When this document becomes eligible for disposition.
+             */
+            readonly retentionDeadline?: string;
+            /**
+             * Arbitrary key-value metadata supplied at upload.
+             */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            readonly createdAt: string;
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related DocumentVersion resource.
+                 */
+                latestVersion?: string;
+            };
+        };
     } & {
         /**
          * Generated composition links.
@@ -5948,6 +6772,10 @@ export type OpenApplicationResponses = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * The uploaded document evidencing household income, if one is attached.
+         */
+        proofOfIncomeDocumentId?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -5958,6 +6786,15 @@ export type OpenApplicationResponses = {
          * County code for routing this application to the correct local office.
          */
         countyCode?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Document resource.
+             */
+            proofOfIncomeDocument?: string;
+        };
     } & {
         /**
          * Unique identifier (server-generated).
@@ -6179,6 +7016,55 @@ export type OpenApplicationResponses = {
          * Timestamp when the application was last updated.
          */
         readonly updatedAt: string;
+        proofOfIncomeDocument?: {
+            /**
+             * What kind of document this is.
+             */
+            documentTypeId: string;
+            /**
+             * A human-readable name for the document.
+             */
+            title: string;
+            /**
+             * The date the document itself bears, which is not the date it arrived.
+             */
+            documentDate?: string;
+        } & {
+            readonly id: string;
+            /**
+             * Where this document is in its retention lifecycle.
+             */
+            lifecycleState: 'active' | 'superseded' | 'disposed';
+            /**
+             * Whether disposition is suspended pending litigation.
+             */
+            readonly legalHold?: boolean;
+            /**
+             * The most recent version, which is what describes the file.
+             */
+            readonly latestVersionId: string;
+            /**
+             * When this document becomes eligible for disposition.
+             */
+            readonly retentionDeadline?: string;
+            /**
+             * Arbitrary key-value metadata supplied at upload.
+             */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            readonly createdAt: string;
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related DocumentVersion resource.
+                 */
+                latestVersion?: string;
+            };
+        };
     } & {
         /**
          * Generated composition links.
@@ -6359,6 +7245,10 @@ export type CloseApplicationResponses = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * The uploaded document evidencing household income, if one is attached.
+         */
+        proofOfIncomeDocumentId?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -6369,6 +7259,15 @@ export type CloseApplicationResponses = {
          * County code for routing this application to the correct local office.
          */
         countyCode?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Document resource.
+             */
+            proofOfIncomeDocument?: string;
+        };
     } & {
         /**
          * Unique identifier (server-generated).
@@ -6590,6 +7489,55 @@ export type CloseApplicationResponses = {
          * Timestamp when the application was last updated.
          */
         readonly updatedAt: string;
+        proofOfIncomeDocument?: {
+            /**
+             * What kind of document this is.
+             */
+            documentTypeId: string;
+            /**
+             * A human-readable name for the document.
+             */
+            title: string;
+            /**
+             * The date the document itself bears, which is not the date it arrived.
+             */
+            documentDate?: string;
+        } & {
+            readonly id: string;
+            /**
+             * Where this document is in its retention lifecycle.
+             */
+            lifecycleState: 'active' | 'superseded' | 'disposed';
+            /**
+             * Whether disposition is suspended pending litigation.
+             */
+            readonly legalHold?: boolean;
+            /**
+             * The most recent version, which is what describes the file.
+             */
+            readonly latestVersionId: string;
+            /**
+             * When this document becomes eligible for disposition.
+             */
+            readonly retentionDeadline?: string;
+            /**
+             * Arbitrary key-value metadata supplied at upload.
+             */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            readonly createdAt: string;
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related DocumentVersion resource.
+                 */
+                latestVersion?: string;
+            };
+        };
     } & {
         /**
          * Generated composition links.
@@ -6761,6 +7709,10 @@ export type WithdrawApplicationResponses = {
             preferredContact?: 'phone' | 'email' | 'mail';
         };
         /**
+         * The uploaded document evidencing household income, if one is attached.
+         */
+        proofOfIncomeDocumentId?: string;
+        /**
          * Arbitrary key-value labels for state-specific tagging, routing, and reporting. States may use these to attach jurisdiction-specific metadata without modifying the core schema.
          *
          */
@@ -6771,6 +7723,15 @@ export type WithdrawApplicationResponses = {
          * County code for routing this application to the correct local office.
          */
         countyCode?: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Document resource.
+             */
+            proofOfIncomeDocument?: string;
+        };
     } & {
         /**
          * Unique identifier (server-generated).
@@ -6992,6 +7953,55 @@ export type WithdrawApplicationResponses = {
          * Timestamp when the application was last updated.
          */
         readonly updatedAt: string;
+        proofOfIncomeDocument?: {
+            /**
+             * What kind of document this is.
+             */
+            documentTypeId: string;
+            /**
+             * A human-readable name for the document.
+             */
+            title: string;
+            /**
+             * The date the document itself bears, which is not the date it arrived.
+             */
+            documentDate?: string;
+        } & {
+            readonly id: string;
+            /**
+             * Where this document is in its retention lifecycle.
+             */
+            lifecycleState: 'active' | 'superseded' | 'disposed';
+            /**
+             * Whether disposition is suspended pending litigation.
+             */
+            readonly legalHold?: boolean;
+            /**
+             * The most recent version, which is what describes the file.
+             */
+            readonly latestVersionId: string;
+            /**
+             * When this document becomes eligible for disposition.
+             */
+            readonly retentionDeadline?: string;
+            /**
+             * Arbitrary key-value metadata supplied at upload.
+             */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            readonly createdAt: string;
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related DocumentVersion resource.
+                 */
+                latestVersion?: string;
+            };
+        };
     } & {
         /**
          * Generated composition links.

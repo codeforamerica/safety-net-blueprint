@@ -322,13 +322,17 @@ components:
           type: string
           format: uuid
           description: The uploaded document evidencing household income, if one is attached.
-          # Expanded across domains: somebody reading an application wants to
-          # see what was filed with it, not a link to go and fetch.
+          # links-only here, expand on Application below, and the override is
+          # load-bearing: this deployment's overlay sets a global style of
+          # `expand`, which rewrites the field it lands on into an object. On
+          # a shape a client writes that turns `POST {…DocumentId: "<id>"}`
+          # into a demand for a whole Document, which nothing can satisfy.
+          # Writes send a flat id; only the read expands.
           x-relationship:
             type: fk
             domain: document-management
             resource: Document
-            style: expand
+            style: links-only
         labels:
           # additionalProperties map — arbitrary key-value labels for state-specific tagging.
           type: object
@@ -352,6 +356,20 @@ components:
               format: uuid
               readOnly: true
               description: Unique identifier (server-generated).
+            proofOfIncomeDocumentId:
+              type: string
+              format: uuid
+              readOnly: true
+              description: The uploaded document evidencing household income, if one is attached.
+              # Expanded across domains, and only on the way out: somebody
+              # reading an application wants to see what was filed with it,
+              # not a link to go and fetch. Resolve renames the field to
+              # `proofOfIncomeDocument` and puts the record where the id was.
+              x-relationship:
+                type: fk
+                domain: document-management
+                resource: Document
+                style: expand
             programCount:
               type: integer
               readOnly: true

@@ -30,8 +30,12 @@ export const zApplicationWritable = z.object({
             'mail'
         ]))
     })),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     labels: z.optional(z.record(z.string(), z.string())),
-    countyCode: z.optional(z.string().max(10))
+    countyCode: z.optional(z.string().max(10)),
+    links: z.optional(z.object({
+        proofOfIncomeDocument: z.optional(z.string())
+    }).readonly())
 });
 
 /**
@@ -65,8 +69,12 @@ export const zApplication = z.object({
             'mail'
         ]))
     })),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     labels: z.optional(z.record(z.string(), z.string())),
-    countyCode: z.optional(z.string().max(10))
+    countyCode: z.optional(z.string().max(10)),
+    links: z.optional(z.object({
+        proofOfIncomeDocument: z.optional(z.string())
+    }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
     programCount: z.int().readonly(),
@@ -177,7 +185,28 @@ export const zApplication = z.object({
         })
     })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    proofOfIncomeDocument: z.optional(z.object({
+        documentTypeId: z.string(),
+        title: z.string(),
+        documentDate: z.optional(z.iso.date().nullable())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        lifecycleState: z.enum([
+            'active',
+            'superseded',
+            'disposed'
+        ]),
+        legalHold: z.optional(z.boolean().readonly()),
+        latestVersionId: z.uuid().readonly(),
+        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        metadata: z.optional(z.record(z.string(), z.unknown())),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            latestVersion: z.optional(z.string())
+        }).readonly())
+    })))
 })).and(z.object({
     _links: z.optional(z.object({
         applicationSummary: z.optional(z.object({
@@ -220,9 +249,13 @@ export const zApplicationCreate = z.object({
             'mail'
         ]))
     })),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     labels: z.optional(z.record(z.string(), z.string())),
-    countyCode: z.optional(z.string().max(10))
-}).and(z.record(z.string(), z.unknown()));
+    countyCode: z.optional(z.string().max(10)),
+    links: z.optional(z.object({
+        proofOfIncomeDocument: z.optional(z.string())
+    }).readonly())
+});
 
 export const zApplicationUpdate = z.object({
     programsAppliedFor: z.optional(z.array(z.enum([
@@ -252,9 +285,13 @@ export const zApplicationUpdate = z.object({
             'mail'
         ]))
     })),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     labels: z.optional(z.record(z.string(), z.string())),
-    countyCode: z.optional(z.string().max(10))
-}).and(z.record(z.string(), z.unknown()));
+    countyCode: z.optional(z.string().max(10)),
+    links: z.optional(z.object({
+        proofOfIncomeDocument: z.optional(z.string())
+    }).readonly())
+});
 
 export const zApplicationList = z.object({
     items: z.array(z.object({
@@ -285,8 +322,12 @@ export const zApplicationList = z.object({
                 'mail'
             ]))
         })),
+        proofOfIncomeDocumentId: z.optional(z.uuid()),
         labels: z.optional(z.record(z.string(), z.string())),
-        countyCode: z.optional(z.string().max(10))
+        countyCode: z.optional(z.string().max(10)),
+        links: z.optional(z.object({
+            proofOfIncomeDocument: z.optional(z.string())
+        }).readonly())
     }).and(z.object({
         id: z.uuid().readonly(),
         programCount: z.int().readonly(),
@@ -397,7 +438,28 @@ export const zApplicationList = z.object({
             })
         })))),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
-        updatedAt: z.iso.datetime({ offset: true }).readonly()
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        proofOfIncomeDocument: z.optional(z.object({
+            documentTypeId: z.string(),
+            title: z.string(),
+            documentDate: z.optional(z.iso.date().nullable())
+        }).and(z.object({
+            id: z.uuid().readonly(),
+            lifecycleState: z.enum([
+                'active',
+                'superseded',
+                'disposed'
+            ]),
+            legalHold: z.optional(z.boolean().readonly()),
+            latestVersionId: z.uuid().readonly(),
+            retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+            metadata: z.optional(z.record(z.string(), z.unknown())),
+            createdAt: z.iso.datetime({ offset: true }).readonly(),
+            updatedAt: z.iso.datetime({ offset: true }).readonly(),
+            links: z.optional(z.object({
+                latestVersion: z.optional(z.string())
+            }).readonly())
+        })))
     })).and(z.object({
         _links: z.optional(z.object({
             applicationSummary: z.optional(z.object({
@@ -955,6 +1017,67 @@ export const zInterviewPromptsResponse = z.array(z.union([
     })
 ]));
 
+export const zDocument = z.object({
+    documentTypeId: z.string(),
+    title: z.string(),
+    documentDate: z.optional(z.iso.date().nullable())
+}).and(z.object({
+    id: z.uuid().readonly(),
+    lifecycleState: z.enum([
+        'active',
+        'superseded',
+        'disposed'
+    ]),
+    legalHold: z.optional(z.boolean().readonly()),
+    latestVersionId: z.uuid().readonly(),
+    retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    metadata: z.optional(z.record(z.string(), z.unknown())),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        latestVersion: z.optional(z.string())
+    }).readonly())
+}));
+
+export const zDocumentWritable = z.object({
+    documentTypeId: z.string(),
+    title: z.string(),
+    documentDate: z.optional(z.iso.date().nullable())
+});
+
+export const zApplicationWritableWritable = z.object({
+    programsAppliedFor: z.optional(z.array(z.enum([
+        'snap',
+        'medicaid',
+        'chip',
+        'tanf'
+    ]))),
+    channel: z.optional(z.enum([
+        'online',
+        'phone',
+        'in_person',
+        'mail'
+    ])),
+    address: z.optional(z.object({
+        street: z.string(),
+        city: z.string(),
+        state: z.string().length(2),
+        zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+    })),
+    contactInfo: z.optional(z.object({
+        phone: z.optional(z.string()),
+        email: z.optional(z.email()),
+        preferredContact: z.optional(z.enum([
+            'phone',
+            'email',
+            'mail'
+        ]))
+    })),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
+    labels: z.optional(z.record(z.string(), z.string())),
+    countyCode: z.optional(z.string().max(10))
+});
+
 /**
  * A benefit application record, including server-managed fields.
  */
@@ -986,6 +1109,7 @@ export const zApplicationWritable2 = z.object({
             'mail'
         ]))
     })),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10))
 }).and(z.object({
@@ -1059,8 +1183,81 @@ export const zApplicationWritable2 = z.object({
         application: z.object({
             programsAppliedFor: z.optional(z.string())
         })
-    }))))
+    })))),
+    proofOfIncomeDocument: z.optional(z.object({
+        documentTypeId: z.string(),
+        title: z.string(),
+        documentDate: z.optional(z.iso.date().nullable())
+    }).and(z.object({
+        metadata: z.optional(z.record(z.string(), z.unknown()))
+    })))
 }));
+
+export const zApplicationCreateWritable = z.object({
+    programsAppliedFor: z.optional(z.array(z.enum([
+        'snap',
+        'medicaid',
+        'chip',
+        'tanf'
+    ]))),
+    channel: z.optional(z.enum([
+        'online',
+        'phone',
+        'in_person',
+        'mail'
+    ])),
+    address: z.optional(z.object({
+        street: z.string(),
+        city: z.string(),
+        state: z.string().length(2),
+        zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+    })),
+    contactInfo: z.optional(z.object({
+        phone: z.optional(z.string()),
+        email: z.optional(z.email()),
+        preferredContact: z.optional(z.enum([
+            'phone',
+            'email',
+            'mail'
+        ]))
+    })),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
+    labels: z.optional(z.record(z.string(), z.string())),
+    countyCode: z.optional(z.string().max(10))
+});
+
+export const zApplicationUpdateWritable = z.object({
+    programsAppliedFor: z.optional(z.array(z.enum([
+        'snap',
+        'medicaid',
+        'chip',
+        'tanf'
+    ]))),
+    channel: z.optional(z.enum([
+        'online',
+        'phone',
+        'in_person',
+        'mail'
+    ])),
+    address: z.optional(z.object({
+        street: z.string(),
+        city: z.string(),
+        state: z.string().length(2),
+        zip: z.string().regex(/^\d{5}(-\d{4})?$/)
+    })),
+    contactInfo: z.optional(z.object({
+        phone: z.optional(z.string()),
+        email: z.optional(z.email()),
+        preferredContact: z.optional(z.enum([
+            'phone',
+            'email',
+            'mail'
+        ]))
+    })),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
+    labels: z.optional(z.record(z.string(), z.string())),
+    countyCode: z.optional(z.string().max(10))
+});
 
 export const zApplicationListWritable = z.object({
     items: z.array(z.object({
@@ -1091,6 +1288,7 @@ export const zApplicationListWritable = z.object({
                 'mail'
             ]))
         })),
+        proofOfIncomeDocumentId: z.optional(z.uuid()),
         labels: z.optional(z.record(z.string(), z.string())),
         countyCode: z.optional(z.string().max(10))
     }).and(z.object({
@@ -1164,7 +1362,14 @@ export const zApplicationListWritable = z.object({
             application: z.object({
                 programsAppliedFor: z.optional(z.string())
             })
-        }))))
+        })))),
+        proofOfIncomeDocument: z.optional(z.object({
+            documentTypeId: z.string(),
+            title: z.string(),
+            documentDate: z.optional(z.iso.date().nullable())
+        }).and(z.object({
+            metadata: z.optional(z.record(z.string(), z.unknown()))
+        })))
     }))),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
@@ -1355,6 +1560,14 @@ export const zReviewProgressListResponseWritable = z.object({
     hasNext: z.boolean()
 });
 
+export const zDocumentWritable2 = z.object({
+    documentTypeId: z.string(),
+    title: z.string(),
+    documentDate: z.optional(z.iso.date().nullable())
+}).and(z.object({
+    metadata: z.optional(z.record(z.string(), z.unknown()))
+}));
+
 /**
  * Unique identifier of the application.
  */
@@ -1410,8 +1623,12 @@ export const zListApplicationsResponse = z.object({
                 'mail'
             ]))
         })),
+        proofOfIncomeDocumentId: z.optional(z.uuid()),
         labels: z.optional(z.record(z.string(), z.string())),
-        countyCode: z.optional(z.string().max(10))
+        countyCode: z.optional(z.string().max(10)),
+        links: z.optional(z.object({
+            proofOfIncomeDocument: z.optional(z.string())
+        }).readonly())
     }).and(z.object({
         id: z.uuid().readonly(),
         programCount: z.int().readonly(),
@@ -1522,7 +1739,28 @@ export const zListApplicationsResponse = z.object({
             })
         })))),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
-        updatedAt: z.iso.datetime({ offset: true }).readonly()
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        proofOfIncomeDocument: z.optional(z.object({
+            documentTypeId: z.string(),
+            title: z.string(),
+            documentDate: z.optional(z.iso.date().nullable())
+        }).and(z.object({
+            id: z.uuid().readonly(),
+            lifecycleState: z.enum([
+                'active',
+                'superseded',
+                'disposed'
+            ]),
+            legalHold: z.optional(z.boolean().readonly()),
+            latestVersionId: z.uuid().readonly(),
+            retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+            metadata: z.optional(z.record(z.string(), z.unknown())),
+            createdAt: z.iso.datetime({ offset: true }).readonly(),
+            updatedAt: z.iso.datetime({ offset: true }).readonly(),
+            links: z.optional(z.object({
+                latestVersion: z.optional(z.string())
+            }).readonly())
+        })))
     })).and(z.object({
         _links: z.optional(z.object({
             applicationSummary: z.optional(z.object({
@@ -1571,8 +1809,12 @@ export const zCreateApplicationData = z.object({
                 'mail'
             ]))
         })),
+        proofOfIncomeDocumentId: z.optional(z.uuid()),
         labels: z.optional(z.record(z.string(), z.string())),
-        countyCode: z.optional(z.string().max(10))
+        countyCode: z.optional(z.string().max(10)),
+        links: z.optional(z.object({
+            proofOfIncomeDocument: z.optional(z.string())
+        }).readonly())
     }).and(z.record(z.string(), z.unknown())),
     path: z.optional(z.never()),
     query: z.optional(z.never())
@@ -1609,8 +1851,12 @@ export const zCreateApplicationResponse = z.object({
             'mail'
         ]))
     })),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     labels: z.optional(z.record(z.string(), z.string())),
-    countyCode: z.optional(z.string().max(10))
+    countyCode: z.optional(z.string().max(10)),
+    links: z.optional(z.object({
+        proofOfIncomeDocument: z.optional(z.string())
+    }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
     programCount: z.int().readonly(),
@@ -1721,7 +1967,28 @@ export const zCreateApplicationResponse = z.object({
         })
     })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    proofOfIncomeDocument: z.optional(z.object({
+        documentTypeId: z.string(),
+        title: z.string(),
+        documentDate: z.optional(z.iso.date().nullable())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        lifecycleState: z.enum([
+            'active',
+            'superseded',
+            'disposed'
+        ]),
+        legalHold: z.optional(z.boolean().readonly()),
+        latestVersionId: z.uuid().readonly(),
+        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        metadata: z.optional(z.record(z.string(), z.unknown())),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            latestVersion: z.optional(z.string())
+        }).readonly())
+    })))
 })).and(z.object({
     _links: z.optional(z.object({
         applicationSummary: z.optional(z.object({
@@ -1788,8 +2055,12 @@ export const zGetApplicationResponse = z.object({
             'mail'
         ]))
     })),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     labels: z.optional(z.record(z.string(), z.string())),
-    countyCode: z.optional(z.string().max(10))
+    countyCode: z.optional(z.string().max(10)),
+    links: z.optional(z.object({
+        proofOfIncomeDocument: z.optional(z.string())
+    }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
     programCount: z.int().readonly(),
@@ -1900,7 +2171,28 @@ export const zGetApplicationResponse = z.object({
         })
     })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    proofOfIncomeDocument: z.optional(z.object({
+        documentTypeId: z.string(),
+        title: z.string(),
+        documentDate: z.optional(z.iso.date().nullable())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        lifecycleState: z.enum([
+            'active',
+            'superseded',
+            'disposed'
+        ]),
+        legalHold: z.optional(z.boolean().readonly()),
+        latestVersionId: z.uuid().readonly(),
+        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        metadata: z.optional(z.record(z.string(), z.unknown())),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            latestVersion: z.optional(z.string())
+        }).readonly())
+    })))
 })).and(z.object({
     _links: z.optional(z.object({
         applicationSummary: z.optional(z.object({
@@ -1944,8 +2236,12 @@ export const zUpdateApplicationData = z.object({
                 'mail'
             ]))
         })),
+        proofOfIncomeDocumentId: z.optional(z.uuid()),
         labels: z.optional(z.record(z.string(), z.string())),
-        countyCode: z.optional(z.string().max(10))
+        countyCode: z.optional(z.string().max(10)),
+        links: z.optional(z.object({
+            proofOfIncomeDocument: z.optional(z.string())
+        }).readonly())
     }).and(z.record(z.string(), z.unknown())),
     path: z.object({
         applicationId: z.uuid()
@@ -1984,8 +2280,12 @@ export const zUpdateApplicationResponse = z.object({
             'mail'
         ]))
     })),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     labels: z.optional(z.record(z.string(), z.string())),
-    countyCode: z.optional(z.string().max(10))
+    countyCode: z.optional(z.string().max(10)),
+    links: z.optional(z.object({
+        proofOfIncomeDocument: z.optional(z.string())
+    }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
     programCount: z.int().readonly(),
@@ -2096,7 +2396,28 @@ export const zUpdateApplicationResponse = z.object({
         })
     })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    proofOfIncomeDocument: z.optional(z.object({
+        documentTypeId: z.string(),
+        title: z.string(),
+        documentDate: z.optional(z.iso.date().nullable())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        lifecycleState: z.enum([
+            'active',
+            'superseded',
+            'disposed'
+        ]),
+        legalHold: z.optional(z.boolean().readonly()),
+        latestVersionId: z.uuid().readonly(),
+        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        metadata: z.optional(z.record(z.string(), z.unknown())),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            latestVersion: z.optional(z.string())
+        }).readonly())
+    })))
 })).and(z.object({
     _links: z.optional(z.object({
         applicationSummary: z.optional(z.object({
@@ -2689,8 +3010,12 @@ export const zSubmitApplicationResponse = z.object({
             'mail'
         ]))
     })),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     labels: z.optional(z.record(z.string(), z.string())),
-    countyCode: z.optional(z.string().max(10))
+    countyCode: z.optional(z.string().max(10)),
+    links: z.optional(z.object({
+        proofOfIncomeDocument: z.optional(z.string())
+    }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
     programCount: z.int().readonly(),
@@ -2801,7 +3126,28 @@ export const zSubmitApplicationResponse = z.object({
         })
     })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    proofOfIncomeDocument: z.optional(z.object({
+        documentTypeId: z.string(),
+        title: z.string(),
+        documentDate: z.optional(z.iso.date().nullable())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        lifecycleState: z.enum([
+            'active',
+            'superseded',
+            'disposed'
+        ]),
+        legalHold: z.optional(z.boolean().readonly()),
+        latestVersionId: z.uuid().readonly(),
+        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        metadata: z.optional(z.record(z.string(), z.unknown())),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            latestVersion: z.optional(z.string())
+        }).readonly())
+    })))
 })).and(z.object({
     _links: z.optional(z.object({
         applicationSummary: z.optional(z.object({
@@ -2855,8 +3201,12 @@ export const zOpenApplicationResponse = z.object({
             'mail'
         ]))
     })),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     labels: z.optional(z.record(z.string(), z.string())),
-    countyCode: z.optional(z.string().max(10))
+    countyCode: z.optional(z.string().max(10)),
+    links: z.optional(z.object({
+        proofOfIncomeDocument: z.optional(z.string())
+    }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
     programCount: z.int().readonly(),
@@ -2967,7 +3317,28 @@ export const zOpenApplicationResponse = z.object({
         })
     })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    proofOfIncomeDocument: z.optional(z.object({
+        documentTypeId: z.string(),
+        title: z.string(),
+        documentDate: z.optional(z.iso.date().nullable())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        lifecycleState: z.enum([
+            'active',
+            'superseded',
+            'disposed'
+        ]),
+        legalHold: z.optional(z.boolean().readonly()),
+        latestVersionId: z.uuid().readonly(),
+        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        metadata: z.optional(z.record(z.string(), z.unknown())),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            latestVersion: z.optional(z.string())
+        }).readonly())
+    })))
 })).and(z.object({
     _links: z.optional(z.object({
         applicationSummary: z.optional(z.object({
@@ -3024,8 +3395,12 @@ export const zCloseApplicationResponse = z.object({
             'mail'
         ]))
     })),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     labels: z.optional(z.record(z.string(), z.string())),
-    countyCode: z.optional(z.string().max(10))
+    countyCode: z.optional(z.string().max(10)),
+    links: z.optional(z.object({
+        proofOfIncomeDocument: z.optional(z.string())
+    }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
     programCount: z.int().readonly(),
@@ -3136,7 +3511,28 @@ export const zCloseApplicationResponse = z.object({
         })
     })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    proofOfIncomeDocument: z.optional(z.object({
+        documentTypeId: z.string(),
+        title: z.string(),
+        documentDate: z.optional(z.iso.date().nullable())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        lifecycleState: z.enum([
+            'active',
+            'superseded',
+            'disposed'
+        ]),
+        legalHold: z.optional(z.boolean().readonly()),
+        latestVersionId: z.uuid().readonly(),
+        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        metadata: z.optional(z.record(z.string(), z.unknown())),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            latestVersion: z.optional(z.string())
+        }).readonly())
+    })))
 })).and(z.object({
     _links: z.optional(z.object({
         applicationSummary: z.optional(z.object({
@@ -3190,8 +3586,12 @@ export const zWithdrawApplicationResponse = z.object({
             'mail'
         ]))
     })),
+    proofOfIncomeDocumentId: z.optional(z.uuid()),
     labels: z.optional(z.record(z.string(), z.string())),
-    countyCode: z.optional(z.string().max(10))
+    countyCode: z.optional(z.string().max(10)),
+    links: z.optional(z.object({
+        proofOfIncomeDocument: z.optional(z.string())
+    }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
     programCount: z.int().readonly(),
@@ -3302,7 +3702,28 @@ export const zWithdrawApplicationResponse = z.object({
         })
     })))),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    proofOfIncomeDocument: z.optional(z.object({
+        documentTypeId: z.string(),
+        title: z.string(),
+        documentDate: z.optional(z.iso.date().nullable())
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        lifecycleState: z.enum([
+            'active',
+            'superseded',
+            'disposed'
+        ]),
+        legalHold: z.optional(z.boolean().readonly()),
+        latestVersionId: z.uuid().readonly(),
+        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        metadata: z.optional(z.record(z.string(), z.unknown())),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            latestVersion: z.optional(z.string())
+        }).readonly())
+    })))
 })).and(z.object({
     _links: z.optional(z.object({
         applicationSummary: z.optional(z.object({
