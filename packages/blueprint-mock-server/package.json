@@ -1,7 +1,7 @@
 {
   "name": "@codeforamerica/blueprint-mock-server",
   "version": "0.2.0",
-  "description": "Mock API server for contract-first development — auto-generates CRUD, RPC, and event endpoints from Blueprint contracts",
+  "description": "Mock API server for contract-first development \u2014 auto-generates CRUD, RPC, and event endpoints from Blueprint contracts",
   "type": "module",
   "files": [
     "src/",
@@ -10,7 +10,8 @@
   "exports": {
     ".": "./src/index.js",
     "./store": "./src/stores/memory-store.js",
-    "./test-utils": "./src/test-utils.js"
+    "./test-utils": "./src/test-utils.js",
+    "./routes": "./src/http/route-table.js"
   },
   "bin": {
     "blueprint-mock": "cli/server.js",
@@ -49,11 +50,9 @@
     "ajv": "^8.12.0",
     "ajv-formats": "^3.0.1",
     "better-sqlite3": "^11.0.0",
-    "cors": "^2.8.5",
     "express": "^5.1.0",
     "js-yaml": "^4.1.0",
     "json-logic-js": "^2.0.5",
-    "multer": "^2.1.1",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {

@@ -272,7 +272,7 @@ async function runAllTests() {
     const integrationAlreadyRunning = await isServerRunning().catch(() => false);
     if (!integrationAlreadyRunning) {
       console.log('Starting mock server...');
-      await startMockServer([integrationResolvedDir], integrationSeedDir, null, storeKind);
+      await startMockServer([integrationResolvedDir], integrationSeedDir, storeKind);
       await new Promise(res => setTimeout(res, 1500));
       integrationServerStarted = true;
       console.log('Mock server started\n');

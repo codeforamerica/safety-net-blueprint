@@ -14,21 +14,24 @@ import { createMemoryStore } from '../../src/stores/memory-store.js';
 // because a fresh one per file is isolation they did not have before.
 const store = createMemoryStore();
 import { registerRoutes } from '../../src/route-generator.js';
+import { makeRequest, readResponse } from '../helpers/fetch.js';
 
 // ---------------------------------------------------------------------------
 // Minimal test infrastructure
 // ---------------------------------------------------------------------------
 
-function createMockApp() {
-  const routes = [];
-  return {
-    get: (path, handler) => routes.push({ method: 'GET', path, handler }),
-    post: (path, handler) => routes.push({ method: 'POST', path, handler }),
-    patch: (path, handler) => routes.push({ method: 'PATCH', path, handler }),
-    put: (path, handler) => routes.push({ method: 'PUT', path, handler }),
-    delete: (path, handler) => routes.push({ method: 'DELETE', path, handler }),
-    getRoutes: () => routes,
-  };
+/**
+ * Read a route table back in registration order.
+ *
+ * `registerRoutes` populates a table rather than an Express app (#448 step 2);
+ * these cases drive the handler through the adapter, as the server does.
+ */
+function listRoutes(table) {
+  return [...table].map(([key, entry]) => ({
+    method: key.slice(0, key.indexOf(' ')),
+    path: entry.expressPath,
+    handler: entry.handler,
+  }));
 }
 
 function createSingletonMetadata(path, method = 'patch') {
@@ -42,35 +45,35 @@ function createSingletonMetadata(path, method = 'patch') {
   };
 }
 
-function makeReqRes(params, body, headers = {}) {
-  const req = { params, body, headers, path: Object.values(params).join('/') };
-  const res = {
-    _code: 200,
-    _data: null,
-    status(code) { this._code = code; return this; },
-    json(data) { this._data = data; return this; },
-  };
-  return { req, res };
+/**
+ * Call a registered route the way the dispatcher does.
+ *
+ * @returns {Promise<{ _code: number, _data: unknown }>} named to match the
+ *   assertions these cases already make.
+ */
+async function callRoute(route, params, body, headers = {}) {
+  const request = makeRequest(`/${Object.values(params).join('/')}`, { method: 'PATCH', body, headers });
+  const { status, body: data } = await readResponse(route.handler(request, { params }));
+  return { _code: status, _data: data };
 }
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-test('singleton PATCH — create (upsert): emits .created with full resource snapshot', () => {
+test('singleton PATCH — create (upsert): emits .created with full resource snapshot', async () => {
   store.clearAll('household-info');
   store.clearAll('events');
 
-  const app = createMockApp();
+  const table = new Map();
   const metadata = createSingletonMetadata('/test/applications/{applicationId}/household-info');
-  registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, { store: store });
-  const route = app.getRoutes().find(r => r.method === 'PATCH');
+  registerRoutes(table, metadata, 'http://localhost:1080', [], [], { store: store });
+  const route = listRoutes(table).find(r => r.method === 'PATCH');
 
-  const { req, res } = makeReqRes(
+  const res = await callRoute(route,
     { applicationId: 'app-1' },
     { size: 3, housingCosts: 1200 }
   );
-  route.handler(req, res);
 
   assert.strictEqual(res._code, 200);
   assert.ok(res._data.id, 'response has an id');
@@ -86,7 +89,7 @@ test('singleton PATCH — create (upsert): emits .created with full resource sna
   assert.ok(event.data.id, 'snapshot includes id');
 });
 
-test('singleton PATCH — update: emits .updated with changes diff', () => {
+test('singleton PATCH — update: emits .updated with changes diff', async () => {
   store.clearAll('household-info');
   store.clearAll('events');
 
@@ -98,16 +101,15 @@ test('singleton PATCH — update: emits .updated with changes diff', () => {
     housingCosts: 1200,
   });
 
-  const app = createMockApp();
+  const table = new Map();
   const metadata = createSingletonMetadata('/test/applications/{applicationId}/household-info');
-  registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, { store: store });
-  const route = app.getRoutes().find(r => r.method === 'PATCH');
+  registerRoutes(table, metadata, 'http://localhost:1080', [], [], { store: store });
+  const route = listRoutes(table).find(r => r.method === 'PATCH');
 
-  const { req, res } = makeReqRes(
+  const res = await callRoute(route,
     { applicationId: 'app-2' },
     { size: 4 }
   );
-  route.handler(req, res);
 
   assert.strictEqual(res._code, 200);
   assert.strictEqual(res._data.size, 4);
@@ -125,7 +127,7 @@ test('singleton PATCH — update: emits .updated with changes diff', () => {
   assert.ok(!event.data.changes.find(c => c.field === 'housingCosts'), 'unchanged field not in changes');
 });
 
-test('singleton PATCH — update with no meaningful change: emits .updated with empty changes', () => {
+test('singleton PATCH — update with no meaningful change: emits .updated with empty changes', async () => {
   store.clearAll('household-info');
   store.clearAll('events');
 
@@ -135,16 +137,15 @@ test('singleton PATCH — update with no meaningful change: emits .updated with 
     size: 3,
   });
 
-  const app = createMockApp();
+  const table = new Map();
   const metadata = createSingletonMetadata('/test/applications/{applicationId}/household-info');
-  registerRoutes(app, metadata, 'http://localhost:1080', [], [], null, { store: store });
-  const route = app.getRoutes().find(r => r.method === 'PATCH');
+  registerRoutes(table, metadata, 'http://localhost:1080', [], [], { store: store });
+  const route = listRoutes(table).find(r => r.method === 'PATCH');
 
-  const { req, res } = makeReqRes(
+  const res = await callRoute(route,
     { applicationId: 'app-3' },
     { size: 3 }  // same value
   );
-  route.handler(req, res);
 
   assert.strictEqual(res._code, 200);
 

@@ -5,34 +5,66 @@
 
 import { eventBus } from '../event-bus.js';
 
+const HEARTBEAT_MS = 30000;
+
 /**
- * Create SSE handler for the /events/stream endpoint.
- * @returns {Function} Express handler
+ * Create the SSE handler for the /events/stream endpoint.
+ *
+ * An event stream is a `Response` whose body is a `ReadableStream` — SSE needs
+ * no streaming abstraction of its own, because the platform already has one
+ * (#448 step 4). The client disconnect that `req.on('close')` used to report
+ * arrives as the request's `AbortSignal`, which is where the standard puts it.
+ *
+ * @returns {(request: Request) => Response}
  */
 export function createSseHandler() {
-  return (req, res) => {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
+  return (request) => {
+    const encoder = new TextEncoder();
+    let heartbeat;
+    let listener;
 
-    // Initial comment to confirm connection
-    res.write(': connected\n\n');
+    const body = new ReadableStream({
+      start(controller) {
+        const send = (text) => {
+          try {
+            controller.enqueue(encoder.encode(text));
+          } catch {
+            // The stream is already closed — the client went away between the
+            // abort firing and this write. Nothing to report.
+          }
+        };
 
-    // Heartbeat every 30s to prevent proxy timeouts
-    const heartbeat = setInterval(() => {
-      res.write(': heartbeat\n\n');
-    }, 30000);
+        // Initial comment to confirm connection
+        send(': connected\n\n');
 
-    const listener = (event) => {
-      res.write(`data: ${JSON.stringify(event)}\n\n`);
-    };
+        // Heartbeat to prevent proxy timeouts
+        heartbeat = setInterval(() => send(': heartbeat\n\n'), HEARTBEAT_MS);
+        // Node keeps the process alive for a pending timer; a heartbeat should
+        // not be a reason the server cannot exit.
+        heartbeat.unref?.();
 
-    eventBus.on('domain-event', listener);
+        listener = (event) => send(`data: ${JSON.stringify(event)}\n\n`);
+        eventBus.on('domain-event', listener);
 
-    req.on('close', () => {
-      clearInterval(heartbeat);
-      eventBus.off('domain-event', listener);
+        request.signal?.addEventListener('abort', () => {
+          clearInterval(heartbeat);
+          eventBus.off('domain-event', listener);
+          try { controller.close(); } catch { /* already closed */ }
+        });
+      },
+
+      cancel() {
+        clearInterval(heartbeat);
+        eventBus.off('domain-event', listener);
+      },
+    });
+
+    return new Response(body, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
     });
   };
 }

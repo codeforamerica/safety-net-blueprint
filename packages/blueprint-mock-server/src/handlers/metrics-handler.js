@@ -3,6 +3,7 @@
  */
 
 import jsonLogic from 'json-logic-js';
+import { assertFetchShaped, queryOf } from '../http/request.js';
 
 /**
  * Apply a JSON Logic filter to a list of records.
@@ -192,19 +193,20 @@ function formatMetric(metric, domain, value, breakdown, computedAt) {
  * @returns {Function} Express handler
  */
 export function createMetricsListHandler(allMetrics, { store } = {}) {
-  return (req, res) => {
+  return (request) => {
+    const query = queryOf(assertFetchShaped(request, 'createMetricsListHandler'));
     try {
       const queryFilters = {
-        from: req.query.from || null,
-        to: req.query.to || null,
-        queueId: req.query.queueId || null,
-        program: req.query.program || null
+        from: query.from || null,
+        to: query.to || null,
+        queueId: query.queueId || null,
+        program: query.program || null
       };
-      const groupBy = req.query.groupBy || null;
-      const domainFilter = req.query.domain || null;
-      const q = req.query.q || null;
-      const limit = parseInt(req.query.limit) || 20;
-      const offset = parseInt(req.query.offset) || 0;
+      const groupBy = query.groupBy || null;
+      const domainFilter = query.domain || null;
+      const q = query.q || null;
+      const limit = parseInt(query.limit) || 20;
+      const offset = parseInt(query.offset) || 0;
 
       const computedAt = new Date().toISOString();
       const collections = {
@@ -237,7 +239,7 @@ export function createMetricsListHandler(allMetrics, { store } = {}) {
         return formatMetric(metric, domain, value, breakdown, computedAt);
       });
 
-      res.json({
+      return Response.json({
         items,
         total,
         limit,
@@ -246,11 +248,11 @@ export function createMetricsListHandler(allMetrics, { store } = {}) {
       });
     } catch (error) {
       console.error('Metrics list handler error:', error);
-      res.status(500).json({
+      return Response.json({
         code: 'INTERNAL_ERROR',
         message: 'An unexpected error occurred',
         details: [{ message: error.message }]
-      });
+      }, { status: 500 });
     }
   };
 }
@@ -261,16 +263,17 @@ export function createMetricsListHandler(allMetrics, { store } = {}) {
  * @returns {Function} Express handler
  */
 export function createMetricsGetHandler(allMetrics, { store } = {}) {
-  return (req, res) => {
+  return (request, { params }) => {
+    const query = queryOf(assertFetchShaped(request, 'createMetricsGetHandler'));
     try {
-      const { metricId } = req.params;
+      const { metricId } = params;
       const queryFilters = {
-        from: req.query.from || null,
-        to: req.query.to || null,
-        queueId: req.query.queueId || null,
-        program: req.query.program || null
+        from: query.from || null,
+        to: query.to || null,
+        queueId: query.queueId || null,
+        program: query.program || null
       };
-      const groupBy = req.query.groupBy || null;
+      const groupBy = query.groupBy || null;
 
       // Find metric across all domains
       let found = null;
@@ -283,10 +286,10 @@ export function createMetricsGetHandler(allMetrics, { store } = {}) {
       }
 
       if (!found) {
-        return res.status(404).json({
+        return Response.json({
           code: 'NOT_FOUND',
           message: `Metric not found: ${metricId}`
-        });
+        }, { status: 404 });
       }
 
       const computedAt = new Date().toISOString();
@@ -300,14 +303,14 @@ export function createMetricsGetHandler(allMetrics, { store } = {}) {
         : null;
       const value = breakdown ? null : computeScalar(found.metric, collections, queryFilters);
 
-      res.json(formatMetric(found.metric, found.domain, value, breakdown, computedAt));
+      return Response.json(formatMetric(found.metric, found.domain, value, breakdown, computedAt));
     } catch (error) {
       console.error('Metrics get handler error:', error);
-      res.status(500).json({
+      return Response.json({
         code: 'INTERNAL_ERROR',
         message: 'An unexpected error occurred',
         details: [{ message: error.message }]
-      });
+      }, { status: 500 });
     }
   };
 }

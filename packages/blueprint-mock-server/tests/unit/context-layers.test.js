@@ -19,6 +19,7 @@ const DEPS = { store: store };
 import { resolveContextLayers } from '../../src/handlers/procedure-runner.js';
 import { createUpdateHandler } from '../../src/handlers/update-handler.js';
 import { createCreateHandler } from '../../src/handlers/create-handler.js';
+import { makeRequest, readResponse } from '../helpers/fetch.js';
 
 // =============================================================================
 // resolveContextLayers — unit
@@ -108,7 +109,7 @@ test('resolveContextLayers — all null/empty layers returns empty entities', ()
 // Integration: machine-level context available in onCreate steps
 // =============================================================================
 
-test('createCreateHandler — machine-level context available in onCreate steps:', () => {
+test('createCreateHandler — machine-level context available in onCreate steps:', async () => {
   store.clearAll('testresources');
   store.clearAll('queues');
   store.insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
@@ -127,20 +128,23 @@ test('createCreateHandler — machine-level context available in onCreate steps:
   };
 
   const handler = createCreateHandler(apiMetadata, endpoint, 'http://localhost:1080', null, [], machine, DEPS);
-  const req = { body: { name: 'test' }, headers: { 'x-caller-id': 'sys', 'x-caller-roles': 'system' }, path: '/testresources' };
-  const res = { _code: 200, _data: null, status(c) { this._code = c; return this; }, json(d) { this._data = d; return this; }, header() { return this; } };
+  const request = makeRequest('/testresources', {
+    method: 'POST',
+    body: { name: 'test' },
+    headers: { 'x-caller-id': 'sys', 'x-caller-roles': 'system' },
+  });
 
-  handler(req, res);
+  const { status, body } = await readResponse(handler(request, { params: {} }));
 
-  assert.strictEqual(res._code, 201);
-  assert.strictEqual(res._data.queueId, 'q-snap');
+  assert.strictEqual(status, 201);
+  assert.strictEqual(body.queueId, 'q-snap');
 });
 
 // =============================================================================
 // Integration: machine-level context available in onUpdate steps
 // =============================================================================
 
-test('createUpdateHandler — machine-level context available in onUpdate steps:', () => {
+test('createUpdateHandler — machine-level context available in onUpdate steps:', async () => {
   store.clearAll('testresources');
   store.clearAll('queues');
   store.insertResource('queues', { id: 'q-snap', name: 'snap-intake' });
@@ -161,20 +165,22 @@ test('createUpdateHandler — machine-level context available in onUpdate steps:
   };
 
   const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine, DEPS);
-  const req = { params: { id: 'res-ctx-1' }, body: { isExpedited: true }, headers: {}, path: '/testresources' };
-  const res = { _code: 200, _data: null, status(c) { this._code = c; return this; }, json(d) { this._data = d; return this; }, header() { return this; } };
+  const request = makeRequest('/testresources/res-ctx-1', {
+    method: 'PATCH',
+    body: { isExpedited: true },
+  });
 
-  handler(req, res);
+  const { body } = await readResponse(handler(request, { params: { id: 'res-ctx-1' } }));
 
-  assert.ok(res._data, 'expected a response body');
-  assert.strictEqual(res._data.queueId, 'q-snap');
+  assert.ok(body, 'expected a response body');
+  assert.strictEqual(body.queueId, 'q-snap');
 });
 
 // =============================================================================
 // createCreateHandler — auto-emitted event subject and auth context (#364, #365)
 // =============================================================================
 
-test('createCreateHandler — emitted event subject is the created resource id, not the parent id', () => {
+test('createCreateHandler — emitted event subject is the created resource id, not the parent id', async () => {
   store.clearAll('testitems');
   store.clearAll('events');
 
@@ -185,18 +191,18 @@ test('createCreateHandler — emitted event subject is the created resource id, 
 
   // Simulate a sub-resource POST where applicationId is injected as enrichmentData
   const parentId = 'parent-uuid-001';
-  const req = {
+  const request = makeRequest('/testitems', {
+    method: 'POST',
     body: { name: 'child-record' },
-    enrichmentData: { applicationId: parentId },
     headers: { 'x-caller-id': 'user-1', 'x-caller-roles': 'technician' },
-    path: '/testitems',
-  };
-  const res = { _code: 200, _data: null, status(c) { this._code = c; return this; }, json(d) { this._data = d; return this; }, header() { return this; } };
+  });
 
-  handler(req, res);
+  const { status, body: created } = await readResponse(
+    handler(request, { params: {}, enrichmentData: { applicationId: parentId } })
+  );
 
-  assert.strictEqual(res._code, 201);
-  const createdId = res._data.id;
+  assert.strictEqual(status, 201);
+  const createdId = created.id;
   assert.ok(createdId, 'created resource must have an id');
   assert.notStrictEqual(createdId, parentId, 'created resource id must not equal the parent id');
 
@@ -206,7 +212,7 @@ test('createCreateHandler — emitted event subject is the created resource id, 
   assert.strictEqual(createdEvent.subject, createdId, 'event subject must be the child resource id, not the parent id');
 });
 
-test('createCreateHandler — emitted event includes authid and authtype from caller headers', () => {
+test('createCreateHandler — emitted event includes authid and authtype from caller headers', async () => {
   store.clearAll('testitems');
   store.clearAll('events');
 
@@ -215,14 +221,13 @@ test('createCreateHandler — emitted event includes authid and authtype from ca
 
   const handler = createCreateHandler(apiMetadata, endpoint, 'http://localhost:1080', null, [], null, DEPS);
 
-  const req = {
+  const request = makeRequest('/testitems', {
+    method: 'POST',
     body: { name: 'child-record' },
     headers: { 'x-caller-id': 'caseworker-42', 'x-caller-roles': 'technician,supervisor' },
-    path: '/testitems',
-  };
-  const res = { _code: 200, _data: null, status(c) { this._code = c; return this; }, json(d) { this._data = d; return this; }, header() { return this; } };
+  });
 
-  handler(req, res);
+  await readResponse(handler(request, { params: {} }));
 
   const { items } = store.findAll('events', {});
   const createdEvent = items.find(e => e.type === 'test.testitem.created');
@@ -231,7 +236,7 @@ test('createCreateHandler — emitted event includes authid and authtype from ca
   assert.strictEqual(createdEvent.authtype, 'user');
 });
 
-test('createCreateHandler — emitted event has null authid and authtype when no caller headers', () => {
+test('createCreateHandler — emitted event has null authid and authtype when no caller headers', async () => {
   store.clearAll('testitems');
   store.clearAll('events');
 
@@ -240,14 +245,9 @@ test('createCreateHandler — emitted event has null authid and authtype when no
 
   const handler = createCreateHandler(apiMetadata, endpoint, 'http://localhost:1080', null, [], null, DEPS);
 
-  const req = {
-    body: { name: 'child-record' },
-    headers: {},
-    path: '/testitems',
-  };
-  const res = { _code: 200, _data: null, status(c) { this._code = c; return this; }, json(d) { this._data = d; return this; }, header() { return this; } };
+  const request = makeRequest('/testitems', { method: 'POST', body: { name: 'child-record' } });
 
-  handler(req, res);
+  await readResponse(handler(request, { params: {} }));
 
   const { items } = store.findAll('events', {});
   const createdEvent = items.find(e => e.type === 'test.testitem.created');

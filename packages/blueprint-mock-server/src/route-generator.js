@@ -6,6 +6,8 @@
 import { createListHandler } from './handlers/list-handler.js';
 import { extractExpandFields, applyExpand, getItemSchema } from './handlers/expand-utils.js';
 import { createGetHandler } from './handlers/get-handler.js';
+import { jsonBody, readJsonBody, queryOf } from './http/request.js';
+import { addRoute } from './http/route-table.js';
 import { createCurrentUserHandler } from './handlers/current-user-handler.js';
 import { createCreateHandler } from './handlers/create-handler.js';
 import { createUpdateHandler, buildChanges } from './handlers/update-handler.js';
@@ -20,8 +22,7 @@ import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, d
 import { emitEvent } from './emit-event.js';
 import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
 import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX } from './search-engine.js';
-import { randomUUID } from 'node:crypto';
-import { extractCallerRoles } from './auth-context.js';
+import { extractCallerRoles, callerHeader } from './auth-context.js';
 
 /**
  * SLA types declared for one domain.
@@ -100,21 +101,16 @@ function deriveParentCollection(path, basePath) {
  */
 function createSingletonGetHandler(endpoint, parentParam, parentField, deps = {}) {
   const { store } = deps;
-  return (req, res) => {
-    try {
-      const parentId = req.params[parentParam];
-      const { items } = store.findAll(endpoint.collectionName, { [parentField]: parentId }, { limit: 1 });
-      if (items.length === 0) {
-        // Singleton sub-resources always exist conceptually — initialize an empty one on first access.
-        const newRecord = { id: randomUUID(), [parentField]: parentId };
-        store.insertResource(endpoint.collectionName, newRecord);
-        return res.json(newRecord);
-      }
-      res.json(items[0]);
-    } catch (error) {
-      console.error('Singleton get handler error:', error);
-      internalError(res, error);
+  return (request, { params }) => {
+    const parentId = params[parentParam];
+    const { items } = store.findAll(endpoint.collectionName, { [parentField]: parentId }, { limit: 1 });
+    if (items.length === 0) {
+      // Singleton sub-resources always exist conceptually — initialize an empty one on first access.
+      const newRecord = { id: crypto.randomUUID(), [parentField]: parentId };
+      store.insertResource(endpoint.collectionName, newRecord);
+      return Response.json(newRecord);
     }
+    return Response.json(items[0]);
   };
 }
 
@@ -127,58 +123,54 @@ function createSingletonGetHandler(endpoint, parentParam, parentField, deps = {}
 function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parentField, deps = {}) {
   const { store } = deps;
   const resourceLabel = endpoint.collectionName.replace(/s$/, '');
-  return (req, res) => {
-    try {
-      const parentId = req.params[parentParam];
+  return async (request, { params }) => {
+    const parentId = params[parentParam];
+    const requestBody = (await readJsonBody(request)).value;
 
-      if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
-        return res.status(400).json({ code: 'BAD_REQUEST', message: 'Request body must be a JSON object', details: [{ field: 'body', message: 'must be object' }] });
-      }
-      if (Object.keys(req.body).length === 0) {
-        return res.status(400).json({ code: 'BAD_REQUEST', message: 'Request body must contain at least one field to update', details: [{ field: 'body', message: 'minProperties: 1' }] });
-      }
-
-      const { items } = store.findAll(endpoint.collectionName, { [parentField]: parentId }, { limit: 1 });
-      let result;
-      let action;
-      let eventData;
-
-      if (items.length === 0) {
-        // No record yet — create one (upsert)
-        const newRecord = { id: randomUUID(), [parentField]: parentId, ...req.body };
-        store.insertResource(endpoint.collectionName, newRecord);
-        result = store.findAll(endpoint.collectionName, { id: newRecord.id }, { limit: 1 }).items[0];
-        action = 'created';
-        eventData = { ...result };
-      } else {
-        const before = { ...items[0] };
-        result = store.update(endpoint.collectionName, items[0].id, req.body);
-        action = 'updated';
-        eventData = { changes: buildChanges(before, result) };
-      }
-
-      try {
-        const domain = apiMetadata.serverBasePath.replace(/^\//, '');
-        emitEvent({
-          store,
-          domain,
-          object: resourceLabel,
-          action,
-          resourceId: result.id,
-          source: apiMetadata.serverBasePath,
-          data: eventData,
-          callerId: req.headers['x-caller-id'] || null,
-          callerRoles: extractCallerRoles(req),
-          traceparent: req.headers['traceparent'] || null,
-          now: result.updatedAt,
-        });
-      } catch (e) { /* non-fatal */ }
-
-      res.json(result);
-    } catch (error) {
-      console.error('Singleton update handler error:', error);
-      internalError(res, error);
+    if (!requestBody || typeof requestBody !== 'object' || Array.isArray(requestBody)) {
+      return Response.json({ code: 'BAD_REQUEST', message: 'Request body must be a JSON object', details: [{ field: 'body', message: 'must be object' }] }, { status: 400 });
     }
+    if (Object.keys(requestBody).length === 0) {
+      return Response.json({ code: 'BAD_REQUEST', message: 'Request body must contain at least one field to update', details: [{ field: 'body', message: 'minProperties: 1' }] }, { status: 400 });
+    }
+
+    const { items } = store.findAll(endpoint.collectionName, { [parentField]: parentId }, { limit: 1 });
+    let result;
+    let action;
+    let eventData;
+
+    if (items.length === 0) {
+      // No record yet — create one (upsert)
+      const newRecord = { id: crypto.randomUUID(), [parentField]: parentId, ...requestBody };
+      store.insertResource(endpoint.collectionName, newRecord);
+      result = store.findAll(endpoint.collectionName, { id: newRecord.id }, { limit: 1 }).items[0];
+      action = 'created';
+      eventData = { ...result };
+    } else {
+      const before = { ...items[0] };
+      result = store.update(endpoint.collectionName, items[0].id, requestBody);
+      action = 'updated';
+      eventData = { changes: buildChanges(before, result) };
+    }
+
+    try {
+      const domain = (apiMetadata.serverBasePath ?? '').replace(/^\//, '');
+      emitEvent({
+        store,
+        domain,
+        object: resourceLabel,
+        action,
+        resourceId: result.id,
+        source: apiMetadata.serverBasePath,
+        data: eventData,
+        callerId: callerHeader(request, 'x-caller-id'),
+        callerRoles: extractCallerRoles(request),
+        traceparent: callerHeader(request, 'traceparent'),
+        now: result.updatedAt,
+      });
+    } catch (e) { /* non-fatal */ }
+
+    return Response.json(result);
   };
 }
 
@@ -264,13 +256,15 @@ export function extractRequiredDefaults(responseSchema) {
 
 /**
  * Register routes for an API specification
- * @param {Object} app - Express app
+ * @param {Map<string, object>} routes - Route table to populate
  * @param {Object} apiMetadata - API metadata from OpenAPI spec
  * @param {string} baseUrl - Base URL for Location headers
  * @param {Array} stateMachines - State machine entries for this API's domain (from discoverStateMachines)
+ * @param {Array} [slaTypes] - SLA types, by domain
+ * @param {Object} [deps] - Shared dependencies ({ store })
  * @returns {Array} Array of registered endpoint info
  */
-export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaTypes = [], uploadsDir = null, deps = {}) {
+export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaTypes = [], deps = {}) {
   const { store } = deps;
   const registeredEndpoints = [];
 
@@ -306,21 +300,21 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
     if (endpoint.operationId === 'streamEvents') {
       // Handled by manual registration in server.js before routes are registered
       continue;
-    } else if (endpoint.operationId === 'uploadDocument' && uploadsDir) {
-      const [middleware, uploadHandler] = createDocumentUploadHandler(uploadsDir, baseUrl, deps);
-      app.post(expressPath, middleware, uploadHandler);
+    } else if (endpoint.operationId === 'uploadDocument') {
+      addRoute(routes, 'POST', expressPath, createDocumentUploadHandler(baseUrl, deps),
+        { operationId: endpoint.operationId, description: 'Upload document (multipart)' });
       registeredEndpoints.push({ method: 'POST', path: expressPath, description: 'Upload document (multipart)' });
       console.log(`    POST   ${expressPath} - Upload document (multipart)`);
       continue;
-    } else if (endpoint.operationId === 'uploadDocumentVersion' && uploadsDir) {
-      const [middleware, uploadHandler] = createDocumentVersionUploadHandler(uploadsDir, baseUrl, deps);
-      app.post(expressPath, middleware, uploadHandler);
+    } else if (endpoint.operationId === 'uploadDocumentVersion') {
+      addRoute(routes, 'POST', expressPath, createDocumentVersionUploadHandler(baseUrl, deps),
+        { operationId: endpoint.operationId, description: 'Upload document version (multipart)' });
       registeredEndpoints.push({ method: 'POST', path: expressPath, description: 'Upload document version (multipart)' });
       console.log(`    POST   ${expressPath} - Upload document version (multipart)`);
       continue;
-    } else if (endpoint.operationId === 'getDocumentVersionContent' && uploadsDir) {
-      const contentHandler = createDocumentContentHandler(uploadsDir, deps);
-      app.get(expressPath, contentHandler);
+    } else if (endpoint.operationId === 'getDocumentVersionContent') {
+      addRoute(routes, 'GET', expressPath, createDocumentContentHandler(deps),
+        { operationId: endpoint.operationId, description: 'Get document version file content' });
       registeredEndpoints.push({ method: 'GET', path: expressPath, description: 'Get document version file content' });
       console.log(`    GET    ${expressPath} - Get document version file content`);
       continue;
@@ -385,38 +379,34 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
         if (method === 'get') {
           const parentCollection = deriveParentCollection(endpoint.path, apiMetadata.serverBasePath);
           const pagination = apiMetadata.pagination || {};
-          handler = (req, res) => {
-            try {
-              const parentId = req.params[parentParam];
-              // Verify parent exists before listing sub-resources
-              if (parentCollection) {
-                const { items: parentCheck } = store.findAll(parentCollection, { id: parentId }, { limit: 1 });
-                if (parentCheck.length === 0) {
-                  const label = capitalize(parentCollection.replace(/s$/, ''));
-                  return res.status(404).json({ code: 'NOT_FOUND', message: `${label} not found` });
-                }
+          handler = (request, { params }) => {
+            const parentId = params[parentParam];
+            // Verify parent exists before listing sub-resources
+            if (parentCollection) {
+              const { items: parentCheck } = store.findAll(parentCollection, { id: parentId }, { limit: 1 });
+              if (parentCheck.length === 0) {
+                const label = capitalize(parentCollection.replace(/s$/, ''));
+                return Response.json({ code: 'NOT_FOUND', message: `${label} not found` }, { status: 404 });
               }
-              // List sub-resources filtered by parent ID plus any extra query field filters.
-              // Note: req.query mutation does not work reliably in Express 5 (getter re-evaluates),
-              // so we call findAll directly rather than routing through createListHandler.
-              const limitDefault = pagination.limitDefault ?? PAGINATION_DEFAULTS.limitDefault;
-              const limitMax = pagination.limitMax ?? PAGINATION_DEFAULTS.limitMax;
-              const limit = Math.min(parseInt(req.query.limit) || limitDefault, limitMax);
-              const offset = parseInt(req.query.offset) || 0;
-              const reservedParams = new Set(['limit', 'offset', 'q', 'sort']);
-              const extraFilters = Object.fromEntries(
-                Object.entries(req.query).filter(([k]) => !reservedParams.has(k))
-              );
-              const { items, total } = store.findAll(endpointWithCollection.collectionName, { [parentField]: parentId, ...extraFilters }, { limit, offset });
-              const itemSchema = getItemSchema(endpoint.responseSchema, apiMetadata.schemas);
-              const expandFields = extractExpandFields(itemSchema);
-              const expandedItems = expandFields.length > 0
-                ? items.map(item => applyExpand(item, expandFields, findById))
-                : items;
-              return res.json({ items: expandedItems, total, limit, offset, hasNext: offset + items.length < total });
-            } catch (error) {
-              internalError(res, error);
             }
+            // List sub-resources filtered by parent ID plus any extra query field filters,
+            // calling findAll directly rather than routing through createListHandler.
+            const query = queryOf(request);
+            const limitDefault = pagination.limitDefault ?? PAGINATION_DEFAULTS.limitDefault;
+            const limitMax = pagination.limitMax ?? PAGINATION_DEFAULTS.limitMax;
+            const limit = Math.min(parseInt(query.limit) || limitDefault, limitMax);
+            const offset = parseInt(query.offset) || 0;
+            const reservedParams = new Set(['limit', 'offset', 'q', 'sort']);
+            const extraFilters = Object.fromEntries(
+              Object.entries(query).filter(([k]) => !reservedParams.has(k))
+            );
+            const { items, total } = store.findAll(endpointWithCollection.collectionName, { [parentField]: parentId, ...extraFilters }, { limit, offset });
+            const itemSchema = getItemSchema(endpoint.responseSchema, apiMetadata.schemas);
+            const expandFields = extractExpandFields(itemSchema);
+            const expandedItems = expandFields.length > 0
+              ? items.map(item => applyExpand(item, expandFields, findById))
+              : items;
+            return Response.json({ items: expandedItems, total, limit, offset, hasNext: offset + items.length < total });
           };
           description = 'List sub-resources';
         } else if (method === 'post') {
@@ -429,12 +419,13 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
           if (subMachineForEndpoint?.initialState) subRequiredDefaults.status = subMachineForEndpoint.initialState;
           if (Object.keys(subRequiredDefaults).length > 0) store.registerCollectionDefaults(collectionName, subRequiredDefaults);
           const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint, deps);
-          handler = (req, res) => {
+          handler = async (request, ctx) => {
             // Spread ALL path params, not just the last one — sub-sub-resource
             // routes (e.g. /applications/{applicationId}/members/{memberId}/incomes)
             // need every parent FK on the persisted record. See mergePathParamsIntoBody.
-            req.body = mergePathParamsIntoBody(req.body, req.params);
-            return baseCreateHandler(req, res);
+            // Passed through ctx because a Request body cannot be reassigned.
+            const body = mergePathParamsIntoBody(await jsonBody(request), ctx.params);
+            return baseCreateHandler(request, { ...ctx, body });
           };
           description = 'Create sub-resource';
         } else {
@@ -477,8 +468,12 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
       continue;
     }
 
-    // Register the route
-    app[method](expressPath, handler);
+    // Add to the route table. Express mounting happens once, afterwards, in
+    // mountExpress — this function no longer knows about Express.
+    addRoute(routes, method, expressPath, handler, {
+      operationId: endpoint.operationId,
+      description,
+    });
 
     registeredEndpoints.push({
       method: method.toUpperCase(),
@@ -496,13 +491,13 @@ export function registerRoutes(app, apiMetadata, baseUrl, stateMachines, slaType
 
 /**
  * Register routes for all API specifications
- * @param {Object} app - Express app
+ * @param {Map<string, object>} routes - Route table to populate
  * @param {Array} apiSpecs - Array of API metadata objects
  * @param {string} baseUrl - Base URL for Location headers
  * @param {Array} stateMachines - Array from discoverStateMachines()
  * @returns {Array} Array of all registered endpoints grouped by API
  */
-export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], slaTypes = [], metrics = [], uploadsDir = null, deps = {}) {
+export function registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines = [], slaTypes = [], metrics = [], deps = {}) {
   console.log('\nRegistering API routes...');
 
   const allEndpoints = [];
@@ -511,8 +506,8 @@ export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], sl
   // for the /workflow/metrics paths declared in workflow-openapi.yaml.
   if (metrics.length > 0) {
     console.log('  Registering metrics routes...');
-    app.get('/workflow/metrics', createMetricsListHandler(metrics, deps));
-    app.get('/workflow/metrics/:metricId', createMetricsGetHandler(metrics, deps));
+    addRoute(routes, 'GET', '/workflow/metrics', createMetricsListHandler(metrics, deps));
+    addRoute(routes, 'GET', '/workflow/metrics/:metricId', createMetricsGetHandler(metrics, deps));
     console.log('    GET    /workflow/metrics - List computed metrics');
     console.log('    GET    /workflow/metrics/:metricId - Get computed metric');
   }
@@ -520,7 +515,7 @@ export function registerAllRoutes(app, apiSpecs, baseUrl, stateMachines = [], sl
   for (const apiSpec of apiSpecs) {
     // Pass all state machines for this domain — there may be more than one (e.g., Application + ApplicationDocument)
     const domainSMs = stateMachines.filter(s => s.domain === apiSpec.name);
-    const endpoints = registerRoutes(app, apiSpec, baseUrl, domainSMs, slaTypes, uploadsDir, deps);
+    const endpoints = registerRoutes(routes, apiSpec, baseUrl, domainSMs, slaTypes, deps);
     allEndpoints.push({
       apiName: apiSpec.name,
       title: apiSpec.title,
@@ -598,12 +593,12 @@ function buildResourceCollectionNameMap(apiSpecs) {
  *   GET {endpoint.path}           — section index (list of section names + hrefs)
  *   GET {endpoint.path}/:section  — section panel (primary items + includes)
  *
- * @param {Object} app - Express app
+ * @param {Map<string, object>} routes - Route table to populate
  * @param {Array} compositionFiles - Array from discoverCompositions()
  * @param {Array} apiSpecs - Array of API metadata (used to resolve domain base paths)
  * @returns {Array} Registered endpoint info
  */
-export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs = [], deps = {}) {
+export function registerCompositionRoutes(routes, compositionFiles = [], apiSpecs = [], deps = {}) {
   const { store } = deps;
   const registeredEndpoints = [];
   const resourceItemPathMap = buildResourceItemPathMap(apiSpecs);
@@ -655,48 +650,39 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
 
       if (composition.compositeType === 'sectionView') {
         // Section index
-        app.get(indexExpressPath, (req, res) => {
-          try {
-            const parentId = primaryParam ? req.params[primaryParam] : null;
-            if (parentId && !store.findById(rootCollectionName, parentId)) {
-              return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
-            }
-            res.json(assembleSectionIndex(compositionWithDoc, req.params, indexExpressPath, stateDefaults, assemblerOpts));
-          } catch (error) {
-            console.error('Composition index handler error:', error);
-            internalError(res, error);
+        addRoute(routes, 'GET', indexExpressPath, (request, { params }) => {
+          const parentId = primaryParam ? params[primaryParam] : null;
+          if (parentId && !store.findById(rootCollectionName, parentId)) {
+            return Response.json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` }, { status: 404 });
           }
+          return Response.json(assembleSectionIndex(compositionWithDoc, params, indexExpressPath, stateDefaults, assemblerOpts));
         });
 
         // Section panel — passes query params through so assembleSectionPanel can
         // apply q= filtering and limit/offset pagination on the assembled items.
-        app.get(panelExpressPath, (req, res) => {
-          try {
-            const parentId = primaryParam ? req.params[primaryParam] : null;
-            if (parentId && !store.findById(rootCollectionName, parentId)) {
-              return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` });
-            }
-            const panelOpts = { ...assemblerOpts, queryParams: req.query, paginationDefaults };
-            const panel = assembleSectionPanel(compositionWithDoc, req.params.section, req.params, stateDefaults, panelOpts);
-            if (!panel) {
-              return res.status(404).json({ code: 'NOT_FOUND', message: `Section "${req.params.section}" not found` });
-            }
-            if (panel.error) {
-              const details = panel.error.field !== undefined ? [{ field: panel.error.field, message: panel.error.message }] : [];
-              return res.status(400).json({ code: panel.error.code, message: panel.error.message, details });
-            }
-            res.json(panel);
-          } catch (error) {
-            console.error('Composition panel handler error:', error);
-            internalError(res, error);
+        addRoute(routes, 'GET', panelExpressPath, (request, { params }) => {
+          const parentId = primaryParam ? params[primaryParam] : null;
+          if (parentId && !store.findById(rootCollectionName, parentId)) {
+            return Response.json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` }, { status: 404 });
           }
+          const panelOpts = { ...assemblerOpts, queryParams: queryOf(request), paginationDefaults };
+          const panel = assembleSectionPanel(compositionWithDoc, params.section, params, stateDefaults, panelOpts);
+          if (!panel) {
+            return Response.json({ code: 'NOT_FOUND', message: `Section "${params.section}" not found` }, { status: 404 });
+          }
+          if (panel.error) {
+            const details = panel.error.field !== undefined ? [{ field: panel.error.field, message: panel.error.message }] : [];
+            return Response.json({ code: panel.error.code, message: panel.error.message, details }, { status: 400 });
+          }
+          return Response.json(panel);
         });
 
         // Pre-register 405 for write methods on the index endpoint
         for (const writeMethod of ['post', 'patch', 'put', 'delete']) {
-          app[writeMethod](indexExpressPath, (req, res) => {
-            res.status(405).set('Allow', 'GET').json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' });
-          });
+          addRoute(routes, writeMethod.toUpperCase(), indexExpressPath, () =>
+            Response.json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' },
+              { status: 405, headers: { Allow: 'GET' } })
+          );
         }
 
         console.log(`    GET    ${indexExpressPath} - ${compositionName} section index`);
@@ -708,24 +694,20 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
         );
       } else {
         // Plain composition — single GET endpoint returning the root resource record
-        app.get(indexExpressPath, (req, res) => {
-          try {
-            const result = assemblePlainComposition(compositionWithDoc, req.params, assemblerOpts);
-            if (!result) {
-              return res.status(404).json({ code: 'NOT_FOUND', message: `${composition.resource} not found` });
-            }
-            res.json(result);
-          } catch (error) {
-            console.error('Plain composition handler error:', error);
-            internalError(res, error);
+        addRoute(routes, 'GET', indexExpressPath, (request, { params }) => {
+          const result = assemblePlainComposition(compositionWithDoc, params, assemblerOpts);
+          if (!result) {
+            return Response.json({ code: 'NOT_FOUND', message: `${composition.resource} not found` }, { status: 404 });
           }
+          return Response.json(result);
         });
 
         // Pre-register 405 for write methods
         for (const writeMethod of ['post', 'patch', 'put', 'delete']) {
-          app[writeMethod](indexExpressPath, (req, res) => {
-            res.status(405).set('Allow', 'GET').json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' });
-          });
+          addRoute(routes, writeMethod.toUpperCase(), indexExpressPath, () =>
+            Response.json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' },
+              { status: 405, headers: { Allow: 'GET' } })
+          );
         }
 
         console.log(`    GET    ${indexExpressPath} - ${compositionName} plain composition`);
@@ -740,7 +722,7 @@ export function registerCompositionRoutes(app, compositionFiles = [], apiSpecs =
         const stateInfo = deriveStateResource(composition.state, endpointPath, basePath);
         if (stateInfo) {
           const stateEndpoints = registerStateRoutes(
-            app, composition, compositionName, stateInfo, stateDefaults,
+            routes, composition, compositionName, stateInfo, stateDefaults,
             endpointPath, fullPath, basePath, deps
           );
           registeredEndpoints.push(...stateEndpoints);
@@ -787,7 +769,7 @@ function loadStateDefaults(stateConfig, apiSpec) {
  *   PUT    {stateBasePath}/{section}/{itemId} — replace state for a collection item
  *   PATCH  {stateBasePath}/{section}/{itemId} — partial update for a collection item
  *
- * @param {Object} app - Express app
+ * @param {Map<string, object>} routes - Route table to populate
  * @param {Object} composition - Composition definition
  * @param {string} compositionName - Key name for the composition
  * @param {{ defsKey: string, pathSegment: string, collectionName: string, camelKey: string }} stateInfo
@@ -797,7 +779,7 @@ function loadStateDefaults(stateConfig, apiSpec) {
  * @param {string} basePath - Server base path (e.g. /intake)
  * @returns {Array} Registered endpoint descriptors
  */
-function registerStateRoutes(app, composition, compositionName, stateInfo, stateDefaults, endpointPath, fullPath, basePath, deps = {}) {
+function registerStateRoutes(routes, composition, compositionName, stateInfo, stateDefaults, endpointPath, fullPath, basePath, deps = {}) {
   const { store } = deps;
   const bindParam = extractPrimaryParam(endpointPath);
   if (!bindParam) return [];
@@ -815,50 +797,42 @@ function registerStateRoutes(app, composition, compositionName, stateInfo, state
   const itemPath = `${stateExpressBase}/:section/:itemId`;
 
   // GET /{section} — paginated list of state records for that section
-  app.get(sectionPath, (req, res) => {
-    try {
-      const parent = store.findById(composition.resource, req.params[bindParam]);
-      if (!parent) return res.status(404).json({ code: 'NOT_FOUND', message: 'Parent resource not found' });
+  addRoute(routes, 'GET', sectionPath, (request, { params }) => {
+    const parent = store.findById(composition.resource, params[bindParam]);
+    if (!parent) return Response.json({ code: 'NOT_FOUND', message: 'Parent resource not found' }, { status: 404 });
 
-      const limit = Math.min(parseInt(req.query.limit) || PAGINATION_DEFAULTS.limitDefault, STATE_RECORDS_LIMIT_MAX);
-      const offset = parseInt(req.query.offset) || 0;
-      const result = listStateRecords(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, { limit, offset }, store);
-      res.json(result);
-    } catch (error) { internalError(res, error); }
+    const query = queryOf(request);
+    const limit = Math.min(parseInt(query.limit) || PAGINATION_DEFAULTS.limitDefault, STATE_RECORDS_LIMIT_MAX);
+    const offset = parseInt(query.offset) || 0;
+    return Response.json(listStateRecords(stateInfo.collectionName, bindParam, params[bindParam], params.section, { limit, offset }, store));
   });
 
   // GET /{section}/{itemId} — single state record
-  app.get(itemPath, (req, res) => {
-    try {
-      const record = findStateRecord(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, req.params.itemId, store);
-      if (!record) return res.status(404).json({ code: 'NOT_FOUND', message: 'State record not found' });
-      res.json(record);
-    } catch (error) { internalError(res, error); }
+  addRoute(routes, 'GET', itemPath, (request, { params }) => {
+    const record = findStateRecord(stateInfo.collectionName, bindParam, params[bindParam], params.section, params.itemId, store);
+    if (!record) return Response.json({ code: 'NOT_FOUND', message: 'State record not found' }, { status: 404 });
+    return Response.json(record);
   });
 
   // PUT/PATCH /{section} — singleton write
   for (const method of ['put', 'patch']) {
-    app[method](sectionPath, (req, res) => {
-      try {
-        const parent = store.findById(composition.resource, req.params[bindParam]);
-        if (!parent) return res.status(404).json({ code: 'NOT_FOUND', message: 'Parent resource not found' });
-        const body = method === 'put' ? { ...stateDefaults, ...req.body } : req.body;
-        const record = upsertStateRecord(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, null, body, store);
-        res.json(record);
-      } catch (error) { internalError(res, error); }
+    addRoute(routes, method.toUpperCase(), sectionPath, async (request, { params }) => {
+      const parent = store.findById(composition.resource, params[bindParam]);
+      if (!parent) return Response.json({ code: 'NOT_FOUND', message: 'Parent resource not found' }, { status: 404 });
+      const sent = await jsonBody(request);
+      const body = method === 'put' ? { ...stateDefaults, ...sent } : sent;
+      return Response.json(upsertStateRecord(stateInfo.collectionName, bindParam, params[bindParam], params.section, null, body, store));
     });
   }
 
   // PUT/PATCH /{section}/{itemId} — collection item write
   for (const method of ['put', 'patch']) {
-    app[method](itemPath, (req, res) => {
-      try {
-        const parent = store.findById(composition.resource, req.params[bindParam]);
-        if (!parent) return res.status(404).json({ code: 'NOT_FOUND', message: 'Parent resource not found' });
-        const body = method === 'put' ? { ...stateDefaults, ...req.body } : req.body;
-        const record = upsertStateRecord(stateInfo.collectionName, bindParam, req.params[bindParam], req.params.section, req.params.itemId, body, store);
-        res.json(record);
-      } catch (error) { internalError(res, error); }
+    addRoute(routes, method.toUpperCase(), itemPath, async (request, { params }) => {
+      const parent = store.findById(composition.resource, params[bindParam]);
+      if (!parent) return Response.json({ code: 'NOT_FOUND', message: 'Parent resource not found' }, { status: 404 });
+      const sent = await jsonBody(request);
+      const body = method === 'put' ? { ...stateDefaults, ...sent } : sent;
+      return Response.json(upsertStateRecord(stateInfo.collectionName, bindParam, params[bindParam], params.section, params.itemId, body, store));
     });
   }
 
@@ -881,12 +855,12 @@ function registerStateRoutes(app, composition, compositionName, stateInfo, state
 
 /**
  * Register state machine RPC routes (e.g., POST /tasks/:taskId/claim).
- * @param {Object} app - Express app
+ * @param {Map<string, object>} routes - Route table to populate
  * @param {Array} stateMachines - Array from discoverStateMachines()
  * @param {Array} apiSpecs - Array of API metadata objects
  * @returns {Array} Array of registered RPC endpoint info
  */
-export function registerStateMachineRoutes(app, stateMachines, apiSpecs, slaTypes = [], deps = {}) {
+export function registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaTypes = [], deps = {}) {
   const registeredEndpoints = [];
 
   for (const sm of stateMachines) {
@@ -952,7 +926,10 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, slaType
         deps
       );
 
-      app.post(expressPath, handler);
+      addRoute(routes, 'POST', expressPath, handler, {
+        operationId: entry.id,
+        description: `${entry.id}: ${entry.from} → ${entry.to ?? '(in-place)'}`,
+      });
 
       registeredEndpoints.push({
         method: 'POST',
@@ -976,7 +953,7 @@ export function registerStateMachineRoutes(app, stateMachines, apiSpecs, slaType
  * path is constructed the same way as composition routes: serverBasePath from
  * the domain's API spec is prepended to endpoint.path.
  *
- * @param {import('express').Express} app
+ * @param {Map<string, object>} routes - Route table to populate
  * @param {Array<{ domain: string, doc: Object, filePath: string }>} rulesFiles
  * @param {Array<Object>} apiSpecs
  * @returns {Array<{ method: string, path: string, description: string }>}
@@ -995,7 +972,7 @@ export function buildRulesIndex(graphs = []) {
   return Object.fromEntries(graphs.map((graph) => [graph.ruleset, graph]));
 }
 
-export function registerRulesRoutes(app, rulesFiles = [], apiSpecs = [], graphs = []) {
+export function registerRulesRoutes(routes, rulesFiles = [], apiSpecs = [], graphs = []) {
   const byRuleset = buildRulesIndex(graphs);
   const registeredEndpoints = [];
 
@@ -1014,20 +991,15 @@ export function registerRulesRoutes(app, rulesFiles = [], apiSpecs = [], graphs 
       const graph = byRuleset[rulesetName];
       if (!graph) continue;
 
-      app.post(fullPath, (req, res) => {
-        try {
-          const nodes = evaluate(graph, req.body ?? {});
-          const result = {};
-          for (const [name, node] of Object.entries(nodes)) {
-            if (node.type !== 'output') continue;
-            const { type: _type, ...rest } = node;
-            result[name] = rest;
-          }
-          res.json(result);
-        } catch (err) {
-          console.error(`Rules evaluation error (${rulesetName}):`, err);
-          internalError(res, err);
+      addRoute(routes, 'POST', fullPath, async (request) => {
+        const nodes = evaluate(graph, await jsonBody(request));
+        const result = {};
+        for (const [name, node] of Object.entries(nodes)) {
+          if (node.type !== 'output') continue;
+          const { type: _type, ...rest } = node;
+          result[name] = rest;
         }
+        return Response.json(result);
       });
 
       registeredEndpoints.push({ method: 'POST', path: fullPath, description: `Evaluate ${rulesetName}` });

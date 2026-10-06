@@ -8,7 +8,6 @@
  *   {domain}.{object}.{action}
  */
 
-import { randomUUID } from 'crypto';
 import { eventBus } from './event-bus.js';
 
 /**
@@ -28,7 +27,7 @@ export function emitEventEnvelope(envelope, store) {
     specversion: '1.0',
     datacontenttype: 'application/json',
     ...envelope,
-    id: envelope.id || randomUUID(),
+    id: envelope.id || crypto.randomUUID(),
     time: envelope.time || new Date().toISOString(),
   };
   // Infrastructure events (scheduling, etc.) are broadcast for stub interception
@@ -84,7 +83,7 @@ export function emitEvent({ domain, object, action, resourceId, subject, source,
 
   const envelope = {
     specversion: '1.0',
-    id: randomUUID(),
+    id: crypto.randomUUID(),
     type,
     source: source || `/${domain}`,
     subject: subject ?? resourceId,

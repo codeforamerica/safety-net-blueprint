@@ -15,6 +15,7 @@ const store = createMemoryStore();
 // The handler takes its store as a parameter; these cases seed through the
 // shim's exports, so they hand it the same one.
 import { deepEqual, buildChanges, createUpdateHandler } from '../../src/handlers/update-handler.js';
+import { makeRequest, readResponse } from '../helpers/fetch.js';
 
 // =============================================================================
 // deepEqual
@@ -186,22 +187,22 @@ test('buildChanges — nested object added whole (before null) emits top-level f
 // createUpdateHandler — onUpdate trigger
 // =============================================================================
 
-function makeReqRes(params, body, headers = {}) {
-  const req = { params, body, headers, path: '/testresources' };
-  const res = {
-    _code: 200,
-    _data: null,
-    status(code) { this._code = code; return this; },
-    json(data) { this._data = data; return this; },
-    header() { return this; }
-  };
-  return { req, res };
+/**
+ * Call a Fetch-shaped update handler and read its Response.
+ *
+ * @returns {Promise<{ _code: number, _data: unknown }>} named to match the
+ *   assertions these tests already make against a mock response.
+ */
+async function callUpdate(handler, params, body, headers = {}) {
+  const request = makeRequest(`/testresources/${params.id ?? ''}`, { method: 'PATCH', body, headers });
+  const { status, body: data } = await readResponse(handler(request, { params }));
+  return { _code: status, _data: data };
 }
 
 const apiMetadata = { serverBasePath: '/test' };
 const endpoint = { collectionName: 'testresources', path: '/testresources/{id}', requestSchema: null };
 
-test('createUpdateHandler — onUpdate fires when watched field is patched', () => {
+test('createUpdateHandler — onUpdate fires when watched field is patched', async () => {
   store.clearAll('testresources');
   store.insertResource('testresources', { id: 'res-1', isExpedited: false, priority: 'normal' });
 
@@ -216,15 +217,14 @@ test('createUpdateHandler — onUpdate fires when watched field is patched', () 
   };
 
   const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine, { store: store });
-  const { req, res } = makeReqRes({ id: 'res-1' }, { isExpedited: true });
-  handler(req, res);
+  const res = await callUpdate(handler, { id: 'res-1' }, { isExpedited: true });
 
   assert.strictEqual(res._code, 200);
   const saved = store.findById('testresources', 'res-1');
   assert.strictEqual(saved.priority, 'expedited');
 });
 
-test('createUpdateHandler — onUpdate does not fire when non-watched field is patched', () => {
+test('createUpdateHandler — onUpdate does not fire when non-watched field is patched', async () => {
   store.clearAll('testresources');
   store.insertResource('testresources', { id: 'res-2', isExpedited: false, priority: 'normal', notes: '' });
 
@@ -239,15 +239,14 @@ test('createUpdateHandler — onUpdate does not fire when non-watched field is p
   };
 
   const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine, { store: store });
-  const { req, res } = makeReqRes({ id: 'res-2' }, { notes: 'updated' });
-  handler(req, res);
+  const res = await callUpdate(handler, { id: 'res-2' }, { notes: 'updated' });
 
   assert.strictEqual(res._code, 200);
   const saved = store.findById('testresources', 'res-2');
   assert.strictEqual(saved.priority, 'normal'); // onUpdate did not fire
 });
 
-test('createUpdateHandler — onUpdate fires for all fields when no watchedFields defined', () => {
+test('createUpdateHandler — onUpdate fires for all fields when no watchedFields defined', async () => {
   store.clearAll('testresources');
   store.insertResource('testresources', { id: 'res-3', notes: '', priority: 'normal' });
 
@@ -262,8 +261,7 @@ test('createUpdateHandler — onUpdate fires for all fields when no watchedField
   };
 
   const handler = createUpdateHandler(apiMetadata, endpoint, null, [], machine, { store: store });
-  const { req, res } = makeReqRes({ id: 'res-3' }, { notes: 'anything' });
-  handler(req, res);
+  const res = await callUpdate(handler, { id: 'res-3' }, { notes: 'anything' });
 
   const saved = store.findById('testresources', 'res-3');
   assert.strictEqual(saved.priority, 'high');
