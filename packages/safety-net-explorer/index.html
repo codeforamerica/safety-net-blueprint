@@ -194,6 +194,11 @@
       z-index: 0;
     }
 
+    /* A section this contract set produced nothing for. The card still
+       describes the capability; it just does not lead anywhere. */
+    .card-link--absent { color: var(--text-light); cursor: default; }
+    .card-link--absent::after { content: none; }
+
     .card-accent { height: 4px; }
 
     .accent-blue   { background: linear-gradient(90deg, var(--dark-blue), var(--mid-blue)); }
@@ -381,6 +386,47 @@
             <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Static reference for all contract APIs — endpoints, parameters, request and response schemas. No running mock server required.</p>
+          <div class="card-outputs">
+            <a href="api-reference/case-management.html" class="output-tag">
+              <span class="dot dot-green"></span>Case Management
+            </a>
+            <a href="api-reference/client-management.html" class="output-tag">
+              <span class="dot dot-green"></span>Client Management
+            </a>
+            <a href="api-reference/communication.html" class="output-tag">
+              <span class="dot dot-green"></span>Communication
+            </a>
+            <a href="api-reference/data-exchange.html" class="output-tag">
+              <span class="dot dot-green"></span>Data Exchange
+            </a>
+            <a href="api-reference/data-exchange-adapter.html" class="output-tag">
+              <span class="dot dot-green"></span>Data Exchange Adapter
+            </a>
+            <a href="api-reference/document-management.html" class="output-tag">
+              <span class="dot dot-green"></span>Document Management
+            </a>
+            <a href="api-reference/eligibility.html" class="output-tag">
+              <span class="dot dot-green"></span>Eligibility
+            </a>
+            <a href="api-reference/eligibility-adapter.html" class="output-tag">
+              <span class="dot dot-green"></span>Eligibility Adapter
+            </a>
+            <a href="api-reference/intake.html" class="output-tag">
+              <span class="dot dot-green"></span>Intake
+            </a>
+            <a href="api-reference/platform.html" class="output-tag">
+              <span class="dot dot-green"></span>Platform
+            </a>
+            <a href="api-reference/scheduling.html" class="output-tag">
+              <span class="dot dot-green"></span>Scheduling
+            </a>
+            <a href="api-reference/users.html" class="output-tag">
+              <span class="dot dot-green"></span>Users
+            </a>
+            <a href="api-reference/workflow.html" class="output-tag">
+              <span class="dot dot-green"></span>Workflow
+            </a>
+          </div>
         </div>
       </div>
 
@@ -542,7 +588,7 @@
             </svg>
           </div>
           <div class="card-header-row">
-            <h4><a href="rules-docs/index.html" class="card-link">Rules Docs</a></h4>
+            <h4><span class="card-link card-link--absent" title="Not generated for this contract set">Rules Docs</span></h4>
             <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Dependency graph visualizer for blueprint rulesets — inputs, intermediate facts, outputs, policy citations, and browser-side evaluation.</p>
@@ -571,6 +617,28 @@
             <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Cross-domain event reference — every published event with its emitting domain and all subscribers, derived from state machine contracts.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-accent accent-sand"></div>
+        <div class="card-body">
+          <div class="card-icon icon-sand">
+            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="2" y="3" width="16" height="2.5" rx="1.25" fill="#b5917a"/>
+              <rect x="2" y="7.5" width="10" height="2" rx="1" fill="#e9ccbe"/>
+              <rect x="2" y="11.5" width="12" height="2" rx="1" fill="#e9ccbe"/>
+              <rect x="2" y="15.5" width="7" height="2" rx="1" fill="#e9ccbe"/>
+              <circle cx="16" cy="14" r="3.5" fill="#f7ede8" stroke="#b5917a" stroke-width="1.5"/>
+              <line x1="14.5" y1="14" x2="17.5" y2="14" stroke="#b5917a" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="16" y1="12.5" x2="16" y2="15.5" stroke="#b5917a" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="card-header-row">
+            <h4><a href="annotations-explorer/index.html" class="card-link">Annotation Registry</a></h4>
+            <span class="status-badge badge-progress">In progress</span>
+          </div>
+          <p>Registry coverage explorer — every annotation registry entry with the schema fields, operations, events, and facts that reference it.</p>
         </div>
       </div>
 
@@ -618,8 +686,14 @@
             <a href="context-map/domain_eligibility.html" class="output-tag">
               <span class="dot dot-blue"></span>Eligibility
             </a>
+            <a href="context-map/domain_identity_access.html" class="output-tag">
+              <span class="dot dot-blue"></span>Identity Access
+            </a>
             <a href="context-map/domain_intake.html" class="output-tag">
               <span class="dot dot-blue"></span>Intake
+            </a>
+            <a href="context-map/domain_platform.html" class="output-tag">
+              <span class="dot dot-blue"></span>Platform
             </a>
             <a href="context-map/domain_scheduling.html" class="output-tag">
               <span class="dot dot-blue"></span>Scheduling

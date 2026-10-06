@@ -194,6 +194,11 @@
       z-index: 0;
     }
 
+    /* A section this contract set produced nothing for. The card still
+       describes the capability; it just does not lead anywhere. */
+    .card-link--absent { color: var(--text-light); cursor: default; }
+    .card-link--absent::after { content: none; }
+
     .card-accent { height: 4px; }
 
     .accent-blue   { background: linear-gradient(90deg, var(--dark-blue), var(--mid-blue)); }
@@ -603,6 +608,9 @@
           </div>
           <p>Visual map of the bounded contexts, systems, and integration relationships across the safety net platform.</p>
           <div class="card-outputs">
+            <a href="context-map/domain_document_management.html" class="output-tag">
+              <span class="dot dot-blue"></span>Document Management
+            </a>
             <a href="context-map/domain_eligibility.html" class="output-tag">
               <span class="dot dot-blue"></span>Eligibility
             </a>
