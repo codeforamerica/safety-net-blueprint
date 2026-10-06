@@ -13,7 +13,7 @@
  * Usage: node build.js
  */
 
-import { writeFileSync, readdirSync, mkdirSync, rmSync } from 'fs';
+import { writeFileSync, readdirSync, mkdirSync, rmSync, existsSync } from 'fs';
 import { resolve, dirname, basename, relative, join } from 'path';
 import { fileURLToPath } from 'url';
 import $RefParser from '@apidevtools/json-schema-ref-parser';
@@ -744,7 +744,13 @@ function renderEndpoint(path, method, op, rawOp = {}, paramNameByKey = new Map()
 // ── Domain page ───────────────────────────────────────────────────────────
 
 function buildDomainPage({ slug, spec, raw, fileMap = new Map(), doc = null }) {
-  const dataDictHref = `../data-dictionaries/${slug}.html`;
+  // Only where there is one to link to. A data dictionary is built from a
+  // domain's annotations, so a domain with none gets no page — and every
+  // field on this page pointed into it regardless, which is hundreds of
+  // dead links per domain. Data dictionaries are built before this tool, so
+  // the answer is on disk by now.
+  const dataDictFile = resolve(contentDir, 'data-dictionaries', `${slug}.html`);
+  const dataDictHref = existsSync(dataDictFile) ? `../data-dictionaries/${slug}.html` : null;
   const metaSubtitle = headerMetaSubtitle(slug, resolvedSourcePairs(slug, resolvedDir, { include: SOURCE_SUFFIXES }, repo));
 
   const info       = spec.info ?? {};

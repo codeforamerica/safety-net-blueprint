@@ -173,6 +173,11 @@ function renderFieldCard(path, meta, ann, allowedAnnotations, registryTypes = ne
   // Known annotation fields to skip (metadata, not display fields)
   const SKIP_ANN_FIELDS = new Set(['$schema', 'version', 'domain']);
 
+  // Longest an annotation value may be and still sit on a shared row. Program
+  // codes and field names fit; the interview questions annotations carry do
+  // not, and those read better stacked.
+  const INLINE_VALUE_MAX = 40;
+
   let annHtml = '';
   if (ann) {
     const parts = [];
@@ -187,8 +192,19 @@ function renderFieldCard(path, meta, ann, allowedAnnotations, registryTypes = ne
         } else if (value.length === 1) {
           parts.push(`<p class="ann-reason"><span class="ann-label">${h(label)}</span>${h(String(value[0]).replace(/\s+/g, ' ').trim())}</p>`);
         } else {
-          const items = value.map(v => `<li>${h(String(v).replace(/\s+/g, ' ').trim())}</li>`).join('');
-          parts.push(`<div class="ann-row ann-row--col"><span class="ann-label">${h(label)}</span><ul class="ann-list">${items}</ul></div>`);
+          const values = value.map(v => String(v).replace(/\s+/g, ' ').trim());
+          // Short values go inline, the same way the enum row above renders
+          // its allowed values. Three single words became three bullets on
+          // three lines, directly under four of the same words laid out
+          // horizontally. Long ones stay stacked — wrapping a sentence
+          // across a row is worse than a list.
+          if (values.every(v => v.length <= INLINE_VALUE_MAX)) {
+            const chips = values.map(v => `<code>${h(v)}</code>`).join(' ');
+            parts.push(`<div class="ann-row"><span class="ann-label">${h(label)}</span><span class="val-list">${chips}</span></div>`);
+          } else {
+            const items = values.map(v => `<li>${h(v)}</li>`).join('');
+            parts.push(`<div class="ann-row ann-row--col"><span class="ann-label">${h(label)}</span><ul class="ann-list">${items}</ul></div>`);
+          }
         }
       } else if (typeof value === 'string' && value.trim()) {
         const text = value.replace(/\s+/g, ' ').trim();

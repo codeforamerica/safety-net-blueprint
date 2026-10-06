@@ -13,7 +13,6 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, rmSync } from 'fs';
 import { resolve, dirname, basename, extname, relative, join } from 'path';
 import { fileURLToPath } from 'url';
-import yaml from 'js-yaml';
 import { loadConfig } from '../lib/config.js';
 import { COLORS, FONT } from '../lib/theme.js';
 import { breadcrumb } from '../lib/html.js';
@@ -22,9 +21,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // srcDir: where render.js wrote the fragments
 // outDir: where to write per-page HTML files
-// --config=<path>: path to context-map config.yaml (contains nav definition)
 const args       = process.argv.slice(2);
-const configArg  = args.find(a => a.startsWith('--config='));
 const contentArg = args.find(a => a.startsWith('--content='));
 const positional = args.filter(a => !a.startsWith('--'));
 const srcDir     = positional[0] ? resolve(positional[0]) : resolve(__dirname, '../dist');
@@ -35,22 +32,28 @@ const { name: projectName } = contentDir ? loadConfig(contentDir) : { name: 'Blu
 mkdirSync(outDir, { recursive: true });
 readdirSync(outDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(resolve(outDir, f)));
 
-// ── Nav definition — loaded from config ──────────────────────────────────────
+// ── Nav definition — the pages that were generated ───────────────────────────
 
-let ALL_NAV = [];
-if (configArg) {
-  const config = yaml.load(readFileSync(configArg.slice('--config='.length), 'utf8'));
-  ALL_NAV = (config.nav ?? []).map(({ file, label }) => ({ file, label }));
-}
-
-// Only include nav entries that actually have fragment files
 const availableFiles = new Set(
   readdirSync(srcDir)
     .filter(f => extname(f) === '.html')
     .map(f => basename(f, '.html'))
 );
 
-const navItems = ALL_NAV.filter(item => availableFiles.has(item.file));
+// Derived, not listed. A `nav:` block in the diagram config named six domain
+// pages; the contracts had eleven, so five were generated and unreachable.
+// Every page that exists gets an entry, and a domain added to the contracts
+// needs nobody to remember this file.
+const navItems = [
+  ...(availableFiles.has('domains') ? [{ file: 'domains', label: 'Overview' }] : []),
+  ...[...availableFiles]
+    .filter(f => f.startsWith('domain_'))
+    .sort()
+    .map(f => ({
+      file: f,
+      label: f.replace(/^domain_/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    })),
+];
 
 // ── Discover all fragment files to generate pages for ────────────────────────
 
