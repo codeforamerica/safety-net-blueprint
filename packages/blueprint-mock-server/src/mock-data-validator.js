@@ -31,6 +31,36 @@ function mockDataDocuments(docs) {
 }
 
 /**
+ * The properties of a schema that are computed at read time.
+ *
+ * A seed record is what is *stored*, and an `x-derived` field is never stored
+ * — it is evaluated when the record is read. So the record cannot carry one,
+ * and the read schema requiring it does not mean the seed is wrong.
+ *
+ * Walks `allOf` because a read schema is usually a writable base plus the
+ * server-managed fields, and the derived ones are in that second branch.
+ * `$ref`s are not followed: a derived field is readOnly, so it is declared on
+ * the read schema rather than on anything the writable base points at.
+ *
+ * @param {object} schema
+ * @returns {Set<string>}
+ */
+function derivedProperties(schema) {
+  const names = new Set();
+
+  const walk = (node) => {
+    if (!node || typeof node !== 'object') return;
+    for (const [name, property] of Object.entries(node.properties ?? {})) {
+      if (property && typeof property === 'object' && 'x-derived' in property) names.add(name);
+    }
+    for (const branch of node.allOf ?? []) walk(branch);
+  };
+
+  walk(schema);
+  return names;
+}
+
+/**
  * Check every seeded record against the schema it claims to exemplify.
  *
  * @param {import('@codeforamerica/blueprint-core').Doc[]} docs - The contract set
@@ -45,10 +75,13 @@ export function validateMockData(docs, apiSpecs) {
   // follow a cross-file $ref out of it — a detached schema object carries no
   // base to resolve one against (#448).
   const declaredIn = new Map();
+  const derivedIn = new Map();
   for (const api of apiSpecs) {
     if (!api.relativePath) continue;
-    for (const name of Object.keys(api.schemas ?? {})) {
-      if (!declaredIn.has(name)) declaredIn.set(name, api.relativePath);
+    for (const [name, schema] of Object.entries(api.schemas ?? {})) {
+      if (declaredIn.has(name)) continue;
+      declaredIn.set(name, api.relativePath);
+      derivedIn.set(name, derivedProperties(schema));
     }
   }
 
@@ -90,7 +123,14 @@ export function validateMockData(docs, apiSpecs) {
       const validateFn = validatorFor(ajv, relativePath, `/components/schemas/${schemaName}`);
       if (!validateFn) continue;
 
-      for (const { instancePath, message } of errorsFrom(validateFn, value)) {
+      const derived = derivedIn.get(schemaName) ?? new Set();
+
+      for (const { instancePath, message, missingProperty } of errorsFrom(validateFn, value)) {
+        // The seed is input; a derived field is output. Requiring one of a
+        // record that stores it nowhere fails every seed in the set, which is
+        // how the Node server stopped booting on this contract set at all.
+        if (missingProperty && derived.has(missingProperty)) continue;
+
         errors.push({ api: apiName, key, message: `${instancePath || '/'}: ${message}` });
       }
     }

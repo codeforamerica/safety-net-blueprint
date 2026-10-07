@@ -20,9 +20,16 @@ function makeApiSpec(name, schemas) {
 
 test('Mock Data Validator Tests', async (t) => {
 
+  // The schema the records below are examples of, unless a test supplies its
+  // own.
+  const EVENT = {
+    type: 'object', properties: { id: { type: 'string' } },
+    required: ['id'], additionalProperties: false,
+  };
+
   // A contract set of one API, written to a temp dir, so the validator sees
   // the same shape it sees in production: specs plus mock data on disk.
-  async function contractSet(mockData) {
+  async function contractSet(mockData, event = EVENT) {
     const { mkdtempSync, writeFileSync } = require('fs');
     const { tmpdir } = require('os');
     const yaml = (await import('js-yaml')).default;
@@ -44,9 +51,7 @@ test('Mock Data Validator Tests', async (t) => {
           },
         },
       },
-      components: { schemas: { Event: {
-        type: 'object', properties: { id: { type: 'string' } },
-        required: ['id'], additionalProperties: false } } },
+      components: { schemas: { Event: event } },
     }));
     writeFileSync(join(dir, 'platform-mock-data.yaml'), yaml.dump(mockData));
     const docs = discover(dir).map(load);
@@ -84,6 +89,37 @@ test('Mock Data Validator Tests', async (t) => {
   await t.test('validateMockData - accepts a conforming record', async () => {
     const { docs, apiSpecs } = await contractSet({ EventExample1: { id: 'e1' } });
     assert.deepStrictEqual(validateMockData(docs, apiSpecs), []);
+  });
+
+  // A read schema requiring a field that is computed at read time. The seed is
+  // input and stores no such field, so requiring it of the seed failed every
+  // record in the set — which is how the Node server stopped booting on the
+  // harness contracts at all, while the browser seeded them without complaint.
+  const DERIVED_EVENT = {
+    unevaluatedProperties: false,
+    required: ['id', 'tags', 'tagCount'],
+    allOf: [
+      { type: 'object', properties: { id: { type: 'string' }, tags: { type: 'array', items: { type: 'string' } } } },
+      { type: 'object', properties: { tagCount: { type: 'integer', readOnly: true, 'x-derived': '$this.tags.size()' } } },
+    ],
+  };
+
+  await t.test('validateMockData - a required derived field is not required of the seed', async () => {
+    const { docs, apiSpecs } = await contractSet(
+      { EventExample1: { id: 'e1', tags: ['a', 'b'] } },
+      DERIVED_EVENT,
+    );
+    assert.deepStrictEqual(validateMockData(docs, apiSpecs), []);
+  });
+
+  await t.test('validateMockData - a required field that is not derived is still required', async () => {
+    // The exemption is for derived fields only. Dropping every readOnly field
+    // from `required` would have let a missing `tags` through too.
+    const { docs, apiSpecs } = await contractSet({ EventExample1: { id: 'e1' } }, DERIVED_EVENT);
+    const errors = validateMockData(docs, apiSpecs);
+
+    assert.strictEqual(errors.length, 1, 'the missing tags must still be reported');
+    assert.match(errors[0].message, /required property 'tags'/);
   });
 
   await t.test('validateMockData - returns no errors when no mock data files exist', () => {

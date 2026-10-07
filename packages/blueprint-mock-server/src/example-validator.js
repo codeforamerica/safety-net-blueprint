@@ -54,15 +54,20 @@ export function validateAgainstSchema(value, schema) {
  * So the caller resolves the validator by pointer, through `schema-registry`,
  * and hands it here.
  *
+ * `missingProperty` is carried through because the message alone does not say
+ * which property is missing in a form a caller can match on, and a caller that
+ * knows some properties are never stored needs to tell those apart.
+ *
  * @param {import('ajv').ValidateFunction} validateFn
  * @param {object} value - The example record
- * @returns {Array<{instancePath: string, message: string}>}
+ * @returns {Array<{instancePath: string, message: string, missingProperty?: string}>}
  */
 export function errorsFrom(validateFn, value) {
   if (validateFn(value)) return [];
   return (validateFn.errors || []).map((err) => ({
     instancePath: err.instancePath || '',
     message: err.message,
+    missingProperty: err.params?.missingProperty,
   }));
 }
 
