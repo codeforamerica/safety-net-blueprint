@@ -56,7 +56,6 @@ export function addRoute(routes, method, expressPath, handler, meta = {}) {
   routes.set(key, {
     operationId: meta.operationId ?? null,
     description: meta.description ?? null,
-    expressPath,
     handler,
   });
   return true;
