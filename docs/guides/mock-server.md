@@ -83,7 +83,7 @@ AppointmentExample1:
   status: scheduled
 ```
 
-You can also use `$now` tokens in event stub `respond.data` fields — there, the time is calculated when the stub fires, not when the server started.
+You can also use `$now` tokens in event stub `response.data` fields — there, the time is calculated when the stub fires, not when the server started.
 
 ## Caller context
 
@@ -149,7 +149,7 @@ curl -X POST http://localhost:1080/mock/stubs/events \
   -d '{
     "on": "data_exchange.service_call.created",
     "match": { "data.serviceType": "fdsh_ssa" },
-    "respond": {
+    "response": {
       "type": "data_exchange.call.completed",
       "data": { "result": "inconclusive" }
     }
@@ -158,16 +158,16 @@ curl -X POST http://localhost:1080/mock/stubs/events \
 
 - `on` — the CloudEvents type suffix to match (no platform prefix, underscores)
 - `match` — optional dot-path field matchers against the event envelope; all must match
-- `respond.type` — the event type to fire when matched
-- `respond.data` — merged with the trigger event's data; only specify what changes
+- `response.type` — the event type to fire when matched
+- `response.data` — merged with the trigger event's data; only specify what changes
 
-The response envelope is built by merging: an entity ID derived from the trigger's `subject` (e.g., `serviceCallId`), the trigger event's data, then `respond.data` overrides. The fired event's `causationid` is set to the trigger event's `id`, so a scenario can fetch the response for a specific trigger with `GET /platform/events?causationid=<trigger event id>`.
+The response envelope is built by merging: an entity ID derived from the trigger's `subject` (e.g., `serviceCallId`), the trigger event's data, then `response.data` overrides. The fired event's `causationid` is set to the trigger event's `id`, so a scenario can fetch the response for a specific trigger with `GET /platform/events?causationid=<trigger event id>`.
 
 **Stub IDs** are human-readable: `service_call.created-1`, `service_call.created-2`, etc.
 
 ### Timer stubs
 
-Timer stubs are a variant for `scheduling.timer.requested` events. The callback event type and data are embedded in the triggering event itself, so no `respond` block is needed — the stub engine reads them directly.
+Timer stubs are a variant for `scheduling.timer.requested` events. The callback event type and data are embedded in the triggering event itself, so no `response` block is needed — the stub engine reads them directly.
 
 ```bash
 # Register a stub for creation_deadline timers
@@ -240,12 +240,15 @@ curl -X POST http://localhost:1080/mock/stubs/http \
 
 **DELETE stubs** default to `status: 204` with no body.
 
+`response` is required. A stub without one would match, be consumed, and answer `200 {}` — which looks exactly like the mock working normally, so it is rejected at registration instead.
+
 **Verifying consumption:** after the flow that triggers the adapter call, `GET /mock/stubs/http` should return an empty list.
 
 ```bash
 # 1. Register stub before triggering the flow
 curl -X POST http://localhost:1080/mock/stubs/http \
-  -d '{"match": {"method": "POST", "domain": "eligibility-adapter", "url": "/evaluate/expedited-screening"}}'
+  -d '{"match": {"method": "POST", "domain": "eligibility-adapter", "url": "/evaluate/expedited-screening"},
+       "response": {"body": {"expedited": true}}}'
 
 # 2. Trigger the flow (SNAP application creates a Decision → fires eligibility.decision.created
 #    → evaluateSnapExpedited procedure → POST /eligibility-adapter/evaluate/expedited-screening)

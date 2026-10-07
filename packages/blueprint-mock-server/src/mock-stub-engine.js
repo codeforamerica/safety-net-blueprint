@@ -6,10 +6,10 @@
  * (FIFO) and pops the first one whose `on` and `match` criteria fit the event.
  *
  * Two stub formats are supported:
- * - General: `{ on, match?, respond: { type, subject?, source?, data? } }` — fires
+ * - General: `{ on, match?, response: { type, subject?, source?, data? } }` — fires
  *   the specified response event when the stub matches.
  * - Timer: `{ on: "scheduling.timer.requested", match? }` — fires the callback
- *   event embedded in the triggering event's `data.callback` envelope. `respond`
+ *   event embedded in the triggering event's `data.callback` envelope. `response`
  *   is not needed; the callback type and data come from the event itself.
  *
  * Stubs are ephemeral — cleared on server restart or via DELETE /mock/stubs/events.
@@ -90,17 +90,23 @@ function matchCriteria(stub, envelope) {
  * @param {Object} stub
  * @param {string} stub.on       - CloudEvents type suffix to match (e.g., "data_exchange.service_call.created")
  * @param {Object} [stub.match]  - Dot-path field matchers against the event envelope
- * @param {Object} [stub.respond] - Event to fire when matched: { type, subject?, source?, data? }.
+ * @param {Object} [stub.response] - Event to fire when matched: { type, subject?, source?, data? }.
  *   Omit for scheduling.timer.requested stubs — the callback is read from the event.
  * @returns {Object} The registered stub with id assigned
  */
 export function registerStub(stub) {
-  const { on, respond } = stub;
+  const { on, response } = stub;
   if (!on) {
     throw new Error('Stub requires "on" (event type suffix to match)');
   }
-  if (respond !== undefined && !respond?.type) {
-    throw new Error('Stub "respond" block requires a "type" field (response event type)');
+  // Named, rather than ignored. An unrecognised key used to be spread in and
+  // silently do nothing, which is how a stub could register, list, and then
+  // never fire.
+  if ('respond' in stub) {
+    throw new Error('Stub "respond" was renamed to "response" — both stub kinds now use the same key');
+  }
+  if (response !== undefined && !response?.type) {
+    throw new Error('Stub "response" block requires a "type" field (response event type)');
   }
   const registered = { ...stub, id: nextId(on) };
   stubs.push(registered);
@@ -148,6 +154,18 @@ function resolveStubUrl(stub) {
 export function registerHttpStub(stub) {
   if (!stub.match?.url) {
     throw new Error('HTTP stub requires "match.url"');
+  }
+  if ('respond' in stub) {
+    throw new Error('HTTP stub "respond" was renamed to "response" — both stub kinds now use the same key');
+  }
+  // Required, because the handlers fall back to `200 {}` when it is absent.
+  // A stub that registers, returns an id, lists, and then answers an empty
+  // 200 is indistinguishable from the mock simply working.
+  if (!stub.response || typeof stub.response !== 'object') {
+    throw new Error('HTTP stub requires a "response" object: { status?, body? }');
+  }
+  if (stub.response.status !== undefined && !Number.isInteger(stub.response.status)) {
+    throw new Error('HTTP stub "response.status" must be an integer');
   }
   const registered = { ...stub, type: 'http', id: nextHttpId(stub.match.url) };
   httpStubs.push(registered);
@@ -243,7 +261,7 @@ export function clearAllStubs() {
  * For scheduling.timer.requested: fires the callback event embedded in
  * the trigger event's data.callback envelope.
  *
- * For all other events: fires the stub's respond event, merging trigger
+ * For all other events: fires the stub's response event, merging trigger
  * data with stub-specified overrides.
  */
 function dispatchStubResponse(stub, envelope, store) {
@@ -272,9 +290,9 @@ function dispatchStubResponse(stub, envelope, store) {
     return;
   }
 
-  if (!stub.respond?.type) return;
+  if (!stub.response?.type) return;
 
-  const { type, subject, source, data: rawStubData } = stub.respond;
+  const { type, subject, source, data: rawStubData } = stub.response;
   const stubData = rawStubData ? resolveTimeTokens(rawStubData) : rawStubData;
   const fullType = type;
 
