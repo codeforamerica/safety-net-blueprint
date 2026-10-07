@@ -23,6 +23,7 @@ import {
 import { registerConfigManaged } from './config-registry.js';
 import { seedAllDatabases } from './seeder.js';
 import { addRoute } from './http/route-table.js';
+import { conformanceFindings, clearConformance } from './real-endpoints.js';
 import { jsonBody, readJsonBody, invalidJson } from './http/request.js';
 
 /**
@@ -69,6 +70,20 @@ export function registerPlatformRoutes(routes, { store, apiNames = [], readDocs,
   console.log('  GET    /mock/stubs/events - List active event stubs');
   console.log('  DELETE /mock/stubs/events/:id - Remove an event stub');
   console.log('  DELETE /mock/stubs/events - Clear all event stubs');
+
+  // What forwarded routes answered that their own contracts disallow (#283).
+  // A test asserts this is empty; a person reads it to find out where their
+  // service and the blueprint disagree.
+  addRoute(routes, 'GET', '/mock/conformance', () => {
+    const items = conformanceFindings();
+    return Response.json({ items, total: items.length });
+  });
+  addRoute(routes, 'DELETE', '/mock/conformance', () => {
+    clearConformance();
+    return new Response(null, { status: 204 });
+  });
+  console.log('  GET    /mock/conformance - What a real service answered that its contract disallows');
+  console.log('  DELETE /mock/conformance - Clear those findings');
 
   // HTTP stub registry — intercept any inbound request and return a pre-programmed response.
   addRoute(routes, 'POST', '/mock/stubs/http', async (request) => {

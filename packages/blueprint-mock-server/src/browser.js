@@ -24,7 +24,8 @@ import {
   registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes,
   registerRulesRoutes, buildRulesIndex,
 } from './route-generator.js';
-import { createDispatcher, overrideByOperationId } from './http/route-table.js';
+import { createDispatcher, overrideByOperationId, routeKey, templateOf } from './http/route-table.js';
+import { applyRealEndpoints, responseSchemasByRoute } from './real-endpoints.js';
 import { seedAllDatabases } from './seeder.js';
 import { registerEventSubscriptions } from './event-subscription.js';
 import { subscribeStubDispatch } from './mock-stub-engine.js';
@@ -55,6 +56,7 @@ export async function createMockServer({
   baseUrl = '',
   basePath = '',
   seed = true,
+  realEndpoints = [],
 } = {}) {
   // Core owns the artifact format, both halves: `generate(docs, 'artifact')`
   // wrote this and `extract(artifact, 'docs')` reads it back, rebuilding each
@@ -122,5 +124,13 @@ export async function createMockServer({
   registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaTypes, { store });
   overrideByOperationId(routes, contractOverrides({ store }));
 
-  return { fetch: createDispatcher(routes, { basePath }), routes, store, endpoints };
+  // Last, so a route is real whatever registered it, and before the
+  // dispatcher is built, so the first request is already answered the way
+  // the configuration says (#283).
+  const real = applyRealEndpoints(routes, realEndpoints, {
+    responseSchemas: responseSchemasByRoute(apiSpecs, routeKey, templateOf),
+  });
+  for (const key of real) console.log(`  REAL   ${key}`);
+
+  return { fetch: createDispatcher(routes, { basePath }), routes, store, endpoints, real };
 }

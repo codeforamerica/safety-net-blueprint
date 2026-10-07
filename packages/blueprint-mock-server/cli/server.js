@@ -7,6 +7,7 @@
 import http from 'http';
 import { execSync, spawn } from 'child_process';
 import { realpathSync, openSync, statSync, readFileSync } from 'fs';
+import { load as loadYaml } from 'js-yaml';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
@@ -14,7 +15,8 @@ import { subscribeStubDispatch } from '../src/mock-stub-engine.js';
 import { createMemoryStore } from '../src/stores/memory-store.js';
 import { createSqliteStore } from '../src/stores/sqlite-store.js';
 import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes, registerRulesRoutes, buildRulesIndex } from '../src/route-generator.js';
-import { createDispatcher, wrapRoute, overrideByOperationId } from '../src/http/route-table.js';
+import { createDispatcher, wrapRoute, overrideByOperationId, routeKey, templateOf } from '../src/http/route-table.js';
+import { applyRealEndpoints, responseSchemasByRoute } from '../src/real-endpoints.js';
 import { registerPlatformRoutes, contractOverrides } from '../src/platform-routes.js';
 import { jsonBody, readJsonBody, invalidJson } from '../src/http/request.js';
 import { discover, load, extract } from '@codeforamerica/blueprint-core';
@@ -82,7 +84,8 @@ function parseSpecDirs() {
     a !== '--help' && a !== '-h' &&
     a !== '--detach' && a !== '--stop' &&
     !a.startsWith('--spec=') && !a.startsWith('--seed=') &&
-    !a.startsWith('--log=') && !a.startsWith('--store=')
+    !a.startsWith('--log=') && !a.startsWith('--store=') &&
+    !a.startsWith('--real-endpoints=')
   );
   if (unknown.length > 0) {
     console.error(`Error: Unknown argument(s): ${unknown.join(', ')}`);
@@ -104,6 +107,23 @@ function parseSpecDirs() {
   const seedDir = seedArg ? resolve(seedArg.split('=')[1]) : null;
 
 
+  // Routing is per-environment, so it is read from outside the contract set
+  // rather than declared in it (#283). The file is loaded here; the server
+  // itself takes data, because it also runs in a browser.
+  const realArg = args.find(a => a.startsWith('--real-endpoints='));
+  let realEndpoints = [];
+  if (realArg) {
+    const realPath = resolve(realArg.split('=')[1]);
+    try {
+      const text = readFileSync(realPath, 'utf8');
+      const parsed = realPath.endsWith('.json') ? JSON.parse(text) : loadYaml(text);
+      realEndpoints = Array.isArray(parsed) ? parsed : (parsed?.realEndpoints ?? []);
+    } catch (err) {
+      console.error(`Error: could not read --real-endpoints=${realPath}: ${err.message}`);
+      process.exit(1);
+    }
+  }
+
   const storeArg = args.find(a => a.startsWith('--store='));
   const storeKind = process.env.MOCK_STORE || (storeArg ? storeArg.split('=')[1] : 'sqlite');
   if (storeKind !== 'sqlite' && storeKind !== 'memory') {
@@ -111,7 +131,7 @@ function parseSpecDirs() {
     process.exit(1);
   }
 
-  return { specDirs, seedDir, storeKind };
+  return { specDirs, seedDir, storeKind, realEndpoints };
 }
 
 let httpServer = null;
@@ -156,11 +176,12 @@ function docsFromArtifactFile(path) {
 /**
  * Start the mock server
  * @param {string[]|null} specDirs - Spec directories to load. Defaults to parseSpecDirs() (from process.argv).
+ * @param {Array|null} realEndpoints - Routes to forward to a real service (#283). Parsed from --real-endpoints.
  * @param {string|null} seedDir - Directory containing seed data files. Defaults to each specDir.
  * @param {'sqlite'|'memory'|null} storeKind - Where resources are held. Defaults to
  *   --store / MOCK_STORE, and to sqlite when neither is given.
  */
-async function startMockServer(specDirs = null, seedDir = null, storeKind = null) {
+async function startMockServer(specDirs = null, seedDir = null, storeKind = null, realEndpoints = null) {
   console.log('='.repeat(70));
   console.log('🚀 Starting Mock API Server');
   console.log('='.repeat(70));
@@ -172,6 +193,7 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
       specDirs = parsed.specDirs;
       seedDir = seedDir ?? parsed.seedDir;
       storeKind = storeKind ?? parsed.storeKind;
+      realEndpoints = realEndpoints ?? parsed.realEndpoints;
     }
 
     // Resolved here as well as in parseSpecDirs, because a caller that passes
@@ -302,6 +324,19 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
         },
       });
     });
+
+    // Last, so a route is real whatever registered it, and before the
+    // dispatcher exists, so the first request is already answered the way the
+    // configuration says (#283).
+    try {
+      const responseSchemas = responseSchemasByRoute(apiSpecs, routeKey, templateOf);
+      for (const key of applyRealEndpoints(routes, realEndpoints ?? [], { responseSchemas })) {
+        console.log(`  REAL   ${key} - forwarded to a real service`);
+      }
+    } catch (err) {
+      console.error(`Error: ${err.message}`);
+      process.exit(1);
+    }
 
     // The route table is the server. 404 and unhandled-throw live in the
     // dispatcher, so there are no trailing middleware layers to fall through to.
