@@ -1,6 +1,6 @@
 {
   "name": "@codeforamerica/blueprint-safety-net-contracts",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "OpenAPI specs, state machines, event schemas, and overlays for safety net benefits programs — reference implementation of the Blueprint framework",
   "type": "module",
   "files": [
@@ -14,10 +14,10 @@
     "test:integration": "node tests/run-tests.js --integration --contracts=../generated/contracts --seed=../generated/contracts --clients=../generated/clients --stop"
   },
   "dependencies": {
-    "@codeforamerica/blueprint-mock-server": "^0.2.0"
+    "@codeforamerica/blueprint-mock-server": "^0.3.0"
   },
   "devDependencies": {
-    "@codeforamerica/blueprint-cli": "^0.3.0"
+    "@codeforamerica/blueprint-cli": "^0.4.0"
   },
   "engines": {
     "node": ">=22.11.0"
