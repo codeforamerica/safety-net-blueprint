@@ -153,8 +153,29 @@ const response = await mock.fetch(new Request('/intake/applications'));
 ```
 
 `mock.fetch` has `fetch`'s own signature, so it can be called directly, handed
-to a test runner, or assigned over `window.fetch` so application code reaches
-it unchanged.
+to a test runner, or assigned over `window.fetch`.
+
+Assigning over `window.fetch` only reaches code that calls `fetch`, which the
+generated clients do not. `generate-ts-clients` emits `@hey-api/client-axios`,
+and axios uses `XMLHttpRequest` in a browser, so that swap leaves every
+generated call going to the network. Hand the mock to axios instead:
+
+```js
+import { createClient } from './clients/intake/client';
+import { listApplications } from './clients/intake';
+
+const client = createClient({
+  baseURL: '/intake',
+  adapter: 'fetch',
+  env: { fetch: mock.fetch },
+});
+
+await listApplications({ client });
+```
+
+Both settings have to be there when the client is built: `createClient` hands
+its config to `axios.create`, and setting them on an instance afterwards leaves
+the default adapter in place.
 
 | Option | Default | |
 |---|---|---|
