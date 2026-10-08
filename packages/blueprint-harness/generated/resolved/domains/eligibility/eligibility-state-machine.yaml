@@ -27,13 +27,14 @@ machines:
               - allProgramsResolved
         steps:
           - emit:
-              type: ca.eligibility.determination.complete
+              type: eligibility.determination.complete
               description: Signals that all program eligibility results are ready for caseworker review.
     events:
-      - type: ca.intake.application.submitted
+      - type: intake.application.submitted
         description: Initiate an eligibility determination for each program applied for.
         steps:
           - call:
-              path: eligibility/determinations
-              method: POST
+              POST: eligibility/determinations
+              body:
+                applicationId: $object.id
               description: Create a pending determination for the submitted application.

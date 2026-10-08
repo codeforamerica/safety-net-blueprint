@@ -2,4 +2,4 @@
 "@codeforamerica/blueprint-mock-server": minor
 ---
 
-Run the server with `--store=memory` to hold resources in memory instead of SQLite — nothing written to disk and no native module loaded. SQLite stays the default. `createMemoryStore` is also available on its own from the new `./store` export, without Express or a native module. (#448)
+Before, running the mock server meant SQLite on disk and a native module. Now `--store=memory` keeps resources in memory with neither, and `createMemoryStore` is available on its own from the new `./store` export; SQLite stays the default. (#448)

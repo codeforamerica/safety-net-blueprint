@@ -14,9 +14,6 @@ schema:
   application.confirmationNumber:
     patterns: [deprecated-field, read-only-field]
 
-  application.referenceId:
-    patterns: [read-only-field]
-
   application.status:
     patterns: [x-enum-source, read-only-field]
 
@@ -71,7 +68,9 @@ schema:
     policies: [snap-income-verification]
     patterns: [external-ref-defs-oneof]
 
-  applicationMember.applicationId:
+  # Named `application`, not `applicationId`: the relationship expands, and
+  # resolve renames the field when it does.
+  applicationMember.application:
     patterns: [intra-domain-fk]
 
   applicationMember.notificationPreference:

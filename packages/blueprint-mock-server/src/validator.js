@@ -4,6 +4,7 @@
 
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
+import { createAjv, registerDocuments, validatorForRef } from './schema-registry.js';
 
 // Create AJV instance with OpenAPI 3.1 support
 const ajv = new Ajv({
@@ -19,6 +20,40 @@ addFormats(ajv);
 
 // Store compiled validators
 const validators = new Map();
+
+/**
+ * An ajv that knows the contract set, for schemas that still carry `$ref`s.
+ *
+ * A module-level instance because `validate` is reached from handlers that are
+ * built once at boot and called per request, and threading it through every
+ * one of them would be a lot of plumbing for a value that never changes. Same
+ * shape as the compiled-validator cache above, and as the event bus.
+ *
+ * Null until a boot path registers the documents, which is what lets the
+ * fallback below keep working: a schema with no refs validates the same way it
+ * always did, so tests that pass a plain schema need no registry (#448).
+ *
+ * @type {import('ajv').default|null}
+ */
+let registryAjv = null;
+
+/**
+ * Hand the validator the document set, so it can resolve refs.
+ *
+ * Called once per boot, by whichever path assembled the documents — `setup.js`
+ * from a directory, `browser.js` from an artifact.
+ *
+ * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
+ * @returns {{ registered: number, skipped: string[] }}
+ */
+export function initSchemaRegistry(docs) {
+  // createAjv already adds the format validators; adding them twice throws
+  // on the second `formatMaximum` registration.
+  registryAjv = createAjv({ validateFormats: true, coerceTypes: false });
+  const result = registerDocuments(registryAjv, docs);
+  validators.clear();
+  return result;
+}
 
 /**
  * Get or compile a validator for a schema
@@ -55,8 +90,14 @@ function prepareSchemaForValidation(schema) {
 
   // Strip $id and $schema so AJV doesn't try to register shared sub-schemas
   // (e.g., schemas/common/income.yaml) multiple times when the same file is
-  // referenced by more than one OpenAPI spec. The validator only needs to check
-  // structure, not resolve cross-schema $refs by ID.
+  // referenced by more than one OpenAPI spec.
+  //
+  // This path only handles schemas with no cross-file refs to resolve. It used
+  // to say the validator "only needs to check structure, not resolve
+  // cross-schema $refs by ID", which held only because $RefParser had already
+  // inlined them. It does not any more — resolving by ID is exactly what
+  // schema-registry.js does, and a schema that needs it comes through
+  // `resolveValidator` instead (#448).
   delete prepared.$id;
   delete prepared.$schema;
 
@@ -116,19 +157,83 @@ function prepareSchemaForValidation(schema) {
   return prepared;
 }
 
+/** Schemas already reported as uncompilable, so each is said once. */
+const uncompilable = new Set();
+
 /**
- * Validate request data against a schema
+ * The validator for a schema, by whichever route can produce one.
+ *
+ * Prefers the registry, which resolves `$ref`s against the document the schema
+ * was declared in. Falls back to compiling the object, which is right for a
+ * schema carrying no refs — and can fail outright for one that does, since a
+ * detached object gives ajv no base to resolve against. A compile error here
+ * would otherwise surface as an unhandled MissingRefError inside a request
+ * handler, which is a bad place to learn that a contract ref is wrong.
+ *
+ * Note the two resolvers do not agree in one case: core's `followRef` retries
+ * a ref with its leading `../` segments stripped, so a ref written one level
+ * too shallow still resolves for anything reading documents. ajv does
+ * ordinary URI arithmetic and will not find it. That set is malformed either
+ * way, but it reaches this function rather than failing earlier.
+ *
+ * @param {object} schema
+ * @param {string} schemaKey
+ * @param {{ relativePath?: string, ref?: string|null }|null} source
+ * @returns {import('ajv').ValidateFunction|null}
+ */
+function resolveValidator(schema, schemaKey, source) {
+  if (registryAjv && source?.relativePath && source?.ref) {
+    const fromRegistry = validatorForRef(registryAjv, source.relativePath, source.ref);
+    if (fromRegistry) return fromRegistry;
+  }
+
+  try {
+    return getValidator(schemaKey, schema);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Validate request data against a schema.
+ *
+ * `source` says where the schema came from, which matters when it still
+ * carries `$ref`s: ajv resolves a ref relative to the document holding it, and
+ * a detached schema object says nothing about which document that was — the
+ * failure reads "from id #", no base at all. Given a source, the schema is
+ * addressed by ref through the registry instead, so ajv resolves it itself.
+ *
+ * Omit `source` and it compiles the object as before, which is right for a
+ * schema with no refs to resolve.
+ *
  * @param {Object} data - Data to validate
  * @param {Object} schema - JSON Schema
  * @param {string} schemaKey - Unique key for caching the validator
+ * @param {{ relativePath?: string, ref?: string|null }} [source] - The document
+ *   the schema was declared in, and the ref naming it
  * @returns {Object} {valid: boolean, errors: Array}
  */
-export function validate(data, schema, schemaKey) {
+export function validate(data, schema, schemaKey, source = null) {
   if (!schema) {
     return { valid: true, errors: [] };
   }
-  
-  const validator = getValidator(schemaKey, schema);
+
+  const validator = resolveValidator(schema, schemaKey, source);
+  if (!validator) {
+    // Nothing to validate against, and a request is not the place to discover
+    // that. Reported once per schema so it is visible without one line per
+    // request; the contract set is what needs fixing.
+    if (!uncompilable.has(schemaKey)) {
+      uncompilable.add(schemaKey);
+      console.warn(
+        `Warning: no validator could be compiled for "${schemaKey}", so requests to it ` +
+        'are not checked. A $ref in its schema names nothing in the contract set — ' +
+        'check the relative path, including how many `../` segments it leads with.'
+      );
+    }
+    return { valid: true, errors: [] };
+  }
+
   const valid = validator(data);
   
   if (valid) {

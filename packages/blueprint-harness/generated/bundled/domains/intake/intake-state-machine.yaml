@@ -1,4 +1,5 @@
 $schema: state-machine-schema.yaml
+extends: ../platform/platform-state-machine.yaml
 version: "1.0"
 domain: intake
 apiSpec: intake-openapi.yaml
@@ -38,8 +39,21 @@ machines:
               value: $now
               description: Record the submission timestamp (regulatory clock start).
           - emit:
-              type: ca.intake.application.submitted
+              type: intake.application.submitted
+              subject: $object.id
+              data:
+                id: $object.id
+                programsAppliedFor: $object.programsAppliedFor
               description: Triggers eligibility screening, caseworker task creation, and confirmation notice.
+          - call: requestTimer
+            with:
+              timerId: review_reminder
+              fireAfter:
+                amount: 72
+                unit: hours
+              callback:
+                event: intake.review_reminder
+            description: Escalate if no caseworker has opened this application in 72 hours.
       - id: open
         description: Moves a submitted application into active caseworker review.
         transition:
@@ -72,7 +86,7 @@ machines:
           to: closed
         steps:
           - emit:
-              type: ca.intake.application.closed
+              type: intake.application.closed
       - id: withdraw
         description: Withdraws the application at the household's request.
         transition:
@@ -83,16 +97,16 @@ machines:
           to: withdrawn
         steps:
           - emit:
-              type: ca.intake.application.withdrawn
+              type: intake.application.withdrawn
     events:
-      - type: ca.intake.review_reminder
+      - type: intake.review_reminder
         description: |
           Escalates an application that has been awaiting caseworker review for too long. Fired by the scheduling service when the review_reminder timer expires.
         transition:
           from: submitted
         steps:
           - emit:
-              type: ca.intake.application.review-reminder
+              type: intake.application.review-reminder
               description: Notify supervisors that this application needs immediate attention.
 $defs:
   CloseRequest:

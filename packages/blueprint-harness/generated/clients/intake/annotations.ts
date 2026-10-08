@@ -18,11 +18,6 @@ export const Annotations = {
         "read-only-field"
       ]
     },
-    "application.referenceId": {
-      "patterns": [
-        "read-only-field"
-      ]
-    },
     "application.status": {
       "patterns": [
         "x-enum-source",
@@ -126,7 +121,7 @@ export const Annotations = {
         "external-ref-defs-oneof"
       ]
     },
-    "applicationMember.applicationId": {
+    "applicationMember.application": {
       "patterns": [
         "intra-domain-fk"
       ]
@@ -168,7 +163,7 @@ export const Annotations = {
     }
   },
   "events": {
-    "ca.intake.application.submitted": {
+    "intake.application.submitted": {
       "policies": [
         "snap-processing-clock",
         "medicaid-processing-clock",
@@ -178,19 +173,19 @@ export const Annotations = {
         "state-machine-event"
       ]
     },
-    "ca.intake.application.withdrawn": {
+    "intake.application.withdrawn": {
       "policies": [
         "snap-notice-of-action"
       ]
     },
-    "ca.intake.application.closed": {
+    "intake.application.closed": {
       "policies": [
         "snap-notice-of-eligibility",
         "medicaid-notice-of-eligibility",
         "snap-fair-hearing-rights"
       ]
     },
-    "ca.intake.application.review-reminder": {
+    "intake.application.review-reminder": {
       "patterns": [
         "state-machine-timer"
       ]

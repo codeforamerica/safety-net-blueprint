@@ -81,6 +81,11 @@
             }
           }
         },
+        "proofOfIncomeDocumentId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The uploaded document evidencing household income, if one is attached."
+        },
         "labels": {
           "type": "object",
           "additionalProperties": {
@@ -92,6 +97,18 @@
           "type": "string",
           "maxLength": 10,
           "description": "County code for routing this application to the correct local office."
+        },
+        "links": {
+          "type": "object",
+          "readOnly": true,
+          "description": "Related resource links.",
+          "properties": {
+            "proofOfIncomeDocument": {
+              "type": "string",
+              "format": "uri-reference",
+              "description": "Link to the related Document resource."
+            }
+          }
         }
       }
     },

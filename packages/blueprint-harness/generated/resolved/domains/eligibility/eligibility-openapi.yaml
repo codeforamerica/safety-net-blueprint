@@ -5,6 +5,9 @@ info:
   x-domain: eligibility
   x-status: stable
   x-visibility: internal
+servers:
+  - url: http://localhost:1080/eligibility
+    description: Local development server
 x-events:
   eligibility.determination.complete:
     type: org.codeforamerica.safety-net-blueprint.eligibility.determination.complete
@@ -14,6 +17,13 @@ paths:
     get:
       summary: List determinations
       operationId: listDeterminations
+      x-sortable:
+        fields:
+          - createdAt
+          - updatedAt
+          - determinedAt
+          - status
+        default: "-createdAt"
       tags:
         - Determinations
       parameters:

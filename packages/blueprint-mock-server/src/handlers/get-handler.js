@@ -52,8 +52,18 @@ export function createGetHandler(apiMetadata, endpoint, { store } = {}) {
       }, { status: 404 });
     }
 
-    // Inject _links for composition parentLink registrations.
-    // Path params are substituted into each link's href at request time.
+    const expandFields = extractExpandFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
+    const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
+    const derivedFields = extractDerivedFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
+    let responseBody = expandFields.length > 0 ? applyExpand(resource, expandFields, (c, id) => store.findById(c, id)) : resource;
+    if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+    if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
+
+    // Composition parentLink registrations, merged rather than returned on
+    // their own. Returning here used to skip everything above it, so
+    // declaring `parentLink: true` on a composition silently turned off
+    // expand, links-only and derived fields for that resource's GET — three
+    // features disabled by an unrelated one, with nothing reported.
     const compositionLinks = parentLinkRegistry.get(endpoint.path);
     if (compositionLinks) {
       const _links = {};
@@ -62,15 +72,9 @@ export function createGetHandler(apiMetadata, endpoint, { store } = {}) {
           href: link.href.replace(/\{([^}]+)\}/g, (_, p) => params[p] ?? `{${p}}`),
         };
       }
-      return Response.json({ ...resource, _links });
+      responseBody = { ...responseBody, _links };
     }
 
-    const expandFields = extractExpandFields(endpoint.responseSchema);
-    const linksFields = extractLinksFields(endpoint.responseSchema);
-    const derivedFields = extractDerivedFields(endpoint.responseSchema);
-    let responseBody = expandFields.length > 0 ? applyExpand(resource, expandFields, (c, id) => store.findById(c, id)) : resource;
-    if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
-    if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
     return Response.json(responseBody);
   };
 }

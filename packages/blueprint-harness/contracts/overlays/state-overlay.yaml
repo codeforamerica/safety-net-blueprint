@@ -13,7 +13,20 @@ config:
     style: filtered
   x-relationship:
     style: expand
-  x-event-type-prefix: ca.
+  # A deployment namespaces its events so two deployments' events cannot be
+  # confused. Left as a state code for now, and the choice is open: naming a
+  # real state in a fixture implies a deployment that does not exist, but
+  # `example.` does not work — blueprint-explorer's validate-config strips a
+  # jurisdiction prefix with /^[a-z]{2,3}\./, so anything longer than three
+  # letters stops the sequence-diagram config matching its events. `xx.` (the
+  # ISO 3166 user-assigned "not a real place" code) would fit that rule.
+
+  # A deployment sharing a message bus prefixes its events so two deployments'
+  # cannot be confused. That is a fact about the deployment, not about the
+  # contract, so the value comes from the environment — see
+  # ../../environments/. Locally it resolves to nothing, which is what the
+  # demo and the tests want; a real deployment supplies its own.
+  x-event-type-prefix: ${EVENT_PREFIX}
 
 # JSONPath-targeted actions that add or modify fields in specific specs.
 actions:

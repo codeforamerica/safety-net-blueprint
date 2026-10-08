@@ -12,6 +12,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export const harnessDir         = join(__dirname, '../../blueprint-harness');
 export const contractsDir       = join(harnessDir, 'contracts');
+/**
+ * Values for the harness's `${VAR}` placeholders. Resolving those contracts
+ * without it fails, by design — the file both supplies the values and declares
+ * which variables exist.
+ */
+export const localEnvPath       = join(harnessDir, 'environments/local.env');
 export const resolvedDir        = join(harnessDir, 'generated/resolved');
 export const bundledDir         = join(harnessDir, 'generated/bundled');
 export const overlaysDir        = join(harnessDir, 'generated/overlays');

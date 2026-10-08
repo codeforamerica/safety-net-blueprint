@@ -2,7 +2,7 @@
  * Unit tests for document upload and content handlers.
  *
  * Multipart is parsed with `request.formData()` (#448 step 5), so these cases
- * build real `FormData` rather than a mock `req.file`. The behaviour that
+ * build real `FormData` rather than a mock `req.file`. The behavior that
  * matters most is negative: no file bytes are stored anywhere.
  */
 
@@ -70,9 +70,9 @@ test('uploadDocument — stores no file bytes anywhere', async () => {
   // The guarantee the metadata-only design exists for: a snapshot is made to be
   // shared, so uploaded content must never be able to reach one.
   const { body } = await readResponse(upload()(uploadRequest(), { params: {} }));
-  const serialised = JSON.stringify(store.snapshot());
+  const serialized = JSON.stringify(store.snapshot());
 
-  assert.ok(!serialised.includes(CONTENT), 'uploaded content must not appear in the store');
+  assert.ok(!serialized.includes(CONTENT), 'uploaded content must not appear in the store');
   assert.strictEqual(store.findById('document-versions', body.latestVersionId).content, undefined);
 });
 

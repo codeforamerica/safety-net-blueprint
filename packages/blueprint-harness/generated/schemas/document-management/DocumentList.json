@@ -1,0 +1,125 @@
+{
+  "type": "object",
+  "required": [
+    "items",
+    "total"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "type": "object",
+            "required": [
+              "documentTypeId",
+              "title"
+            ],
+            "properties": {
+              "documentTypeId": {
+                "type": "string",
+                "description": "What kind of document this is."
+              },
+              "title": {
+                "type": "string",
+                "description": "A human-readable name for the document."
+              },
+              "documentDate": {
+                "type": "string",
+                "format": "date",
+                "nullable": true,
+                "description": "The date the document itself bears, which is not the date it arrived."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "lifecycleState",
+              "latestVersionId",
+              "createdAt",
+              "updatedAt"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "readOnly": true
+              },
+              "lifecycleState": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "superseded",
+                  "disposed"
+                ],
+                "readOnly": true,
+                "description": "Where this document is in its retention lifecycle."
+              },
+              "legalHold": {
+                "type": "boolean",
+                "readOnly": true,
+                "description": "Whether disposition is suspended pending litigation."
+              },
+              "latestVersionId": {
+                "type": "string",
+                "format": "uuid",
+                "readOnly": true,
+                "description": "The most recent version, which is what describes the file."
+              },
+              "retentionDeadline": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true,
+                "readOnly": true,
+                "description": "When this document becomes eligible for disposition."
+              },
+              "metadata": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Arbitrary key-value metadata supplied at upload."
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              },
+              "links": {
+                "type": "object",
+                "readOnly": true,
+                "description": "Related resource links.",
+                "properties": {
+                  "latestVersion": {
+                    "type": "string",
+                    "format": "uri-reference",
+                    "description": "Link to the related DocumentVersion resource."
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "total": {
+      "type": "integer"
+    },
+    "limit": {
+      "type": "integer"
+    },
+    "offset": {
+      "type": "integer"
+    },
+    "hasNext": {
+      "type": "boolean"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/DocumentList"
+}

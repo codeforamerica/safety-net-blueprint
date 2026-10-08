@@ -75,17 +75,6 @@ export interface RefEntry {
   target: unknown;
 }
 
-/** What produced a resolved document set. */
-export interface Provenance {
-  resolvedAt: string;
-  /** Titles of the overlays applied, in order. */
-  overlays: string[];
-  /** Environment filtered to, or null if unfiltered. */
-  envTarget: string | null;
-  /** Names of the variables substituted. */
-  variables: string[];
-}
-
 /**
  * A loaded contract document.
  *
@@ -119,9 +108,6 @@ export interface Doc {
    * back for the tools that already speak them.
    */
   model(): StateMachineModel | null;
-  /** True when a resolve manifest governs this document's location. */
-  resolved: boolean;
-  provenance: Provenance | null;
 }
 
 /** A step in a state machine, with branch and loop bodies under `children`. */
@@ -163,7 +149,27 @@ export interface Graph {
   dependencies: Record<string, string[]>;
 }
 
-/** One example record, as `generate(docs, 'examples')` groups them. */
+/**
+ * A contract set reduced to data, as `generate(docs, 'artifact')` builds it
+ * and `extract(artifact, 'docs')` reads it back.
+ *
+ * `docs` holds each document stripped of its methods, which JSON cannot carry;
+ * reading it back rebuilds them. The OpenAPI documents keep their `$ref`s:
+ * they name other documents in the same set, so the set is already complete,
+ * and inlining them took the artifact from 0.67 MB to 3.95 MB.
+ *
+ * Each document carries `relativePath` and no `path`: an absolute path is a
+ * fact about the machine that built the file, not about the contract set, and
+ * this file gets committed and served. Nothing else is in here either — no
+ * build timestamp, no derived facts, no hash — so the same contract set always
+ * produces the same bytes.
+ */
+export interface ContractsArtifact {
+  artifactVersion: number;
+  docs: Array<Omit<Doc, 'path' | 'refs' | 'externalRefs' | 'resolveRef' | 'model'>>;
+}
+
+/** One example record, as `extract(docs, 'examples')` groups them. */
 export interface ExampleRecord {
   /** The example's key in the source document, e.g. `ApplicationExample1`. */
   key: string;
@@ -197,12 +203,16 @@ export interface ResolveOptions {
 
 export interface ResolveResult {
   docs: Doc[];
-  /** Write alongside the output; `load` reads it back as provenance. */
-  manifest: Provenance;
   /** Conditions worth attention that did not stop resolution. */
   warnings: string[];
   /** What each pass did, for a caller that reports progress. */
   applied: string[];
+  /**
+   * Names of `${VAR}` placeholders that found no value, in documents or in
+   * overlay config. Left literal in the output, so a caller that writes the
+   * result should treat a non-empty list as a failure.
+   */
+  unresolved: string[];
 }
 
 /** One finding. `rule` identifies the check, for grouping and filtering. */
@@ -265,16 +275,10 @@ export function generate(
   options?: { baseUrl?: string; collectionId?: string | null }
 ): Record<string, unknown>;
 /**
- * Example records grouped by the schema each exemplifies.
- *
- * Keyed by schema name — `Application`, `ApplicationMember` — not by
- * collection. Naming a collection is the mock server's concern; a schema is
- * something the document declares.
+ * The whole contract set as one serializable object, for a browser to boot
+ * from. Carries no derived facts and no integrity hash.
  */
-export function generate(
-  docs: Doc[],
-  type: 'examples'
-): Record<string, ExampleRecord[]>;
+export function generate(docs: Doc[], type: 'artifact'): ContractsArtifact;
 
 /** Apply overlays, inject enums, filter by environment, substitute variables. */
 export function resolve(docs: Doc[], options?: ResolveOptions): ResolveResult;
@@ -349,4 +353,36 @@ export function extract(docs: Doc[], type: 'state-machines'): StateMachineEntry[
 export function extract(docs: Doc[], type: 'sla-types'): SlaTypesEntry[];
 export function extract(docs: Doc[], type: 'metrics'): MetricsEntry[];
 export function extract(docs: Doc[], type: 'config'): ConfigEntry[];
+/**
+ * Registry entries, keyed by the type each registry claims.
+ *
+ * Registries are generic — core knows the format, the contract set declares
+ * which types exist — so this groups by what it finds rather than taking a
+ * type to look for. Entries merge across documents, later winning, which is
+ * how an overlay adds to a registry it did not author.
+ */
+export function extract(
+  docs: Doc[],
+  type: 'registries'
+): Record<string, Record<string, Record<string, unknown>>>;
+/**
+ * Example records grouped by the schema each exemplifies.
+ *
+ * Keyed by schema name — `Application`, `ApplicationMember` — not by
+ * collection. Naming a collection is the mock server's concern; a schema is
+ * something the document declares.
+ *
+ * Was `generate(docs, 'examples')`. It groups records the documents already
+ * declare rather than producing anything they do not contain, which makes it
+ * a readout by `extract`'s own definition.
+ */
+export function extract(docs: Doc[], type: 'examples'): Record<string, ExampleRecord[]>;
+/**
+ * The contract set inside an artifact, with each document's methods rebuilt.
+ *
+ * The one case whose first argument is an artifact rather than a document set.
+ * Takes the parsed object, not a path — the caller has already read the file,
+ * with `readFileSync` or `await (await fetch(…)).json()`.
+ */
+export function extract(artifact: ContractsArtifact, type: 'docs'): Doc[];
 

@@ -15,7 +15,7 @@ npm install @codeforamerica/blueprint-mock-server
 
 ## What It Does
 
-An Express-based mock API server that reads resolved OpenAPI specs and state machine definitions and stands up a fully functional API — no backend required. Frontend teams can develop and test against real API contracts from day one.
+A mock API server that reads resolved OpenAPI specs and state machine definitions and stands up a fully functional API — no backend required. It runs on `node:http`, or as a `fetch` handler with no server at all, including in a browser. Frontend teams can develop and test against real API contracts from day one.
 
 - **Auto-discovers specs** — generates all routes from `*-openapi.yaml` files at startup
 - **Database per domain** — each domain gets its own in-memory database with full CRUD support
@@ -24,7 +24,7 @@ An Express-based mock API server that reads resolved OpenAPI specs and state mac
 - **SLA enforcement** — tracks SLA clocks and fires timer events when deadlines are reached
 - **Event streaming** — SSE endpoints emit domain events on state transitions
 - **Event and HTTP stubbing** — simulate downstream responses for testing event-driven flows
-- **Document upload** — handles file uploads and serves documents back at runtime
+- **Document upload** — accepts multipart uploads and records what it measured about each file; the bytes are never stored
 - **Metrics endpoints** — computes and serves metrics from live database records
 - **Search and filtering** — full-text search, filtering, sorting, and pagination on all list endpoints
 - **Swagger UI** — browse and test all endpoints interactively at `http://localhost:3000`
@@ -44,6 +44,17 @@ See the [Mock Server guide](https://github.com/codeforamerica/safety-net-bluepri
 |---------|------|-------------|
 | `blueprint-mock` | 1080 | Mock API server |
 | `blueprint-swagger` | 3000 | Swagger UI |
+
+`--spec` takes a directory of resolved contracts, or a single `contracts.json`
+built by `blueprint-bundle-contracts`:
+
+```bash
+blueprint-mock --spec=./resolved          # walk a directory
+blueprint-mock --spec=./contracts.json    # read one file
+```
+
+The second reads exactly the documents the artifact was built from rather than
+whatever is on disk now, and it is the same file a browser boots from.
 
 ## Seeding
 
@@ -89,9 +100,8 @@ store.insertResource('applications', { id: 'app-001', status: 'draft' });
 store.findAll('applications', { status: 'draft' });
 ```
 
-`./store` exports the in-memory store on its own, without pulling in Express or
-a native module, so it can be used in a browser or in a test that has no need of
-a server. `createSqliteStore` comes from the package root, since that is Node
+`./store` exports the in-memory store on its own, without a native module, so
+it can be used in a browser or in a test that has no need of a server. `createSqliteStore` comes from the package root, since that is Node
 only regardless.
 
 Every method is synchronous. Both implementations are natively synchronous —
@@ -126,6 +136,80 @@ a Node server, a service worker, or a direct call in a test.
 
 [ROUTING.md](./ROUTING.md) covers the resolution rules and why the matcher is
 ~40 lines rather than a dependency.
+
+## In a browser
+
+The route table has no dependency on `node:http`, so the same handlers answer
+in a page. Hand `createMockServer` a contracts artifact and it returns a
+`fetch`:
+
+```js
+import { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
+
+const contracts = await (await fetch('./contracts.json')).json();
+const mock = await createMockServer({ contracts });
+
+const response = await mock.fetch(new Request('/intake/applications'));
+```
+
+`mock.fetch` has `fetch`'s own signature, so it can be called directly, handed
+to a test runner, or assigned over `window.fetch`.
+
+Assigning over `window.fetch` only reaches code that calls `fetch`, which the
+generated clients do not. `generate-ts-clients` emits `@hey-api/client-axios`,
+and axios uses `XMLHttpRequest` in a browser, so that swap leaves every
+generated call going to the network. Hand the mock to axios instead:
+
+```js
+import { createClient } from './clients/intake/client';
+import { listApplications } from './clients/intake';
+
+const client = createClient({
+  baseURL: '/intake',
+  adapter: 'fetch',
+  env: { fetch: mock.fetch },
+});
+
+await listApplications({ client });
+```
+
+Both settings have to be there when the client is built: `createClient` hands
+its config to `axios.create`, and setting them on an instance afterwards leaves
+the default adapter in place.
+
+| Option | Default | |
+|---|---|---|
+| `contracts` | — | Parsed output of `blueprint-bundle-contracts` |
+| `store` | a fresh in-memory store | Any store implementation |
+| `basePath` | `''` | A path prefix to strip before matching |
+| `baseUrl` | `''` | Base for `Location` headers |
+| `seed` | `true` | Seed from the artifact's mock-data documents |
+
+`basePath` matters when the page is not at the root of its origin. GitHub Pages
+serves a project site from `/<repo>/`, so a request for `/intake/applications`
+arrives as `/<repo>/mock/intake/applications`:
+
+```js
+createMockServer({ contracts, basePath: location.pathname.replace(/\/[^/]*$/, '') });
+```
+
+The prefix is stripped once, before matching, so handlers and HTTP stubs never
+see it.
+
+`blueprint-harness` builds a worked example of both — a served version and a
+single self-contained file — in `packages/blueprint-harness/generated/mock/`.
+The page it is built from is `packages/blueprint-harness/mock/index.html`.
+
+## References are not dereferenced
+
+The server resolves a `$ref` against the contract set when something needs to
+see through one, rather than being handed pre-flattened specs. Inlining
+multiplies every shared schema by the number of places referencing it — it is
+the difference between a 0.67 MB artifact and a 3.95 MB one.
+
+[REFERENCES.md](./REFERENCES.md) records why, how resolution works at each
+layer, and the four bugs the change cost — all of which passed the test suites,
+because the fixtures were dereferenced and so had no refs to resolve.
 
 ## Environment Variables
 

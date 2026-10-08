@@ -52,7 +52,8 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
         const { valid, errors } = validate(
           requestBody,
           endpoint.requestSchema,
-          `${endpoint.collectionName}-create`
+          `${endpoint.collectionName}-create`,
+          { relativePath: apiMetadata.relativePath, ref: endpoint.requestSchemaRef }
         );
 
         if (!valid) {
@@ -90,6 +91,10 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const callerId = callerHeader(request, 'x-caller-id');
       const now = new Date().toISOString();
       const traceparent = callerHeader(request, 'traceparent');
+      // A spec with no localhost server URL has no domain prefix, and
+      // prefixing with an empty string produced ".application.created" — a
+      // malformed CloudEvents type with a leading dot. Better to emit an
+      // unprefixed type than a broken one (#448).
       const domain = (apiMetadata.serverBasePath ?? '').replace(/^\//, '');
       const object = endpoint.collectionName.replace(/s$/, '');
 
@@ -197,9 +202,9 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const fresh = store.findById(endpoint.collectionName, resource.id) || resource;
 
       // Apply x-relationship expand, links-only, and x-derived transformations (same as GET handler)
-      const expandFields = extractExpandFields(endpoint.responseSchema);
-      const linksFields = extractLinksFields(endpoint.responseSchema);
-      const derivedFields = extractDerivedFields(endpoint.responseSchema);
+      const expandFields = extractExpandFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
+      const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
+      const derivedFields = extractDerivedFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
       let responseBody = expandFields.length > 0 ? applyExpand(fresh, expandFields, store.findById) : fresh;
       if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
       if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);

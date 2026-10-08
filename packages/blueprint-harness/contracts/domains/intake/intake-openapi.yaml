@@ -6,6 +6,14 @@ info:
   x-status: stable
   x-visibility: public
 
+# The localhost URL is where the domain path prefix comes from, and the mock
+# server reads it again to build an event's `source`. Without it the prefix is
+# empty, and a creation event came out typed ".application.created" — a leading
+# dot and no domain, which nothing can subscribe to (#448).
+servers:
+  - url: http://localhost:1080/intake
+    description: Local development server
+
 x-events:
   # CRUD lifecycle events — auto-emitted for every POST, PATCH, DELETE
   application.created:
@@ -42,6 +50,9 @@ paths:
     get:
       summary: List applications
       operationId: listApplications
+      x-sortable:
+        fields: [createdAt, updatedAt, submittedAt, status, channel, countyCode]
+        default: '-createdAt'
       tags: [Applications]
       parameters:
         - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam'
@@ -160,6 +171,9 @@ paths:
     get:
       summary: List household members
       operationId: listApplicationMembers
+      x-sortable:
+        fields: [createdAt, updatedAt, lastName, dateOfBirth]
+        default: 'createdAt'
       tags: [Household Members]
       parameters:
         - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam'
@@ -304,6 +318,21 @@ components:
         contactInfo:
           # External $ref — ContactInfo is defined in common/schemas/shared.yaml.
           $ref: '../../common/schemas/shared.yaml#/$defs/ContactInfo'
+        proofOfIncomeDocumentId:
+          type: string
+          format: uuid
+          description: The uploaded document evidencing household income, if one is attached.
+          # links-only here, expand on Application below, and the override is
+          # load-bearing: this deployment's overlay sets a global style of
+          # `expand`, which rewrites the field it lands on into an object. On
+          # a shape a client writes that turns `POST {…DocumentId: "<id>"}`
+          # into a demand for a whole Document, which nothing can satisfy.
+          # Writes send a flat id; only the read expands.
+          x-relationship:
+            type: fk
+            domain: document-management
+            resource: Document
+            style: links-only
         labels:
           # additionalProperties map — arbitrary key-value labels for state-specific tagging.
           type: object
@@ -317,7 +346,7 @@ components:
     Application:
       description: A benefit application record, including server-managed fields.
       unevaluatedProperties: false
-      required: [id, status, programsAppliedFor, referenceId, createdAt, updatedAt]
+      required: [id, status, programsAppliedFor, programCount, createdAt, updatedAt]
       allOf:
         - $ref: '#/components/schemas/ApplicationWritable'
         - type: object
@@ -327,18 +356,42 @@ components:
               format: uuid
               readOnly: true
               description: Unique identifier (server-generated).
-            referenceId:
+            proofOfIncomeDocumentId:
               type: string
+              format: uuid
               readOnly: true
-              # x-derived — short human-readable code derived from the UUID at read time.
-              x-derived: "$this.id.substring(0, 8).toUpperCase()"
-              description: Short human-readable reference code for this application.
+              description: The uploaded document evidencing household income, if one is attached.
+              # Expanded across domains, and only on the way out: somebody
+              # reading an application wants to see what was filed with it,
+              # not a link to go and fetch. Resolve renames the field to
+              # `proofOfIncomeDocument` and puts the record where the id was.
+              x-relationship:
+                type: fk
+                domain: document-management
+                resource: Document
+                style: expand
+            programCount:
+              type: integer
+              readOnly: true
+              # x-derived — computed from another field at read time, in CEL.
+              #
+              # This replaced a `referenceId` derived as
+              # `$this.id.substring(0, 8).toUpperCase()`, which was wrong three
+              # ways: it restated the id rather than deriving anything, the
+              # first eight hex characters of a UUID are not unique enough to
+              # be a code a caseworker reads aloud, and `substring`/
+              # `toUpperCase` are not CEL — they only evaluated because the
+              # mock's evaluator falls through to JavaScript. `.size()` is in
+              # the supported set, and the value is genuinely a function of a
+              # field the request supplied.
+              x-derived: "$this.programsAppliedFor.size()"
+              description: How many programs this application covers, from programsAppliedFor.
             confirmationNumber:
               type: string
               readOnly: true
               deprecated: true
               description: >
-                Deprecated — use referenceId instead. Legacy confirmation number assigned
+                Deprecated — use id instead. Legacy confirmation number assigned
                 by older case management systems. Retained for backward compatibility
                 during state migration periods.
             status:
@@ -485,11 +538,19 @@ components:
               type: string
               format: uuid
               description: The application this member belongs to.
-              # x-relationship — intra-domain link from member back to its parent application.
+              # Expanded, not linked: a household member is read by somebody
+              # looking at the application it belongs to, so the application
+              # comes with it. Resolve renames this field to `application`
+              # and the server inlines the record at read time, which is one
+              # request where a link would be two.
               x-relationship:
                 type: fk
                 resource: Application
-                style: links-only
+                style: expand
+                # Bounded, because this points back at the parent and the
+                # parent lists its members: expanding everything would chase
+                # that circle. Naming the fields says how far to go.
+                fields: [id, status, programsAppliedFor, programCount]
             createdAt:
               type: string
               format: date-time

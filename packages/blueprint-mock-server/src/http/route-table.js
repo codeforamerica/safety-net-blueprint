@@ -146,10 +146,29 @@ export function matchRoute(routes, method, pathname) {
  * @param {Map<string, object>} routes
  * @returns {(request: Request) => Promise<Response>} Same signature as `fetch`
  */
-export function createDispatcher(routes) {
+export function createDispatcher(routes, { basePath = '' } = {}) {
+  // A prefix the route table knows nothing about, stripped before matching.
+  // A page served from a subdirectory — GitHub Pages puts a project site at
+  // /<repo>/ — resolves `/intake/applications` to `/<repo>/intake/applications`,
+  // and the route table is keyed on the contract's own paths. Without this the
+  // hosted page 404s every request while the same page works locally, which is
+  // the worst shape for a bug to take (#448).
+  const prefix = basePath.replace(/\/+$/, '');
+
   return async function fetch(request) {
     const { pathname } = new URL(request.url);
-    const match = matchRoute(routes, request.method, pathname);
+    const routable = prefix && pathname.startsWith(prefix)
+      ? pathname.slice(prefix.length) || '/'
+      : pathname;
+
+    // Strip once, here, and hand the handler a request that has never heard of
+    // the prefix. Matching the route on a stripped path while handlers read the
+    // original left the two disagreeing: a handler consults the HTTP stub table
+    // with `new URL(request.url).pathname`, so a stub registered for
+    // `/determinations` never matched a request for `/repo/mock/determinations`
+    // — the route resolved and the stub silently did not.
+    const forwarded = routable === pathname ? request : withPathname(request, routable);
+    const match = matchRoute(routes, request.method, routable);
 
     if (match === null) {
       return Response.json({
@@ -159,7 +178,7 @@ export function createDispatcher(routes) {
     }
 
     try {
-      return await match.entry.handler(request, { params: match.params });
+      return await match.entry.handler(forwarded, { params: match.params });
     } catch (error) {
       console.error(`Unhandled error in ${match.key}:`, error);
       return Response.json({
@@ -173,9 +192,33 @@ export function createDispatcher(routes) {
 
 
 /**
+ * The same request at a different path.
+ *
+ * Rebuilt rather than mutated, because a `Request`'s url is read-only. The
+ * body is passed through as a stream with `duplex: 'half'` instead of being
+ * buffered, so an upload stays an upload — reading it here would consume it
+ * before the handler saw it.
+ *
+ * @param {Request} request
+ * @param {string} pathname
+ * @returns {Request}
+ */
+function withPathname(request, pathname) {
+  const url = new URL(request.url);
+  url.pathname = pathname;
+
+  const init = { method: request.method, headers: request.headers, signal: request.signal };
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    init.body = request.body;
+    init.duplex = 'half';
+  }
+  return new Request(url, init);
+}
+
+/**
  * Replace a route's handler with one wrapping the original.
  *
- * The composition point for behaviour that used to be middleware. Middleware
+ * The composition point for behavior that used to be middleware. Middleware
  * matched a path prefix and ran for anything under it; this names one route, so
  * it cannot quietly apply to a route added later.
  *
@@ -192,4 +235,47 @@ export function wrapRoute(routes, key, wrap) {
   }
   entry.handler = wrap(entry.handler);
   return true;
+}
+
+/**
+ * Replace the handlers of contract-declared routes, matched by `operationId`.
+ *
+ * A few endpoints are declared in a contract but cannot be served by generated
+ * CRUD: `streamEvents` is a stream, `publishEvent` fires the event bus rather
+ * than storing a row. They are overrides rather than extra registrations, so
+ * adding a platform endpoint to the contract needs no code — only an endpoint
+ * whose *behavior* is special does.
+ *
+ * Matching on `operationId` rather than a path string is the point. A path can
+ * be changed in the contract; the operationId is its identity, so renaming the
+ * path moves the override with it.
+ *
+ * An unmatched override warns rather than throws: a contract set that declares
+ * no platform domain is legitimate — the functional fixtures are one — so a
+ * missing operationId cannot be told apart from a smaller set at this level.
+ * Drift against the real contract set is caught by a test instead.
+ *
+ * @param {Map<string, object>} routes
+ * @param {Record<string, Function>} overrides - operationId → handler
+ * @returns {{ applied: string[], unmatched: string[] }}
+ */
+export function overrideByOperationId(routes, overrides) {
+  const byOperationId = new Map();
+  for (const [key, entry] of routes) {
+    if (entry.operationId) byOperationId.set(entry.operationId, key);
+  }
+
+  const applied = [];
+  const unmatched = [];
+  for (const [operationId, handler] of Object.entries(overrides)) {
+    const key = byOperationId.get(operationId);
+    if (key === undefined) {
+      unmatched.push(operationId);
+      continue;
+    }
+    routes.get(key).handler = handler;
+    applied.push(key);
+  }
+
+  return { applied, unmatched };
 }

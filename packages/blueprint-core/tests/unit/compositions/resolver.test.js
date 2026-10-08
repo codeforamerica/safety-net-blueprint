@@ -11,7 +11,6 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import yaml from 'js-yaml';
 import {
-  discoverCompositions,
   extractResourceSlug,
   collectSchemaProperties,
   buildResourceSchemaIndex,
@@ -188,94 +187,6 @@ const sampleOpenApiSpec = {
     }
   }
 };
-
-// ---------------------------------------------------------------------------
-// discoverCompositions
-// ---------------------------------------------------------------------------
-
-describe('discoverCompositions', () => {
-  test('returns empty array for missing directory', () => {
-    const result = discoverCompositions('/nonexistent/path');
-    assert.deepEqual(result, []);
-  });
-
-  test('returns empty array for directory with no composition files', () => {
-    const dir = createTempDir();
-    try {
-      writeYaml(dir, 'intake-openapi.yaml', { openapi: '3.1.0' });
-      const result = discoverCompositions(dir);
-      assert.deepEqual(result, []);
-    } finally {
-      removeTempDir(dir);
-    }
-  });
-
-  test('discovers a single composition file', () => {
-    const dir = createTempDir();
-    try {
-      writeYaml(dir, 'test-compositions.yaml', minimalComposition);
-      const result = discoverCompositions(dir);
-      assert.equal(result.length, 1);
-      assert.equal(result[0].domain, 'test');
-      assert.ok(result[0].filePath.endsWith('test-compositions.yaml'));
-      assert.ok(result[0].doc.compositions.memberSummary);
-    } finally {
-      removeTempDir(dir);
-    }
-  });
-
-  test('discovers multiple composition files', () => {
-    const dir = createTempDir();
-    try {
-      writeYaml(dir, 'intake-compositions.yaml', { ...minimalComposition, domain: 'intake' });
-      writeYaml(dir, 'eligibility-compositions.yaml', { ...minimalComposition, domain: 'eligibility' });
-      const result = discoverCompositions(dir);
-      assert.equal(result.length, 2);
-      const domains = result.map(r => r.domain).sort();
-      assert.deepEqual(domains, ['eligibility', 'intake']);
-    } finally {
-      removeTempDir(dir);
-    }
-  });
-
-  test('skips files without compositions key', () => {
-    const dir = createTempDir();
-    try {
-      writeYaml(dir, 'test-compositions.yaml', { version: '1.0', domain: 'test' });
-      const result = discoverCompositions(dir);
-      assert.equal(result.length, 0);
-    } finally {
-      removeTempDir(dir);
-    }
-  });
-
-  test('skips unparseable files', () => {
-    const dir = createTempDir();
-    try {
-      writeFileSync(join(dir, 'broken-compositions.yaml'), ': invalid: yaml: !!: !!:', 'utf8');
-      const result = discoverCompositions(dir);
-      assert.equal(result.length, 0);
-    } finally {
-      removeTempDir(dir);
-    }
-  });
-
-  test('ignores overlays directory when it does not exist', () => {
-    const dir = createTempDir();
-    try {
-      writeYaml(dir, 'intake-compositions.yaml', {
-        $schema: './schemas/compositions-schema.yaml',
-        version: '1.0',
-        domain: 'intake',
-        compositions: { reviewContext: { resource: 'applications', sections: {} } },
-      });
-      const result = discoverCompositions(dir);
-      assert.equal(result.length, 1);
-    } finally {
-      removeTempDir(dir);
-    }
-  });
-});
 
 // ---------------------------------------------------------------------------
 // extractResourceSlug
@@ -953,58 +864,43 @@ describe('generateCompositionOverlay', () => {
 // generateCompositionOverlays (integration)
 // ---------------------------------------------------------------------------
 
+/**
+ * What the caller hands `generateCompositionOverlays`: one entry per
+ * compositions document. `discover`/`load` produce this in the pipeline; built
+ * directly here so these test overlay generation rather than a directory walk.
+ */
+function compositionFilesFor(doc) {
+  return [{ filePath: `${doc.domain}-compositions.yaml`, domain: doc.domain, doc }];
+}
+
 describe('generateCompositionOverlays', () => {
   test('generates one overlay per composition file with endpoints', () => {
-    const dir = createTempDir();
-    try {
-      writeYaml(dir, 'intake-compositions.yaml', sectionViewComposition);
+    const yamlFiles = [{ relativePath: 'intake-openapi.yaml', spec: sampleOpenApiSpec }];
+    const overlays = generateCompositionOverlays(compositionFilesFor(sectionViewComposition), yamlFiles);
 
-      const compositionFiles = discoverCompositions(dir);
-      const yamlFiles = [{ relativePath: 'intake-openapi.yaml', spec: sampleOpenApiSpec }];
-      const overlays = generateCompositionOverlays(compositionFiles, yamlFiles);
-
-      assert.equal(overlays.length, 1);
-      assert.equal(overlays[0].domain, 'intake');
-    } finally {
-      removeTempDir(dir);
-    }
+    assert.equal(overlays.length, 1);
+    assert.equal(overlays[0].domain, 'intake');
   });
 
   test('uses parameter refs from the loaded spec', () => {
-    const dir = createTempDir();
-    try {
-      writeYaml(dir, 'intake-compositions.yaml', sectionViewComposition);
+    const yamlFiles = [{ relativePath: 'intake-openapi.yaml', spec: sampleOpenApiSpec }];
+    const overlays = generateCompositionOverlays(compositionFilesFor(sectionViewComposition), yamlFiles);
 
-      const compositionFiles = discoverCompositions(dir);
-      const yamlFiles = [{ relativePath: 'intake-openapi.yaml', spec: sampleOpenApiSpec }];
-      const overlays = generateCompositionOverlays(compositionFiles, yamlFiles);
-
-      const { overlay } = overlays[0];
-      const pathsAction = overlay.actions.find(a => a.target === '$.paths');
-      const pathEntry = pathsAction.update['/applications/{applicationId}/review'];
-      assert.ok(pathEntry.parameters.some(p => p.$ref === '#/components/parameters/ApplicationIdParam'));
-    } finally {
-      removeTempDir(dir);
-    }
+    const { overlay } = overlays[0];
+    const pathsAction = overlay.actions.find(a => a.target === '$.paths');
+    const pathEntry = pathsAction.update['/applications/{applicationId}/review'];
+    assert.ok(pathEntry.parameters.some(p => p.$ref === '#/components/parameters/ApplicationIdParam'));
   });
 
   test('skips composition files with no endpoint declarations', () => {
-    const dir = createTempDir();
-    try {
-      writeYaml(dir, 'test-compositions.yaml', {
-        version: '1.0',
-        domain: 'test',
-        compositions: {
-          ctx: { resource: 'things', bind: 'parentId' }
-        }
-      });
-
-      const compositionFiles = discoverCompositions(dir);
-      const overlays = generateCompositionOverlays(compositionFiles, []);
-      assert.equal(overlays.length, 0);
-    } finally {
-      removeTempDir(dir);
-    }
+    const overlays = generateCompositionOverlays(compositionFilesFor({
+      version: '1.0',
+      domain: 'test',
+      compositions: {
+        ctx: { resource: 'things', bind: 'parentId' }
+      }
+    }), []);
+    assert.equal(overlays.length, 0);
   });
 });
 

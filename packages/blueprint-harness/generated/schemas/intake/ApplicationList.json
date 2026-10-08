@@ -17,7 +17,7 @@
           "id",
           "status",
           "programsAppliedFor",
-          "referenceId",
+          "programCount",
           "createdAt",
           "updatedAt"
         ],
@@ -103,6 +103,11 @@
                   }
                 }
               },
+              "proofOfIncomeDocumentId": {
+                "type": "string",
+                "format": "uuid",
+                "description": "The uploaded document evidencing household income, if one is attached."
+              },
               "labels": {
                 "type": "object",
                 "additionalProperties": {
@@ -114,6 +119,18 @@
                 "type": "string",
                 "maxLength": 10,
                 "description": "County code for routing this application to the correct local office."
+              },
+              "links": {
+                "type": "object",
+                "readOnly": true,
+                "description": "Related resource links.",
+                "properties": {
+                  "proofOfIncomeDocument": {
+                    "type": "string",
+                    "format": "uri-reference",
+                    "description": "Link to the related Document resource."
+                  }
+                }
               }
             }
           },
@@ -126,15 +143,15 @@
                 "readOnly": true,
                 "description": "Unique identifier (server-generated)."
               },
-              "referenceId": {
-                "type": "string",
+              "programCount": {
+                "type": "integer",
                 "readOnly": true,
-                "description": "Short human-readable reference code for this application."
+                "description": "How many programs this application covers, from programsAppliedFor."
               },
               "confirmationNumber": {
                 "type": "string",
                 "readOnly": true,
-                "description": "Deprecated — use referenceId instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.\n"
+                "description": "Deprecated — use id instead. Legacy confirmation number assigned by older case management systems. Retained for backward compatibility during state migration periods.\n"
               },
               "status": {
                 "type": "string",
@@ -228,7 +245,7 @@
                   "unevaluatedProperties": false,
                   "required": [
                     "id",
-                    "applicationId",
+                    "application",
                     "firstName",
                     "lastName",
                     "relationship",
@@ -499,11 +516,6 @@
                           "readOnly": true,
                           "description": "Unique identifier (server-generated)."
                         },
-                        "applicationId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "description": "The application this member belongs to."
-                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time",
@@ -516,15 +528,35 @@
                           "readOnly": true,
                           "description": "Timestamp when the member was last updated."
                         },
-                        "links": {
+                        "application": {
                           "type": "object",
-                          "readOnly": true,
-                          "description": "Related resource links.",
+                          "description": "Expanded Application (subset).",
                           "properties": {
-                            "application": {
+                            "id": {
                               "type": "string",
-                              "format": "uri-reference",
-                              "description": "Link to the related Application resource."
+                              "format": "uuid",
+                              "readOnly": true,
+                              "description": "Unique identifier (server-generated)."
+                            },
+                            "status": {
+                              "type": "string",
+                              "readOnly": true,
+                              "description": "Current lifecycle status of the application.",
+                              "enum": [
+                                "draft",
+                                "submitted",
+                                "under_review",
+                                "withdrawn",
+                                "closed"
+                              ]
+                            },
+                            "programsAppliedFor": {
+                              "type": "string"
+                            },
+                            "programCount": {
+                              "type": "integer",
+                              "readOnly": true,
+                              "description": "How many programs this application covers, from programsAppliedFor."
                             }
                           }
                         }
@@ -545,6 +577,105 @@
                 "format": "date-time",
                 "readOnly": true,
                 "description": "Timestamp when the application was last updated."
+              },
+              "proofOfIncomeDocument": {
+                "allOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "documentTypeId",
+                      "title"
+                    ],
+                    "properties": {
+                      "documentTypeId": {
+                        "type": "string",
+                        "description": "What kind of document this is."
+                      },
+                      "title": {
+                        "type": "string",
+                        "description": "A human-readable name for the document."
+                      },
+                      "documentDate": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "description": "The date the document itself bears, which is not the date it arrived."
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "lifecycleState",
+                      "latestVersionId",
+                      "createdAt",
+                      "updatedAt"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                      },
+                      "lifecycleState": {
+                        "type": "string",
+                        "enum": [
+                          "active",
+                          "superseded",
+                          "disposed"
+                        ],
+                        "readOnly": true,
+                        "description": "Where this document is in its retention lifecycle."
+                      },
+                      "legalHold": {
+                        "type": "boolean",
+                        "readOnly": true,
+                        "description": "Whether disposition is suspended pending litigation."
+                      },
+                      "latestVersionId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "description": "The most recent version, which is what describes the file."
+                      },
+                      "retentionDeadline": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "readOnly": true,
+                        "description": "When this document becomes eligible for disposition."
+                      },
+                      "metadata": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "description": "Arbitrary key-value metadata supplied at upload."
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                      },
+                      "links": {
+                        "type": "object",
+                        "readOnly": true,
+                        "description": "Related resource links.",
+                        "properties": {
+                          "latestVersion": {
+                            "type": "string",
+                            "format": "uri-reference",
+                            "description": "Link to the related DocumentVersion resource."
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
               }
             }
           },

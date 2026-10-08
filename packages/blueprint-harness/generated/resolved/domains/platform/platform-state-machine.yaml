@@ -1,0 +1,19 @@
+$schema: state-machine-schema.yaml
+version: "1.0"
+procedures:
+  - id: requestTimer
+    description: |
+      Request a time-based callback from the scheduling service. Pass fireAfter (a duration) or fireAt (an absolute timestamp), and a callback naming the event to publish when it elapses. Nothing here waits: the request is an event, and whatever provides scheduling answers it — in a deployment a scheduler, in a test a mock stub, which is what makes a 72-hour deadline testable in a second.
+    parameters:
+      - timerId
+      - callback
+      - fireAfter
+      - fireAt
+    emit:
+      type: scheduling.timer.requested
+      subject: $object.id
+      data:
+        timerId: $params.timerId
+        fireAfter: $params.fireAfter
+        fireAt: $params.fireAt
+        callback: $params.callback

@@ -128,7 +128,8 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
         const { valid, errors } = validate(
           dataForValidation,
           endpoint.requestSchema,
-          `${endpoint.collectionName}-update`
+          `${endpoint.collectionName}-update`,
+          { relativePath: apiMetadata.relativePath, ref: endpoint.requestSchemaRef }
         );
 
         if (!valid) {
@@ -224,9 +225,9 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
         console.error('Failed to emit updated event:', eventError.message);
       }
 
-      const expandFields = extractExpandFields(endpoint.responseSchema);
-      const linksFields = extractLinksFields(endpoint.responseSchema);
-      const derivedFields = extractDerivedFields(endpoint.responseSchema);
+      const expandFields = extractExpandFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
+      const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
+      const derivedFields = extractDerivedFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
       let responseBody = expandFields.length > 0 ? applyExpand(updated, expandFields, store.findById) : updated;
       if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
       if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);

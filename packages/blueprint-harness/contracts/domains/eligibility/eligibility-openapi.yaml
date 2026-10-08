@@ -6,6 +6,14 @@ info:
   x-status: stable
   x-visibility: internal
 
+# The localhost URL is where the domain path prefix comes from, and the mock
+# server reads it again to build an event's `source`. Without it the prefix is
+# empty, and a creation event came out typed ".application.created" — a leading
+# dot and no domain, which nothing can subscribe to (#448).
+servers:
+  - url: http://localhost:1080/eligibility
+    description: Local development server
+
 x-events:
   eligibility.determination.complete:
     type: org.codeforamerica.safety-net-blueprint.eligibility.determination.complete
@@ -16,6 +24,9 @@ paths:
     get:
       summary: List determinations
       operationId: listDeterminations
+      x-sortable:
+        fields: [createdAt, updatedAt, determinedAt, status]
+        default: '-createdAt'
       tags: [Determinations]
       parameters:
         - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam'
@@ -213,6 +224,11 @@ components:
           type: string
           format: uuid
           description: The intake application this determination is for.
+          # links-only, not expand: expanding across domains copies the
+          # intake Application schema into this document and leaves its
+          # sibling refs pointing at this directory, where they resolve to
+          # nothing. Same-domain expand works and is exercised on
+          # ApplicationMember.
           x-relationship:
             type: fk
             domain: intake

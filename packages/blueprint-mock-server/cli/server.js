@@ -6,7 +6,7 @@
 
 import http from 'http';
 import { execSync, spawn } from 'child_process';
-import { realpathSync, openSync, statSync } from 'fs';
+import { realpathSync, openSync, statSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { performSetup } from '../src/setup.js';
@@ -14,8 +14,10 @@ import { subscribeStubDispatch } from '../src/mock-stub-engine.js';
 import { createMemoryStore } from '../src/stores/memory-store.js';
 import { createSqliteStore } from '../src/stores/sqlite-store.js';
 import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes, registerRulesRoutes, buildRulesIndex } from '../src/route-generator.js';
-import { addRoute, createDispatcher, wrapRoute } from '../src/http/route-table.js';
+import { createDispatcher, wrapRoute, overrideByOperationId } from '../src/http/route-table.js';
+import { registerPlatformRoutes, contractOverrides } from '../src/platform-routes.js';
 import { jsonBody, readJsonBody, invalidJson } from '../src/http/request.js';
+import { discover, load, extract } from '@codeforamerica/blueprint-core';
 import { createNodeServer } from '../src/http/node-server.js';
 import { initRulesIndex } from '../src/state-machine-engine.js';
 import { registerEventSubscriptions } from '../src/event-subscription.js';
@@ -38,7 +40,8 @@ Usage:
   npm run mock:start [-- --spec=<dir> ...]
 
 Options:
-  --spec=<dir>      File or directory containing *-openapi.yaml files (repeatable)
+  --spec=<path>     Directory of contracts, a single spec file, or a contracts.json
+                    artifact from blueprint-bundle-contracts (repeatable)
                     Default: packages/contracts
   --seed=<dir>      Directory containing seed data files (default: same as --spec)
                     Override with MOCK_UPLOADS_DIR env var
@@ -93,7 +96,7 @@ function parseSpecDirs() {
   // renamed long ago, so omitting --spec failed later and obscurely with an
   // empty contract set rather than saying what was missing.
   if (specDirs.length === 0) {
-    console.error('Error: --spec=<dir> is required (a directory of resolved contracts)');
+    console.error('Error: --spec=<path> is required (a directory of resolved contracts, or a contracts.json artifact)');
     process.exit(1);
   }
 
@@ -114,6 +117,41 @@ function parseSpecDirs() {
 let httpServer = null;
 /** The store this process is using; closed on shutdown. */
 let store = null;
+
+/**
+ * Whether a `--spec` value names a contracts artifact rather than a directory.
+ *
+ * One JSON file instead of a tree: `blueprint-bundle-contracts` writes it, and
+ * booting from it skips the walk entirely — the server gets exactly the
+ * documents the artifact was built from rather than whatever is on disk now.
+ * The same file a browser boots from (#448).
+ *
+ * @param {string} value
+ * @returns {boolean}
+ */
+function isArtifactPath(value) {
+  return typeof value === 'string' && value.endsWith('.json');
+}
+
+/**
+ * The documents inside a contracts artifact.
+ *
+ * Reading and parsing is this command's job; rebuilding the documents is
+ * core's, through `extract(artifact, 'docs')`, which also checks the version
+ * and shape and puts back the methods JSON could not carry.
+ *
+ * @param {string} path
+ * @returns {import('@codeforamerica/blueprint-core').Doc[]}
+ */
+function docsFromArtifactFile(path) {
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(path, 'utf8'));
+  } catch (error) {
+    throw new Error(`Could not read contracts artifact ${path}: ${error.message}`);
+  }
+  return extract(parsed, 'docs');
+}
 
 /**
  * Start the mock server
@@ -152,6 +190,16 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
     if (storeKind === 'memory') {
       console.log('  Store: in-memory (data will not survive this process)');
     }
+    // How /mock/reseed gets its documents. A function rather than a value so
+    // a directory is re-read on each call, picking up edits since boot. An
+    // artifact has nothing to re-read, so it is parsed again instead — which
+    // still answers the question honestly: these are the documents this server
+    // was started from.
+    const readDocs = () => specDirs.flatMap((dir) => (
+      isArtifactPath(dir)
+        ? docsFromArtifactFile(dir)
+        : [...new Set([dir, seedDir].filter(Boolean))].flatMap((d) => discover(d)).map(load)
+    ));
     let apiSpecs = [];
     let allStateMachines = [];
     let allSlaTypes = [];
@@ -162,7 +210,9 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
     let allGraphs = [];
     let allPolicies = {};
     for (const specsDir of specDirs) {
-      const result = await performSetup({ specsDir, seedDir, verbose: true, store });
+      const result = isArtifactPath(specsDir)
+        ? await performSetup({ docs: docsFromArtifactFile(specsDir), seedDir, verbose: true, store })
+        : await performSetup({ specsDir, seedDir, verbose: true, store });
       apiSpecs = apiSpecs.concat(result.apiSpecs);
       allStateMachines = allStateMachines.concat(result.stateMachines);
       allSlaTypes = allSlaTypes.concat(result.slaTypes);
@@ -181,117 +231,17 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
     // first-match-wins resolution did.
     const routes = new Map();
 
-    // Health check endpoint
-    addRoute(routes, 'GET', '/health', () =>
-      Response.json({ status: 'ok', apis: apiSpecs.map(a => a.name) }));
-
-    // Register SSE stream endpoint before item routes to avoid :id capture
-    addRoute(routes, 'GET', '/platform/events/stream', createSseHandler(),
-      { description: 'Domain event stream (SSE)' });
-    console.log('  GET    /platform/events/stream - Domain event stream (SSE)');
-
-    // Register event injection endpoint — accepts a CloudEvents 1.0 envelope and
-    // fires it to the event bus so event-triggered rule sets can respond to it.
-    // Useful for simulating events from external domains during integration testing.
-    addRoute(routes, 'POST', '/platform/events', async (request) => {
-      const parsed = await readJsonBody(request);
-      if (!parsed.ok) return invalidJson();
-      const event = parsed.value;
-      if (!event?.type || !event?.specversion) {
-        const missing = ['specversion', 'type'].filter(f => !event?.[f]);
-        return Response.json({
-          code: 'VALIDATION_ERROR',
-          message: 'Request body must be a CloudEvents 1.0 envelope',
-          details: missing.map(f => ({ field: f, message: 'required' }))
-        }, { status: 422 });
-      }
-      return Response.json(emitEventEnvelope(event, store), { status: 201 });
+    // One route table for the whole server. Registration order is priority:
+    // addRoute keeps the first entry for a key, which is what Express's
+    // first-match-wins resolution did.
+    registerPlatformRoutes(routes, {
+      store,
+      apiNames: apiSpecs.map((a) => a.name),
+      readDocs,
+      configs: allConfigs,
+      policies: allPolicies,
+      seeded: Boolean(seedDir),
     });
-    console.log('  POST   /platform/events - Inject external domain event (testing)');
-
-    // Event stub registry — pre-program event responses for integration tests.
-    addRoute(routes, 'POST', '/mock/stubs/events', async (request) => {
-      try {
-        return Response.json(registerStub(await jsonBody(request)), { status: 201 });
-      } catch (err) {
-        return Response.json({ code: 'VALIDATION_ERROR', message: err.message }, { status: 422 });
-      }
-    });
-    addRoute(routes, 'GET', '/mock/stubs/events', () => {
-      const items = listStubs();
-      return Response.json({ items, total: items.length });
-    });
-    addRoute(routes, 'DELETE', '/mock/stubs/events', () => {
-      clearStubs();
-      return new Response(null, { status: 204 });
-    });
-    addRoute(routes, 'DELETE', '/mock/stubs/events/{id}', (request, { params }) =>
-      removeStub(params.id)
-        ? new Response(null, { status: 204 })
-        : Response.json({ code: 'NOT_FOUND', message: `Stub "${params.id}" not found` }, { status: 404 }));
-    console.log('  POST   /mock/stubs/events - Register an event stub');
-    console.log('  GET    /mock/stubs/events - List active event stubs');
-    console.log('  DELETE /mock/stubs/events/:id - Remove an event stub');
-    console.log('  DELETE /mock/stubs/events - Clear all event stubs');
-
-    // HTTP stub registry — intercept any inbound request and return a pre-programmed response.
-    addRoute(routes, 'POST', '/mock/stubs/http', async (request) => {
-      try {
-        return Response.json(registerHttpStub(await jsonBody(request)), { status: 201 });
-      } catch (err) {
-        return Response.json({ code: 'VALIDATION_ERROR', message: err.message }, { status: 422 });
-      }
-    });
-    addRoute(routes, 'GET', '/mock/stubs/http', () => {
-      const items = listHttpStubs();
-      return Response.json({ items, total: items.length });
-    });
-    addRoute(routes, 'DELETE', '/mock/stubs/http', () => {
-      clearHttpStubs();
-      return new Response(null, { status: 204 });
-    });
-    addRoute(routes, 'DELETE', '/mock/stubs/http/{id}', (request, { params }) =>
-      removeHttpStub(params.id)
-        ? new Response(null, { status: 204 })
-        : Response.json({ code: 'NOT_FOUND', message: `Stub "${params.id}" not found` }, { status: 404 }));
-    console.log('  POST   /mock/stubs/http - Register an HTTP stub');
-    console.log('  GET    /mock/stubs/http - List active HTTP stubs');
-    console.log('  DELETE /mock/stubs/http/:id - Remove an HTTP stub');
-    console.log('  DELETE /mock/stubs/http - Clear all HTTP stubs');
-
-    // Reset endpoint — clears all runtime data and restores config-managed resources.
-    // Config-managed items (queues, services, document types) are restored; all other
-    // data is wiped. Useful for putting tests into a known-clean state without restarting.
-    addRoute(routes, 'POST', '/mock/reset', () => {
-      for (const collection of Object.keys(store.snapshot())) store.clearAll(collection);
-      clearAllStubs();
-      for (const config of allConfigs) {
-        for (const [catalogKey, entries] of Object.entries(config.catalogs)) {
-          for (const entry of entries) {
-            const data = { ...entry };
-            for (const key of Object.keys(data)) {
-              if (key.startsWith('x-')) delete data[key];
-            }
-            store.insertResource(catalogKey, { ...data, source: 'system' });
-            registerConfigManaged(catalogKey, data.id);
-          }
-        }
-      }
-      for (const [id, policy] of Object.entries(allPolicies)) {
-        store.insertResource('registry-policies', { id, ...policy, source: 'system' });
-        registerConfigManaged('registry-policies', id);
-      }
-      return new Response(null, { status: 204 });
-    });
-    console.log('  POST   /mock/reset - Reset all runtime data (keeps config-managed resources)');
-
-    // Reseed endpoint — re-inserts seed data without clearing anything else.
-    // Useful after a reset when tests need baseline data present.
-    addRoute(routes, 'POST', '/mock/reseed', () => {
-      seedAllDatabases(specDirs, seedDir, store);
-      return new Response(null, { status: 204 });
-    });
-    console.log('  POST   /mock/reseed - Re-seed all collections from seed files');
 
 
     // Register event subscriptions
@@ -319,6 +269,15 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
 
     // Register state machine RPC routes
     const rpcEndpoints = registerStateMachineRoutes(routes, allStateMachines, apiSpecs, allSlaTypes, { store });
+
+    // A few contract-declared endpoints cannot be served by generated CRUD.
+    // Matched by operationId, so adding a platform endpoint to the contract
+    // needs no code here, and an override that stops matching fails at boot.
+    const { applied, unmatched } = overrideByOperationId(routes, contractOverrides({ store }));
+    for (const key of applied) console.log(`  ${key} - contract route, custom handler`);
+    if (unmatched.length > 0) {
+      console.warn(`  Note: no contract route declares ${unmatched.join(', ')} — not overridden`);
+    }
 
     // Service-call creation is enriched with catalog-derived fields: serviceType
     // and callMode come from the referenced ExternalService, and status starts

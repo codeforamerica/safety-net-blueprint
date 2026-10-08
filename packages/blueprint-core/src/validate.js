@@ -24,7 +24,7 @@ import { validateEvents } from './validator/event-validator.js';
 import { validateSlaTypeFields, validateMetricFields } from './validator/field-reference-validator.js';
 import { validateAnnotations } from './validator/annotation-validator.js';
 import { validateSchemas } from './validator/json-schema-validator.js';
-import { stemOf, setRootOf, isDeprecated, isReservedResource } from './contract-types.js';
+import { stemOf, isDeprecated, isReservedResource } from './contract-types.js';
 import { indexByRelativePath, followRef, isRemoteRef } from './ref-lookup.js';
 import {
   buildSchemaIndex,
@@ -73,7 +73,6 @@ export function validate(docs) {
   const yamlFiles = docs.map((doc) => ({
     relativePath: doc.relativePath ?? doc.path,
     filePath: doc.path,
-    setRoot: setRootOf(doc),
     spec: doc.content,
   }));
 
@@ -359,6 +358,48 @@ function findRoleTypeEnum(docs) {
  * @param {{ schemaIndex: Map, collectionIndex: Map, domainSchemas: Map, validRoles: Set|null, byRelativePath: Map }} context
  * @returns {{ errors: object[], warnings: object[] }}
  */
+/**
+ * An operation that advertises `?sort=` but never says what may be sorted.
+ *
+ * Sorting is gated on `x-sortable`, which carries the allowlist of fields and
+ * the default order. Declaring the `sort` parameter without it produces a
+ * contract that advertises sorting and a server that answers
+ * `400 INVALID_SORT_FIELD` — two declarations about the same capability,
+ * disagreeing, with nothing to catch it. That is exactly how it was found:
+ * by typing `?sort=createdAt` into a demo and getting a 400.
+ *
+ * A warning rather than an error because a list route backed by a composition
+ * takes its sort configuration from the composition's section instead, and
+ * this cannot see across documents to tell which is which. Narrowing it to an
+ * error wants that cross-check first.
+ */
+function sortDeclaredWithoutAllowlist(doc) {
+  const findings = [];
+  for (const [path, item] of Object.entries(doc.content?.paths ?? {})) {
+    for (const [method, operation] of Object.entries(item ?? {})) {
+      if (!/^(get|post)$/.test(method) || !operation || typeof operation !== 'object') continue;
+      if (operation['x-sortable']) continue;
+
+      const declaresSort = (operation.parameters ?? []).some((parameter) => (
+        parameter?.name === 'sort'
+        || (typeof parameter?.$ref === 'string' && /\bSortParam\b/.test(parameter.$ref))
+      ));
+      if (!declaresSort) continue;
+
+      findings.push({
+        rule: 'sort-without-x-sortable',
+        severity: 'warning',
+        message:
+          `${method.toUpperCase()} ${path} declares a sort parameter but no x-sortable, `
+          + 'so the server will reject every ?sort= it advertises. Add x-sortable with the '
+          + 'fields that may be sorted, or drop the parameter.',
+        path: doc.path,
+      });
+    }
+  }
+  return findings;
+}
+
 function validateDoc(doc, context) {
   const errors = [];
   const warnings = [];
@@ -383,6 +424,7 @@ function validateDoc(doc, context) {
       for (const finding of validateApiPatterns(doc.content, doc.path, sameDomainSchemas)) {
         (finding.severity === 'warning' ? warnings : errors).push(finding);
       }
+      warnings.push(...sortDeclaredWithoutAllowlist(doc));
       break;
     }
 

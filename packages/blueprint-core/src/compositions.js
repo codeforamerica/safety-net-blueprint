@@ -16,9 +16,6 @@
  * fully-shaped schema.
  */
 
-import { readdirSync, readFileSync } from 'fs';
-import { join } from 'path';
-import yaml from 'js-yaml';
 import { resolveSchemaRefs, collectTopLevelProperties } from './json-schema/index.js';
 import { indexByRelativePath } from './ref-lookup.js';
 import { extractPathParams, buildParameterIndex, buildPathEntry, toPascalCase } from './openapi/utils.js';
@@ -29,48 +26,6 @@ const LIST_QUERY_PARAMS = [
   { $ref: './components/parameters.yaml#/OffsetParam' },
   { $ref: './components/parameters.yaml#/SortParam' },
 ];
-
-// =============================================================================
-// Discovery
-// =============================================================================
-
-/**
- * Discover composition YAML files in a directory.
- *
- * @param {string} specsDir - Path to the specs directory
- * @returns {Array<{ filePath: string, domain: string, doc: Object }>}
- */
-export function discoverCompositions(specsDir) {
-  let files;
-  try {
-    files = readdirSync(specsDir, { recursive: true }).filter(f => typeof f === 'string');
-  } catch {
-    return [];
-  }
-
-  const results = [];
-  for (const file of files) {
-    if (!file.endsWith('.yaml') && !file.endsWith('.yml')) continue;
-    const filePath = join(specsDir, file);
-    try {
-      const content = readFileSync(filePath, 'utf8');
-      const doc = yaml.load(content, { schema: yaml.CORE_SCHEMA });
-      if (!doc || typeof doc !== 'object') continue;
-
-      // Use $schema as the type discriminator, not the filename convention
-      const schemaBasename = doc.$schema?.split('/').pop();
-      if (schemaBasename !== 'compositions-schema.yaml') continue;
-      if (!doc.compositions) continue;
-
-      const domain = doc.domain || file.replace(/-compositions\.ya?ml$/, '');
-      results.push({ filePath, domain, doc });
-    } catch {
-      continue;
-    }
-  }
-
-  return results;
-}
 
 // =============================================================================
 // Resource Schema Index

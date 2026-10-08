@@ -20,9 +20,12 @@ readdirSync(outputDir).filter(f => f.endsWith('.html')).forEach(f => rmSync(join
 
 const stateMachines = discover(resolvedDir, 'state-machine').map(load);
 
+// Returning, not exiting: this is one call inside build.js, and a contract
+// set with no state machines is a reason to write nothing here rather than
+// to end everybody else's build. See rules-docs for what that cost.
 if (!stateMachines.length) {
-  console.error('No state machine contracts found in', resolvedDir);
-  process.exit(1);
+  console.log(`No state machine contracts found in ${resolvedDir} — skipping state-machine-docs`);
+  return { skipped: 'no state machines in the contract set' };
 }
 
 // A base state machine declares shared procedures and no machines of its

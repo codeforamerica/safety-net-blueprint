@@ -3,12 +3,15 @@
  * Handles loading specs and seeding databases
  */
 
-import { loadAllSpecs, discoverApiSpecs } from './spec-loader.js';
+import { apiSpecsFromDocs } from './spec-loader.js';
+import { discoverApiSpecs } from './spec-discovery.js';
 import { seedAllDatabases } from './seeder.js';
 import { validateMockData } from './mock-data-validator.js';
 import { validateAll, getValidationStatus } from './spec-validator.js';
+import { initSchemaRegistry } from './validator.js';
 import { registerConfigManaged } from './config-registry.js';
-import { discover, generate, load, extract } from '@codeforamerica/blueprint-core';
+import { discover, load, extract } from '@codeforamerica/blueprint-core';
+import { contractsOfType, graphsOf, unresolvedRulesWarning } from './contract-views.js';
 /**
  * Perform setup: load specs and seed databases
  * @param {Object} options - Setup options
@@ -17,16 +20,22 @@ import { discover, generate, load, extract } from '@codeforamerica/blueprint-cor
  * @param {boolean} options.skipValidation - Skip validation step
  * @returns {Promise<Object>} Setup result with apiSpecs and summary
  */
-export async function performSetup({ specsDir, seedDir, verbose = true, skipValidation = false, store } = {}) {
-  if (!specsDir) {
-    throw new Error('specsDir is required — pass --spec <dir> to specify the spec file or directory');
+export async function performSetup({ specsDir, seedDir, docs: providedDocs = null, verbose = true, skipValidation = false, store } = {}) {
+  // Documents can arrive already loaded — from a contracts artifact, which is
+  // a contract set someone else already walked and parsed (#448). Everything
+  // after this point reads `docs` and cannot tell the difference.
+  if (!specsDir && !providedDocs) {
+    throw new Error('specsDir is required — pass --spec <dir> to specify the spec file or directory, or supply docs');
   }
   seedDir = seedDir || specsDir;
   // Check environment variable for skip validation
   if (process.env.SKIP_VALIDATION === 'true') {
     skipValidation = true;
   }
-  if (verbose) {
+  if (verbose && providedDocs) {
+    console.log(`\nReading ${providedDocs.length} document(s) from the contracts artifact...`);
+    console.log('  Validated when the artifact was built; not re-checked here.');
+  } else if (verbose) {
     console.log('\nDiscovering OpenAPI specifications...');
     console.log(`  Specs: ${specsDir}`);
     if (seedDir !== specsDir) console.log(`  Seed:  ${seedDir}`);
@@ -37,9 +46,20 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   // plus discover() called separately for compositions, rules, graphs and the
   // policy registry. The loaders are gone; `extract` reads the same facts from
   // documents already in memory.
-  const docs = discover(specsDir).map(load);
+  // The seed directory's documents belong in the same set: seeding reads
+  // mock-data documents through `extract(docs, 'examples')`, so they have to
+  // be here rather than discovered separately inside the seeder.
+  const docs = providedDocs ?? [
+    ...discover(specsDir),
+    ...(seedDir && seedDir !== specsDir ? discover(seedDir) : []),
+  ].map(load);
 
-  const apiSpecs = await loadAllSpecs({ specsDir });
+  // Hand the request validator the set before any route is registered, so a
+  // schema that still carries $refs can be resolved against it.
+  initSchemaRegistry(docs);
+
+  // From the documents already loaded, not a second walk of the same tree.
+  const apiSpecs = apiSpecsFromDocs(docs);
 
   if (apiSpecs.length === 0) {
     throw new Error('No OpenAPI specifications found in specs directory');
@@ -50,8 +70,14 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     apiSpecs.forEach(api => console.log(`  - ${api.title} (${api.name})`));
   }
 
-  // Validate specs (unless skipped)
-  if (!skipValidation) {
+  // Validate specs (unless skipped, or unless there are no files to validate).
+  //
+  // This check reads the spec files off disk — it dereferences each one to
+  // confirm every $ref resolves, which is a question about the tree rather
+  // than about the documents. An artifact has no tree: it was validated when
+  // `blueprint-bundle-contracts` built it, which is the point at which the
+  // files still existed, and it refuses to write an invalid set (#448).
+  if (!skipValidation && !providedDocs) {
     if (verbose) {
       console.log('\nValidating specifications...');
     }
@@ -100,13 +126,14 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     compositions.forEach(c => console.log(`  - ${c.domain} (${Object.keys(c.doc.compositions || {}).length} composition(s))`));
   }
 
-  // Discover rules files. Their decision graphs are compiled by generate —
-  // the same build step the resolve pipeline runs — so the server evaluates
-  // exactly what the pipeline would have written.
+  // Decision graphs are read from the set, not compiled here. resolve wrote
+  // one per ruleset beside its rules document, so recompiling produced the
+  // identical bytes — and could stop doing so if the two ran under different
+  // versions of the compiler.
   const rulesFiles = contractsOfType(docs, 'rules', 'rulesets');
-  const graphs = rulesFiles.length > 0
-    ? generate(docs, 'graph').map(({ graph }) => graph)
-    : [];
+  const graphs = graphsOf(docs);
+  const unresolved = unresolvedRulesWarning(rulesFiles, graphs);
+  if (unresolved) console.warn(`\nWarning: ${unresolved}`);
   if (verbose && rulesFiles.length > 0) {
     console.log(`\n✓ Discovered ${rulesFiles.length} rules file(s):`);
     rulesFiles.forEach(r => console.log(`  - ${r.domain} (${Object.keys(r.doc.rulesets || {}).length} ruleset(s))`));
@@ -120,7 +147,11 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   }
 
   // Seed databases from example files
-  const summary = seedAllDatabases(specsDir, seedDir, store);
+  // Seeding was asked for if a seed directory was given — or if the documents
+  // were handed over already loaded, which is what a contracts artifact does.
+  // An artifact has no seed directory and carries its mock-data documents in
+  // the set, so keying off the directory alone left the store empty (#448).
+  const summary = seedAllDatabases(docs, store, { seeded: Boolean(seedDir) || providedDocs !== null });
 
   // Seed config-managed resources (after seedAllDatabases, which clears collections first)
   const configs = extract(docs, 'config');
@@ -142,7 +173,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
   }
 
   // Seed platform policy registry into the mock database
-  const policies = registryEntries(docs, 'policies');
+  const policies = extract(docs, 'registries').policies ?? {};
   const policyEntries = Object.entries(policies);
   for (const [id, policy] of policyEntries) {
     store.insertResource('registry-policies', { id, ...policy, source: 'system' });
@@ -154,7 +185,7 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
 
   // Validate seed data against schemas
   if (!skipValidation) {
-    const seedErrors = validateMockData(specsDir, apiSpecs);
+    const seedErrors = validateMockData(docs, apiSpecs);
     if (seedErrors.length > 0) {
       const msg = seedErrors
         .map(e => `  ${e.api}${e.key ? ` [${e.key}]` : ''}: ${e.message}`)
@@ -176,27 +207,9 @@ export async function performSetup({ specsDir, seedDir, verbose = true, skipVali
     }
   }
 
-  return { apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, policies, summary };
+  return { docs, apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, policies, summary };
 }
 
-/**
- * Contract documents of one type, in the shape the server's consumers expect.
- *
- * `discover` already knows the type from the document's own $schema, so the
- * only thing left is to skip documents that declare none of the section the
- * caller wants. Takes the loaded set rather than a directory, so this costs no
- * extra walk.
- *
- * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
- * @param {string} type - Contract type to select
- * @param {string} section - Top-level key a usable document must declare
- * @returns {{ filePath: string, domain: string, doc: object }[]}
- */
-function contractsOfType(docs, type, section) {
-  return docs
-    .filter((doc) => doc.type === type && doc.content?.[section])
-    .map((doc) => ({ filePath: doc.path, domain: doc.content.domain, doc: doc.content }));
-}
 
 /**
  * Display setup summary
@@ -212,22 +225,3 @@ export function displaySetupSummary(summary) {
   }
 }
 
-/**
- * Merge every registry of one type into a map of ID to entry.
- *
- * Later documents override earlier ones per ID, which is how a state replaces
- * a baseline entry. `registry` is a contract type, so `discover` has already
- * tagged these; all that is left is the merge.
- *
- * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
- * @param {string} type - Registry type, e.g. 'policies'
- * @returns {Record<string, object>}
- */
-function registryEntries(docs, type) {
-  const merged = {};
-  for (const doc of docs) {
-    if (doc.type !== 'registry' || doc.content?.type !== type) continue;
-    Object.assign(merged, doc.content.entries ?? {});
-  }
-  return merged;
-}

@@ -2,4 +2,4 @@
 "@codeforamerica/blueprint-mock-server": minor
 ---
 
-**Breaking:** uploaded document bytes are no longer stored anywhere. `GET /document-versions/{id}/content` returns a JSON object describing the file — name, type, size, hash, upload time — instead of its contents, and nothing is written to disk, so a `snapshot()` can never carry real uploaded content. (#448)
+**Breaking:** before, uploading a document wrote its bytes to disk and `GET /document-versions/{id}/content` returned them. Now nothing is written and that endpoint returns a JSON object describing the file — name, type, size, hash, upload time — so a `snapshot()` can never carry real uploaded content. (#448)

@@ -1,0 +1,38 @@
+asyncapi: 3.0.0
+info:
+  title: Scheduling Domain Events
+  version: 0.1.0
+  x-status: draft
+  x-domain: scheduling
+  description: |
+    The timer request channel, which is the whole scheduling surface this
+    fixture needs. A domain asks for a time-based callback by publishing
+    `scheduling.timer.requested` with the event to fire when it elapses;
+    whatever provides scheduling answers it. Nothing in this contract set
+    implements a scheduler, which is the point — the mock server's timer stub
+    stands in, so a deadline measured in days is exercised in a second.
+channels:
+  scheduling.timer.requested:
+    address: scheduling.timer.requested
+    messages:
+      timerRequested:
+        $ref: '#/components/messages/TimerRequestedMessage'
+components:
+  messages:
+    TimerRequestedMessage:
+      name: scheduling.timer.requested
+      summary: >
+        Emitted by the platform requestTimer procedure. A scheduler registers
+        the timer and publishes the callback event on expiry.
+      payload:
+        $ref: '#/components/schemas/TimerRequestedEvent'
+  schemas:
+    # subject: the resource the timer is about
+    TimerRequestedEvent:
+      allOf:
+        - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/Event'
+        - type: object
+          properties:
+            type:
+              type: string
+              const: scheduling.timer.requested

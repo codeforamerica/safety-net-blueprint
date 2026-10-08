@@ -2,4 +2,4 @@
 "@codeforamerica/blueprint-safety-net-contracts": patch
 ---
 
-Fixed every reference that named something not in the contract set: 56 `$ref`s across eight AsyncAPI documents pointing at `schemas/events.yaml` instead of the canonical base events schema, and five `x-relationship.resource` values in `document-management-openapi.yaml` using a `domain/collection` path instead of a schema name. The `EmployerInfo` component is removed from `common/components/common.yaml` — it pointed at a schema deleted in July and is superseded by `Organization`, which carries the same fields. (#447)
+Before, validating or resolving the contract set reported references that named nothing in it: AsyncAPI documents pointing at a `schemas/events.yaml` that is not the canonical base events schema, and `x-relationship.resource` values naming a `domain/collection` path where a schema name belongs. Now every reference resolves. `EmployerInfo` is gone from `common/components/common.yaml` — it referenced a schema deleted in July, so it could not resolve either; use `Organization`, which carries the same fields. (#447)

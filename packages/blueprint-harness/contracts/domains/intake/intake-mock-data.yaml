@@ -1,0 +1,28 @@
+# Seed records for the intake domain.
+#
+# Keyed by the schema each record exemplifies — `ApplicationExample1` is an
+# `Application` — which is how `extract(docs, 'examples')` groups them and how
+# the seeder decides which collection each belongs in. The key names the
+# schema, not the collection, because a collection is the server's name for a
+# database and a schema is something the contract declares.
+#
+# Without these the sample contract set boots with every collection empty, so
+# nothing that reads a list demonstrates anything.
+ApplicationExample1:
+  id: 11111111-1111-4111-8111-111111111111
+  status: submitted
+  programsAppliedFor:
+    - snap
+  channel: online
+  createdAt: "2026-02-01T09:00:00Z"
+  updatedAt: "2026-02-01T09:15:00Z"
+
+ApplicationExample2:
+  id: 22222222-2222-4222-8222-222222222222
+  status: draft
+  programsAppliedFor:
+    - snap
+    - medicaid
+  channel: phone
+  createdAt: "2026-02-02T10:00:00Z"
+  updatedAt: "2026-02-02T10:00:00Z"

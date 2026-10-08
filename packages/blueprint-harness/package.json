@@ -17,5 +17,8 @@
     "type": "git",
     "url": "git+https://github.com/codeforamerica/safety-net-blueprint.git",
     "directory": "packages/blueprint-harness"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }

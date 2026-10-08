@@ -9,7 +9,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { substituteVariables } from '../../../src/resolve/variables.js';
+import { substituteVariables, substituteConfig } from '../../../src/resolve/variables.js';
 import { doc, only } from '../../helpers/docs.js';
 
 describe('substituteVariables', () => {
@@ -113,5 +113,45 @@ describe('substituteVariables', () => {
 
     assert.equal(result.applied.length, 1);
     assert.match(result.applied[0], /2 variable reference\(s\).*intake-openapi\.yaml/);
+  });
+});
+
+describe('substituteConfig', () => {
+  test('substitutes a config value, so a setting can vary by environment', () => {
+    // The point of the pass: an overlay declares that a cross-cutting setting
+    // is configurable without naming one deployment's choice.
+    const { config } = substituteConfig(
+      { 'x-event-type-prefix': '${EVENT_PREFIX}' },
+      { EVENT_PREFIX: 'ca.' }
+    );
+
+    assert.equal(config['x-event-type-prefix'], 'ca.');
+  });
+
+  test('an empty value is a value, not a missing one', () => {
+    // A local environment wants no prefix at all, which has to be expressible
+    // as a supplied empty string rather than as an absent variable.
+    const { config, unresolved } = substituteConfig(
+      { 'x-event-type-prefix': '${EVENT_PREFIX}' },
+      { EVENT_PREFIX: '' }
+    );
+
+    assert.equal(config['x-event-type-prefix'], '');
+    assert.deepEqual(unresolved, []);
+  });
+
+  test('names what it could not resolve, and leaves it written as it was', () => {
+    const { config, unresolved, warnings } = substituteConfig(
+      { 'x-event-type-prefix': '${EVENT_PREFIX}' },
+      {}
+    );
+
+    assert.equal(config['x-event-type-prefix'], '${EVENT_PREFIX}');
+    assert.deepEqual(unresolved, ['EVENT_PREFIX']);
+    assert.match(warnings[0], /EVENT_PREFIX/);
+  });
+
+  test('no config is not an error', () => {
+    assert.deepEqual(substituteConfig(null, {}), { config: null, warnings: [], unresolved: [] });
   });
 });

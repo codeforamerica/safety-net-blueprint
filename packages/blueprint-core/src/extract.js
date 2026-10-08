@@ -10,10 +10,24 @@
  *   sla-types        SLA type definitions, by domain
  *   metrics          metric definitions, by domain
  *   config           domain configuration catalogs, by domain
+ *   registries       registry entries, keyed by the type each registry claims
+ *   examples         example records, grouped by the schema each exemplifies
+ *   docs             the documents inside an artifact, as a contract set
  *
- * The last four name contract types, so they read the same vocabulary as
- * `discover(dir, type)`. Each replaces a loader in `blueprint-mock-server`
- * that walked the contracts directory itself; see `contract-readers.js`.
+ * `state-machines` through `config` name contract types, so they read the same
+ * vocabulary as `discover(dir, type)`. Each replaces a loader in
+ * `blueprint-mock-server` that walked the contracts directory itself; see
+ * `contract-readers.js`.
+ *
+ * `examples` was `generate(docs, 'examples')` until it was noticed that it
+ * groups records the documents already declare rather than producing anything
+ * the inputs do not contain — a readout, by this function's own definition.
+ *
+ * `docs` is the one case whose first argument is not a contract set but an
+ * artifact: `generate(docs, 'artifact')` serializes a set, and this reads it
+ * back. It belongs here rather than with `load` because the caller has already
+ * read and parsed the file — in a page, `await (await fetch(…)).json()` — so
+ * there is nothing left to load, only documents to rebuild (#448).
  *
  * Takes the whole set because the questions are cross-document by nature —
  * a single document cannot say whether its key is the first declaration, and
@@ -21,7 +35,9 @@
  */
 
 import { buildRelationshipIndex } from './indexes.js';
-import { readStateMachines, readSlaTypes, readMetrics, readConfigs } from './contract-readers.js';
+import { readStateMachines, readSlaTypes, readMetrics, readConfigs, readRegistries } from './contract-readers.js';
+import { buildExamples } from './examples.js';
+import { docsFromArtifact } from './artifact.js';
 
 /** What `extract` knows how to read. */
 const READERS = {
@@ -30,11 +46,15 @@ const READERS = {
   'sla-types': readSlaTypes,
   metrics: readMetrics,
   config: readConfigs,
+  registries: readRegistries,
+  examples: buildExamples,
+  docs: docsFromArtifact,
 };
 
 /**
- * @param {import('../types.js').Doc[]} docs
- * @param {'relationships'|'state-machines'|'sla-types'|'metrics'|'config'} type - Which fact to read out
+ * @param {import('../types.js').Doc[]|object} docs - A contract set, or an
+ *   artifact when reading `docs`
+ * @param {'relationships'|'state-machines'|'sla-types'|'metrics'|'config'|'registries'|'examples'|'docs'} type - Which fact to read out
  * @param {object} [options] - Passed to the reader that needs them
  * @returns {*} Whatever that fact is
  */

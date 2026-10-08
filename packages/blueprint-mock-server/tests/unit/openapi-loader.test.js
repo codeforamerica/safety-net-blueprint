@@ -1,16 +1,27 @@
 /**
- * Unit tests for OpenAPI loader
- * Tests spec discovery, loading, and parsing
+ * The server's view of an OpenAPI document.
+ *
+ * Nothing here dereferences any more. The refs in a contract set name other
+ * documents in the same set, so the set is already complete — flattening it
+ * only multiplied every shared schema by the number of places referencing it
+ * (#448). What is tested instead is that a ref can be *followed*: the two
+ * cases below that used to assert `$RefParser` had inlined everything now
+ * assert the opposite, and that resolution works anyway.
  */
 
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { discoverApiSpecs, loadSpec, extractMetadata } from '../../src/spec-loader.js';
+import { discover, load } from '@codeforamerica/blueprint-core';
+import { extractMetadata, apiSpecsFromDocs } from '../../src/spec-loader.js';
+import { discoverApiSpecs } from '../../src/spec-discovery.js';
 import { join } from 'path';
 
 const fixturesArg = process.argv.find(a => a.startsWith('--fixtures='));
 if (!fixturesArg) { console.error('--fixtures= is required'); process.exit(1); }
 const fixtureSpecDir = join(fixturesArg.slice('--fixtures='.length), 'spec');
+
+/** The server's metadata for every OpenAPI document in the fixture set. */
+const apisOf = (dir) => apiSpecsFromDocs(discover(dir).map(load));
 
 test('OpenAPI Loader Tests', async (t) => {
 
@@ -40,35 +51,44 @@ test('OpenAPI Loader Tests', async (t) => {
     console.log('  ✓ Throws without specsDir');
   });
 
-  await t.test('loadSpec - loads and dereferences spec', async () => {
-    const specs = discoverApiSpecs({ specsDir: fixtureSpecDir });
-    assert.ok(specs.length > 0, 'Need at least one spec to test');
+  await t.test('apiSpecsFromDocs - reads every OpenAPI document in the set', () => {
+    const apis = apisOf(fixtureSpecDir);
+    assert.ok(apis.length > 0, 'Should read at least one API');
 
-    const spec = await loadSpec(specs[0].specPath);
+    for (const api of apis) {
+      assert.ok(api.name, 'Should have a name');
+      assert.ok(api.title, 'Should have a title');
+      assert.ok(Array.isArray(api.endpoints), 'Should have endpoints');
+      assert.strictEqual(typeof api.resolve.node, 'function',
+        'Should carry a resolver bound to its own document');
+    }
 
-    assert.ok(spec.openapi, 'Should have openapi version');
-    assert.ok(spec.openapi.startsWith('3.'), 'Should be OpenAPI 3.x');
-    assert.ok(spec.info, 'Should have info section');
-    assert.ok(spec.paths, 'Should have paths section');
-
-    console.log(`  ✓ Loaded spec: ${spec.info.title}`);
+    console.log(`  ✓ Read ${apis.length} API(s) from documents`);
   });
 
-  await t.test('loadSpec - resolves $ref references', async () => {
-    const specs = discoverApiSpecs({ specsDir: fixtureSpecDir });
-    const spec = await loadSpec(specs[0].specPath);
+  await t.test('apiSpecsFromDocs - follows a ref without inlining the document', () => {
+    // The point of the change. A dereferenced document has no $ref left to
+    // find; this one keeps them, and resolution is a lookup at the moment
+    // something needs to see through one.
+    const docs = discover(fixtureSpecDir).map(load);
+    const [api] = apiSpecsFromDocs(docs);
 
-    // Check that references are resolved (no $ref left at top level)
-    const pathKeys = Object.keys(spec.paths);
-    assert.ok(pathKeys.length > 0, 'Should have at least one path');
+    const refs = [...docs.find((d) => d.type === 'openapi').refs().keys()];
+    assert.ok(refs.length > 0, 'the fixture document should still carry refs');
 
-    console.log(`  ✓ Resolved references for ${pathKeys.length} path(s)`);
+    const internal = refs.find((r) => r.startsWith('#/components/schemas/'));
+    if (internal) {
+      const resolved = api.resolve.node(internal);
+      assert.ok(resolved && typeof resolved === 'object',
+        `${internal} should resolve to the schema it names`);
+      assert.ok(!resolved.$ref, 'resolving should return the node, not another pointer');
+    }
+
+    console.log(`  ✓ ${refs.length} ref(s) left in place and followable`);
   });
 
-  await t.test('extractMetadata - extracts API information', async () => {
-    const specs = discoverApiSpecs({ specsDir: fixtureSpecDir });
-    const spec = await loadSpec(specs[0].specPath);
-    const metadata = extractMetadata(spec, specs[0].name);
+  await t.test('extractMetadata - extracts API information', () => {
+    const [metadata] = apisOf(fixtureSpecDir);
 
     assert.ok(metadata.name, 'Should have name');
     assert.ok(metadata.title, 'Should have title');
@@ -79,10 +99,8 @@ test('OpenAPI Loader Tests', async (t) => {
     console.log(`  ✓ Extracted metadata with ${metadata.endpoints.length} endpoint(s)`);
   });
 
-  await t.test('extractMetadata - extracts endpoint details', async () => {
-    const specs = discoverApiSpecs({ specsDir: fixtureSpecDir });
-    const spec = await loadSpec(specs[0].specPath);
-    const metadata = extractMetadata(spec, specs[0].name);
+  await t.test('extractMetadata - extracts endpoint details', () => {
+    const [metadata] = apisOf(fixtureSpecDir);
 
     const endpoint = metadata.endpoints[0];
     assert.ok(endpoint.path, 'Endpoint should have path');
@@ -93,10 +111,8 @@ test('OpenAPI Loader Tests', async (t) => {
     console.log(`  ✓ First endpoint: ${endpoint.method} ${endpoint.path}`);
   });
 
-  await t.test('extractMetadata - extracts pagination defaults', async () => {
-    const specs = discoverApiSpecs({ specsDir: fixtureSpecDir });
-    const spec = await loadSpec(specs[0].specPath);
-    const metadata = extractMetadata(spec, specs[0].name);
+  await t.test('extractMetadata - extracts pagination defaults', () => {
+    const [metadata] = apisOf(fixtureSpecDir);
 
     assert.ok(metadata.pagination, 'Should have pagination config');
     assert.strictEqual(typeof metadata.pagination.limitDefault, 'number', 'Should have default limit');

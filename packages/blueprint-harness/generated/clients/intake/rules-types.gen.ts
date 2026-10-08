@@ -4,7 +4,12 @@ export type InterviewPromptsInputs = {
   household?: {
     monthlyIncome?: number;
     monthlyExpenses?: number;
-    members?: unknown[];
+    members?: Array<{
+      age?: number;
+      isEmployed?: boolean;
+      isStudent?: boolean;
+      isNonCitizen?: boolean;
+    }>;
   };
   application?: {
     hasChangedCircumstances?: boolean;

@@ -9,7 +9,11 @@ compositions:
   # before running eligibility determination rules.
   applicationSummary:
     resource: applications
-    fields: [id, referenceId, status, programsAppliedFor, channel, submittedAt]
+    # programCount is deliberately absent. It is x-derived, and a composition
+    # projects fields off the stored record without applying read-time
+    # transformations — so naming it here produced a response missing a field
+    # the contract declared. Re-add it as the regression test when #443 lands.
+    fields: [id, status, programsAppliedFor, channel, submittedAt]
     endpoint:
       path: /applications/{applicationId}/summary
       parentLink: true

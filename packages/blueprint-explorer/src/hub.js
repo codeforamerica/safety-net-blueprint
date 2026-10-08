@@ -56,6 +56,22 @@ function defaultLabel(slug) {
   return slug.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
+/**
+ * A card heading, linked only where the page it points at was written.
+ *
+ * A tool with nothing to document writes nothing: a contract set declaring no
+ * rule graphs produces no rules-docs, and the card linking into that section
+ * was a 404 on the front page of the site. The card stays — the capability is
+ * real and worth knowing about — but it stops pretending to lead somewhere.
+ */
+function sectionTitle(contentDir, label, href) {
+  const target = join(contentDir, href.split('#')[0]);
+  return existsSync(target)
+    ? `<h4><a href="${href}" class="card-link">${label}</a></h4>`
+    : `<h4><span class="card-link card-link--absent"`
+      + ` title="Not generated for this contract set">${label}</span></h4>`;
+}
+
 // ── Output tag HTML ───────────────────────────────────────────────────────────
 
 function outputTags(pages, basePath, dotClass) {
@@ -299,6 +315,11 @@ const html = `<!DOCTYPE html>
       z-index: 0;
     }
 
+    /* A section this contract set produced nothing for. The card still
+       describes the capability; it just does not lead anywhere. */
+    .card-link--absent { color: var(--text-light); cursor: default; }
+    .card-link--absent::after { content: none; }
+
     .card-accent { height: 4px; }
 
     .accent-blue   { background: linear-gradient(90deg, var(--dark-blue), var(--mid-blue)); }
@@ -445,7 +466,7 @@ const html = `<!DOCTYPE html>
       <h1>${projectName}</h1>
     </div>
     <nav>
-      <a href="${repoUrl}">GitHub</a>
+      ${repoUrl ? `<a href="${repoUrl}">GitHub</a>` : ''}
     </nav>
   </header>
 
@@ -477,7 +498,7 @@ const html = `<!DOCTYPE html>
             </svg>
           </div>
           <div class="card-header-row">
-            <h4><a href="api-reference/index.html" class="card-link">API Reference</a></h4>
+            ${sectionTitle(contentDir, "API Reference", "api-reference/index.html")}
             <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Static reference for all contract APIs — endpoints, parameters, request and response schemas. No running mock server required.</p>${outputTags(apiPages, `api-reference`, 'dot-green')}
@@ -496,7 +517,7 @@ const html = `<!DOCTYPE html>
             </svg>
           </div>
           <div class="card-header-row">
-            <h4><a href="data-dictionaries/index.html" class="card-link">Data Dictionary</a></h4>
+            ${sectionTitle(contentDir, "Data Dictionary", "data-dictionaries/index.html")}
             <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Field-level reference for the blueprint data model — types, enums, relationships, and annotations from the OpenAPI specs.</p>${outputTags(dictPages, `data-dictionaries`, 'dot-green')}
@@ -517,7 +538,7 @@ const html = `<!DOCTYPE html>
             </svg>
           </div>
           <div class="card-header-row">
-            <h4><a href="client-reference/index.html" class="card-link">Client Reference</a></h4>
+            ${sectionTitle(contentDir, "Client Reference", "client-reference/index.html")}
             <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Generated TypeScript client reference — SDK functions, types, and Zod schemas for each domain, with search helper documentation.</p>${outputTags(clientPages, `client-reference`, 'dot-grey')}
@@ -537,7 +558,7 @@ const html = `<!DOCTYPE html>
             </svg>
           </div>
           <div class="card-header-row">
-            <h4><a href="state-machine-docs/index.html" class="card-link">State Machine Docs</a></h4>
+            ${sectionTitle(contentDir, "State Machine Docs", "state-machine-docs/index.html")}
             <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Generated reference for the state machines defined in the blueprint contracts — states, transitions, actions, and event subscriptions.</p>${outputTags(smPages, `state-machine-docs`, 'dot-blue')}
@@ -561,7 +582,7 @@ const html = `<!DOCTYPE html>
             </svg>
           </div>
           <div class="card-header-row">
-            <h4><a href="rules-docs/index.html" class="card-link">Rules Docs</a></h4>
+            ${sectionTitle(contentDir, "Rules Docs", "rules-docs/index.html")}
             <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Dependency graph visualizer for blueprint rulesets — inputs, intermediate facts, outputs, policy citations, and browser-side evaluation.</p>${outputTags(rulesPages, `rules-docs`, 'dot-blue')}
@@ -586,7 +607,7 @@ const html = `<!DOCTYPE html>
             </svg>
           </div>
           <div class="card-header-row">
-            <h4><a href="event-catalog/index.html" class="card-link">Event Catalog</a></h4>
+            ${sectionTitle(contentDir, "Event Catalog", "event-catalog/index.html")}
             <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Cross-domain event reference — every published event with its emitting domain and all subscribers, derived from state machine contracts.</p>
@@ -608,7 +629,7 @@ const html = `<!DOCTYPE html>
             </svg>
           </div>
           <div class="card-header-row">
-            <h4><a href="annotations-explorer/index.html" class="card-link">Annotation Registry</a></h4>
+            ${sectionTitle(contentDir, "Annotation Registry", "annotations-explorer/index.html")}
             <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Registry coverage explorer — every annotation registry entry with the schema fields, operations, events, and facts that reference it.</p>
@@ -645,7 +666,7 @@ const html = `<!DOCTYPE html>
             </svg>
           </div>
           <div class="card-header-row">
-            <h4><a href="context-map/domains.html" class="card-link">Context Map</a></h4>
+            ${sectionTitle(contentDir, "Context Map", "context-map/domains.html")}
             <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Visual map of the bounded contexts, systems, and integration relationships across the safety net platform.</p>${outputTags(contextPages, `context-map`, 'dot-blue')}
@@ -666,7 +687,7 @@ const html = `<!DOCTYPE html>
             </svg>
           </div>
           <div class="card-header-row">
-            <h4><a href="sequence-diagrams/index.html" class="card-link">Sequence Diagrams</a></h4>
+            ${sectionTitle(contentDir, "Sequence Diagrams", "sequence-diagrams/index.html")}
             <span class="status-badge badge-progress">In progress</span>
           </div>
           <p>Contract-driven event chain diagrams tracing how a triggering action propagates across domain boundaries.</p>${outputTags(seqPages, `sequence-diagrams`, 'dot-blue')}
@@ -678,7 +699,7 @@ const html = `<!DOCTYPE html>
   </main>
 
   <footer>
-    <a href="${repoUrl}">${projectName}</a>
+    ${repoUrl ? `<a href="${repoUrl}">${projectName}</a>` : projectName}
     &nbsp;·&nbsp;
     Code for America
   </footer>

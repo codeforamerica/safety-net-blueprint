@@ -7,7 +7,7 @@
  * lets the same route table be served by a service worker or called directly
  * in a browser (#448).
  *
- * The request body is the socket stream rather than a re-serialised copy, so a
+ * The request body is the socket stream rather than a re-serialized copy, so a
  * multipart upload reaches `request.formData()` exactly as it arrived — and a
  * handler replaced by a real `fetch` can forward it unread.
  */

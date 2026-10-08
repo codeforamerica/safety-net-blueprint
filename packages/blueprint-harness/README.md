@@ -6,14 +6,36 @@ This is a private, internal package. It is not published to npm.
 
 ## What it contains
 
-A complete sample blueprint project — two domains (intake, eligibility) — used as the shared test fixture across all blueprint tooling packages (`blueprint-cli`, `blueprint-explorer`, `blueprint-rules-engine`, etc.).
+A complete sample blueprint project, used as the shared test fixture across all blueprint tooling packages (`blueprint-cli`, `blueprint-explorer`, `blueprint-rules-engine`, etc.). Four domains carry resources — intake, eligibility, platform and document-management — and scheduling contributes an events channel only.
 
 | Directory | Contents |
 |-----------|----------|
 | `contracts/` | Source contract files — the inputs that tooling packages process |
-| `generated/resolved/` | Resolved output produced by `blueprint-cli resolve` |
-| `generated/clients/` | TypeScript clients produced by `blueprint-cli generate-ts-clients` |
+| `mock/` | The demo page source, built into `generated/mock/` |
 | `explorer/` | Explorer configuration and authored content (not generated) |
+| `generated/resolved/` | Resolved output produced by `blueprint-cli resolve` |
+| `generated/bundled/` | Dereferenced specs |
+| `generated/clients/` | TypeScript clients produced by `blueprint-cli generate-ts-clients` |
+| `generated/explorer/` | Rendered Explorer site |
+| `generated/mock/` | The browser mock page, served and single-file |
+| `generated/overlays/`, `generated/postman/`, `generated/schemas/` | Generated overlays, a Postman collection, exported JSON Schemas |
+
+## What it is for
+
+Two jobs, and the second matters more than it looks.
+
+It is the shared fixture the tooling packages test against. It is also the only place the contract types are used *together*, by something that doesn't know which parts are load-bearing — which is a different test, and a harder one to pass.
+
+Unit tests exercise one seam at a time and keep passing. Building something real against the whole set finds what they cannot. Writing the browser demo page in `mock/` surfaced, among other things:
+
+- a cross-domain subscription this contract set declares, which had never once run: the step was written in a shape the engine does not accept, and the schema permits that shape
+- an event emitted with an empty payload, so even a correctly written subscriber had nothing to act on
+- a field annotated `x-derived` whose expression was neither a derivation nor valid CEL — it only evaluated because the evaluator falls through to JavaScript
+- a package export documented in three places and absent from `package.json`
+
+Most of them share a shape: a contract declares something, code does the same job by hand, and both sides work while disagreeing. That is the failure this whole project exists to prevent, and nothing catches it except using the contracts end to end.
+
+So when you add a feature to a tooling package, adding a contract here that exercises it is worth more than another unit test.
 
 ## What each contract type exercises
 

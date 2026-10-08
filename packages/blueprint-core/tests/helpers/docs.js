@@ -7,7 +7,7 @@
  * returns `{...doc, content}` reports the new content, not the original.
  */
 
-import { detectType } from '../../src/openapi/contract-files.js';
+import { detectType } from '../../src/contract-types.js';
 
 /**
  * @param {object} content - Parsed document content
@@ -27,8 +27,6 @@ export function doc(content, { relativePath = 'domains/test/test.yaml', type, mo
     content,
     refs() { return new Map(); },
     model() { return model ?? null; },
-    resolved: false,
-    provenance: null,
   };
 }
 

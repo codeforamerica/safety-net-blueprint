@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "required": [
+    "documentTypeId",
+    "title"
+  ],
+  "properties": {
+    "documentTypeId": {
+      "type": "string",
+      "description": "What kind of document this is."
+    },
+    "title": {
+      "type": "string",
+      "description": "A human-readable name for the document."
+    },
+    "documentDate": {
+      "type": "string",
+      "format": "date",
+      "nullable": true,
+      "description": "The date the document itself bears, which is not the date it arrived."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/DocumentWritable"
+}

@@ -9,7 +9,7 @@
  * Exit code 1 if any mismatches are found.
  */
 
-import { readFileSync, readdirSync } from 'fs';
+import { readFileSync, readdirSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
@@ -66,6 +66,13 @@ function procsForDomain(domain) {
 }
 
 // ── Load config files and validate ────────────────────────────────────────
+
+// A content set with no sequence diagrams has no directory for them, which
+// is a reason to validate nothing rather than to fail somebody's build.
+if (!existsSync(configDir)) {
+  console.log(`No sequence diagram configs in ${configDir} — nothing to validate`);
+  process.exit(0);
+}
 
 const configFiles = readdirSync(configDir).filter(f => f.endsWith('-config.yaml'));
 let errors = 0;

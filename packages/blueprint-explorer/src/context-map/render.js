@@ -201,25 +201,33 @@ function groupIntoFlows(cfg) {
 // ── Overview (SVG hex grid) ────────────────────────────────────────────────
 
 function renderOverview() {
-  const W = 1400, H = 840;
   const R_OV        = 100;  // hex vertex-radius — sized for readable text
   const COL_COUNT   = 4;
   const COL_SPACING = 310;  // center-to-center column distance
   const ROW_SPACING = 235;  // center-to-center row distance
   const GRID_TOP    = 240;  // y-coordinate of the first row center
 
-  // Center the 4-column grid horizontally within the canvas
-  const COL_START = Math.round((W - (COL_COUNT - 1) * COL_SPACING) / 2);
+  const W = 1400;
 
-  // Sort by y then x (preserves config layout order) and assign to grid slots
+  // Every domain, in a stable order, placed by its position in the list.
+  //
+  // The coordinates for this grid were computed here all along; the x and y
+  // in the layout config were only ever read back to sort by, which made a
+  // diagram config into a second register of which domains exist. It fell
+  // out of step with the contracts and drew two domains that had been
+  // deleted. Ordering alphabetically needs nobody to maintain anything.
   const sortedDomains = [...config.domains]
-    .filter(d => d.x != null)
-    .sort((a, b) => a.y !== b.y ? a.y - b.y : a.x - b.x)
+    .sort((a, b) => a.id.localeCompare(b.id))
     .map((d, idx) => ({
       ...d,
-      cx: COL_START + (idx % COL_COUNT) * COL_SPACING,
-      cy: GRID_TOP  + Math.floor(idx / COL_COUNT) * ROW_SPACING,
+      cx: Math.round((W - (COL_COUNT - 1) * COL_SPACING) / 2) + (idx % COL_COUNT) * COL_SPACING,
+      cy: GRID_TOP + Math.floor(idx / COL_COUNT) * ROW_SPACING,
     }));
+
+  // Tall enough for however many rows there are, so a domain added to the
+  // contracts appears instead of being drawn past the bottom edge.
+  const rows = Math.max(1, Math.ceil(sortedDomains.length / COL_COUNT));
+  const H = Math.max(840, GRID_TOP + (rows - 1) * ROW_SPACING + R_OV + 60);
 
   const parts = [
     `<rect x="0" y="0" width="${W}" height="${H}" fill="white"/>`,
@@ -455,10 +463,7 @@ export function renderContextMap(pkgConfig, mapConfig, outDir) {
     apis:          pkgConfig.apis,
     actors:        pkgConfig.actors,
     flows:         pkgConfig.flows,
-    domains:       (pkgConfig.domains || []).map(d => ({
-      ...d,
-      ...(mapConfig.layout?.[d.id] || {}),
-    })),
+    domains:       pkgConfig.domains || [],
   };
 
   mkdirSync(outDir, { recursive: true });

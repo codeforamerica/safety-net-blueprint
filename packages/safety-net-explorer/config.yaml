@@ -81,23 +81,11 @@ domains:
     description: Appointments & interviews
     entities: [Appointment, Schedule]
 
-  - id: communications
+  - id: communication
     label: Communications
     status: not-started
     description: Notices, letters & client alerts
     entities: [Notice, Template, DeliveryEvent, Preference]
-
-  - id: appeals_hearings
-    label: Appeals & Hearings
-    status: not-started
-    description: Fair hearings & appeal decisions
-    entities: [Appeal, Hearing, HearingOfficer, Decision]
-
-  - id: benefits_payments
-    label: Benefits & Payments
-    status: not-started
-    description: Benefit issuance, EBT & recoupment
-    entities: [BenefitIssuance, PaymentRecord, Overpayment, RecoupmentPlan]
 
 # Domain events (asynchronous, pub/sub)
 #
@@ -188,7 +176,7 @@ events:
 
   # ── Intake ───────────────────────────────────────────────────────────────────
 
-  # intake calls communications directly when a document request is created on a verification item;
+  # intake calls communication directly when a document request is created on a verification item;
   # no event — intake knows exactly what it needs and who to call
 
   # emitted when a determination requires supervisor sign-off before the NOA is sent;
@@ -465,7 +453,7 @@ flows:
     label: Application Submission
     domain: intake
     description: Events triggered when an application is submitted
-    participants: [applicant, intake, workflow, eligibility, data_exchange, document_management, communications, client_management]
+    participants: [applicant, intake, workflow, eligibility, data_exchange, document_management, communication, client_management]
     steps:
       - fragment: submission
         steps:
@@ -531,10 +519,10 @@ flows:
         steps:
           - label: Send document request notice
             from: intake
-            to: communications
+            to: communication
             gap: true
             gap_description: "Communications needs verification category and program on the payload to select the right notice template; template catalog not yet designed"
-          - self: communications
+          - self: communication
             label: Document request notice sent to applicant
             gap: true
             gap_description: Notice template catalog not yet designed
@@ -637,7 +625,7 @@ flows:
     label: Caseworker Review
     domain: intake
     description: From task claim through interview to verification complete
-    participants: [caseworker, supervisor, intake, workflow, data_exchange, scheduling, document_management, communications]
+    participants: [caseworker, supervisor, intake, workflow, data_exchange, scheduling, document_management, communication]
     steps:
       - ref: application_submission
         label: Application Submission
@@ -684,10 +672,10 @@ flows:
             steps:
               - label: Send document request notice
                 from: intake
-                to: communications
+                to: communication
                 gap: true
                 gap_description: "Communications needs verification category and program on the payload to select the right notice template; template catalog not yet designed"
-              - self: communications
+              - self: communication
                 label: Document request notice sent to applicant
                 gap: true
                 gap_description: Notice template catalog not yet designed
@@ -779,7 +767,7 @@ flows:
     label: Eligibility Determination
     domain: intake
     description: "Two paths to determination: (A) auto — Medicaid-only; eligibility runs electronic checks at submission and records formal Decisions immediately when data is conclusive (45 CFR § 435.911); (B) manual — caseworker completes review, intake fires application.review_completed, eligibility runs rules engine for all pending Decisions. Both paths converge at eligibility.application.determination_completed."
-    participants: [caseworker, supervisor, intake, workflow, eligibility, communications, case_management]
+    participants: [caseworker, supervisor, intake, workflow, eligibility, communication, case_management]
     steps:
       - fragment: auto-determination
         type: opt
@@ -870,7 +858,7 @@ flows:
         steps:
           - label: Send Notice of Action
             from: intake
-            to: communications
+            to: communication
             ref: "operations/application.close"
             gap: true
             gap_description: Notice template catalog not yet designed

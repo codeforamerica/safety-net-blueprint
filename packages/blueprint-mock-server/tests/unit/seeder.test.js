@@ -11,8 +11,9 @@ import { createMemoryStore } from '../../src/stores/memory-store.js';
 // singleton. In memory because these cases do not need a database — and
 // because a fresh one per file is isolation they did not have before.
 const store = createMemoryStore();
+import { discover, load } from '@codeforamerica/blueprint-core';
 import { seedAllDatabases } from '../../src/seeder.js';
-import { loadAllSpecs } from '../../src/spec-loader.js';
+import { loadAllSpecs } from '../../src/spec-discovery.js';
 import { join } from 'path';
 
 const fixturesArg = process.argv.find(a => a.startsWith('--fixtures='));
@@ -27,6 +28,16 @@ const seedDir        = seedArg.slice('--seed='.length);
 // causes WAL to be replayed into the new file, restoring deleted rows).
 const cleanup = () => { store.clearAll('persons'); };
 
+/**
+ * Load the documents the seeder now takes, from the directories these cases use.
+ *
+ * Duplicates are dropped: several cases pass the same directory as both spec
+ * and seed, and seeding the same example twice is not what they are asserting.
+ */
+function loadDocs(...dirs) {
+  return [...new Set(dirs.filter(Boolean))].flatMap((d) => discover(d)).map(load);
+}
+
 test('Database Seeder Tests', async (t) => {
   
   await t.test('seedAllDatabases - seeds from *-mock-data.yaml files', () => {
@@ -40,7 +51,7 @@ test('Database Seeder Tests', async (t) => {
         { path: '/client-management/persons/{personId}' },
       ],
     };
-    const summary = seedAllDatabases(fixtureSpecDir, seedDir, store);
+    const summary = seedAllDatabases(loadDocs(fixtureSpecDir, seedDir), store, { seeded: Boolean(seedDir) });
 
     assert.ok(typeof summary === 'object', 'Should return summary object');
     const seededCount = summary['persons'] ?? 0;
@@ -66,7 +77,7 @@ test('Database Seeder Tests', async (t) => {
         { path: '/client-management/persons/{personId}' },
       ],
     };
-    seedAllDatabases(fixtureSpecDir, seedDir, store);
+    seedAllDatabases(loadDocs(fixtureSpecDir, seedDir), store, { seeded: Boolean(seedDir) });
     const records = store.findAll('persons', {});
 
     if (records.length > 0) {
@@ -89,7 +100,7 @@ test('Database Seeder Tests', async (t) => {
         { path: '/client-management/persons/{personId}' },
       ],
     };
-    seedAllDatabases(fixtureSpecDir, seedDir, store);
+    seedAllDatabases(loadDocs(fixtureSpecDir, seedDir), store, { seeded: Boolean(seedDir) });
     const records = store.findAll('persons', {});
 
     if (records.length > 1) {
@@ -110,7 +121,7 @@ test('Database Seeder Tests', async (t) => {
       serverBasePath: '/client-management',
       endpoints: [{ path: '/client-management/persons' }],
     };
-    seedAllDatabases(fixtureSpecDir, null, store);
+    seedAllDatabases(loadDocs(fixtureSpecDir), store, { seeded: false });
 
     assert.strictEqual(store.count('persons'), 0, 'Should be empty with no seedDir');
     console.log('  ✓ Empty databases with null seedDir');
@@ -129,7 +140,7 @@ test('Database Seeder Tests', async (t) => {
       serverBasePath: '/client-management',
       endpoints: [{ path: '/client-management/persons' }],
     };
-    seedAllDatabases(fixtureSpecDir, emptyDir, store);
+    seedAllDatabases(loadDocs(fixtureSpecDir, emptyDir), store, { seeded: Boolean(emptyDir) });
 
     assert.strictEqual(store.count('persons'), 0, 'Should be empty when no seed files found');
     console.log('  ✓ Empty databases when no mock-data files present');
@@ -139,7 +150,7 @@ test('Database Seeder Tests', async (t) => {
     cleanup();
 
     const apiSpecs = await loadAllSpecs({ specsDir: fixtureSpecDir });
-    const summary = seedAllDatabases(fixtureSpecDir, seedDir, store);
+    const summary = seedAllDatabases(loadDocs(fixtureSpecDir, seedDir), store, { seeded: Boolean(seedDir) });
 
     assert.ok(typeof summary === 'object', 'Should return summary object');
     assert.ok(Object.keys(summary).length >= apiSpecs.length,
@@ -198,7 +209,7 @@ test('Database Seeder Tests', async (t) => {
       assert.strictEqual(store.findAll(target, { id: sentinelId }).total, 1,
         'Sentinel should be present before reseed');
 
-      seedAllDatabases(dir, dir, store);
+      seedAllDatabases(loadDocs(dir, dir), store, { seeded: Boolean(dir) });
 
       assert.strictEqual(store.findAll(target, { id: sentinelId }).total, 0,
         `Sub-collection "${target}" should be cleared at boot`);
@@ -277,8 +288,7 @@ test('Database Seeder Tests', async (t) => {
       } },
     }));
 
-    const { seedAllDatabases: seed } = await import('../../src/seeder.js');
-    seed([api], tmpSeedDir, store);
+    seedAllDatabases(loadDocs(tmpSeedDir), store);
 
     const appsInApplications = store.findAll('applications', {}).total;
     const membersInApplications = store.findAll('applications', { id: 'c0000001-0000-4000-8000-000000000001' }).total;
@@ -313,9 +323,9 @@ test('Database Seeder Tests', async (t) => {
     }));
 
     // The fixture spec dir names the collections; the custom seed dir supplies
-    // the records — confirming seeds come from seedDir, not from specsDir.
-    const { seedAllDatabases: seed } = await import('../../src/seeder.js');
-    seed(fixtureSpecDir, tmpSeedDir, store);
+    // the records. The seeder takes documents now, so this is the caller's job
+    // — which is what lets a browser seed from the contracts artifact (#448).
+    seedAllDatabases(loadDocs(fixtureSpecDir, tmpSeedDir), store);
 
     const found = store.findAll('widgets', { id: 'f0000001-0000-4000-8000-000000000001' });
     assert.strictEqual(found.total, 1, 'record from custom seedDir should be present in widgets');

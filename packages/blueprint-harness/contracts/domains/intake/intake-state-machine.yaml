@@ -1,4 +1,6 @@
 $schema: state-machine-schema.yaml
+# Inherits the platform procedures — `requestTimer` is used by `submit` below.
+extends: ../platform/platform-state-machine.yaml
 version: "1.0"
 domain: intake
 apiSpec: intake-openapi.yaml
@@ -40,7 +42,26 @@ machines:
               description: Record the submission timestamp (regulatory clock start).
           - emit:
               type: intake.application.submitted
+              # Carries the application, not just a type. A subscriber in
+              # another domain cannot act on an empty payload, and eligibility
+              # declares a subscription to this event below in
+              # eligibility-state-machine.yaml. `id` matching `subject` is what
+              # binds the payload to `$object` in the subscriber's steps.
+              subject: $object.id
+              data:
+                id: $object.id
+                programsAppliedFor: $object.programsAppliedFor
               description: Triggers eligibility screening, caseworker task creation, and confirmation notice.
+          # The regulatory clock starts here, so the escalation deadline is set
+          # here too. Nothing waits: the request is an event, and the machine's
+          # `intake.review_reminder` subscription below handles the callback.
+          - call: requestTimer
+            with:
+              timerId: review_reminder
+              fireAfter: {amount: 72, unit: hours}
+              callback:
+                event: intake.review_reminder
+            description: Escalate if no caseworker has opened this application in 72 hours.
 
       - id: open
         description: Moves a submitted application into active caseworker review.

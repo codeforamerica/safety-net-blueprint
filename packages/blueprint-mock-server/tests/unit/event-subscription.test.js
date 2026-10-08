@@ -41,14 +41,13 @@ test('machine onEvent — runs when guards pass', (t, done) => {
 
   const machine = {
     object: 'Application',
-    guards: [{ id: 'isUrgent', field: 'isUrgent', operator: 'equals', value: true }],
-    triggers: {
-      onEvent: [{
-        type: 'intake.application.submitted',
-        guards: { conditions: ['isUrgent'] },
-        then: [{ set: { field: 'priority', value: 'high' } }]
-      }]
-    }
+    guards: [{ id: 'isUrgent', condition: 'object.isUrgent == true' }],
+    events: [{
+      type: 'intake.application.submitted',
+      transition: { from: 'submitted' },
+      guards: { conditions: ['isUrgent'] },
+      steps: [{ set: { field: 'priority', value: 'high' } }]
+    }]
   };
 
   const smEntries = [{
@@ -64,8 +63,8 @@ test('machine onEvent — runs when guards pass', (t, done) => {
   ));
 
   setImmediate(() => {
-    // guard passes — no transition: so no DB write, but steps ran on empty resource
-    // (steps on non-transition onEvent don't persist — this just verifies no crash)
+    const app = store.findById('applications', APP_ID);
+    assert.strictEqual(app.priority, 'high', 'the step should have run and persisted');
     done();
   });
 });
@@ -79,14 +78,13 @@ test('machine onEvent — skipped when guards fail', (t, done) => {
 
   const machine = {
     object: 'Application',
-    guards: [{ id: 'isUrgent', field: 'isUrgent', operator: 'equals', value: true }],
-    triggers: {
-      onEvent: [{
-        type: 'intake.application.submitted',
-        guards: { conditions: ['isUrgent'] },
-        then: [{ set: { field: 'priority', value: 'high' } }]
-      }]
-    }
+    guards: [{ id: 'isUrgent', condition: 'object.isUrgent == true' }],
+    events: [{
+      type: 'intake.application.submitted',
+      transition: { from: 'submitted' },
+      guards: { conditions: ['isUrgent'] },
+      steps: [{ set: { field: 'priority', value: 'high' } }]
+    }]
   };
 
   const smEntries = [{
@@ -206,6 +204,47 @@ test('machine onEvent — skipped when resource in wrong from state', (t, done) 
     const app = store.findById('applications', APP_ID);
     assert.strictEqual(app.status, 'under_review');
     assert.strictEqual(app.flag, undefined);
+    done();
+  });
+});
+
+// =============================================================================
+// Machine onEvent — emitting
+// =============================================================================
+
+test('machine onEvent — an emit: step reaches the event log', (t, done) => {
+  // This path threw for every subscription that emits: emitEventEnvelope takes
+  // the store as its second argument and this call site omitted it, so the
+  // envelope could not be recorded. The failure is caught and logged, so the
+  // triggering transition still succeeded and the emitted event simply never
+  // appeared — which is the hardest kind of missing to notice.
+  store.clearAll('applications');
+  store.clearAll('events');
+  const APP_ID = 'app-emitting';
+  store.insertResource('applications', { id: APP_ID, status: 'submitted' });
+
+  const machine = {
+    object: 'Application',
+    events: [{
+      type: 'intake.review_reminder',
+      transition: { from: 'submitted' },
+      steps: [{ emit: { type: 'intake.application.review-reminder' } }],
+    }],
+  };
+
+  const smEntries = [{
+    domain: 'intake',
+    machine,
+    stateMachine: { domain: 'intake', context: null, rules: [], guards: [] },
+  }];
+
+  registerEventSubscriptions(smEntries, [], [], store);
+  eventBus.emit('domain-event', makeEvent('intake.review_reminder', APP_ID));
+
+  setImmediate(() => {
+    const { items } = store.findAll('events', { type: 'intake.application.review-reminder' }, { limit: null });
+    assert.equal(items.length, 1, 'the emitted event should be in the log');
+    assert.equal(items[0].subject, APP_ID, 'and should name the resource it was about');
     done();
   });
 });

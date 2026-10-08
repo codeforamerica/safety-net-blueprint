@@ -13,7 +13,7 @@
  * mock holds can end up in a `snapshot()`, and a snapshot is made to be shared;
  * a real uploaded paystub in a fixture is a PII leak waiting to be emailed.
  * Not storing bytes makes that impossible rather than discouraged, and it keeps
- * the store serialisable and bounded.
+ * the store serializable and bounded.
  *
  * Multipart is parsed with `request.formData()`, which is why `multer` is gone.
  */

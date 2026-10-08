@@ -309,3 +309,98 @@ describe('extends on a library document', () => {
     );
   });
 });
+
+describe('extract(docs, "registries")', () => {
+
+  test('groups entries by the type each registry claims', () => {
+    const docs = setOf({
+      'registries/policies.yaml': {
+        $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
+        type: 'policies',
+        entries: {
+          'snap-gross-income': { title: 'SNAP gross income limit' },
+          'snap-net-income': { title: 'SNAP net income limit' },
+        },
+      },
+      'registries/queues.yaml': {
+        $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
+        type: 'taskQueues',
+        entries: { intake: { title: 'Intake queue' } },
+      },
+    });
+
+    const registries = extract(docs, 'registries');
+    assert.deepEqual(Object.keys(registries).sort(), ['policies', 'taskQueues']);
+    assert.equal(Object.keys(registries.policies).length, 2);
+    assert.equal(registries.policies['snap-gross-income'].title, 'SNAP gross income limit');
+    assert.equal(registries.taskQueues.intake.title, 'Intake queue');
+  });
+
+  test('merges entries declared across documents, later winning', () => {
+    // How an overlay adds to a registry it did not author. Order is discovery
+    // order, so a set holding two documents of one type gets both.
+    const docs = setOf({
+      'registries/a-policies.yaml': {
+        $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
+        type: 'policies',
+        entries: { shared: { title: 'from a' }, onlyA: { title: 'a' } },
+      },
+      'registries/b-policies.yaml': {
+        $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
+        type: 'policies',
+        entries: { shared: { title: 'from b' }, onlyB: { title: 'b' } },
+      },
+    });
+
+    const { policies } = extract(docs, 'registries');
+    assert.deepEqual(Object.keys(policies).sort(), ['onlyA', 'onlyB', 'shared']);
+    assert.equal(policies.shared.title, 'from b', 'the later document wins');
+  });
+
+  test('does not require a domain, since platform registries are cross-domain', () => {
+    // The other readers filter on `content.domain`. Policies and task queues
+    // belong to the platform rather than to one domain, so requiring it would
+    // silently drop every registry that prompted this reader.
+    const docs = setOf({
+      'registries/policies.yaml': {
+        $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
+        type: 'policies',
+        entries: { x: { title: 'X' } },
+      },
+    });
+    assert.equal(Object.keys(extract(docs, 'registries').policies).length, 1);
+  });
+
+  describe('skips what it cannot key', () => {
+    const cases = [
+      ['a registry with no type', { entries: { x: {} } }],
+      ['a registry with an empty type', { type: '', entries: { x: {} } }],
+      ['a registry with a non-string type', { type: 42, entries: { x: {} } }],
+    ];
+    for (const [name, extra] of cases) {
+      test(name, () => {
+        const docs = setOf({
+          'registries/odd.yaml': {
+            $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
+            ...extra,
+          },
+        });
+        assert.deepEqual(extract(docs, 'registries'), {});
+      });
+    }
+  });
+
+  test('a registry declaring no entries contributes its type and nothing else', () => {
+    const docs = setOf({
+      'registries/empty.yaml': {
+        $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
+        type: 'policies',
+      },
+    });
+    assert.deepEqual(extract(docs, 'registries'), { policies: {} });
+  });
+
+  test('an empty set reads as no registries', () => {
+    assert.deepEqual(extract([], 'registries'), {});
+  });
+});

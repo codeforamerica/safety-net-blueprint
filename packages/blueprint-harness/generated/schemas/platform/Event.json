@@ -1,0 +1,63 @@
+{
+  "allOf": [
+    {
+      "type": "object",
+      "description": "A CloudEvents 1.0 envelope. The spec is followed rather than paraphrased because the mock server validates `specversion` and `type` before publishing, and a subscriber reads the same envelope off the SSE stream.\n",
+      "required": [
+        "specversion",
+        "type",
+        "source"
+      ],
+      "properties": {
+        "specversion": {
+          "type": "string",
+          "const": "1.0",
+          "description": "CloudEvents version. Always `1.0`."
+        },
+        "type": {
+          "type": "string",
+          "description": "Event type, e.g. `intake.application.submitted`."
+        },
+        "source": {
+          "type": "string",
+          "description": "What published it."
+        },
+        "subject": {
+          "type": "string",
+          "description": "The resource it concerns."
+        },
+        "datacontenttype": {
+          "type": "string",
+          "description": "Media type of `data`."
+        },
+        "data": {
+          "type": "object",
+          "description": "The event payload.",
+          "additionalProperties": true
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "id",
+        "time"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "readOnly": true
+        },
+        "time": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true,
+          "description": "When it was published."
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/Event"
+}

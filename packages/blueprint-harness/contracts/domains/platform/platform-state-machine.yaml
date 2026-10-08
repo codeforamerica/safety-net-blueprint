@@ -1,0 +1,30 @@
+$schema: state-machine-schema.yaml
+version: "1.0"
+
+# A library, not a machine: it declares procedures for other domains to inherit
+# with `extends:` and names no domain of its own, because its identity is not
+# domain-scoped. `contract-readers` attaches these as `_platformProcedures` to
+# every machine that extends this file, and the mock server merges them under
+# the machine's own procedures of the same id.
+
+procedures:
+  - id: requestTimer
+    description: >
+      Request a time-based callback from the scheduling service. Pass fireAfter
+      (a duration) or fireAt (an absolute timestamp), and a callback naming the
+      event to publish when it elapses. Nothing here waits: the request is an
+      event, and whatever provides scheduling answers it — in a deployment a
+      scheduler, in a test a mock stub, which is what makes a 72-hour deadline
+      testable in a second.
+    parameters: [timerId, callback, fireAfter, fireAt]
+    emit:
+      type: scheduling.timer.requested
+      # The timer is about a resource, and the callback carries the subject
+      # through unchanged — which is how a subscription with a `from` state
+      # finds the record to guard and act on.
+      subject: $object.id
+      data:
+        timerId: $params.timerId
+        fireAfter: $params.fireAfter
+        fireAt: $params.fireAt
+        callback: $params.callback

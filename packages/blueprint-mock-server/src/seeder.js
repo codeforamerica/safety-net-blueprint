@@ -2,7 +2,7 @@
  * Data seeder - loads example data from YAML files into SQLite
  */
 
-import { discover, generate, load } from '@codeforamerica/blueprint-core';
+import { extract } from '@codeforamerica/blueprint-core/browser';
 import { deriveCollectionName } from './collection-utils.js';
 import { resolveTimeTokens } from './time-tokens.js';
 
@@ -72,7 +72,7 @@ function collectionSchemas(docs) {
 /**
  * Seed all databases for all discovered APIs.
  *
- * Records are grouped by collection through core's `generate(docs,
+ * Records are grouped by collection through core's `extract(docs,
  * 'examples')` — the same call the rest of the pipeline makes — so the server
  * seeds exactly what the pipeline says belongs where. Any *-mock-data.yaml
  * under seedDir joins the pool regardless of its location or name; an example
@@ -80,27 +80,23 @@ function collectionSchemas(docs) {
  *
  * @param {Array} apiSpecs - Array of API specification objects, for the set of
  *   collections to clear and report on
- * @param {string|string[]} specsDir - Directory (or directories) of resolved
- *   contracts. Their paths are what name the collections the records are
- *   grouped into. The server can be started with several --spec dirs, and a
- *   reseed has to cover all of them at once or the last one clears the rest.
- * @param {string|null} seedDir - Directory to recurse for *-mock-data.yaml files.
- *   When null, seeding is skipped and all collections start empty.
+ * @param {import('@codeforamerica/blueprint-core').Doc[]} docs - Every document
+ *   in the set, including any mock-data documents. Taking documents rather
+ *   than directories is what lets a browser seed from the contracts artifact
+ *   (#448); `discover` is a filesystem walk and has no equivalent in a page.
+ * @param {Object} store
+ * @param {{ seeded?: boolean }} [options] - `seeded: false` clears collections
+ *   and leaves them empty, which is what no --seed directory used to mean.
  * @returns {Object} Summary of seeded data
  */
-export function seedAllDatabases(specsDir, seedDir, store) {
+export function seedAllDatabases(docs, store, { seeded = true } = {}) {
   // Core groups the records by the schema each one exemplifies — a fact the
   // documents state. Which collection holds a given schema is this server's
   // business, and the contract answers it: a collection endpoint's list
   // response names the schema its records are. So the naming rule lives here
   // only, in collection-utils, where routing needs it regardless.
-  const specDirs = Array.isArray(specsDir) ? specsDir : [specsDir].filter(Boolean);
-  const docs = [
-    ...specDirs.flatMap((dir) => discover(dir)),
-    ...(seedDir ? discover(seedDir) : []),
-  ].map(load);
 
-  const bySchema = generate(docs, 'examples');
+  const bySchema = extract(docs, 'examples');
   const schemaOf = collectionSchemas(docs);
   const collections = [...schemaOf.keys()];
   const byCollection = Object.fromEntries(
@@ -109,12 +105,12 @@ export function seedAllDatabases(specsDir, seedDir, store) {
 
   for (const name of collections) store.clearAll(name);
 
-  if (!seedDir) {
-    console.log('\nNo --seed directory specified; databases will be empty.');
+  if (!seeded) {
+    console.log('\nNo seed data supplied; databases will be empty.');
     return Object.fromEntries(collections.map((name) => [name, 0]));
   }
 
-  console.log(`\nSeeding databases from ${seedDir}...`);
+  console.log('\nSeeding databases...');
 
   if (collections.every((name) => byCollection[name].length === 0)) {
     console.log('  No *-mock-data.yaml files found; databases will be empty.');

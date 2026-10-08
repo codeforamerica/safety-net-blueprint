@@ -22,7 +22,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
-import { contractsDir, clientsDir } from '../../paths.js';
+import { contractsDir, clientsDir, localEnvPath } from '../../paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const contracts = contractsDir;
@@ -57,6 +57,7 @@ describe('generate-clients golden', () => {
       resolveScript,
       `--spec=${contracts}`,
       `--overlay=${join(contracts, 'overlays')}`,
+      `--env-variables=${localEnvPath}`,
       `--out=${resolvedDir}`,
     ], { cwd: projectRoot, encoding: 'utf8' });
     assert.equal(resolveResult.status, 0, `Resolve failed:\n${resolveResult.stderr}`);

@@ -79,6 +79,8 @@ userId:
 
 **Evaluation scope:** item-scope only — the expression is evaluated once per record. Collection-scope expressions (operating across the full result set) are not currently supported.
 
+**Supported expressions:** the mock server's evaluator translates a subset of CEL — `has()`, `.size()`, `.contains()`, `in`, `.filter()`, `.map()`, `.all()` and `.exists()` — and nothing else. Anything outside that subset is handed to JavaScript unchanged, so `$this.id.substring(0, 8).toUpperCase()` evaluates here and would be rejected by a real CEL runtime. Keep expressions inside the subset: `$this.programsAppliedFor.size()`, not string manipulation. Note also that `has()` is matched as `has(identifier)`, so `has($this.field)` is *not* translated and silently yields no value.
+
 The mock server evaluates `x-derived` fields on all response paths: GET single, GET list, POST create, and PATCH update.
 
 ---

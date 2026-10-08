@@ -14,7 +14,7 @@ const PLACEHOLDER = /\$\{([^}]+)\}/g;
 /**
  * @param {import('../../types.js').Doc[]} docs
  * @param {Record<string, string>} variables
- * @returns {{ docs: object[], warnings: string[], applied: string[] }}
+ * @returns {{ docs: object[], warnings: string[], applied: string[], unresolved: string[] }}
  */
 export function substituteVariables(docs, variables) {
   const unresolved = new Map();
@@ -45,7 +45,42 @@ export function substituteVariables(docs, variables) {
       `Unresolved placeholder \${${name}} left as-is in ${[...files].sort().join(', ')}.`
   );
 
-  return { docs: substituted, warnings, applied };
+  return { docs: substituted, warnings, applied, unresolved: [...unresolved.keys()].sort() };
+}
+
+/**
+ * Substitute placeholders in overlay configuration.
+ *
+ * Config is read once, before the pipeline runs, and several passes are driven
+ * by it — so a value that varies by environment has to be substituted here
+ * rather than in the document pass, which runs last and would be too late to
+ * change what a pass did.
+ *
+ * It also has to be here rather than there for a structural reason: the
+ * document pass substitutes values and not object keys, and an event type
+ * prefix reaches AsyncAPI channel *keys*. Prefixing with an unsubstituted
+ * placeholder would leave the key and its sibling `address:` disagreeing.
+ * Resolving the prefix before it is applied avoids the problem rather than
+ * teaching the walker to rewrite keys, which can collide.
+ *
+ * @param {object|null} config - From `overlayConfig`
+ * @param {Record<string, string>} variables
+ * @returns {{ config: object|null, warnings: string[], unresolved: string[] }}
+ */
+export function substituteConfig(config, variables = {}) {
+  if (!config) return { config, warnings: [], unresolved: [] };
+
+  const unresolved = new Set();
+  const substituted = substituteNode(config, variables, {
+    onSubstituted: () => {},
+    onUnresolved: (name) => unresolved.add(name),
+  });
+
+  const warnings = [...unresolved].sort().map(
+    (name) => `Unresolved placeholder \${${name}} left as-is in overlay config.`
+  );
+
+  return { config: substituted, warnings, unresolved: [...unresolved].sort() };
 }
 
 /**

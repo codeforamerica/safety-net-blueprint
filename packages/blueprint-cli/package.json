@@ -15,9 +15,9 @@
     "blueprint-generate-postman-collection": "./scripts/generate-postman-collection.js",
     "blueprint-generate-ts-clients": "./scripts/generate-ts-clients.js",
     "blueprint-resolve": "./scripts/resolve.js",
-    "blueprint-scaffold-api": "./scripts/scaffold-api.js"
+    "blueprint-scaffold-api": "./scripts/scaffold-api.js",
+    "blueprint-bundle-contracts": "./scripts/bundle-contracts.js"
   },
-
   "scripts": {
     "test": "node --test",
     "test:unit": "node --test \"tests/unit/**/*.test.js\"",

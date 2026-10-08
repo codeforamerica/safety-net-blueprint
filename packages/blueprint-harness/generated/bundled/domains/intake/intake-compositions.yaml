@@ -6,7 +6,6 @@ compositions:
     resource: applications
     fields:
       - id
-      - referenceId
       - status
       - programsAppliedFor
       - channel
