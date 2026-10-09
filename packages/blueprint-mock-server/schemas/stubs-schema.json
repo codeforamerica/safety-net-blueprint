@@ -1,0 +1,79 @@
+{
+  "$id": "https://blueprint.codeforamerica.org/schemas/stubs-schema.json",
+  "title": "Mock stubs",
+  "description": "Per-test overrides registered at runtime. An event stub answers a domain event with another event; an HTTP stub intercepts a request. Each is consumed by the first thing it matches.",
+  "definitions": {
+    "EventStub": {
+      "description": "Registered at POST /mock/stubs/events.",
+      "type": "object",
+      "required": ["on"],
+      "additionalProperties": false,
+      "properties": {
+        "on": {
+          "description": "The CloudEvents type of the event to answer.",
+          "type": "string",
+          "minLength": 1,
+          "examples": ["data_exchange.service_call.created"]
+        },
+        "match": {
+          "description": "Dot paths into the triggering event's envelope, each with the value it must equal. Omitted or empty matches any event of that type.",
+          "type": "object",
+          "examples": [{ "data.serviceType": "fdsh_ssa" }]
+        },
+        "response": {
+          "description": "The event to emit when this stub matches. Omit for scheduling.timer.requested, which emits the callback the timer request carries.",
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "type": "string", "minLength": 1 },
+            "subject": { "type": "string" },
+            "source": { "type": "string" },
+            "data": {
+              "description": "Merged over the triggering event's data. Time tokens are resolved."
+            }
+          }
+        }
+      }
+    },
+    "HttpStub": {
+      "description": "Registered at POST /mock/stubs/http.",
+      "type": "object",
+      "required": ["match"],
+      "additionalProperties": false,
+      "properties": {
+        "match": {
+          "type": "object",
+          "required": ["url"],
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "description": "The request path to match exactly. With domain, relative to it.",
+              "type": "string",
+              "pattern": "^/"
+            },
+            "domain": {
+              "description": "Prefix for url: the path matched is /<domain><url>.",
+              "type": "string",
+              "pattern": "^[a-z0-9-]+$"
+            },
+            "method": {
+              "description": "Matched case-insensitively. Omit to match any method.",
+              "type": "string",
+              "pattern": "^[A-Za-z]+$"
+            }
+          }
+        },
+        "response": {
+          "description": "What an intercepted request answers. Without one it answers 200 with an empty object. A procedure's create intercepted by this stub is suppressed whatever the response says.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": { "type": "integer", "minimum": 100, "maximum": 599 },
+            "body": {}
+          }
+        }
+      }
+    }
+  }
+}

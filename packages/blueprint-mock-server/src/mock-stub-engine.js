@@ -21,6 +21,8 @@ import { emitEventEnvelope } from './emit-event.js';
 import { eventBus } from './event-bus.js';
 import { resolveTimeTokens } from './time-tokens.js';
 import { resolveDotPath, toCamelCase } from './collection-utils.js';
+import { assertValid, dotted } from './mock-schemas.js';
+import schema from '../schemas/stubs-schema.json' with { type: 'json' };
 
 /** Ordered list of registered event stubs. */
 const stubs = [];
@@ -95,20 +97,11 @@ function matchCriteria(stub, envelope) {
  * @returns {Object} The registered stub with id assigned
  */
 export function registerStub(stub) {
-  const { on, response } = stub;
-  if (!on) {
-    throw new Error('Stub requires "on" (event type suffix to match)');
-  }
-  // Named, rather than ignored. An unrecognised key used to be spread in and
-  // silently do nothing, which is how a stub could register, list, and then
-  // never fire.
-  if ('respond' in stub) {
-    throw new Error('Stub "respond" was renamed to "response" — both stub kinds now use the same key');
-  }
-  if (response !== undefined && !response?.type) {
-    throw new Error('Stub "response" block requires a "type" field (response event type)');
-  }
-  const registered = { ...stub, id: nextId(on) };
+  // Checked against the schema rather than spread in as it comes. An
+  // unrecognised key used to be kept and silently do nothing, which is how a
+  // stub could register, list, and then never fire.
+  assertValid(schema.definitions.EventStub, stub, (pointer) => ['Event stub', dotted(pointer)]);
+  const registered = { ...stub, id: nextId(stub.on) };
   stubs.push(registered);
   return registered;
 }
@@ -148,25 +141,12 @@ function resolveStubUrl(stub) {
  * @param {string} [stub.match.domain]   - Domain prefix (e.g., "eligibility-adapter"). When set, the
  *   effective match path is `/<domain><url>`, scoping the stub to a specific API domain.
  * @param {string} [stub.match.method]   - HTTP method (e.g., "POST"); omit to match any method
- * @param {Object} [stub.response]       - { status?, body? } — status defaults to 200
+ * @param {Object} [stub.response]       - { status?, body? } — status defaults to 200. Optional:
+ *   a stub intercepting a procedure's create only needs to match, and its response is never read.
  * @returns {Object} The registered stub with id and type assigned
  */
 export function registerHttpStub(stub) {
-  if (!stub.match?.url) {
-    throw new Error('HTTP stub requires "match.url"');
-  }
-  if ('respond' in stub) {
-    throw new Error('HTTP stub "respond" was renamed to "response" — both stub kinds now use the same key');
-  }
-  // Required, because the handlers fall back to `200 {}` when it is absent.
-  // A stub that registers, returns an id, lists, and then answers an empty
-  // 200 is indistinguishable from the mock simply working.
-  if (!stub.response || typeof stub.response !== 'object') {
-    throw new Error('HTTP stub requires a "response" object: { status?, body? }');
-  }
-  if (stub.response.status !== undefined && !Number.isInteger(stub.response.status)) {
-    throw new Error('HTTP stub "response.status" must be an integer');
-  }
+  assertValid(schema.definitions.HttpStub, stub, (pointer) => ['HTTP stub', dotted(pointer)]);
   const registered = { ...stub, type: 'http', id: nextHttpId(stub.match.url) };
   httpStubs.push(registered);
   return registered;

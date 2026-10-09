@@ -420,12 +420,24 @@ console.log('\n✓ All mock-stub-engine tests passed\n');
 
 // ── The two ways a stub used to register and then quietly do nothing ────────
 
-test('registerHttpStub — refuses a stub with no response', () => {
-  // It would register, return an id, list, match, be consumed, and answer
-  // `200 {}` — indistinguishable from the mock simply working.
+test('registerHttpStub — accepts a stub with no response', () => {
+  // A stub intercepting a procedure's create only has to match: the create is
+  // suppressed and the response is never read.
+  const stub = registerHttpStub({ match: { method: 'POST', domain: 'eligibility', url: '/evaluate/expedited-screening' } });
+  assert.ok(stub.id);
+});
+
+test('registerHttpStub — refuses an unknown key rather than ignoring it', () => {
   assert.throws(
-    () => registerHttpStub({ match: { url: '/evaluate/expedited-screening' } }),
-    /requires a "response" object/,
+    () => registerHttpStub({ match: { url: '/evaluate/expedited-screening', methd: 'POST' } }),
+    /unknown key "match\.methd"/,
+  );
+});
+
+test('registerStub — refuses an unknown key rather than ignoring it', () => {
+  assert.throws(
+    () => registerStub({ on: 'x.y.z', response: { type: 'a.b.c', date: {} } }),
+    /unknown key "response\.date"/,
   );
 });
 
@@ -452,6 +464,6 @@ test('registerHttpStub — refuses a non-integer status', () => {
       match: { url: '/evaluate/expedited-screening' },
       response: { status: '418' },
     }),
-    /must be an integer/,
+    /must be integer/,
   );
 });

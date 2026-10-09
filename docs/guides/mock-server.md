@@ -240,15 +240,16 @@ curl -X POST http://localhost:1080/mock/stubs/http \
 
 **DELETE stubs** default to `status: 204` with no body.
 
-`response` is required. A stub without one would match, be consumed, and answer `200 {}` — which looks exactly like the mock working normally, so it is rejected at registration instead.
+A stub intercepting a procedure's create, as below, only has to match: the create is suppressed and its `response` is never read.
+
+Both kinds of stub are checked against `packages/blueprint-mock-server/schemas/stubs-schema.json` when registered. A key the schema does not name is rejected with a `422` naming it, rather than being kept and silently ignored.
 
 **Verifying consumption:** after the flow that triggers the adapter call, `GET /mock/stubs/http` should return an empty list.
 
 ```bash
 # 1. Register stub before triggering the flow
 curl -X POST http://localhost:1080/mock/stubs/http \
-  -d '{"match": {"method": "POST", "domain": "eligibility-adapter", "url": "/evaluate/expedited-screening"},
-       "response": {"body": {"expedited": true}}}'
+  -d '{"match": {"method": "POST", "domain": "eligibility-adapter", "url": "/evaluate/expedited-screening"}}'
 
 # 2. Trigger the flow (SNAP application creates a Decision → fires eligibility.decision.created
 #    → evaluateSnapExpedited procedure → POST /eligibility-adapter/evaluate/expedited-screening)
@@ -267,6 +268,77 @@ curl http://localhost:1080/mock/stubs/http                                      
 curl -X DELETE http://localhost:1080/mock/stubs/http/http.expedited-screening-1  # remove one
 curl -X DELETE http://localhost:1080/mock/stubs/http                             # clear all
 ```
+
+## Forwarding to a real service
+
+Forwarding sends a whole domain, or a single endpoint, to a real service while every other route stays mocked. It is how a state connects its backend one domain at a time without leaving the mock environment.
+
+```yaml
+# forwarding.yaml — per environment; keep it out of the contracts directory
+forwarding:
+  - domain: intake
+    to: https://intake.state.example.gov
+    includeHeaders: [Authorization]
+  - endpoint: GET /eligibility/determinations/{determinationId}
+    to: http://localhost:4000
+    timeoutMs: 5000
+```
+
+```bash
+npm run mock:start -- --spec=<contracts> --forwarding=forwarding.yaml
+```
+
+In a page, pass the same entries to `createMockServer({ contracts, forwarding })`. Both are checked against [`schemas/forwarding-schema.json`](../../packages/blueprint-mock-server/schemas/forwarding-schema.json).
+
+| Field | |
+|---|---|
+| `domain` | Every route the domain's contracts declare, named by its directory under `domains/`. State machine operations are included. |
+| `endpoint` | One route, as `METHOD /path` with the contract's `{param}` templates. Overrides a `domain` entry for that route. |
+| `to` | The real service's base URL. Its path is a prefix: `https://host/api` serves `/intake/applications` at `https://host/api/intake/applications`. It may not carry a username or password. |
+| `includeHeaders` | Headers to pass along beyond the defaults, below. |
+| `timeoutMs` | How long to wait before answering `504`. Defaults to 10000. |
+
+Each entry names exactly one of `domain` or `endpoint`. The server refuses to start when an entry names nothing the contracts declare, names the same domain or endpoint twice, names one of the mock's own routes, or carries a key the schema does not.
+
+**Prefer a domain to an endpoint.** A forwarded endpoint answers from the real service's data while the rest of its domain answers from the mock's, so a record the real service creates is invisible to the mocked reads beside it. Forwarding the whole domain keeps them together.
+
+### Headers
+
+Only headers that describe the request are forwarded by default: `Accept`, `Accept-Language`, `Content-Type`, `If-Match`, `If-None-Match`, `Idempotency-Key`, `traceparent` and `tracestate`. Everything else, credentials included, is dropped unless `includeHeaders` names it — so a service that needs the caller's token gets it only with `includeHeaders: [Authorization]`.
+
+The same list governs what comes back: the real service's `Set-Cookie` reaches the caller only if `includeHeaders` names it. The service's own CORS headers never do.
+
+The mock attaches no credential of its own. Where the target needs one, it is either the caller's — a user's bearer token, named in `includeHeaders` — or the target holds it, as an adapter in front of a vendor system does.
+
+### What comes back
+
+The real service's status, headers and body, unchanged except as above. A target that cannot be reached answers `502`, one that is too slow `504`, and a redirect is refused with a `502` naming where it pointed — the mock forwards only to the targets the file names.
+
+An [HTTP stub](#http-stubs) still outranks a forwarded route: registered on one, it answers in the service's place, once, and the next request is forwarded.
+
+### In a browser
+
+A page holds no secrets, so a forwarded route in a page can reach only a service that accepts a user's own credential, or none:
+
+- **CORS.** The target must allow the page's origin. A third-party service usually does not.
+- **No shared credentials.** A system credential for a federal data service cannot be in a page. Forward to an adapter that holds it — run locally by the person using the page, or hosted.
+
+### What forwarding does not reach
+
+Forwarding applies to requests that come into the mock. Two things it does not reach:
+
+- **Calls between domains inside the mock.** When one domain's state machine acts on another, the mock does it in-process. A forwarded domain is not called, and its real service never sees those changes. Adapter calls made by procedures are the same: an [HTTP stub](#http-stubs) can intercept one, forwarding cannot.
+- **The real service's events.** It publishes them to its own event bus, so the mocked domains do not react. It can publish them to the mock as well, at `POST /platform/events`.
+
+## The mock's own endpoints
+
+The routes the mock serves itself — `/health`, the stub endpoints, `/mock/reset` and `/mock/reseed` — are described in [`contracts/mock-openapi.yaml`](../../packages/blueprint-mock-server/contracts/mock-openapi.yaml), whose request bodies reference the stub schema. Show it in Swagger beside a contract set by passing `--spec` twice:
+
+```bash
+npx blueprint-swagger --spec=./resolved --spec=node_modules/@codeforamerica/blueprint-mock-server/contracts
+```
+
+It is for reading, not for the mock: passed to `blueprint-mock` as a contract, it declares routes the mock already serves, and the server refuses to start.
 
 ## Record shape on create
 
@@ -312,11 +384,13 @@ MOCK_SERVER_HOST=0.0.0.0 MOCK_SERVER_PORT=8080 npm run mock:start
 | `npm run mock:start -- --seed=<dir>` | Start server and seed from `*-mock-data.yaml` files under `<dir>` |
 | `npm run mock:start -- --store=memory` | Hold resources in memory instead of SQLite — nothing written to disk, no native module |
 | `npm run mock:start -- --spec=contracts.json` | Start from a bundled contracts artifact instead of walking a directory |
+| `npm run mock:start -- --forwarding=<file>` | Forward domains or endpoints to a real service — see [Forwarding](#forwarding-to-a-real-service) |
 | `npm run mock:seed` | Generate faker-based seed files into `packages/generated/mock-data/` |
 
 | Endpoint | Description |
 |---------|-------------|
 | `POST /mock/reset` | Clear runtime data; restore config-managed resources |
+| `POST /mock/reseed` | Insert seed records again, clearing nothing |
 | `POST /mock/stubs/events` | Register an event stub |
 | `GET /mock/stubs/events` | List active event stubs |
 | `DELETE /mock/stubs/events/:id` | Remove a specific event stub |

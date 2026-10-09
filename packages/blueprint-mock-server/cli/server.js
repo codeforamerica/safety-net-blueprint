@@ -15,9 +15,9 @@ import { subscribeStubDispatch } from '../src/mock-stub-engine.js';
 import { createMemoryStore } from '../src/stores/memory-store.js';
 import { createSqliteStore } from '../src/stores/sqlite-store.js';
 import { registerAllRoutes, registerStateMachineRoutes, registerCompositionRoutes, registerRulesRoutes, buildRulesIndex } from '../src/route-generator.js';
-import { createDispatcher, wrapRoute, overrideByOperationId, routeKey, templateOf } from '../src/http/route-table.js';
-import { applyRealEndpoints, responseSchemasByRoute } from '../src/real-endpoints.js';
-import { registerPlatformRoutes, contractOverrides } from '../src/platform-routes.js';
+import { createDispatcher, wrapRoute, overrideByOperationId } from '../src/http/route-table.js';
+import { applyForwarding, forwardingFromDocument } from '../src/forwarding.js';
+import { registerPlatformRoutes, contractOverrides, refuseOwnRouteCollisions } from '../src/platform-routes.js';
 import { jsonBody, readJsonBody, invalidJson } from '../src/http/request.js';
 import { discover, load, extract } from '@codeforamerica/blueprint-core';
 import { createNodeServer } from '../src/http/node-server.js';
@@ -54,6 +54,9 @@ Options:
                     store the browser build uses. Note that --detach --store=memory
                     gives a background server whose data disappears with it.
                     Override with MOCK_STORE env var
+  --forwarding=<file>
+                    YAML or JSON listing domains and endpoints to forward to a
+                    real service instead of mocking. See schemas/forwarding-schema.json
   --detach          Start server in the background (logs to mock-server.log)
   --log=<path>      Log file or directory for --detach output (default: spec dir)
   --stop            Stop the running mock server
@@ -85,7 +88,7 @@ function parseSpecDirs() {
     a !== '--detach' && a !== '--stop' &&
     !a.startsWith('--spec=') && !a.startsWith('--seed=') &&
     !a.startsWith('--log=') && !a.startsWith('--store=') &&
-    !a.startsWith('--real-endpoints=')
+    !a.startsWith('--forwarding=')
   );
   if (unknown.length > 0) {
     console.error(`Error: Unknown argument(s): ${unknown.join(', ')}`);
@@ -110,16 +113,22 @@ function parseSpecDirs() {
   // Routing is per-environment, so it is read from outside the contract set
   // rather than declared in it (#283). The file is loaded here; the server
   // itself takes data, because it also runs in a browser.
-  const realArg = args.find(a => a.startsWith('--real-endpoints='));
-  let realEndpoints = [];
-  if (realArg) {
-    const realPath = resolve(realArg.split('=')[1]);
+  const forwardingArg = args.find(a => a.startsWith('--forwarding='));
+  let forwarding = [];
+  if (forwardingArg) {
+    const forwardingPath = resolve(forwardingArg.split('=')[1]);
+    let parsed;
     try {
-      const text = readFileSync(realPath, 'utf8');
-      const parsed = realPath.endsWith('.json') ? JSON.parse(text) : loadYaml(text);
-      realEndpoints = Array.isArray(parsed) ? parsed : (parsed?.realEndpoints ?? []);
+      const text = readFileSync(forwardingPath, 'utf8');
+      parsed = forwardingPath.endsWith('.json') ? JSON.parse(text) : loadYaml(text);
     } catch (err) {
-      console.error(`Error: could not read --real-endpoints=${realPath}: ${err.message}`);
+      console.error(`Error: could not read --forwarding=${forwardingPath}: ${err.message}`);
+      process.exit(1);
+    }
+    try {
+      forwarding = forwardingFromDocument(parsed);
+    } catch (err) {
+      console.error(`Error: --forwarding=${forwardingPath} is not valid:\n${err.message}`);
       process.exit(1);
     }
   }
@@ -131,7 +140,7 @@ function parseSpecDirs() {
     process.exit(1);
   }
 
-  return { specDirs, seedDir, storeKind, realEndpoints };
+  return { specDirs, seedDir, storeKind, forwarding };
 }
 
 let httpServer = null;
@@ -176,12 +185,12 @@ function docsFromArtifactFile(path) {
 /**
  * Start the mock server
  * @param {string[]|null} specDirs - Spec directories to load. Defaults to parseSpecDirs() (from process.argv).
- * @param {Array|null} realEndpoints - Routes to forward to a real service (#283). Parsed from --real-endpoints.
+ * @param {Array|null} forwarding - Domains and endpoints to forward to a real service (#283). Parsed from --forwarding.
  * @param {string|null} seedDir - Directory containing seed data files. Defaults to each specDir.
  * @param {'sqlite'|'memory'|null} storeKind - Where resources are held. Defaults to
  *   --store / MOCK_STORE, and to sqlite when neither is given.
  */
-async function startMockServer(specDirs = null, seedDir = null, storeKind = null, realEndpoints = null) {
+async function startMockServer(specDirs = null, seedDir = null, storeKind = null, forwarding = null) {
   console.log('='.repeat(70));
   console.log('🚀 Starting Mock API Server');
   console.log('='.repeat(70));
@@ -193,7 +202,7 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
       specDirs = parsed.specDirs;
       seedDir = seedDir ?? parsed.seedDir;
       storeKind = storeKind ?? parsed.storeKind;
-      realEndpoints = realEndpoints ?? parsed.realEndpoints;
+      forwarding = forwarding ?? parsed.forwarding;
     }
 
     // Resolved here as well as in parseSpecDirs, because a caller that passes
@@ -325,13 +334,13 @@ async function startMockServer(specDirs = null, seedDir = null, storeKind = null
       });
     });
 
-    // Last, so a route is real whatever registered it, and before the
+    // Last, so a route is forwarded whatever registered it, and before the
     // dispatcher exists, so the first request is already answered the way the
     // configuration says (#283).
     try {
-      const responseSchemas = responseSchemasByRoute(apiSpecs, routeKey, templateOf);
-      for (const key of applyRealEndpoints(routes, realEndpoints ?? [], { responseSchemas })) {
-        console.log(`  REAL   ${key} - forwarded to a real service`);
+      refuseOwnRouteCollisions(routes, apiSpecs);
+      for (const key of applyForwarding(routes, forwarding ?? [])) {
+        console.log(`  FORWARD ${key}`);
       }
     } catch (err) {
       console.error(`Error: ${err.message}`);

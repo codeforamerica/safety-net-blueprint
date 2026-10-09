@@ -58,7 +58,7 @@ test('Platform routes', async (t) => {
   await t.test('stubs can be registered, listed and cleared through the routes', async () => {
     const routes = platformTable(createMemoryStore());
     const fetch = createDispatcher(routes);
-    const stub = { on: 'thing.happened', emit: { type: 'test.other' } };
+    const stub = { on: 'thing.happened', response: { type: 'test.other' } };
 
     const created = await fetch(new Request('http://x/mock/stubs/events', {
       method: 'POST',

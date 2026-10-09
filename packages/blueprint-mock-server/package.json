@@ -5,7 +5,9 @@
   "type": "module",
   "files": [
     "src/",
-    "cli/"
+    "cli/",
+    "contracts/",
+    "schemas/"
   ],
   "exports": {
     ".": "./src/index.js",
@@ -21,7 +23,7 @@
   "scripts": {
     "start": "node cli/server.js --spec=../generated/contracts",
     "start:all": "node cli/start-all.js --spec=../generated/contracts",
-    "swagger": "node cli/swagger/server.js --spec=../generated/contracts",
+    "swagger": "node cli/swagger/server.js --spec=../generated/contracts --spec=contracts",
     "seed": "node cli/generate-mock-data.js --spec=../generated/contracts --out=../generated/mock-data",
     "validate:mock-data": "node cli/validate-mock-data.js --spec=../generated/contracts",
     "setup": "node cli/setup.js --spec=../generated/contracts",
