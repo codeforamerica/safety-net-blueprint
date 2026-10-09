@@ -53,23 +53,33 @@ Each entry says what the contract declares, a candidate shape, and its status:
 **exists**, **to define**, or **open** where whether it should be a contract at
 all is undecided. Where each lives is a candidate, not a decision.
 
+### Where they live
+
+The work splits by layer, not by feature:
+
+| Layer | What goes there |
+|---|---|
+| **The framework** — `blueprint-core` and `blueprint-mock-server` | The general mechanisms, which know nothing about benefits: the Suggestion resource, request and response templates and their schema, connectors, the toolsets contract type, the extension saying whether a model may use an operation, the declared event-persistence property, and the mock acting as the Data Exchange adapter. Any contract set built on the blueprint gets them — the case for a framework platform domain, which Suggestion would be the first resource of. |
+| **`safety-net-contracts`** | The interview assistant, the first use of those mechanisms: the interview's conduct, the SNAP required-items catalog, the risk ruleset, the eligibility ruleset the guidance evaluates, the `fact_extraction` service and its catalog entry, and the transcription session. This is program policy, and belongs with the real domain contracts. |
+| **The harness** | Fictional fixtures that test the framework mechanisms in isolation, as it already exercises forwarding and stubs. Not policy. |
+
 ### Already in the contracts
 
-An AI service uses much of the contract set as it stands:
+From `safety-net-contracts`, an AI service uses:
 
 | What it needs | Declared as | Status |
 |---|---|---|
-| The operations it may perform | OpenAPI paths and state machine operations | Exists |
-| What it reads and writes | Request and response schemas, usable directly as the model's structured output | Exists |
-| Why each field is asked, and the regulation behind it | `reason` and `policy` annotations | Exists |
-| What to probe for in an interview | `interviewPrompts` in `intake-rules.yaml` — household facts in, the FNS-1104 topics a worker must probe out, served at `POST /intake/applications/evaluate-interview-prompts` | Exists |
-| Screening partway through | `expeditedSnap` in `eligibility-rules.yaml` | Exists |
-| How to check the rules | `*-rules-examples.yaml` — worked inputs and expected outputs | Exists |
-| What changed elsewhere | Domain events, on `GET /platform/events/stream` | Exists |
+| The operations it may perform | OpenAPI paths, and state machine operations for eligibility, intake, platform and workflow | Exists |
+| What it reads and writes | Request and response schemas, usable directly as a model's structured output | Exists |
+| Why each field is asked, and the regulation behind it | `reason` and `policy` annotations — so far for intake and client management | Exists, partly |
+| The interview as a record | The `Interview` schema in `intake-openapi.yaml` | Exists |
+| External calls, and a catalog of them | Data Exchange's service catalog and service call lifecycle | Exists |
+| What changed elsewhere | Domain events in AsyncAPI, on `GET /platform/events/stream` | Exists |
+| Rulesets — guidance, screening, risk | None yet. The harness has fictional sketches — `interviewPrompts` and `expeditedSnap` — that show the idea, not real policy | To define |
 
-Rulesets run in the page through `blueprint-rules-engine`, so an assistant gets
-the result the eligibility domain would compute with no network call. The
-result is advisory; the determination is still made by eligibility.
+Rulesets run in a page through `blueprint-rules-engine`, so once they exist an
+assistant gets the result the eligibility domain would compute with no network
+call.
 
 Writes go through state machine operations, not raw updates, so guards, actor
 roles and the audit trail apply to data a model captured exactly as they do to a
@@ -87,45 +97,242 @@ AWS request signing (SigV4) is not part of these. It is how one deployment
 proves identity to AWS, not something the contract requires, and it is not a
 standard OpenAPI scheme.
 
-### Services the blueprint or a page calls
+### Interview guidance: three kinds, three sources
 
-Adapter contracts, in the shape of the eligibility adapter: the blueprint
-declares the interface, an implementation satisfies it.
+What an assistant puts in front of a worker during an interview is three
+different things, with three different sources. Treating them as one ruleset —
+as the harness's `interviewPrompts` sketch does — mixes them.
 
-| Contract | What it declares | Candidate shape | Status |
+| Kind | Example | Source | Contract |
 |---|---|---|---|
-| Provider session | How a page gets a short-lived session for a provider | `POST /sessions` returning `{ provider, token, expiresAt }`. Satisfied by the identity pool for AWS and by the [token function](#the-token-function) for a provider outside AWS | To define |
-| Transcription | Starting and stopping a transcription session, and the shape of a transcript line whatever produced it | A provider-neutral segment schema — the transcription tools' `{ id, role, isPartial, start, end, text, words, speakers }` is the starting point — with Transcribe and Scribe output mapped to it | To define |
-| Fact extraction | Turning a stretch of transcript into the facts a ruleset or an operation takes | Input: transcript segments and the target schema. Output: values matching that schema, each with a confidence | To define |
-| Document extraction and classification | What document-management sends and gets back | An adapter called from a document state machine step | To define |
-| Notice drafting | What communication sends and gets back | An adapter called from a communication state machine step | To define |
+| **Missing information** the determination needs | "Ask about shelter costs" | Partial evaluation of the eligibility ruleset: it reports exactly which inputs are missing and would change the outcome, and nothing else | The eligibility ruleset itself. No separate ruleset — the questions fall out of the determination's own rules, explained by their `reason` and `policy` annotations. *No determination ruleset exists in the real contracts yet.* |
+| **Risk indicators** — the error-prone situations behind payment error rates | "Income does not cover reported expenses" | Deterministic triggers over the facts, plus what a model notices that a trigger cannot — vague or contradictory answers | A risk ruleset, separate from the determination: its outputs are flags with a severity, a reason and a citation, not eligibility. Most of the harness sketch's facts are of this kind. *To define.* |
+| **Required items** that must be said or asked regardless | Rights and responsibilities, penalty warnings, consent | A checklist, some items with a condition (the ABAWD notice only when a member is of ABAWD age) | A config catalog, as queues and document types are declared, with each item's condition in CEL. The interview cannot complete until every applicable item is covered. *To define.* |
+
+**The determination here is guidance, not the official one.** Nothing in an
+interview records an eligibility Decision; that stays with the eligibility
+domain and the caseworker. The risk is guidance drifting from policy, so the
+guidance should evaluate the *same* eligibility ruleset the official process
+uses, never a copy of it.
+
+### The eligibility ruleset
+
+The missing-information kind of guidance needs a SNAP eligibility ruleset,
+which `safety-net-contracts` does not have. It is the largest piece of this
+plan, and nothing earlier depends on it.
+
+**One ruleset, two outputs: whether a household is eligible, and its monthly
+allotment.** Net income drives both the net income test and the allotment —
+the maximum allotment for the household size, less 30% of net income — so as
+one dependency graph the shared facts are computed once and cannot disagree,
+and partial evaluation reports what is missing for both answers at once. The
+risk ruleset stays separate.
+
+**What federal policy defines**, mostly in 7 CFR § 273.9 and § 273.10: the
+gross and net income tests and the asset limit; the deductions that turn gross
+income into net — standard, earned income, dependent care, medical for elderly
+or disabled members, child support, excess shelter; the allotment, with its
+minimum and first-month proration; who counts in the household; and work
+requirements, including ABAWD time limits (7 CFR § 273.7, § 273.24).
+
+**Everything carries an effective date.** Thresholds, allotments, deductions
+and caps change every fiscal year on October 1, and Alaska and Hawaii have
+their own tables, so amounts are parameters, declared as data with the date
+each value takes effect — never written into an expression. The rules change
+too: ABAWD work requirements were changed by the Fiscal Responsibility Act of
+2023 and again by Public Law 119-21 in 2025. So a determination is evaluated
+*as of* a date, and both parameters and rules need effective dating. None of
+the contracts has it today — the rules, config and registry schemas carry only
+a document `version` for change tracking — so it is an addition to the
+contracts, and the first step toward this ruleset. Releases of the contracts are versioned
+separately, as packages already are.
+
+**The federal baseline, with state options declared.** Broad-based categorical
+eligibility, which most states use, changes or removes the gross income and
+asset tests; standard utility allowances are set by each state; reporting rules
+vary. Each is a declared, named parameter in the baseline, and each state sets
+its own values in its own overlay — the blueprint does not write them. A
+Colorado demo needs Colorado's values from someone, labeled as such.
+
+**Checking it.** A ruleset drafted from the regulations is not trusted until it
+is checked, and review by someone who knows SNAP policy is what makes it usable:
+
+- **Worked examples** in `*-rules-examples.yaml`, drawn where possible from FNS's
+  own published calculations.
+- **A cross-check against an independent implementation**, as the rules engine
+  was checked against IRS FactGraph. PolicyEngine's open-source US model,
+  `policyengine-us`, covers SNAP — with effective-dated parameters, state
+  values such as each state's utility allowances, and ABAWD rules including the
+  2023 and 2025 changes. It is AGPL-3.0: running it as an independent check is
+  fine; copying its code or parameter files into the blueprint would carry the
+  license's obligations, so amounts come from FNS directly.
+
+Guidance or not, wrong rules would produce the payment errors this is meant to
+reduce.
+
+### AI calls, as Data Exchange services
+
+A call to a model to do a job — extract facts from a transcript, classify a
+document, draft a notice — has the shape of a Data Exchange call: a configured
+service, a call with a lifecycle, a result announced as an event. Data
+Exchange already has the pieces:
+
+- the `ExternalService` catalog, `data-exchange-config.yaml`, keyed by
+  `serviceType`, overlaid by states with their endpoints;
+- the `ExternalServiceCall` resource and its lifecycle, synchronous or
+  asynchronous;
+- per-service-type input and result schemas — the call's `data` is already
+  polymorphic on `serviceType`;
+- results announced as `data_exchange.call.completed`.
+
+So an AI call is a new **service type**, with its own input and result schemas,
+and nothing else new:
+
+| Service type | Input | Result | Status |
+|---|---|---|---|
+| `fact_extraction` | Transcript text, and the schema of what to fill in — the blueprint's own request schema for the target operation | Values matching that schema, each with a confidence and the quoted words it came from | To define |
+| `document_classification` | A document | Its type, with a confidence | To define |
+| `document_extraction` | A document and the schema to fill | Values matching it | To define |
+| `notice_drafting` | The notice's facts and template | Draft text | To define |
+
+**Who translates speech into the data model** is the `fact_extraction` call:
+the blueprint supplies the target schema, the model fills it with only what was
+said, and the blueprint validates the result. From "it's me, my two kids and my
+mom" a model can propose four members and their relationships, but not names or
+birth dates, because nobody said them — and partial evaluation then reports
+those as missing.
+
+### How a service call reaches a provider
+
+The catalog entry for each AI service declares how to call its provider: a
+**request template** and a **response template**, in the same shape a state
+machine `call:` step already uses — a method, a path, and a body built from
+`$`-references and CEL. Fact extraction through Bedrock, for example:
+
+```yaml
+# data-exchange-config.yaml — endpoint and model overlaid per environment
+services:
+  - id: fact-extraction-bedrock
+    serviceType: fact_extraction
+    endpoint:
+      url: https://bedrock-runtime.us-east-1.amazonaws.com
+      auth: aws-sigv4            # a name, never a credential
+      authService: bedrock
+    config:
+      modelId: <model id>
+      prompt: >
+        Record only what the applicant or worker actually said. Leave out
+        anything not stated. Quote the words each value came from.
+    request:
+      POST: /model/$config.modelId/converse
+      body:
+        system:
+          - text: $config.prompt
+        messages:
+          - role: user
+            content:
+              - text: $input.transcript
+        toolConfig:
+          tools:
+            - toolSpec:
+                name: record
+                inputSchema:
+                  json: $input.resultSchema       # the blueprint's own schema
+          toolChoice:
+            tool: {name: record}                  # forces a schema-shaped answer
+    response:
+      result: $response.output.message.content[0].toolUse.input
+```
+
+Bedrock's Converse API lets a request require the model to answer by "calling"
+a named tool, and the tool's input schema is whatever the request supplies —
+so passing the blueprint's schema returns JSON already in the blueprint's shape.
+
+What this declares:
+
+- **The prompt is a contract**, reviewable and overlayable with the model
+  choice, without touching code.
+- **Changing provider is a new catalog entry.** The service type, its input and
+  its result stay the same, so nothing that uses the result changes.
+- **It is testable like a ruleset.** An entry can carry examples — a call's
+  input and a recorded provider response, with the result expected — run
+  against the mock with no live call.
+
+Where a template cannot express a provider — a conversation that loops through
+tool calls, a streaming or binary protocol — the catalog entry names a
+**connector** instead: provider-specific code shipped with the blueprint and
+registered by name, never code written into a page. Also open: building a
+string from a list (`join`) is a CEL extension rather than core CEL, so the
+evaluator would need it; and the rule for telling an expression from a fixed
+value should be confirmed against how `call:` and `with:` are parsed before a
+template schema is written.
+
+### Transcription
+
+A transcription session is contract-able in everything but the raw audio:
+
+| Part | Declared as | Status |
+|---|---|---|
+| The session — starting, live, interrupted, stopping, ended | A resource and state machine. The transcription tools already have exactly these states. Its `start` is guarded on consent being recorded on the interview | To define |
+| Its settings — provider, language, custom vocabulary, which channel is the worker and which the applicant, the audio format | A service catalog entry, overlayable. Changing Transcribe for Scribe is configuration | To define |
+| Its output — lines as they firm up, finished lines, finished turns, gaps, warnings | AsyncAPI events on the platform bus | To define |
+| The stream to the provider | A connector, since it is a binary streaming protocol. The transcription tools' `sigv4.js` and `eventstream.js` are that code | To build |
+| Capture — the microphone, the shared call window, audio processing | **Not a contract.** A browser grants these only to page code, on a click | Exists, in the transcription tools |
+
+### Provider session
+
+How a page gets a short-lived session for a provider: `POST /sessions`
+returning `{ provider, token, expiresAt }`, satisfied by the identity pool for
+AWS and by the [token function](#the-token-function) for a provider outside
+AWS. An adapter contract. *To define.*
 
 ### New resources
 
-Resources with lifecycles, declared in OpenAPI and a state machine, so their
-rules are reviewable and overlayable like any other.
+**Suggestion**, on platform. Anything an assistant, or a rule, puts in front of
+a worker, and the worker's decision on it. Platform knows only two kinds:
 
-**Suggestion.** What an assistant proposes: an operation to perform and its
-arguments, with the model's confidence and the transcript lines it drew on.
-Its lifecycle runs proposed → accepted, rejected or expired, and accepting it
-performs the operation it names. That makes "the model proposes, the worker
-decides" a declared rule with guards and an audit trail, rather than something
-each service implements. It also answers provenance: the suggestion record is
-the record of what the model proposed, who accepted it, and from what. A
-suggestion can name an operation in any domain, so its home is open — platform,
-beside events, is a candidate. *To define.*
+- **Proposes an operation.** Carries the operation and its arguments, the
+  evidence, the source and a confidence. Accepting it performs the operation,
+  with the guards and audit trail of any other request. Recording a household
+  member is one; so is marking a required item covered, which is just an
+  operation on the interview.
+- **Informs.** No operation; the worker acknowledges or dismisses it. A
+  question to ask, a risk indicator.
 
-**Interview session.** Starts, runs and completes; tied to an application and
-its transcript. Consent becomes a guard: a session cannot start transcription
-until consent is recorded. That puts a compliance rule in a contract rather
-than in each service's code. Intake, whose domain covers interview
-requirements, is a candidate home. *To define.*
+Owning domains declare **categories**, each with its own payload schema —
+eligibility declares "missing determination input" and "risk indicator",
+intake "required item covered" — the same per-type-schema pattern Data Exchange
+uses for service types. Platform owns the lifecycle — proposed, then accepted,
+rejected, expired or superseded — and knows nothing about interviews. The
+suggestion record is also the provenance: what was proposed, from which words,
+by what, and who decided. *To define.*
+
+The worker's acceptance is what vouches that a value is *true*; schema
+validation only says it has the right shape. So a worker's screen must show
+each suggestion's evidence beside it.
+
+**Interview**, in intake, extended. `safety-net-contracts` already declares an
+`Interview` in `intake-openapi.yaml` — the regulatory record that the interview
+happened, linked to scheduling appointments, as `intake.md` describes. Its conduct belongs on the same resource rather than a separate
+session: recording consent, starting, the applicable required items, and
+completing, guarded on every applicable item being covered. Its state machine
+also re-runs the guidance rulesets when the interview's application changes, and
+creates the resulting suggestions. Recertification belongs to case management
+under `eligibility.md`, which does not model it yet; a recertification interview
+is the same `Interview` with a different parent, and where it lives is settled
+when recertification is modeled. *To define.*
 
 ### Events
 
-Declared in AsyncAPI, in whichever domain owns each resource:
-`transcript.segment.finalized`, `suggestion.proposed`, `suggestion.accepted`,
-`suggestion.rejected`, `interview.started`, `interview.completed`. *To define.*
+Declared in AsyncAPI, in whichever domain owns each resource: transcript lines
+and turns, `suggestion.proposed`, `.accepted`, `.rejected` and `.expired`,
+`interview.started` and `interview.completed`. *To define.*
+
+**Whether an event is stored is declared too.** Lines still firming up arrive
+several times a second, and are wanted only by whoever is displaying them; a
+finished line or turn is a record. So each event type declares whether it is
+persisted, replacing the mock's hard-coded rule that `scheduling.*` events are
+broadcast but not stored.
 
 ### Tools
 
@@ -137,7 +344,7 @@ operation reaches every AI service without anyone editing them.
 | Contract | What it declares | Candidate shape | Status |
 |---|---|---|---|
 | Whether a model may use an operation at all | Per operation: available to a model or not | An `x-` extension on the operation, narrowed further by an overlay — so a state can keep a model away from, say, approving a determination | To define |
-| Toolsets | Which operations, rulesets and resources a given assistant or agent gets — an interview assistant gets reading the application, evaluating `interviewPrompts`, and proposing suggestions, and nothing else | A new authored contract type, `*-toolsets.yaml`, with a schema in `blueprint-core` like every other type, validated and overlayable | To define |
+| Toolsets | Which operations, rulesets and resources a given assistant or agent gets — an interview assistant gets reading the application, evaluating the guidance rulesets, and proposing suggestions, and nothing else | A new authored contract type, `*-toolsets.yaml`, with a schema in `blueprint-core` like every other type, validated and overlayable | To define |
 | How a tool is described to a model | The tool's name, its description, and the description of each argument | Derived: the operation's `summary` and `description`, and each field's `reason` and `policy` annotations. An override only where the derived text is not enough | To define |
 | Tool definitions | The tools themselves, in the shape models accept | **Not a contract** — a generated artifact, from the contracts above, beside the existing artifact and Postman generators. Works on `contracts.json`, so it runs in a page | To build |
 
@@ -156,58 +363,142 @@ Deployment choices, not statements about what the system must do:
   [forwarding](../../guides/mock-server.md#forwarding-to-a-real-service): a
   contract set is shared, deployment choices are not.
 
-Prompts are **open**. They decide how a model behaves, and a state might want to
-review them as it reviews a notice template — an argument for declaring them.
-They are also tied to a particular model, which argues against.
+Prompts are **not** in that list: a service's prompt is part of its catalog
+entry — see [How a service call reaches a provider](#how-a-service-call-reaches-a-provider).
 
 ## How fast
 
 "Real time" means three different things here, and they need different designs.
 
-- **Transcription** streams continuously; partial lines appear as people speak
-  and are replaced as they firm up. It runs directly between the page and AWS.
-- **An assistant's suggestions** follow finished lines. A few seconds is fine —
-  the worker is mid-conversation and glances at them — so a suggestion is one
-  text-model request per finished line or group of lines, not a streaming
-  session.
+- **Transcription** streams continuously; lines appear as people speak and are
+  replaced as they firm up.
+- **An assistant's suggestions** follow finished *turns* — everything one
+  person said before the other spoke. A few seconds is fine, since the worker is
+  mid-conversation and glances at them. One model call per turn, rather than per
+  line, keeps the number of calls and their cost down.
 - **An agent's conversation loop** — speech in, model, speech out — has to
-  answer in about a second. It stays entirely inside the speech model's
-  session. A synchronous call to a system of record on every turn would spend
-  that budget.
+  answer in about a second, and stays inside the speech model's session.
 
-None of the three needs the blueprint to be fast: tool calls are ordinary API
-requests made when the model decides to act, and the event stream carries what
-changed.
+None of the three needs the blueprint to be fast: a suggestion is an ordinary
+request, and the event stream carries what changed.
 
-## Where a service runs
+## The mock as the integration point
 
-The same tool layer runs in either place, so a service can move between them.
+In a demo running in a single page, the mock is not only the stand-in for the
+blueprint's APIs. It is also the **adapter** for Data Exchange: when a service
+call arrives for a service whose catalog entry has an endpoint, the mock makes
+the call itself — evaluates the request template, signs the request, sends it,
+evaluates the response template, validates the result against the service
+type's result schema, completes the call, and emits `call.completed`. Nothing
+about the provider is in page code; it is all in the catalog.
 
-**In the page**, for an application a person uses in a browser. Transcription
-and the model run from the page, tool calls are executed in the page, and in
-development they reach the mock running in the same tab:
+This is the outbound half of the mock's
+[forwarding](../../guides/mock-server.md#forwarding-to-a-real-service).
+Forwarding today sends requests that come *into* the mock to a real service;
+this sends calls the mock *makes* to one. Built for AI services, it works for
+every Data Exchange service — a state testing its real income-verification
+adapter gets the same thing.
 
-```
- One HTML file
- ┌──────────────────────────────────────────────────────────────────┐
- │  Worker's UI ◄── suggestions ── Assistant ◄── finished lines ──┐ │
- │      │ accepts                     │  ▲                         │ │
- │      ▼                             │  │ tool definitions        │ │
- │  Tool layer ──► blueprint API      │  │ (from the contracts)    │ │
- │      │          (mock in this tab, │  │                         │ │
- │      │           or real)          ▼  │                         │ │
- │      └────────► rules engine      text model ◄─┐   Transcription │ │
- └─────────────────────────────────────────────────┼────────▲───────┘ │
-                                                    │        │ mic + call audio
-                         short-lived AWS credentials │        │
-             Cognito ──────────────────────────────►─┴────────┘
-                                     Amazon Bedrock      Amazon Transcribe
-```
+**Credentials are the signed-in person's.** The page hands the mock a function
+that returns them, alongside its forwarding configuration: identity-pool
+credentials for AWS, a provider session token for anything else. The mock signs
+with whichever the catalog entry names. It attaches no credential of its own.
 
-**On a server**, for a channel with no browser — an agent on a phone line. It
-runs server-side and calls the blueprint API over HTTP, authenticating as a
-service (see [Identity & Access](identity-access.md#service-to-service-authentication)).
-The in-tab mock is out of reach there, so it is tested against the Node mock.
+**One event bus — the mock's.** Transcript lines, turns, suggestions and every
+domain event travel on the platform bus, and everything that reacts to them is
+declared in a state machine.
+
+### An interview, end to end
+
+A worker interviews an applicant. The page holds the worker's UI, audio capture,
+sign-in, and the mock.
+
+1. **The worker starts the interview.** The page calls `record-consent`, then
+   `start`, on the `Interview`. The required items applicable to this household
+   are attached.
+2. **The applicant speaks.** Audio goes to the transcription provider; finished
+   lines and turns arrive on the bus as events.
+3. **A turn finishes.** The `Interview` state machine reacts by creating a
+   `fact_extraction` service call, with the turn's text and the schema of what
+   it is filling in.
+4. **The mock makes the call** to the model, from the catalog entry, and
+   completes it. A declared step turns the result into suggestions — four
+   household members, each proposing "add household member", with the words each
+   came from.
+5. **The worker accepts them.** Each performs its operation, with the guards and
+   audit trail of any request.
+6. **The application changed, so the interview re-runs its guidance.** Partial
+   evaluation of the eligibility ruleset reports names and birth dates missing;
+   the risk ruleset flags income below expenses. Each becomes a suggestion that
+   informs.
+7. **The worker reads the penalty warning.** The next extraction notices it and
+   proposes marking that item covered; the worker accepts.
+8. **The worker completes the interview.** `complete` succeeds only once every
+   applicable required item is covered. Open suggestions expire, and
+   `interview.completed` fires.
+
+The worker's panel through all of this is the interview's open suggestions — its
+list endpoint, kept current by events.
+
+### What stays outside the mock
+
+- **Audio capture**, because a browser grants the microphone and a shared window
+  only to page code, on a click.
+- **Sign-in**, which produces the credentials the mock is given.
+
+The audio *stream* can move behind the mock, in two steps. First, the session,
+its settings and its events are declared, with the transcription tools still
+streaming. Then the stream itself moves into a connector the mock runs: in a
+page, `mock.fetch` is a function call, so a request whose body is the live audio
+stream reaches the mock with no network hop, and the Node mock takes the same
+request as a long-running upload and opens the provider's WebSocket itself. The
+streaming endpoint is declared in AsyncAPI, which describes WebSocket channels
+where OpenAPI does not. The second step is proved before relying on it.
+
+### On a server
+
+For a channel with no browser — an agent on a phone line — the same contracts
+apply, and a real implementation of them does what the mock does. The in-tab
+mock is out of reach there, so it is tested against the Node mock.
+
+## Security and performance
+
+The mock is for demos with fictional data, not for real applicants. A real
+deployment implements the same contracts; the mock is their reference
+implementation. Within that, five things keep the design from doing harm.
+
+**Outbound calls go only where the catalog says.** A request template may use a
+call's input in the request body, never to choose the host. Otherwise whoever
+creates a call could point the mock at any server, carrying whatever data the
+template sends. Redirects are refused, as forwarding refuses them. A page's
+content security policy limits it further, to the endpoints its `connect-src`
+lists.
+
+**CEL is safe to evaluate.** It cannot run arbitrary code, reach the network, or
+loop without end, so evaluating a template from a contract or an overlay is not
+executing code from it.
+
+**What is said can try to steer the model.** An applicant could say something
+meant as an instruction to it. For an assistant, that is contained: the model
+only proposes, the worker decides, and every value is validated against the
+schema. An agent acts on its own, so its toolset is the limit on what such an
+instruction could make it do.
+
+**Credentials stay narrow.** The mock signs with the signed-in person's
+credentials, and for a demo those should be on the cost side of
+[the line](#what-narrow-means) — models and transcription, never real data. A
+Node mock doing the same would use a developer's own AWS profile, so it is for
+local use, never a shared server.
+
+**Events are cheap if partial lines are not stored.** Measured in the mock, a
+stored event costs about 1.3 KB of memory, publishing one takes 0.04 ms, and
+listing the first 50 of 5,000 takes 34 ms, rising with the number stored. A
+one-hour interview whose finished lines and turns are stored is a few thousand
+events — three or four megabytes — which a day of demos absorbs, and a reload
+clears. Lines still firming up arrive several times a second; stored, they
+would be twenty megabytes an hour and listing would slow with them. They are
+broadcast and not stored, which is why that is a declared property of each
+event type.
 
 ## Hosting in a single page
 
@@ -218,7 +509,8 @@ mock and AI services together, with no server of our own.
 
 | Part | In a page? | Basis |
 |---|---|---|
-| UI, mock server, rules engine, tool layer | Yes | Done in this repository: the mock and the rules engine both run in a tab, and the mock ships as one file. |
+| UI, mock server, rules engine | Yes | Done in this repository: the mock and the rules engine both run in a tab, and the mock ships as one file. |
+| The mock calling AI services from the catalog | To build | The outbound half of forwarding; a `fetch` from the page, signed with the person's credentials. |
 | Signing in | Yes | Done in the transcription tools: a Cognito user pool's public app client with PKCE, through a popup. |
 | Credentials for AWS services | Yes | Done in the transcription tools: a Cognito identity pool exchanges the worker's token for one-hour credentials whose IAM role allows a single action. Nothing in the page is a secret. |
 | Streaming audio to AWS | Yes | Done in the transcription tools: the worker's microphone and the call's shared audio, streamed to Transcribe over a signed WebSocket from a page opened from disk. |
@@ -347,8 +639,8 @@ side of [the line drawn below](#what-narrow-means).
 The two patterns differ only in where a session comes from, so the page need
 not know which it is using. It asks for a session for a provider and gets back
 credentials or a token with an expiry: from the identity pool for AWS, from the
-token function for anything else. The tool layer and the rest of the page are
-the same either way, and in development one switch points both at fake
+token function for anything else. The mock and the rest of the page are the
+same either way, and in development one switch points both at fake
 sessions.
 
 AWS stays on the identity pool rather than going through the token function.
@@ -454,9 +746,10 @@ complement to an AWS service:
 
 **Agents call tools in the page.** The browser SDK supports *client tools* —
 functions the agent calls that run in the page and return a result to it —
-alongside tools the agent calls on a server. That is the same shape as the
-page-side tool layer above, so the blueprint's tool definitions and tool layer
-would serve an ElevenLabs agent as they would a Bedrock model. Voice
+alongside tools the agent calls on a server. A client tool can be a request
+to the mock, so the tool definitions generated from the contracts serve an
+ElevenLabs agent as they would a Bedrock model, and each call meets the same
+guards. Voice
 conversations run over WebRTC, text over WebSocket.
 
 **Signing in is the difference that matters.** An ElevenLabs API key must never
@@ -534,13 +827,13 @@ exists for one domain, the mock's
 [forwarding](../../guides/mock-server.md#forwarding-to-a-real-service) sends
 that domain to it and keeps the rest mocked.
 
-A transcript does not have to come from a live call: the transcription tools'
-`Transcript` accepts segments from any source, so an assistant is tested by
-replaying a recorded or written transcript. With the segment schema defined,
-recorded transcripts become fixtures like any other.
+A transcript does not have to come from a live call. Published to the mock as
+events, a recorded or written transcript replays an interview, and becomes a
+fixture like any other.
 
-Rulesets carry their own examples, so whether an assistant's extracted facts
-produce the right probes is checked against `*-rules-examples.yaml`.
+Rulesets carry their own examples, and a service's catalog entry can carry its
+own — an input and a recorded provider response, with the result expected — so
+both the guidance and the extraction are checked with no live call.
 
 ## Compliance
 
@@ -549,39 +842,52 @@ obligations apply — see [Identity & Access](identity-access.md#regulatory-requ
 Two arise only here: consent to record or transcribe a conversation, and, for
 an agent, disclosure that the person is speaking with an automated system.
 
-Both can be contracts. Consent is a guard on the interview session, so a
-transcript cannot start without it. Disclosure is a step an agent's session
-must complete before its first question. Declared that way, they are reviewed
-once and enforced everywhere, rather than trusted to each service.
+Both are contracts. Consent is recorded on the interview and guards the start of
+transcription; whether it is required is overlayable, since states differ on
+whether every party to a recording must agree. Disclosure is a step an agent's
+session must complete before its first question. Declared that way, they are
+reviewed once and enforced everywhere, rather than trusted to each service.
 
 ## Likely first steps
 
-None of this is decided.
+None of this is decided. Each is something to try as soon as it exists, since
+the mock serves a contract the moment it is declared.
 
-1. **A text-model request from the page**, with the transcription tools'
-   sign-in and credentials, proving the one unproven part an assistant needs. A
-   small page; not shipped.
-2. **The transcript segment schema and the fact-extraction adapter contract**,
-   since an assistant's first job — transcript to facts to `interviewPrompts` —
-   depends on both.
-3. **The suggestion resource and its state machine**, so an assistant has
-   somewhere to put what it proposes, and provenance comes with it.
-4. **The operation extension and toolsets**, then the generator that turns
-   them into tool definitions.
-5. **The sign-in security scheme and the provider session adapter contract**,
-   which every service needs before any of it reaches real data.
+1. **The suggestion resource**, in the framework: its two kinds, its lifecycle
+   and its events, tested with a harness fixture. Usable at once — create,
+   accept and reject suggestions against the mock — with no model and no AWS.
+2. **The interview's conduct and the required-items catalog**, in
+   `safety-net-contracts`: consent, start, the SNAP checklist, and complete
+   guarded on it. The one kind of guidance that needs no ruleset, and useful
+   alone.
+3. **Transcript events and a recorded transcript**, so an interview replays with
+   no live call.
+4. **The mock calling services from the catalog** — templates, signing and the
+   adapter role, in the framework — **and the `fact_extraction` service** in
+   `safety-net-contracts`. The first piece that needs AWS, and the first working
+   assistant end to end.
+5. **The risk ruleset**, in `safety-net-contracts` — the first real ruleset.
+6. **The operation extension and toolsets**, then the generator for tool
+   definitions.
+7. **The sign-in security scheme and the provider session contract.**
 
-Only for an agent: **prove live speech-to-speech from a page**, or choose what
-sits in front of it — AgentCore Runtime on AWS, or an ElevenLabs agent with a
-token function.
+Larger and later:
+
+- **The SNAP eligibility ruleset** — see [The eligibility ruleset](#the-eligibility-ruleset).
+  First the effective dating it needs in the rules contract, then the federal
+  baseline with its parameters and state options, then examples and the
+  cross-check, then review by SNAP policy staff.
+- Moving the audio stream behind the mock.
+- For an agent, live speech-to-speech from a page.
 
 ## Open questions
 
-- Where each new contract lives — the suggestion resource especially, since it
-  can name an operation in any domain.
-- Whether the tool layer — the code that turns a model's tool call into a
-  blueprint call — belongs in the blueprint or in each service.
-- Whether prompts are contracts.
+- Exactly where each new contract lives within its layer. Suggestions on a
+  framework platform domain and AI calls in Data Exchange are candidates; the
+  recertification interview waits on case management modeling recertification.
+- Whether a template can express each provider, or some need a connector.
+- How a template tells an expression from a fixed value — to match `call:` and
+  `with:` once confirmed.
 - Whether the provider session is an adapter contract or a general
   identity-access endpoint — the latter worth it only if something other than a
   page needed provider tokens.
@@ -590,7 +896,10 @@ token function.
 - Which provider handles which part — transcription, the language model, and
   for an agent the voice — and whether a better voice is worth one server-side
   function.
-- How the transcription tools and the blueprint's page are combined into one
-  file. Both are built to be inlined, but the tools register classic scripts on
-  a global while the mock's bundle is a module for its served build and a
-  global for its standalone one.
+- How effective dating is expressed — per value, as `policyengine-us` does, or
+  per version of a document — and whether rules and parameters share one
+  mechanism.
+- Who supplies Colorado's values for a Colorado demo.
+- Whether transcripts are ever kept. The transcription tools keep them out of
+  storage, so a suggestion's evidence is the quoted words, not a reference to a
+  stored transcript. Keeping them is a policy decision, not a technical one.
