@@ -60,7 +60,7 @@ The work splits by layer, not by feature:
 | Layer | What goes there |
 |---|---|
 | **The framework** — `blueprint-core` and `blueprint-mock-server` | The general mechanisms, which know nothing about benefits: the Suggestion resource, request and response templates and their schema, connectors, the toolsets contract type, the extension saying whether a model may use an operation, the declared event-persistence property, and the mock acting as the Data Exchange adapter. Any contract set built on the blueprint gets them — the case for a framework platform domain, which Suggestion would be the first resource of. |
-| **`safety-net-contracts`** | The interview assistant, the first use of those mechanisms: the interview's conduct, the SNAP required-items catalog, the risk ruleset, the eligibility ruleset the guidance evaluates, the `fact_extraction` service and its catalog entry, and the transcription session. This is program policy, and belongs with the real domain contracts. |
+| **`safety-net-contracts`** | The interview assistant, the first use of those mechanisms: the interview's conduct, the SNAP interview requirements, the risk ruleset, the eligibility ruleset the guidance evaluates, the `fact_extraction` service and its catalog entry, and the transcription session. This is program policy, and belongs with the real domain contracts. |
 | **The harness** | Fictional fixtures that test the framework mechanisms in isolation, as it already exercises forwarding and stubs. Not policy. |
 
 ### Already in the contracts
@@ -106,8 +106,24 @@ as the harness's `interviewPrompts` sketch does — mixes them.
 | Kind | Example | Source | Contract |
 |---|---|---|---|
 | **Missing information** the determination needs | "Ask about shelter costs" | Partial evaluation of the eligibility ruleset: it reports exactly which inputs are missing and would change the outcome, and nothing else | The eligibility ruleset itself. No separate ruleset — the questions fall out of the determination's own rules, explained by their `reason` and `policy` annotations. *No determination ruleset exists in the real contracts yet.* |
-| **Risk indicators** — the error-prone situations behind payment error rates | "Income does not cover reported expenses" | Deterministic triggers over the facts, plus what a model notices that a trigger cannot — vague or contradictory answers | A risk ruleset, separate from the determination: its outputs are flags with a severity, a reason and a citation, not eligibility. Most of the harness sketch's facts are of this kind. *To define.* |
-| **Required items** that must be said or asked regardless | Rights and responsibilities, penalty warnings, consent | A checklist, some items with a condition (the ABAWD notice only when a member is of ABAWD age) | A config catalog, as queues and document types are declared, with each item's condition in CEL. The interview cannot complete until every applicable item is covered. *To define.* |
+| **Risk indicators** — the error-prone situations behind payment error rates | "Income does not cover reported expenses" | Deterministic conditions over declared facts, plus what a model notices that a condition cannot — vague or contradictory answers | A ruleset of its own, separate from the determination. Each output is one indicator; its annotations carry the severity, the reason, the citation and the question to probe with. Most of the harness sketch's facts are of this kind. *To define.* |
+| **Interview requirements** that must be said or asked regardless | Rights and responsibilities, penalty warnings, consent | Some apply always, some on a condition — the ABAWD notice only when a member is of ABAWD age | Split three ways: a ruleset decides which requirements apply; a registry type, `interview-requirements`, holds each one's wording, whether it must be read word for word, whether an attestation is recorded, and its policies; and the `Interview` records which are covered. The interview cannot complete until every applicable one is. *To define.* |
+
+**Flat rulesets are still rulesets.** The determination is a deep dependency
+graph, and the risk and applicability rulesets are one level deep — a list of
+named conditions. Both are declared the same way and get the same things: typed
+inputs bound to the data model, so a condition never names a field; partial
+evaluation, so a condition whose inputs are unknown is *unknown* rather than
+false, and those inputs become things to ask; examples; and one call that
+evaluates every condition at once, in the page. A condition written against
+fields directly — in a registry, say — would tie it to one state's data model.
+
+Rulesets cannot yet declare that one takes another's outputs as inputs. Where
+risk indicators should reuse the determination's computed totals rather than
+recompute them, the chaining happens in the `Interview`'s state machine, which
+evaluates the determination first and passes its outputs on. That works with
+the DSL today; the dependency is visible there rather than in the rules
+contract.
 
 **The determination here is guidance, not the official one.** Nothing in an
 interview records an eligibility Decision; that stays with the eligibility
@@ -314,7 +330,7 @@ each suggestion's evidence beside it.
 **Interview**, in intake, extended. `safety-net-contracts` already declares an
 `Interview` in `intake-openapi.yaml` — the regulatory record that the interview
 happened, linked to scheduling appointments, as `intake.md` describes. Its conduct belongs on the same resource rather than a separate
-session: recording consent, starting, the applicable required items, and
+session: recording consent, starting, the applicable interview requirements, and
 completing, guarded on every applicable item being covered. Its state machine
 also re-runs the guidance rulesets when the interview's application changes, and
 creates the resulting suggestions. Recertification belongs to case management
@@ -414,7 +430,7 @@ A worker interviews an applicant. The page holds the worker's UI, audio capture,
 sign-in, and the mock.
 
 1. **The worker starts the interview.** The page calls `record-consent`, then
-   `start`, on the `Interview`. The required items applicable to this household
+   `start`, on the `Interview`. The interview requirements that apply to this household
    are attached.
 2. **The applicant speaks.** Audio goes to the transcription provider; finished
    lines and turns arrive on the bus as events.
@@ -856,17 +872,19 @@ the mock serves a contract the moment it is declared.
 1. **The suggestion resource**, in the framework: its two kinds, its lifecycle
    and its events, tested with a harness fixture. Usable at once — create,
    accept and reject suggestions against the mock — with no model and no AWS.
-2. **The interview's conduct and the required-items catalog**, in
-   `safety-net-contracts`: consent, start, the SNAP checklist, and complete
-   guarded on it. The one kind of guidance that needs no ruleset, and useful
-   alone.
+2. **The interview's conduct and its requirements**, in
+   `safety-net-contracts`: consent, start, the `interview-requirements`
+   registry, the ruleset deciding which apply, and complete guarded on them.
+   Useful alone, and it can start before any ruleset exists: requirements
+   that always apply need no condition.
 3. **Transcript events and a recorded transcript**, so an interview replays with
    no live call.
 4. **The mock calling services from the catalog** — templates, signing and the
    adapter role, in the framework — **and the `fact_extraction` service** in
    `safety-net-contracts`. The first piece that needs AWS, and the first working
    assistant end to end.
-5. **The risk ruleset**, in `safety-net-contracts` — the first real ruleset.
+5. **The risk ruleset**, in `safety-net-contracts`, with severity and probes in
+   its annotations.
 6. **The operation extension and toolsets**, then the generator for tool
    definitions.
 7. **The sign-in security scheme and the provider session contract.**
