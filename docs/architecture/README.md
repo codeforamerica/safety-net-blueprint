@@ -46,6 +46,7 @@ Concerns that span multiple domains.
 | [Contract Metadata](cross-cutting/contract-metadata.md) | Annotations, field-level metadata, and policy traceability |
 | [Resource Composition](cross-cutting/resource-composition.md) | Composite resources that aggregate data from multiple APIs within a domain |
 | [Adapters](cross-cutting/adapters.md) | The adapter pattern: how vendor systems connect without coupling |
+| [AI Services](cross-cutting/ai-services.md) | How AI services use the contracts — as a channel or as a capability — and hosting them in a single page |
 | [Behavioral Contract DSL](cross-cutting/behavioral-contract-dsl.md) | State machine YAML format and expression language |
 | [Search](cross-cutting/search.md) | Cross-domain search patterns |
 | [Scheduling Service](cross-cutting/scheduling-service.md) | The shared scheduling infrastructure |
