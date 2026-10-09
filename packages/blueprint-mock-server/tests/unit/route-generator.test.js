@@ -55,7 +55,7 @@ function graphsFor(rulesDoc) {
 function listRoutes(table) {
   return [...table].map(([key, entry]) => ({
     method: key.slice(0, key.indexOf(' ')),
-    path: entry.expressPath,
+    path: key.slice(key.indexOf(' ') + 1),
     template: key.slice(key.indexOf(' ') + 1),
     operationId: entry.operationId,
     handler: entry.handler,
@@ -75,10 +75,10 @@ function createTestMetadata(endpoints) {
 test('Route Generator Tests', async (t) => {
 
   // ==========================================================================
-  // Path Format Conversion (OpenAPI to Express)
+  // Path params survive registration, in the contract's own syntax
   // ==========================================================================
 
-  await t.test('registerRoutes - converts OpenAPI path params to Express format', () => {
+  await t.test('registerRoutes - keys a path parameter by the contract template', () => {
     const table = new Map();
     const metadata = createTestMetadata([
       { path: '/persons/{personId}', method: 'get', operationId: 'getPerson' }
@@ -88,8 +88,8 @@ test('Route Generator Tests', async (t) => {
     const routes = listRoutes(table);
 
     assert.strictEqual(routes.length, 1);
-    assert.strictEqual(routes[0].path, '/persons/:personId');
-    console.log('  ✓ Converts {personId} to :personId');
+    assert.strictEqual(routes[0].path, '/persons/{personId}');
+    console.log('  ✓ Keys /persons/{personId} by its template');
   });
 
   await t.test('registerRoutes - handles multiple path parameters', () => {
@@ -101,7 +101,7 @@ test('Route Generator Tests', async (t) => {
     registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     const routes = listRoutes(table);
 
-    assert.strictEqual(routes[0].path, '/orgs/:orgId/users/:userId');
+    assert.strictEqual(routes[0].path, '/orgs/{orgId}/users/{userId}');
     console.log('  ✓ Converts multiple path parameters');
   });
 
@@ -265,7 +265,6 @@ test('Route Generator Tests', async (t) => {
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].method, 'GET');
     assert.strictEqual(registered[0].path, '/persons');
-    assert.strictEqual(registered[0].expressPath, '/persons');
     assert.strictEqual(registered[0].operationId, 'listPersons');
     assert.ok(registered[0].description);
 
@@ -387,7 +386,7 @@ test('Route Generator Tests', async (t) => {
     registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     const routes = listRoutes(table);
 
-    assert.strictEqual(routes[0].path, '/api/v1/users/:userId/posts/:postId');
+    assert.strictEqual(routes[0].path, '/api/v1/users/{userId}/posts/{postId}');
 
     console.log('  ✓ Handles complex nested paths');
   });
@@ -415,7 +414,7 @@ test('Route Generator Tests', async (t) => {
     // All routes should be registered at the full prefixed path
     const paths = routes.map(r => r.path);
     assert.ok(paths.includes('/intake/applications'), 'List route registered at prefixed path');
-    assert.ok(paths.includes('/intake/applications/:applicationId'), 'Get route registered at prefixed path');
+    assert.ok(paths.includes('/intake/applications/{applicationId}'), 'Get route registered at prefixed path');
 
     console.log('  ✓ Routes registered at prefixed paths with correct collection names');
   });
@@ -432,7 +431,7 @@ test('Route Generator Tests', async (t) => {
     const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].description, 'List sub-resources');
-    assert.strictEqual(listRoutes(table)[0].path, '/applications/:applicationId/documents');
+    assert.strictEqual(listRoutes(table)[0].path, '/applications/{applicationId}/documents');
     console.log('  ✓ Sub-collection GET registered as list sub-resources');
   });
 
@@ -455,7 +454,7 @@ test('Route Generator Tests', async (t) => {
     const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].description, 'Get sub-resource by ID');
-    assert.strictEqual(listRoutes(table)[0].path, '/applications/:applicationId/documents/:documentId');
+    assert.strictEqual(listRoutes(table)[0].path, '/applications/{applicationId}/documents/{documentId}');
     console.log('  ✓ Sub-item GET registered as get sub-resource by ID');
   });
 
@@ -487,7 +486,7 @@ test('Route Generator Tests', async (t) => {
     const registered = registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
     assert.strictEqual(registered.length, 1);
     assert.strictEqual(registered[0].description, 'Get singleton sub-resource');
-    assert.strictEqual(listRoutes(table)[0].path, '/applications/:applicationId/interview');
+    assert.strictEqual(listRoutes(table)[0].path, '/applications/{applicationId}/interview');
     console.log('  ✓ Singleton GET registered as get singleton sub-resource');
   });
 

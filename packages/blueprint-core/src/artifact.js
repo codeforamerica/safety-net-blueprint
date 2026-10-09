@@ -110,6 +110,34 @@ export function domainClosure(docs, domains) {
 }
 
 /**
+ * The documents, less any that are not part of the contract set.
+ *
+ * `discover` keeps every YAML file it finds, and one it cannot identify as
+ * any contract type is `unknown`. Such a file in a contracts directory is
+ * usually something else entirely — a mock forwarding file, a note, a local
+ * config — and the artifact is published: the harness one is committed and
+ * inlined into a page anyone can open. So an `unknown` document is left out,
+ * unless a contract `$ref`s it, in which case it is part of the set whatever
+ * its type, and dropping it would leave a ref that cannot resolve.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {import('../types.js').Doc[]}
+ */
+function contractDocs(docs) {
+  const byRelativePath = indexByRelativePath(docs);
+  const referenced = new Set();
+  for (const doc of docs) {
+    if (doc.type === 'unknown') continue;
+    for (const ref of doc.refs().values()) {
+      if (!ref.external || !ref.file || isRemoteRef(ref.file)) continue;
+      const found = followRef(ref.file, byRelativePath, doc.relativePath);
+      if (found) referenced.add(found.relativePath);
+    }
+  }
+  return docs.filter((doc) => doc.type !== 'unknown' || referenced.has(doc.relativePath));
+}
+
+/**
  * The whole contract set, reduced to data.
  *
  * @param {import('../types.js').Doc[]} docs
@@ -119,7 +147,8 @@ export function domainClosure(docs, domains) {
  * @returns {{ artifactVersion: number, docs: object[] }}
  */
 export function buildArtifact(docs, { domains = null } = {}) {
-  const selected = domains?.length ? domainClosure(docs, domains) : docs;
+  const contracts = contractDocs(docs);
+  const selected = domains?.length ? domainClosure(contracts, domains) : contracts;
   return {
     artifactVersion: ARTIFACT_VERSION,
     docs: selected.map(plainDoc),

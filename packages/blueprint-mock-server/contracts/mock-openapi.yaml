@@ -1,0 +1,208 @@
+openapi: 3.1.0
+info:
+  title: Mock server
+  version: 1.0.0
+  description: >
+    The routes the mock server serves itself, which no contract declares:
+    health, stubs, reset and reseed. For Swagger and for reading — do not pass
+    this to the mock as a contract. It already serves these routes, and refuses
+    to start when a contract declares one of them.
+servers:
+  - url: http://localhost:1080
+tags:
+  - name: Health
+  - name: Event stubs
+    description: Answer a domain event with another event, once.
+  - name: HTTP stubs
+    description: Intercept a request, once, before the mock or a forwarded service answers it.
+  - name: State
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      tags: [Health]
+      summary: Whether the mock is up, and which APIs it serves
+      responses:
+        '200':
+          description: Up.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, apis]
+                properties:
+                  status: { type: string, const: ok }
+                  apis: { type: array, items: { type: string } }
+
+  /mock/stubs/events:
+    post:
+      operationId: registerEventStub
+      tags: [Event stubs]
+      summary: Register an event stub
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/stubs-schema.json#/definitions/EventStub'
+      responses:
+        '201':
+          description: Registered, with the id it was given.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisteredEventStub'
+        '422':
+          $ref: '#/components/responses/InvalidStub'
+    get:
+      operationId: listEventStubs
+      tags: [Event stubs]
+      summary: List event stubs not yet consumed
+      responses:
+        '200':
+          description: The stubs, in the order they will be matched.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/RegisteredEventStub' } }
+                  total: { type: integer }
+    delete:
+      operationId: clearEventStubs
+      tags: [Event stubs]
+      summary: Remove every event stub
+      responses:
+        '204': { description: Cleared. }
+
+  /mock/stubs/events/{id}:
+    delete:
+      operationId: removeEventStub
+      tags: [Event stubs]
+      summary: Remove one event stub
+      parameters:
+        - $ref: '#/components/parameters/StubId'
+      responses:
+        '204': { description: Removed. }
+        '404':
+          $ref: '#/components/responses/StubNotFound'
+
+  /mock/stubs/http:
+    post:
+      operationId: registerHttpStub
+      tags: [HTTP stubs]
+      summary: Register an HTTP stub
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/stubs-schema.json#/definitions/HttpStub'
+      responses:
+        '201':
+          description: Registered, with the id it was given.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisteredHttpStub'
+        '422':
+          $ref: '#/components/responses/InvalidStub'
+    get:
+      operationId: listHttpStubs
+      tags: [HTTP stubs]
+      summary: List HTTP stubs not yet consumed
+      responses:
+        '200':
+          description: The stubs, in the order they will be matched.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/RegisteredHttpStub' } }
+                  total: { type: integer }
+    delete:
+      operationId: clearHttpStubs
+      tags: [HTTP stubs]
+      summary: Remove every HTTP stub
+      responses:
+        '204': { description: Cleared. }
+
+  /mock/stubs/http/{id}:
+    delete:
+      operationId: removeHttpStub
+      tags: [HTTP stubs]
+      summary: Remove one HTTP stub
+      parameters:
+        - $ref: '#/components/parameters/StubId'
+      responses:
+        '204': { description: Removed. }
+        '404':
+          $ref: '#/components/responses/StubNotFound'
+
+  /mock/reset:
+    post:
+      operationId: resetMock
+      tags: [State]
+      summary: Clear all data and stubs, keeping config-managed resources
+      description: >
+        Leaves an empty store plus the catalog entries and policies the
+        contracts' config files declare. Does not reseed.
+      responses:
+        '204': { description: Reset. }
+
+  /mock/reseed:
+    post:
+      operationId: reseedMock
+      tags: [State]
+      summary: Insert the seed records again, clearing nothing
+      responses:
+        '204': { description: Reseeded. }
+
+components:
+  parameters:
+    StubId:
+      name: id
+      in: path
+      required: true
+      description: As returned when the stub was registered, e.g. `service_call.created-1` or `http.expedited-screening-1`.
+      schema: { type: string }
+
+  schemas:
+    RegisteredEventStub:
+      description: An event stub as registered, with the id it was given.
+      allOf:
+        - $ref: '../schemas/stubs-schema.json#/definitions/EventStub'
+        - type: object
+          required: [id]
+          properties:
+            id: { type: string }
+    RegisteredHttpStub:
+      description: An HTTP stub as registered, with the id it was given.
+      allOf:
+        - $ref: '../schemas/stubs-schema.json#/definitions/HttpStub'
+        - type: object
+          required: [id, type]
+          properties:
+            id: { type: string }
+            type: { type: string, const: http }
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+  responses:
+    InvalidStub:
+      description: The stub does not match its schema. The message names every problem, one per line.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    StubNotFound:
+      description: No stub has that id, or it was already consumed.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }

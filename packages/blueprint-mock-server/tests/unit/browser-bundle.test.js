@@ -17,10 +17,10 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, statSync, readFileSync } from 'node:fs';
+import { mkdtempSync, statSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const entry = join(packageRoot, 'src/browser.js');
@@ -36,6 +36,40 @@ function bundle({ minify = false } = {}) {
   assert.strictEqual(stderr.trim(), '', 'esbuild reported problems');
   return out;
 }
+
+/** A minimal artifact with one postable collection, whose create requires `label`. */
+const postableContracts = {
+  artifactVersion: 1,
+  docs: [{
+    path: '/x/domains/demo/demo-openapi.yaml',
+    relativePath: 'domains/demo/demo-openapi.yaml',
+    domain: 'demo', type: 'openapi', provenance: null,
+    content: {
+      openapi: '3.1.0',
+      info: { title: 'Demo', version: '1.0.0', 'x-domain': 'demo' },
+      // The localhost server URL is where the domain prefix comes from, so
+      // routes land at /demo/widgets as they do in a real contract set.
+      servers: [{ url: 'http://localhost:1080/demo' }],
+      paths: {
+        '/widgets': {
+          get: { operationId: 'listWidgets', responses: { 200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/WidgetList' } } } } } },
+          post: {
+            operationId: 'createWidget',
+            requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/WidgetCreate' } } } },
+            responses: { 201: { content: { 'application/json': { schema: { $ref: '#/components/schemas/Widget' } } } } },
+          },
+        },
+      },
+      components: {
+        schemas: {
+          Widget: { type: 'object', required: ['id'], properties: { id: { type: 'string' }, label: { type: 'string' } } },
+          WidgetCreate: { type: 'object', required: ['label'], properties: { label: { type: 'string' } } },
+          WidgetList: { type: 'object', properties: { items: { type: 'array', items: { $ref: '#/components/schemas/Widget' } } } },
+        },
+      },
+    },
+  }],
+};
 
 describe('the browser entry', () => {
 
@@ -121,6 +155,52 @@ describe('the browser entry', () => {
     assert.strictEqual(body.items[0].id, 'w1');
   });
 
+  test('runs with no Node globals, on the failure path as well as the happy one', () => {
+    // Every other test here executes browser code inside Node, where `process`
+    // and `Buffer` exist — so a Node-only global is invisible to all of them.
+    // That is how `validator.js` shipped a bare `process.env.DEBUG_VALIDATION`
+    // on the validation-failure path: a page returned
+    // `500 INTERNAL_ERROR: process is not defined` for every rejected request,
+    // and the bundle test passed because it only ever made a request that
+    // succeeded.
+    //
+    // So: drop `process` the way a page does, and exercise a request that
+    // fails validation, not just one that works. This has to be a child
+    // process because `node:test` needs the global being removed.
+    //
+    // Only `process`. `Buffer` cannot be removed too, much as a page lacks
+    // that as well: Node's bundled undici reaches for it to provide `Request`
+    // and `fetch`, which a browser has natively, so deleting it fails inside
+    // Node rather than inside anything being tested.
+    const out = bundle({ minify: true });
+    const driver = join(dirname(out), 'no-globals.mjs');
+
+    writeFileSync(driver, `
+      import { createMockServer } from ${JSON.stringify(pathToFileURL(out).href)};
+
+      delete globalThis.process;
+
+      const mock = await createMockServer({ contracts: ${JSON.stringify(postableContracts)}, seed: false });
+      const statuses = [];
+      for (const body of [{ label: 'ok' }, {}]) {
+        const response = await mock.fetch(new Request('http://localhost/demo/widgets', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        }));
+        statuses.push(response.status);
+      }
+      console.log(JSON.stringify(statuses));
+    `);
+
+    const stdout = execFileSync(process.execPath, [driver], { encoding: 'utf8' });
+    const [created, rejected] = JSON.parse(stdout.trim().split('\n').pop());
+
+    assert.strictEqual(created, 201, 'a valid request should still be created');
+    assert.strictEqual(rejected, 422,
+      'a rejected request must answer 422, not a 500 from touching a Node global');
+  });
+
   test('mock.fetch has fetch\'s signature, so it can replace the global', async () => {
     // The property the whole design rests on: substituting the mock for the
     // real network is the identity function, not an adapter (#283).
@@ -148,39 +228,7 @@ describe('the browser entry', () => {
 });
 
 describe('a page served from a subdirectory', () => {
-  /** A minimal artifact with one postable collection. */
-  const contracts = {
-    artifactVersion: 1,
-    docs: [{
-      path: '/x/domains/demo/demo-openapi.yaml',
-      relativePath: 'domains/demo/demo-openapi.yaml',
-      domain: 'demo', type: 'openapi', provenance: null,
-      content: {
-        openapi: '3.1.0',
-        info: { title: 'Demo', version: '1.0.0', 'x-domain': 'demo' },
-        // The localhost server URL is where the domain prefix comes from, so
-        // routes land at /demo/widgets as they do in a real contract set.
-        servers: [{ url: 'http://localhost:1080/demo' }],
-        paths: {
-          '/widgets': {
-            get: { operationId: 'listWidgets', responses: { 200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/WidgetList' } } } } } },
-            post: {
-              operationId: 'createWidget',
-              requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/WidgetCreate' } } } },
-              responses: { 201: { content: { 'application/json': { schema: { $ref: '#/components/schemas/Widget' } } } } },
-            },
-          },
-        },
-        components: {
-          schemas: {
-            Widget: { type: 'object', required: ['id'], properties: { id: { type: 'string' }, label: { type: 'string' } } },
-            WidgetCreate: { type: 'object', required: ['label'], properties: { label: { type: 'string' } } },
-            WidgetList: { type: 'object', properties: { items: { type: 'array', items: { $ref: '#/components/schemas/Widget' } } } },
-          },
-        },
-      },
-    }],
-  };
+  const contracts = postableContracts;
 
   // GitHub Pages serves a project site from /<repo>/, so this is the shape a
   // hosted page actually sees.

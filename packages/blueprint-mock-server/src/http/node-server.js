@@ -27,9 +27,33 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   'Access-Control-Allow-Headers':
-    'Content-Type, Authorization, X-Caller-Id, X-Caller-Roles, X-Mock-Now, traceparent',
+    'Content-Type, Authorization, X-Caller-Id, X-Caller-Roles, traceparent',
   'Access-Control-Allow-Credentials': 'true',
 };
+
+/**
+ * The preflight answer: every header the page asked to send is allowed.
+ *
+ * A fixed list refused anything not on it, and the browser then never sent
+ * the request — so `includeHeaders: [X-API-Key]` could not work from a page,
+ * and neither could `If-Match` or `Idempotency-Key`, which forwarding sends by
+ * default. Allowing what was asked costs nothing here: the origin is already
+ * `*`, so this is not a boundary the mock relies on, and what travels on to a
+ * real service is decided by the forwarding rules, not by this.
+ *
+ * @param {import('node:http').IncomingMessage} req
+ */
+export function preflightHeaders(req) {
+  const asked = req.headers['access-control-request-headers'];
+  if (!asked) return CORS_HEADERS;
+  return {
+    ...CORS_HEADERS,
+    'Access-Control-Allow-Headers': asked,
+    // The answer depends on the question, so a cache must not reuse it for a
+    // preflight that asked for something else.
+    Vary: 'Access-Control-Request-Headers',
+  };
+}
 
 /**
  * Build a Fetch `Request` from a Node request.
@@ -90,7 +114,7 @@ export function createNodeServer(handler) {
     // Preflight never reaches a route; the allowed methods and headers are a
     // property of the transport, not of any endpoint.
     if (req.method === 'OPTIONS') {
-      res.writeHead(204, CORS_HEADERS);
+      res.writeHead(204, preflightHeaders(req));
       res.end();
       return;
     }

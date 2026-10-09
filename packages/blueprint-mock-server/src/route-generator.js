@@ -7,7 +7,7 @@ import { createListHandler } from './handlers/list-handler.js';
 import { extractExpandFields, applyExpand, getItemSchema } from './handlers/expand-utils.js';
 import { createGetHandler } from './handlers/get-handler.js';
 import { jsonBody, readJsonBody, queryOf } from './http/request.js';
-import { addRoute } from './http/route-table.js';
+import { addRoute, tagRoutesAddedBy } from './http/route-table.js';
 import { createCurrentUserHandler } from './handlers/current-user-handler.js';
 import { createCreateHandler } from './handlers/create-handler.js';
 import { createUpdateHandler, buildChanges } from './handlers/update-handler.js';
@@ -515,8 +515,10 @@ export function registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines = [],
   // for the /workflow/metrics paths declared in workflow-openapi.yaml.
   if (metrics.length > 0) {
     console.log('  Registering metrics routes...');
-    addRoute(routes, 'GET', '/workflow/metrics', createMetricsListHandler(metrics, deps));
-    addRoute(routes, 'GET', '/workflow/metrics/:metricId', createMetricsGetHandler(metrics, deps));
+    // The paths are fixed, so the domain is whichever contract is served there.
+    const domain = apiSpecs.find((s) => s.serverBasePath === '/workflow')?.domain ?? null;
+    addRoute(routes, 'GET', '/workflow/metrics', createMetricsListHandler(metrics, deps), { domain });
+    addRoute(routes, 'GET', '/workflow/metrics/:metricId', createMetricsGetHandler(metrics, deps), { domain });
     console.log('    GET    /workflow/metrics - List computed metrics');
     console.log('    GET    /workflow/metrics/:metricId - Get computed metric');
   }
@@ -524,7 +526,8 @@ export function registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines = [],
   for (const apiSpec of apiSpecs) {
     // Pass all state machines for this domain — there may be more than one (e.g., Application + ApplicationDocument)
     const domainSMs = stateMachines.filter(s => s.domain === apiSpec.name);
-    const endpoints = registerRoutes(routes, apiSpec, baseUrl, domainSMs, slaTypes, deps);
+    const endpoints = tagRoutesAddedBy(routes, { domain: apiSpec.domain ?? null },
+      () => registerRoutes(routes, apiSpec, baseUrl, domainSMs, slaTypes, deps));
     allEndpoints.push({
       apiName: apiSpec.name,
       title: apiSpec.title,
@@ -618,6 +621,10 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
     const apiSpec = apiSpecs.find(s => s.name === domain);
     const basePath = apiSpec?.serverBasePath ?? '';
 
+    // Every route this file adds belongs to its domain. Tagged once, after
+    // the loop, rather than at each of the many `addRoute` calls in it — the
+    // same thing `tagRoutesAddedBy` does, without re-indenting the loop.
+    const before = new Set(routes.keys());
     for (const [compositionName, composition] of Object.entries(doc.compositions || {})) {
       const endpointPath = composition.endpoint?.path;
       if (!endpointPath) continue;
@@ -737,6 +744,9 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
           registeredEndpoints.push(...stateEndpoints);
         }
       }
+    }
+    for (const [key, entry] of routes) {
+      if (!before.has(key)) entry.domain = apiSpec?.domain ?? domain;
     }
   }
 
@@ -938,6 +948,7 @@ export function registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaT
       addRoute(routes, 'POST', expressPath, handler, {
         operationId: entry.id,
         description: `${entry.id}: ${entry.from} → ${entry.to ?? '(in-place)'}`,
+        domain: apiSpec.domain ?? null,
       });
 
       registeredEndpoints.push({
@@ -1009,7 +1020,7 @@ export function registerRulesRoutes(routes, rulesFiles = [], apiSpecs = [], grap
           result[name] = rest;
         }
         return Response.json(result);
-      });
+      }, { domain: apiSpec?.domain ?? domain });
 
       registeredEndpoints.push({ method: 'POST', path: fullPath, description: `Evaluate ${rulesetName}` });
       console.log(`  POST   ${fullPath} - Evaluate ${rulesetName} (rules)`);
