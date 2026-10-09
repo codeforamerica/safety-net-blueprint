@@ -124,7 +124,7 @@ async function runAllTests() {
     const alreadyRunning = await isServerRunning().catch(() => false);
     if (!alreadyRunning) {
       console.log('Starting mock server...');
-      await startMockServer([contractsDir], seedDir, null, storeKind);
+      await startMockServer([contractsDir], seedDir, storeKind);
       await new Promise(res => setTimeout(res, 1500));
       console.log('Mock server started\n');
     } else {
