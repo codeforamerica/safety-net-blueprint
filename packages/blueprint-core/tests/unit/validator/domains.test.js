@@ -86,3 +86,43 @@ describe('missing-domain', () => {
     });
   });
 });
+
+describe('undefined-domain', () => {
+  const undefinedDomains = (docs) => validate(docs).results
+    .flatMap((result) => result.errors.filter((e) => e.rule === 'undefined-domain'));
+
+  test('a document attaching to a domain nothing defines is reported, with the ones that are', () => {
+    withSet({
+      'domains/intake/intake-openapi.yaml': openapi({ 'x-domain': 'intake' }),
+      'domains/intake/intake-mock-data.yaml': { domain: 'intkae', ApplicationExample1: { id: 'a-1' } },
+    }, (docs) => {
+      const [error] = undefinedDomains(docs);
+      assert.match(error?.message ?? '', /"intkae"/);
+      assert.match(error.message, /Defined: intake/);
+    });
+  });
+
+  test('a rules document defines a domain of its own', () => {
+    // A rules file can serve endpoints with no API, so a rules-only domain is
+    // a domain, and what attaches to it is fine.
+    withSet({
+      'domains/screening/screening-rules.yaml': {
+        $schema: 'https://blueprint.codeforamerica.org/schemas/rules-schema.yaml',
+        domain: 'screening',
+        rulesets: {},
+      },
+      'domains/screening/screening-rules-examples.yaml': {
+        $schema: 'https://blueprint.codeforamerica.org/schemas/rules-examples-schema.yaml',
+        domain: 'screening',
+      },
+    }, (docs) => {
+      assert.deepEqual(undefinedDomains(docs), []);
+    });
+  });
+
+  test('a set that defines no domain is not checked', () => {
+    withSet({ 'domains/intake/intake-mock-data.yaml': { domain: 'intake' } }, (docs) => {
+      assert.deepEqual(undefinedDomains(docs), []);
+    });
+  });
+});

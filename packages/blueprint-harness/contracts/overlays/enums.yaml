@@ -3,7 +3,8 @@ info:
   title: Harness enum extensions
   version: 1.0.0
 
-# Extends base enum definitions to include harness-specific domains and collections.
+# Extends base enum definitions to include harness-specific collections. The Domain
+# enum needs no overlay: it is generated from the domains the contracts declare.
 # This mirrors what a real domain package overlay would do when deploying blueprint contracts.
 
 actions:
@@ -22,19 +23,3 @@ actions:
         - applications
         - determinations
         - events
-
-  # Extend the Domain enum to include harness domains.
-  # The base enum only contains "platform"; domain packages add their own values via overlay.
-  - target: "$.$defs.Domain"
-    files: https://blueprint.codeforamerica.org/base/schemas/enums.yaml
-    description: Add harness domains (intake, eligibility) to the Domain enum
-    replace:
-      type: string
-      description: >
-        Harness domain identifier. Extends the blueprint-core base Domain enum
-        with the intake and eligibility domains exercised by these contracts.
-      enum:
-        - eligibility
-        - intake
-        - platform
-

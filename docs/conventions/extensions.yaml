@@ -116,12 +116,14 @@ x_extensions:
     description: >
       Declares that a string field's valid enum values are derived from another
       contract artifact rather than being hardcoded in the OpenAPI spec. Supports
-      a string form (path expression, e.g. states[].id or slaTypes[].id) and an
+      a string form (path expression, e.g. states[].id or slaTypes[].id), an
       object form with an optional machine: property to scope to a specific state
-      machine when a state machine file defines multiple machines. The resolve
+      machine when a state machine file defines multiple machines, and the named
+      source domains — the domains the set's OpenAPI, AsyncAPI and rules documents
+      declare, sorted. The resolve
       pipeline injects the actual enum values at build time and strips the annotation,
       keeping the OpenAPI spec in sync with behavioral contracts without duplication.
-    location: schema property level (on string fields whose valid values come from another artifact)
+    location: schema property level (on string fields whose valid values come from another artifact), or on a named string schema such as $defs.Domain
     type: string | object
     fields:
       source: >
@@ -149,6 +151,11 @@ x_extensions:
           source: states[].id
           machine: Application
         description: Current lifecycle status.
+
+      # Named source — the domains the set defines
+      Domain:
+        type: string
+        x-enum-source: domains
 
   x-relationship:
     description: >

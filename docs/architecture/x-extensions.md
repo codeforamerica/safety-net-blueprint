@@ -100,7 +100,7 @@ info:
   x-domain: workflow
 ```
 
-Valid values: `case-management`, `client-management`, `communication`, `data-exchange`, `document-management`, `eligibility`, `identity-access`, `intake`, `platform`, `reporting`, `scheduling`, `search`, `workflow`.
+A contract set's domains are the ones its OpenAPI, AsyncAPI and rules documents declare; there is no separate list. Every other document attaches to one of those domains, and one naming a domain none of them declare fails validation.
 
 ---
 
@@ -146,9 +146,9 @@ x-events:
 
 ## x-enum-source
 
-**File type:** `*-openapi.yaml` — schema property level, on string fields whose valid values come from another contract artifact.
+**File type:** `*-openapi.yaml` and JSON Schema files — on a string schema property, or on a named string schema such as `$defs.Domain`, whose valid values come from another contract artifact.
 
-Declares that a field's enum values are derived from a behavioral contract (state machine, SLA types) rather than hardcoded in the OpenAPI spec. The resolve pipeline injects the actual enum values at build time, keeping the spec in sync without duplication. The annotation is stripped from the resolved output and replaced with a concrete `enum:` array.
+Declares that a field's enum values are derived from another contract (state machine, SLA types, the set's domains) rather than hardcoded in the spec. The resolve pipeline injects the actual enum values at build time, keeping the spec in sync without duplication. The annotation is stripped from the resolved output and replaced with a concrete `enum:` array.
 
 **String form** — for single-machine state files or SLA types:
 
@@ -184,6 +184,15 @@ status:
     source: states[].id
     machine: Verification
   description: Current status of the verification obligation.
+```
+
+**`domains`** — the domains the set defines, those its OpenAPI, AsyncAPI and rules documents declare, sorted:
+
+```yaml
+# base/schemas/enums.yaml
+Domain:
+  type: string
+  x-enum-source: domains
 ```
 
 **Fields (object form):**

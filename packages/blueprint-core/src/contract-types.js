@@ -20,15 +20,19 @@
  *               so it declares a domain only when it belongs to one;
  *             'none' — it is never one domain's.
  *             No default, and never inferred: no domain means shared.
+ *   definesDomain  true for a type that stands on its own, so that a domain
+ *             exists because a document of it declares one: OpenAPI, AsyncAPI,
+ *             and rules, which can define endpoints with no API. Every other
+ *             document attaches to a domain one of these defines.
  */
 
 export const CONTRACT_TYPES = {
-  openapi:          { suffix: '-openapi.yaml', domain: 'required' },
-  asyncapi:         { suffix: '-asyncapi.yaml', domain: 'required' },
+  openapi:          { suffix: '-openapi.yaml', domain: 'required', definesDomain: true },
+  asyncapi:         { suffix: '-asyncapi.yaml', domain: 'required', definesDomain: true },
   // A document with no machines is a library — guards and procedures any
   // domain inherits through `extends` — and is shared; see requiresDomain.
   'state-machine':  { schema: 'state-machine-schema.yaml', suffix: '-state-machine.yaml', authored: true, domain: 'required' },
-  rules:            { schema: 'rules-schema.yaml', suffix: '-rules.yaml', authored: true, domain: 'required' },
+  rules:            { schema: 'rules-schema.yaml', suffix: '-rules.yaml', authored: true, domain: 'required', definesDomain: true },
   'rules-examples': { schema: 'rules-examples-schema.yaml', suffix: '-rules-examples.yaml', domain: 'required' },
   graph:            { schema: 'graph-schema.yaml', suffix: '-graph.yaml', domain: 'required' },
   compositions:     { schema: 'compositions-schema.yaml', suffix: '-compositions.yaml', authored: true, domain: 'required' },
@@ -95,6 +99,22 @@ export function requiresDomain(doc) {
   if (CONTRACT_TYPES[doc.type]?.domain !== 'required') return false;
   if (doc.type === 'state-machine' && !Array.isArray(doc.content?.machines)) return false;
   return true;
+}
+
+/**
+ * The domains a set defines: those its OpenAPI, AsyncAPI and rules documents
+ * declare, sorted.
+ *
+ * @param {{ type: string, domain?: string|null, content?: object }[]} docs
+ * @returns {string[]}
+ */
+export function definedDomains(docs) {
+  const domains = new Set();
+  for (const doc of docs) {
+    const domain = doc.domain ?? extractDomain(doc.content);
+    if (CONTRACT_TYPES[doc.type]?.definesDomain && domain && !isDeprecated(doc.content)) domains.add(domain);
+  }
+  return [...domains].sort();
 }
 
 /**

@@ -78,6 +78,8 @@ This generates `permits-openapi.yaml` with full CRUD paths and schema variants (
 
 The convention is to put all resources for a domain into a single spec file. You can split across multiple files if needed, as long as each spec declares its domain via `x-domain` in the `info` block.
 
+The `x-domain` you give it is what makes `permits` a domain; there is no separate list to add it to. Every other file for the domain — schemas, mock data, a state machine — declares the same name as a top-level `domain`, and validation reports one naming a domain no OpenAPI, AsyncAPI or rules document declares, which is what catches a misspelled one.
+
 ### 2. Define your schemas
 
 The scaffolded spec gives you the endpoint and schema structure, but not the domain fields — those are yours to define. Define domain entity schemas in JSON Schema for anything used by non-OpenAPI artifacts (state machines, annotations, compositions); OpenAPI specs can then reference those rather than redefine them. See [Creating APIs — Where to define the writable base](../guides/creating-apis.md#where-to-define-the-writable-base) for the recommended pattern.

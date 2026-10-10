@@ -24,7 +24,7 @@ import { validateEvents } from './validator/event-validator.js';
 import { validateSlaTypeFields, validateMetricFields } from './validator/field-reference-validator.js';
 import { validateAnnotations } from './validator/annotation-validator.js';
 import { validateSchemas } from './validator/json-schema-validator.js';
-import { stemOf, isDeprecated, isReservedResource, requiresDomain } from './contract-types.js';
+import { stemOf, isDeprecated, isReservedResource, requiresDomain, definedDomains, CONTRACT_TYPES } from './contract-types.js';
 import { indexByRelativePath, followRef, isRemoteRef } from './ref-lookup.js';
 import {
   buildSchemaIndex,
@@ -84,6 +84,7 @@ export function validate(docs) {
   const collectionIndex = buildCollectionIndex(docs);
 
   const context = {
+    definedDomains: definedDomains(docs),
     byRelativePath,
     schemaIndex,
     collectionIndex,
@@ -421,11 +422,36 @@ function missingDomain(doc) {
   }];
 }
 
+/**
+ * A document attaching to a domain that nothing defines.
+ *
+ * A domain exists because an OpenAPI, AsyncAPI or rules document declares it;
+ * every other document — a state machine, mock data, annotations, config —
+ * attaches to one of those. Attaching to a domain nothing defines is almost
+ * always a typo, which would otherwise start a domain of its own and quietly
+ * split the one meant. A set that defines no domain at all is not checked.
+ *
+ * @param {import('../types.js').Doc} doc
+ * @param {string[]} defined
+ * @returns {{ rule: string, message: string, path: string }[]}
+ */
+function undefinedDomain(doc, defined) {
+  if (defined.length === 0 || !doc.domain || CONTRACT_TYPES[doc.type]?.definesDomain) return [];
+  if (defined.includes(doc.domain) || isDeprecated(doc.content)) return [];
+  return [{
+    rule: 'undefined-domain',
+    message: `Declares domain "${doc.domain}", which no OpenAPI, AsyncAPI or rules document declares. ` +
+      `Defined: ${defined.join(', ')}. Fix the name, or define the domain.`,
+    path: doc.path,
+  }];
+}
+
 function validateDoc(doc, context) {
   const errors = [];
   const warnings = [];
 
   errors.push(...missingDomain(doc));
+  errors.push(...undefinedDomain(doc, context.definedDomains));
   errors.push(...brokenFragmentRefs(doc));
   errors.push(...brokenExternalRefs(doc, context.byRelativePath));
   errors.push(...unresolvedRelationshipResources(doc, context.schemaIndex));

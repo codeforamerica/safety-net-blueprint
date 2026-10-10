@@ -226,3 +226,61 @@ describe('injectEnumSources', () => {
     assert.deepEqual(field(result).enum, ['snap_standard', 'medicaid_standard']);
   });
 });
+
+describe('injectEnumSources — the domains the set defines', () => {
+  const declaring = (relativePath, type, domain) => doc(
+    type === 'openapi' || type === 'asyncapi'
+      ? { [type]: '3.0.0', info: { title: domain, version: '1.0.0', 'x-domain': domain } }
+      : { domain },
+    { relativePath, type, domain }
+  );
+
+  const enums = doc(
+    { $defs: { Domain: { type: 'string', 'x-enum-source': 'domains' } } },
+    { relativePath: 'base/schemas/enums.yaml', type: 'schema' }
+  );
+
+  const domainEnum = (result) =>
+    result.docs.find((d) => d.relativePath === 'base/schemas/enums.yaml').content.$defs.Domain;
+
+  test('every domain an OpenAPI, AsyncAPI or rules document declares, sorted', () => {
+    const result = injectEnumSources([
+      declaring('domains/workflow/workflow-openapi.yaml', 'openapi', 'workflow'),
+      declaring('domains/intake/intake-asyncapi.yaml', 'asyncapi', 'intake'),
+      declaring('domains/screening/screening-rules.yaml', 'rules', 'screening'),
+      enums,
+    ]);
+
+    assert.deepEqual(domainEnum(result).enum, ['intake', 'screening', 'workflow']);
+    assert.equal('x-enum-source' in domainEnum(result), false);
+  });
+
+  test('a document that only attaches to a domain adds none', () => {
+    // A misspelled domain on mock data must not become a value of the enum;
+    // validation reports it instead.
+    const result = injectEnumSources([
+      declaring('domains/intake/intake-openapi.yaml', 'openapi', 'intake'),
+      declaring('domains/intake/intake-mock-data.yaml', 'mock-data', 'intkae'),
+      enums,
+    ]);
+
+    assert.deepEqual(domainEnum(result).enum, ['intake']);
+  });
+
+  test('a set defining no domain leaves the annotation, and no enum', () => {
+    const result = injectEnumSources([enums]);
+
+    assert.equal(domainEnum(result)['x-enum-source'], 'domains');
+    assert.equal('enum' in domainEnum(result), false);
+  });
+
+  test('a set defining domains but nothing else to draw on still warns where one is missing', () => {
+    const result = injectEnumSources([
+      declaring('domains/intake/intake-openapi.yaml', 'openapi', 'intake'),
+      doc({ $defs: { Status: { type: 'string', 'x-enum-source': 'slaTypes[].id' } } },
+        { relativePath: 'common/schemas/status.yaml', type: 'schema' }),
+    ]);
+
+    assert.match(result.warnings.join('\n'), /no values found for "slaTypes"/);
+  });
+});

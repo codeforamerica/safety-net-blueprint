@@ -9,14 +9,19 @@
  *
  * It runs after overlays, so the values reflect a state's customizations.
  *
- * Two annotation forms:
+ * Two annotation forms, and one named source:
  *
  *     x-enum-source: "slaTypes[].id"
  *     x-enum-source: { source: "states[].id", machine: "Application" }
+ *     x-enum-source: domains
  *
  * The object form picks one machine's states; the string form takes every
- * machine's states in the document.
+ * machine's states in the document. `domains` is the domains the set defines —
+ * those its OpenAPI, AsyncAPI and rules documents declare — so the Domain enum
+ * is written nowhere as a list.
  */
+
+import { definedDomains } from '../contract-types.js';
 
 const ANNOTATION = 'x-enum-source';
 const SOURCE_SYNTAX = /^(\w+)\[\]\.(\w+)$/;
@@ -55,13 +60,17 @@ export function injectEnumSources(docs) {
  * Collect the value lists that annotations can draw from.
  *
  * Keys are the collection name — `slaTypes`, `states` — plus `states:{Object}`
- * for each machine, so an annotation can name one machine's states.
+ * for each machine, so an annotation can name one machine's states, and
+ * `domains` for the domains the set defines.
  *
  * @param {import('../../types.js').Doc[]} docs
  * @returns {Map<string, string[]>}
  */
 function buildIndex(docs) {
   const index = new Map();
+
+  const domains = definedDomains(docs);
+  if (domains.length > 0) index.set('domains', domains);
 
   for (const doc of docs) {
     if (doc.type === 'sla-types' && Array.isArray(doc.content?.slaTypes)) {
@@ -141,6 +150,15 @@ function transform(node, path, handlers) {
  * @returns {string[]|null} Values, or null when the annotation cannot be resolved
  */
 function resolveAnnotation(annotation, path, handlers) {
+  if (annotation === 'domains') {
+    const values = handlers.lookup('domains');
+    if (!values || values.length === 0) {
+      handlers.onWarning(`${ANNOTATION}: no OpenAPI, AsyncAPI or rules document declares a domain, at #${path}`);
+      return null;
+    }
+    return values;
+  }
+
   const source = typeof annotation === 'string' ? annotation : annotation?.source;
   const machine = typeof annotation === 'string' ? null : annotation?.machine ?? null;
 
