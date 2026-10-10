@@ -119,3 +119,29 @@ describe('a state machine still naming apiSpec', () => {
     assert.ok(warnings.some((w) => w.rule === 'deprecated-api-spec'));
   });
 });
+
+describe('an operation written by hand that a generated one would replace', async () => {
+  const { generate } = await import('../../src/index.js');
+  const machine = toDoc({
+    path: '/set/domains/intake/intake-state-machine.yaml',
+    relativePath: 'domains/intake/intake-state-machine.yaml',
+    type: 'state-machine',
+    content: { domain: 'intake', machines: [{ object: 'Application', states: [{ id: 'draft' }], initialState: 'draft', actions: [{ id: 'submit' }] }] },
+  });
+  const withSubmit = (operation) => api('domains/intake/intake-openapi.yaml', 'intake', '/intake', {
+    '/applications/{applicationId}': returns('Application'),
+    '/applications/{applicationId}/submit': { post: operation },
+  });
+
+  test('is refused, naming the operation, the document and the action', () => {
+    assert.throws(
+      () => generate([withSubmit({ operationId: 'submitByHand', responses: {} }), machine], 'overlay'),
+      /POST \/applications\/\{applicationId\}\/submit is written in domains\/intake\/intake-openapi\.yaml and also generated from the intake state machine's "submit" action/,
+    );
+  });
+
+  test('one resolve generated earlier, carrying the same marker, is not', () => {
+    const marked = { operationId: 'submitApplication', 'x-relationship': { type: 'state-machine-action', domain: 'intake', id: 'submit' }, responses: {} };
+    assert.doesNotThrow(() => generate([withSubmit(marked), machine], 'overlay'));
+  });
+});

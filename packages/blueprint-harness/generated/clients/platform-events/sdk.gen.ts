@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetEventData, GetEventErrors, GetEventResponses, ListEventsData, ListEventsResponses, PublishEventData, PublishEventResponses, StreamEventsData, StreamEventsResponses } from './types.gen';
+import type { GetEventData, GetEventErrors, GetEventResponses, ListEventsData, ListEventsErrors, ListEventsResponses, PublishEventData, PublishEventErrors, PublishEventResponses, StreamEventsData, StreamEventsResponses } from './types.gen';
 import { zGetEventData, zGetEventResponse, zListEventsData, zListEventsResponse, zPublishEventData, zPublishEventResponse, zStreamEventsData, zStreamEventsResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
@@ -22,9 +22,15 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 /**
  * List events
  *
- * Every event published so far, newest first.
+ * Queryable log of all domain events across the blueprint. Supports
+ * REST polling as an integration pattern and provides permanent audit
+ * history regardless of whether a message broker is in use.
+ *
+ * Events are returned in ascending time order (oldest first) to support
+ * cursor-based polling.
+ *
  */
-export const listEvents = <ThrowOnError extends boolean = false>(options?: Options<ListEventsData, ThrowOnError>) => (options?.client ?? client).get<ListEventsResponses, unknown, ThrowOnError>({
+export const listEvents = <ThrowOnError extends boolean = false>(options?: Options<ListEventsData, ThrowOnError>) => (options?.client ?? client).get<ListEventsResponses, ListEventsErrors, ThrowOnError>({
     requestValidator: async (data) => await zListEventsData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zListEventsResponse.parseAsync(data),
@@ -35,10 +41,11 @@ export const listEvents = <ThrowOnError extends boolean = false>(options?: Optio
 /**
  * Publish an event
  *
- * Put an event on the bus. The mock server replaces this operation with one that also notifies subscribers, which is how a test drives a state machine without performing the action that would have emitted it.
+ * Publish a CloudEvents 1.0 envelope to the event log. Used by domain
+ * producers to record state transitions and significant data mutations.
  *
  */
-export const publishEvent = <ThrowOnError extends boolean = false>(options: Options<PublishEventData, ThrowOnError>) => (options.client ?? client).post<PublishEventResponses, unknown, ThrowOnError>({
+export const publishEvent = <ThrowOnError extends boolean = false>(options: Options<PublishEventData, ThrowOnError>) => (options.client ?? client).post<PublishEventResponses, PublishEventErrors, ThrowOnError>({
     requestValidator: async (data) => await zPublishEventData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zPublishEventResponse.parseAsync(data),
@@ -51,9 +58,15 @@ export const publishEvent = <ThrowOnError extends boolean = false>(options: Opti
 });
 
 /**
- * Subscribe to events
+ * Stream domain events (SSE)
  *
- * A Server-Sent Events stream. The mock server replaces this operation with one that holds the response open and writes each event as it is published.
+ * Real-time stream of domain events delivered as Server-Sent Events (SSE).
+ *
+ * Connect with `Accept: text/event-stream`. Each event is delivered as a
+ * `data:` line containing a JSON-encoded `Event` object.
+ *
+ * The stream stays open until the client disconnects. A `: heartbeat` comment
+ * is sent every 30 seconds to prevent proxy timeouts.
  *
  */
 export const streamEvents = <ThrowOnError extends boolean = false>(options?: Options<StreamEventsData, ThrowOnError>) => (options?.client ?? client).sse.get<StreamEventsResponses, unknown, ThrowOnError>({
@@ -65,7 +78,9 @@ export const streamEvents = <ThrowOnError extends boolean = false>(options?: Opt
 });
 
 /**
- * Get one event
+ * Get a domain event
+ *
+ * Retrieve a single domain event by its identifier.
  */
 export const getEvent = <ThrowOnError extends boolean = false>(options: Options<GetEventData, ThrowOnError>) => (options.client ?? client).get<GetEventResponses, GetEventErrors, ThrowOnError>({
     requestValidator: async (data) => await zGetEventData.parseAsync(data),

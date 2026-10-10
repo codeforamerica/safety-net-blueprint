@@ -368,10 +368,11 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
         } else if (method === 'post') {
           // A transition is served from its state machine, which is what
           // produced it (registerStateMachineRoutes), and the operation resolve
-          // generated for it is skipped when the document is loaded. A POST on
-          // a singular sub-path written by hand, with nothing behind it, has no
-          // behavior to serve.
-          console.warn(`    Warning: POST ${endpoint.path} is not generated from a state machine, so nothing serves it`);
+          // generated for it is skipped when the document is loaded. One
+          // written by hand has no behavior of its own to serve; if a state
+          // machine action produces the same route, that serves it, and resolve
+          // refuses the pair.
+          console.warn(`    Warning: POST ${endpoint.path} is written by hand, not generated from a state machine, so it is not served as written`);
           continue;
         } else {
           console.warn(`    Warning: Unsupported method ${method.toUpperCase()} on singleton ${endpoint.path}`);

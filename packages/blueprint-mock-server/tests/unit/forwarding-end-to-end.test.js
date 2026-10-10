@@ -169,9 +169,9 @@ describe('the mock\'s own routes', () => {
 
 describe('two contracts declaring one route', () => {
   test('refuse to start, naming both documents', async () => {
-    // A framework file and a set's own file both declaring GET /platform/events
-    // — the failure moving the events contract could cause, which first-wins
-    // used to hide by quietly serving one of them.
+    // A set's own file still declaring GET /platform/events beside the
+    // framework's — the failure moving the events contract could cause, which
+    // first-wins used to hide by quietly serving one of them.
     const dir = mkdtempSync(join(tmpdir(), 'dup-route-'));
     const path = join(dir, 'platform-events-openapi.yaml');
     writeFileSync(path, [
@@ -183,11 +183,11 @@ describe('two contracts declaring one route', () => {
       '    get: { operationId: listFrameworkEvents, responses: { "200": { description: ok } } }',
       '',
     ].join('\n'));
-    const events = load({ path, relativePath: 'base/domains/platform/platform-events-openapi.yaml' });
+    const events = load({ path, relativePath: 'domains/platform/platform-openapi.yaml' });
     rmSync(dir, { recursive: true, force: true });
 
     const set = [...discover(harness).map(load), events];
     await assert.rejects(boot({ contracts: generate(set, 'artifact'), seed: false }),
-      /GET \/platform\/events is declared by two contracts: .*platform-openapi\.yaml and .*platform-events-openapi\.yaml|GET \/platform\/events is declared by two contracts: .*platform-events-openapi\.yaml and .*platform-openapi\.yaml/);
+      /GET \/platform\/events is declared by two contracts: (base\/domains\/platform\/platform-events-openapi\.yaml and domains\/platform\/platform-openapi\.yaml|domains\/platform\/platform-openapi\.yaml and base\/domains\/platform\/platform-events-openapi\.yaml)/);
   });
 });

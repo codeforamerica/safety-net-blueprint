@@ -1,59 +1,124 @@
 {
   "allOf": [
     {
+      "allOf": [
+        {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Fully qualified CloudEvents event type following the convention {domain}.{entity}.{action} (e.g., intake.application.submitted). Must match a channel address declared in the domain's eventsSpec AsyncAPI file.\n"
+            },
+            "description": {
+              "type": "string",
+              "description": "Human-readable annotation for state machine authors. Not a CloudEvents field."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "subject": {
+              "type": "string",
+              "description": "CloudEvents subject override. The entity ID the event pertains to. Defaults to the emitting resource's own id when omitted.\n"
+            },
+            "causationid": {
+              "type": "string",
+              "description": "CloudEvents Causation extension (optional). Value expression resolving to the id of the event that directly caused this one. Use when an event is emitted in response to another event (e.g., auto-resume triggered by a timer callback).\n"
+            },
+            "data": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Event-specific payload. Field values are value expressions resolved at emit time."
+            }
+          }
+        }
+      ]
+    },
+    {
       "type": "object",
-      "description": "A CloudEvents 1.0 envelope. The spec is followed rather than paraphrased because the mock server validates `specversion` and `type` before publishing, and a subscriber reads the same envelope off the SSE stream.\n",
       "required": [
         "specversion",
-        "type",
-        "source"
+        "id",
+        "source",
+        "subject",
+        "time",
+        "datacontenttype"
       ],
       "properties": {
         "specversion": {
           "type": "string",
           "const": "1.0",
-          "description": "CloudEvents version. Always `1.0`."
+          "description": "CloudEvents specification version."
         },
-        "type": {
-          "type": "string",
-          "description": "Event type, e.g. `intake.application.submitted`."
-        },
-        "source": {
-          "type": "string",
-          "description": "What published it."
-        },
-        "subject": {
-          "type": "string",
-          "description": "The resource it concerns."
-        },
-        "datacontenttype": {
-          "type": "string",
-          "description": "Media type of `data`."
-        },
-        "data": {
-          "type": "object",
-          "description": "The event payload.",
-          "additionalProperties": true
-        }
-      }
-    },
-    {
-      "type": "object",
-      "required": [
-        "id",
-        "time"
-      ],
-      "properties": {
         "id": {
           "type": "string",
           "format": "uuid",
-          "readOnly": true
+          "description": "Unique event identifier."
+        },
+        "source": {
+          "type": "string",
+          "description": "Domain base path that produced the event (e.g., /intake, /workflow)."
+        },
+        "subject": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Entity ID the event pertains to."
         },
         "time": {
           "type": "string",
           "format": "date-time",
-          "readOnly": true,
-          "description": "When it was published."
+          "description": "When the event occurred."
+        },
+        "datacontenttype": {
+          "type": "string",
+          "const": "application/json",
+          "description": "Media type of the event payload."
+        },
+        "traceparent": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "W3C Trace Context header (optional). Propagated from the triggering request or event. The trace ID component is stable across the full causal chain.\n"
+        },
+        "causationid": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "CloudEvents Causation extension (optional). The `id` of the event that directly caused this one. Use when an event is emitted in direct response to another event (e.g., a task auto-resumed because a timer fired). Allows consumers to trace the immediate cause without inspecting the full distributed trace.\n"
+        },
+        "authid": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "CloudEvents Auth Context extension (optional). Principal identifier (userId from JWT claims) of the actor who triggered the event. No PII — user ID only, not name or email. Required for FTI-governed events per IRS Pub. 1075. Omitted when no caller identity is present.\n"
+        },
+        "authtype": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "user",
+            "service_account",
+            "api_key",
+            "system",
+            "unauthenticated",
+            "unknown",
+            null
+          ],
+          "description": "CloudEvents Auth Context extension (optional). Principal type of the actor who triggered the event. Required when authid is present. Required for FTI-governed events per IRS Pub. 1075.\n"
+        },
+        "data": {
+          "type": "object",
+          "description": "Event-specific payload. Schema is defined per event type in each domain's AsyncAPI file."
         }
       }
     }

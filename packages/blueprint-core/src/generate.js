@@ -81,11 +81,13 @@ function buildOverlays(positioned) {
   // RPC overlays align their own refs, because finding the target spec is
   // part of generating them — each machine attaches to the resource it governs.
   const rpc = generateRpcOverlays(positioned).map((entry) => entry.overlay);
-
-  return [
+  const overlays = [
     ...rpc,
     ...alignRefs(compositionOverlays(positioned, inputFiles), positioned),
   ];
+
+  refuseHandWritten(overlays, positioned);
+  return overlays;
 }
 
 /**
@@ -122,6 +124,56 @@ function buildGraphs(positioned) {
  */
 function specsOf(positioned) {
   return positioned.map((doc) => ({ relativePath: doc.relativePath, spec: doc.content }));
+}
+
+/**
+ * Refuse an operation written by hand that a generated one would replace.
+ *
+ * A state machine's transitions and a composition's endpoints are generated
+ * into the OpenAPI document that declares their resource, and setting a path
+ * replaces whatever the document had there. An operation the author also wrote
+ * by hand at that path would vanish from the published document without a
+ * word — and either way the route would have two sources. So it is an error,
+ * caught here, before the generated operation overwrites it. An operation that
+ * already carries the same generated marker is one resolve wrote earlier.
+ *
+ * @param {object[]} overlays - Generated overlays, each action naming its target `file`
+ * @param {import('../types.js').Doc[]} docs
+ * @throws {Error} Naming every operation written by hand that a generated one would replace
+ */
+function refuseHandWritten(overlays, docs) {
+  const byPath = new Map(docs.map((doc) => [doc.relativePath, doc]));
+  const conflicts = [];
+
+  for (const overlay of overlays) {
+    for (const action of overlay.actions ?? []) {
+      if (action.target !== '$.paths' || !action.update) continue;
+      const target = byPath.get(action.file);
+      if (!target) continue;
+
+      for (const [path, generated] of Object.entries(action.update)) {
+        for (const [method, operation] of Object.entries(generated ?? {})) {
+          const written = target.content?.paths?.[path]?.[method];
+          const source = operation?.['x-relationship'];
+          if (!written || !source?.type || written['x-relationship']?.type === source.type) continue;
+          conflicts.push(`${method.toUpperCase()} ${path} is written in ${target.relativePath} and also generated from ${describeSource(source)}.`);
+        }
+      }
+    }
+  }
+
+  if (conflicts.length > 0) {
+    throw new Error(
+      `${conflicts.join('\n')}\nAn endpoint generated from another contract comes from that contract; remove it from the OpenAPI document.`
+    );
+  }
+}
+
+/** "the intake state machine's submit action", from a generated operation's marker. */
+function describeSource({ type, domain, id }) {
+  if (type === 'state-machine-action') return `the ${domain} state machine's "${id}" action`;
+  if (type === 'composition') return `the ${domain} composition "${id}"`;
+  return `${type} "${id}"`;
 }
 
 /**
