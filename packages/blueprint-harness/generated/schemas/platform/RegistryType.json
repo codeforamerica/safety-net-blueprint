@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "required": [
+    "type",
+    "total"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "description": "The registry type, as its files declare it."
+    },
+    "total": {
+      "type": "integer",
+      "description": "How many entries it has, across every file of the type."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/RegistryType"
+}

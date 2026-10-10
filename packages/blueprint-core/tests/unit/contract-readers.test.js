@@ -336,25 +336,43 @@ describe('extract(docs, "registries")', () => {
     assert.equal(registries.taskQueues.intake.title, 'Intake queue');
   });
 
-  test('merges entries declared across documents, later winning', () => {
-    // How an overlay adds to a registry it did not author. Order is discovery
-    // order, so a set holding two documents of one type gets both.
+  test('combines entries declared across documents of a type', () => {
+    // How a state adds to a registry it did not author: a file of its own.
     const docs = setOf({
       'registries/a-policies.yaml': {
         $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
         type: 'policies',
-        entries: { shared: { title: 'from a' }, onlyA: { title: 'a' } },
+        entries: { onlyA: { title: 'a' } },
       },
       'registries/b-policies.yaml': {
         $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
         type: 'policies',
-        entries: { shared: { title: 'from b' }, onlyB: { title: 'b' } },
+        entries: { onlyB: { title: 'b' } },
       },
     });
 
     const { policies } = extract(docs, 'registries');
-    assert.deepEqual(Object.keys(policies).sort(), ['onlyA', 'onlyB', 'shared']);
-    assert.equal(policies.shared.title, 'from b', 'the later document wins');
+    assert.deepEqual(Object.keys(policies).sort(), ['onlyA', 'onlyB']);
+  });
+
+  test('refuses an entry id two documents of a type define, naming both', () => {
+    // Changing an existing entry is an overlay's job. A second file defining
+    // the same id would replace the first without a word.
+    const docs = setOf({
+      'registries/a-policies.yaml': {
+        $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
+        type: 'policies',
+        entries: { shared: { title: 'from a' } },
+      },
+      'registries/b-policies.yaml': {
+        $schema: 'https://blueprint.codeforamerica.org/schemas/registry-schema.yaml',
+        type: 'policies',
+        entries: { shared: { title: 'from b' } },
+      },
+    });
+
+    assert.throws(() => extract(docs, 'registries'),
+      /"shared" of type "policies" is defined in both registries\/a-policies\.yaml and registries\/b-policies\.yaml/);
   });
 
   test('does not require a domain, since platform registries are cross-domain', () => {

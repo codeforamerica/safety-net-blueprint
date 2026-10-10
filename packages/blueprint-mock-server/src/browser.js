@@ -85,7 +85,9 @@ export async function createMockServer({
   const graphs = graphsOf(docs);
   const unresolved = unresolvedRulesWarning(rulesFiles, graphs);
   if (unresolved) console.warn(`Warning: ${unresolved}`);
-  const policies = extract(docs, 'registries').policies ?? {};
+  // Served from the contracts, not stored. Read here so a duplicate entry id
+  // fails at boot.
+  const registries = extract(docs, 'registries');
 
   // Seed before routing so a list endpoint answers on the first request.
   if (seed) seedAllDatabases(docs, store, { seeded: true });
@@ -99,10 +101,6 @@ export async function createMockServer({
         registerConfigManaged(catalogKey, data.id);
       }
     }
-  }
-  for (const [id, policy] of Object.entries(policies)) {
-    store.insertResource('registry-policies', { id, ...policy, source: 'system' });
-    registerConfigManaged('registry-policies', id);
   }
 
   registerEventSubscriptions(stateMachines, slaTypes, apiSpecs, store);
@@ -118,14 +116,13 @@ export async function createMockServer({
     // artifact carries. Node passes a function that walks the directory again.
     readDocs: () => docs,
     configs,
-    policies,
     seeded: seed,
   });
   if (compositions.length > 0) registerCompositionRoutes(routes, compositions, apiSpecs, { store });
   if (rulesFiles.length > 0) registerRulesRoutes(routes, rulesFiles, apiSpecs, graphs);
   const endpoints = registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines, slaTypes, metrics, { store });
   registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaTypes, { store });
-  overrideByOperationId(routes, contractOverrides({ store }));
+  overrideByOperationId(routes, contractOverrides({ store, registries }));
 
   // Last, so a route is forwarded whatever registered it, and before the
   // dispatcher is built, so the first request is already answered the way

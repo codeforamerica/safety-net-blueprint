@@ -353,12 +353,17 @@ function resolveActionSchemas(stateMachine, byRelativePath, fromPath) {
  * took a single type and returned bare entries, so a second registry type
  * meant a second call and nothing listed what types a set actually declared.
  *
+ * Files of one type combine. An entry id two files define refuses, naming
+ * both: the second would otherwise replace the first without a word.
+ *
  * @param {import('../types.js').Doc[]} docs
  * @returns {Record<string, Record<string, object>>} Registry type to its
  *   merged entries, keyed by entry id
+ * @throws {Error} When two files of a type define the same entry id
  */
 export function readRegistries(docs) {
   const byType = {};
+  const definedIn = {};
 
   for (const doc of docs) {
     if (doc.type !== 'registry') continue;
@@ -366,7 +371,18 @@ export function readRegistries(docs) {
     if (typeof type !== 'string' || !type) continue;
 
     byType[type] ??= {};
-    Object.assign(byType[type], doc.content.entries ?? {});
+    definedIn[type] ??= {};
+    const where = doc.relativePath ?? doc.path;
+    for (const [id, entry] of Object.entries(doc.content.entries ?? {})) {
+      // Registries are additive — several files of a type combine — so an id
+      // two files define is two entries claiming one name, and the second
+      // would quietly replace the first.
+      if (definedIn[type][id] && definedIn[type][id] !== where) {
+        throw new Error(`Registry entry "${id}" of type "${type}" is defined in both ${definedIn[type][id]} and ${where}. Each entry id is defined once.`);
+      }
+      definedIn[type][id] = where;
+      byType[type][id] = entry;
+    }
   }
 
   return byType;

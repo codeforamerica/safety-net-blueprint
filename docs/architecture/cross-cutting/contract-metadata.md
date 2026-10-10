@@ -225,18 +225,21 @@ For policy lookups, use the platform API (see below) rather than a baked-in stat
 
 ## Runtime API
 
-The platform registry endpoint serves policy data for UI clients, tooling, and any consumer that
-cannot bundle the static client or needs fresh data after overlay changes.
-
-**Policies** are served at the platform level, since they are not domain-scoped:
+The platform registry endpoints serve registry data — policies and any other registry type the
+contracts declare — for UI clients, tooling, and any consumer that cannot bundle the static client
+or needs fresh data after overlay changes. They come with the framework, in every contract set, and
+read the registry files themselves, so a new registry type is served with nothing added:
 
 ```
-GET /platform/registry/policies
-GET /platform/registry/policies/{policyId}
+GET /platform/registry                      the registry types, with their entry counts
+GET /platform/registry/{type}               a type's entries — /platform/registry/policies
+GET /platform/registry/{type}/{entryId}     one entry
 ```
 
-See `platform-openapi.yaml` for the full schema. The `Policy` response shape has `id`, `citation`,
-`citationUrl`, `description`, and `programs` fields.
+Every file of a type contributes, so a state adds entries with a file of its own; an entry id two
+files define is an error. See the framework's `platform-registries-openapi.yaml` for the schema. An
+entry has its `id`, its `description`, and whatever fields its type defines — for a policy,
+`citation`, `citationUrl` and `programs`.
 
 > **Future capability:** reverse-lookup — querying from the policy direction ("what elements
 > reference this policy?") — can be added as an `expand=elements` parameter on the existing

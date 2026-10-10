@@ -172,16 +172,9 @@ export async function performSetup({ specsDir, seedDir, docs: providedDocs = nul
     }
   }
 
-  // Seed platform policy registry into the mock database
-  const policies = extract(docs, 'registries').policies ?? {};
-  const policyEntries = Object.entries(policies);
-  for (const [id, policy] of policyEntries) {
-    store.insertResource('registry-policies', { id, ...policy, source: 'system' });
-    registerConfigManaged('registry-policies', id);
-  }
-  if (verbose && policyEntries.length > 0) {
-    console.log(`✓ Seeded ${policyEntries.length} config-managed registry-policies (platform)`);
-  }
+  // Registries are served from the contracts, not stored: every type, every
+  // file of it combined. Read here so a duplicate entry id fails at boot.
+  const registries = extract(docs, 'registries');
 
   // Validate seed data against schemas
   if (!skipValidation) {
@@ -207,7 +200,7 @@ export async function performSetup({ specsDir, seedDir, docs: providedDocs = nul
     }
   }
 
-  return { docs, apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, policies, summary };
+  return { docs, apiSpecs, stateMachines, slaTypes, metrics, configs, compositions, rulesFiles, graphs, registries, summary };
 }
 
 
