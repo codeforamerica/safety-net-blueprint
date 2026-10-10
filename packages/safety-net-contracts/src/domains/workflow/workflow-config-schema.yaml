@@ -5,6 +5,7 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/safety-net/domains/workflow/workflow-config-schema.yaml"
 title: Workflow Config
+domain: workflow
 description: Schema for workflow-config.yaml. Validates queue catalog entries.
 
 allOf:

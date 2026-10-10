@@ -1,6 +1,7 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/safety-net/domains/intake/intake-schema.yaml"
 title: Intake
+domain: intake
 description: >
   Domain schemas for the intake domain. Covers member sub-objects (demographics,
   citizenship, disability, etc.), application-level sub-objects (household,

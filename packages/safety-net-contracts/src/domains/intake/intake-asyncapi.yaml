@@ -1,5 +1,6 @@
 asyncapi: 3.0.0
 info:
+  x-domain: intake
   title: Intake Domain Events
   version: 0.11.0
   x-status: beta

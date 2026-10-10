@@ -1,5 +1,6 @@
 asyncapi: 3.0.0
 info:
+  x-domain: communication
   title: Communication Domain Events
   version: 0.1.0
   x-status: alpha

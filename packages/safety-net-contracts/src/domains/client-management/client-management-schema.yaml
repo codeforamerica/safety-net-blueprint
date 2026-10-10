@@ -1,6 +1,7 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/safety-net/domains/client-management/client-management-schema.yaml"
 title: ClientManagement
+domain: client-management
 description: >
   Shared client management types. Person is the system of record for unique,
   de-duplicated individuals across all interactions with the safety net system.

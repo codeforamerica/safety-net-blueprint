@@ -106,7 +106,9 @@ function examplesOf(docs, name, spec) {
 
   const pooled = {};
   for (const doc of docs.filter((d) => d.type === 'mock-data')) {
-    Object.assign(pooled, doc.content ?? {});
+    // `domain` is the document's own declaration, not a record.
+    const { domain: _domain, ...records } = doc.content ?? {};
+    Object.assign(pooled, records);
   }
   if (Object.keys(pooled).length > 0) return pooled;
 

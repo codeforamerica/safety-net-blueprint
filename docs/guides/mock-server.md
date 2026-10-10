@@ -27,7 +27,7 @@ Adding a new operation or resource requires only a contract change.
 
 At startup, the server populates its databases from two sources:
 
-- **Seed files** — `*-mock-data.yaml` files discovered recursively under the directory passed to `--seed`. Records are routed to collections by key-prefix matching (e.g. `TaskExample1` → `tasks`). Without `--seed`, all collections start empty.
+- **Seed files** — `*-mock-data.yaml` files discovered recursively under the directory passed to `--seed`. Each declares its domain with a top-level `domain`; every other key is a record, routed to a collection by key-prefix matching (e.g. `TaskExample1` → `tasks`). Without `--seed`, all collections start empty.
 - **Config files** (`*-config.yaml`) — catalog entries like queues, services, and document types that the server treats as system-managed records. These are always loaded from the spec directory regardless of `--seed`.
 
 The safety-net-contracts package ships hand-authored `*-mock-data.yaml` files alongside each domain's specs (e.g. `domains/workflow/workflow-mock-data.yaml`). To use them:

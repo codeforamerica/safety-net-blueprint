@@ -87,9 +87,11 @@ The mock server evaluates `x-derived` fields on all response paths: GET single, 
 
 ## x-domain
 
-**File type:** `*-openapi.yaml` — `info` level (entire API) or operation level (multi-domain specs). Required on all API specs.
+**File type:** `*-openapi.yaml` and `*-asyncapi.yaml` — `info` level (entire API) or operation level (multi-domain specs). Required on every OpenAPI and AsyncAPI document.
 
 The business domain this API belongs to. Enables filtering, domain-specific documentation generation, and future folder reorganization without changing file locations.
+
+A domain is never inferred from a document's folder or filename. Other documents that belong to a domain — state machines, rules, compositions, annotations, registries, config, mock data and the like — declare it as a top-level `domain`. Shared building blocks, such as common schemas, components and state machine libraries, declare none.
 
 ```yaml
 # workflow-openapi.yaml

@@ -205,7 +205,7 @@ test('resolve-overlay tests', async (t) => {
       // Spec using canonical blueprint URI ref
       writeYaml(join(dir, 'spec'), 'items-openapi.yaml', {
         openapi: '3.1.0',
-        info: { title: 'Items', version: '1.0.0' },
+        info: { title: 'Items', version: '1.0.0', 'x-domain': 'items' },
         paths: {
           '/items': {
             get: {

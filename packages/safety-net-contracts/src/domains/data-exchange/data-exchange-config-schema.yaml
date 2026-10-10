@@ -5,6 +5,7 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/safety-net/domains/data-exchange/data-exchange-config-schema.yaml"
 title: Data Exchange Config
+domain: data-exchange
 description: Schema for data-exchange-config.yaml. Validates the ExternalService catalog.
 
 allOf:

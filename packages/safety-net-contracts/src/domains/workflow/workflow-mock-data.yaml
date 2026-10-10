@@ -1,6 +1,8 @@
 # Example data for this domain, seeded into the mock server.
 # Validated against the schemas its collections hold.
 
+domain: workflow
+
 TaskExample1:
   id: 00000009-0000-4000-8000-000000000001
   name: Review SNAP application - fixture household

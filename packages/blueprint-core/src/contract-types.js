@@ -13,30 +13,40 @@
  *   aliases   additional suffixes mapping to the same type
  *   authored  true when states author this by hand, so it is extended by
  *             overlay rather than replaced wholesale
+ *   domain    whether a document of this type declares a domain:
+ *             'required' — it always belongs to one, and validation refuses
+ *               one that declares none;
+ *             'optional' — it may belong to one or be shared across domains,
+ *               so it declares a domain only when it belongs to one;
+ *             'none' — it is never one domain's.
+ *             No default, and never inferred: no domain means shared.
  */
 
 export const CONTRACT_TYPES = {
-  openapi:          { suffix: '-openapi.yaml' },
-  asyncapi:         { suffix: '-asyncapi.yaml' },
-  'state-machine':  { schema: 'state-machine-schema.yaml', suffix: '-state-machine.yaml', authored: true },
-  rules:            { schema: 'rules-schema.yaml', suffix: '-rules.yaml', authored: true },
-  'rules-examples': { schema: 'rules-examples-schema.yaml', suffix: '-rules-examples.yaml' },
-  graph:            { schema: 'graph-schema.yaml', suffix: '-graph.yaml' },
-  compositions:     { schema: 'compositions-schema.yaml', suffix: '-compositions.yaml', authored: true },
-  annotations:      { schema: 'annotations-schema.yaml', suffix: '-annotations.yaml', aliases: ['-annotations-docs.yaml'], authored: true },
+  openapi:          { suffix: '-openapi.yaml', domain: 'required' },
+  asyncapi:         { suffix: '-asyncapi.yaml', domain: 'required' },
+  // A document with no machines is a library — guards and procedures any
+  // domain inherits through `extends` — and is shared; see requiresDomain.
+  'state-machine':  { schema: 'state-machine-schema.yaml', suffix: '-state-machine.yaml', authored: true, domain: 'required' },
+  rules:            { schema: 'rules-schema.yaml', suffix: '-rules.yaml', authored: true, domain: 'required' },
+  'rules-examples': { schema: 'rules-examples-schema.yaml', suffix: '-rules-examples.yaml', domain: 'required' },
+  graph:            { schema: 'graph-schema.yaml', suffix: '-graph.yaml', domain: 'required' },
+  compositions:     { schema: 'compositions-schema.yaml', suffix: '-compositions.yaml', authored: true, domain: 'required' },
+  annotations:      { schema: 'annotations-schema.yaml', suffix: '-annotations.yaml', aliases: ['-annotations-docs.yaml'], authored: true, domain: 'required' },
   // Registries are generic: core knows the format, not which types exist. A
   // type like 'policies' is declared by the contracts that need it.
-  registry:         { schema: 'registry-schema.yaml' },
-  'sla-types':      { schema: 'sla-types-schema.yaml', suffix: '-sla-types.yaml', authored: true },
-  metrics:          { schema: 'metrics-schema.yaml', suffix: '-metrics.yaml', authored: true },
-  schema:           { suffix: '-schema.yaml' },
-  'mock-data':      { suffix: '-mock-data.yaml' },
-  config:           { suffix: '-config.yaml' },
+  registry:         { schema: 'registry-schema.yaml', domain: 'required' },
+  'sla-types':      { schema: 'sla-types-schema.yaml', suffix: '-sla-types.yaml', authored: true, domain: 'required' },
+  metrics:          { schema: 'metrics-schema.yaml', suffix: '-metrics.yaml', authored: true, domain: 'required' },
+  // A domain's own resource schemas, or a building block several share.
+  schema:           { suffix: '-schema.yaml', domain: 'optional' },
+  'mock-data':      { suffix: '-mock-data.yaml', domain: 'required' },
+  config:           { suffix: '-config.yaml', domain: 'required' },
   // Carries `actions:` to apply, a `config:` block of cross-cutting settings,
   // or both. One type: which of the two an overlay happens to declare is a
   // property of the document, not a different kind of document.
-  overlay:          { suffix: '-overlay.yaml' },
-  components:       {},
+  overlay:          { suffix: '-overlay.yaml', domain: 'none' },
+  components:       { domain: 'none' },
 };
 
 /**
@@ -54,57 +64,38 @@ export function isDeprecated(content) {
 }
 
 /**
- * Extract a domain value from a file entry using layered heuristics.
+ * The domain a document declares: `info['x-domain']` on OpenAPI and AsyncAPI,
+ * `domain` on everything else.
  *
- * Priority:
- *   1. content.info['x-domain']  — explicit annotation on openapi/asyncapi specs
- *   2. content.domain            — top-level field on annotations files
- *   3. A path segment matching a known domain value
- *   4. The filename prefix before the first '-' if it matches a known domain value
- *   5. null
+ * Declared, never inferred. Working a domain out from a folder, a filename
+ * prefix or the Domain enum split domains in half whenever the guess differed
+ * between two files of the same domain, and could not tell a domain's second
+ * file from a shared one. A document that belongs to a domain says which, and
+ * validation refuses one that does not (`requiresDomain`).
  *
- * @param {string} filename
- * @param {string} relativePath - Forward-slash relative path from the root dir
  * @param {object} content - Parsed YAML content
- * @param {Set<string>} knownDomains - Valid domain values from the resolved Domain enum
  * @returns {string|null}
  */
-export function extractDomain(filename, relativePath, content, knownDomains) {
-  if (content?.info?.['x-domain']) return content.info['x-domain'];
-  if (content?.domain) return content.domain;
-
-  const segments = relativePath.split('/').slice(0, -1);
-
-  for (const segment of segments) {
-    if (knownDomains.has(segment)) return segment;
-  }
-
-  const dashIdx = filename.indexOf('-');
-  if (dashIdx > 0) {
-    const prefix = filename.slice(0, dashIdx);
-    if (knownDomains.has(prefix)) return prefix;
-  }
-
-  // A directory under `domains/` names a domain whether or not the Domain enum
-  // lists it. Checked after the enum, so it only answers where the enum was
-  // silent — and the enum can be silent: a set may declare `domains/scheduling`
-  // without having added `scheduling` to the enum yet, which left every
-  // document there domainless unless it happened to say so itself. That split a
-  // domain in half, with `scheduling-openapi.yaml` carrying `x-domain` and
-  // `scheduling-mock-data.yaml` carrying nothing — so a per-domain bundle of it
-  // shipped an API with an empty store.
-  //
-  // Not a general path fallback, which is why the enum check stays: `base/` and
-  // `common/` hold documents shared across domains, and inferring `base` as a
-  // domain from the directory name would be worse than inferring nothing.
-  const domainsIdx = segments.indexOf('domains');
-  if (domainsIdx !== -1 && segments[domainsIdx + 1]) {
-    return segments[domainsIdx + 1];
-  }
-
-  return null;
+export function extractDomain(content) {
+  return content?.info?.['x-domain'] ?? content?.domain ?? null;
 }
 
+/**
+ * Whether a document must declare a domain: its type's `domain` is
+ * 'required', and it is not a state machine library.
+ *
+ * The library is the one case the type cannot decide. A state machine document
+ * with no machines holds guards and procedures that any domain inherits
+ * through `extends`, so it is shared, like a common schema.
+ *
+ * @param {{ type: string, content?: object }} doc
+ * @returns {boolean}
+ */
+export function requiresDomain(doc) {
+  if (CONTRACT_TYPES[doc.type]?.domain !== 'required') return false;
+  if (doc.type === 'state-machine' && !Array.isArray(doc.content?.machines)) return false;
+  return true;
+}
 
 /**
  * `x-relationship.resource` values that name no resource.

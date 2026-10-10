@@ -26,7 +26,8 @@ function mockDataDocuments(docs) {
       // is intake's. Taken from relativePath so it is the same answer whether
       // the document came off disk or out of an artifact.
       apiName: (doc.relativePath ?? doc.path).split('/').pop().replace(/-mock-data\.yaml$/, ''),
-      examples: doc.content ?? {},
+      // Everything but `domain`, which is the document's own declaration.
+      examples: Object.fromEntries(Object.entries(doc.content ?? {}).filter(([key]) => key !== 'domain')),
     }));
 }
 

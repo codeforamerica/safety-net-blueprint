@@ -24,7 +24,7 @@ import { validateEvents } from './validator/event-validator.js';
 import { validateSlaTypeFields, validateMetricFields } from './validator/field-reference-validator.js';
 import { validateAnnotations } from './validator/annotation-validator.js';
 import { validateSchemas } from './validator/json-schema-validator.js';
-import { stemOf, isDeprecated, isReservedResource } from './contract-types.js';
+import { stemOf, isDeprecated, isReservedResource, requiresDomain } from './contract-types.js';
 import { indexByRelativePath, followRef, isRemoteRef } from './ref-lookup.js';
 import {
   buildSchemaIndex,
@@ -400,10 +400,32 @@ function sortDeclaredWithoutAllowlist(doc) {
   return findings;
 }
 
+/**
+ * A document of a type that always belongs to a domain, declaring none.
+ *
+ * Nothing infers a domain any more — not the folder, the filename or the
+ * Domain enum — so a document that does not say which domain it belongs to
+ * belongs to none, and every route, event and seed record it carries would be
+ * filed nowhere.
+ *
+ * @param {import('../types.js').Doc} doc
+ * @returns {{ rule: string, message: string, path: string }[]}
+ */
+function missingDomain(doc) {
+  if (!requiresDomain(doc) || doc.domain || isDeprecated(doc.content)) return [];
+  const where = doc.type === 'openapi' || doc.type === 'asyncapi' ? '`info.x-domain`' : 'a top-level `domain`';
+  return [{
+    rule: 'missing-domain',
+    message: `A ${doc.type} document belongs to a domain, and this one declares none. Add ${where}.`,
+    path: doc.path,
+  }];
+}
+
 function validateDoc(doc, context) {
   const errors = [];
   const warnings = [];
 
+  errors.push(...missingDomain(doc));
   errors.push(...brokenFragmentRefs(doc));
   errors.push(...brokenExternalRefs(doc, context.byRelativePath));
   errors.push(...unresolvedRelationshipResources(doc, context.schemaIndex));

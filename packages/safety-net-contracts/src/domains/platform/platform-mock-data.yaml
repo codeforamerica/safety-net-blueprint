@@ -1,6 +1,8 @@
 # Example data for this domain, seeded into the mock server.
 # Validated against the schemas its collections hold.
 
+domain: platform
+
 PolicyExample1:
   id: snap-household-composition
   citation: "7 CFR \xA7 273.1"

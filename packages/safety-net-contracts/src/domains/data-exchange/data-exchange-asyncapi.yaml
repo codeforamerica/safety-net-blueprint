@@ -1,5 +1,6 @@
 asyncapi: 3.0.0
 info:
+  x-domain: data-exchange
   title: Data Exchange Domain Events
   version: 0.5.0
   x-status: beta

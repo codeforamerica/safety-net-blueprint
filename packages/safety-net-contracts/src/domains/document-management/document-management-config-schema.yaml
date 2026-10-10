@@ -5,6 +5,7 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/safety-net/domains/document-management/document-management-config-schema.yaml"
 title: Document Management Config
+domain: document-management
 description: Schema for document-management-config.yaml. Validates document type catalog entries.
 
 allOf:
