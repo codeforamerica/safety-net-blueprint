@@ -59,8 +59,9 @@ The work splits by layer, not by feature:
 
 | Layer | What goes there |
 |---|---|
-| **The framework** — `blueprint-core` and `blueprint-mock-server` | The general mechanisms, which know nothing about benefits: the Suggestion resource, request and response templates and their schema, connectors, the toolsets contract type, the extension saying whether a model may use an operation, the declared event-persistence property, and the mock acting as the Data Exchange adapter. Any contract set built on the blueprint gets them — the case for a framework platform domain, which Suggestion would be the first resource of. |
-| **`safety-net-contracts`** | The interview assistant, the first use of those mechanisms: the interview's conduct, the SNAP interview requirements, the risk ruleset, the eligibility ruleset the guidance evaluates, the `fact_extraction` service and its catalog entry, and the transcription session. This is program policy, and belongs with the real domain contracts. |
+| **The framework** — `blueprint-core` and `blueprint-mock-server` | The general mechanisms, which know nothing about benefits: the Transcript and Suggestion resources, request and response templates and their schema, the toolsets contract type, the extension saying whether a model may use an operation, and the mock acting as the Data Exchange adapter. Any contract set built on the blueprint gets them — the case for a framework platform domain, which Transcript and Suggestion would be the first resources of. |
+| **`safety-net-contracts`** | The interview assistant, the first use of those mechanisms: the interview's conduct and its transcript, the SNAP interview requirements, the risk ruleset, the eligibility ruleset the guidance evaluates, and the `fact_extraction` service and its catalog entry. This is program policy, and belongs with the real domain contracts. |
+| **The application** | What speaks a provider's protocol — the transcription client — and the page code that captures audio. Neither is a contract, and neither belongs in the framework, which stays vendor-neutral. |
 | **The harness** | Fictional fixtures that test the framework mechanisms in isolation, as it already exercises forwarding and stubs. Not policy. |
 
 ### Already in the contracts
@@ -275,25 +276,24 @@ What this declares:
   against the mock with no live call.
 
 Where a template cannot express a provider — a conversation that loops through
-tool calls, a streaming or binary protocol — the catalog entry names a
-**connector** instead: provider-specific code shipped with the blueprint and
-registered by name, never code written into a page. Also open: building a
+tool calls — what makes the call is open. A streaming protocol is not the
+mock's to speak: see [What stays outside the mock](#what-stays-outside-the-mock).
+Also open: building a
 string from a list (`join`) is a CEL extension rather than core CEL, so the
 evaluator would need it; and the rule for telling an expression from a fixed
 value should be confirmed against how `call:` and `with:` are parsed before a
 template schema is written.
 
-### Transcription
+### Transcripts
 
-A transcription session is contract-able in everything but the raw audio:
-
-| Part | Declared as | Status |
-|---|---|---|
-| The session — starting, live, interrupted, stopping, ended | A resource and state machine. The transcription tools already have exactly these states. Its `start` is guarded on consent being recorded on the interview | To define |
-| Its settings — provider, language, custom vocabulary, which channel is the worker and which the applicant, the audio format | A service catalog entry, overlayable. Changing Transcribe for Scribe is configuration | To define |
-| Its output — lines as they firm up, finished lines, finished turns, gaps, warnings | AsyncAPI events on the platform bus | To define |
-| The stream to the provider | A connector, since it is a binary streaming protocol. The transcription tools' `sigv4.js` and `eventstream.js` are that code | To build |
-| Capture — the microphone, the shared call window, audio processing | **Not a contract.** A browser grants these only to page code, on a click | Exists, in the transcription tools |
+The written record of a conversation, on the framework's platform domain: its
+states — recording, paused, closed — its lines and its gaps. A transcription
+client in the page streams audio straight to the provider and reports finished
+lines and gaps to the transcript; the blueprint holds the client to rules — it
+refuses a line spoken while paused or after closing, closes a transcript the
+client abandons, and judges each line by when it was spoken. Settings are a
+config catalog entry. The audio stream and the provider's protocol stay outside
+the blueprint. See [Transcripts](transcripts.md). *To define.*
 
 ### Provider session
 
@@ -329,10 +329,12 @@ each suggestion's evidence beside it.
 
 **Interview**, in intake, extended. `safety-net-contracts` already declares an
 `Interview` in `intake-openapi.yaml` — the regulatory record that the interview
-happened, linked to scheduling appointments, as `intake.md` describes. Its conduct belongs on the same resource rather than a separate
-session: recording consent, starting, the applicable interview requirements, and
-completing, guarded on every applicable item being covered. Its state machine
-also re-runs the guidance rulesets when the interview's application changes, and
+happened, linked to scheduling appointments, as `intake.md` describes. Its
+conduct belongs on the same resource rather than a separate session: recording
+consent, starting, the applicable interview requirements, and completing,
+guarded on every applicable item being covered. It refers to its
+[transcript](transcripts.md), whose recording its consent guards and its
+completion closes. Its state machine also re-runs the guidance rulesets when the interview's application changes, and
 creates the resulting suggestions. Recertification belongs to case management
 under `eligibility.md`, which does not model it yet; a recertification interview
 is the same `Interview` with a different parent, and where it lives is settled
@@ -340,15 +342,18 @@ when recertification is modeled. *To define.*
 
 ### Events
 
-Declared in AsyncAPI, in whichever domain owns each resource: transcript lines
-and turns, `suggestion.proposed`, `.accepted`, `.rejected` and `.expired`,
-`interview.started` and `interview.completed`. *To define.*
+Declared in AsyncAPI, in whichever domain owns each resource: a transcript's
+line added, gap recorded, paused, resumed and closed; `suggestion.proposed`,
+`.accepted`, `.rejected` and `.expired`; `interview.started` and
+`interview.completed`. *To define.*
 
-**Whether an event is stored is declared too.** Lines still firming up arrive
-several times a second, and are wanted only by whoever is displaying them; a
-finished line or turn is a record. So each event type declares whether it is
+**Whether an event is stored could be declared too.** Some events are wanted
+only by whoever is displaying them at that moment — lines still firming up, a
+"reconnecting" status — and storing them would cost memory for nothing. If one
+of those ever travels on the bus, each event type would declare whether it is
 persisted, replacing the mock's hard-coded rule that `scheduling.*` events are
-broadcast but not stored.
+broadcast but not stored. Nothing planned needs it yet: only finished lines
+reach the blueprint.
 
 ### Tools
 
@@ -432,9 +437,11 @@ sign-in, and the mock.
 1. **The worker starts the interview.** The page calls `record-consent`, then
    `start`, on the `Interview`. The interview requirements that apply to this household
    are attached.
-2. **The applicant speaks.** Audio goes to the transcription provider; finished
-   lines and turns arrive on the bus as events.
-3. **A turn finishes.** The `Interview` state machine reacts by creating a
+2. **The applicant speaks.** The page's transcription client streams the audio
+   to the provider, and adds each finished line to the interview's transcript;
+   each arrives on the bus as an event.
+3. **A turn finishes** — the applicant's lines are followed by the worker's. The
+   `Interview` state machine reacts by creating a
    `fact_extraction` service call, with the turn's text and the schema of what
    it is filling in.
 4. **The mock makes the call** to the model, from the catalog entry, and
@@ -460,16 +467,14 @@ list endpoint, kept current by events.
 
 - **Audio capture**, because a browser grants the microphone and a shared window
   only to page code, on a click.
+- **The audio stream to the provider**, in the transcription client.
 - **Sign-in**, which produces the credentials the mock is given.
 
-The audio *stream* can move behind the mock, in two steps. First, the session,
-its settings and its events are declared, with the transcription tools still
-streaming. Then the stream itself moves into a connector the mock runs: in a
-page, `mock.fetch` is a function call, so a request whose body is the live audio
-stream reaches the mock with no network hop, and the Node mock takes the same
-request as a long-running upload and opens the provider's WebSocket itself. The
-streaming endpoint is declared in AsyncAPI, which describes WebSocket channels
-where OpenAPI does not. The second step is proved before relying on it.
+The audio stream stays out deliberately: providers design for the browser
+connecting directly, and a mock that relayed audio would become a real
+implementation of a provider integration.
+The blueprint's part is the transcript: what the client reports, and the rules
+it is held to. See [Transcripts](transcripts.md#why-the-audio-stream-stays-out-of-the-mock).
 
 ### On a server
 
@@ -506,15 +511,14 @@ credentials, and for a demo those should be on the cost side of
 Node mock doing the same would use a developer's own AWS profile, so it is for
 local use, never a shared server.
 
-**Events are cheap if partial lines are not stored.** Measured in the mock, a
-stored event costs about 1.3 KB of memory, publishing one takes 0.04 ms, and
-listing the first 50 of 5,000 takes 34 ms, rising with the number stored. A
-one-hour interview whose finished lines and turns are stored is a few thousand
-events — three or four megabytes — which a day of demos absorbs, and a reload
+**Events are cheap because partial lines never reach the mock.** Measured in
+the mock, a stored event costs about 1.3 KB of memory, publishing one takes
+0.04 ms, and listing the first 50 of 5,000 takes 34 ms, rising with the number
+stored. A one-hour interview's finished lines are on the order of a thousand —
+their events a megabyte or two — which a day of demos absorbs, and a reload
 clears. Lines still firming up arrive several times a second; stored, they
-would be twenty megabytes an hour and listing would slow with them. They are
-broadcast and not stored, which is why that is a declared property of each
-event type.
+would be twenty megabytes an hour and listing would slow with them. They stay
+in the client.
 
 ## Hosting in a single page
 
@@ -843,9 +847,9 @@ exists for one domain, the mock's
 [forwarding](../../guides/mock-server.md#forwarding-to-a-real-service) sends
 that domain to it and keeps the rest mocked.
 
-A transcript does not have to come from a live call. Published to the mock as
-events, a recorded or written transcript replays an interview, and becomes a
-fixture like any other.
+A transcript does not have to come from a live call. Added to the mock through
+the transcript's operations, a recorded or written one replays an interview,
+and becomes a fixture like any other.
 
 Rulesets carry their own examples, and a service's catalog entry can carry its
 own — an input and a recorded provider response, with the result expected — so
@@ -858,8 +862,8 @@ obligations apply — see [Identity & Access](identity-access.md#regulatory-requ
 Two arise only here: consent to record or transcribe a conversation, and, for
 an agent, disclosure that the person is speaking with an automated system.
 
-Both are contracts. Consent is recorded on the interview and guards the start of
-transcription; whether it is required is overlayable, since states differ on
+Both are contracts. Consent is recorded on the interview and guards starting
+and resuming its transcript; whether it is required is overlayable, since states differ on
 whether every party to a recording must agree. Disclosure is a step an agent's
 session must complete before its first question. Declared that way, they are
 reviewed once and enforced everywhere, rather than trusted to each service.
@@ -869,20 +873,24 @@ reviewed once and enforced everywhere, rather than trusted to each service.
 None of this is decided. Each is something to try as soon as it exists, since
 the mock serves a contract the moment it is declared.
 
-1. **The suggestion resource**, in the framework: its two kinds, its lifecycle
-   and its events, tested with a harness fixture. Usable at once — create,
-   accept and reject suggestions against the mock — with no model and no AWS.
-2. **The interview's conduct and its requirements**, in
-   `safety-net-contracts`: consent, start, the `interview-requirements`
-   registry, the ruleset deciding which apply, and complete guarded on them.
-   Useful alone, and it can start before any ruleset exists: requirements
-   that always apply need no condition.
-3. **Transcript events and a recorded transcript**, so an interview replays with
-   no live call.
+1. **The transcript**, on a platform domain the framework now provides: its
+   states, lines and gaps, the rules a client is held to, its settings, and a
+   recorded transcript replayed with no live call. Then an application's client
+   streaming to Transcribe from a page and writing to it — the first proof that
+   a page with no backend reaches an AI service securely and the blueprint
+   follows the conversation.
+2. **The suggestion resource**, on the same domain: its two kinds, its lifecycle
+   and its events. Usable at once — create, accept and reject suggestions
+   against the mock — with no model and no AWS.
+3. **The interview's conduct and its requirements**, in
+   `safety-net-contracts`: consent, start, its transcript, the
+   `interview-requirements` registry, the ruleset deciding which apply, and
+   complete guarded on them. Useful alone, and it can start before any ruleset
+   exists: requirements that always apply need no condition.
 4. **The mock calling services from the catalog** — templates, signing and the
    adapter role, in the framework — **and the `fact_extraction` service** in
-   `safety-net-contracts`. The first piece that needs AWS, and the first working
-   assistant end to end.
+   `safety-net-contracts`, reading the transcript. The first working assistant
+   end to end.
 5. **The risk ruleset**, in `safety-net-contracts`, with severity and probes in
    its annotations.
 6. **The operation extension and toolsets**, then the generator for tool
@@ -895,15 +903,22 @@ Larger and later:
   First the effective dating it needs in the rules contract, then the federal
   baseline with its parameters and state options, then examples and the
   cross-check, then review by SNAP policy staff.
-- Moving the audio stream behind the mock.
+- Transcribing a recording after the fact, as a Data Exchange service.
 - For an agent, live speech-to-speech from a page.
 
 ## Open questions
 
-- Exactly where each new contract lives within its layer. Suggestions on a
-  framework platform domain and AI calls in Data Exchange are candidates; the
-  recertification interview waits on case management modeling recertification.
-- Whether a template can express each provider, or some need a connector.
+- How a contract set's own platform domain extends the framework's — an
+  overlay, or a second document in the same domain — and whether the build can
+  merge two domains of the same name at all.
+- Where the recertification interview lives, which waits on case management
+  modeling recertification.
+- Where the transcription client lives: with the application that uses it, or
+  beside the transcription tools it is built from.
+- How long a recording transcript may go without activity before it closes
+  itself.
+- What makes a call a template cannot express, such as one that loops through
+  tool calls.
 - How a template tells an expression from a fixed value — to match `call:` and
   `with:` once confirmed.
 - Whether the provider session is an adapter contract or a general

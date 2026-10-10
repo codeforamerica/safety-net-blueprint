@@ -49,6 +49,7 @@ Concerns that span multiple domains.
 | [AI Services](cross-cutting/ai-services.md) | How AI services use the contracts — as a channel or as a capability — and hosting them in a single page |
 | [Behavioral Contract DSL](cross-cutting/behavioral-contract-dsl.md) | State machine YAML format and expression language |
 | [Search](cross-cutting/search.md) | Cross-domain search patterns |
+| [Transcripts](cross-cutting/transcripts.md) | The written record of a conversation, and the rules a transcription client is held to |
 | [Scheduling Service](cross-cutting/scheduling-service.md) | The shared scheduling infrastructure |
 
 ## Other resources
