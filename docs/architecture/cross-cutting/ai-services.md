@@ -908,9 +908,6 @@ Larger and later:
 
 ## Open questions
 
-- How a contract set's own platform domain extends the framework's — an
-  overlay, or a second document in the same domain — and whether the build can
-  merge two domains of the same name at all.
 - Where the recertification interview lives, which waits on case management
   modeling recertification.
 - Where the transcription client lives: with the application that uses it, or

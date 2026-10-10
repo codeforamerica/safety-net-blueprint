@@ -180,8 +180,6 @@ mock.
 
 ## Open questions
 
-- How a contract set's own platform domain extends the framework's, and whether
-  the build can merge two domains of the same name.
 - Where the transcription client lives: with the application that uses it, or
   beside the transcription tools it is built from.
 - How long a recording transcript may go without activity before it closes
