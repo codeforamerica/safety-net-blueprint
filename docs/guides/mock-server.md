@@ -21,6 +21,10 @@ curl http://localhost:1080/health
 
 **Metrics endpoints** — generated from metrics files (`*-metrics.yaml`): `GET /{domain}/metrics` and `GET /{domain}/metrics/{id}`, computed on-the-fly from live data.
 
+**Rules endpoints** — one `POST` per ruleset, at `/{domain}/rules/{ruleset-name}` or the path the ruleset declares. See the [rules guide](rules-guide.md#endpoints).
+
+Each route has one source. A transition, composition or ruleset is served from the contract that produced it; the operation resolve generated for it in an OpenAPI document only documents it. Two documents declaring the same route stop the mock from starting, with an error naming both.
+
 Adding a new operation or resource requires only a contract change.
 
 ## Seed data

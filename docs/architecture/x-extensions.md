@@ -213,7 +213,7 @@ Domain:
 Declares a relationship between a spec element and another contract artifact. Used in two contexts:
 
 - **FK fields** (`type: fk`, the default): annotates a UUID foreign-key field to identify the related resource. Recommended on all fields that end in `Id` and have `format: uuid`.
-- **Generated operations** (`type: state-machine-action | ruleset | composition`): injected by the resolve pipeline to record which contract artifact produced the endpoint. Enables the explorer and other tooling to link endpoints back to their source artifacts bidirectionally.
+- **Generated operations** (`type: state-machine-action | ruleset | composition`): injected by the resolve pipeline to record which contract artifact produced the endpoint. Enables the explorer and other tooling to link endpoints back to their source artifacts bidirectionally. A generated operation documents its source artifact; servers serve it from that artifact — the mock serves a transition from its state machine, a ruleset from its rules document, a composition from its compositions document — never from the operation itself, so each route has one source.
 
 Omitting `type` is equivalent to `type: fk` for backward compatibility.
 

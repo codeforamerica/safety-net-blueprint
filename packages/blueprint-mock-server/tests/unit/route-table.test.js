@@ -9,7 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import {
-  routeKey, templateOf, addRoute, matchPath, matchRoute, createDispatcher,
+  routeKey, templateOf, addRoute, matchPath, matchRoute, createDispatcher, routesFrom,
 } from '../../src/http/route-table.js';
 
 const ok = () => Response.json({ ok: true });
@@ -129,3 +129,34 @@ test('Route table', async (t) => {
     assert.strictEqual(response.status, 200);
   });
 });
+
+test('routesFrom — every route has one source', async (t) => {
+  await t.test('records the document each route came from', () => {
+    const routes = new Map();
+    addRoute(routesFrom(routes, 'domains/intake/intake-openapi.yaml'), 'GET', '/intake/applications', ok);
+    assert.strictEqual(routes.get('GET /intake/applications').source, 'domains/intake/intake-openapi.yaml');
+  });
+
+  await t.test('the same document registering a route again is a no-op', () => {
+    const routes = new Map();
+    const table = routesFrom(routes, 'a-openapi.yaml');
+    assert.strictEqual(addRoute(table, 'GET', '/x', ok), true);
+    assert.strictEqual(addRoute(table, 'GET', '/x', ok), false);
+  });
+
+  await t.test('a second document claiming a route refuses, naming both', () => {
+    const routes = new Map();
+    addRoute(routesFrom(routes, 'domains/platform/platform-openapi.yaml'), 'GET', '/platform/events', ok);
+    assert.throws(
+      () => addRoute(routesFrom(routes, 'base/domains/platform/platform-events-openapi.yaml'), 'GET', '/platform/events', ok),
+      /GET \/platform\/events is declared by two contracts: domains\/platform\/platform-openapi\.yaml and base\/domains\/platform\/platform-events-openapi\.yaml/,
+    );
+  });
+
+  await t.test('a route with no source, such as one the mock serves itself, is left to its own check', () => {
+    const routes = new Map();
+    addRoute(routes, 'GET', '/health', ok, { mock: true });
+    assert.strictEqual(addRoute(routesFrom(routes, 'x-openapi.yaml'), 'GET', '/health', ok), false);
+  });
+});
+

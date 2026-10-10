@@ -15,6 +15,9 @@
 
 import { resolverFor } from './schema-refs.js';
 
+/** `x-relationship.type`s resolve stamps on the operations it generates from other contracts. */
+const GENERATED = new Set(['state-machine-action', 'composition', 'ruleset']);
+
 /**
  * The name an API is known by, from the path of its OpenAPI document.
  *
@@ -128,14 +131,10 @@ export function extractMetadata(spec, resourceName, resolve = null) {
         continue;
       }
 
-      // A ruleset's evaluation endpoint is served from its rules document, at
-      // its domain's path; this operation only documents it.
-      if (operation['x-relationship']?.type === 'ruleset') {
-        continue;
-      }
-      
-      // Skip action endpoints (like /submit)
-      if (path.includes('/submit')) {
+      // An operation resolve generated from another contract only documents
+      // it: a state machine action, a composition or a ruleset is served from
+      // that contract, so each route has one source.
+      if (GENERATED.has(operation['x-relationship']?.type)) {
         continue;
       }
       

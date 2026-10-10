@@ -7,7 +7,7 @@ import { createListHandler } from './handlers/list-handler.js';
 import { extractExpandFields, applyExpand, getItemSchema } from './handlers/expand-utils.js';
 import { createGetHandler } from './handlers/get-handler.js';
 import { jsonBody, readJsonBody, queryOf } from './http/request.js';
-import { addRoute, tagRoutesAddedBy } from './http/route-table.js';
+import { addRoute, routesFrom, tagRoutesAddedBy } from './http/route-table.js';
 import { createCurrentUserHandler } from './handlers/current-user-handler.js';
 import { createCreateHandler } from './handlers/create-handler.js';
 import { createUpdateHandler, buildChanges } from './handlers/update-handler.js';
@@ -366,19 +366,13 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
           handler = createSingletonUpdateHandler(apiMetadata, endpointWithCollection, parentParam, parentField, deps);
           description = 'Update singleton sub-resource';
         } else if (method === 'post') {
-          // POST on a singular sub-path is a state machine RPC/transition endpoint.
-          // e.g., POST /tasks/{taskId}/claim — the trigger name is the last path segment.
-          const trigger = endpoint.path.split('/').filter(s => s && !s.startsWith('{')).pop();
-          const parentCollectionName = deriveParentCollection(endpoint.path, apiMetadata.serverBasePath);
-          const smEntry = findStateMachineForCollection(stateMachines, parentCollectionName);
-          if (smEntry) {
-            const domainSlaTypes = findSlaTypes(slaTypes, smEntry.stateMachine.domain);
-            handler = createTransitionHandler(parentCollectionName, smEntry.stateMachine, trigger, parentParam, domainSlaTypes, smEntry.machine, deps);
-            description = `${trigger} transition on ${parentCollectionName}`;
-          } else {
-            console.warn(`    Warning: No state machine found for POST ${endpoint.path} (parent collection: ${parentCollectionName})`);
-            continue;
-          }
+          // A transition is served from its state machine, which is what
+          // produced it (registerStateMachineRoutes), and the operation resolve
+          // generated for it is skipped when the document is loaded. A POST on
+          // a singular sub-path written by hand, with nothing behind it, has no
+          // behavior to serve.
+          console.warn(`    Warning: POST ${endpoint.path} is not generated from a state machine, so nothing serves it`);
+          continue;
         } else {
           console.warn(`    Warning: Unsupported method ${method.toUpperCase()} on singleton ${endpoint.path}`);
           continue;
@@ -529,7 +523,7 @@ export function registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines = [],
     // several OpenAPI documents, and each takes the machines for its own collections.
     const domainSMs = stateMachines.filter(s => s.domain === apiSpec.domain);
     const endpoints = tagRoutesAddedBy(routes, { domain: apiSpec.domain ?? null },
-      () => registerRoutes(routes, apiSpec, baseUrl, domainSMs, slaTypes, deps));
+      () => registerRoutes(routesFrom(routes, apiSpec.relativePath ?? apiSpec.name), apiSpec, baseUrl, domainSMs, slaTypes, deps));
     allEndpoints.push({
       apiName: apiSpec.name,
       title: apiSpec.title,
@@ -618,7 +612,8 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
   const resourceItemPathMap = buildResourceItemPathMap(apiSpecs);
   const resourceCollectionNameMap = buildResourceCollectionNameMap(apiSpecs);
 
-  for (const { domain, doc, filePath, api } of compositionFiles) {
+  for (const { domain, doc, filePath, relativePath, api } of compositionFiles) {
+    const table = routesFrom(routes, relativePath ?? filePath);
     // The document core attached these compositions to, and the API loaded
     // from it — its server base, schemas and pagination.
     const apiSpec = loadedFrom(apiSpecs, api);
@@ -669,7 +664,7 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
 
       if (composition.compositeType === 'sectionView') {
         // Section index
-        addRoute(routes, 'GET', indexExpressPath, (request, { params }) => {
+        addRoute(table, 'GET', indexExpressPath, (request, { params }) => {
           const parentId = primaryParam ? params[primaryParam] : null;
           if (parentId && !store.findById(rootCollectionName, parentId)) {
             return Response.json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` }, { status: 404 });
@@ -679,7 +674,7 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
 
         // Section panel — passes query params through so assembleSectionPanel can
         // apply q= filtering and limit/offset pagination on the assembled items.
-        addRoute(routes, 'GET', panelExpressPath, (request, { params }) => {
+        addRoute(table, 'GET', panelExpressPath, (request, { params }) => {
           const parentId = primaryParam ? params[primaryParam] : null;
           if (parentId && !store.findById(rootCollectionName, parentId)) {
             return Response.json({ code: 'NOT_FOUND', message: `${composition.resource} "${parentId}" not found` }, { status: 404 });
@@ -698,7 +693,7 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
 
         // Pre-register 405 for write methods on the index endpoint
         for (const writeMethod of ['post', 'patch', 'put', 'delete']) {
-          addRoute(routes, writeMethod.toUpperCase(), indexExpressPath, () =>
+          addRoute(table, writeMethod.toUpperCase(), indexExpressPath, () =>
             Response.json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' },
               { status: 405, headers: { Allow: 'GET' } })
           );
@@ -713,7 +708,7 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
         );
       } else {
         // Plain composition — single GET endpoint returning the root resource record
-        addRoute(routes, 'GET', indexExpressPath, (request, { params }) => {
+        addRoute(table, 'GET', indexExpressPath, (request, { params }) => {
           const result = assemblePlainComposition(compositionWithDoc, params, assemblerOpts);
           if (!result) {
             return Response.json({ code: 'NOT_FOUND', message: `${composition.resource} not found` }, { status: 404 });
@@ -723,7 +718,7 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
 
         // Pre-register 405 for write methods
         for (const writeMethod of ['post', 'patch', 'put', 'delete']) {
-          addRoute(routes, writeMethod.toUpperCase(), indexExpressPath, () =>
+          addRoute(table, writeMethod.toUpperCase(), indexExpressPath, () =>
             Response.json({ code: 'METHOD_NOT_ALLOWED', message: 'This endpoint is read-only' },
               { status: 405, headers: { Allow: 'GET' } })
           );
@@ -947,7 +942,7 @@ export function registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaT
         deps
       );
 
-      addRoute(routes, 'POST', expressPath, handler, {
+      addRoute(routesFrom(routes, sm.relativePath ?? `${sm.domain} state machine`), 'POST', expressPath, handler, {
         operationId: entry.id,
         description: `${entry.id}: ${entry.from} → ${entry.to ?? '(in-place)'}`,
         domain: sm.domain ?? null,
@@ -998,14 +993,15 @@ export function registerRulesRoutes(routes, rulesFiles = [], apiSpecs = [], grap
   const byRuleset = buildRulesIndex(graphs);
   const registeredEndpoints = [];
 
-  for (const { domain, rulesets = [] } of rulesFiles) {
+  for (const { domain, rulesets = [], relativePath, filePath } of rulesFiles) {
+    const table = routesFrom(routes, relativePath ?? filePath ?? `${domain} rules`);
     // Where core says each ruleset is evaluated: /{domain} and its endpoint
     // path, or /{domain}/rules/{ruleset-name} when it declares none.
     for (const { name: rulesetName, path: fullPath } of rulesets) {
       const graph = byRuleset[rulesetName];
       if (!graph) continue;
 
-      addRoute(routes, 'POST', fullPath, async (request) => {
+      addRoute(table, 'POST', fullPath, async (request) => {
         const nodes = evaluate(graph, await jsonBody(request));
         const result = {};
         for (const [name, node] of Object.entries(nodes)) {
