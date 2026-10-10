@@ -40,17 +40,28 @@ One document per domain — entity model, lifecycle, events, and key design deci
 
 Concerns that span multiple domains.
 
+### Shared services
+
+Resources and services every domain uses.
+
+| Document | What it covers |
+|----------|---------------|
+| [Search](cross-cutting/search.md) | Cross-domain search patterns |
+| [Transcripts](cross-cutting/transcripts.md) | The written record of a conversation, and the rules a transcription client is held to |
+| [Scheduling Service](cross-cutting/scheduling-service.md) | The shared scheduling infrastructure |
+
+### Patterns and concerns
+
+How the contracts handle things no single domain owns.
+
 | Document | What it covers |
 |----------|---------------|
 | [Identity & Access](cross-cutting/identity-access.md) | Authentication, authorization, JWT claims, and the User Service |
 | [Contract Metadata](cross-cutting/contract-metadata.md) | Annotations, field-level metadata, and policy traceability |
 | [Resource Composition](cross-cutting/resource-composition.md) | Composite resources that aggregate data from multiple APIs within a domain |
 | [Adapters](cross-cutting/adapters.md) | The adapter pattern: how vendor systems connect without coupling |
-| [AI Services](cross-cutting/ai-services.md) | How AI services use the contracts — as a channel or as a capability — and hosting them in a single page |
 | [Behavioral Contract DSL](cross-cutting/behavioral-contract-dsl.md) | State machine YAML format and expression language |
-| [Search](cross-cutting/search.md) | Cross-domain search patterns |
-| [Transcripts](cross-cutting/transcripts.md) | The written record of a conversation, and the rules a transcription client is held to |
-| [Scheduling Service](cross-cutting/scheduling-service.md) | The shared scheduling infrastructure |
+| [AI Services](cross-cutting/ai-services.md) | How AI services use the contracts — as a channel or as a capability — and hosting them in a single page |
 
 ## Other resources
 
