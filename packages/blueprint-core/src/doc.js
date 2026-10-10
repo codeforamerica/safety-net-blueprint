@@ -20,6 +20,7 @@
  */
 
 import { followRef, indexByRelativePath, resolveRef, isRemoteRef } from './ref-lookup.js';
+import { buildApiModel } from './openapi/model.js';
 
 /**
  * Build a Doc from already-parsed document data.
@@ -165,15 +166,17 @@ function resolvePointer(root, pointer) {
 /**
  * Build the normalized view for blueprint-authored contract types.
  *
- * Only state machines are normalized today. Rules and compositions get a model
- * when something needs to walk them — adding one is additive, since every Doc
- * already carries the field.
+ * State machines are normalized so every step has one shape; an OpenAPI
+ * document is read as the resources it serves (`openapi/model.js`). Rules and
+ * compositions get a model when something needs to walk them — adding one is
+ * additive, since every Doc already carries the field.
  *
  * @param {string} type - Contract type from detectType
  * @param {*} content - Parsed document
  * @returns {*|null} Normalized view, or null for standards-defined types
  */
 function buildModel(type, content) {
+  if (type === 'openapi') return content && typeof content === 'object' ? buildApiModel(content) : null;
   if (type !== 'state-machine') return null;
   if (!content || typeof content !== 'object') return null;
 

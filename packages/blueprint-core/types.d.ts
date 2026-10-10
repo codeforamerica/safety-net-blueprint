@@ -102,12 +102,39 @@ export interface Doc {
   /** Follow one external `$ref` to the schema it names, within the set. */
   resolveRef(ref: string, docs: Doc[]): Record<string, unknown>;
   /**
-   * Normalized view of blueprint-authored types, null for documents whose
-   * shape an external standard already defines — OpenAPI, AsyncAPI, JSON
-   * Schema. A parallel representation of those would only need converting
-   * back for the tools that already speak them.
+   * Normalized view of blueprint-authored types; for an OpenAPI document, the
+   * resources it serves; null for AsyncAPI and JSON Schema. The OpenAPI model
+   * is a read-only view of what the document states, never written back —
+   * the document stays the source, and tools that speak OpenAPI read it as
+   * before.
    */
-  model(): StateMachineModel | null;
+  model(): StateMachineModel | ApiModel | null;
+}
+
+/**
+ * An OpenAPI document read as the resources it serves. Grows by addition:
+ * operations will land on `collection` and `item`, schemas on the operations.
+ */
+export interface ApiModel {
+  /** The path the document's first server puts it under, e.g. `/intake`; empty when none. */
+  base: string;
+  /** Every resource, nested ones included, parents before children. */
+  resources: ApiResource[];
+}
+
+/**
+ * A resource: every `segment/{param}` pair in the document's paths, so a
+ * nested resource always has its ancestors.
+ */
+export interface ApiResource {
+  /** The schema its item endpoint's GET returns; null when none is stated. */
+  name: string | null;
+  parent: ApiResource | null;
+  children: ApiResource[];
+  collection: { segment: string };
+  item: { parameter: string };
+  /** The path, relative to the server, as OpenAPI writes it. */
+  path(part: 'item' | 'collection'): string;
 }
 
 /** A step in a state machine, with branch and loop bodies under `children`. */
