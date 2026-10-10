@@ -1850,101 +1850,6 @@ export type ReviewProgressListResponse = {
     hasNext: boolean;
 };
 
-/**
- * Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
- */
-export type InterviewPromptsRequest = {
-    /**
-     * Household composition and financial circumstances.
-     */
-    household?: {
-        /**
-         * Total monthly gross income reported by the household.
-         */
-        monthlyIncome?: number;
-        /**
-         * Total monthly expenses reported by the household.
-         */
-        monthlyExpenses?: number;
-        /**
-         * All individuals in the household.
-         */
-        members?: Array<{
-            /**
-             * Member's age in years.
-             */
-            age?: number;
-            /**
-             * Whether the member is currently employed.
-             */
-            isEmployed?: boolean;
-            /**
-             * Whether the member is enrolled at least half-time in higher education.
-             */
-            isStudent?: boolean;
-            /**
-             * Whether the member is a non-citizen subject to immigration screening.
-             */
-            isNonCitizen?: boolean;
-        }>;
-    };
-    /**
-     * Application-level context relevant to the interview.
-     */
-    application?: {
-        /**
-         * Whether the household reported changes since the application was submitted.
-         */
-        hasChangedCircumstances?: boolean;
-    };
-};
-
-/**
- * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
- *
- */
-export type InterviewPromptsResponse = Array<{
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'complete';
-    /**
-     * The computed value.
-     */
-    value: unknown;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'placeholder';
-    /**
-     * The computed value, derived using one or more schema defaults.
-     */
-    value: unknown;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'missing';
-    /**
-     * Input paths required to resolve this fact.
-     */
-    missing: Array<string>;
-} | {
-    /**
-     * The fact name.
-     */
-    fact: string;
-    state: 'error';
-    /**
-     * The reason evaluation failed.
-     */
-    message: string;
-}>;
-
 export type Document = {
     /**
      * What kind of document this is.
@@ -6169,6 +6074,9 @@ export type UpdateApplicationMemberResponse = UpdateApplicationMemberResponses[k
 export type SubmitApplicationData = {
     body?: never;
     path: {
+        /**
+         * Unique identifier of the application.
+         */
         applicationId: string;
     };
     query?: never;
@@ -6633,6 +6541,9 @@ export type SubmitApplicationResponse = SubmitApplicationResponses[keyof SubmitA
 export type OpenApplicationData = {
     body?: never;
     path: {
+        /**
+         * Unique identifier of the application.
+         */
         applicationId: string;
     };
     query?: never;
@@ -7106,6 +7017,9 @@ export type CloseApplicationData = {
         notes?: string;
     };
     path: {
+        /**
+         * Unique identifier of the application.
+         */
         applicationId: string;
     };
     query?: never;
@@ -7570,6 +7484,9 @@ export type CloseApplicationResponse = CloseApplicationResponses[keyof CloseAppl
 export type WithdrawApplicationData = {
     body?: never;
     path: {
+        /**
+         * Unique identifier of the application.
+         */
         applicationId: string;
     };
     query?: never;
@@ -9315,150 +9232,3 @@ export type ReplaceReviewProgressByItemResponses = {
 };
 
 export type ReplaceReviewProgressByItemResponse = ReplaceReviewProgressByItemResponses[keyof ReplaceReviewProgressByItemResponses];
-
-export type EvaluateInterviewPromptsData = {
-    /**
-     * Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
-     */
-    body: {
-        /**
-         * Household composition and financial circumstances.
-         */
-        household?: {
-            /**
-             * Total monthly gross income reported by the household.
-             */
-            monthlyIncome?: number;
-            /**
-             * Total monthly expenses reported by the household.
-             */
-            monthlyExpenses?: number;
-            /**
-             * All individuals in the household.
-             */
-            members?: Array<{
-                /**
-                 * Member's age in years.
-                 */
-                age?: number;
-                /**
-                 * Whether the member is currently employed.
-                 */
-                isEmployed?: boolean;
-                /**
-                 * Whether the member is enrolled at least half-time in higher education.
-                 */
-                isStudent?: boolean;
-                /**
-                 * Whether the member is a non-citizen subject to immigration screening.
-                 */
-                isNonCitizen?: boolean;
-            }>;
-        };
-        /**
-         * Application-level context relevant to the interview.
-         */
-        application?: {
-            /**
-             * Whether the household reported changes since the application was submitted.
-             */
-            hasChangedCircumstances?: boolean;
-        };
-    };
-    path?: never;
-    query?: never;
-    url: '/applications/evaluate-interview-prompts';
-};
-
-export type EvaluateInterviewPromptsErrors = {
-    /**
-     * The request is malformed or contains invalid parameters.
-     */
-    400: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-    /**
-     * An unexpected error occurred on the server.
-     */
-    500: {
-        /**
-         * Machine-readable error code.
-         */
-        code: string;
-        /**
-         * Human-readable error description.
-         */
-        message: string;
-        /**
-         * Additional error details.
-         */
-        details?: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-};
-
-export type EvaluateInterviewPromptsError = EvaluateInterviewPromptsErrors[keyof EvaluateInterviewPromptsErrors];
-
-export type EvaluateInterviewPromptsResponses = {
-    /**
-     * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
-     *
-     */
-    200: Array<{
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'complete';
-        /**
-         * The computed value.
-         */
-        value: unknown;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'placeholder';
-        /**
-         * The computed value, derived using one or more schema defaults.
-         */
-        value: unknown;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'missing';
-        /**
-         * Input paths required to resolve this fact.
-         */
-        missing: Array<string>;
-    } | {
-        /**
-         * The fact name.
-         */
-        fact: string;
-        state: 'error';
-        /**
-         * The reason evaluation failed.
-         */
-        message: string;
-    }>;
-};
-
-export type EvaluateInterviewPromptsResponse = EvaluateInterviewPromptsResponses[keyof EvaluateInterviewPromptsResponses];

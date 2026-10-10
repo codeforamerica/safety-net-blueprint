@@ -1,6 +1,6 @@
 # Intake State Machine
 
-Domain: `intake` | API spec: [intake-openapi.yaml](../../../contracts/intake-openapi.yaml) | State machine: [intake-state-machine.yaml](../../../contracts/intake-state-machine.yaml)
+Domain: `intake` | API: [intake-openapi.yaml](../../../contracts/domains/intake/intake-openapi.yaml) | State machine: [intake-state-machine.yaml](../../../contracts/intake-state-machine.yaml)
 
 ---
 

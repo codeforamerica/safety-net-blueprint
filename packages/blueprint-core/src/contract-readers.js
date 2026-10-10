@@ -9,9 +9,12 @@
  * reasons the server could not run without a filesystem.
  *
  * They are readers rather than generators in `extract`'s sense: every field
- * returned is stated in the documents. The one exception is the state machine
- * reader, which follows `extends` and the `$ref`s in action schemas, and even
- * that resolves within the set rather than deriving anything new.
+ * returned is stated in the documents, with two exceptions. The state machine
+ * reader follows `extends` and the `$ref`s in action schemas, resolving within
+ * the set. And the state machine and composition readers report what each
+ * attaches to — `api`, the OpenAPI document, and `resource`, the resource in
+ * its model (`attachment.js`) — and the rules reader the route each ruleset is
+ * evaluated at, so a consumer serves them where resolve documented them.
  *
  * Unlike the loaders these replace, a document that declares none of the
  * section being asked for is skipped silently instead of warning. `validate`
@@ -20,6 +23,8 @@
  */
 
 import { followRef, indexByRelativePath, splitRef, pointerInto } from './ref-lookup.js';
+import { governedResource, declaredResource } from './attachment.js';
+import { rulesetEndpointPath } from './rules.js';
 
 /** Envelope keys a config document carries that are not catalogs. */
 const CONFIG_METADATA_KEYS = new Set(['$schema', 'version', 'domain']);
@@ -104,7 +109,11 @@ export function readConfigs(docs) {
  *                     what they point at.
  *
  * @param {import('../types.js').Doc[]} docs
- * @returns {{ domain: string, object: string, apiSpec: string|null, stateMachine: object, machine: object, relativePath: string|null }[]}
+ * Each entry also carries what its machine governs: `api`, the OpenAPI
+ * document, and `resource`, the resource in its model named for the machine's
+ * object. Both null when nothing in the domain serves the object.
+ *
+ * @returns {{ domain: string, object: string, apiSpec: string|null, api: object|null, resource: object|null, stateMachine: object, machine: object, relativePath: string|null }[]}
  */
 export function readStateMachines(docs) {
   const byRelativePath = indexByRelativePath(docs);
@@ -159,14 +168,73 @@ export function readStateMachines(docs) {
     if (Array.isArray(stateMachine.machines)) {
       for (const machine of stateMachine.machines) {
         if (!machine.object) continue;
-        results.push({ ...entry, object: machine.object, machine });
+        results.push({ ...entry, object: machine.object, ...governed(docs, entry.domain, machine.object), machine });
       }
     } else if (stateMachine.object) {
-      results.push({ ...entry, object: stateMachine.object, machine: stateMachine });
+      results.push({ ...entry, object: stateMachine.object, ...governed(docs, entry.domain, stateMachine.object), machine: stateMachine });
     }
   }
 
   return results;
+}
+
+/**
+ * @param {import('../types.js').Doc[]} docs
+ * @param {string} domain
+ * @param {string} object
+ * @returns {{ api: object|null, resource: object|null }}
+ */
+function governed(docs, domain, object) {
+  return governedResource(docs, domain, object) ?? { api: null, resource: null };
+}
+
+/**
+ * Compositions, by domain, with what they are about: `api`, the OpenAPI
+ * document declaring the resource their compositions name, and `resource`,
+ * that resource. Both null when the domain declares none of them.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {{ domain: string, doc: object, filePath: string, relativePath: string|null, api: object|null, resource: object|null }[]}
+ */
+export function readCompositions(docs) {
+  return ofType(docs, 'compositions')
+    .filter((doc) => doc.content.compositions)
+    .map((doc) => {
+      const collections = Object.values(doc.content.compositions).map((c) => c?.resource).filter(Boolean);
+      const declared = declaredResource(docs, doc.content.domain, collections, doc.relativePath ?? doc.path);
+      return {
+        domain: doc.content.domain,
+        doc: doc.content,
+        filePath: doc.path,
+        relativePath: doc.relativePath,
+        api: declared?.api ?? null,
+        resource: declared?.resource ?? null,
+      };
+    });
+}
+
+/**
+ * Rules documents, by domain, with the route each ruleset is evaluated at:
+ * `/{domain}` and its endpoint path, or `/{domain}/rules/{ruleset-name}` when
+ * it declares none (`rulesetEndpointPath`). A ruleset declaring
+ * `endpoint: false` has no route.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {{ domain: string, doc: object, filePath: string, relativePath: string|null, rulesets: { name: string, path: string }[] }[]}
+ */
+export function readRules(docs) {
+  return ofType(docs, 'rules')
+    .filter((doc) => doc.content.rulesets)
+    .map((doc) => ({
+      domain: doc.content.domain,
+      doc: doc.content,
+      filePath: doc.path,
+      relativePath: doc.relativePath,
+      rulesets: Object.entries(doc.content.rulesets)
+        .map(([name, ruleset]) => ({ name, endpoint: rulesetEndpointPath(name, ruleset) }))
+        .filter(({ endpoint }) => endpoint !== null)
+        .map(({ name, endpoint }) => ({ name, path: `/${doc.content.domain}${endpoint}` })),
+    }));
 }
 
 const basename = (p) => p.slice(p.lastIndexOf('/') + 1);

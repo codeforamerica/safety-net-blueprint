@@ -32,7 +32,7 @@ import { subscribeStubDispatch } from './mock-stub-engine.js';
 import { registerConfigManaged } from './config-registry.js';
 import { initSchemaRegistry } from './validator.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
-import { contractsOfType, graphsOf, unresolvedRulesWarning } from './contract-views.js';
+import { graphsOf, unresolvedRulesWarning } from './contract-views.js';
 
 
 
@@ -80,8 +80,8 @@ export async function createMockServer({
   const slaTypes = extract(docs, 'sla-types');
   const metrics = extract(docs, 'metrics');
   const configs = extract(docs, 'config');
-  const compositions = contractsOfType(docs, 'compositions', 'compositions');
-  const rulesFiles = contractsOfType(docs, 'rules', 'rulesets');
+  const compositions = extract(docs, 'compositions');
+  const rulesFiles = extract(docs, 'rules');
   const graphs = graphsOf(docs);
   const unresolved = unresolvedRulesWarning(rulesFiles, graphs);
   if (unresolved) console.warn(`Warning: ${unresolved}`);

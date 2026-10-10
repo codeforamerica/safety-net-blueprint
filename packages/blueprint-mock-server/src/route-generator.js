@@ -524,8 +524,10 @@ export function registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines = [],
   }
 
   for (const apiSpec of apiSpecs) {
-    // Pass all state machines for this domain — there may be more than one (e.g., Application + ApplicationDocument)
-    const domainSMs = stateMachines.filter(s => s.domain === apiSpec.name);
+    // Pass all state machines for this domain — there may be more than one (e.g., Application + ApplicationDocument).
+    // Matched by the domain each declares, not the file's name: a domain can span
+    // several OpenAPI documents, and each takes the machines for its own collections.
+    const domainSMs = stateMachines.filter(s => s.domain === apiSpec.domain);
     const endpoints = tagRoutesAddedBy(routes, { domain: apiSpec.domain ?? null },
       () => registerRoutes(routes, apiSpec, baseUrl, domainSMs, slaTypes, deps));
     allEndpoints.push({
@@ -616,9 +618,10 @@ export function registerCompositionRoutes(routes, compositionFiles = [], apiSpec
   const resourceItemPathMap = buildResourceItemPathMap(apiSpecs);
   const resourceCollectionNameMap = buildResourceCollectionNameMap(apiSpecs);
 
-  for (const { domain, doc, filePath } of compositionFiles) {
-    // Look up the server base path for this domain (e.g. "/intake" for the intake domain)
-    const apiSpec = apiSpecs.find(s => s.name === domain);
+  for (const { domain, doc, filePath, api } of compositionFiles) {
+    // The document core attached these compositions to, and the API loaded
+    // from it — its server base, schemas and pagination.
+    const apiSpec = loadedFrom(apiSpecs, api);
     const basePath = apiSpec?.serverBasePath ?? '';
 
     // Every route this file adds belongs to its domain. Tagged once, after
@@ -873,6 +876,21 @@ function registerStateRoutes(routes, composition, compositionName, stateInfo, st
 }
 
 /**
+ * The API the mock loaded from a document core reports something attaches to.
+ *
+ * Its `serverBasePath` is where the mock serves that document — the mock's
+ * own choice of server — so a transition, composition or ruleset served from
+ * it sits beside the rest of the document's routes.
+ *
+ * @param {object[]} apiSpecs
+ * @param {object|null} api - An OpenAPI Doc, from `extract`
+ * @returns {object|undefined}
+ */
+function loadedFrom(apiSpecs, api) {
+  return api ? apiSpecs.find((spec) => spec.doc === api) : undefined;
+}
+
+/**
  * Register state machine RPC routes (e.g., POST /tasks/:taskId/claim).
  * @param {Map<string, object>} routes - Route table to populate
  * @param {Array} stateMachines - Array from discoverStateMachines()
@@ -883,36 +901,20 @@ export function registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaT
   const registeredEndpoints = [];
 
   for (const sm of stateMachines) {
-    // Match state machine to its API spec by domain
-    const apiSpec = apiSpecs.find(spec => spec.name === sm.domain);
-    if (!apiSpec) {
-      console.warn(`  No API spec found for domain "${sm.domain}" — skipping state machine routes`);
+    // The resource core says the machine governs: the one in its domain named
+    // for its object.
+    if (!sm.resource) {
+      console.warn(`  No resource found for "${sm.domain}/${sm.object}" — skipping state machine routes`);
       continue;
     }
 
-    // Find the item endpoint that matches the state machine object.
-    // Uses suffix matching so single-word objects (e.g., "Verification") correctly match
-    // sub-resource collections like "application-verifications".
-    // e.g., object "Task" matches "tasks"; object "Verification" matches "application-verifications"
-    const objectPluralSuffix = toKebabCase(sm.object) + 's';
-    const itemEndpoint = apiSpec.endpoints.find(
-      e => e.method.toLowerCase() === 'get' && (isItemEndpoint(e.path) || isSubItemEndpoint(e.path))
-        && (() => {
-          const col = deriveCollectionName(e.path, apiSpec.serverBasePath);
-          return col === objectPluralSuffix || col.endsWith('-' + objectPluralSuffix);
-        })()
-    );
-    if (!itemEndpoint) {
-      console.warn(`  No item endpoint found for "${sm.domain}" — skipping state machine routes`);
-      continue;
-    }
-
-    const basePath = itemEndpoint.path; // e.g., /tasks/{taskId} or /applications/{applicationId}/verifications/{verificationId}
-    const allParams = [...basePath.matchAll(/\{([^}]+)\}/g)];
-    const paramName = allParams.length > 0 ? allParams[allParams.length - 1][1] : 'id';
+    // Served at the base the mock serves the machine's API at, like the rest of it.
+    const serverBase = loadedFrom(apiSpecs, sm.api)?.serverBasePath ?? '';
+    const basePath = `${serverBase}${sm.resource.path('item')}`; // e.g., /workflow/tasks/{taskId}
+    const paramName = sm.resource.item.parameter;
 
     // Derive collection name from the resource path
-    const collectionName = deriveCollectionName(itemEndpoint.path, apiSpec.serverBasePath);
+    const collectionName = deriveCollectionName(basePath, serverBase);
 
     console.log(`  Registering state machine routes for ${sm.domain}/${sm.object}...`);
 
@@ -948,7 +950,7 @@ export function registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaT
       addRoute(routes, 'POST', expressPath, handler, {
         operationId: entry.id,
         description: `${entry.id}: ${entry.from} → ${entry.to ?? '(in-place)'}`,
-        domain: apiSpec.domain ?? null,
+        domain: sm.domain ?? null,
       });
 
       registeredEndpoints.push({
@@ -996,18 +998,10 @@ export function registerRulesRoutes(routes, rulesFiles = [], apiSpecs = [], grap
   const byRuleset = buildRulesIndex(graphs);
   const registeredEndpoints = [];
 
-  for (const { domain, doc } of rulesFiles) {
-    const apiSpec = apiSpecs.find(s => s.name === domain);
-    const basePath = apiSpec?.serverBasePath ?? `/${domain}`;
-
-    for (const [rulesetName, ruleset] of Object.entries(doc.rulesets || {})) {
-      const endpointPath = ruleset.endpoint?.path;
-      if (!endpointPath) continue;
-
-      const fullPath = basePath && !endpointPath.startsWith(basePath)
-        ? `${basePath}${endpointPath}`
-        : endpointPath;
-
+  for (const { domain, rulesets = [] } of rulesFiles) {
+    // Where core says each ruleset is evaluated: /{domain} and its endpoint
+    // path, or /{domain}/rules/{ruleset-name} when it declares none.
+    for (const { name: rulesetName, path: fullPath } of rulesets) {
       const graph = byRuleset[rulesetName];
       if (!graph) continue;
 
@@ -1020,7 +1014,7 @@ export function registerRulesRoutes(routes, rulesFiles = [], apiSpecs = [], grap
           result[name] = rest;
         }
         return Response.json(result);
-      }, { domain: apiSpec?.domain ?? domain });
+      }, { domain });
 
       registeredEndpoints.push({ method: 'POST', path: fullPath, description: `Evaluate ${rulesetName}` });
       console.log(`  POST   ${fullPath} - Evaluate ${rulesetName} (rules)`);

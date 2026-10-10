@@ -110,7 +110,13 @@ $defs:
     additionalProperties: false
     properties:
       endpoint:
-        $ref: "#/$defs/Endpoint"
+        description: >
+          Where the ruleset is evaluated. Every ruleset is reachable by default,
+          at /{domain}/rules/{ruleset-name}; declare a path to place it elsewhere,
+          or false to give it no endpoint.
+        oneOf:
+          - $ref: "#/$defs/Endpoint"
+          - const: false
       inputs:
         $ref: "#/$defs/SchemaMap"
       outputs:
@@ -178,19 +184,19 @@ $defs:
     #     path: /assess-work-requirements
     type: object
     description: >
-      Declares a standalone POST endpoint for this ruleset. The resolver generates
-      the full path from the file-level domain field and derives the request/response
-      schema from the ruleset's inputs and outputs. Same endpoint block syntax as
-      compositions.
-    required:
-      - path
+      Places the ruleset's POST endpoint. The full path is the file-level domain
+      followed by `path` — /intake/applications/evaluate-interview-prompts — or
+      /{domain}/rules/{ruleset-name} when `path` is omitted. The request and
+      response schemas are derived from the ruleset's inputs and outputs, and
+      the endpoints are documented in an OpenAPI document resolve generates
+      beside the rules file.
     additionalProperties: false
     properties:
       path:
         type: string
         description: >
-          Action-specific path segment. The resolver prefixes this with the domain
-          base path (e.g., /intake) to form the full endpoint path.
+          The path within the domain. The full endpoint path is /{domain}
+          followed by this, e.g. /intake for the intake domain.
 
           Path parameters are not permitted. A ruleset is evaluated against the
           inputs in the request body and nothing binds a path segment to them, so

@@ -71,7 +71,10 @@ properties:
 
   apiSpec:
     type: string
-    description: Filename of the associated OpenAPI spec.
+    deprecated: true
+    description: >
+      Deprecated and ignored. Each machine attaches to the resource in its
+      domain named for its object, in whichever OpenAPI document declares it.
 
   eventsSpec:
     type: string

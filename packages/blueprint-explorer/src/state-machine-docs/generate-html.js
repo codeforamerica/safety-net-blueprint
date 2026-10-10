@@ -340,7 +340,7 @@ export function generateHtml(sm, outputDir, eventIndex, allStateMachines, hubHre
   const body = `
     <div style="margin-bottom:2rem;">
       <h1 style="font-size:1.5rem;font-weight:800;color:${COLORS.darkBlue};margin-bottom:0.375rem;">${titleCase(sm.domain)} State Machine</h1>
-      <p style="font-size:12px;color:${COLORS.textLight};">Domain: <code>${sm.domain}</code> · API spec: <code>${sm.apiSpec}</code></p>
+      <p style="font-size:12px;color:${COLORS.textLight};">Domain: <code>${sm.domain}</code> · API: ${sm.apis.map((api) => `<code>${api.split('/').pop()}</code>`).join(', ') || 'none'}</p>
     </div>
     ${sections}`;
 

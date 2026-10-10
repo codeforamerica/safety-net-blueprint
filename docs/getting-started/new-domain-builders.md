@@ -122,7 +122,7 @@ See [Resource Composition](../architecture/cross-cutting/resource-composition.md
 
 Rules contracts define domain logic as dependency graphs of named facts — eligibility criteria, screening probes, work requirement checks, income calculations, or any logic where the answer to "what do we need to know next?" depends on what's already known. The evaluator runs against partial data and returns not just what it resolved, but the specific inputs still needed to resolve what it couldn't. This makes progressive intake forms, adaptive interviews, and real-time eligibility screening possible without writing custom logic in every adapter.
 
-Rules can be invoked three ways: as an `evaluate:` step in a state machine action, as a generated standalone POST endpoint, or directly in the browser via `blueprint-rules-engine` — all returning the same evaluation contract. One ruleset, every context.
+Rules can be invoked three ways: as an `evaluate:` step in a state machine action, as a standalone POST endpoint every ruleset gets under its domain, or directly in the browser via `blueprint-rules-engine` — all returning the same evaluation contract. One ruleset, every context.
 
 Test a ruleset from the command line without starting the mock server:
 

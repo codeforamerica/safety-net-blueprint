@@ -715,13 +715,14 @@ export function buildPathToSchemaMap(yamlFiles) {
  * The overlay uses `./components/responses.yaml#/...` for error response refs.
  * Callers that need a different prefix should rewrite refs after calling this.
  *
- * @param {Object} compositionFile - { filePath, domain, doc }
+ * @param {Object} compositionFile - { filePath, domain, doc, apiSpecFile? } — `apiSpecFile`, the
+ *   document the overlay patches, when the caller has worked it out
  * @param {Map<string, string>} paramIndex - from buildParameterIndex
  * @returns {Object|null} Overlay document, or null if no endpoints were declared
  */
 export function generateCompositionOverlay(compositionFile, paramIndex, parentSchemaMap = null) {
   const { domain, doc, filePath } = compositionFile;
-  const apiSpecFile = `${domain}-openapi.yaml`;
+  const apiSpecFile = compositionFile.apiSpecFile ?? `${domain}-openapi.yaml`;
 
   const pathsUpdate = {};
   const schemasUpdate = {};
@@ -895,7 +896,7 @@ export function generateCompositionOverlays(compositionFiles, yamlFiles) {
   for (const compositionFile of compositionFiles) {
     const overlay = generateCompositionOverlay(compositionFile, paramIndex, parentSchemaMap);
     if (overlay) {
-      result.push({ overlay, domain: compositionFile.domain });
+      result.push({ overlay, domain: compositionFile.domain, target: compositionFile.apiSpecFile ?? null });
     }
   }
 

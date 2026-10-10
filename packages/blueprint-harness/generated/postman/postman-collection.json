@@ -545,6 +545,11 @@
       "description": "Eligibility API"
     },
     {
+      "name": "Determinations",
+      "item": [],
+      "description": "Eligibility rules"
+    },
+    {
       "name": "Intake",
       "item": [
         {
@@ -1307,6 +1312,11 @@
         }
       ],
       "description": "Intake API"
+    },
+    {
+      "name": "Applications",
+      "item": [],
+      "description": "Intake rules"
     },
     {
       "name": "Platform",

@@ -477,6 +477,14 @@ function validateDoc(doc, context) {
     }
 
     case 'state-machine':
+      if (doc.content?.apiSpec !== undefined) {
+        warnings.push({
+          rule: 'deprecated-api-spec',
+          message: '`apiSpec` is ignored: each machine attaches to the resource in its domain named for its object, ' +
+            'in whichever OpenAPI document declares it. Remove it.',
+          path: doc.path,
+        });
+      }
       if (context.validRoles === null) {
         errors.push({
           rule: 'missing-role-vocabulary',
@@ -511,10 +519,10 @@ function validateDoc(doc, context) {
       break;
 
     case 'compositions': {
-      // The composition validators take { domain, doc }; domain is the stem of
-      // the relative path, which is how a composition names its target spec.
+      // The composition validators take { domain, doc }; the domain names the
+      // compositions in messages.
       const compositionDoc = {
-        domain: stemOf(doc.relativePath ?? doc.path, 'compositions'),
+        domain: doc.domain ?? stemOf(doc.relativePath ?? doc.path, 'compositions'),
         doc: doc.content,
       };
       errors.push(

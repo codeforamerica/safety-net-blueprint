@@ -10,7 +10,8 @@ import {
   expandInputs,
   extractDeps,
   compileRuleset,
-  generateRulesEndpointOverlay,
+  generateRulesApi,
+  rulesetEndpointPath,
   generateRulesResults,
 } from '../../../src/rules.js';
 
@@ -448,9 +449,26 @@ test('compileRuleset — array inputs (SNAP interview probes)', async (t) => {
 
 });
 
-// ── generateRulesEndpointOverlay ─────────────────────────────────────────────
+// ── rulesetEndpointPath ──────────────────────────────────────────────────────
 
-test('generateRulesEndpointOverlay', async (t) => {
+test('rulesetEndpointPath', async (t) => {
+  await t.test('a declared path', () => {
+    assert.equal(rulesetEndpointPath('expeditedSnap', { endpoint: { path: '/assess-expedited-snap' } }), '/assess-expedited-snap');
+  });
+
+  await t.test('no endpoint declared is /rules/{ruleset-name}, in kebab-case', () => {
+    assert.equal(rulesetEndpointPath('expeditedSnap', {}), '/rules/expedited-snap');
+    assert.equal(rulesetEndpointPath('expeditedSnap', { endpoint: {} }), '/rules/expedited-snap');
+  });
+
+  await t.test('endpoint: false is none', () => {
+    assert.equal(rulesetEndpointPath('expeditedSnap', { endpoint: false }), null);
+  });
+});
+
+// ── generateRulesApi ─────────────────────────────────────────────────────────
+
+test('generateRulesApi', async (t) => {
 
   const rulesDoc = {
     domain: 'eligibility',
@@ -469,49 +487,41 @@ test('generateRulesEndpointOverlay', async (t) => {
     },
   };
 
-  await t.test('returns null when no rulesets have endpoints', () => {
-    const result = generateRulesEndpointOverlay('eligibility', {
-      rulesets: { myRuleset: { inputs: {}, outputs: {}, facts: [] } },
+  await t.test('returns null when every ruleset opts out', () => {
+    const result = generateRulesApi('eligibility', {
+      rulesets: { myRuleset: { endpoint: false, inputs: {}, outputs: {}, facts: [] } },
     });
     assert.equal(result, null);
   });
 
-  await t.test('produces a valid overlay document', () => {
-    const overlay = generateRulesEndpointOverlay('eligibility', rulesDoc);
-    assert.ok(overlay);
-    assert.equal(overlay.overlay, '1.0.0');
-    assert.ok(Array.isArray(overlay.actions));
+  await t.test('is an OpenAPI document of its own, in the domain, served under it', () => {
+    const api = generateRulesApi('eligibility', rulesDoc);
+    assert.equal(api.openapi, '3.1.0');
+    assert.equal(api.info['x-domain'], 'eligibility');
+    assert.deepEqual(api.servers, [{ url: '/eligibility' }]);
   });
 
   await t.test('adds POST endpoint at declared path with inferred tag', () => {
-    const overlay = generateRulesEndpointOverlay('eligibility', rulesDoc);
-    const pathsAction = overlay.actions.find(a => a.target === '$.paths');
-    assert.ok(pathsAction.update['/assess-expedited-snap']);
-    assert.ok(pathsAction.update['/assess-expedited-snap'].post);
-    assert.equal(pathsAction.update['/assess-expedited-snap'].post.operationId, 'assessExpeditedSnap');
-    assert.deepEqual(pathsAction.update['/assess-expedited-snap'].post.tags, ['Assess Expedited Snap']);
+    const api = generateRulesApi('eligibility', rulesDoc);
+    assert.ok(api.paths['/assess-expedited-snap'].post);
+    assert.equal(api.paths['/assess-expedited-snap'].post.operationId, 'assessExpeditedSnap');
+    assert.deepEqual(api.paths['/assess-expedited-snap'].post.tags, ['Assess Expedited Snap']);
   });
 
   await t.test('generates request and response schemas', () => {
-    const overlay = generateRulesEndpointOverlay('eligibility', rulesDoc);
-    const schemasAction = overlay.actions.find(a => a.target === '$.components.schemas');
-    assert.ok(schemasAction.update['ExpeditedSnapRequest']);
-    assert.ok(schemasAction.update['ExpeditedSnapResponse']);
+    const api = generateRulesApi('eligibility', rulesDoc);
+    assert.ok(api.components.schemas['ExpeditedSnapRequest']);
+    assert.ok(api.components.schemas['ExpeditedSnapResponse']);
   });
 
   await t.test('response schema references EvaluationResult via allOf', () => {
-    const overlay = generateRulesEndpointOverlay('eligibility', rulesDoc);
-    const schemasAction = overlay.actions.find(a => a.target === '$.components.schemas');
-    const response = schemasAction.update['ExpeditedSnapResponse'];
-    assert.ok(response.allOf);
+    const response = generateRulesApi('eligibility', rulesDoc).components.schemas['ExpeditedSnapResponse'];
     assert.strictEqual(response.allOf[0].$ref, 'https://blueprint.codeforamerica.org/base/schemas/rules-evaluation.yaml#/EvaluationResult');
   });
 
-  await t.test('targets the correct OpenAPI spec file', () => {
-    const overlay = generateRulesEndpointOverlay('eligibility', rulesDoc);
-    for (const action of overlay.actions) {
-      assert.equal(action.file, 'eligibility-openapi.yaml');
-    }
+  await t.test('error responses resolve from anywhere, by their canonical URL', () => {
+    const responses = generateRulesApi('eligibility', rulesDoc).paths['/assess-expedited-snap'].post.responses;
+    assert.match(responses['400'].$ref, /^https:\/\/blueprint\.codeforamerica\.org\/base\/components\/responses\.yaml#/);
   });
 
 });
@@ -549,18 +559,18 @@ test('generateRulesResults', async (t) => {
     assert.ok(graphs.has('eligibility-expeditedSnap-graph.yaml'));
   });
 
-  await t.test('produces overlays for rulesets with endpoints', () => {
-    const { overlays } = generateRulesResults(rulesFiles);
-    assert.equal(overlays.length, 1);
-    assert.equal(overlays[0].domain, 'eligibility');
+  await t.test('produces one API document per rules file, in its domain', () => {
+    const { apis } = generateRulesResults(rulesFiles);
+    assert.equal(apis.size, 1);
+    assert.equal([...apis.values()][0].info['x-domain'], 'eligibility');
   });
 
   await t.test('skips files without domain or rulesets', () => {
-    const { graphs, overlays } = generateRulesResults([
+    const { graphs, apis } = generateRulesResults([
       { relativePath: 'bad-rules.yaml', doc: { rulesets: null } },
     ]);
     assert.equal(graphs.size, 0);
-    assert.equal(overlays.length, 0);
+    assert.equal(apis.size, 0);
   });
 
 });

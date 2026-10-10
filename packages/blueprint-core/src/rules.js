@@ -267,22 +267,47 @@ export function compileRuleset(domain, rulesetName, ruleset, resolve = () => nul
 // ── Endpoint overlay generation ──────────────────────────────────────────────
 
 /**
- * Generate an OpenAPI overlay for all rulesets in a rules file that declare
- * an endpoint: block. Returns null if no rulesets have endpoints.
+ * Where a ruleset is evaluated, relative to its domain: `endpoint.path` when
+ * it declares one, `/rules/{ruleset-name}` when it does not, and null when it
+ * opts out with `endpoint: false`.
+ *
+ * Every ruleset is reachable by default. Evaluating one is a pure function of
+ * the inputs in the request — it reads no stored data and changes nothing —
+ * so there is nothing to protect by leaving one out, and a ruleset no one can
+ * call would be a surprise. The `rules` segment keeps a ruleset from claiming
+ * the URL of a collection it happens to share a name with.
+ *
+ * @param {string} rulesetName - e.g. "expeditedSnap"
+ * @param {object} ruleset
+ * @returns {string|null} e.g. "/rules/expedited-snap"
+ */
+export function rulesetEndpointPath(rulesetName, ruleset) {
+  if (ruleset?.endpoint === false) return null;
+  return ruleset?.endpoint?.path ?? `/rules/${toKebabCase(rulesetName)}`;
+}
+
+/**
+ * The OpenAPI document a rules file's endpoints are documented in.
+ *
+ * A rules document stands on its own — it defines its domain, and needs no
+ * OpenAPI document to exist — so its endpoints are not merged into one. They
+ * get a document of their own, served under the domain's path, which Swagger,
+ * the API reference and the client generators read like any other. Null when
+ * every ruleset opts out.
  *
  * @param {string} domain   - domain name
  * @param {Object} rulesDoc - parsed rules YAML document
- * @returns {Object|null} OpenAPI Overlay 1.0.0 document, or null
+ * @param {Map} [paramIndex]
+ * @returns {Object|null} An OpenAPI 3.1 document, or null
  */
-export function generateRulesEndpointOverlay(domain, rulesDoc, paramIndex = new Map()) {
-  const apiSpecFile = `${domain}-openapi.yaml`;
-  const pathsUpdate = {};
-  const schemasUpdate = {};
+export function generateRulesApi(domain, rulesDoc, paramIndex = new Map()) {
+  const paths = {};
+  const schemas = {};
 
   for (const [rulesetName, ruleset] of Object.entries(rulesDoc.rulesets || {})) {
-    if (!ruleset.endpoint?.path) continue;
+    const endpointPath = rulesetEndpointPath(rulesetName, ruleset);
+    if (!endpointPath) continue;
 
-    const endpointPath = ruleset.endpoint.path;
     const pascal = toPascalCase(rulesetName);
     const requestSchemaName = `${pascal}Request`;
     const responseSchemaName = `${pascal}Response`;
@@ -295,13 +320,7 @@ export function generateRulesEndpointOverlay(domain, rulesDoc, paramIndex = new 
       requestProperties[inputName] = inputSchema;
     }
 
-    // Response: evaluation contract { resolved, missing, errors }
-    const resolvedProperties = {};
-    for (const [propName, propSchema] of Object.entries(ruleset.outputs || {})) {
-      resolvedProperties[propName] = propSchema;
-    }
-
-    pathsUpdate[endpointPath] = buildPathEntry(endpointPath, 'post', {
+    paths[endpointPath] = buildPathEntry(endpointPath, 'post', {
       summary: `Evaluate ${rulesetName}`,
       operationId,
       requestBody: {
@@ -321,18 +340,18 @@ export function generateRulesEndpointOverlay(domain, rulesDoc, paramIndex = new 
             },
           },
         },
-        '400': { $ref: './components/responses.yaml#/BadRequest' },
-        '500': { $ref: './components/responses.yaml#/InternalError' },
+        '400': { $ref: 'https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest' },
+        '500': { $ref: 'https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError' },
       },
     }, paramIndex, { type: 'ruleset', domain, id: rulesetName });
 
-    schemasUpdate[requestSchemaName] = {
+    schemas[requestSchemaName] = {
       type: 'object',
       description: `Input data for ${rulesetName} evaluation. All fields are optional — partial inputs trigger partial evaluation.`,
       properties: requestProperties,
     };
 
-    schemasUpdate[responseSchemaName] = {
+    schemas[responseSchemaName] = {
       allOf: [
         { $ref: 'https://blueprint.codeforamerica.org/base/schemas/rules-evaluation.yaml#/EvaluationResult' },
       ],
@@ -340,65 +359,60 @@ export function generateRulesEndpointOverlay(domain, rulesDoc, paramIndex = new 
     };
   }
 
-  if (Object.keys(pathsUpdate).length === 0) return null;
+  if (Object.keys(paths).length === 0) return null;
 
   return {
-    overlay: '1.0.0',
+    openapi: '3.1.0',
     info: {
-      title: `${domain} Rules Overlay`,
-      version: '1.0.0',
-      description: `Auto-generated rules endpoints from ${domain}-rules.yaml`,
+      title: `${toPascalCase(domain)} rules`,
+      version: String(rulesDoc.version ?? '1.0.0'),
+      description: `Evaluation endpoints for the ${domain} rulesets, generated from their rules document.`,
+      'x-domain': domain,
     },
-    actions: [
-      {
-        target: '$.paths',
-        file: apiSpecFile,
-        description: `Add generated rules endpoints for ${domain}`,
-        update: pathsUpdate,
-      },
-      {
-        target: '$.components.schemas',
-        file: apiSpecFile,
-        description: `Add generated rules request/response schemas for ${domain}`,
-        update: schemasUpdate,
-      },
-    ],
+    servers: [{ url: `/${domain}` }],
+    paths,
+    components: { schemas },
   };
 }
 
 /**
- * Compile all rules files and generate endpoint overlays.
+ * Compile all rules files, and generate the API document each one's endpoints are documented in.
  *
  * @param {Array<{ relativePath: string, doc: Object }>} rulesFiles
- * @returns {{ graphs: Map<string, Object>, overlays: Array<{ overlay: Object, domain: string }> }}
+ * @returns {{ graphs: Map<string, Object>, apis: Map<string, Object> }} Each keyed by the relative path to write it at
  */
 export function generateRulesResults(rulesFiles, yamlFiles = [], resolve = () => null) {
   const graphs = new Map();
-  const overlays = [];
+  const apis = new Map();
   const paramIndex = buildParameterIndex(yamlFiles);
 
   for (const { relativePath, doc } of rulesFiles) {
     const domain = doc.domain;
     if (!domain || !doc.rulesets) continue;
 
+    const dir = relativePath.includes('/') ? relativePath.slice(0, relativePath.lastIndexOf('/') + 1) : '';
+
     for (const [rulesetName, ruleset] of Object.entries(doc.rulesets)) {
       const graph = compileRuleset(domain, rulesetName, ruleset, (ref) => resolve(ref, doc));
-      const dir = relativePath.includes('/') ? relativePath.slice(0, relativePath.lastIndexOf('/') + 1) : '';
-      const graphPath = `${dir}${domain}-${rulesetName}-graph.yaml`;
-      graphs.set(graphPath, graph);
+      graphs.set(`${dir}${domain}-${rulesetName}-graph.yaml`, graph);
     }
 
-    const overlay = generateRulesEndpointOverlay(domain, doc, paramIndex);
-    if (overlay) {
-      overlays.push({ overlay, domain });
-    }
+    // Beside the rules document, named for it: intake-rules.yaml documents
+    // its endpoints in intake-rules-openapi.yaml.
+    const api = generateRulesApi(domain, doc, paramIndex);
+    if (api) apis.set(relativePath.replace(/\.yaml$/, '-openapi.yaml'), api);
   }
 
-  return { graphs, overlays };
+  return { graphs, apis };
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function toCamelCase(str) {
   return str.split('-').map((s, i) => i === 0 ? s : toPascalCase(s)).join('');
+}
+
+/** "expeditedSnap" → "expedited-snap". */
+function toKebabCase(str) {
+  return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 }

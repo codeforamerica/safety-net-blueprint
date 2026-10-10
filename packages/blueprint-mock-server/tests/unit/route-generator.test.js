@@ -18,7 +18,7 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import yaml from 'js-yaml';
-import { generate, load } from '@codeforamerica/blueprint-core';
+import { generate, load, extract } from '@codeforamerica/blueprint-core';
 import { registerRoutes, registerAllRoutes, registerRulesRoutes } from '../../src/route-generator.js';
 
 /**
@@ -40,6 +40,18 @@ function graphsFor(rulesDoc) {
     writeFileSync(path, yaml.dump(rulesDoc));
     const doc = load({ path, relativePath: basename(path) });
     return generate([doc], 'graph').map(({ graph }) => graph);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** The rules entry core reports for a document — what the mock serves from. */
+function rulesEntry(rulesDoc) {
+  const dir = mkdtempSync(join(tmpdir(), 'rules-entry-'));
+  try {
+    const path = join(dir, `${rulesDoc.domain}-rules.yaml`);
+    writeFileSync(path, yaml.dump(rulesDoc));
+    return extract([load({ path, relativePath: basename(path) })], 'rules');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -642,33 +654,28 @@ test('registerRulesRoutes', async (t) => {
     assert.strictEqual(result.length, 0);
   });
 
-  await t.test('skips rulesets without an endpoint declaration', () => {
+  await t.test('serves every ruleset, at /{domain} and its path or /{domain}/rules/{ruleset-name}', () => {
     const table = new Map();
-    registerRulesRoutes(table, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
-    // Only snapEligibility has endpoint; noEndpointRuleset is skipped
-    assert.strictEqual(listRoutes(table).length, 1);
+    registerRulesRoutes(table, rulesEntry(minimalRulesDoc), [], graphsFor(minimalRulesDoc));
+    assert.deepStrictEqual(listRoutes(table).map((r) => `${r.method} ${r.path}`), [
+      'POST /eligibility/assess-snap-eligibility',
+      'POST /eligibility/rules/no-endpoint-ruleset',
+    ]);
   });
 
-  await t.test('falls back to /domain prefix when no apiSpec found', () => {
+  await t.test('a ruleset declaring endpoint: false is not served', () => {
     const table = new Map();
-    registerRulesRoutes(table, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
-    const routes = listRoutes(table);
-    assert.strictEqual(routes.length, 1);
-    assert.strictEqual(routes[0].method, 'POST');
-    assert.strictEqual(routes[0].path, '/eligibility/assess-snap-eligibility');
-  });
-
-  await t.test('uses serverBasePath from apiSpec when available', () => {
-    const table = new Map();
-    const apiSpecs = [{ name: 'eligibility', serverBasePath: '/eligibility' }];
-    registerRulesRoutes(table, [{ domain: 'eligibility', doc: minimalRulesDoc }], apiSpecs, graphsFor(minimalRulesDoc));
-    const routes = listRoutes(table);
-    assert.strictEqual(routes[0].path, '/eligibility/assess-snap-eligibility');
+    const optedOut = {
+      ...minimalRulesDoc,
+      rulesets: { ...minimalRulesDoc.rulesets, noEndpointRuleset: { ...minimalRulesDoc.rulesets.noEndpointRuleset, endpoint: false } },
+    };
+    registerRulesRoutes(table, rulesEntry(optedOut), [], graphsFor(optedOut));
+    assert.deepStrictEqual(listRoutes(table).map((r) => r.path), ['/eligibility/assess-snap-eligibility']);
   });
 
   await t.test('handler returns evaluate result as JSON for complete inputs', async () => {
     const table = new Map();
-    registerRulesRoutes(table, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
+    registerRulesRoutes(table, rulesEntry(minimalRulesDoc), [], graphsFor(minimalRulesDoc));
     const handler = listRoutes(table)[0].handler;
 
     const { status: statusCode, body: responseBody } = await readResponse(
@@ -695,7 +702,7 @@ test('registerRulesRoutes', async (t) => {
         },
       },
     };
-    registerRulesRoutes(table, [{ domain: 'eligibility', doc: brokenDoc }], [], graphsFor(brokenDoc));
+    registerRulesRoutes(table, rulesEntry(brokenDoc), [], graphsFor(brokenDoc));
     const handler = listRoutes(table)[0].handler;
 
     const { status: statusCode, body: responseBody } = await readResponse(
@@ -708,8 +715,8 @@ test('registerRulesRoutes', async (t) => {
 
   await t.test('returns registered endpoint descriptors', () => {
     const table = new Map();
-    const result = registerRulesRoutes(table, [{ domain: 'eligibility', doc: minimalRulesDoc }], [], graphsFor(minimalRulesDoc));
-    assert.strictEqual(result.length, 1);
+    const result = registerRulesRoutes(table, rulesEntry(minimalRulesDoc), [], graphsFor(minimalRulesDoc));
+    assert.strictEqual(result.length, 2, 'both rulesets: one at its declared path, one at the default');
     assert.strictEqual(result[0].method, 'POST');
     assert.ok(result[0].path.includes('assess-snap-eligibility'));
     assert.ok(result[0].description.includes('snapEligibility'));

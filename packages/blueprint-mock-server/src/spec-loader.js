@@ -127,6 +127,12 @@ export function extractMetadata(spec, resourceName, resolve = null) {
       if (method === 'parameters' || !['get', 'post', 'patch', 'delete', 'put'].includes(method)) {
         continue;
       }
+
+      // A ruleset's evaluation endpoint is served from its rules document, at
+      // its domain's path; this operation only documents it.
+      if (operation['x-relationship']?.type === 'ruleset') {
+        continue;
+      }
       
       // Skip action endpoints (like /submit)
       if (path.includes('/submit')) {
@@ -214,7 +220,9 @@ export function apiSpecsFromDocs(docs) {
       const resolve = resolverFor(doc, docs);
       // The domain is the contract's directory, which is what a person names
       // it by; the spec's own name comes from its file and can differ.
-      loaded.push({ ...extractMetadata(doc.content, name, resolve), resolve, relativePath: doc.relativePath, domain: doc.domain ?? null });
+      // `doc` is the document itself, so core's answer to what something
+      // attaches to (`extract`'s `api`) finds the API loaded from it.
+      loaded.push({ ...extractMetadata(doc.content, name, resolve), resolve, relativePath: doc.relativePath, domain: doc.domain ?? null, doc });
     } catch (error) {
       console.warn(`Warning: Could not read spec ${name}:`, error.message);
     }

@@ -29,10 +29,11 @@ const intake = {
 const byName = (model, name) => model.resources.find((r) => r.name === name);
 
 describe('buildApiModel', () => {
-  test('the base comes from the first server', () => {
-    assert.equal(buildApiModel(intake).base, '/intake');
-    assert.equal(buildApiModel({ ...intake, servers: [{ url: 'http://localhost:1080/platform/' }] }).base, '/platform');
-    assert.equal(buildApiModel({ ...intake, servers: undefined }).base, '');
+  test('every server, with the path it puts the API under', () => {
+    assert.deepEqual(buildApiModel(intake).servers, [{ url: 'https://api.example.com/intake', base: '/intake' }]);
+    assert.deepEqual(buildApiModel({ ...intake, servers: [{ url: 'http://localhost:1080/platform/' }, { url: '/x-relationship' }] }).servers,
+      [{ url: 'http://localhost:1080/platform/', base: '/platform' }, { url: '/x-relationship', base: '/x-relationship' }]);
+    assert.deepEqual(buildApiModel({ ...intake, servers: undefined }).servers, []);
   });
 
   test('a resource is named for the schema its item endpoint returns', () => {
@@ -97,7 +98,7 @@ describe('Doc.model() for an OpenAPI document', () => {
   test('reads the content it has now, after a pass replaces it', () => {
     const d = toDoc({ path: '/x/intake-openapi.yaml', relativePath: 'domains/intake/intake-openapi.yaml', type: 'openapi', content: intake });
     const passed = { ...d, content: { ...intake, servers: [{ url: '/elsewhere' }] } };
-    assert.equal(passed.model().base, '/elsewhere');
+    assert.equal(passed.model().servers[0].base, '/elsewhere');
   });
 
   test('stays null for AsyncAPI and JSON Schema', () => {

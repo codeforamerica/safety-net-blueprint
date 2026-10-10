@@ -16,7 +16,7 @@
 
 /**
  * @param {object} content - An OpenAPI document's content
- * @returns {{ base: string, resources: Resource[] }}
+ * @returns {{ servers: { url: string, base: string }[], resources: Resource[] }}
  */
 export function buildApiModel(content) {
   const nodes = new Map();
@@ -51,7 +51,7 @@ export function buildApiModel(content) {
     }
   }
 
-  return { base: baseOf(content), resources };
+  return { servers: serversOf(content), resources };
 }
 
 /**
@@ -105,15 +105,22 @@ const isParameter = (segment) => segment.startsWith('{') && segment.endsWith('}'
 const unbrace = (segment) => segment.slice(1, -1);
 
 /**
- * The path a document's first server puts it under: `/intake` for
- * `https://api.example.com/intake`. Empty when it declares none.
+ * Every server the document lists, each with the path it puts the API under:
+ * `/intake` for `https://api.example.com/intake`. Which one to act as is the
+ * consumer's choice — the mock stands in for the localhost server — so none is
+ * singled out.
  *
  * @param {object} content
- * @returns {string}
+ * @returns {{ url: string, base: string }[]}
  */
-function baseOf(content) {
-  const url = content?.servers?.[0]?.url;
-  if (typeof url !== 'string') return '';
+function serversOf(content) {
+  return (content?.servers ?? [])
+    .filter((server) => typeof server?.url === 'string')
+    .map(({ url }) => ({ url, base: basePathOf(url) }));
+}
+
+/** @param {string} url */
+function basePathOf(url) {
   try {
     return new URL(url, 'http://relative.invalid').pathname.replace(/\/$/, '');
   } catch {

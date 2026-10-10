@@ -358,7 +358,8 @@ export function generate(sm, outputDir, eventIndex, allStateMachines) {
   lines.push('');
   const smFile = path.basename(sm.path);
   const contractsRel = '../../../contracts';
-  lines.push(`Domain: \`${sm.domain}\` | API spec: [${sm.apiSpec}](${contractsRel}/${sm.apiSpec}) | State machine: [${smFile}](${contractsRel}/${smFile})`);
+  const apiLinks = sm.apis.map((api) => `[${path.basename(api)}](${contractsRel}/${api})`).join(', ') || 'none';
+  lines.push(`Domain: \`${sm.domain}\` | API: ${apiLinks} | State machine: [${smFile}](${contractsRel}/${smFile})`);
   lines.push('');
 
   for (const machine of sm.machines) {

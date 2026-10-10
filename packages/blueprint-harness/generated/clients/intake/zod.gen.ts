@@ -971,52 +971,6 @@ export const zReviewProgressListResponse = z.object({
     hasNext: z.boolean()
 });
 
-/**
- * Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
- */
-export const zInterviewPromptsRequest = z.object({
-    household: z.optional(z.object({
-        monthlyIncome: z.optional(z.number()),
-        monthlyExpenses: z.optional(z.number()),
-        members: z.optional(z.array(z.object({
-            age: z.optional(z.int()),
-            isEmployed: z.optional(z.boolean()),
-            isStudent: z.optional(z.boolean()),
-            isNonCitizen: z.optional(z.boolean())
-        })))
-    })),
-    application: z.optional(z.object({
-        hasChangedCircumstances: z.optional(z.boolean())
-    }))
-});
-
-/**
- * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
- *
- */
-export const zInterviewPromptsResponse = z.array(z.union([
-    z.object({
-        fact: z.string(),
-        state: z.enum(['complete']),
-        value: z.unknown()
-    }),
-    z.object({
-        fact: z.string(),
-        state: z.enum(['placeholder']),
-        value: z.unknown()
-    }),
-    z.object({
-        fact: z.string(),
-        state: z.enum(['missing']),
-        missing: z.array(z.string())
-    }),
-    z.object({
-        fact: z.string(),
-        state: z.enum(['error']),
-        message: z.string()
-    })
-]));
-
 export const zDocument = z.object({
     documentTypeId: z.string(),
     title: z.string(),
@@ -2974,7 +2928,7 @@ export const zUpdateApplicationMemberResponse = z.object({
 export const zSubmitApplicationData = z.object({
     body: z.optional(z.never()),
     path: z.object({
-        applicationId: z.string()
+        applicationId: z.uuid()
     }),
     query: z.optional(z.never())
 });
@@ -3165,7 +3119,7 @@ export const zSubmitApplicationResponse = z.object({
 export const zOpenApplicationData = z.object({
     body: z.optional(z.never()),
     path: z.object({
-        applicationId: z.string()
+        applicationId: z.uuid()
     }),
     query: z.optional(z.never())
 });
@@ -3359,7 +3313,7 @@ export const zCloseApplicationData = z.object({
         notes: z.optional(z.string())
     }),
     path: z.object({
-        applicationId: z.string()
+        applicationId: z.uuid()
     }),
     query: z.optional(z.never())
 });
@@ -3550,7 +3504,7 @@ export const zCloseApplicationResponse = z.object({
 export const zWithdrawApplicationData = z.object({
     body: z.optional(z.never()),
     path: z.object({
-        applicationId: z.string()
+        applicationId: z.uuid()
     }),
     query: z.optional(z.never())
 });
@@ -4003,50 +3957,3 @@ export const zReplaceReviewProgressByItemResponse = z.object({
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
-
-export const zEvaluateInterviewPromptsData = z.object({
-    body: z.object({
-        household: z.optional(z.object({
-            monthlyIncome: z.optional(z.number()),
-            monthlyExpenses: z.optional(z.number()),
-            members: z.optional(z.array(z.object({
-                age: z.optional(z.int()),
-                isEmployed: z.optional(z.boolean()),
-                isStudent: z.optional(z.boolean()),
-                isNonCitizen: z.optional(z.boolean())
-            })))
-        })),
-        application: z.optional(z.object({
-            hasChangedCircumstances: z.optional(z.boolean())
-        }))
-    }),
-    path: z.optional(z.never()),
-    query: z.optional(z.never())
-});
-
-/**
- * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
- *
- */
-export const zEvaluateInterviewPromptsResponse = z.array(z.union([
-    z.object({
-        fact: z.string(),
-        state: z.enum(['complete']),
-        value: z.unknown()
-    }),
-    z.object({
-        fact: z.string(),
-        state: z.enum(['placeholder']),
-        value: z.unknown()
-    }),
-    z.object({
-        fact: z.string(),
-        state: z.enum(['missing']),
-        missing: z.array(z.string())
-    }),
-    z.object({
-        fact: z.string(),
-        state: z.enum(['error']),
-        message: z.string()
-    })
-]));

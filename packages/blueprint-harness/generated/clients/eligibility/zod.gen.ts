@@ -108,49 +108,6 @@ export const zDecisionList = z.object({
     hasNext: z.optional(z.boolean())
 });
 
-/**
- * Input data for expeditedSnap evaluation. All fields are optional — partial inputs trigger partial evaluation.
- */
-export const zExpeditedSnapRequest = z.object({
-    household: z.optional(z.object({
-        monthlyGrossIncome: z.optional(z.number()),
-        liquidResources: z.optional(z.number()),
-        monthlyShelterCost: z.optional(z.number()),
-        isMigrantFarmworker: z.optional(z.boolean())
-    })),
-    policy: z.optional(z.object({
-        incomeThreshold: z.optional(z.number()).default(150),
-        resourceThreshold: z.optional(z.number()).default(100)
-    }))
-});
-
-/**
- * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
- *
- */
-export const zExpeditedSnapResponse = z.array(z.union([
-    z.object({
-        fact: z.string(),
-        state: z.enum(['complete']),
-        value: z.unknown()
-    }),
-    z.object({
-        fact: z.string(),
-        state: z.enum(['placeholder']),
-        value: z.unknown()
-    }),
-    z.object({
-        fact: z.string(),
-        state: z.enum(['missing']),
-        missing: z.array(z.string())
-    }),
-    z.object({
-        fact: z.string(),
-        state: z.enum(['error']),
-        message: z.string()
-    })
-]));
-
 export const zDeterminationWritableWritable = z.object({
     applicationId: z.optional(z.uuid())
 });
@@ -420,7 +377,7 @@ export const zGetDecisionResponse = z.object({
 export const zCompleteDeterminationData = z.object({
     body: z.optional(z.never()),
     path: z.object({
-        determinationId: z.string()
+        determinationId: z.uuid()
     }),
     query: z.optional(z.never())
 });
@@ -444,47 +401,3 @@ export const zCompleteDeterminationResponse = z.object({
         application: z.optional(z.string())
     }).readonly())
 });
-
-export const zEvaluateExpeditedSnapData = z.object({
-    body: z.object({
-        household: z.optional(z.object({
-            monthlyGrossIncome: z.optional(z.number()),
-            liquidResources: z.optional(z.number()),
-            monthlyShelterCost: z.optional(z.number()),
-            isMigrantFarmworker: z.optional(z.boolean())
-        })),
-        policy: z.optional(z.object({
-            incomeThreshold: z.optional(z.number()).default(150),
-            resourceThreshold: z.optional(z.number()).default(100)
-        }))
-    }),
-    path: z.optional(z.never()),
-    query: z.optional(z.never())
-});
-
-/**
- * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
- *
- */
-export const zEvaluateExpeditedSnapResponse = z.array(z.union([
-    z.object({
-        fact: z.string(),
-        state: z.enum(['complete']),
-        value: z.unknown()
-    }),
-    z.object({
-        fact: z.string(),
-        state: z.enum(['placeholder']),
-        value: z.unknown()
-    }),
-    z.object({
-        fact: z.string(),
-        state: z.enum(['missing']),
-        missing: z.array(z.string())
-    }),
-    z.object({
-        fact: z.string(),
-        state: z.enum(['error']),
-        message: z.string()
-    })
-]));

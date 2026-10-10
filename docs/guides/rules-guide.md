@@ -181,12 +181,35 @@ declare integer cents.
 
 ## Endpoints
 
-A ruleset may declare a standalone POST endpoint:
+Every ruleset is evaluated at a POST endpoint under its domain. By default
+that is `/{domain}/rules/{ruleset-name}`, with the name in kebab-case, so
+intake's `interviewPrompts` is at `/intake/rules/interview-prompts`. No
+declaration is needed.
+
+To place it elsewhere, give a path. It is still under the domain:
 
 ```yaml
 endpoint:
-  path: /applications/evaluate-interview-prompts
+  path: /applications/evaluate-interview-prompts   # → /intake/applications/evaluate-interview-prompts
 ```
+
+To give a ruleset no endpoint, say so:
+
+```yaml
+endpoint: false
+```
+
+Every ruleset is reachable by default because evaluating one is safe to
+expose: it is a pure function of the inputs in the request, reading no stored
+data and changing nothing. The `rules` segment keeps a ruleset from claiming the
+URL of a collection that shares its name.
+
+The endpoints are documented in an OpenAPI document that resolve generates
+beside the rules file — `intake-rules-openapi.yaml` beside `intake-rules.yaml` —
+with the server `/{domain}`. Swagger, the API reference and the client
+generators read it like any other API. A rules file is not merged into its
+domain's OpenAPI document, so a domain can have any number of documents, and a
+rules file needs none.
 
 Path parameters are not permitted. Nothing binds a path segment to ruleset
 inputs, so a parameter would be accepted and silently ignored — the path would

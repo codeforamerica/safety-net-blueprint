@@ -11,7 +11,7 @@ import { validateAll, getValidationStatus } from './spec-validator.js';
 import { initSchemaRegistry } from './validator.js';
 import { registerConfigManaged } from './config-registry.js';
 import { discover, load, extract } from '@codeforamerica/blueprint-core';
-import { contractsOfType, graphsOf, unresolvedRulesWarning } from './contract-views.js';
+import { graphsOf, unresolvedRulesWarning } from './contract-views.js';
 /**
  * Perform setup: load specs and seed databases
  * @param {Object} options - Setup options
@@ -120,7 +120,7 @@ export async function performSetup({ specsDir, seedDir, docs: providedDocs = nul
   }
 
   // Discover composition definitions
-  const compositions = contractsOfType(docs, 'compositions', 'compositions');
+  const compositions = extract(docs, 'compositions');
   if (verbose && compositions.length > 0) {
     console.log(`\n✓ Discovered ${compositions.length} composition file(s):`);
     compositions.forEach(c => console.log(`  - ${c.domain} (${Object.keys(c.doc.compositions || {}).length} composition(s))`));
@@ -130,7 +130,7 @@ export async function performSetup({ specsDir, seedDir, docs: providedDocs = nul
   // one per ruleset beside its rules document, so recompiling produced the
   // identical bytes — and could stop doing so if the two ran under different
   // versions of the compiler.
-  const rulesFiles = contractsOfType(docs, 'rules', 'rulesets');
+  const rulesFiles = extract(docs, 'rules');
   const graphs = graphsOf(docs);
   const unresolved = unresolvedRulesWarning(rulesFiles, graphs);
   if (unresolved) console.warn(`\nWarning: ${unresolved}`);

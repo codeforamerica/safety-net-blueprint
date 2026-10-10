@@ -293,8 +293,18 @@ test('rules-schema endpoint block', async (t) => {
     assert.ok(!valid);
   });
 
-  await t.test('endpoint requires path', () => {
+  await t.test('endpoint may omit path, for the default /{domain}/rules/{ruleset-name}', () => {
     const { valid } = validate(doc({ test: { ...minimalRuleset, endpoint: {} } }));
+    assert.ok(valid);
+  });
+
+  await t.test('endpoint: false gives the ruleset no endpoint', () => {
+    const { valid } = validate(doc({ test: { ...minimalRuleset, endpoint: false } }));
+    assert.ok(valid);
+  });
+
+  await t.test('endpoint: true means nothing and is refused', () => {
+    const { valid } = validate(doc({ test: { ...minimalRuleset, endpoint: true } }));
     assert.ok(!valid);
   });
 

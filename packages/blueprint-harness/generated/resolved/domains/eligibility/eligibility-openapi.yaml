@@ -172,11 +172,7 @@ paths:
           $ref: ../../common/components/responses.yaml#/InternalError
   /determinations/{determinationId}/complete:
     parameters:
-      - name: determinationId
-        in: path
-        required: true
-        schema:
-          type: string
+      - $ref: "#/components/parameters/DeterminationIdParam"
     post:
       summary: Complete determination
       description: Marks the determination as complete once all program results are resolved.
@@ -202,33 +198,6 @@ paths:
         type: state-machine-action
         domain: eligibility
         id: complete
-  /determinations/evaluate-expedited-snap:
-    post:
-      summary: Evaluate expeditedSnap
-      operationId: evaluateExpeditedSnap
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ExpeditedSnapRequest"
-      responses:
-        "200":
-          description: expeditedSnap evaluation result.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ExpeditedSnapResponse"
-        "400":
-          $ref: ../../base/components/responses.yaml#/BadRequest
-        "500":
-          $ref: ../../base/components/responses.yaml#/InternalError
-      tags:
-        - Determinations
-      x-relationship:
-        type: ruleset
-        domain: eligibility
-        id: expeditedSnap
 components:
   parameters:
     DeterminationIdParam:
@@ -456,38 +425,3 @@ components:
           minimum: 0
         hasNext:
           type: boolean
-    ExpeditedSnapRequest:
-      type: object
-      description: Input data for expeditedSnap evaluation. All fields are optional — partial inputs trigger partial evaluation.
-      properties:
-        household:
-          type: object
-          description: Household financial circumstances at the time of application.
-          properties:
-            monthlyGrossIncome:
-              type: number
-              description: Total monthly gross income for all household members (dollars).
-            liquidResources:
-              type: number
-              description: Total liquid resources (cash, bank accounts) available to the household (dollars).
-            monthlyShelterCost:
-              type: number
-              description: Monthly shelter cost including rent/mortgage and utilities (dollars).
-            isMigrantFarmworker:
-              type: boolean
-              description: Whether any household member is a migrant or seasonal farmworker.
-        policy:
-          type: object
-          properties:
-            incomeThreshold:
-              type: number
-              default: 150
-              description: Monthly gross income threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
-            resourceThreshold:
-              type: number
-              default: 100
-              description: Liquid resource threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
-    ExpeditedSnapResponse:
-      allOf:
-        - $ref: ../../base/schemas/rules-evaluation.yaml#/EvaluationResult
-      description: Evaluation result for expeditedSnap.

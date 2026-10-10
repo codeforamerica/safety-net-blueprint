@@ -436,6 +436,11 @@ async function main() {
     console.log(`Overlay: ${overlayInput} (${authoredOverlays.length} document(s))`);
   }
 
+  // Each rules file's endpoints are documented in an OpenAPI document of its
+  // own, generated beside it. Added before resolving, so it is resolved,
+  // validated and written like any other document.
+  docs.push(...generate(docs, 'rules-api'));
+
   const generatedOverlays = generate(docs, 'overlay');
   const graphs = generate(docs, 'graph');
 

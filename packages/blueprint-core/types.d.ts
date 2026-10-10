@@ -116,8 +116,8 @@ export interface Doc {
  * operations will land on `collection` and `item`, schemas on the operations.
  */
 export interface ApiModel {
-  /** The path the document's first server puts it under, e.g. `/intake`; empty when none. */
-  base: string;
+  /** Every server the document lists, each with the path it puts the API under (e.g. `/intake`). Which to act as is the consumer's choice. */
+  servers: Array<{ url: string; base: string }>;
   /** Every resource, nested ones included, parents before children. */
   resources: ApiResource[];
 }
@@ -296,6 +296,8 @@ export function load(file: DiscoveredFile | string): Doc;
  */
 export function generate(docs: Doc[], type: 'overlay'): Overlay[];
 export function generate(docs: Doc[], type: 'graph'): Array<{ path: string; graph: Graph }>;
+/** The OpenAPI document each rules file's endpoints are documented in, positioned beside it, for a caller to add to the set it resolves. */
+export function generate(docs: Doc[], type: 'rules-api'): Doc[];
 export function generate(
   docs: Doc[],
   type: 'postman',
@@ -354,10 +356,37 @@ export interface ConfigEntry {
 export interface StateMachineEntry {
   domain: string;
   object: string;
+  /** @deprecated Ignored. A machine governs the resource in its domain named for its object; see `api` and `resource`. */
   apiSpec: string | null;
+  /** The OpenAPI document declaring the resource the machine governs; null when nothing in its domain serves it. */
+  api: Doc | null;
+  /** That resource, in `api.model()`; null with `api`. */
+  resource: ApiResource | null;
   stateMachine: Record<string, unknown>;
   machine: Record<string, unknown>;
   relativePath: string | null;
+}
+
+/** A compositions document, with what it is about. */
+export interface CompositionsEntry {
+  domain: string;
+  doc: Record<string, unknown>;
+  filePath: string;
+  relativePath: string | null;
+  /** The OpenAPI document declaring the resource its compositions name; null when the domain declares none of them. */
+  api: Doc | null;
+  /** That resource, in `api.model()`. */
+  resource: ApiResource | null;
+}
+
+/** A rules document, with the route each ruleset is evaluated at. */
+export interface RulesEntry {
+  domain: string;
+  doc: Record<string, unknown>;
+  filePath: string;
+  relativePath: string | null;
+  /** `/{domain}` and the ruleset's endpoint path, or `/{domain}/rules/{ruleset-name}` when it declares none. Rulesets with `endpoint: false` are absent. */
+  rulesets: Array<{ name: string; path: string }>;
 }
 
 /**
@@ -377,6 +406,8 @@ export function extract(
   type: 'relationships'
 ): Map<string, { path: string; method: string }>;
 export function extract(docs: Doc[], type: 'state-machines'): StateMachineEntry[];
+export function extract(docs: Doc[], type: 'compositions'): CompositionsEntry[];
+export function extract(docs: Doc[], type: 'rules'): RulesEntry[];
 export function extract(docs: Doc[], type: 'sla-types'): SlaTypesEntry[];
 export function extract(docs: Doc[], type: 'metrics'): MetricsEntry[];
 export function extract(docs: Doc[], type: 'config'): ConfigEntry[];

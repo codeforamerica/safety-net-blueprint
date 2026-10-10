@@ -30,9 +30,11 @@ if (!stateMachines.length) {
 
 // A base state machine declares shared procedures and no machines of its
 // own; there is nothing to document for it.
+// What each machine attaches to comes from core, which needs the whole set.
+const entries = extract(discover(resolvedDir).map(load), 'state-machines');
 const domains = stateMachines
   .filter((doc) => doc.domain && Array.isArray(doc.content?.machines))
-  .map(stateMachineView);
+  .map((doc) => stateMachineView(doc, entries));
 
 const eventIndex = buildEventIndex(stateMachines);
 
