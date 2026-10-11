@@ -97,7 +97,7 @@
       <div id="sidebar-nav">
         <div class="nav-section">
       <div class="nav-section-label">Methods</div>
-      <a href="#group-events" class="nav-link">Events <span class="nav-count">4</span></a><a href="#group-registry" class="nav-link">Registry <span class="nav-count">1</span></a><a href="#group-policies" class="nav-link">Policies <span class="nav-count">1</span></a><a href="#group-search" class="nav-link">Search <span class="nav-count">1</span></a>
+      <a href="#section-methods" class="nav-link">All methods <span class="nav-count">1</span></a>
     </div>
     <div class="nav-section">
         <div class="nav-section-label">Constants</div>
@@ -105,226 +105,19 @@
       </div>
     <div class="nav-section">
         <div class="nav-section-label">Types</div>
-        <a href="#type-Event" class="nav-link">Event</a><a href="#type-Policy" class="nav-link">Policy</a><a href="#type-SearchResult" class="nav-link">SearchResult</a><a href="#type-EventList" class="nav-link">EventList</a><a href="#type-PolicyList" class="nav-link">PolicyList</a><a href="#type-SearchFacet" class="nav-link">SearchFacet</a><a href="#type-SearchResultAttribute" class="nav-link">SearchResultAttribute</a><a href="#type-SearchResultList" class="nav-link">SearchResultList</a>
+        <a href="#type-SearchResult" class="nav-link">SearchResult</a><a href="#type-SearchFacet" class="nav-link">SearchFacet</a><a href="#type-SearchResultAttribute" class="nav-link">SearchResultAttribute</a><a href="#type-SearchResultList" class="nav-link">SearchResultList</a>
       </div>
       </div>
     </nav>
     <main id="content">
-      <section id="group-events" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Events (4)</h2>
-        <div id="ep-listEvents" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">listEvents<span style="color:#aaa;font-weight:400;">()</span></span>
-      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">You can provide a client instance returned by `createClient()` instead of</span>
-      <a href="../api-reference/platform.html#op-get-events" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
-      <a href="#ep-listEvents" class="permalink" title="Link to this method">#</a>
-    </summary>
-    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">platform.listEvents({
-  query: { q?: string, sort?: string, type?: string, source?: string, subject?: string, traceid?: string, causationid?: string, start?: string, end?: string, limit?: number, offset?: number },
-})</pre>
-      
-    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
-      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
-      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><a href="search-helpers.html" style="font-family:monospace;font-weight:600;color:#5650BE;text-decoration:none;" title="See Search Helpers">q <span style="font-size:10px;font-weight:400;">search →</span></a></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
-    </tr><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">sort</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
-    </tr><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">type</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
-    </tr><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">source</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
-    </tr><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">subject</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
-    </tr><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">traceid</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
-    </tr><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">causationid</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
-    </tr><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">start</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
-    </tr><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">end</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
-    </tr><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">limit</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">number</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
-    </tr><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">offset</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">number</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
-    </tr></tbody></table>
-    </div>
-    </div>
-  </details>
-</div><div id="ep-publishEvent" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">publishEvent<span style="color:#aaa;font-weight:400;">()</span></span>
-      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Publish an event</span>
-      <a href="../api-reference/platform.html#op-post-events" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
-      <a href="#ep-publishEvent" class="permalink" title="Link to this method">#</a>
-    </summary>
-    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">platform.publishEvent({ body: { ... } })</pre>
-      
-    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
-      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
-      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
-    </tr></tbody></table>
-    </div>
-    </div>
-  </details>
-</div><div id="ep-streamEvents" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">streamEvents<span style="color:#aaa;font-weight:400;">()</span></span>
-      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Stream domain events (SSE)</span>
-      <a href="../api-reference/platform.html#op-get-events-stream" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
-      <a href="#ep-streamEvents" class="permalink" title="Link to this method">#</a>
-    </summary>
-    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:0;">platform.streamEvents()</pre>
-      
-    </div>
-  </details>
-</div><div id="ep-getEvent" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getEvent<span style="color:#aaa;font-weight:400;">(eventId)</span></span>
-      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get a domain event</span>
-      <a href="../api-reference/platform.html#op-get-events-eventId" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
-      <a href="#ep-getEvent" class="permalink" title="Link to this method">#</a>
-    </summary>
-    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">platform.getEvent({ path: { eventId: string } })</pre>
-      
-    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
-      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
-      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">eventId</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
-    </tr></tbody></table>
-    </div>
-    </div>
-  </details>
-</div>
-      </section><section id="group-registry" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Registry (1)</h2>
-        <div id="ep-listPolicies" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">listPolicies<span style="color:#aaa;font-weight:400;">()</span></span>
-      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">List policies</span>
-      <a href="../api-reference/platform.html#op-get-registry-policies" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
-      <a href="#ep-listPolicies" class="permalink" title="Link to this method">#</a>
-    </summary>
-    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">platform.listPolicies({
-  query: { q?: string, limit?: number, offset?: number, sort?: string },
-})</pre>
-      
-    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
-      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
-      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><a href="search-helpers.html" style="font-family:monospace;font-weight:600;color:#5650BE;text-decoration:none;" title="See Search Helpers">q <span style="font-size:10px;font-weight:400;">search →</span></a></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
-    </tr><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">limit</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">number</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
-    </tr><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">offset</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">number</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
-    </tr><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">sort</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
-    </tr></tbody></table>
-    </div>
-    </div>
-  </details>
-</div>
-      </section><section id="group-policies" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Policies (1)</h2>
-        <div id="ep-getPolicy" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getPolicy<span style="color:#aaa;font-weight:400;">(policyId)</span></span>
-      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get a policy</span>
-      <a href="../api-reference/platform.html#op-get-registry-policies-policyId" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
-      <a href="#ep-getPolicy" class="permalink" title="Link to this method">#</a>
-    </summary>
-    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
-      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">platform.getPolicy({ path: { policyId: string } })</pre>
-      
-    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
-      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
-      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">policyId</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
-      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
-    </tr></tbody></table>
-    </div>
-    </div>
-  </details>
-</div>
-      </section><section id="group-search" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Search (1)</h2>
-        <div id="ep-search" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+      <section id="section-methods" style="margin-bottom:2.5rem;">
+      <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Methods (1)</h2>
+      <div id="ep-search" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
       <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">search<span style="color:#aaa;font-weight:400;">()</span></span>
-      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Search across resources</span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">You can provide a client instance returned by `createClient()` instead of</span>
       <a href="../api-reference/platform.html#op-get-search" title="View in API Reference" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;flex-shrink:0;">API ref →</a>
       <a href="#ep-search" class="permalink" title="Link to this method">#</a>
     </summary>
@@ -360,7 +153,7 @@
     </div>
   </details>
 </div>
-      </section><section id="section-constants" style="margin-bottom:2.5rem;">
+    </section><section id="section-constants" style="margin-bottom:2.5rem;">
         <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Constants (1)</h2>
         <div id="const-SearchResultType" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
@@ -374,36 +167,8 @@
   </details>
 </div>
       </section><section id="section-types" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (8)</h2>
-        <div id="type-Event" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <code style="font-size:13px;font-weight:700;color:#2B1A78;">Event</code>
-      <span style="font-size:11px;color:#aaa;">2 fields</span>
-      <a href="#type-Event" class="permalink" title="Link to this type">#</a>
-    </summary>
-    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
-      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">Event</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">type</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">description</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
-      <div style="line-height:1.8;color:#666;">}</div>
-    </div>
-  </details>
-</div><div id="type-Policy" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <code style="font-size:13px;font-weight:700;color:#2B1A78;">Policy</code>
-      <span style="font-size:11px;color:#aaa;">5 fields</span>
-      <a href="#type-Policy" class="permalink" title="Link to this type">#</a>
-    </summary>
-    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
-      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">Policy</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">id</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">citation</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">citationUrl</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">description</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">programs</span><span style="color:#888;">?:</span> <span style="color:#006152;">array[string]</span></div>
-      <div style="line-height:1.8;color:#666;">}</div>
-    </div>
-  </details>
-</div><div id="type-SearchResult" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (4)</h2>
+        <div id="type-SearchResult" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
       <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
@@ -414,34 +179,6 @@
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">SearchResult</span> <span style="color:#666;">{</span></div>
       <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">id</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">type</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;person&quot;, &quot;case&quot;, &quot;application&quot;, &quot;task&quot;, &quot;appointment&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">title</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">score</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">attributes</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">createdAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">updatedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
-      <div style="line-height:1.8;color:#666;">}</div>
-    </div>
-  </details>
-</div><div id="type-EventList" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <code style="font-size:13px;font-weight:700;color:#2B1A78;">EventList</code>
-      <span style="font-size:11px;color:#aaa;">4 fields</span>
-      <a href="#type-EventList" class="permalink" title="Link to this type">#</a>
-    </summary>
-    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
-      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">EventList</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">?:</span> <span style="color:#006152;">boolean</span></div>
-      <div style="line-height:1.8;color:#666;">}</div>
-    </div>
-  </details>
-</div><div id="type-PolicyList" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
-  <details>
-    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
-      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
-      <code style="font-size:13px;font-weight:700;color:#2B1A78;">PolicyList</code>
-      <span style="font-size:11px;color:#aaa;">4 fields</span>
-      <a href="#type-PolicyList" class="permalink" title="Link to this type">#</a>
-    </summary>
-    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
-      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">PolicyList</span> <span style="color:#666;">{</span></div>
-      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">?:</span> <span style="color:#006152;">boolean</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>

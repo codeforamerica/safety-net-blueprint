@@ -1,6 +1,6 @@
 # Workflow State Machine
 
-Domain: `workflow` | API spec: [workflow-openapi.yaml](../../../contracts/workflow-openapi.yaml) | State machine: [workflow-state-machine.yaml](../../../contracts/workflow-state-machine.yaml)
+Domain: `workflow` | API: [workflow-openapi.yaml](../../../contracts/domains/workflow/workflow-openapi.yaml) | State machine: [workflow-state-machine.yaml](../../../contracts/workflow-state-machine.yaml)
 
 ---
 
