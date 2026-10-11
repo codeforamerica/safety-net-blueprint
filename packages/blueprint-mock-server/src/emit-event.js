@@ -34,10 +34,21 @@ export function emitEventEnvelope(envelope, store) {
   // but not persisted — they are not domain events observable via /platform/events.
   const isInfrastructureEvent = record.type?.startsWith('scheduling.');
   if (!isInfrastructureEvent) {
-    store.insertResource('events', record);
+    saveEvent(store, record);
   }
   eventBus.emit('domain-event', record);
   return record;
+}
+
+/**
+ * Save an event as it is. An event is a record of something that happened, not
+ * a resource, so the store adds no id and no timestamps of its own. A store
+ * written before `append` existed falls back to `insertResource`, whose events
+ * keep the timestamps it adds.
+ */
+function saveEvent(store, record) {
+  if (typeof store.append === 'function') store.append('events', record);
+  else store.insertResource('events', record);
 }
 
 // The optional CloudEvents attributes, which the events contract has an event
@@ -112,7 +123,7 @@ export function emitEvent({ domain, object, action, resourceId, subject, source,
     data,
   });
 
-  const stored = store.create('events', envelope);
-  eventBus.emit('domain-event', stored);
-  return stored;
+  saveEvent(store, envelope);
+  eventBus.emit('domain-event', envelope);
+  return envelope;
 }

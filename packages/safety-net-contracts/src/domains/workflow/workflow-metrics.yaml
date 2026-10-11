@@ -11,14 +11,14 @@ metrics:
       filter:
         "==":
           - var: type
-          - created
+          - workflow.task.created
     to:
       collection: events
       filter:
         "==":
           - var: type
-          - claimed
-    pairBy: resourceId
+          - workflow.task.claimed
+    pairBy: subject
     targets:
       - stat: p50
         operator: <
@@ -46,9 +46,15 @@ metrics:
       filter:
         "==":
           - var: type
-          - released
+          - workflow.task.released
     total:
       collection: events
+      # Every task transition: task events other than created and updated.
+      filter:
+        and:
+          - in: [workflow.task., {var: type}]
+          - "!=": [{var: type}, workflow.task.created]
+          - "!=": [{var: type}, workflow.task.updated]
     targets:
       - stat: ratio
         operator: <
@@ -60,10 +66,14 @@ metrics:
     aggregate: ratio
     source:
       collection: tasks
+      # Any SLA entry breached. JSON Logic has no path wildcard, so
+      # `slaInfo.*.status` read as missing and matched nothing.
       filter:
-        in:
-          - breached
-          - var: slaInfo.*.status
+        some:
+          - var: slaInfo
+          - "==":
+              - var: status
+              - breached
     total:
       collection: tasks
     targets:
@@ -77,12 +87,20 @@ metrics:
     aggregate: ratio
     source:
       collection: events
+      # The warning timer escalates the task with this reason; there is no
+      # event of its own.
       filter:
-        "==":
-          - var: type
-          - auto-escalate-sla-warning
+        and:
+          - "==": [{var: type}, workflow.task.escalated]
+          - "==": [{var: data.reason}, sla_deadline_approaching]
     total:
       collection: events
+      # Every task transition: task events other than created and updated.
+      filter:
+        and:
+          - in: [workflow.task., {var: type}]
+          - "!=": [{var: type}, workflow.task.created]
+          - "!=": [{var: type}, workflow.task.updated]
     targets:
       - stat: ratio
         operator: <

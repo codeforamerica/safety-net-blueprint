@@ -34,18 +34,18 @@ metrics:
     description: Median time from determination creation to completion.
     aggregate: duration
     from:
-      collection: determinations
+      collection: events
       filter:
         "==":
-          - var: status
-          - pending
+          - var: type
+          - eligibility.determination.created
     to:
       collection: events
       filter:
         "==":
           - var: type
           - eligibility.determination.complete
-    pairBy: resourceId
+    pairBy: subject
     targets:
       - stat: p50
         operator: <

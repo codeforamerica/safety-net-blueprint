@@ -278,6 +278,32 @@ test('emitEvent', async (t) => {
     }
   });
 
+  // ==========================================================================
+  // An event is not a resource
+  // ==========================================================================
+
+  await t.test('an event carries no createdAt or updatedAt, only its time', () => {
+    store.clearAll('events');
+    const built = emitEvent({ store, domain: 'workflow', object: 'task', action: 'created',
+      resourceId: 'abc123', source: '/workflow', now: '2024-01-01T00:00:00.000Z' });
+    const injected = emitEventEnvelope({ type: 'intake.interview.completed', source: '/intake', subject: 'i-1' }, store);
+
+    for (const event of [built, injected]) {
+      const stored = store.findById('events', event.id);
+      assert.ok(stored, 'stored under its own id');
+      assert.ok(!('createdAt' in stored) && !('updatedAt' in stored), `${stored.type} has no store timestamps`);
+      assert.ok(stored.time);
+    }
+  });
+
+  await t.test('a store without append still saves events, with its own timestamps', () => {
+    const { append, ...older } = createMemoryStore();
+    const stored = emitEventEnvelope({ type: 'intake.interview.completed', source: '/intake', subject: 'i-2' }, older);
+
+    assert.strictEqual(typeof append, 'function');
+    assert.ok(older.findById('events', stored.id), 'saved through insertResource');
+  });
+
   await t.test('emitEventEnvelope - defaults specversion and datacontenttype', () => {
     store.clearAll('events');
     const stored = emitEventEnvelope({

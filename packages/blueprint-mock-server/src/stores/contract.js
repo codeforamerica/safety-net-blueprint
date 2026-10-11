@@ -92,6 +92,13 @@
  *   and `updatedAt` when absent — **by mutating the argument**, which callers in
  *   this package rely on.
  *
+ * @property {(collection: string, record: Object) => void} append
+ *   Adds a record exactly as given, under its own id: no id minted, no
+ *   timestamps, no registered defaults. For records of something that happened
+ *   rather than resources — events, whose `time` says when and which never
+ *   change, so `createdAt` and `updatedAt` would only repeat or contradict it.
+ *   A record at an id already held replaces it, as `insertResource` does.
+ *
  * @property {(collection: string) => number} count
  *   Records in one collection, ignoring filters.
  *
@@ -108,8 +115,9 @@
  *   mechanism; this is the interchange one.
  *
  * @property {(snapshot: Object<string, Object[]>) => void} restore
- *   Replaces the contents of each named collection wholesale. Collections absent
- *   from the snapshot are left alone.
+ *   Replaces the contents of each named collection wholesale, each record exactly
+ *   as the snapshot has it, so a restored session matches the one snapshotted.
+ *   Collections absent from the snapshot are left alone.
  *
  * @property {() => void} close
  *   Releases whatever the implementation holds. A no-op for in-memory stores.
