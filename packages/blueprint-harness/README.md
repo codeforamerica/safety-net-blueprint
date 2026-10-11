@@ -42,7 +42,7 @@ So when you add a feature to a tooling package, adding a contract here that exer
 ### OpenAPI specs
 
 **[`contracts/domains/intake/intake-openapi.yaml`](contracts/domains/intake/intake-openapi.yaml)**
-- State machine RPC endpoint injection (`open`, `submit`, `withdraw`, `approve` actions)
+- State machine RPC endpoint injection (`submit`, `open`, `close`, `withdraw` actions)
 - `x-enum-source: "slaTypes[].id"` — SLA type code field populated from SLA types file
 - `x-enum-source: { source: "states[].id", machine: "Application" }` — status field populated from state machine
 - `x-relationship` expand-style relationship injection
@@ -59,6 +59,7 @@ So when you add a feature to a tooling package, adding a contract here that exer
 **[`contracts/domains/intake/intake-state-machine.yaml`](contracts/domains/intake/intake-state-machine.yaml)**
 - Multi-machine format (`machines[]` array with a single `Application` machine)
 - Action steps: `set` (record timestamps) and `emit` (fire domain events)
+- An actor guard: `withdraw` is limited to `applicant` and `case_worker`, so a caller without either gets a 403. The walk never calls it, so the walk passes with no roles
 - `x-event-type-prefix` injection — event types prefixed with `ca.` via state overlay
 - SLA clock states (`running`, `stopped`, `paused`) on each lifecycle state
 
@@ -103,8 +104,8 @@ So when you add a feature to a tooling package, adding a contract here that exer
 ### Overlays
 
 **[`contracts/overlays/enums.yaml`](contracts/overlays/enums.yaml)**
-- Extends the base `Domain` enum to add `intake` and `eligibility`
 - Extends the base `MetricCollection` enum to add `applications` and `determinations`
+- Replaces the base `RoleType` with the harness's roles, which guard actors are validated against and the demo page offers a caller
 - Uses `files:` (array/string form) rather than `file:` to target the base enums schema
 
 **[`contracts/overlays/state-overlay.yaml`](contracts/overlays/state-overlay.yaml)**

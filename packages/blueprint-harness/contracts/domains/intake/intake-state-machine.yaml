@@ -90,6 +90,10 @@ machines:
         transition:
           from: [draft, submitted, under_review]
           to: withdrawn
+        # Only the household or a case worker acting for it. The one action
+        # here limited by role, so a caller without one gets a 403.
+        guards:
+          - actors: [applicant, case_worker]
         steps:
           - emit:
               type: intake.application.withdrawn

@@ -87,6 +87,24 @@
     border-radius: 4px; border: 1px solid var(--line); background: var(--card); color: var(--ink);
   }
   #controls button:disabled { opacity: .4; cursor: not-allowed; }
+  /* Who the reference calls as. Every request carries it, the way a real
+     client's sign-in would, and the events it causes record it. */
+  .caller { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; margin: 0 0 .6rem; font-size: .85rem; color: var(--muted); }
+  .caller input, .caller select { width: auto; }
+  .caller .caller-id { width: 9rem; }
+  .caller input.caller-roles { width: 15rem; }
+  details.caller-roles { position: relative; }
+  details.caller-roles summary {
+    cursor: pointer; font-family: var(--mono); font-size: .8rem; padding: .4rem .5rem; min-width: 12rem;
+    border: 1px solid var(--line); border-radius: 4px; background: #fcfcfc; color: var(--ink);
+  }
+  details.caller-roles .menu {
+    position: absolute; z-index: 5; margin-top: .2rem; padding: .3rem .5rem; min-width: 100%;
+    border: 1px solid var(--line); border-radius: 4px; background: var(--card); box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  }
+  details.caller-roles .menu label { display: flex; gap: .4rem; align-items: center; padding: .15rem 0; font-family: var(--mono); font-size: .8rem; color: var(--ink); white-space: nowrap; }
+  details.caller-roles .menu input { width: auto; }
+  .caller .caller-id:disabled { opacity: .4; }
 
 
   #shell {
@@ -316,7 +334,6 @@ const pageConfig = (() => {
   const tag = document.getElementById('page-config');
   try { return tag ? JSON.parse(tag.textContent) : {}; } catch { return {}; }
 })();
-const CALLER = 'the-explorer';
 
 let docs;          // every document in the set
 let mock;          // the server derived from them
@@ -351,8 +368,99 @@ const loadContracts = async () => {
   return response.json();
 };
 
+// Who the reference calls as, chosen above each request. The walk always
+// calls as itself, so a choice made while exploring cannot break a step.
+const WALK_CALLER = 'the-explorer';
+const caller = { id: WALK_CALLER, type: 'user', roles: [] };
+
+/**
+ * The caller headers a request carries.
+ *
+ * The mock reads the kind of actor from the roles, so a kind other than
+ * `user` goes in as one; an unauthenticated caller sends no identity at all.
+ * A real deployment takes all of this from the sign-in token instead.
+ */
+const callerHeaders = () => {
+  if (!showAll) return { 'X-Caller-Id': WALK_CALLER };
+  const id = caller.id.trim();
+  if (caller.type === 'unauthenticated' || !id) return {};
+  const roles = caller.roles.filter((role) => role !== caller.type);
+  if (caller.type !== 'user') roles.unshift(caller.type);
+  return { 'X-Caller-Id': id, ...(roles.length ? { 'X-Caller-Roles': roles.join(',') } : {}) };
+};
+
+/** The kinds of actor an event can record, as the events contract lists them. */
+const actorTypes = () => {
+  const schema = docs.find((doc) => doc.type === 'schema' && doc.content?.$defs?.Event);
+  const parts = schema?.content.$defs.Event.allOf ?? [];
+  const authtype = parts.map((part) => part.properties?.authtype).find(Boolean);
+  return (authtype?.enum ?? ['user']).filter((value) => value !== null);
+};
+
+/**
+ * The roles a caller can hold: the set's RoleType, which its guards are
+ * validated against. Empty when the set declares none.
+ */
+const roleTypes = () => {
+  const schema = docs.find((doc) => Array.isArray(doc.content?.$defs?.RoleType?.enum));
+  return schema?.content.$defs.RoleType.enum ?? [];
+};
+
+/** The "Calling as" row: an id, a kind of actor, and roles. */
+const callerRow = () => {
+  const row = el('div', '', 'caller');
+  const id = el('input', '', 'caller-id');
+  id.type = 'text';
+  id.value = caller.id;
+  id.setAttribute('aria-label', 'Caller id');
+  id.oninput = () => { caller.id = id.value; };
+
+  const type = el('select', '', 'caller-type');
+  type.setAttribute('aria-label', 'Caller type');
+  type.append(...actorTypes().map((kind) => el('option', kind)));
+  type.value = caller.type;
+  id.disabled = caller.type === 'unauthenticated';
+  type.onchange = () => { caller.type = type.value; id.disabled = type.value === 'unauthenticated'; };
+
+  // A dropdown of the declared roles, any number checked; a box to type them
+  // into for a set that declares none.
+  let roles;
+  const declared = roleTypes();
+  if (declared.length > 0) {
+    roles = el('details', '', 'caller-roles');
+    const summary = el('summary');
+    const label = () => { summary.textContent = caller.roles.length ? caller.roles.join(', ') : 'no roles'; };
+    roles.append(summary);
+    const list = el('div', '', 'menu');
+    for (const role of declared) {
+      const option = el('label');
+      const box = el('input');
+      box.type = 'checkbox';
+      box.checked = caller.roles.includes(role);
+      box.onchange = () => {
+        caller.roles = declared.filter((name) => name === role ? box.checked : caller.roles.includes(name));
+        label();
+      };
+      option.append(box, document.createTextNode(role));
+      list.append(option);
+    }
+    roles.append(list);
+    label();
+  } else {
+    roles = el('input', '', 'caller-roles');
+    roles.type = 'text';
+    roles.value = caller.roles.join(', ');
+    roles.placeholder = 'roles, comma-separated';
+    roles.oninput = () => { caller.roles = roles.value.split(',').map((role) => role.trim()).filter(Boolean); };
+  }
+  roles.setAttribute('aria-label', 'Caller roles');
+
+  row.append(document.createTextNode('Calling as'), id, type, roles);
+  return row;
+};
+
 const call = async (method, path, body) => {
-  const init = { method, headers: { 'X-Caller-Id': CALLER } };
+  const init = { method, headers: callerHeaders() };
   if (body instanceof FormData) {
     init.body = body;
   } else if (body !== undefined) {
@@ -2455,6 +2563,7 @@ const stepPanel = async (op, { live = true, number = null } = {}) => {
   if (group) panel.append(el('p', group.title, 'kindline'));
   panel.append(el('h2', number ? `${String(number).padStart(2, '0')} · ${op.step}` : (op.step ?? op.summary)));
   const sending = withParams(op.path, params) + (op.query ? `?${op.query}` : '');
+  if (showAll && live) panel.append(callerRow());
   panel.append(el('p', `${op.method} ${sending}`, 'path'));
 
   const bodyRef = op.operation.requestBody?.content?.['application/json']?.schema?.$ref;

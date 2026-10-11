@@ -39,11 +39,10 @@ $defs:
   RoleType:
     type: string
     description: |
-      Authorization roles that determine base permissions and data scoping. Used in state machine actors arrays and JWT role claims.
-      - readonly: Read-only access to allowed resources - readwrite: Read and write access to allowed resources - admin: Administrative access including configuration - system: Automated service account for background and inter-service operations
-      Domain packages extend this enum via overlay to add program-specific roles.
+      Harness authorization roles. Replaces the base RoleType with the roles the harness's state machine guards name.
+      - applicant: The household applying, acting on its own application - case_worker: Processes applications - supervisor: Oversees case workers - system: Automated service account for background and inter-service operations
     enum:
-      - readonly
-      - readwrite
-      - admin
+      - applicant
+      - case_worker
+      - supervisor
       - system

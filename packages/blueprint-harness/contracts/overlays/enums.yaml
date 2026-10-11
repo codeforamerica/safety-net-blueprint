@@ -23,3 +23,25 @@ actions:
         - applications
         - determinations
         - events
+
+  # Replace the generic base roles with the harness's own, as a program would.
+  # Guard actors are validated against this list, and the demo page offers it
+  # as the roles a caller can hold.
+  - target: "$.$defs.RoleType"
+    files: https://blueprint.codeforamerica.org/base/schemas/enums.yaml
+    description: Replace the base roles with the harness's
+    replace:
+      type: string
+      description: >
+        Harness authorization roles. Replaces the base RoleType with the roles
+        the harness's state machine guards name.
+
+        - applicant: The household applying, acting on its own application
+        - case_worker: Processes applications
+        - supervisor: Oversees case workers
+        - system: Automated service account for background and inter-service operations
+      enum:
+        - applicant
+        - case_worker
+        - supervisor
+        - system

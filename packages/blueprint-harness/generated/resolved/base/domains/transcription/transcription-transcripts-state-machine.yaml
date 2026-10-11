@@ -24,10 +24,6 @@ machines:
         steps:
           - emit:
               type: transcription.transcript.paused
-              subject: $object.id
-              data:
-                id: $object.id
-                status: paused
       - id: resume
         description: Put the conversation back on the record.
         transition:
@@ -36,10 +32,6 @@ machines:
         steps:
           - emit:
               type: transcription.transcript.resumed
-              subject: $object.id
-              data:
-                id: $object.id
-                status: recording
       - id: close
         description: End the transcript.
         transition:
@@ -53,8 +45,3 @@ machines:
               value: $now
           - emit:
               type: transcription.transcript.closed
-              subject: $object.id
-              data:
-                id: $object.id
-                status: closed
-                closedAt: $now

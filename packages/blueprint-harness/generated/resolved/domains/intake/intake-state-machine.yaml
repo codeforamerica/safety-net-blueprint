@@ -82,6 +82,10 @@ machines:
             - submitted
             - under_review
           to: withdrawn
+        guards:
+          - actors:
+              - applicant
+              - case_worker
         steps:
           - emit:
               type: intake.application.withdrawn
