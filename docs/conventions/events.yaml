@@ -287,12 +287,13 @@ x_events:
         request's lifecycle, including events from state machine transitions
         and CRUD lifecycle effects triggered by the same call.
 
-        When no `traceparent` is present on the inbound request, the attribute
-        must be omitted from emitted events — implementations must not generate
-        a synthetic value.
+        When no `traceparent` is present on the inbound request, the
+        implementation starts a trace, as W3C Trace Context has the first traced
+        service do, and every event that request causes carries it.
 
-        Clients must include `traceparent` on all requests to enable end-to-end
-        tracing. The trace ID component is stable across the full causal chain,
+        Clients that are already part of a trace include their `traceparent`,
+        so the trace continues end to end. The trace ID component is stable
+        across the full causal chain,
         so filtering events by trace ID reconstructs the complete set of
         operations triggered by a single originating request.
 

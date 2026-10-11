@@ -22,7 +22,7 @@ import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, d
 import { emitEvent } from './emit-event.js';
 import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
 import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX } from './search-engine.js';
-import { extractCallerRoles, callerHeader } from './auth-context.js';
+import { extractCallerRoles, callerHeader, traceparentOf } from './auth-context.js';
 
 /**
  * SLA types declared for one domain.
@@ -165,7 +165,7 @@ function createSingletonUpdateHandler(apiMetadata, endpoint, parentParam, parent
         data: eventData,
         callerId: callerHeader(request, 'x-caller-id'),
         callerRoles: extractCallerRoles(request),
-        traceparent: callerHeader(request, 'traceparent'),
+        traceparent: traceparentOf(request),
         now: result.updatedAt,
       });
     } catch (e) { /* non-fatal */ }

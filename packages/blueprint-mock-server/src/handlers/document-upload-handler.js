@@ -20,7 +20,7 @@
 
 import { emitEvent } from '../emit-event.js';
 import { assertFetchShaped } from '../http/request.js';
-import { callerHeader } from '../auth-context.js';
+import { callerHeader, extractCallerRoles, traceparentOf } from '../auth-context.js';
 
 /**
  * Pull the uploaded file out of a multipart body.
@@ -134,6 +134,8 @@ export function createDocumentUploadHandler(baseUrl, { store } = {}) {
       store, domain: 'document-management', object: 'document', action: 'created',
       resourceId: document.id, source: '/document-management',
       data: { documentId, latestVersionId: versionId },
+      callerId: callerHeader(request, 'x-caller-id'), callerRoles: extractCallerRoles(request),
+      traceparent: traceparentOf(request),
     });
 
     return Response.json(document, {
@@ -181,6 +183,8 @@ export function createDocumentVersionUploadHandler(baseUrl, { store } = {}) {
       store, domain: 'document-management', object: 'document-version', action: 'uploaded',
       resourceId: versionId, source: '/document-management',
       data: { documentId, versionId, versionNumber },
+      callerId: callerHeader(request, 'x-caller-id'), callerRoles: extractCallerRoles(request),
+      traceparent: traceparentOf(request),
     });
 
     return Response.json(version, {

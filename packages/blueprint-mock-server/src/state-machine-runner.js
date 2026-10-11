@@ -7,7 +7,7 @@
 import { findOperation, evaluateGuards, applySteps } from './state-machine-engine.js';
 import { updateSlaInfo } from './sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
-import { emitEventEnvelope } from './emit-event.js';
+import { emitEventEnvelope, authContext } from './emit-event.js';
 import { mergeByPrecedence, buildInlineRules } from './collection-utils.js';
 import { validate } from './validator.js';
 
@@ -157,6 +157,7 @@ export function executeTransition({
         time: timestamp,
         traceparent,
         causationid: event.causationid || causationid || undefined,
+        ...authContext(callerId, callerRoles),
       }, store);
     } catch (e) {
       console.error(`Failed to emit event "${event.type}":`, e.message);

@@ -403,6 +403,36 @@ test('executeTransition — emit: step stores event in database', () => {
   assert.strictEqual(emitted.data.resourceId, 'res-steps-2');
 });
 
+test('executeTransition — an emitted event records who acted and carries the trace', () => {
+  store.insertResource('testresources', { id: 'res-steps-auth', status: 'pending' });
+  const traceparent = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01';
+
+  const result = executeTransition({
+    store,
+    resourceName: 'testresources',
+    resourceId: 'res-steps-auth',
+    trigger: 'submit',
+    callerId: 'user-1',
+    callerRoles: [ROLES.CASE_WORKER],
+    stateMachine: makeStateMachine(),
+    machine: makeMachine([{
+      id: 'submit',
+      transition: { from: 'pending', to: 'submitted' },
+      steps: [{ emit: { type: 'test.testresource.submitted' } }]
+    }]),
+    traceparent,
+    now: '2025-01-01T00:00:00Z'
+  });
+
+  assert.strictEqual(result.success, true);
+  const emitted = store.findAll('events', {}).items.find(e => e.type === 'test.testresource.submitted');
+  assert.strictEqual(emitted.authid, 'user-1');
+  assert.strictEqual(emitted.authtype, 'user');
+  assert.strictEqual(emitted.traceparent, traceparent);
+  assert.ok(!('data' in emitted), 'an emit with no data carries none');
+  assert.ok(!('causationid' in emitted), 'a transition a request started has no causing event');
+});
+
 test('executeTransition — emit: subject override uses value expression instead of resourceId', () => {
   store.insertResource('testresources', { id: 'res-steps-2b', status: 'pending', parentId: 'parent-app-99' });
 

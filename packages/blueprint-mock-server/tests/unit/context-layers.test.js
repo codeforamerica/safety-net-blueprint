@@ -236,7 +236,7 @@ test('createCreateHandler — emitted event includes authid and authtype from ca
   assert.strictEqual(createdEvent.authtype, 'user');
 });
 
-test('createCreateHandler — emitted event has null authid and authtype when no caller headers', async () => {
+test('createCreateHandler — emitted event leaves out authid and authtype when no caller headers, and starts a trace', async () => {
   store.clearAll('testitems');
   store.clearAll('events');
 
@@ -252,6 +252,7 @@ test('createCreateHandler — emitted event has null authid and authtype when no
   const { items } = store.findAll('events', {});
   const createdEvent = items.find(e => e.type === 'test.testitem.created');
   assert.ok(createdEvent, 'must have emitted a created event');
-  assert.strictEqual(createdEvent.authid, null);
-  assert.strictEqual(createdEvent.authtype, null);
+  assert.ok(!('authid' in createdEvent), 'no caller, no authid');
+  assert.ok(!('authtype' in createdEvent), 'no caller, no authtype');
+  assert.match(createdEvent.traceparent, /^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/, 'a request with no trace starts one');
 });

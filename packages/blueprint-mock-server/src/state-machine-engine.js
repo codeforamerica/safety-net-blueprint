@@ -590,7 +590,8 @@ export function applySteps(steps, resource, context, store) {
     } else if (step.set) {
       resource[step.set.field] = resolveValue(step.set.value, context);
     } else if (step.emit) {
-      const data = {};
+      // An emit declaring no data carries none, rather than an empty object.
+      const data = step.emit.data ? {} : undefined;
       for (const [key, value] of Object.entries(step.emit.data || {})) {
         data[key] = resolveValue(value, context);
       }

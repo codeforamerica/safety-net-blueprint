@@ -15,7 +15,7 @@ import { eventBus } from './event-bus.js';
 import { executeTransition } from './state-machine-runner.js';
 import { applySteps, evaluateGuards } from './state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
-import { emitEvent, emitEventEnvelope } from './emit-event.js';
+import { emitEvent, emitEventEnvelope, authContext } from './emit-event.js';
 import { deriveCollectionName, mergeByPrecedence, buildInlineRules, toKebabCase } from './collection-utils.js';
 
 /**
@@ -316,6 +316,7 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
               traceparent: event.traceparent,
               causationid: event.id,
               time: now,
+              ...authContext('system'),
             }, store);
           } catch (e) {
             console.error(`onEvent emit "${evt.type}" failed:`, e.message);

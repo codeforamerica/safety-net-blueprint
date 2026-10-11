@@ -263,6 +263,7 @@ function dispatchStubResponse(stub, envelope, store) {
       type: callbackEvent,
       source: '/scheduler',
       subject: envelope.subject,
+      traceparent: envelope.traceparent,
       causationid: envelope.id,
       data: firedData,
     }, store);
@@ -296,6 +297,7 @@ function dispatchStubResponse(stub, envelope, store) {
     type: fullType,
     source: source || '/system',
     subject: subject !== undefined ? subject : envelope.subject,
+    traceparent: envelope.traceparent,
     causationid: envelope.id,
     data: Object.keys(resolvedData).length > 0 ? resolvedData : null,
   }, store);

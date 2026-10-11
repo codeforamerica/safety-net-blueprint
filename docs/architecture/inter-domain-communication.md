@@ -130,7 +130,7 @@ Filtering by `type` or `source` narrows results to a specific domain or event ki
 
 Conforming implementations must propagate the W3C Trace Context `traceparent` header from each inbound HTTP request to every event emitted during that request's lifecycle. The `traceparent` value is included as a CloudEvents extension attribute (per the [CloudEvents Distributed Tracing extension](https://github.com/cloudevents/spec/blob/main/cloudevents/extensions/distributed-tracing.md)) and must not be modified — it carries a trace ID (stable across the full causal chain) and a parent span ID (the immediate parent operation).
 
-Clients must forward the `traceparent` header on all requests to enable end-to-end tracing. When an inbound request carries no `traceparent`, the implementation omits the attribute from emitted events rather than generating a synthetic value.
+Clients that are already part of a trace send their `traceparent` header, so the trace continues end to end. When an inbound request carries no `traceparent`, the implementation starts a trace, as W3C Trace Context has the first traced service do, and every event that request causes carries it. A client that does not trace still gets its events grouped.
 
 The trace ID is stable across the entire chain — every event emitted from a single HTTP request shares the same trace ID, so the complete causal trail for any operation is recoverable by filtering events on `traceparent` prefix or by querying an OTLP-compatible backend.
 

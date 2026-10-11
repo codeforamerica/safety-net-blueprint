@@ -10,7 +10,7 @@ import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
 import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { extractCallerRoles, callerHeader } from '../auth-context.js';
+import { extractCallerRoles, callerHeader, traceparentOf } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
 
@@ -90,7 +90,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
       const callerId = callerHeader(request, 'x-caller-id');
       const now = new Date().toISOString();
-      const traceparent = callerHeader(request, 'traceparent');
+      const traceparent = traceparentOf(request);
       // A spec with no localhost server URL has no domain prefix, and
       // prefixing with an empty string produced ".application.created" — a
       // malformed CloudEvents type with a leading dot. Better to emit an
