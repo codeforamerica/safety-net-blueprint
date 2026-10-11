@@ -1,0 +1,33 @@
+{
+  "allOf": [
+    {
+      "type": "object",
+      "description": "Client-writable fields of a transcript.",
+      "properties": {
+        "subjectType": {
+          "type": "string",
+          "description": "What kind of thing the transcript records, e.g. `interview` or `call`."
+        },
+        "subjectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind."
+        },
+        "provider": {
+          "type": "string",
+          "description": "The transcription provider that produced its lines, e.g. `aws-transcribe`."
+        },
+        "client": {
+          "type": "string",
+          "description": "The client that wrote to it, and its version."
+        }
+      }
+    },
+    {
+      "type": "object",
+      "description": "Payload to start a transcript. Every field is optional; id, status,\ncreatedAt and updatedAt are set by the server.\n"
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/TranscriptCreate"
+}

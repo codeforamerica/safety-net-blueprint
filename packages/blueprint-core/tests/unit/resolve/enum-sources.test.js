@@ -284,3 +284,69 @@ describe('injectEnumSources — the domains the set defines', () => {
     assert.match(result.warnings.join('\n'), /no values found for "slaTypes"/);
   });
 });
+
+describe('injectEnumSources — states named without a machine', () => {
+  test('come from the annotated document\'s own domain, whichever state machine was read last', () => {
+    // A set's workflow machine, then a framework machine in another domain
+    // read after it. The workflow schema names no machine, and must still get
+    // workflow's states.
+    const workflow = doc(
+      { domain: 'workflow', machines: [{ object: 'Task', states: [{ id: 'pending' }, { id: 'completed' }] }] },
+      { relativePath: 'domains/workflow/workflow-state-machine.yaml', type: 'state-machine' }
+    );
+    const transcripts = doc(
+      { domain: 'platform', machines: [{ object: 'Transcript', states: [{ id: 'recording' }, { id: 'closed' }] }] },
+      { relativePath: 'base/domains/platform/platform-transcripts-state-machine.yaml', type: 'state-machine' }
+    );
+    const schema = doc(
+      { domain: 'workflow', $defs: { Task: { properties: { status: { type: 'string', 'x-enum-source': 'states[].id' } } } } },
+      { relativePath: 'domains/workflow/workflow-schema.yaml', type: 'schema' }
+    );
+
+    const result = injectEnumSources([workflow, transcripts, schema]);
+    const status = result.docs.find((d) => d.relativePath === 'domains/workflow/workflow-schema.yaml').content.$defs.Task.properties.status;
+    assert.deepEqual(status.enum, ['pending', 'completed']);
+  });
+});
+
+describe('injectEnumSources — registry source', () => {
+  const registry = (relativePath, type, ids) => doc(
+    { type, domain: 'transcription', entries: Object.fromEntries(ids.map((id) => [id, { description: id }])) },
+    { relativePath, type: 'registry' }
+  );
+
+  const api = doc(
+    { components: { schemas: { TranscriptWritable: { properties: { provider: { type: 'string', 'x-enum-source': { registry: 'transcription-services' } } } } } } },
+    { relativePath: 'base/domains/transcription/transcription-transcripts-openapi.yaml', type: 'openapi' }
+  );
+
+  const providers = (result) => result.docs
+    .find((d) => d.type === 'openapi').content.components.schemas.TranscriptWritable.properties.provider;
+
+  test('pools the entry ids of every registry of the type, sorted', () => {
+    // The framework's providers, and a state's own in a file of its own.
+    const result = injectEnumSources([
+      registry('base/domains/transcription/transcription-registry-transcription-services.yaml', 'transcription-services', ['elevenlabs-scribe', 'aws-transcribe']),
+      registry('domains/transcription/state-registry-transcription-services.yaml', 'transcription-services', ['state-vendor']),
+      api,
+    ]);
+
+    assert.deepEqual(providers(result).enum, ['aws-transcribe', 'elevenlabs-scribe', 'state-vendor']);
+    assert.equal('x-enum-source' in providers(result), false);
+  });
+
+  test('takes only the named type', () => {
+    const result = injectEnumSources([
+      registry('a-registry-transcription-services.yaml', 'transcription-services', ['aws-transcribe']),
+      registry('a-registry-policies.yaml', 'policies', ['snap-clock']),
+      api,
+    ]);
+    assert.deepEqual(providers(result).enum, ['aws-transcribe']);
+  });
+
+  test('a type no registry declares warns and leaves the annotation', () => {
+    const result = injectEnumSources([registry('a-registry-policies.yaml', 'policies', ['snap-clock']), api]);
+    assert.equal(providers(result)['x-enum-source'].registry, 'transcription-services');
+    assert.match(result.warnings.join('\n'), /no registry entries of type "transcription-services"/);
+  });
+});

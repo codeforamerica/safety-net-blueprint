@@ -1,0 +1,13 @@
+# transcription field inventory
+# Do not edit — regenerate with: node generate-field-inventory.mjs --domain=transcription
+
+# ── Transcript ──────────────────────────────────────────────────────────────────
+
+transcript.subjectId: { type: uuid, relationship: Polymorphic }
+transcript.id: { type: uuid }
+transcript.subjectType: { type: string }
+transcript.provider: { type: enum, values: [aws-transcribe, elevenlabs-scribe, none] }
+transcript.model: { type: string }
+transcript.client: { type: string }
+transcript.status: { type: enum, values: [recording, paused, closed] }
+transcript.closedAt: { type: datetime }

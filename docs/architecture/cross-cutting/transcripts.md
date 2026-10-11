@@ -1,7 +1,9 @@
 # Transcripts (Cross-Cutting)
 
-> **Status: draft.** No contract exists yet. This is the design the contract
-> will be written from, including the rules a transcription client is held to.
+> **Status: draft, partly built.** The resource and its lifecycle exist, in the
+> framework's `transcription` domain (`blueprint-core/base-contracts/domains/transcription/transcription-transcripts-*.yaml`):
+> starting, pausing, resuming and closing a transcript, and their events. Lines,
+> gaps, settings and the idle timer are to come, as this design describes.
 
 See [AI Services](ai-services.md) for how transcripts fit with suggestions,
 fact extraction and the interview, and [Contract-Driven Architecture](../contract-driven-architecture.md)
@@ -70,7 +72,7 @@ A transcript refers to what it records — for the interview assistant, the
 - **Gaps**, where the conversation went untranscribed, each with a start and an
   end. A gap is unintended and a pause is chosen, so the two are kept apart.
 - **Events:** each operation emits one — line added, gap recorded, paused,
-  resumed, closed — on the platform event stream.
+  resumed, closed — on the event stream.
 
 Lines are records under the transcript, not stored events, so a transcript
 lists and pages like any other resource. An hour-long interview is on the order
@@ -128,17 +130,20 @@ one person who was there — sees the transcript.
 
 ## Where it lives
 
-**The framework's platform domain, beside Suggestion.** A transcript has nothing
+**A `transcription` domain the framework provides.** A transcript has nothing
 benefits-specific in it, and more than an interview has one — a caseworker's
 call on an existing case, a fair hearing. In intake, another domain could not
 use it, and since intake is in `safety-net-contracts`, neither could another
 contract set. The `Interview` refers to its transcript. Its settings are a
-config catalog entry on the same domain.
+config catalog entry in the same domain.
 
-Platform gets no subdomain for these: domains are flat, and the domain name runs
-through route ownership, event names, forwarding and overlays, so nesting would
-be a large framework change for two resources. OpenAPI tags group them for
-reading.
+**A domain of its own, not platform.** Platform holds infrastructure every domain
+plugs into — the event log, registries, and suggestions, which each domain
+contributes categories to. A transcript is a capability domains use when they
+want it, with its own records, lifecycle, events and rules, the way scheduling,
+communication and document management are. It is a capability: a contract set
+includes it by listing `transcription` in `x-capabilities` in its config
+overlay, and a set that does not has none of its endpoints.
 
 **Not Data Exchange, which models a request and a single answer.** Something in
 the blueprint submits a call, an adapter performs it, and one result comes back

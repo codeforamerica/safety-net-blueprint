@@ -1,0 +1,346 @@
+# A transcript: the written record of one conversation — who said what, and
+# when. A transcription client writes to it; the audio goes from the client to
+# its provider and never through the blueprint. Its lifecycle — recording,
+# paused, closed — is transcription-transcripts-state-machine.yaml beside this file.
+#
+# See docs/architecture/cross-cutting/transcripts.md for the design, including
+# the rules a client is held to.
+openapi: 3.1.0
+info:
+  title: Transcripts
+  version: 0.1.0
+  x-domain: transcription
+  x-status: alpha
+  x-visibility: internal
+  description: |
+    The written record of a conversation. Starting a transcript opens it for
+    recording; pausing takes the conversation off the record; closing ends it.
+    A transcript refers to what it records — an interview, a call — and records
+    which client, transcription service and model produced it. Updating corrects what it records;
+    deleting removes it, and the event left behind says which one and by whom.
+servers:
+  - url: https://api.example.com/transcription
+    description: Production server
+  - url: http://localhost:1080/transcription
+    description: Local development server
+tags:
+  - name: Transcripts
+    description: The written record of a conversation.
+x-events:
+  transcript.created:
+    type: org.codeforamerica.safety-net-blueprint.transcription.transcript.created
+    summary: Emitted when a transcript is started.
+    payload:
+      $ref: "#/components/schemas/TranscriptCreatedEvent"
+  transcript.updated:
+    type: org.codeforamerica.safety-net-blueprint.transcription.transcript.updated
+    summary: Emitted when a transcript is updated via PATCH.
+    payload:
+      $ref: "#/components/schemas/TranscriptUpdatedEvent"
+  transcript.deleted:
+    type: org.codeforamerica.safety-net-blueprint.transcription.transcript.deleted
+    summary: Emitted when a transcript is deleted. Records which transcript, and who deleted it.
+    payload:
+      $ref: "#/components/schemas/TranscriptDeletedEvent"
+paths:
+  /transcripts:
+    get:
+      summary: List transcripts
+      description: |
+        Retrieve a paginated list of transcripts. Filter by `subjectId` to find
+        the transcripts of one interview or call.
+      operationId: listTranscripts
+      tags:
+        - Transcripts
+      x-sortable:
+        fields: [createdAt]
+        default: -createdAt
+        tieBreaker: id
+      parameters:
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SortParam"
+      responses:
+        "200":
+          description: A paginated collection of transcripts.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptList"
+        "400":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+    post:
+      summary: Start a transcript
+      description: |
+        Start recording a conversation. The transcript begins in `recording`.
+      operationId: createTranscript
+      tags:
+        - Transcripts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscriptCreate"
+      responses:
+        "201":
+          description: Transcript started.
+          headers:
+            Location:
+              description: URL of the new transcript.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transcript"
+        "400":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "422":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+  /transcripts/{transcriptId}:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptIdParam"
+    get:
+      summary: Get a transcript
+      description: Retrieve a single transcript by identifier.
+      operationId: getTranscript
+      tags:
+        - Transcripts
+      responses:
+        "200":
+          description: Transcript retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transcript"
+              examples:
+                TranscriptExample1:
+                  $ref: "#/components/examples/TranscriptExample1"
+        "404":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+    patch:
+      summary: Update a transcript
+      description: |
+        Correct what a transcript records — its subject, provider or client.
+        Its status changes only through `pause`, `resume` and `close`.
+      operationId: updateTranscript
+      tags:
+        - Transcripts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscriptUpdate"
+      responses:
+        "200":
+          description: Transcript updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transcript"
+        "400":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "422":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+    delete:
+      summary: Delete a transcript
+      description: |
+        Permanently remove a transcript. The `transcription.transcript.deleted`
+        event records which transcript was removed and who removed it.
+      operationId: deleteTranscript
+      tags:
+        - Transcripts
+      responses:
+        "204":
+          description: Transcript deleted.
+        "404":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+components:
+  parameters:
+    TranscriptIdParam:
+      name: transcriptId
+      in: path
+      required: true
+      description: Unique identifier of the transcript.
+      schema:
+        type: string
+        format: uuid
+      example: 4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2
+  schemas:
+    # Writable base: client-writable fields only. Transcript, TranscriptCreate
+    # and TranscriptUpdate extend it via allOf, so a write never carries a
+    # server-managed field — status included, which only the transitions move.
+    TranscriptWritable:
+      type: object
+      description: Client-writable fields of a transcript.
+      properties:
+        subjectType:
+          type: string
+          description: What kind of thing the transcript records, e.g. `interview` or `call`.
+          example: interview
+        subjectId:
+          type: string
+          format: uuid
+          description: The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
+          x-relationship:
+            resource: Polymorphic
+        provider:
+          type: string
+          description: |
+            The transcription service that turned speech into its lines — an
+            entry of the `transcription-services` registry, which a contract set
+            extends with a registry file of its own. `none` when no service was
+            involved: a chat, or lines a person typed.
+          x-enum-source:
+            registry: transcription-services
+          example: aws-transcribe
+        model:
+          type: string
+          description: |
+            The transcription service's identifier for the model that produced
+            its lines — e.g. `scribe_v2`. Services change the model behind the
+            same name, so this is what tells two transcripts made a month apart
+            apart. Where a service does not report a version, the model the
+            client requested — e.g. `standard`. Required unless `provider` is
+            `none`.
+          example: scribe_v2
+        client:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9.-]*/[0-9A-Za-z.+-]+$"
+          description: The software that wrote its lines, as `name/version` — a transcription client, or a chat.
+          example: interview-assistant/0.1.0
+    Transcript:
+      description: A transcript, including server-managed fields.
+      unevaluatedProperties: false
+      required:
+        - id
+        - status
+        - createdAt
+        - updatedAt
+      allOf:
+        - $ref: "#/components/schemas/TranscriptWritable"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+              description: Unique identifier (server-generated).
+            status:
+              type: string
+              readOnly: true
+              x-enum-source:
+                source: states[].id
+                machine: Transcript
+              description: |
+                `recording` while the conversation is on the record, `paused`
+                while it is off it, and `closed` once it has ended.
+            closedAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: When the transcript was closed.
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: When the transcript was started.
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: When the transcript last changed.
+    TranscriptCreate:
+      allOf:
+        - $ref: "#/components/schemas/TranscriptWritable"
+        - type: object
+          description: |
+            Payload to start a transcript. What produced it is required — the
+            client, the transcription service, and its model unless the service
+            is `none` — so every transcript says where its lines came from. id, status, createdAt and updatedAt are set by the server.
+          required: [provider, client]
+          if:
+            properties:
+              provider:
+                const: none
+          then: {}
+          else:
+            required: [model]
+    TranscriptUpdate:
+      allOf:
+        - $ref: "#/components/schemas/TranscriptWritable"
+        - type: object
+          description: |
+            Payload to update one or more fields of a transcript. Partial
+            updates are supported; status is not one of them.
+          minProperties: 1
+    TranscriptList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transcript"
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of transcripts available.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of transcripts requested.
+        offset:
+          type: integer
+          minimum: 0
+          description: Number of items skipped before the current page.
+        hasNext:
+          type: boolean
+          description: Whether more transcripts are available beyond this page.
+
+    # Event payload schemas — referenced by x-events above
+    TranscriptCreatedEvent:
+      description: Snapshot of the newly started transcript.
+      $ref: "#/components/schemas/Transcript"
+
+    TranscriptUpdatedEvent:
+      $ref: "https://blueprint.codeforamerica.org/base/schemas/events.yaml#/ResourceUpdatedEvent"
+
+    TranscriptDeletedEvent:
+      $ref: "https://blueprint.codeforamerica.org/base/schemas/events.yaml#/ResourceDeletedEvent"
+
+  examples:
+    TranscriptExample1:
+      summary: A transcript of an interview, recording
+      value:
+        id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        subjectType: interview
+        subjectId: "5c1f8a2e-0d3b-4e6f-9a7c-2b4d6e8f0a1c"
+        provider: aws-transcribe
+        model: standard
+        client: interview-assistant/0.1.0
+        status: recording
+        createdAt: "2026-10-11T14:00:00Z"
+        updatedAt: "2026-10-11T14:00:00Z"

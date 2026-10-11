@@ -1,0 +1,34 @@
+{
+  "allOf": [
+    {
+      "type": "object",
+      "description": "Client-writable fields of a transcript.",
+      "properties": {
+        "subjectType": {
+          "type": "string",
+          "description": "What kind of thing the transcript records, e.g. `interview` or `call`."
+        },
+        "subjectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind."
+        },
+        "provider": {
+          "type": "string",
+          "description": "The transcription provider that produced its lines, e.g. `aws-transcribe`."
+        },
+        "client": {
+          "type": "string",
+          "description": "The client that wrote to it, and its version."
+        }
+      }
+    },
+    {
+      "type": "object",
+      "description": "Payload to update one or more fields of a transcript. Partial\nupdates are supported; status is not one of them.\n",
+      "minProperties": 1
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/TranscriptUpdate"
+}

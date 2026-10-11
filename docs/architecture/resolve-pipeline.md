@@ -70,7 +70,7 @@ The overlay resolver (`packages/blueprint-core/src/overlay/overlay-resolver.js`)
 
 The overlay path is specified via the `--overlay` flag to `resolve.js`. It can be a single file or a directory. When given a directory, the resolver walks it recursively and discovers all `.yaml` files with `overlay: 1.0.0` at the top level, applying them in alphabetical order.
 
-The overlay directory may also contain a `config.yaml` file (not an overlay file itself — no `overlay:` key) that configures pipeline behavior via `config:` keys such as `x-casing`, `x-pagination`, and `x-relationship`. See [x-extensions](x-extensions.md) for the full config key reference.
+The overlay directory may also contain a `config.yaml` file (not an overlay file itself — no `overlay:` key) that configures pipeline behavior via `config:` keys such as `x-casing`, `x-pagination`, `x-relationship`, and `x-capabilities`, which chooses the framework's capabilities to include. See [x-extensions](x-extensions.md) for the full config key reference.
 
 **File type identification:** Throughout the pipeline, asset types are identified from spec content rather than filename patterns. Each spec type declares its type explicitly:
 

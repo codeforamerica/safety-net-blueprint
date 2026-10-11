@@ -1,0 +1,86 @@
+{
+  "description": "A transcript, including server-managed fields.",
+  "unevaluatedProperties": false,
+  "required": [
+    "id",
+    "status",
+    "createdAt",
+    "updatedAt"
+  ],
+  "allOf": [
+    {
+      "type": "object",
+      "description": "Client-writable fields of a transcript.",
+      "properties": {
+        "subjectType": {
+          "type": "string",
+          "description": "What kind of thing the transcript records, e.g. `interview` or `call`."
+        },
+        "subjectId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind."
+        },
+        "provider": {
+          "type": "string",
+          "description": "The transcription service that turned speech into its lines — an\nentry of the `transcription-services` registry, which a contract set\nextends with a registry file of its own. `none` when no service was\ninvolved: a chat, or lines a person typed.\n",
+          "enum": [
+            "aws-transcribe",
+            "elevenlabs-scribe",
+            "none"
+          ]
+        },
+        "model": {
+          "type": "string",
+          "description": "The transcription service's identifier for the model that produced\nits lines — e.g. `scribe_v2`. Services change the model behind the\nsame name, so this is what tells two transcripts made a month apart\napart. Where a service does not report a version, the model the\nclient requested — e.g. `standard`. Required unless `provider` is\n`none`.\n"
+        },
+        "client": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9.-]*/[0-9A-Za-z.+-]+$",
+          "description": "The software that wrote its lines, as `name/version` — a transcription client, or a chat."
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "readOnly": true,
+          "description": "Unique identifier (server-generated)."
+        },
+        "status": {
+          "type": "string",
+          "readOnly": true,
+          "description": "`recording` while the conversation is on the record, `paused`\nwhile it is off it, and `closed` once it has ended.\n",
+          "enum": [
+            "recording",
+            "paused",
+            "closed"
+          ]
+        },
+        "closedAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true,
+          "description": "When the transcript was closed."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true,
+          "description": "When the transcript was started."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true,
+          "description": "When the transcript last changed."
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/Transcript"
+}

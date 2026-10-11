@@ -708,6 +708,299 @@
       "description": "Registries"
     },
     {
+      "name": "Transcription",
+      "item": [
+        {
+          "name": "List All Transcription",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Maximum number of items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of items to skip"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Transcription (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "Get only 2 items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Transcription (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "00000000-0000-0000-0000-000000000000"
+              ],
+              "variables": [
+                "transcriptId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Error response has code and message\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('code');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pause Transcription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Caller-Id",
+                "value": "{{callerId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/a1b2c3d4-e5f6-7890-abcd-ef1234567890/pause",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                "pause"
+              ],
+              "variables": [
+                "transcriptId"
+              ]
+            },
+            "description": "Trigger the pause transition"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON with id\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resume Transcription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Caller-Id",
+                "value": "{{callerId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/a1b2c3d4-e5f6-7890-abcd-ef1234567890/resume",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                "resume"
+              ],
+              "variables": [
+                "transcriptId"
+              ]
+            },
+            "description": "Trigger the resume transition"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON with id\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Close Transcription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Caller-Id",
+                "value": "{{callerId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/a1b2c3d4-e5f6-7890-abcd-ef1234567890/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                "close"
+              ],
+              "variables": [
+                "transcriptId"
+              ]
+            },
+            "description": "Trigger the close transition"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON with id\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Transcripts"
+    },
+    {
       "name": "Document-management",
       "item": [
         {
@@ -2024,6 +2317,11 @@
     {
       "key": "baseUrl",
       "value": "http://localhost:1080",
+      "type": "string"
+    },
+    {
+      "key": "callerId",
+      "value": "postman-test-user",
       "type": "string"
     },
     {

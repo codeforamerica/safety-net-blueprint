@@ -9,6 +9,9 @@ Auto-generated from state machine `emit` and subscription declarations.
 | `intake.application.submitted` | [Intake/Application](intake.md) | [Eligibility/Determination](eligibility.md) |
 | `intake.application.withdrawn` | [Intake/Application](intake.md) | *(none)* |
 | `intake.review_reminder` | *(unknown)* | [Intake/Application](intake.md) |
+| `transcription.transcript.closed` | [Transcription/Transcript](transcription.md) | *(none)* |
+| `transcription.transcript.paused` | [Transcription/Transcript](transcription.md) | *(none)* |
+| `transcription.transcript.resumed` | [Transcription/Transcript](transcription.md) | *(none)* |
 
 ## Subscribed but not emitted
 

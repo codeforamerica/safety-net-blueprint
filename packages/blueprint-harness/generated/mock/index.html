@@ -328,6 +328,14 @@ const made = new Map();  // collection → the id the walk created there
 const built = new Map(); // schema name → the id the walk created of that shape
 const answers = new Map(); // step → what it answered, so going back shows it
 let selected = null;
+// The reference's domain groups the reader has opened. The navigation is
+// rebuilt on every click, and rebuilding from scratch used to collapse every
+// group but the first — so picking an operation closed the one you were in.
+let openDomains = null;
+// What the reader picked for each path parameter, by operation and name, so a
+// panel redrawn after a pick keeps it — and the parameters after it list the
+// records under what was picked.
+const chosen = new Map();
 let transcript = false; // the whole walk at once, rather than a step at a time
 let ran = 0;            // how long running it that way took
 let ranCount = 0;       // how many of the steps that run actually sent
@@ -1780,7 +1788,10 @@ const tourSteps = (ops) => {
  */
 const renderGroups = () => {
   const nav = $('groups');
+  // Kept across the rebuild, so the list does not jump back to the top.
+  const scrolled = nav.scrollTop;
   nav.replaceChildren();
+  requestAnimationFrame(() => { nav.scrollTop = scrolled; });
 
   const everything = operations()
     .map((op) => ({ ...op, ...classify(op) }))
@@ -1842,13 +1853,18 @@ const renderGroups = () => {
 
   const classified = [...everything, ...stubStep(), ...controlSteps()];
   const domains = [...new Set(classified.map((op) => op.domain))].sort();
-  let first = true;
+  // The first group starts open; after that, whatever the reader opened stays
+  // open, and the group holding the selected operation always is.
+  openDomains ??= new Set(domains.slice(0, 1));
+  if (selected?.domain) openDomains.add(selected.domain);
 
   for (const domain of domains) {
     const mine = classified.filter((op) => op.domain === domain);
     const box = el('details', '', 'group');
-    box.open = first;
-    first = false;
+    box.open = openDomains.has(domain);
+    box.addEventListener('toggle', () => {
+      if (box.open) openDomains.add(domain); else openDomains.delete(domain);
+    });
     box.append(el('summary', `${domain}  (${mine.length})`));
 
     for (const group of GROUPS) {
@@ -2231,10 +2247,29 @@ const walkSteps = () => tourSteps(curate(operations()
 const requestFor = async (op) => {
   const names = [...op.template.matchAll(/\{([^}]+)\}/g)].map((m) => m[1]);
   const collection = names.length > 0 ? collectionOf(op) : null;
-  const records = collection ? await recordsIn(collection) : [];
-  const target = collection ? (made.get(collection) ?? records[0]?.id) : null;
+
+  // Each parameter is a record in its own collection — the path up to it,
+  // with the parameters before it filled in. `{entryId}` in
+  // /platform/registry/{type}/{entryId} is an entry of the type picked for
+  // `{type}`, not another type. A record answers for a parameter with the
+  // field of that name when it has one (`type`), and with its id otherwise.
   const params = {};
-  if (target) for (const name of names) params[name] = target;
+  const pickers = [];
+  for (const [index, name] of names.entries()) {
+    const under = withParams(op.path.slice(0, op.path.indexOf(`/{${name}}`)), params);
+    const held = await recordsIn(under);
+    const valueOf = (record) => record?.[name] ?? record?.id;
+    const walked = index === 0 ? made.get(collection) : undefined;
+    // A pick whose record has since gone — deleted, or the store reset — is
+    // dropped rather than sent.
+    const picked = chosen.get(`${keyOf(op)}:${name}`);
+    const stillThere = picked !== undefined && held.some((record) => valueOf(record) === picked);
+    const value = (stillThere ? picked : undefined) ?? walked ?? valueOf(held[0]);
+    if (value) params[name] = value;
+    pickers.push({ name, records: held, value, valueOf });
+  }
+  const records = pickers[0]?.records ?? [];
+  const target = pickers[0]?.value ?? null;
 
   // A control step carries its own body: no contract declares these, so
   // there is no schema to read one off. A read carries none at all, and
@@ -2248,6 +2283,8 @@ const requestFor = async (op) => {
     collection,
     records,
     target,
+    pickers,
+    params,
     parts,
     path: withParams(op.path, params) + (op.query ? `?${op.query}` : ''),
     body: parts ? asFormData(parts) : (example === null ? undefined : example),
@@ -2399,7 +2436,7 @@ const stepPanel = async (op, { live = true, number = null } = {}) => {
   // Everything the request needs, worked out before any of it is drawn.
   // The path line used to render above this and printed `{applicationId}`,
   // because the values it was interpolating did not exist yet.
-  const { names, records, target, parts, body: fresh } = await requestFor(op);
+  const { names, records, target, pickers, params: resolved, parts, body: fresh } = await requestFor(op);
 
   // Once a step has run, the pair on screen is the pair that happened. A
   // body is derived from what the walk has made, so rebuilding one to
@@ -2414,8 +2451,7 @@ const stepPanel = async (op, { live = true, number = null } = {}) => {
   // and a status, asks a reader to decide something the walk decided for
   // them — and the reference is where deciding belongs.
   const fixed = showAll ? null : target;
-  const held = fixed ? [] : records;
-  if (fixed) for (const name of names) params[name] = fixed;
+  Object.assign(params, resolved);
 
   if (group) panel.append(el('p', group.title, 'kindline'));
   panel.append(el('h2', number ? `${String(number).padStart(2, '0')} · ${op.step}` : (op.step ?? op.summary)));
@@ -2455,19 +2491,21 @@ const stepPanel = async (op, { live = true, number = null } = {}) => {
   // Path parameters become a picker of records the server actually holds,
   // rather than a box to paste a UUID into.
   if (!fixed) {
-    for (const name of names) {
+    for (const { name, records: held, value, valueOf } of pickers) {
       const field = el('label', '', 'field');
       field.append(el('span', name));
       if (held.length > 0) {
         const picker = el('select');
         for (const record of held) {
-          const describe = [record.id, record.status, record.title].filter(Boolean).join('  ·  ');
-          const choice = el('option', describe);
-          choice.value = record.id;
+          // Just what is sent: the id, or the field the parameter is named for.
+          const choice = el('option', valueOf(record));
+          choice.value = valueOf(record);
           picker.append(choice);
         }
-        picker.onchange = () => { params[name] = picker.value; };
-        params[name] = held[0]?.id;
+        picker.value = value ?? '';
+        // Redrawn on a pick: the path line shows the new value, and any
+        // parameter after this one lists what is under it.
+        picker.onchange = () => { chosen.set(`${keyOf(op)}:${name}`, picker.value); renderStage(); };
         field.append(picker);
       } else {
         const box = el('input');
@@ -2675,7 +2713,9 @@ const stepPanel = async (op, { live = true, number = null } = {}) => {
       }
     }
 
-    const result = await call(op.method, sending, body);
+    // From the parameters as they are now: a value typed into a box after the
+    // panel was drawn has to reach the request.
+    const result = await call(op.method, withParams(op.path, params) + (op.query ? `?${op.query}` : ''), body);
     remember(op, result, body);
     present(result);
 

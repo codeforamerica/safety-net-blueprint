@@ -1,0 +1,7 @@
+{
+  "type": "object",
+  "description": "Payload for a CRUD-emitted deleted event. Carries no data — the entity\nno longer exists and consumers should treat the subject ID as permanently\nremoved.\n",
+  "properties": {},
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/TranscriptDeletedEvent"
+}

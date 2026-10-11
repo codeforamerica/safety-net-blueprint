@@ -15,6 +15,7 @@ The machine-readable catalog is in [`docs/conventions/`](../conventions/) under 
 
 | Extension | Category | File type(s) | Location within file |
 |---|---|---|---|
+| `x-capabilities` | Config | `overlays/config.yaml` | `config:` section |
 | `x-casing` | Config | `overlays/config.yaml` | `config:` section |
 | `x-pagination` | Config | `overlays/config.yaml` | `config:` section |
 | `x-derived` | Spec | `*-openapi.yaml` | Schema property (on computed fields) |
@@ -28,6 +29,23 @@ The machine-readable catalog is in [`docs/conventions/`](../conventions/) under 
 | `x-visibility` | Spec | `*-openapi.yaml` | `info` level or operation level |
 
 ---
+
+---
+
+## x-capabilities
+
+**File type:** `overlays/config.yaml` — `config:` section.
+
+The capabilities a contract set includes. A capability is a domain the framework provides beyond platform — today, `transcription`. Platform is infrastructure every set needs (the event log, registries) and always comes along; a capability comes along only when it is listed, so a set that does not use one has none of its endpoints in its API, clients or docs.
+
+```yaml
+# overlays/config.yaml
+config:
+  x-capabilities:
+    - transcription
+```
+
+A name the framework does not provide stops resolve, listing the ones it does.
 
 ---
 
@@ -148,7 +166,7 @@ x-events:
 
 **File type:** `*-openapi.yaml` and JSON Schema files — on a string schema property, or on a named string schema such as `$defs.Domain`, whose valid values come from another contract artifact.
 
-Declares that a field's enum values are derived from another contract (state machine, SLA types, the set's domains) rather than hardcoded in the spec. The resolve pipeline injects the actual enum values at build time, keeping the spec in sync without duplication. The annotation is stripped from the resolved output and replaced with a concrete `enum:` array.
+Declares that a field's enum values are derived from another contract (state machine, SLA types, a registry, the set's domains) rather than hardcoded in the spec. The resolve pipeline injects the actual enum values at build time, keeping the spec in sync without duplication. The annotation is stripped from the resolved output and replaced with a concrete `enum:` array.
 
 **String form** — for single-machine state files or SLA types:
 
@@ -185,6 +203,18 @@ status:
     machine: Verification
   description: Current status of the verification obligation.
 ```
+
+**Registry form** — the entry ids of every registry of a type in the set, pooled and sorted, so a list several files contribute to is written nowhere as one:
+
+```yaml
+# transcription-transcripts-openapi.yaml
+provider:
+  type: string
+  x-enum-source:
+    registry: transcription-services
+```
+
+A contract set adds a value with a registry file of its own; the framework's file is not edited.
 
 **`domains`** — the domains the set defines, those its OpenAPI, AsyncAPI and rules documents declare, sorted:
 
