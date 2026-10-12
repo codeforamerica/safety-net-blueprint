@@ -384,7 +384,7 @@ components:
               # mock's evaluator falls through to JavaScript. `.size()` is in
               # the supported set, and the value is genuinely a function of a
               # field the request supplied.
-              x-derived: "$this.programsAppliedFor.size()"
+              x-derived: "this.programsAppliedFor.size()"
               description: How many programs this application covers, from programsAppliedFor.
             confirmationNumber:
               type: string

@@ -468,7 +468,18 @@ $defs:
   #   $this.field       Field on the triggering event payload
   #   $alias.field      Field on a context-bound entity
   #   $alias            The whole context-bound entity (bare alias)
+  #   $params.field     An argument the procedure was called with (with:)
   #   literal           Any non-$ string is treated as a literal value
+  #
+  # To build a string from several values, embed expressions in braces, as
+  # OpenAPI runtime expressions are embedded: each {$…} is looked up like a
+  # lone expression and the pieces joined. Nothing is evaluated — a value is
+  # only ever looked up — so there is no operator syntax, and a missing value
+  # contributes nothing.
+  #   timerId: "workflow.{$params.timerType}.{$object.id}"
+  #
+  # Value expressions are not CEL. Conditions (a guard's condition, if:,
+  # match:, a where: string) are CEL, with unprefixed names.
   #
   # In path slots (call: path strings), use $alias.field like any other expression:
   #   POST: intake/applications/$application.id/open
@@ -560,7 +571,7 @@ $defs:
   #         person: $object.applicant
   #         policy: $policyConfig
   #       bind: $evaluation
-  #     - if: "$evaluation.eligible.value == true"
+  #     - if: "evaluation.eligible.value == true"
   #       then:
   #         - emit:
   #             type: intake.application.eligible
@@ -575,7 +586,7 @@ $defs:
   #
   # IF
   #   Conditional branch — evaluates a CEL expression; runs then: on true, else: on false.
-  #     - if: '$task.taskType == "application_review" && $application.status == "submitted"'
+  #     - if: 'task != null && task.taskType == "application_review" && application.status == "submitted"'
   #       then:
   #         - call:
   #             POST: intake/applications/$application.id/open
@@ -585,7 +596,7 @@ $defs:
   #
   # MATCH
   #   Dispatch on a single value — evaluates a CEL expression and routes to the matching branch.
-  #     - match: $object.category
+  #     - match: object.category
   #       when:
   #         identity:
   #           - call:
@@ -807,8 +818,9 @@ $defs:
         type: string
         description: >
           CEL expression that must evaluate to true for the guard to pass.
-          Reference caller attributes as caller.roles (no $ prefix in CEL),
-          and object fields as object.field.
+          Reference caller attributes as caller.roles and object fields as
+          object.field, with no $ prefix, and ask whether a field is present
+          with has(object.field).
           Example: '"applicant" in caller.roles'
 
   # ---------------------------------------------------------------------------
@@ -852,7 +864,8 @@ $defs:
       A named reusable step sequence called with call: procedure-id.
       Inherits all context in scope at the call site (machine + trigger/operation).
       Parameterized procedures accept arguments via with: at the call site;
-      parameters are referenced as $params.name in steps and in CEL conditions.
+      parameters are referenced as $params.name in step values and as
+      params.name in CEL conditions.
 
 
       Two forms:
@@ -876,8 +889,8 @@ $defs:
           type: string
         description: >
           Parameter names this procedure accepts. Callers pass values via with:.
-          Parameters are referenced in steps as $params.name and in CEL conditions
-          as $params.name.
+          Parameters are referenced in step values as $params.name and in CEL
+          conditions as params.name.
       context:
         $ref: "#/$defs/ContextProperty"
       steps:
@@ -1014,11 +1027,9 @@ $defs:
   #                 - { "==": [{ var: "applicationId" }, { var: "application.id" }] }
   #                 - { "!=": [{ var: "citizenshipStatus" }, "citizen"] }
   #
-  #   (3) CEL — a string. `item` is the candidate record; `object` and
-  #       `request` are the governed record and the request body; a prior
-  #       binding is named by its alias. Write it as valid CEL, without `$`,
-  #       since #445 moves every expression onto a spec-compliant evaluator,
-  #       which will also make the event available as `this`:
+  #   (3) CEL — a string. `item` is the candidate record; `object`, `request`
+  #       and `this` are the governed record, the request body and the event;
+  #       a prior binding is named by its alias:
   #
   #       context:
   #         - openPause:

@@ -204,12 +204,12 @@ Two built-in shared procedures encapsulate the timer boilerplate:
 ```yaml
 - call: requestTimer
   with:
-    timerId: '"intake.snap_deadline." + $object.id'
+    timerId: "intake.snap_deadline.{$object.id}"
     fireAfter: P30D   # ISO 8601 duration; use fireAt + fireOffset for deadline-relative
     calendarType: calendar   # or: business
-    callback: {event: '"intake.snap_deadline"', data: {}}
+    callback: {event: intake.snap_deadline, data: {}}
 - call: cancelTimer
-  with: {timerId: '"intake.snap_deadline." + $object.id'}
+  with: {timerId: "intake.snap_deadline.{$object.id}"}
 ```
 
 `fireAfter` accepts an ISO 8601 duration (`P30D` = 30 days, `PT72H` = 72 hours). Use `fireAt` with an ISO 8601 timestamp when the deadline is stored on the object; combine with `fireOffset` (e.g. `"-PT48H"`) to fire before it. See [Scheduling Service](scheduling-service.md) for the full event contract.

@@ -81,7 +81,7 @@ compositions:
         bind: applicationId
         links: true
         index:
-          filter: "roles.contains('primary_applicant')"
+          filter: "'primary_applicant' in roles"
           fields: [id, contact.name.firstName, contact.name.lastName, dateOfBirth]
 
       identity:
@@ -93,7 +93,7 @@ compositions:
             bind: applicationId
             filter: "category == 'identity'"
         index:
-          filter: "roles.contains('primary_applicant')"
+          filter: "'primary_applicant' in roles"
           fields: [id, contact.name.firstName, contact.name.lastName, citizenshipStatus, immigrationStatus]
 
       income:
@@ -130,7 +130,7 @@ compositions:
         bind: applicationId
         fields: [id, contact.name.firstName, contact.name.lastName, contact.primaryPhone, email, preferredLanguage, preferredContactMethod]
         index:
-          filter: "roles.contains('primary_applicant')"
+          filter: "'primary_applicant' in roles"
           fields: [id, contact.name.firstName, contact.name.lastName, contact.primaryPhone, email]
 
       expenses:
@@ -152,5 +152,5 @@ compositions:
         verifications:
           resource: application-verifications
           bind: applicationId
-          filter: "category == $section.name"
+          filter: "category == section.name"
 

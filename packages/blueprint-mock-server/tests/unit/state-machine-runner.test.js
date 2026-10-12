@@ -471,7 +471,7 @@ test('executeTransition — if: step runs correct branch based on resource state
     transition: { from: 'pending', to: 'routed' },
     guards: [],
     steps: [{
-      if: '$object.isExpedited == true',
+      if: 'has(object.isExpedited) && object.isExpedited == true',
       then: [{ set: { field: 'priority', value: 'high' } }],
       else: [{ set: { field: 'priority', value: 'normal' } }]
     }]
@@ -501,7 +501,7 @@ test('executeTransition — if: true branch runs when condition met', () => {
     transition: { from: 'pending', to: 'routed' },
     guards: [],
     steps: [{
-      if: '$object.isExpedited == true',
+      if: 'has(object.isExpedited) && object.isExpedited == true',
       then: [{ set: { field: 'priority', value: 'high' } }],
       else: [{ set: { field: 'priority', value: 'normal' } }]
     }]

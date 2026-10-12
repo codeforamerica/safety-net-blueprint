@@ -311,11 +311,11 @@ Baseline timer transitions:
 **Considerations:**
 - Requiring a separate state machine and API resource per task type would fragment the API surface and duplicate shared infrastructure (queues, SLA tracking, domain events, assignment rules).
 - Pega (`caseTypeID`), Salesforce (`RecordTypeId`), and JSM (issue type) all scope available operations within a single object type's API.
-- Task-type-specific transitions carry a guard checking `$object.taskType`. Shared transitions (`cancel`, `set-priority`) carry no task type guard and apply to all types.
+- Task-type-specific transitions carry a guard checking `object.taskType`. Shared transitions (`cancel`, `set-priority`) carry no task type guard and apply to all types.
 
 **Options:**
 - **(A)** Separate state machine file and API resource per task type
-- **(B) ✓** Task-type-specific states and transitions added to the baseline state machine and guarded on `$object.taskType`
+- **(B) ✓** Task-type-specific states and transitions added to the baseline state machine and guarded on `object.taskType`
 
 **Customization:** States add task-type-specific transitions and guards via overlay.
 
@@ -563,7 +563,7 @@ Baseline timer transitions:
 
 ### State machine
 
-States can add transitions, extend guards, add steps to existing transitions, and add task-type-specific states via overlay. Task-type-specific transitions should be guarded on `$object.taskType` to scope them appropriately. See [Decision 7](#decision-7-guards-on-tasktype-enable-multiple-lifecycles-per-state-machine).
+States can add transitions, extend guards, add steps to existing transitions, and add task-type-specific states via overlay. Task-type-specific transitions should be guarded on `object.taskType` to scope them appropriately. See [Decision 7](#decision-7-guards-on-tasktype-enable-multiple-lifecycles-per-state-machine).
 
 ### Routing and priority rules
 

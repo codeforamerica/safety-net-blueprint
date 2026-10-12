@@ -8,8 +8,7 @@ import { deriveCollectionName, resolveDotPath } from '../collection-utils.js';
 import { applySteps, resolveValue } from '../state-machine-engine.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { bindableContext, evaluateCEL } from '../cel-evaluator.js';
-
+import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
 
 /**
  * Resolve a where clause value expression against the current resolution context.
@@ -57,9 +56,8 @@ function resolveWhereValue(val, resource, context, resolved) {
  *         item      → the candidate record
  *         object    → the primary resource
  *         request   → the request body
+ *         this      → the triggering event/context
  *         alias     → a previously resolved binding
- *       Written as valid CEL, without `$`: #445 moves every expression onto a
- *       spec-compliant evaluator, and these are written to need no change then.
  *
  * Bindings are resolved in order; each binding may reference previously resolved aliases.
  * A binding that finds no record resolves to null.
@@ -88,15 +86,21 @@ function resolveContextBindings(contextBindings, resource, context, store) {
 
     if (typeof where === 'string') {
       const { items: candidates } = store.findAll(collection, {}, { limit: null });
-      // No `this`: this evaluator runs the expression as JavaScript, where
-      // `this` cannot be bound. It comes with #445's spec-compliant evaluator.
       const scope = {
         ...(context?.entities ?? {}),
         ...resolved,
         object: resource,
         request: context?.request ?? {},
+        this: context?.this ?? {},
       };
-      resolved[alias] = candidates.find((item) => evaluateCEL(where, { ...scope, item }) === true) ?? null;
+      const matches = (item) => {
+        try {
+          return evaluateCEL(where, { ...scope, item }) === true;
+        } catch {
+          return false; // A field the candidate does not have: not this record.
+        }
+      };
+      resolved[alias] = candidates.find(matches) ?? null;
       continue;
     }
 
@@ -207,28 +211,8 @@ function hasProcedureStepKey(proc) {
 }
 
 /**
- * Build the CEL/JS evaluation context from a step context.
- */
-function buildEvalCtx(context) {
-  return {
-    caller: context.caller || {},
-    object: context.object || {},
-    request: context.request || {},
-    params: context.params || {},
-    ...Object.fromEntries(
-      Object.entries(context.entities || {}).map(([k, v]) => [`$${k}`, v])
-    ),
-    $caller: context.caller || {},
-    $object: context.object || {},
-    $request: context.request || {},
-    $this: context.this || {},
-    $params: context.params || {},
-    $now: context.now || new Date().toISOString(),
-  };
-}
-
-/**
- * Resolve a single with: argument value against a step context.
+ * Resolve a single with: argument value against a step context. Objects are
+ * resolved field by field.
  */
 function resolveWithArgValue(val, context) {
   if (val === null || val === undefined) return val;
@@ -237,23 +221,9 @@ function resolveWithArgValue(val, context) {
     for (const [k, v] of Object.entries(val)) result[k] = resolveWithArgValue(v, context);
     return result;
   }
-  if (typeof val !== 'string') return val;
-
-  if (/^\$[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_.]*)?$/.test(val) || val === '$now') {
-    return resolveValue(val, context);
-  }
-
-  if (val.includes('$') || val.startsWith('"') || val.includes(' + ')) {
-    try {
-      const { names, values } = bindableContext(buildEvalCtx(context));
-      const fn = new Function(...names, `return (${val});`);
-      return fn(...values);
-    } catch (e) {
-      console.warn(`resolveWithArgValue: expression "${val}" failed — ${e.message}`);
-    }
-  }
-
-  return val;
+  // A value expression, a string with value expressions embedded in braces,
+  // or a literal: all resolved the same way as any step value.
+  return resolveValue(val, context);
 }
 
 /**

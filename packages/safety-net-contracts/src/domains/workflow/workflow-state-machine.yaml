@@ -41,7 +41,7 @@ machines:
           - set: {field: outcome, value: $request.outcome, description: Store the completion outcome from the request}
           - set: {field: completionNotes, value: $request.notes, description: Store optional completion notes from the request}
           - emit: {type: workflow.task.completed, data: {outcome: $request.outcome}, description: Emit a domain event recording the completion and its outcome}
-          - if: $request.createFollowUp == true
+          - if: has(request.createFollowUp) && request.createFollowUp == true
             then: [{call: {POST: workflow/tasks, body: {$merge: $object, status: pending}}, description: Create a follow-up task when caller requests one}]
       - id: release
         description: "POST /tasks/{taskId}/release — Returns an in-progress task to the queue, clearing the assignment"
@@ -173,10 +173,10 @@ machines:
           request:
             $ref: "#/$defs/SystemEscalateTaskRequest"
         steps:
-          - if: $object.escalatedAt == null
+          - if: '!has(object.escalatedAt) || object.escalatedAt == null'
             then: [{set: {field: escalatedAt, value: $now, description: "Record first escalation time; not overwritten on subsequent timer-triggered escalations"}}]
           - call: setPriority
-          - if: $request.reason == "sla_deadline_exceeded"
+          - if: has(request.reason) && request.reason == "sla_deadline_exceeded"
             then: [{emit: {type: workflow.task.sla_breached, data: {reason: $request.reason}, description: Emit a domain event recording the SLA deadline breach for federal compliance reporting}}]
             else: [{emit: {type: workflow.task.escalated, data: {reason: $request.reason}, description: Emit a domain event recording the automatic escalation}}]
       - id: auto-cancel
@@ -266,11 +266,11 @@ machines:
         description: Re-evaluate priority and queue assignment when relevant fields change; reschedule SLA timers when the SLA deadline is set
         transition: {}
         steps:
-          - if: $this.data.changes.exists(c, c.field == "isExpedited" || c.field == "programType")
+          - if: this.data.changes.exists(c, c.field == "isExpedited" || c.field == "programType")
             then: [{call: setPriority}]
-          - if: $this.data.changes.exists(c, c.field == "programType" || c.field == "queueId")
+          - if: this.data.changes.exists(c, c.field == "programType" || c.field == "queueId")
             then: [{call: assignToQueue}]
-          - if: $this.data.changes.exists(c, c.field == "slaDeadline") && $object.slaDeadline != null
+          - if: this.data.changes.exists(c, c.field == "slaDeadline") && has(object.slaDeadline) && object.slaDeadline != null
             then: [{call: scheduleSlaWarning}, {call: scheduleSlaBreachTimer}]
       - type: workflow.creation_deadline
         description: Auto-escalate after 72-business-hour creation deadline
@@ -297,7 +297,7 @@ machines:
         context:
           - task: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
         steps:
-          - if: $task.id != null
+          - if: task != null
             then:
               - call:
                   PATCH: workflow/tasks/$task.id
@@ -314,28 +314,28 @@ machines:
           - reviewTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
           - approvalTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: determination_approval}}
         steps:
-          - if: $reviewTask.id != null && $reviewTask.status == "pending_review"
+          - if: reviewTask != null && reviewTask.status == "pending_review"
             then:
               - call:
                   POST: workflow/tasks/$reviewTask.id/approve
                   body:
                     outcome: application_closed
                   description: Complete the caseworker task that was awaiting supervisor approval
-          - if: $reviewTask.id != null && $reviewTask.status == "in_progress"
+          - if: reviewTask != null && reviewTask.status == "in_progress"
             then:
               - call:
                   POST: workflow/tasks/$reviewTask.id/complete
                   body:
                     outcome: application_closed
                   description: Complete the active caseworker task on application close
-          - if: $reviewTask.id != null && $reviewTask.status == "pending"
+          - if: reviewTask != null && reviewTask.status == "pending"
             then:
               - call:
                   POST: workflow/tasks/$reviewTask.id/cancel
                   body:
                     reason: application_closed
                   description: Cancel the unclaimed caseworker task when the application was auto-determined at submission
-          - if: $approvalTask.id != null
+          - if: approvalTask != null
             then:
               - call:
                   POST: workflow/tasks/$approvalTask.id/complete
@@ -347,7 +347,7 @@ machines:
         context:
           - reviewTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
         steps:
-          - if: $reviewTask.id != null
+          - if: reviewTask != null
             then:
               - call:
                   POST: workflow/tasks/$reviewTask.id/submit-for-review
@@ -367,14 +367,14 @@ machines:
           - reviewTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
           - approvalTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: determination_approval}}
         steps:
-          - if: $reviewTask.id != null
+          - if: reviewTask != null
             then:
               - call:
                   POST: workflow/tasks/$reviewTask.id/return-to-worker
                   body:
                     reason: determination_rejected
                   description: Return the caseworker task to in_progress for revision
-          - if: $approvalTask.id != null
+          - if: approvalTask != null
             then:
               - call:
                   POST: workflow/tasks/$approvalTask.id/complete
@@ -394,9 +394,9 @@ machines:
         description: 7-calendar-day wait on a verification result before auto-resuming
 guards:
   - id: taskIsUnassigned
-    condition: object.assignedToId == null
+    condition: '!has(object.assignedToId) || object.assignedToId == null'
   - id: callerIsAssignedWorker
-    condition: object.assignedToId == caller.id
+    condition: has(object.assignedToId) && object.assignedToId == caller.id
 procedures:
   - id: assignToQueue
     description: Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.
@@ -404,12 +404,12 @@ procedures:
       - application: {from: intake/applications, where: {id: $object.subjectId}}
       - snapQueue: {from: workflow/queues, where: {name: snap-intake}}
       - generalQueue: {from: workflow/queues, where: {name: general-intake}}
-    if: $snapQueue != null && (($application != null && $application.programsAppliedFor.size() == 1 && "snap" in $application.programsAppliedFor) || ($application == null && $object.programType == "snap"))
+    if: snapQueue != null && ((application != null && has(application.programsAppliedFor) && application.programsAppliedFor.size() == 1 && "snap" in application.programsAppliedFor) || (application == null && has(object.programType) && object.programType == "snap"))
     then: [{set: {field: queueId, value: $snapQueue.id}}]
     else: [{set: {field: queueId, value: $generalQueue.id}}]
   - id: setPriority
     description: Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
-    if: $object.isExpedited == true
+    if: has(object.isExpedited) && object.isExpedited == true
     then: [{set: {field: priority, value: 1}}]
     else: [{set: {field: priority, value: 3}}]
   - id: scheduleTimer
@@ -418,13 +418,13 @@ procedures:
     call: requestTimer
     with:
       $merge: $params
-      timerId: "\"workflow.\" + $params.timerType + \".\" + $object.id"
-      callback: {event: '"workflow." + $params.timerType', data: {}}
+      timerId: "workflow.{$params.timerType}.{$object.id}"
+      callback: {event: "workflow.{$params.timerType}", data: {}}
   - id: cancelWorkflowTimer
     description: Cancel a workflow timer by type; idempotent.
     parameters: [timerType]
     call: cancelTimer
-    with: {timerId: "\"workflow.\" + $params.timerType + \".\" + $object.id"}
+    with: {timerId: "workflow.{$params.timerType}.{$object.id}"}
   - id: scheduleCreationDeadline
     description: Schedule auto-escalation 72 business hours after task creation.
     call: scheduleTimer

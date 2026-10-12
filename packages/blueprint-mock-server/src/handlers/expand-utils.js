@@ -13,7 +13,7 @@
  *             at read time with $this bound to the record.
  */
 
-import { evaluateCEL } from '../cel-evaluator.js';
+import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
 
 /**
  * Every property map a schema contributes, following refs on the way.
@@ -264,7 +264,8 @@ export function extractDerivedFields(schema, follow = (x) => x) {
  * Apply x-derived field computations to a record.
  * Returns a new object — does not mutate the original.
  *
- * Each x-derived expression is evaluated with $this bound to the record.
+ * Each x-derived expression is CEL, evaluated with `this` bound to the record.
+ * One that does not evaluate leaves the field out, and says why.
  *
  * @param {object} record - DB record (after expand/links have been applied)
  * @param {Array<{ fieldName: string, expr: string }>} derivedFields
@@ -275,8 +276,11 @@ export function applyDerivedFields(record, derivedFields) {
 
   const result = { ...record };
   for (const { fieldName, expr } of derivedFields) {
-    const value = evaluateCEL(expr, { $this: record });
-    if (value !== undefined) result[fieldName] = value;
+    try {
+      result[fieldName] = evaluateCEL(expr, { this: record });
+    } catch (e) {
+      console.warn(`x-derived ${fieldName} "${expr}" did not evaluate: ${e.message}`);
+    }
   }
   return result;
 }

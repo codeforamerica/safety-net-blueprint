@@ -54,13 +54,13 @@ machines:
         context:
           - pendingDecision: {from: eligibility/determinations/decisions, where: {determinationId: $this.data.determinationId, status: pending}}
         steps:
-          - if: '$pendingDecision == null'
+          - if: 'pendingDecision == null'
             then: [{call: {POST: eligibility/determinations/$this.data.determinationId/complete, description: Complete the Determination when all program Decisions are resolved}}]
       - type: intake.application.withdrawn
         context:
           - determination: {from: eligibility/determinations, where: {applicationId: $this.subject}}
         steps:
-          - if: '$determination.id != null'
+          - if: 'determination != null'
             then: [{call: {POST: eligibility/determinations/$determination.id/withdraw, description: Withdraw the Determination; already-resolved Decisions are preserved as the audit record}}]
     procedures:
       - id: evaluateFinalDetermination
@@ -126,7 +126,7 @@ machines:
       - type: eligibility.decision.created
         description: Run expedited SNAP screening or initiate Medicaid data exchange when a Decision is created
         steps:
-          - match: $object.program
+          - match: object.program
             when:
               snap: [{call: evaluateSnapExpedited}]
               medicaid: [{call: initiateMedicaidDataExchange}]
@@ -148,7 +148,7 @@ machines:
         context:
           - decision: {from: eligibility/determinations/decisions, where: {id: $this.data.decisionId}}
           - pendingCall: {from: data-exchange/service-calls, where: {decisionId: $this.data.decisionId, status: pending}}
-        if: '$decision.id != null && $decision.program == "medicaid" && $pendingCall == null'
+        if: 'decision != null && decision.program == "medicaid" && pendingCall == null'
         then:
           - call: {POST: eligibility/evaluate/medicaid-ex-parte, body: {decisionId: $decision.id, determinationId: $decision.determinationId, applicationId: $decision.applicationId}}
 

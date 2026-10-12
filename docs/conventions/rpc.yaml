@@ -85,7 +85,27 @@ rpc_endpoints:
 #   $object.field   — value from the resource being operated on
 #   $request.field  — value from the operation request body
 #   $now            — current ISO timestamp
+#   $params.field   — an argument a procedure was called with (with:)
 #   <literal>       — string, number, boolean, or null
+#
+# To build a string from several values, embed expressions in braces, as
+# OpenAPI runtime expressions are embedded in strings:
+#   timerId: "workflow.{$params.timerType}.{$object.id}"
+# Each {$…} is looked up like a lone expression and the pieces joined. Nothing
+# is evaluated, so there are no operators; a missing value contributes nothing.
+#
+# Conditions are CEL, with no dialect: a guard's condition, if:, match:, a
+# context binding's where: string, a composition's filter:, and x-derived.
+# They are evaluated by a spec-compliant implementation (@bufbuild/cel), so an
+# expression that is not CEL is refused, not run some other way.
+#   - Names are unprefixed: caller, object, request, params, this (the event),
+#     now, and each context binding by its alias. `$` is value-expression
+#     syntax, above, and not CEL.
+#   - A field a record does not have is an error, not null: ask with has(),
+#     e.g. !has(object.escalatedAt) || object.escalatedAt == null.
+#   - A binding that found no record is null; test the binding, not a field
+#     through it: reviewTask != null.
+#   - List membership is `x in list`; contains() is for strings.
 
 
 behavioral_contract_steps:

@@ -53,6 +53,14 @@ UnprocessableEntity:
     application/json:
       schema:
         $ref: "#/Error"
+IdempotencyKeyReused:
+  description: |
+    The Idempotency-Key was already used for a different request. A retry sends
+    the same request with the same key; a new request needs a new key.
+  content:
+    application/json:
+      schema:
+        $ref: "#/Error"
 InternalError:
   description: An unexpected error occurred on the server.
   content:

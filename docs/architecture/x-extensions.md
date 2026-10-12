@@ -78,14 +78,14 @@ config:
 
 **File type:** `*-openapi.yaml` — schema property level, on computed read-only fields.
 
-Declares a CEL expression that the mock server evaluates at read time to populate the field. The expression is evaluated with `$this` bound to the current resource record. Fields annotated with `x-derived` are implicitly read-only — no need to also declare `readOnly: true`.
+Declares a CEL expression that the mock server evaluates at read time to populate the field. The expression is evaluated with `this` bound to the current resource record. Fields annotated with `x-derived` are implicitly read-only — no need to also declare `readOnly: true`.
 
 ```yaml
 # users-openapi.yaml
 userId:
   type: string
   format: uuid
-  x-derived: "$this.id"
+  x-derived: "this.id"
   description: Alias for id, used in JWT claims context.
 ```
 
@@ -93,11 +93,11 @@ userId:
 
 | Variable | Value |
 |---|---|
-| `$this` | The full resource record being returned |
+| `this` | The full resource record being returned |
 
 **Evaluation scope:** item-scope only — the expression is evaluated once per record. Collection-scope expressions (operating across the full result set) are not currently supported.
 
-**Supported expressions:** the mock server's evaluator translates a subset of CEL — `has()`, `.size()`, `.contains()`, `in`, `.filter()`, `.map()`, `.all()` and `.exists()` — and nothing else. Anything outside that subset is handed to JavaScript unchanged, so `$this.id.substring(0, 8).toUpperCase()` evaluates here and would be rejected by a real CEL runtime. Keep expressions inside the subset: `$this.programsAppliedFor.size()`, not string manipulation. Note also that `has()` is matched as `has(identifier)`, so `has($this.field)` is *not* translated and silently yields no value.
+**Supported expressions:** any CEL, evaluated by a spec-compliant implementation (`@bufbuild/cel`): `this.programsAppliedFor.size()`, `has(this.middleName) ? this.middleName : ""`. An expression that does not evaluate — a field the record does not have, say — leaves the field out of the response, and the mock server logs why.
 
 The mock server evaluates `x-derived` fields on all response paths: GET single, GET list, POST create, and PATCH update.
 
