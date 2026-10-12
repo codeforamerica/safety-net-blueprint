@@ -8,11 +8,6 @@ import { z } from 'zod';
 export const zTranscriptWritable = z.object({
     subjectType: z.optional(z.string()),
     subjectId: z.optional(z.uuid()),
-    provider: z.optional(z.enum([
-        'aws-transcribe',
-        'elevenlabs-scribe',
-        'none'
-    ])),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
 });
@@ -23,11 +18,6 @@ export const zTranscriptWritable = z.object({
 export const zTranscript = z.object({
     subjectType: z.optional(z.string()),
     subjectId: z.optional(z.uuid()),
-    provider: z.optional(z.enum([
-        'aws-transcribe',
-        'elevenlabs-scribe',
-        'none'
-    ])),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
 }).and(z.object({
@@ -40,31 +30,37 @@ export const zTranscript = z.object({
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    profile: z.optional(z.object({
+        name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+        description: z.optional(z.string()),
+        provider: z.enum([
+            'aws-transcribe',
+            'elevenlabs-scribe',
+            'none'
+        ]),
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        source: z.enum(['system', 'user']),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    })))
 }));
 
 export const zTranscriptCreate = z.object({
     subjectType: z.optional(z.string()),
     subjectId: z.optional(z.uuid()),
-    provider: z.optional(z.enum([
-        'aws-transcribe',
-        'elevenlabs-scribe',
-        'none'
-    ])),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
 }).and(z.object({
+    profileId: z.uuid(),
     startedAt: z.iso.datetime({ offset: true })
 }));
 
 export const zTranscriptUpdate = z.object({
     subjectType: z.optional(z.string()),
     subjectId: z.optional(z.uuid()),
-    provider: z.optional(z.enum([
-        'aws-transcribe',
-        'elevenlabs-scribe',
-        'none'
-    ])),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
 }).and(z.record(z.string(), z.unknown()));
@@ -73,11 +69,6 @@ export const zTranscriptList = z.object({
     items: z.array(z.object({
         subjectType: z.optional(z.string()),
         subjectId: z.optional(z.uuid()),
-        provider: z.optional(z.enum([
-            'aws-transcribe',
-            'elevenlabs-scribe',
-            'none'
-        ])),
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
     }).and(z.object({
@@ -90,7 +81,22 @@ export const zTranscriptList = z.object({
         startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
-        updatedAt: z.iso.datetime({ offset: true }).readonly()
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        profile: z.optional(z.object({
+            name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+            description: z.optional(z.string()),
+            provider: z.enum([
+                'aws-transcribe',
+                'elevenlabs-scribe',
+                'none'
+            ]),
+            languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+        }).and(z.object({
+            id: z.uuid().readonly(),
+            source: z.enum(['system', 'user']),
+            createdAt: z.iso.datetime({ offset: true }).readonly(),
+            updatedAt: z.iso.datetime({ offset: true }).readonly()
+        })))
     }))),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
@@ -275,16 +281,88 @@ export const zTranscriptEntryList = z.object({
 });
 
 /**
- * A transcript, including server-managed fields.
+ * Client-writable fields of a profile.
  */
-export const zTranscriptCreatedEvent = z.object({
-    subjectType: z.optional(z.string()),
-    subjectId: z.optional(z.uuid()),
+export const zTranscriptionProfileWritable = z.object({
+    name: z.optional(z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)),
+    description: z.optional(z.string()),
     provider: z.optional(z.enum([
         'aws-transcribe',
         'elevenlabs-scribe',
         'none'
     ])),
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+});
+
+/**
+ * A profile, including server-managed fields.
+ */
+export const zTranscriptionProfile = z.object({
+    name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+    description: z.optional(z.string()),
+    provider: z.enum([
+        'aws-transcribe',
+        'elevenlabs-scribe',
+        'none'
+    ]),
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    source: z.enum(['system', 'user']),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+}));
+
+export const zTranscriptionProfileCreate = z.object({
+    name: z.optional(z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)),
+    description: z.optional(z.string()),
+    provider: z.optional(z.enum([
+        'aws-transcribe',
+        'elevenlabs-scribe',
+        'none'
+    ])),
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+}).and(z.record(z.string(), z.unknown()));
+
+export const zTranscriptionProfileUpdate = z.object({
+    name: z.optional(z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)),
+    description: z.optional(z.string()),
+    provider: z.optional(z.enum([
+        'aws-transcribe',
+        'elevenlabs-scribe',
+        'none'
+    ])),
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+}).and(z.record(z.string(), z.unknown()));
+
+export const zTranscriptionProfileList = z.object({
+    items: z.array(z.object({
+        name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+        description: z.optional(z.string()),
+        provider: z.enum([
+            'aws-transcribe',
+            'elevenlabs-scribe',
+            'none'
+        ]),
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        source: z.enum(['system', 'user']),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    }))),
+    total: z.int().gte(0),
+    limit: z.int().gte(1).lte(100),
+    offset: z.int().gte(0),
+    hasNext: z.optional(z.boolean())
+});
+
+/**
+ * A transcript, including server-managed fields.
+ */
+export const zTranscriptCreatedEvent = z.object({
+    subjectType: z.optional(z.string()),
+    subjectId: z.optional(z.uuid()),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
 }).and(z.object({
@@ -297,7 +375,22 @@ export const zTranscriptCreatedEvent = z.object({
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    profile: z.optional(z.object({
+        name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+        description: z.optional(z.string()),
+        provider: z.enum([
+            'aws-transcribe',
+            'elevenlabs-scribe',
+            'none'
+        ]),
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        source: z.enum(['system', 'user']),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    })))
 }));
 
 /**
@@ -379,37 +472,85 @@ export const zTranscriptEntryUpdatedEvent = z.object({
     }))
 });
 
+/**
+ * A profile, including server-managed fields.
+ */
+export const zTranscriptionProfileCreatedEvent = z.object({
+    name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+    description: z.optional(z.string()),
+    provider: z.enum([
+        'aws-transcribe',
+        'elevenlabs-scribe',
+        'none'
+    ]),
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    source: z.enum(['system', 'user']),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+}));
+
+/**
+ * Payload for a CRUD-emitted updated event. Contains a field-level diff
+ * recording which fields changed and their before/after values.
+ *
+ * Emitted automatically by the mock server on every PATCH request.
+ * Consumers can react to specific field mutations without fetching the
+ * full resource.
+ *
+ */
+export const zTranscriptionProfileUpdatedEvent = z.object({
+    changes: z.array(z.object({
+        field: z.string(),
+        before: z.unknown(),
+        after: z.unknown()
+    }))
+});
+
 export const zAtRequest = z.object({
     at: z.iso.datetime({ offset: true })
 });
 
 /**
- * Client-writable fields of a transcript.
+ * A transcript, including server-managed fields.
  */
 export const zTranscriptWritable2 = z.object({
     subjectType: z.optional(z.string()),
     subjectId: z.optional(z.uuid()),
-    provider: z.optional(z.enum([
-        'aws-transcribe',
-        'elevenlabs-scribe',
-        'none'
-    ])),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
-});
+}).and(z.object({
+    profile: z.optional(z.object({
+        name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+        description: z.optional(z.string()),
+        provider: z.enum([
+            'aws-transcribe',
+            'elevenlabs-scribe',
+            'none'
+        ]),
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    }))
+}));
 
 export const zTranscriptListWritable = z.object({
     items: z.array(z.object({
         subjectType: z.optional(z.string()),
         subjectId: z.optional(z.uuid()),
-        provider: z.optional(z.enum([
-            'aws-transcribe',
-            'elevenlabs-scribe',
-            'none'
-        ])),
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
-    })),
+    }).and(z.object({
+        profile: z.optional(z.object({
+            name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+            description: z.optional(z.string()),
+            provider: z.enum([
+                'aws-transcribe',
+                'elevenlabs-scribe',
+                'none'
+            ]),
+            languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+        }))
+    }))),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
     offset: z.int().gte(0),
@@ -480,19 +621,56 @@ export const zTranscriptEntryListWritable = z.object({
 });
 
 /**
- * Client-writable fields of a transcript.
+ * Client-writable fields of a profile.
+ */
+export const zTranscriptionProfileWritable2 = z.object({
+    name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+    description: z.optional(z.string()),
+    provider: z.enum([
+        'aws-transcribe',
+        'elevenlabs-scribe',
+        'none'
+    ]),
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+});
+
+export const zTranscriptionProfileListWritable = z.object({
+    items: z.array(z.object({
+        name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+        description: z.optional(z.string()),
+        provider: z.enum([
+            'aws-transcribe',
+            'elevenlabs-scribe',
+            'none'
+        ]),
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    })),
+    total: z.int().gte(0),
+    limit: z.int().gte(1).lte(100),
+    offset: z.int().gte(0),
+    hasNext: z.optional(z.boolean())
+});
+
+/**
+ * A transcript, including server-managed fields.
  */
 export const zTranscriptCreatedEventWritable = z.object({
     subjectType: z.optional(z.string()),
     subjectId: z.optional(z.uuid()),
-    provider: z.optional(z.enum([
-        'aws-transcribe',
-        'elevenlabs-scribe',
-        'none'
-    ])),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
-});
+}).and(z.object({
+    profile: z.optional(z.object({
+        name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+        description: z.optional(z.string()),
+        provider: z.enum([
+            'aws-transcribe',
+            'elevenlabs-scribe',
+            'none'
+        ]),
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    }))
+}));
 
 /**
  * Payload for a CRUD-emitted deleted event. Carries no data — the entity
@@ -533,6 +711,20 @@ export const zTranscriptEntryCreatedEventWritable = z.object({
 });
 
 /**
+ * Client-writable fields of a profile.
+ */
+export const zTranscriptionProfileCreatedEventWritable = z.object({
+    name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+    description: z.optional(z.string()),
+    provider: z.enum([
+        'aws-transcribe',
+        'elevenlabs-scribe',
+        'none'
+    ]),
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+});
+
+/**
  * Unique identifier of the transcript.
  */
 export const zTranscriptIdParam = z.uuid();
@@ -541,6 +733,11 @@ export const zTranscriptIdParam = z.uuid();
  * Unique identifier of the entry.
  */
 export const zTranscriptEntryIdParam = z.uuid();
+
+/**
+ * Unique identifier of the profile.
+ */
+export const zProfileIdParam = z.uuid();
 
 export const zListTranscriptsData = z.object({
     body: z.optional(z.never()),
@@ -560,11 +757,6 @@ export const zListTranscriptsResponse = z.object({
     items: z.array(z.object({
         subjectType: z.optional(z.string()),
         subjectId: z.optional(z.uuid()),
-        provider: z.optional(z.enum([
-            'aws-transcribe',
-            'elevenlabs-scribe',
-            'none'
-        ])),
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
     }).and(z.object({
@@ -577,7 +769,22 @@ export const zListTranscriptsResponse = z.object({
         startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
-        updatedAt: z.iso.datetime({ offset: true }).readonly()
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        profile: z.optional(z.object({
+            name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+            description: z.optional(z.string()),
+            provider: z.enum([
+                'aws-transcribe',
+                'elevenlabs-scribe',
+                'none'
+            ]),
+            languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+        }).and(z.object({
+            id: z.uuid().readonly(),
+            source: z.enum(['system', 'user']),
+            createdAt: z.iso.datetime({ offset: true }).readonly(),
+            updatedAt: z.iso.datetime({ offset: true }).readonly()
+        })))
     }))),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
@@ -589,14 +796,10 @@ export const zCreateTranscriptData = z.object({
     body: z.object({
         subjectType: z.optional(z.string()),
         subjectId: z.optional(z.uuid()),
-        provider: z.optional(z.enum([
-            'aws-transcribe',
-            'elevenlabs-scribe',
-            'none'
-        ])),
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
     }).and(z.object({
+        profileId: z.uuid(),
         startedAt: z.iso.datetime({ offset: true })
     })),
     path: z.optional(z.never()),
@@ -609,11 +812,6 @@ export const zCreateTranscriptData = z.object({
 export const zCreateTranscriptResponse = z.object({
     subjectType: z.optional(z.string()),
     subjectId: z.optional(z.uuid()),
-    provider: z.optional(z.enum([
-        'aws-transcribe',
-        'elevenlabs-scribe',
-        'none'
-    ])),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
 }).and(z.object({
@@ -626,7 +824,22 @@ export const zCreateTranscriptResponse = z.object({
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    profile: z.optional(z.object({
+        name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+        description: z.optional(z.string()),
+        provider: z.enum([
+            'aws-transcribe',
+            'elevenlabs-scribe',
+            'none'
+        ]),
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        source: z.enum(['system', 'user']),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    })))
 }));
 
 export const zDeleteTranscriptData = z.object({
@@ -656,11 +869,6 @@ export const zGetTranscriptData = z.object({
 export const zGetTranscriptResponse = z.object({
     subjectType: z.optional(z.string()),
     subjectId: z.optional(z.uuid()),
-    provider: z.optional(z.enum([
-        'aws-transcribe',
-        'elevenlabs-scribe',
-        'none'
-    ])),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
 }).and(z.object({
@@ -673,18 +881,28 @@ export const zGetTranscriptResponse = z.object({
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    profile: z.optional(z.object({
+        name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+        description: z.optional(z.string()),
+        provider: z.enum([
+            'aws-transcribe',
+            'elevenlabs-scribe',
+            'none'
+        ]),
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        source: z.enum(['system', 'user']),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    })))
 }));
 
 export const zUpdateTranscriptData = z.object({
     body: z.object({
         subjectType: z.optional(z.string()),
         subjectId: z.optional(z.uuid()),
-        provider: z.optional(z.enum([
-            'aws-transcribe',
-            'elevenlabs-scribe',
-            'none'
-        ])),
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
     }).and(z.record(z.string(), z.unknown())),
@@ -700,11 +918,6 @@ export const zUpdateTranscriptData = z.object({
 export const zUpdateTranscriptResponse = z.object({
     subjectType: z.optional(z.string()),
     subjectId: z.optional(z.uuid()),
-    provider: z.optional(z.enum([
-        'aws-transcribe',
-        'elevenlabs-scribe',
-        'none'
-    ])),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
 }).and(z.object({
@@ -717,7 +930,22 @@ export const zUpdateTranscriptResponse = z.object({
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    profile: z.optional(z.object({
+        name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+        description: z.optional(z.string()),
+        provider: z.enum([
+            'aws-transcribe',
+            'elevenlabs-scribe',
+            'none'
+        ]),
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        source: z.enum(['system', 'user']),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    })))
 }));
 
 export const zListTranscriptEntriesData = z.object({
@@ -947,6 +1175,139 @@ export const zUpdateTranscriptEntryResponse = z.object({
     }).readonly())
 });
 
+export const zListTranscriptionProfilesData = z.object({
+    body: z.optional(z.never()),
+    path: z.optional(z.never()),
+    query: z.optional(z.object({
+        q: z.optional(z.string()),
+        limit: z.optional(z.int().gte(1).lte(100)).default(25),
+        offset: z.optional(z.int().gte(0)).default(0),
+        sort: z.optional(z.string())
+    }))
+});
+
+/**
+ * A paginated collection of profiles.
+ */
+export const zListTranscriptionProfilesResponse = z.object({
+    items: z.array(z.object({
+        name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+        description: z.optional(z.string()),
+        provider: z.enum([
+            'aws-transcribe',
+            'elevenlabs-scribe',
+            'none'
+        ]),
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        source: z.enum(['system', 'user']),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    }))),
+    total: z.int().gte(0),
+    limit: z.int().gte(1).lte(100),
+    offset: z.int().gte(0),
+    hasNext: z.optional(z.boolean())
+});
+
+export const zCreateTranscriptionProfileData = z.object({
+    body: z.object({
+        name: z.optional(z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)),
+        description: z.optional(z.string()),
+        provider: z.optional(z.enum([
+            'aws-transcribe',
+            'elevenlabs-scribe',
+            'none'
+        ])),
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    }).and(z.record(z.string(), z.unknown())),
+    path: z.optional(z.never()),
+    query: z.optional(z.never())
+});
+
+/**
+ * A profile, including server-managed fields.
+ */
+export const zCreateTranscriptionProfileResponse = z.object({
+    name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+    description: z.optional(z.string()),
+    provider: z.enum([
+        'aws-transcribe',
+        'elevenlabs-scribe',
+        'none'
+    ]),
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    source: z.enum(['system', 'user']),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+}));
+
+export const zGetTranscriptionProfileData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        profileId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * A profile, including server-managed fields.
+ */
+export const zGetTranscriptionProfileResponse = z.object({
+    name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+    description: z.optional(z.string()),
+    provider: z.enum([
+        'aws-transcribe',
+        'elevenlabs-scribe',
+        'none'
+    ]),
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    source: z.enum(['system', 'user']),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+}));
+
+export const zUpdateTranscriptionProfileData = z.object({
+    body: z.object({
+        name: z.optional(z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)),
+        description: z.optional(z.string()),
+        provider: z.optional(z.enum([
+            'aws-transcribe',
+            'elevenlabs-scribe',
+            'none'
+        ])),
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    }).and(z.record(z.string(), z.unknown())),
+    path: z.object({
+        profileId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * A profile, including server-managed fields.
+ */
+export const zUpdateTranscriptionProfileResponse = z.object({
+    name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+    description: z.optional(z.string()),
+    provider: z.enum([
+        'aws-transcribe',
+        'elevenlabs-scribe',
+        'none'
+    ]),
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+}).and(z.object({
+    id: z.uuid().readonly(),
+    source: z.enum(['system', 'user']),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly()
+}));
+
 export const zPauseTranscriptData = z.object({
     body: z.object({
         at: z.iso.datetime({ offset: true })
@@ -963,11 +1324,6 @@ export const zPauseTranscriptData = z.object({
 export const zPauseTranscriptResponse = z.object({
     subjectType: z.optional(z.string()),
     subjectId: z.optional(z.uuid()),
-    provider: z.optional(z.enum([
-        'aws-transcribe',
-        'elevenlabs-scribe',
-        'none'
-    ])),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
 }).and(z.object({
@@ -980,7 +1336,22 @@ export const zPauseTranscriptResponse = z.object({
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    profile: z.optional(z.object({
+        name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+        description: z.optional(z.string()),
+        provider: z.enum([
+            'aws-transcribe',
+            'elevenlabs-scribe',
+            'none'
+        ]),
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        source: z.enum(['system', 'user']),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    })))
 }));
 
 export const zResumeTranscriptData = z.object({
@@ -999,11 +1370,6 @@ export const zResumeTranscriptData = z.object({
 export const zResumeTranscriptResponse = z.object({
     subjectType: z.optional(z.string()),
     subjectId: z.optional(z.uuid()),
-    provider: z.optional(z.enum([
-        'aws-transcribe',
-        'elevenlabs-scribe',
-        'none'
-    ])),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
 }).and(z.object({
@@ -1016,7 +1382,22 @@ export const zResumeTranscriptResponse = z.object({
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    profile: z.optional(z.object({
+        name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+        description: z.optional(z.string()),
+        provider: z.enum([
+            'aws-transcribe',
+            'elevenlabs-scribe',
+            'none'
+        ]),
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        source: z.enum(['system', 'user']),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    })))
 }));
 
 export const zCloseTranscriptData = z.object({
@@ -1035,11 +1416,6 @@ export const zCloseTranscriptData = z.object({
 export const zCloseTranscriptResponse = z.object({
     subjectType: z.optional(z.string()),
     subjectId: z.optional(z.uuid()),
-    provider: z.optional(z.enum([
-        'aws-transcribe',
-        'elevenlabs-scribe',
-        'none'
-    ])),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
 }).and(z.object({
@@ -1052,5 +1428,20 @@ export const zCloseTranscriptResponse = z.object({
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
-    updatedAt: z.iso.datetime({ offset: true }).readonly()
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    profile: z.optional(z.object({
+        name: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+        description: z.optional(z.string()),
+        provider: z.enum([
+            'aws-transcribe',
+            'elevenlabs-scribe',
+            'none'
+        ]),
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    }).and(z.object({
+        id: z.uuid().readonly(),
+        source: z.enum(['system', 'user']),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly()
+    })))
 }));

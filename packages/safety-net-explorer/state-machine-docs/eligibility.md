@@ -33,11 +33,11 @@ Domain: `eligibility` | API: [eligibility-openapi.yaml](../../../contracts/domai
   - Call the final determination adapter for each remaining pending Decision (42 CFR § 435.912)
 - **`eligibility.application.decision_completed`**
   - Look up: pendingDecision
-  - If `$pendingDecision is null`:
+  - If `pendingDecision is null`:
     - Complete the Determination when all program Decisions are resolved
 - **`intake.application.withdrawn`**
   - Look up: determination
-  - If `id is set`:
+  - If `determination is not null`:
     - Withdraw the Determination; already-resolved Decisions are preserved as the audit record
 
 ---
@@ -73,7 +73,7 @@ Domain: `eligibility` | API: [eligibility-openapi.yaml](../../../contracts/domai
 ### Event subscriptions
 
 - **`eligibility.decision.created`**
-  - Match on `$object.program`:
+  - Match on `object.program`:
     - When `snap`:
       - Call the SNAP expedited screening adapter; if criteria are met, the adapter triggers flag-expedited on the Determination (7 CFR § 273.2(i))
     - When `medicaid`:

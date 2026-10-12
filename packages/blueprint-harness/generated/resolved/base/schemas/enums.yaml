@@ -36,6 +36,14 @@ $defs:
     type: string
     description: Preferred language (BCP 47 language tag).
     pattern: ^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$
+  ConfigSource:
+    type: string
+    readOnly: true
+    description: |
+      Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+    enum:
+      - system
+      - user
   RoleType:
     type: string
     description: |

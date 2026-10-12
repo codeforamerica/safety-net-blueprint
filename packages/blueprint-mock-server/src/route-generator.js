@@ -369,7 +369,26 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
       const requiredDefaults = extractRequiredDefaults(endpoint.responseSchema, apiMetadata.resolve?.schema);
       if (machineForEndpoint?.initialState) requiredDefaults.status = machineForEndpoint.initialState;
       if (Object.keys(requiredDefaults).length > 0) store.registerCollectionDefaults(collectionName, requiredDefaults);
-      handler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, domainSlaTypes, machineForEndpoint, deps);
+      const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, smForEndpoint, domainSlaTypes, machineForEndpoint, deps);
+      // A machine may guard the creation of its own object. There is no record
+      // yet, so its guards see only the body and the caller.
+      const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
+      const createGovernors = governors.get(`create ${apiMetadata.domain} ${relativePath}`) ?? [];
+      const checkCreateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-create`);
+      handler = createGovernors.length === 0 ? baseCreateHandler : async (request, ctx) => {
+        const sent = await jsonBody(request.clone());
+        const refused = checkGoverned({
+          governors: createGovernors,
+          verb: 'creating',
+          params: ctx.params,
+          body: sent,
+          caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
+          store,
+          checkBody: checkCreateBody(sent),
+        });
+        if (refused) return Response.json({ code: refused.code, message: refused.message, details: refused.details }, { status: refused.status });
+        return baseCreateHandler(request, ctx);
+      };
       description = 'Create resource';
     } else if (isSubResourceEndpoint(endpoint.path)) {
       // Sub-resource endpoint: /resources/{parentId}/sub or /resources/{parentId}/sub/{subId}
@@ -533,7 +552,24 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
       const smEntry = findStateMachineForCollection(stateMachines, collectionName);
       const smForEndpoint = smEntry?.stateMachine || null;
       const machineForEndpoint = smEntry?.machine || null;
-      handler = createUpdateHandler(apiMetadata, endpointWithCollection, smForEndpoint, [], machineForEndpoint, deps);
+      const baseUpdateHandler = createUpdateHandler(apiMetadata, endpointWithCollection, smForEndpoint, [], machineForEndpoint, deps);
+      const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
+      const updateGovernors = governors.get(`update ${apiMetadata.domain} ${relativePath}`) ?? [];
+      const checkUpdateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-update`);
+      handler = updateGovernors.length === 0 ? baseUpdateHandler : async (request, ctx) => {
+        const change = await jsonBody(request.clone());
+        const refused = checkGoverned({
+          governors: updateGovernors,
+          verb: 'updating',
+          params: ctx.params,
+          body: change,
+          caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
+          store,
+          checkBody: checkUpdateBody(change),
+        });
+        if (refused) return Response.json({ code: refused.code, message: refused.message, details: refused.details }, { status: refused.status });
+        return baseUpdateHandler(request, ctx);
+      };
       description = 'Update resource';
     } else if (method === 'delete' && isItemEndpoint(endpoint.path)) {
       // DELETE /resources/{id} - Delete

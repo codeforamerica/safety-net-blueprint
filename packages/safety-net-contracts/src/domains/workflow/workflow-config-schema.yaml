@@ -21,14 +21,21 @@ properties:
     description: Must be "workflow".
 
   queues:
-    type: array
+    type: object
     description: >
       Queue catalog. Defines the routing queues available across all deployments.
       All entries in a config file are config-managed: they are seeded by the mock
       server on startup and cannot be deleted via the API.
-    minItems: 1
-    items:
-      $ref: "#/$defs/QueueConfig"
+    required: [resource, entries]
+    additionalProperties: false
+    properties:
+      resource:
+        const: Queue
+      entries:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/QueueConfig"
 
 unevaluatedProperties: false
 

@@ -116,11 +116,11 @@
         </tr><tr>
           <td><code>eligibility.application.decision_completed</code></td>
           <td><a href="eligibility.html">Eligibility/Decision</a></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>$pendingDecision is null</code>:<ul style="margin:2px 0 0 14px;"><li>Complete the Determination when all program Decisions are resolved</li></ul></li></ul></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>pendingDecision is null</code>:<ul style="margin:2px 0 0 14px;"><li>Complete the Determination when all program Decisions are resolved</li></ul></li></ul></td>
         </tr><tr>
           <td><code>intake.application.withdrawn</code></td>
           <td><a href="intake.html">Intake/Application</a></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>id is set</code>:<ul style="margin:2px 0 0 14px;"><li>Withdraw the Determination; already-resolved Decisions are preserved as the audit record</li></ul></li></ul></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>determination is not null</code>:<ul style="margin:2px 0 0 14px;"><li>Withdraw the Determination; already-resolved Decisions are preserved as the audit record</li></ul></li></ul></td>
         </tr></tbody>
           </table>
         </div>
@@ -189,7 +189,7 @@
             <tbody><tr>
           <td><code>eligibility.decision.created</code></td>
           <td><span style="color:#999;font-size:11px;">unknown</span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Match on <code>$object.program</code>:<ul style="margin:2px 0 0 14px;"><li>When <code>snap</code>:<ul style="margin:2px 0 0 14px;"><li>Call the SNAP expedited screening adapter; if criteria are met, the adapter triggers flag-expedited on the Determination (7 CFR § 273.2(i))</li></ul></li><li>When <code>medicaid</code>:<ul style="margin:2px 0 0 14px;"><li>Initiate async data exchange for Medicaid ex parte — MAGI income check (FDSH FTI) and existing enrollment check (FDSH Medicare/VCI) (42 CFR § 435.940, 42 CFR § 435.916)</li></ul></li></ul></li></ul></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Match on <code>object.program</code>:<ul style="margin:2px 0 0 14px;"><li>When <code>snap</code>:<ul style="margin:2px 0 0 14px;"><li>Call the SNAP expedited screening adapter; if criteria are met, the adapter triggers flag-expedited on the Determination (7 CFR § 273.2(i))</li></ul></li><li>When <code>medicaid</code>:<ul style="margin:2px 0 0 14px;"><li>Initiate async data exchange for Medicaid ex parte — MAGI income check (FDSH FTI) and existing enrollment check (FDSH Medicare/VCI) (42 CFR § 435.940, 42 CFR § 435.916)</li></ul></li></ul></li></ul></td>
         </tr><tr>
           <td><code>data_exchange.call.completed</code></td>
           <td><span style="color:#999;font-size:11px;">unknown</span></td>

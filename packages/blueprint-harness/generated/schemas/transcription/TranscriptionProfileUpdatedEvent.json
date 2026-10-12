@@ -1,0 +1,37 @@
+{
+  "type": "object",
+  "description": "Payload for a CRUD-emitted updated event. Contains a field-level diff\nrecording which fields changed and their before/after values.\n\nEmitted automatically by the mock server on every PATCH request.\nConsumers can react to specific field mutations without fetching the\nfull resource.\n",
+  "required": [
+    "changes"
+  ],
+  "properties": {
+    "changes": {
+      "type": "array",
+      "description": "List of fields that changed, with before and after values.",
+      "items": {
+        "type": "object",
+        "description": "A single field change recorded in an updated event.",
+        "additionalProperties": false,
+        "required": [
+          "field",
+          "before",
+          "after"
+        ],
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "Dot-path of the changed field. Top-level fields are a simple name (e.g. `status`); nested fields use dot notation (e.g. `personalInformation.dateOfBirth`). Arrays are treated as leaf values — the path identifies the array field itself, not individual elements.\n"
+          },
+          "before": {
+            "description": "Value of the field before the update."
+          },
+          "after": {
+            "description": "Value of the field after the update."
+          }
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/TranscriptionProfileUpdatedEvent"
+}

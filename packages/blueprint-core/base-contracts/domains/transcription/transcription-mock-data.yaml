@@ -9,7 +9,7 @@ TranscriptExample1:
   id: 7a1e0c2d-0000-4000-8000-000000000001
   subjectType: interview
   subjectId: 7a1e0c2d-0000-4000-8000-0000000000a1
-  provider: aws-transcribe
+  profileId: 7a1e0c2d-0000-4000-8000-0000000000b1
   model: standard
   client: interview-assistant/0.1.0
   status: recording
@@ -21,7 +21,7 @@ TranscriptExample2:
   id: 7a1e0c2d-0000-4000-8000-000000000002
   subjectType: chat
   subjectId: 7a1e0c2d-0000-4000-8000-0000000000a2
-  provider: none
+  profileId: 7a1e0c2d-0000-4000-8000-0000000000b3
   client: webchat/2.1.0
   status: closed
   startedAt: '2026-10-09T09:50:00Z'

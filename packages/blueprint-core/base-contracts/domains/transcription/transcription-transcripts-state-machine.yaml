@@ -6,8 +6,8 @@
 # pause, resume and close are sent with — the same clock the times on its
 # entries are on, so nothing compares two clocks. A pause is an entry in the
 # transcript's timeline: pausing writes one with no end, and resuming or
-# closing gives it one. The transcript decides which entries it accepts, under
-# resources: below.
+# closing gives it one. Under resources: below, the transcript decides when one
+# may be started — under a profile that exists — and which entries it accepts.
 $schema: state-machine-schema.yaml
 version: "1.0"
 domain: transcription
@@ -27,23 +27,37 @@ machines:
     initialState: recording
     guards:
       - id: atAfterStart
+        description: the time given is not before the transcript started
         condition: timestamp(request.at) >= timestamp(object.startedAt)
       - id: atAfterPauseBegan
+        description: the time given is not before the open pause began
         condition: openPause == null || timestamp(request.at) >= timestamp(openPause.startedAt)
       - id: aPauseIsOpen
+        description: a pause is open
         condition: openPause != null
+      # A transcript is started under a profile that exists, and says which
+      # model produced its lines unless the profile's service is `none`.
+      - id: profileExists
+        description: the transcript's profile exists
+        condition: profile != null
+      - id: modelGivenForTheService
+        description: a model is given when the profile names a transcription service
+        condition: profile == null || profile.provider == "none" || has(request.model)
       # An entry is judged by when it started: one begun while recording is
       # accepted even if it arrives after a pause, and one begun during a pause
       # or after the close is refused.
       - id: startedWhileRecording
+        description: the entry started while the transcript was recording — after it started, not during a pause, and before it closed
         condition: >-
           timestamp(request.startedAt) >= timestamp(object.startedAt) &&
           pauseAtStart == null &&
           (!has(object.closedAt) || timestamp(request.startedAt) < timestamp(object.closedAt))
       - id: endsAfterItStarts
+        description: the entry does not end before it starts
         condition: timestamp(request.endedAt) >= timestamp(request.startedAt)
       # A pause already explains that time, so a gap may not overlap one.
       - id: gapOutsidePauses
+        description: a gap does not overlap a pause
         condition: request.kind != "gap" || pauseOverlap == null
     actions:
       - id: pause
@@ -108,6 +122,14 @@ machines:
           - emit:
               type: transcription.transcript.closed
     resources:
+      Transcript:
+        create:
+          context:
+            - profile:
+                from: transcription/profiles
+                where: item.id == request.profileId
+          guards:
+            - conditions: [profileExists, modelGivenForTheService]
       TranscriptEntry:
         create:
           context:

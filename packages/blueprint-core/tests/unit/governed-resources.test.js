@@ -1,6 +1,7 @@
 /**
- * A state machine guards the creation of resources nested under its object,
- * declared under `resources:` with the guard clauses actions take.
+ * A state machine guards the creation of its own object and of resources
+ * nested under it, declared under `resources:` with the guard clauses actions
+ * take.
  */
 
 import { test, describe } from 'node:test';
@@ -58,6 +59,11 @@ describe('resources a machine governs', () => {
       TranscriptEntry: { create: { guards: [{ conditions: ['recording'] }] } },
       EntryNote: { create: { guards: [{ conditions: ['recording'] }] } },
     });
+    assert.deepEqual(errorsOf(doc, 'resource-not-nested'), []);
+  });
+
+  test('may be its own object', () => {
+    const doc = machine({ Transcript: { create: { guards: [{ conditions: ['recording'] }] } } });
     assert.deepEqual(errorsOf(doc, 'resource-not-nested'), []);
   });
 

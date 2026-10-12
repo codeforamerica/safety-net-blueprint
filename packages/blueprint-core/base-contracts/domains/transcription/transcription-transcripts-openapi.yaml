@@ -7,6 +7,11 @@
 # nothing was captured, and pauses when the conversation was off the record.
 # The state machine decides when an entry is accepted.
 #
+# A transcript is started under a profile: the transcription service and
+# languages a state chose for a kind of conversation. Profiles are seeded from
+# the domain's config and can be changed through the API; their update events
+# record what a profile said when any transcript started under it.
+#
 # See docs/architecture/cross-cutting/transcripts.md for the design, including
 # the rules a client is held to.
 openapi: 3.1.0
@@ -19,9 +24,16 @@ info:
   description: |
     The written record of a conversation. Starting a transcript opens it for
     recording; pausing takes the conversation off the record; closing ends it.
-    A transcript refers to what it records — an interview, a call — and records
-    which client, transcription service and model produced it. Updating corrects what it records;
-    deleting removes it, and the event left behind says which one and by whom.
+    A transcript refers to what it records — an interview, a call — and names
+    the profile it was started under, which says the transcription service,
+    and the client and model that produced its lines. Updating corrects what
+    it records; deleting removes it, and the event left behind says which one
+    and by whom.
+
+    A profile is a state's choice of transcription service and languages for
+    a kind of conversation. The deployment's config seeds them; they can be
+    added and changed here, never deleted, so every transcript's profile
+    still exists.
 
     Its entries are its timeline, in the order things happened: lines, gaps
     where nothing was captured, and pauses. Every time on a transcript and its
@@ -37,6 +49,8 @@ tags:
     description: The written record of a conversation.
   - name: Transcript entries
     description: A transcript's timeline — lines, gaps and pauses.
+  - name: Transcription profiles
+    description: The transcription service and languages to use for a kind of conversation.
 x-events:
   transcript.created:
     type: org.codeforamerica.safety-net-blueprint.transcription.transcript.created
@@ -63,6 +77,16 @@ x-events:
     summary: Emitted when an entry changes — a pause ending, as the transcript resumes or closes.
     payload:
       $ref: "#/components/schemas/TranscriptEntryUpdatedEvent"
+  profile.created:
+    type: org.codeforamerica.safety-net-blueprint.transcription.profile.created
+    summary: Emitted when a profile is added through the API.
+    payload:
+      $ref: "#/components/schemas/TranscriptionProfileCreatedEvent"
+  profile.updated:
+    type: org.codeforamerica.safety-net-blueprint.transcription.profile.updated
+    summary: Emitted when a profile is changed. Records each field before and after, so what a profile said when a transcript started can be looked up.
+    payload:
+      $ref: "#/components/schemas/TranscriptionProfileUpdatedEvent"
 paths:
   /transcripts:
     get:
@@ -96,7 +120,9 @@ paths:
     post:
       summary: Start a transcript
       description: |
-        Start recording a conversation. The transcript begins in `recording`.
+        Start recording a conversation, under a profile. The transcript begins
+        in `recording`. It is refused when the profile does not exist, or when
+        the profile names a transcription service and no `model` is given.
       operationId: createTranscript
       tags:
         - Transcripts
@@ -121,6 +147,14 @@ paths:
                 $ref: "#/components/schemas/Transcript"
         "400":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "409":
+          description: |
+            The transcript is refused: its profile does not exist, or the
+            profile names a transcription service and no `model` was given.
+          content:
+            application/json:
+              schema:
+                $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Error"
         "422":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
@@ -151,8 +185,9 @@ paths:
     patch:
       summary: Update a transcript
       description: |
-        Correct what a transcript records — its subject, provider or client.
-        Its status changes only through `pause`, `resume` and `close`.
+        Correct what a transcript records — its subject, model or client. Its
+        profile does not change, and its status changes only through `pause`,
+        `resume` and `close`.
       operationId: updateTranscript
       tags:
         - Transcripts
@@ -339,6 +374,117 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+  /profiles:
+    get:
+      summary: List transcription profiles
+      description: Retrieve a paginated list of profiles, by name.
+      operationId: listTranscriptionProfiles
+      tags:
+        - Transcription profiles
+      x-sortable:
+        fields: [name, createdAt]
+        default: name
+        tieBreaker: id
+      parameters:
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SortParam"
+      responses:
+        "200":
+          description: A paginated collection of profiles.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionProfileList"
+        "400":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+    post:
+      summary: Add a transcription profile
+      description: |
+        Add a profile beside the ones the deployment's config seeds. It is
+        marked `source: user`.
+      operationId: createTranscriptionProfile
+      tags:
+        - Transcription profiles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscriptionProfileCreate"
+      responses:
+        "201":
+          description: Profile added.
+          headers:
+            Location:
+              description: URL of the new profile.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionProfile"
+        "400":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "422":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+  /profiles/{profileId}:
+    parameters:
+      - $ref: "#/components/parameters/ProfileIdParam"
+    get:
+      summary: Get a transcription profile
+      description: Retrieve a single profile by identifier.
+      operationId: getTranscriptionProfile
+      tags:
+        - Transcription profiles
+      responses:
+        "200":
+          description: Profile retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionProfile"
+        "404":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+    patch:
+      summary: Change a transcription profile
+      description: |
+        Change a profile, including one the config seeded. The change applies to
+        transcripts started from now on; the update event records each field
+        before and after, so what the profile said when an earlier transcript
+        started can still be looked up. Profiles are never deleted.
+      operationId: updateTranscriptionProfile
+      tags:
+        - Transcription profiles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscriptionProfileUpdate"
+      responses:
+        "200":
+          description: Profile changed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionProfile"
+        "400":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "422":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 components:
   parameters:
     TranscriptIdParam:
@@ -359,6 +505,15 @@ components:
         type: string
         format: uuid
       example: 9c2e4a10-7b1d-4f3e-8a62-1d5c0b7e9f24
+    ProfileIdParam:
+      name: profileId
+      in: path
+      required: true
+      description: Unique identifier of the profile.
+      schema:
+        type: string
+        format: uuid
+      example: 7a1e0c2d-0000-4000-8000-0000000000b1
   schemas:
     # Writable base: client-writable fields only. Transcript, TranscriptCreate
     # and TranscriptUpdate extend it via allOf, so a write never carries a
@@ -377,16 +532,6 @@ components:
           description: The record of the conversation it transcribes — an interview's id, say. `subjectType` says what kind.
           x-relationship:
             resource: Polymorphic
-        provider:
-          type: string
-          description: |
-            The transcription service that turned speech into its lines — an
-            entry of the `transcription-services` registry, which a contract set
-            extends with a registry file of its own. `none` when no service was
-            involved: a chat, or lines a person typed.
-          x-enum-source:
-            registry: transcription-services
-          example: aws-transcribe
         model:
           type: string
           description: |
@@ -394,8 +539,8 @@ components:
             its lines — e.g. `scribe_v2`. Services change the model behind the
             same name, so this is what tells two transcripts made a month apart
             apart. Where a service does not report a version, the model the
-            client requested — e.g. `standard`. Required unless `provider` is
-            `none`.
+            client requested — e.g. `standard`. Required unless the profile's
+            service is `none`.
           example: scribe_v2
         client:
           type: string
@@ -419,6 +564,13 @@ components:
               format: uuid
               readOnly: true
               description: Unique identifier (server-generated).
+            profileId:
+              type: string
+              format: uuid
+              readOnly: true
+              description: The profile it was started under, which says the transcription service. It does not change.
+              x-relationship:
+                resource: TranscriptionProfile
             status:
               type: string
               readOnly: true
@@ -449,29 +601,31 @@ components:
               readOnly: true
               description: When the transcript last changed.
     TranscriptCreate:
+      unevaluatedProperties: false
       allOf:
         - $ref: "#/components/schemas/TranscriptWritable"
         - type: object
           description: |
             Payload to start a transcript. What produced it is required — the
-            client, the transcription service, and its model unless the service
-            is `none` — so every transcript says where its lines came from — and
-            when it started, by the client's clock. id, status, createdAt and
-            updatedAt are set by the server.
-          required: [provider, client, startedAt]
+            profile, which says the transcription service; the client; and the
+            model unless the profile's service is `none` — so every transcript
+            says where its lines came from — and when it started, by the
+            client's clock. id, status, createdAt and updatedAt are set by the
+            server.
+          required: [profileId, client, startedAt]
           properties:
+            profileId:
+              type: string
+              format: uuid
+              description: The profile to start it under.
+              x-relationship:
+                resource: TranscriptionProfile
             startedAt:
               type: string
               format: date-time
               description: When the conversation began, by the client's clock.
-          if:
-            properties:
-              provider:
-                const: none
-          then: {}
-          else:
-            required: [model]
     TranscriptUpdate:
+      unevaluatedProperties: false
       allOf:
         - $ref: "#/components/schemas/TranscriptWritable"
         - type: object
@@ -641,6 +795,95 @@ components:
         offset: {type: integer, minimum: 0, description: Number of entries skipped before this page.}
         hasNext: {type: boolean, description: Whether more entries are available beyond this page.}
 
+    # Writable base: client-writable fields only. TranscriptionProfile,
+    # TranscriptionProfileCreate and TranscriptionProfileUpdate extend it.
+    TranscriptionProfileWritable:
+      type: object
+      description: Client-writable fields of a profile.
+      properties:
+        name:
+          type: string
+          pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+          description: A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+          example: english-phone
+        description:
+          type: string
+          description: What the profile is for.
+        provider:
+          type: string
+          description: |
+            The transcription service — an entry of the `transcription-services`
+            registry, which a contract set extends with a registry file of its
+            own. `none` for conversations no service transcribes: a chat, or
+            lines a person types.
+          x-enum-source:
+            registry: transcription-services
+          example: aws-transcribe
+        languages:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/Language"
+          description: |
+            The languages the conversation may be in. One fixes the language;
+            several let the service tell which is being spoken among them.
+            Absent, the service detects the language itself — which not every
+            service can do.
+          example: [en-US, es-US]
+    TranscriptionProfile:
+      description: A profile, including server-managed fields.
+      unevaluatedProperties: false
+      required: [id, name, provider, source, createdAt, updatedAt]
+      allOf:
+        - $ref: "#/components/schemas/TranscriptionProfileWritable"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+              description: Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+            source:
+              $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/ConfigSource"
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: When the profile was added.
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: When the profile last changed.
+    TranscriptionProfileCreate:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "#/components/schemas/TranscriptionProfileWritable"
+        - type: object
+          description: Payload to add a profile.
+          required: [name, provider]
+    TranscriptionProfileUpdate:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "#/components/schemas/TranscriptionProfileWritable"
+        - type: object
+          description: Payload to change one or more fields of a profile.
+          minProperties: 1
+    TranscriptionProfileList:
+      type: object
+      additionalProperties: false
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TranscriptionProfile"
+        total: {type: integer, minimum: 0, description: Total number of profiles.}
+        limit: {type: integer, minimum: 1, maximum: 100, description: Maximum number of profiles requested.}
+        offset: {type: integer, minimum: 0, description: Number of profiles skipped before this page.}
+        hasNext: {type: boolean, description: Whether more profiles are available beyond this page.}
+
     # Event payload schemas — referenced by x-events above
     TranscriptCreatedEvent:
       description: Snapshot of the newly started transcript.
@@ -659,6 +902,13 @@ components:
     TranscriptEntryUpdatedEvent:
       $ref: "https://blueprint.codeforamerica.org/base/schemas/events.yaml#/ResourceUpdatedEvent"
 
+    TranscriptionProfileCreatedEvent:
+      description: Snapshot of the new profile.
+      $ref: "#/components/schemas/TranscriptionProfile"
+
+    TranscriptionProfileUpdatedEvent:
+      $ref: "https://blueprint.codeforamerica.org/base/schemas/events.yaml#/ResourceUpdatedEvent"
+
   examples:
     TranscriptExample1:
       summary: A transcript of an interview, recording
@@ -666,7 +916,7 @@ components:
         id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
         subjectType: interview
         subjectId: "5c1f8a2e-0d3b-4e6f-9a7c-2b4d6e8f0a1c"
-        provider: aws-transcribe
+        profileId: "7a1e0c2d-0000-4000-8000-0000000000b1"
         model: standard
         client: interview-assistant/0.1.0
         status: recording

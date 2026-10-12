@@ -1,11 +1,16 @@
 # Generic JSON Schema for domain config YAML files.
-# Validates the common envelope (version and domain required).
-# Domain-specific schemas extend this for catalog entry validation.
+# Validates the common envelope (version and domain required) and the shape of
+# each catalog: the resource it seeds, and its entries. Domain-specific schemas
+# extend this to validate the entries themselves.
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://blueprint.codeforamerica.org/schemas/config-schema.yaml"
 title: Domain Config
-description: Schema for domain configuration YAML files. Validates the common envelope.
+description: >
+  Schema for domain configuration YAML files. Every key other than the
+  envelope is a catalog: entries of a resource the domain's API serves. A
+  deploy seeds only the entries not already there, so one changed or added
+  through the API survives the next deploy.
 type: object
 required:
   - version
@@ -22,3 +27,29 @@ properties:
 
   domain:
     $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/Domain"
+
+additionalProperties:
+  $ref: "#/$defs/Catalog"
+
+$defs:
+  Catalog:
+    type: object
+    description: >
+      Entries of one resource, seeded as records its API serves. The resource's
+      schema declares `source`, the shared `ConfigSource`, which is `system` on
+      these entries.
+    required: [resource, entries]
+    additionalProperties: false
+    properties:
+      resource:
+        type: string
+        pattern: "^[A-Z][A-Za-z0-9]*$"
+        description: The resource the entries are, named for the schema its item GET returns.
+      entries:
+        type: array
+        items:
+          type: object
+          required: [id]
+          properties:
+            id:
+              type: string

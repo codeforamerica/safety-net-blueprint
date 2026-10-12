@@ -1,11 +1,13 @@
 /**
  * Creates and updates a state machine governs.
  *
- * A machine declares, under `resources:`, guards for resources nested under its
- * object — a transcript deciding when an entry may be added to it, and that
- * only the system may change one. Creating or updating one runs those guards
- * with `object` the governing record, found from the path, and `request` the
- * body. Every machine governing a resource along its path must pass.
+ * A machine declares, under `resources:`, guards for its own object and for
+ * resources nested under it — a transcript deciding when an entry may be added
+ * to it, and that only the system may change one. Creating or updating a
+ * nested one runs those guards with `object` the governing record, found from
+ * the path, and `request` the body. Creating the machine's own object has no
+ * record yet, so only `request`; updating it, `object` is the record being
+ * updated. Every machine governing a resource along its path must pass.
  *
  * Which create a machine governs is read from core's model of the API —
  * the resource the machine attaches to, and the resources nested under it —
@@ -34,6 +36,15 @@ export function governorsByRoute(stateMachines) {
       if (!governors.has(key)) governors.set(key, []);
       governors.get(key).push(governor);
     };
+    // Its own object: a create has no record to guard with yet, so no owner;
+    // an update's record is the one being updated.
+    const own = declared[entry.resource.name];
+    if (own?.create) {
+      add(`create ${entry.domain} ${entry.resource.path('collection')}`, { entry, name: entry.resource.name, operation: own.create, owner: null });
+    }
+    if (own?.update) {
+      add(`update ${entry.domain} ${entry.resource.path('item')}`, { entry, name: entry.resource.name, operation: own.update, owner: entry.resource });
+    }
     const visit = (resource) => {
       for (const child of resource.children) {
         const governed = child.name ? declared[child.name] : undefined;
@@ -66,13 +77,16 @@ export function governorsByRoute(stateMachines) {
  */
 export function checkGoverned({ governors, verb, params, body, caller, store, checkBody }) {
   for (const { entry, name, operation, owner } of governors ?? []) {
-    const collection = deriveCollectionName(owner.path('collection'), '');
-    const record = store.findById(collection, params[owner.item.parameter]);
-    if (!record) {
-      return { status: 404, code: 'NOT_FOUND', message: `${entry.object} not found` };
+    let record = null;
+    if (owner) {
+      const collection = deriveCollectionName(owner.path('collection'), '');
+      record = store.findById(collection, params[owner.item.parameter]);
+      if (!record) {
+        return { status: 404, code: 'NOT_FOUND', message: `${entry.object} not found` };
+      }
     }
 
-    const baseContext = { caller, object: { ...record }, request: body, now: new Date().toISOString() };
+    const baseContext = { caller, ...(record ? { object: { ...record } } : {}), request: body, now: new Date().toISOString() };
     const entities = resolveContextLayers(
       [entry.stateMachine.context, entry.machine.context, operation.context],
       record, baseContext, store
@@ -85,7 +99,7 @@ export function checkGoverned({ governors, verb, params, body, caller, store, ch
       callerRoles: caller.roles,
       resource: record,
       context: { ...baseContext, entities },
-      label: `${verb} a ${name} on this ${entry.object}`,
+      label: owner === entry.resource && name === entry.object ? `${verb} this ${name}` : record ? `${verb} a ${name} on this ${entry.object}` : `${verb} a ${name}`,
       checkBody,
     });
     if (refused) {

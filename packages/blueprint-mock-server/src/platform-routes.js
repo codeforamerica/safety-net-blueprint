@@ -20,7 +20,7 @@ import {
   registerStub, listStubs, removeStub, clearStubs, clearAllStubs,
   registerHttpStub, listHttpStubs, removeHttpStub, clearHttpStubs,
 } from './mock-stub-engine.js';
-import { registerConfigManaged } from './config-registry.js';
+import { seedConfigs } from './config-registry.js';
 import { seedAllDatabases } from './seeder.js';
 import { addRoute, routeKey, tagRoutesAddedBy } from './http/route-table.js';
 import { jsonBody, readJsonBody, invalidJson } from './http/request.js';
@@ -142,18 +142,7 @@ function registerOwnRoutes(routes, { store, apiNames = [], readDocs, configs = [
   addRoute(routes, 'POST', '/mock/reset', () => {
     for (const collection of Object.keys(store.snapshot())) store.clearAll(collection);
     clearAllStubs();
-    for (const config of configs) {
-      for (const [catalogKey, entries] of Object.entries(config.catalogs)) {
-        for (const entry of entries) {
-          const data = { ...entry };
-          for (const key of Object.keys(data)) {
-            if (key.startsWith('x-')) delete data[key];
-          }
-          store.insertResource(catalogKey, { ...data, source: 'system' });
-          registerConfigManaged(catalogKey, data.id);
-        }
-      }
-    }
+    seedConfigs(configs, store);
     return new Response(null, { status: 204 });
   });
   console.log('  POST   /mock/reset - Reset all runtime data (keeps config-managed resources)');

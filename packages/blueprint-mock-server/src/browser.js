@@ -29,7 +29,7 @@ import { applyForwarding } from './forwarding.js';
 import { seedAllDatabases } from './seeder.js';
 import { registerEventSubscriptions } from './event-subscription.js';
 import { subscribeStubDispatch } from './mock-stub-engine.js';
-import { registerConfigManaged } from './config-registry.js';
+import { seedConfigs } from './config-registry.js';
 import { initSchemaRegistry } from './validator.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 import { graphsOf, unresolvedRulesWarning } from './contract-views.js';
@@ -94,16 +94,7 @@ export async function createMockServer({
   // Seed before routing so a list endpoint answers on the first request.
   if (seed) seedAllDatabases(docs, store, { seeded: true });
 
-  for (const config of configs) {
-    for (const [catalogKey, entries] of Object.entries(config.catalogs)) {
-      for (const entry of entries) {
-        const data = { ...entry };
-        for (const key of Object.keys(data)) if (key.startsWith('x-')) delete data[key];
-        store.insertResource(catalogKey, { ...data, source: 'system' });
-        registerConfigManaged(catalogKey, data.id);
-      }
-    }
-  }
+  seedConfigs(configs, store);
 
   const stepCalls = createStepCalls({ apiSpecs, stateMachines, slaTypes, store });
   registerEventSubscriptions(stateMachines, slaTypes, apiSpecs, store, stepCalls);

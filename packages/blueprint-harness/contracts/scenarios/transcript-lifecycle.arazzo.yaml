@@ -4,12 +4,14 @@ info:
   version: 1.0.0
   x-domain: transcription
   description: |
-    A worker's application transcribes an interview: it starts a transcript,
-    adds lines — retrying one — pauses when the applicant asks to go off the
-    record, and closes it at the end. Along the way the transcript keeps a line
-    said just before the pause, and refuses a line said during it, a lost
-    stretch overlapping it, a line after the close, and a client editing an
-    entry. Every time is the application's.
+    The interview software a caseworker uses transcribes an interview. An
+    administrator adds the profile it runs under. The software starts a
+    transcript under that profile, adds lines — retrying one — pauses when the
+    applicant asks to go off the record, and closes it at the end. Along the
+    way the transcript refuses to start without a model or under a profile that
+    does not exist; keeps a line said just before the pause; and refuses a line
+    said during it, a lost stretch overlapping it, a line after the close, and
+    the software editing an entry. Every time is by the software's clock.
 sourceDescriptions:
   # Relative to the resolved contract set, where the framework's documents sit
   # under base/.
@@ -30,20 +32,66 @@ workflows:
   - workflowId: transcriptLifecycle
     summary: Start, record, pause, resume and close a transcript, and see what it refuses.
     steps:
-      - stepId: start
-        description: The worker starts a transcript of the interview.
+      - stepId: addProfile
+        description: An administrator adds the profile interviews in English run under.
+        operationId: createTranscriptionProfile
+        parameters:
+          - name: X-Caller-Id
+            in: header
+            value: admin-1
+        requestBody:
+          payload:
+            name: english-interview
+            provider: aws-transcribe
+            languages: [en-US]
+        successCriteria:
+          - condition: $statusCode == 201
+          - condition: $response.body#/source == 'user'
+        outputs:
+          id: $response.body#/id
+
+      - stepId: startWithoutAModel
+        description: A transcript under a profile with a transcription service has to say which model produced its lines.
         operationId: createTranscript
         parameters:
           - reference: $components.parameters.caller
         requestBody:
           payload:
-            provider: aws-transcribe
+            profileId: $steps.addProfile.outputs.id
+            client: interview-assistant/0.1.0
+            startedAt: '2026-10-12T10:00:00Z'
+        successCriteria:
+          - condition: $statusCode == 409
+
+      - stepId: startUnderAMissingProfile
+        description: A transcript is started under a profile that exists.
+        operationId: createTranscript
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            profileId: 00000000-0000-4000-8000-000000000000
+            model: standard
+            client: interview-assistant/0.1.0
+            startedAt: '2026-10-12T10:00:00Z'
+        successCriteria:
+          - condition: $statusCode == 409
+
+      - stepId: start
+        description: The caseworker starts a transcript of the interview.
+        operationId: createTranscript
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            profileId: $steps.addProfile.outputs.id
             model: standard
             client: interview-assistant/0.1.0
             startedAt: '2026-10-12T10:00:00Z'
         successCriteria:
           - condition: $statusCode == 201
           - condition: $response.body#/status == 'recording'
+          - condition: $response.body#/profileId == $steps.addProfile.outputs.id
         outputs:
           id: $response.body#/id
 
@@ -64,7 +112,7 @@ workflows:
           id: $response.body#/id
 
       - stepId: retryFirstLine
-        description: The connection drops before the answer comes back, so the application sends the line again with the same key — and gets the same line, not a second one.
+        description: The connection drops before the answer comes back, so the software sends the line again with the same key — and gets the same line, not a second one.
         operationId: addTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -106,7 +154,7 @@ workflows:
           - condition: $statusCode == 201
 
       - stepId: lineSaidDuringThePause
-        description: A line said off the record is refused, even from a faulty application.
+        description: A line said off the record is refused, even from faulty software.
         operationId: addTranscriptEntry
         parameters:
           - reference: $components.parameters.caller

@@ -182,13 +182,14 @@ $defs:
       resources:
         type: object
         description: >
-          Resources nested under this machine's object — at any depth — keyed by
-          resource name, the schema each one's item GET returns. Creating or
-          updating one runs the guards declared here, with `object` the record this machine
-          governs, found from the path, and `request` the body being created.
-          When several machines govern a resource along its path, every one must
-          pass. A name that is not nested under this machine's object is a
-          validation error.
+          This machine's own object, and resources nested under it at any
+          depth, keyed by resource name, the schema each one's item GET
+          returns. Creating or updating one runs the guards declared here, with
+          `request` the body. For a nested resource `object` is the record this
+          machine governs, found from the path; for the machine's own object,
+          `object` is the record being updated, and there is none yet when one
+          is being created. When several machines govern a resource along its
+          path, every one must pass. Any other name is a validation error.
         propertyNames:
           pattern: "^[A-Z][A-Za-z0-9]*$"
         additionalProperties:
@@ -357,13 +358,15 @@ $defs:
 
   GovernedResource:
     type: object
-    description: What a machine decides about one resource nested under its object.
+    description: What a machine decides about its own object, or one resource nested under it.
     additionalProperties: false
     minProperties: 1
     properties:
       create:
         $ref: "#/$defs/GovernedOperation"
-        description: When one may be created; `request` is the body being created.
+        description: >
+          When one may be created; `request` is the body being created. For the
+          machine's own object there is no `object` yet.
       update:
         $ref: "#/$defs/GovernedOperation"
         description: >
@@ -814,6 +817,12 @@ $defs:
         type: string
         pattern: "^[a-z][a-zA-Z0-9]*$"
         description: Guard identifier (camelCase), referenced by name in guards.conditions.
+      description:
+        type: string
+        description: >
+          What must be true, in words a client developer reads — "the
+          transcript's profile exists". A refusal names each condition that was
+          not met by this description, or by its id where there is none.
       condition:
         type: string
         description: >

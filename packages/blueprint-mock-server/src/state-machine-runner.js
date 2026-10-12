@@ -64,7 +64,10 @@ export function checkGuardClauses({ guardItems, stateMachine, machine, callerRol
   });
 
   if (clausePassed) return null;
-  const why = failed.length > 0 ? `: ${[...new Set(failed)].join(', ')} did not hold` : '';
+  // Each condition as its guard describes it, or by its id where it has no
+  // description.
+  const notMet = [...new Set(failed)].map((id) => guardsMap[id]?.description ?? id);
+  const why = notMet.length > 0 ? `. Not met: ${notMet.join('; ')}` : '';
   return { status: 409, error: `No guard clause passed for ${label}${why}` };
 }
 

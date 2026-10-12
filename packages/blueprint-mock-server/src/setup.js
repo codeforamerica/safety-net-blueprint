@@ -9,7 +9,7 @@ import { seedAllDatabases } from './seeder.js';
 import { validateMockData } from './mock-data-validator.js';
 import { validateAll, getValidationStatus } from './spec-validator.js';
 import { initSchemaRegistry } from './validator.js';
-import { registerConfigManaged } from './config-registry.js';
+import { seedConfigs } from './config-registry.js';
 import { discover, load, extract } from '@codeforamerica/blueprint-core';
 import { graphsOf, unresolvedRulesWarning } from './contract-views.js';
 /**
@@ -155,22 +155,7 @@ export async function performSetup({ specsDir, seedDir, docs: providedDocs = nul
 
   // Seed config-managed resources (after seedAllDatabases, which clears collections first)
   const configs = extract(docs, 'config');
-  for (const config of configs) {
-    for (const [catalogKey, entries] of Object.entries(config.catalogs)) {
-      for (const entry of entries) {
-        // Strip x- extension fields before storing — they are config artifact metadata
-        const { ...data } = entry;
-        for (const key of Object.keys(data)) {
-          if (key.startsWith('x-')) delete data[key];
-        }
-        store.insertResource(catalogKey, { ...data, source: 'system' });
-        registerConfigManaged(catalogKey, data.id);
-      }
-      if (verbose) {
-        console.log(`✓ Seeded ${entries.length} config-managed ${catalogKey} (${config.domain})`);
-      }
-    }
-  }
+  seedConfigs(configs, store, { verbose });
 
   // Registries are served from the contracts, not stored: every type, every
   // file of it combined. Read here so a duplicate entry id fails at boot.

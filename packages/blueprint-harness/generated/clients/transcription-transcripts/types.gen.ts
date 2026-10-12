@@ -17,20 +17,12 @@ export type TranscriptWritable = {
      */
     subjectId?: string;
     /**
-     * The transcription service that turned speech into its lines — an
-     * entry of the `transcription-services` registry, which a contract set
-     * extends with a registry file of its own. `none` when no service was
-     * involved: a chat, or lines a person typed.
-     *
-     */
-    provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-    /**
      * The transcription service's identifier for the model that produced
      * its lines — e.g. `scribe_v2`. Services change the model behind the
      * same name, so this is what tells two transcripts made a month apart
      * apart. Where a service does not report a version, the model the
-     * client requested — e.g. `standard`. Required unless `provider` is
-     * `none`.
+     * client requested — e.g. `standard`. Required unless the profile's
+     * service is `none`.
      *
      */
     model?: string;
@@ -53,20 +45,12 @@ export type Transcript = {
      */
     subjectId?: string;
     /**
-     * The transcription service that turned speech into its lines — an
-     * entry of the `transcription-services` registry, which a contract set
-     * extends with a registry file of its own. `none` when no service was
-     * involved: a chat, or lines a person typed.
-     *
-     */
-    provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-    /**
      * The transcription service's identifier for the model that produced
      * its lines — e.g. `scribe_v2`. Services change the model behind the
      * same name, so this is what tells two transcripts made a month apart
      * apart. Where a service does not report a version, the model the
-     * client requested — e.g. `standard`. Required unless `provider` is
-     * `none`.
+     * client requested — e.g. `standard`. Required unless the profile's
+     * service is `none`.
      *
      */
     model?: string;
@@ -101,6 +85,53 @@ export type Transcript = {
      * When the transcript last changed.
      */
     readonly updatedAt: string;
+    /**
+     * A profile, including server-managed fields.
+     */
+    profile?: {
+        /**
+         * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+         */
+        name: string;
+        /**
+         * What the profile is for.
+         */
+        description?: string;
+        /**
+         * The transcription service — an entry of the `transcription-services`
+         * registry, which a contract set extends with a registry file of its
+         * own. `none` for conversations no service transcribes: a chat, or
+         * lines a person types.
+         *
+         */
+        provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+        /**
+         * The languages the conversation may be in. One fixes the language;
+         * several let the service tell which is being spoken among them.
+         * Absent, the service detects the language itself — which not every
+         * service can do.
+         *
+         */
+        languages?: Array<string>;
+    } & {
+        /**
+         * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+         */
+        readonly id: string;
+        /**
+         * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+         *
+         */
+        source: 'system' | 'user';
+        /**
+         * When the profile was added.
+         */
+        readonly createdAt: string;
+        /**
+         * When the profile last changed.
+         */
+        readonly updatedAt: string;
+    };
 };
 
 export type TranscriptCreate = {
@@ -113,20 +144,12 @@ export type TranscriptCreate = {
      */
     subjectId?: string;
     /**
-     * The transcription service that turned speech into its lines — an
-     * entry of the `transcription-services` registry, which a contract set
-     * extends with a registry file of its own. `none` when no service was
-     * involved: a chat, or lines a person typed.
-     *
-     */
-    provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-    /**
      * The transcription service's identifier for the model that produced
      * its lines — e.g. `scribe_v2`. Services change the model behind the
      * same name, so this is what tells two transcripts made a month apart
      * apart. Where a service does not report a version, the model the
-     * client requested — e.g. `standard`. Required unless `provider` is
-     * `none`.
+     * client requested — e.g. `standard`. Required unless the profile's
+     * service is `none`.
      *
      */
     model?: string;
@@ -135,6 +158,10 @@ export type TranscriptCreate = {
      */
     client?: string;
 } & {
+    /**
+     * The profile to start it under.
+     */
+    profileId: string;
     /**
      * When the conversation began, by the client's clock.
      */
@@ -151,20 +178,12 @@ export type TranscriptUpdate = {
      */
     subjectId?: string;
     /**
-     * The transcription service that turned speech into its lines — an
-     * entry of the `transcription-services` registry, which a contract set
-     * extends with a registry file of its own. `none` when no service was
-     * involved: a chat, or lines a person typed.
-     *
-     */
-    provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-    /**
      * The transcription service's identifier for the model that produced
      * its lines — e.g. `scribe_v2`. Services change the model behind the
      * same name, so this is what tells two transcripts made a month apart
      * apart. Where a service does not report a version, the model the
-     * client requested — e.g. `standard`. Required unless `provider` is
-     * `none`.
+     * client requested — e.g. `standard`. Required unless the profile's
+     * service is `none`.
      *
      */
     model?: string;
@@ -190,20 +209,12 @@ export type TranscriptList = {
          */
         subjectId?: string;
         /**
-         * The transcription service that turned speech into its lines — an
-         * entry of the `transcription-services` registry, which a contract set
-         * extends with a registry file of its own. `none` when no service was
-         * involved: a chat, or lines a person typed.
-         *
-         */
-        provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-        /**
          * The transcription service's identifier for the model that produced
          * its lines — e.g. `scribe_v2`. Services change the model behind the
          * same name, so this is what tells two transcripts made a month apart
          * apart. Where a service does not report a version, the model the
-         * client requested — e.g. `standard`. Required unless `provider` is
-         * `none`.
+         * client requested — e.g. `standard`. Required unless the profile's
+         * service is `none`.
          *
          */
         model?: string;
@@ -238,6 +249,53 @@ export type TranscriptList = {
          * When the transcript last changed.
          */
         readonly updatedAt: string;
+        /**
+         * A profile, including server-managed fields.
+         */
+        profile?: {
+            /**
+             * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+             */
+            name: string;
+            /**
+             * What the profile is for.
+             */
+            description?: string;
+            /**
+             * The transcription service — an entry of the `transcription-services`
+             * registry, which a contract set extends with a registry file of its
+             * own. `none` for conversations no service transcribes: a chat, or
+             * lines a person types.
+             *
+             */
+            provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+            /**
+             * The languages the conversation may be in. One fixes the language;
+             * several let the service tell which is being spoken among them.
+             * Absent, the service detects the language itself — which not every
+             * service can do.
+             *
+             */
+            languages?: Array<string>;
+        } & {
+            /**
+             * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+             */
+            readonly id: string;
+            /**
+             * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+             *
+             */
+            source: 'system' | 'user';
+            /**
+             * When the profile was added.
+             */
+            readonly createdAt: string;
+            /**
+             * When the profile last changed.
+             */
+            readonly updatedAt: string;
+        };
     }>;
     /**
      * Total number of transcripts available.
@@ -535,6 +593,208 @@ export type TranscriptEntryList = {
 };
 
 /**
+ * Client-writable fields of a profile.
+ */
+export type TranscriptionProfileWritable = {
+    /**
+     * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+     */
+    name?: string;
+    /**
+     * What the profile is for.
+     */
+    description?: string;
+    /**
+     * The transcription service — an entry of the `transcription-services`
+     * registry, which a contract set extends with a registry file of its
+     * own. `none` for conversations no service transcribes: a chat, or
+     * lines a person types.
+     *
+     */
+    provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+    /**
+     * The languages the conversation may be in. One fixes the language;
+     * several let the service tell which is being spoken among them.
+     * Absent, the service detects the language itself — which not every
+     * service can do.
+     *
+     */
+    languages?: Array<string>;
+};
+
+/**
+ * A profile, including server-managed fields.
+ */
+export type TranscriptionProfile = {
+    /**
+     * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+     */
+    name: string;
+    /**
+     * What the profile is for.
+     */
+    description?: string;
+    /**
+     * The transcription service — an entry of the `transcription-services`
+     * registry, which a contract set extends with a registry file of its
+     * own. `none` for conversations no service transcribes: a chat, or
+     * lines a person types.
+     *
+     */
+    provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+    /**
+     * The languages the conversation may be in. One fixes the language;
+     * several let the service tell which is being spoken among them.
+     * Absent, the service detects the language itself — which not every
+     * service can do.
+     *
+     */
+    languages?: Array<string>;
+} & {
+    /**
+     * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+     */
+    readonly id: string;
+    /**
+     * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+     *
+     */
+    source: 'system' | 'user';
+    /**
+     * When the profile was added.
+     */
+    readonly createdAt: string;
+    /**
+     * When the profile last changed.
+     */
+    readonly updatedAt: string;
+};
+
+export type TranscriptionProfileCreate = {
+    /**
+     * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+     */
+    name?: string;
+    /**
+     * What the profile is for.
+     */
+    description?: string;
+    /**
+     * The transcription service — an entry of the `transcription-services`
+     * registry, which a contract set extends with a registry file of its
+     * own. `none` for conversations no service transcribes: a chat, or
+     * lines a person types.
+     *
+     */
+    provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+    /**
+     * The languages the conversation may be in. One fixes the language;
+     * several let the service tell which is being spoken among them.
+     * Absent, the service detects the language itself — which not every
+     * service can do.
+     *
+     */
+    languages?: Array<string>;
+} & {
+    [key: string]: unknown;
+};
+
+export type TranscriptionProfileUpdate = {
+    /**
+     * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+     */
+    name?: string;
+    /**
+     * What the profile is for.
+     */
+    description?: string;
+    /**
+     * The transcription service — an entry of the `transcription-services`
+     * registry, which a contract set extends with a registry file of its
+     * own. `none` for conversations no service transcribes: a chat, or
+     * lines a person types.
+     *
+     */
+    provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+    /**
+     * The languages the conversation may be in. One fixes the language;
+     * several let the service tell which is being spoken among them.
+     * Absent, the service detects the language itself — which not every
+     * service can do.
+     *
+     */
+    languages?: Array<string>;
+} & {
+    [key: string]: unknown;
+};
+
+export type TranscriptionProfileList = {
+    /**
+     * A profile, including server-managed fields.
+     */
+    items: Array<{
+        /**
+         * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+         */
+        name: string;
+        /**
+         * What the profile is for.
+         */
+        description?: string;
+        /**
+         * The transcription service — an entry of the `transcription-services`
+         * registry, which a contract set extends with a registry file of its
+         * own. `none` for conversations no service transcribes: a chat, or
+         * lines a person types.
+         *
+         */
+        provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+        /**
+         * The languages the conversation may be in. One fixes the language;
+         * several let the service tell which is being spoken among them.
+         * Absent, the service detects the language itself — which not every
+         * service can do.
+         *
+         */
+        languages?: Array<string>;
+    } & {
+        /**
+         * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+         */
+        readonly id: string;
+        /**
+         * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+         *
+         */
+        source: 'system' | 'user';
+        /**
+         * When the profile was added.
+         */
+        readonly createdAt: string;
+        /**
+         * When the profile last changed.
+         */
+        readonly updatedAt: string;
+    }>;
+    /**
+     * Total number of profiles.
+     */
+    total: number;
+    /**
+     * Maximum number of profiles requested.
+     */
+    limit: number;
+    /**
+     * Number of profiles skipped before this page.
+     */
+    offset: number;
+    /**
+     * Whether more profiles are available beyond this page.
+     */
+    hasNext?: boolean;
+};
+
+/**
  * A transcript, including server-managed fields.
  */
 export type TranscriptCreatedEvent = {
@@ -547,20 +807,12 @@ export type TranscriptCreatedEvent = {
      */
     subjectId?: string;
     /**
-     * The transcription service that turned speech into its lines — an
-     * entry of the `transcription-services` registry, which a contract set
-     * extends with a registry file of its own. `none` when no service was
-     * involved: a chat, or lines a person typed.
-     *
-     */
-    provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-    /**
      * The transcription service's identifier for the model that produced
      * its lines — e.g. `scribe_v2`. Services change the model behind the
      * same name, so this is what tells two transcripts made a month apart
      * apart. Where a service does not report a version, the model the
-     * client requested — e.g. `standard`. Required unless `provider` is
-     * `none`.
+     * client requested — e.g. `standard`. Required unless the profile's
+     * service is `none`.
      *
      */
     model?: string;
@@ -595,6 +847,53 @@ export type TranscriptCreatedEvent = {
      * When the transcript last changed.
      */
     readonly updatedAt: string;
+    /**
+     * A profile, including server-managed fields.
+     */
+    profile?: {
+        /**
+         * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+         */
+        name: string;
+        /**
+         * What the profile is for.
+         */
+        description?: string;
+        /**
+         * The transcription service — an entry of the `transcription-services`
+         * registry, which a contract set extends with a registry file of its
+         * own. `none` for conversations no service transcribes: a chat, or
+         * lines a person types.
+         *
+         */
+        provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+        /**
+         * The languages the conversation may be in. One fixes the language;
+         * several let the service tell which is being spoken among them.
+         * Absent, the service detects the language itself — which not every
+         * service can do.
+         *
+         */
+        languages?: Array<string>;
+    } & {
+        /**
+         * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+         */
+        readonly id: string;
+        /**
+         * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+         *
+         */
+        source: 'system' | 'user';
+        /**
+         * When the profile was added.
+         */
+        readonly createdAt: string;
+        /**
+         * When the profile last changed.
+         */
+        readonly updatedAt: string;
+    };
 };
 
 /**
@@ -735,6 +1034,84 @@ export type TranscriptEntryUpdatedEvent = {
     }>;
 };
 
+/**
+ * A profile, including server-managed fields.
+ */
+export type TranscriptionProfileCreatedEvent = {
+    /**
+     * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+     */
+    name: string;
+    /**
+     * What the profile is for.
+     */
+    description?: string;
+    /**
+     * The transcription service — an entry of the `transcription-services`
+     * registry, which a contract set extends with a registry file of its
+     * own. `none` for conversations no service transcribes: a chat, or
+     * lines a person types.
+     *
+     */
+    provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+    /**
+     * The languages the conversation may be in. One fixes the language;
+     * several let the service tell which is being spoken among them.
+     * Absent, the service detects the language itself — which not every
+     * service can do.
+     *
+     */
+    languages?: Array<string>;
+} & {
+    /**
+     * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+     */
+    readonly id: string;
+    /**
+     * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+     *
+     */
+    source: 'system' | 'user';
+    /**
+     * When the profile was added.
+     */
+    readonly createdAt: string;
+    /**
+     * When the profile last changed.
+     */
+    readonly updatedAt: string;
+};
+
+/**
+ * Payload for a CRUD-emitted updated event. Contains a field-level diff
+ * recording which fields changed and their before/after values.
+ *
+ * Emitted automatically by the mock server on every PATCH request.
+ * Consumers can react to specific field mutations without fetching the
+ * full resource.
+ *
+ */
+export type TranscriptionProfileUpdatedEvent = {
+    /**
+     * List of fields that changed, with before and after values.
+     */
+    changes: Array<{
+        /**
+         * Dot-path of the changed field. Top-level fields are a simple name (e.g. `status`); nested fields use dot notation (e.g. `personalInformation.dateOfBirth`). Arrays are treated as leaf values — the path identifies the array field itself, not individual elements.
+         *
+         */
+        field: string;
+        /**
+         * Value of the field before the update.
+         */
+        before: unknown;
+        /**
+         * Value of the field after the update.
+         */
+        after: unknown;
+    }>;
+};
+
 export type AtRequest = {
     /**
      * When it happened, by the client's clock.
@@ -743,7 +1120,7 @@ export type AtRequest = {
 };
 
 /**
- * Client-writable fields of a transcript.
+ * A transcript, including server-managed fields.
  */
 export type TranscriptWritable2 = {
     /**
@@ -755,20 +1132,12 @@ export type TranscriptWritable2 = {
      */
     subjectId?: string;
     /**
-     * The transcription service that turned speech into its lines — an
-     * entry of the `transcription-services` registry, which a contract set
-     * extends with a registry file of its own. `none` when no service was
-     * involved: a chat, or lines a person typed.
-     *
-     */
-    provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-    /**
      * The transcription service's identifier for the model that produced
      * its lines — e.g. `scribe_v2`. Services change the model behind the
      * same name, so this is what tells two transcripts made a month apart
      * apart. Where a service does not report a version, the model the
-     * client requested — e.g. `standard`. Required unless `provider` is
-     * `none`.
+     * client requested — e.g. `standard`. Required unless the profile's
+     * service is `none`.
      *
      */
     model?: string;
@@ -776,9 +1145,42 @@ export type TranscriptWritable2 = {
      * The software that wrote its lines, as `name/version` — a transcription client, or a chat.
      */
     client?: string;
+} & {
+    /**
+     * Client-writable fields of a profile.
+     */
+    profile?: {
+        /**
+         * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+         */
+        name: string;
+        /**
+         * What the profile is for.
+         */
+        description?: string;
+        /**
+         * The transcription service — an entry of the `transcription-services`
+         * registry, which a contract set extends with a registry file of its
+         * own. `none` for conversations no service transcribes: a chat, or
+         * lines a person types.
+         *
+         */
+        provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+        /**
+         * The languages the conversation may be in. One fixes the language;
+         * several let the service tell which is being spoken among them.
+         * Absent, the service detects the language itself — which not every
+         * service can do.
+         *
+         */
+        languages?: Array<string>;
+    };
 };
 
 export type TranscriptListWritable = {
+    /**
+     * A transcript, including server-managed fields.
+     */
     items: Array<{
         /**
          * What kind of thing the transcript records, e.g. `interview` or `call`.
@@ -789,20 +1191,12 @@ export type TranscriptListWritable = {
          */
         subjectId?: string;
         /**
-         * The transcription service that turned speech into its lines — an
-         * entry of the `transcription-services` registry, which a contract set
-         * extends with a registry file of its own. `none` when no service was
-         * involved: a chat, or lines a person typed.
-         *
-         */
-        provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-        /**
          * The transcription service's identifier for the model that produced
          * its lines — e.g. `scribe_v2`. Services change the model behind the
          * same name, so this is what tells two transcripts made a month apart
          * apart. Where a service does not report a version, the model the
-         * client requested — e.g. `standard`. Required unless `provider` is
-         * `none`.
+         * client requested — e.g. `standard`. Required unless the profile's
+         * service is `none`.
          *
          */
         model?: string;
@@ -810,6 +1204,36 @@ export type TranscriptListWritable = {
          * The software that wrote its lines, as `name/version` — a transcription client, or a chat.
          */
         client?: string;
+    } & {
+        /**
+         * Client-writable fields of a profile.
+         */
+        profile?: {
+            /**
+             * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+             */
+            name: string;
+            /**
+             * What the profile is for.
+             */
+            description?: string;
+            /**
+             * The transcription service — an entry of the `transcription-services`
+             * registry, which a contract set extends with a registry file of its
+             * own. `none` for conversations no service transcribes: a chat, or
+             * lines a person types.
+             *
+             */
+            provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+            /**
+             * The languages the conversation may be in. One fixes the language;
+             * several let the service tell which is being spoken among them.
+             * Absent, the service detects the language itself — which not every
+             * service can do.
+             *
+             */
+            languages?: Array<string>;
+        };
     }>;
     /**
      * Total number of transcripts available.
@@ -931,7 +1355,82 @@ export type TranscriptEntryListWritable = {
 };
 
 /**
- * Client-writable fields of a transcript.
+ * Client-writable fields of a profile.
+ */
+export type TranscriptionProfileWritable2 = {
+    /**
+     * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+     */
+    name: string;
+    /**
+     * What the profile is for.
+     */
+    description?: string;
+    /**
+     * The transcription service — an entry of the `transcription-services`
+     * registry, which a contract set extends with a registry file of its
+     * own. `none` for conversations no service transcribes: a chat, or
+     * lines a person types.
+     *
+     */
+    provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+    /**
+     * The languages the conversation may be in. One fixes the language;
+     * several let the service tell which is being spoken among them.
+     * Absent, the service detects the language itself — which not every
+     * service can do.
+     *
+     */
+    languages?: Array<string>;
+};
+
+export type TranscriptionProfileListWritable = {
+    items: Array<{
+        /**
+         * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+         */
+        name: string;
+        /**
+         * What the profile is for.
+         */
+        description?: string;
+        /**
+         * The transcription service — an entry of the `transcription-services`
+         * registry, which a contract set extends with a registry file of its
+         * own. `none` for conversations no service transcribes: a chat, or
+         * lines a person types.
+         *
+         */
+        provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+        /**
+         * The languages the conversation may be in. One fixes the language;
+         * several let the service tell which is being spoken among them.
+         * Absent, the service detects the language itself — which not every
+         * service can do.
+         *
+         */
+        languages?: Array<string>;
+    }>;
+    /**
+     * Total number of profiles.
+     */
+    total: number;
+    /**
+     * Maximum number of profiles requested.
+     */
+    limit: number;
+    /**
+     * Number of profiles skipped before this page.
+     */
+    offset: number;
+    /**
+     * Whether more profiles are available beyond this page.
+     */
+    hasNext?: boolean;
+};
+
+/**
+ * A transcript, including server-managed fields.
  */
 export type TranscriptCreatedEventWritable = {
     /**
@@ -943,20 +1442,12 @@ export type TranscriptCreatedEventWritable = {
      */
     subjectId?: string;
     /**
-     * The transcription service that turned speech into its lines — an
-     * entry of the `transcription-services` registry, which a contract set
-     * extends with a registry file of its own. `none` when no service was
-     * involved: a chat, or lines a person typed.
-     *
-     */
-    provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-    /**
      * The transcription service's identifier for the model that produced
      * its lines — e.g. `scribe_v2`. Services change the model behind the
      * same name, so this is what tells two transcripts made a month apart
      * apart. Where a service does not report a version, the model the
-     * client requested — e.g. `standard`. Required unless `provider` is
-     * `none`.
+     * client requested — e.g. `standard`. Required unless the profile's
+     * service is `none`.
      *
      */
     model?: string;
@@ -964,6 +1455,36 @@ export type TranscriptCreatedEventWritable = {
      * The software that wrote its lines, as `name/version` — a transcription client, or a chat.
      */
     client?: string;
+} & {
+    /**
+     * Client-writable fields of a profile.
+     */
+    profile?: {
+        /**
+         * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+         */
+        name: string;
+        /**
+         * What the profile is for.
+         */
+        description?: string;
+        /**
+         * The transcription service — an entry of the `transcription-services`
+         * registry, which a contract set extends with a registry file of its
+         * own. `none` for conversations no service transcribes: a chat, or
+         * lines a person types.
+         *
+         */
+        provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+        /**
+         * The languages the conversation may be in. One fixes the language;
+         * several let the service tell which is being spoken among them.
+         * Absent, the service detects the language itself — which not every
+         * service can do.
+         *
+         */
+        languages?: Array<string>;
+    };
 };
 
 /**
@@ -1020,6 +1541,36 @@ export type TranscriptEntryCreatedEventWritable = {
 };
 
 /**
+ * Client-writable fields of a profile.
+ */
+export type TranscriptionProfileCreatedEventWritable = {
+    /**
+     * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+     */
+    name: string;
+    /**
+     * What the profile is for.
+     */
+    description?: string;
+    /**
+     * The transcription service — an entry of the `transcription-services`
+     * registry, which a contract set extends with a registry file of its
+     * own. `none` for conversations no service transcribes: a chat, or
+     * lines a person types.
+     *
+     */
+    provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+    /**
+     * The languages the conversation may be in. One fixes the language;
+     * several let the service tell which is being spoken among them.
+     * Absent, the service detects the language itself — which not every
+     * service can do.
+     *
+     */
+    languages?: Array<string>;
+};
+
+/**
  * Unique identifier of the transcript.
  */
 export type TranscriptIdParam = string;
@@ -1028,6 +1579,11 @@ export type TranscriptIdParam = string;
  * Unique identifier of the entry.
  */
 export type TranscriptEntryIdParam = string;
+
+/**
+ * Unique identifier of the profile.
+ */
+export type ProfileIdParam = string;
 
 export type ListTranscriptsData = {
     body?: never;
@@ -1211,20 +1767,12 @@ export type ListTranscriptsResponses = {
              */
             subjectId?: string;
             /**
-             * The transcription service that turned speech into its lines — an
-             * entry of the `transcription-services` registry, which a contract set
-             * extends with a registry file of its own. `none` when no service was
-             * involved: a chat, or lines a person typed.
-             *
-             */
-            provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-            /**
              * The transcription service's identifier for the model that produced
              * its lines — e.g. `scribe_v2`. Services change the model behind the
              * same name, so this is what tells two transcripts made a month apart
              * apart. Where a service does not report a version, the model the
-             * client requested — e.g. `standard`. Required unless `provider` is
-             * `none`.
+             * client requested — e.g. `standard`. Required unless the profile's
+             * service is `none`.
              *
              */
             model?: string;
@@ -1259,6 +1807,53 @@ export type ListTranscriptsResponses = {
              * When the transcript last changed.
              */
             readonly updatedAt: string;
+            /**
+             * A profile, including server-managed fields.
+             */
+            profile?: {
+                /**
+                 * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+                 */
+                name: string;
+                /**
+                 * What the profile is for.
+                 */
+                description?: string;
+                /**
+                 * The transcription service — an entry of the `transcription-services`
+                 * registry, which a contract set extends with a registry file of its
+                 * own. `none` for conversations no service transcribes: a chat, or
+                 * lines a person types.
+                 *
+                 */
+                provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+                /**
+                 * The languages the conversation may be in. One fixes the language;
+                 * several let the service tell which is being spoken among them.
+                 * Absent, the service detects the language itself — which not every
+                 * service can do.
+                 *
+                 */
+                languages?: Array<string>;
+            } & {
+                /**
+                 * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+                 */
+                readonly id: string;
+                /**
+                 * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+                 *
+                 */
+                source: 'system' | 'user';
+                /**
+                 * When the profile was added.
+                 */
+                readonly createdAt: string;
+                /**
+                 * When the profile last changed.
+                 */
+                readonly updatedAt: string;
+            };
         }>;
         /**
          * Total number of transcripts available.
@@ -1292,20 +1887,12 @@ export type CreateTranscriptData = {
          */
         subjectId?: string;
         /**
-         * The transcription service that turned speech into its lines — an
-         * entry of the `transcription-services` registry, which a contract set
-         * extends with a registry file of its own. `none` when no service was
-         * involved: a chat, or lines a person typed.
-         *
-         */
-        provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-        /**
          * The transcription service's identifier for the model that produced
          * its lines — e.g. `scribe_v2`. Services change the model behind the
          * same name, so this is what tells two transcripts made a month apart
          * apart. Where a service does not report a version, the model the
-         * client requested — e.g. `standard`. Required unless `provider` is
-         * `none`.
+         * client requested — e.g. `standard`. Required unless the profile's
+         * service is `none`.
          *
          */
         model?: string;
@@ -1314,6 +1901,10 @@ export type CreateTranscriptData = {
          */
         client?: string;
     } & {
+        /**
+         * The profile to start it under.
+         */
+        profileId: string;
         /**
          * When the conversation began, by the client's clock.
          */
@@ -1329,6 +1920,27 @@ export type CreateTranscriptErrors = {
      * The request is malformed or contains invalid parameters.
      */
     400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The transcript is refused: its profile does not exist, or the
+     * profile names a transcription service and no `model` was given.
+     *
+     */
+    409: {
         /**
          * Machine-readable error code.
          */
@@ -1400,20 +2012,12 @@ export type CreateTranscriptResponses = {
          */
         subjectId?: string;
         /**
-         * The transcription service that turned speech into its lines — an
-         * entry of the `transcription-services` registry, which a contract set
-         * extends with a registry file of its own. `none` when no service was
-         * involved: a chat, or lines a person typed.
-         *
-         */
-        provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-        /**
          * The transcription service's identifier for the model that produced
          * its lines — e.g. `scribe_v2`. Services change the model behind the
          * same name, so this is what tells two transcripts made a month apart
          * apart. Where a service does not report a version, the model the
-         * client requested — e.g. `standard`. Required unless `provider` is
-         * `none`.
+         * client requested — e.g. `standard`. Required unless the profile's
+         * service is `none`.
          *
          */
         model?: string;
@@ -1448,6 +2052,53 @@ export type CreateTranscriptResponses = {
          * When the transcript last changed.
          */
         readonly updatedAt: string;
+        /**
+         * A profile, including server-managed fields.
+         */
+        profile?: {
+            /**
+             * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+             */
+            name: string;
+            /**
+             * What the profile is for.
+             */
+            description?: string;
+            /**
+             * The transcription service — an entry of the `transcription-services`
+             * registry, which a contract set extends with a registry file of its
+             * own. `none` for conversations no service transcribes: a chat, or
+             * lines a person types.
+             *
+             */
+            provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+            /**
+             * The languages the conversation may be in. One fixes the language;
+             * several let the service tell which is being spoken among them.
+             * Absent, the service detects the language itself — which not every
+             * service can do.
+             *
+             */
+            languages?: Array<string>;
+        } & {
+            /**
+             * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+             */
+            readonly id: string;
+            /**
+             * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+             *
+             */
+            source: 'system' | 'user';
+            /**
+             * When the profile was added.
+             */
+            readonly createdAt: string;
+            /**
+             * When the profile last changed.
+             */
+            readonly updatedAt: string;
+        };
     };
 };
 
@@ -1586,20 +2237,12 @@ export type GetTranscriptResponses = {
          */
         subjectId?: string;
         /**
-         * The transcription service that turned speech into its lines — an
-         * entry of the `transcription-services` registry, which a contract set
-         * extends with a registry file of its own. `none` when no service was
-         * involved: a chat, or lines a person typed.
-         *
-         */
-        provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-        /**
          * The transcription service's identifier for the model that produced
          * its lines — e.g. `scribe_v2`. Services change the model behind the
          * same name, so this is what tells two transcripts made a month apart
          * apart. Where a service does not report a version, the model the
-         * client requested — e.g. `standard`. Required unless `provider` is
-         * `none`.
+         * client requested — e.g. `standard`. Required unless the profile's
+         * service is `none`.
          *
          */
         model?: string;
@@ -1634,6 +2277,53 @@ export type GetTranscriptResponses = {
          * When the transcript last changed.
          */
         readonly updatedAt: string;
+        /**
+         * A profile, including server-managed fields.
+         */
+        profile?: {
+            /**
+             * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+             */
+            name: string;
+            /**
+             * What the profile is for.
+             */
+            description?: string;
+            /**
+             * The transcription service — an entry of the `transcription-services`
+             * registry, which a contract set extends with a registry file of its
+             * own. `none` for conversations no service transcribes: a chat, or
+             * lines a person types.
+             *
+             */
+            provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+            /**
+             * The languages the conversation may be in. One fixes the language;
+             * several let the service tell which is being spoken among them.
+             * Absent, the service detects the language itself — which not every
+             * service can do.
+             *
+             */
+            languages?: Array<string>;
+        } & {
+            /**
+             * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+             */
+            readonly id: string;
+            /**
+             * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+             *
+             */
+            source: 'system' | 'user';
+            /**
+             * When the profile was added.
+             */
+            readonly createdAt: string;
+            /**
+             * When the profile last changed.
+             */
+            readonly updatedAt: string;
+        };
     };
 };
 
@@ -1650,20 +2340,12 @@ export type UpdateTranscriptData = {
          */
         subjectId?: string;
         /**
-         * The transcription service that turned speech into its lines — an
-         * entry of the `transcription-services` registry, which a contract set
-         * extends with a registry file of its own. `none` when no service was
-         * involved: a chat, or lines a person typed.
-         *
-         */
-        provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-        /**
          * The transcription service's identifier for the model that produced
          * its lines — e.g. `scribe_v2`. Services change the model behind the
          * same name, so this is what tells two transcripts made a month apart
          * apart. Where a service does not report a version, the model the
-         * client requested — e.g. `standard`. Required unless `provider` is
-         * `none`.
+         * client requested — e.g. `standard`. Required unless the profile's
+         * service is `none`.
          *
          */
         model?: string;
@@ -1779,20 +2461,12 @@ export type UpdateTranscriptResponses = {
          */
         subjectId?: string;
         /**
-         * The transcription service that turned speech into its lines — an
-         * entry of the `transcription-services` registry, which a contract set
-         * extends with a registry file of its own. `none` when no service was
-         * involved: a chat, or lines a person typed.
-         *
-         */
-        provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-        /**
          * The transcription service's identifier for the model that produced
          * its lines — e.g. `scribe_v2`. Services change the model behind the
          * same name, so this is what tells two transcripts made a month apart
          * apart. Where a service does not report a version, the model the
-         * client requested — e.g. `standard`. Required unless `provider` is
-         * `none`.
+         * client requested — e.g. `standard`. Required unless the profile's
+         * service is `none`.
          *
          */
         model?: string;
@@ -1827,6 +2501,53 @@ export type UpdateTranscriptResponses = {
          * When the transcript last changed.
          */
         readonly updatedAt: string;
+        /**
+         * A profile, including server-managed fields.
+         */
+        profile?: {
+            /**
+             * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+             */
+            name: string;
+            /**
+             * What the profile is for.
+             */
+            description?: string;
+            /**
+             * The transcription service — an entry of the `transcription-services`
+             * registry, which a contract set extends with a registry file of its
+             * own. `none` for conversations no service transcribes: a chat, or
+             * lines a person types.
+             *
+             */
+            provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+            /**
+             * The languages the conversation may be in. One fixes the language;
+             * several let the service tell which is being spoken among them.
+             * Absent, the service detects the language itself — which not every
+             * service can do.
+             *
+             */
+            languages?: Array<string>;
+        } & {
+            /**
+             * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+             */
+            readonly id: string;
+            /**
+             * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+             *
+             */
+            source: 'system' | 'user';
+            /**
+             * When the profile was added.
+             */
+            readonly createdAt: string;
+            /**
+             * When the profile last changed.
+             */
+            readonly updatedAt: string;
+        };
     };
 };
 
@@ -2605,6 +3326,670 @@ export type UpdateTranscriptEntryResponses = {
 
 export type UpdateTranscriptEntryResponse = UpdateTranscriptEntryResponses[keyof UpdateTranscriptEntryResponses];
 
+export type ListTranscriptionProfilesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Search query using field:value syntax. Multiple conditions separated by
+         * spaces are ANDed together.
+         *
+         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+         * Most HTTP clients handle this automatically. Examples in this documentation
+         * show human-readable syntax for clarity.
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `term` | Full-text exact match | `john` |
+         * | `*term*` | Full-text contains | `*john*` |
+         * | `term*` | Full-text starts with | `john*` |
+         * | `*term` | Full-text ends with | `*smith` |
+         * | `field:value` | Exact match on field | `status:approved` |
+         * | `field:*value*` | Contains (case-insensitive) | `name:*john*` |
+         * | `field:value*` | Starts with | `name:john*` |
+         * | `field:*value` | Ends with | `email:*@example.com` |
+         * | `field:"value"` | Quoted value (for spaces) | `name:"john doe"` |
+         * | `field.nested:value` | Nested field (dot notation) | `address.state:CA` |
+         * | `field:>value` | Greater than | `income:>1000` |
+         * | `field:>=value` | Greater than or equal | `income:>=1000` |
+         * | `field:<value` | Less than | `income:<5000` |
+         * | `field:<=value` | Less than or equal | `income:<=5000` |
+         * | `field:val1,val2` | Match any value (OR) | `status:approved,pending` |
+         * | `-field:value` | Exclude / negate | `-status:denied` |
+         * | `field:*` | Field exists (not null) | `email:*` |
+         * | `-field:*` | Field does not exist | `-deletedAt:*` |
+         *
+         * ## Examples
+         *
+         * - `john` — exact match for "john" in searchable fields
+         * - `*john*` — contains "john" in searchable fields
+         * - `name:*smith*` — name contains "smith" (case-insensitive)
+         * - `email:*@example.com` — email ends with "@example.com"
+         * - `status:approved` — exact match on status field
+         * - `status:approved,pending` — status is "approved" OR "pending"
+         * - `income:>=1000` — income greater than or equal to 1000
+         * - `created:>2024-01-01` — created after January 1, 2024
+         * - `status:approved income:>=1000` — approved AND income >= 1000 (multiple conditions)
+         * - `-status:denied` — exclude records with status "denied"
+         * - `-deletedAt:*` — only records where deletedAt does not exist
+         * - `applicant.state:CA` — nested field filter
+         *
+         * ## URL Encoding Reference
+         *
+         * When manually constructing URLs, encode these characters:
+         *
+         * | Character | Encoded |
+         * |-----------|---------|
+         * | (space) | `%20` or `+` |
+         * | `"` | `%22` |
+         * | `:` | `%3A` |
+         * | `>` | `%3E` |
+         * | `<` | `%3C` |
+         * | `,` | `%2C` |
+         *
+         * **Example:**
+         * ```
+         * Human-readable: q=status:approved income:>=1000
+         * URL-encoded:    q=status%3Aapproved%20income%3A%3E%3D1000
+         * ```
+         *
+         */
+        q?: string;
+        /**
+         * Maximum number of items to return (1-100).
+         */
+        limit?: number;
+        /**
+         * Number of items to skip before collecting results.
+         */
+        offset?: number;
+        /**
+         * Comma-separated list of fields to sort the response by. Prefix a field
+         * with `-` for descending order. The first field is the primary sort;
+         * subsequent fields are tie-breakers in declaration order.
+         *
+         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+         * Most HTTP clients handle this automatically. Examples below show
+         * human-readable syntax for clarity.
+         *
+         * Which fields a given list endpoint allows is declared in the operation's
+         * `x-sortable.fields` extension. Sending a field name not present in that
+         * list returns `400 FIELD_NOT_SORTABLE`. Sending a field name that doesn't
+         * exist on the resource schema returns `400 INVALID_SORT_FIELD`. When this
+         * parameter is omitted, the operation's `x-sortable.default` (if declared)
+         * is applied; otherwise no client-driven sort is applied. A configured
+         * tie-breaker (default `id`) is always appended for stable pagination.
+         *
+         * See `api-patterns.yaml#sorting` for the full convention and
+         * `docs/architecture/x-extensions.md` for the extension shape.
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `fieldName` | Ascending | `sort=createdAt` |
+         * | `-fieldName` | Descending | `sort=-createdAt` |
+         * | `field1,field2` | Multi-field | `sort=status,-priority` |
+         * | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
+         *
+         * ## Examples
+         *
+         * - `sort=createdAt` — oldest first
+         * - `sort=-createdAt` — newest first
+         * - `sort=-priority,dueDate` — highest priority first, then oldest due date
+         * - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+         *
+         */
+        sort?: string;
+    };
+    url: '/profiles';
+};
+
+export type ListTranscriptionProfilesErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type ListTranscriptionProfilesError = ListTranscriptionProfilesErrors[keyof ListTranscriptionProfilesErrors];
+
+export type ListTranscriptionProfilesResponses = {
+    /**
+     * A paginated collection of profiles.
+     */
+    200: {
+        /**
+         * A profile, including server-managed fields.
+         */
+        items: Array<{
+            /**
+             * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+             */
+            name: string;
+            /**
+             * What the profile is for.
+             */
+            description?: string;
+            /**
+             * The transcription service — an entry of the `transcription-services`
+             * registry, which a contract set extends with a registry file of its
+             * own. `none` for conversations no service transcribes: a chat, or
+             * lines a person types.
+             *
+             */
+            provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+            /**
+             * The languages the conversation may be in. One fixes the language;
+             * several let the service tell which is being spoken among them.
+             * Absent, the service detects the language itself — which not every
+             * service can do.
+             *
+             */
+            languages?: Array<string>;
+        } & {
+            /**
+             * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+             */
+            readonly id: string;
+            /**
+             * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+             *
+             */
+            source: 'system' | 'user';
+            /**
+             * When the profile was added.
+             */
+            readonly createdAt: string;
+            /**
+             * When the profile last changed.
+             */
+            readonly updatedAt: string;
+        }>;
+        /**
+         * Total number of profiles.
+         */
+        total: number;
+        /**
+         * Maximum number of profiles requested.
+         */
+        limit: number;
+        /**
+         * Number of profiles skipped before this page.
+         */
+        offset: number;
+        /**
+         * Whether more profiles are available beyond this page.
+         */
+        hasNext?: boolean;
+    };
+};
+
+export type ListTranscriptionProfilesResponse = ListTranscriptionProfilesResponses[keyof ListTranscriptionProfilesResponses];
+
+export type CreateTranscriptionProfileData = {
+    body: {
+        /**
+         * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+         */
+        name?: string;
+        /**
+         * What the profile is for.
+         */
+        description?: string;
+        /**
+         * The transcription service — an entry of the `transcription-services`
+         * registry, which a contract set extends with a registry file of its
+         * own. `none` for conversations no service transcribes: a chat, or
+         * lines a person types.
+         *
+         */
+        provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+        /**
+         * The languages the conversation may be in. One fixes the language;
+         * several let the service tell which is being spoken among them.
+         * Absent, the service detects the language itself — which not every
+         * service can do.
+         *
+         */
+        languages?: Array<string>;
+    } & {
+        [key: string]: unknown;
+    };
+    path?: never;
+    query?: never;
+    url: '/profiles';
+};
+
+export type CreateTranscriptionProfileErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The request was well-formed but contained semantic errors.
+     */
+    422: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type CreateTranscriptionProfileError = CreateTranscriptionProfileErrors[keyof CreateTranscriptionProfileErrors];
+
+export type CreateTranscriptionProfileResponses = {
+    /**
+     * A profile, including server-managed fields.
+     */
+    201: {
+        /**
+         * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+         */
+        name: string;
+        /**
+         * What the profile is for.
+         */
+        description?: string;
+        /**
+         * The transcription service — an entry of the `transcription-services`
+         * registry, which a contract set extends with a registry file of its
+         * own. `none` for conversations no service transcribes: a chat, or
+         * lines a person types.
+         *
+         */
+        provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+        /**
+         * The languages the conversation may be in. One fixes the language;
+         * several let the service tell which is being spoken among them.
+         * Absent, the service detects the language itself — which not every
+         * service can do.
+         *
+         */
+        languages?: Array<string>;
+    } & {
+        /**
+         * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+         */
+        readonly id: string;
+        /**
+         * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+         *
+         */
+        source: 'system' | 'user';
+        /**
+         * When the profile was added.
+         */
+        readonly createdAt: string;
+        /**
+         * When the profile last changed.
+         */
+        readonly updatedAt: string;
+    };
+};
+
+export type CreateTranscriptionProfileResponse = CreateTranscriptionProfileResponses[keyof CreateTranscriptionProfileResponses];
+
+export type GetTranscriptionProfileData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the profile.
+         */
+        profileId: string;
+    };
+    query?: never;
+    url: '/profiles/{profileId}';
+};
+
+export type GetTranscriptionProfileErrors = {
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type GetTranscriptionProfileError = GetTranscriptionProfileErrors[keyof GetTranscriptionProfileErrors];
+
+export type GetTranscriptionProfileResponses = {
+    /**
+     * A profile, including server-managed fields.
+     */
+    200: {
+        /**
+         * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+         */
+        name: string;
+        /**
+         * What the profile is for.
+         */
+        description?: string;
+        /**
+         * The transcription service — an entry of the `transcription-services`
+         * registry, which a contract set extends with a registry file of its
+         * own. `none` for conversations no service transcribes: a chat, or
+         * lines a person types.
+         *
+         */
+        provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+        /**
+         * The languages the conversation may be in. One fixes the language;
+         * several let the service tell which is being spoken among them.
+         * Absent, the service detects the language itself — which not every
+         * service can do.
+         *
+         */
+        languages?: Array<string>;
+    } & {
+        /**
+         * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+         */
+        readonly id: string;
+        /**
+         * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+         *
+         */
+        source: 'system' | 'user';
+        /**
+         * When the profile was added.
+         */
+        readonly createdAt: string;
+        /**
+         * When the profile last changed.
+         */
+        readonly updatedAt: string;
+    };
+};
+
+export type GetTranscriptionProfileResponse = GetTranscriptionProfileResponses[keyof GetTranscriptionProfileResponses];
+
+export type UpdateTranscriptionProfileData = {
+    body: {
+        /**
+         * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+         */
+        name?: string;
+        /**
+         * What the profile is for.
+         */
+        description?: string;
+        /**
+         * The transcription service — an entry of the `transcription-services`
+         * registry, which a contract set extends with a registry file of its
+         * own. `none` for conversations no service transcribes: a chat, or
+         * lines a person types.
+         *
+         */
+        provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+        /**
+         * The languages the conversation may be in. One fixes the language;
+         * several let the service tell which is being spoken among them.
+         * Absent, the service detects the language itself — which not every
+         * service can do.
+         *
+         */
+        languages?: Array<string>;
+    } & {
+        [key: string]: unknown;
+    };
+    path: {
+        /**
+         * Unique identifier of the profile.
+         */
+        profileId: string;
+    };
+    query?: never;
+    url: '/profiles/{profileId}';
+};
+
+export type UpdateTranscriptionProfileErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The request was well-formed but contained semantic errors.
+     */
+    422: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type UpdateTranscriptionProfileError = UpdateTranscriptionProfileErrors[keyof UpdateTranscriptionProfileErrors];
+
+export type UpdateTranscriptionProfileResponses = {
+    /**
+     * A profile, including server-managed fields.
+     */
+    200: {
+        /**
+         * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+         */
+        name: string;
+        /**
+         * What the profile is for.
+         */
+        description?: string;
+        /**
+         * The transcription service — an entry of the `transcription-services`
+         * registry, which a contract set extends with a registry file of its
+         * own. `none` for conversations no service transcribes: a chat, or
+         * lines a person types.
+         *
+         */
+        provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+        /**
+         * The languages the conversation may be in. One fixes the language;
+         * several let the service tell which is being spoken among them.
+         * Absent, the service detects the language itself — which not every
+         * service can do.
+         *
+         */
+        languages?: Array<string>;
+    } & {
+        /**
+         * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+         */
+        readonly id: string;
+        /**
+         * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+         *
+         */
+        source: 'system' | 'user';
+        /**
+         * When the profile was added.
+         */
+        readonly createdAt: string;
+        /**
+         * When the profile last changed.
+         */
+        readonly updatedAt: string;
+    };
+};
+
+export type UpdateTranscriptionProfileResponse = UpdateTranscriptionProfileResponses[keyof UpdateTranscriptionProfileResponses];
+
 export type PauseTranscriptData = {
     body: {
         /**
@@ -2717,20 +4102,12 @@ export type PauseTranscriptResponses = {
          */
         subjectId?: string;
         /**
-         * The transcription service that turned speech into its lines — an
-         * entry of the `transcription-services` registry, which a contract set
-         * extends with a registry file of its own. `none` when no service was
-         * involved: a chat, or lines a person typed.
-         *
-         */
-        provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-        /**
          * The transcription service's identifier for the model that produced
          * its lines — e.g. `scribe_v2`. Services change the model behind the
          * same name, so this is what tells two transcripts made a month apart
          * apart. Where a service does not report a version, the model the
-         * client requested — e.g. `standard`. Required unless `provider` is
-         * `none`.
+         * client requested — e.g. `standard`. Required unless the profile's
+         * service is `none`.
          *
          */
         model?: string;
@@ -2765,6 +4142,53 @@ export type PauseTranscriptResponses = {
          * When the transcript last changed.
          */
         readonly updatedAt: string;
+        /**
+         * A profile, including server-managed fields.
+         */
+        profile?: {
+            /**
+             * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+             */
+            name: string;
+            /**
+             * What the profile is for.
+             */
+            description?: string;
+            /**
+             * The transcription service — an entry of the `transcription-services`
+             * registry, which a contract set extends with a registry file of its
+             * own. `none` for conversations no service transcribes: a chat, or
+             * lines a person types.
+             *
+             */
+            provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+            /**
+             * The languages the conversation may be in. One fixes the language;
+             * several let the service tell which is being spoken among them.
+             * Absent, the service detects the language itself — which not every
+             * service can do.
+             *
+             */
+            languages?: Array<string>;
+        } & {
+            /**
+             * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+             */
+            readonly id: string;
+            /**
+             * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+             *
+             */
+            source: 'system' | 'user';
+            /**
+             * When the profile was added.
+             */
+            readonly createdAt: string;
+            /**
+             * When the profile last changed.
+             */
+            readonly updatedAt: string;
+        };
     };
 };
 
@@ -2882,20 +4306,12 @@ export type ResumeTranscriptResponses = {
          */
         subjectId?: string;
         /**
-         * The transcription service that turned speech into its lines — an
-         * entry of the `transcription-services` registry, which a contract set
-         * extends with a registry file of its own. `none` when no service was
-         * involved: a chat, or lines a person typed.
-         *
-         */
-        provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-        /**
          * The transcription service's identifier for the model that produced
          * its lines — e.g. `scribe_v2`. Services change the model behind the
          * same name, so this is what tells two transcripts made a month apart
          * apart. Where a service does not report a version, the model the
-         * client requested — e.g. `standard`. Required unless `provider` is
-         * `none`.
+         * client requested — e.g. `standard`. Required unless the profile's
+         * service is `none`.
          *
          */
         model?: string;
@@ -2930,6 +4346,53 @@ export type ResumeTranscriptResponses = {
          * When the transcript last changed.
          */
         readonly updatedAt: string;
+        /**
+         * A profile, including server-managed fields.
+         */
+        profile?: {
+            /**
+             * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+             */
+            name: string;
+            /**
+             * What the profile is for.
+             */
+            description?: string;
+            /**
+             * The transcription service — an entry of the `transcription-services`
+             * registry, which a contract set extends with a registry file of its
+             * own. `none` for conversations no service transcribes: a chat, or
+             * lines a person types.
+             *
+             */
+            provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+            /**
+             * The languages the conversation may be in. One fixes the language;
+             * several let the service tell which is being spoken among them.
+             * Absent, the service detects the language itself — which not every
+             * service can do.
+             *
+             */
+            languages?: Array<string>;
+        } & {
+            /**
+             * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+             */
+            readonly id: string;
+            /**
+             * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+             *
+             */
+            source: 'system' | 'user';
+            /**
+             * When the profile was added.
+             */
+            readonly createdAt: string;
+            /**
+             * When the profile last changed.
+             */
+            readonly updatedAt: string;
+        };
     };
 };
 
@@ -3047,20 +4510,12 @@ export type CloseTranscriptResponses = {
          */
         subjectId?: string;
         /**
-         * The transcription service that turned speech into its lines — an
-         * entry of the `transcription-services` registry, which a contract set
-         * extends with a registry file of its own. `none` when no service was
-         * involved: a chat, or lines a person typed.
-         *
-         */
-        provider?: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
-        /**
          * The transcription service's identifier for the model that produced
          * its lines — e.g. `scribe_v2`. Services change the model behind the
          * same name, so this is what tells two transcripts made a month apart
          * apart. Where a service does not report a version, the model the
-         * client requested — e.g. `standard`. Required unless `provider` is
-         * `none`.
+         * client requested — e.g. `standard`. Required unless the profile's
+         * service is `none`.
          *
          */
         model?: string;
@@ -3095,6 +4550,53 @@ export type CloseTranscriptResponses = {
          * When the transcript last changed.
          */
         readonly updatedAt: string;
+        /**
+         * A profile, including server-managed fields.
+         */
+        profile?: {
+            /**
+             * A short handle people tell profiles apart by, e.g. `english-phone`. Nothing checks that it is unique.
+             */
+            name: string;
+            /**
+             * What the profile is for.
+             */
+            description?: string;
+            /**
+             * The transcription service — an entry of the `transcription-services`
+             * registry, which a contract set extends with a registry file of its
+             * own. `none` for conversations no service transcribes: a chat, or
+             * lines a person types.
+             *
+             */
+            provider: 'aws-transcribe' | 'elevenlabs-scribe' | 'none';
+            /**
+             * The languages the conversation may be in. One fixes the language;
+             * several let the service tell which is being spoken among them.
+             * Absent, the service detects the language itself — which not every
+             * service can do.
+             *
+             */
+            languages?: Array<string>;
+        } & {
+            /**
+             * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
+             */
+            readonly id: string;
+            /**
+             * Where a record of a config-seeded resource came from. `system`: the deployment's config file, which seeds it once; afterwards it can be changed through the API, but not deleted. `user`: added through the API, and deletable where the API allows it. A client can use it to leave out a delete it would be refused, without trying it first.
+             *
+             */
+            source: 'system' | 'user';
+            /**
+             * When the profile was added.
+             */
+            readonly createdAt: string;
+            /**
+             * When the profile last changed.
+             */
+            readonly updatedAt: string;
+        };
     };
 };
 

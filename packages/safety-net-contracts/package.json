@@ -7,7 +7,7 @@
     "src/"
   ],
   "scripts": {
-    "validate": "node ../blueprint-cli/scripts/validate/openapi.js --spec=. --skip-examples",
+    "validate": "node ../blueprint-cli/scripts/validate.js --resolved=../generated/contracts",
     "resolve": "node ../blueprint-cli/scripts/resolve.js --spec=. --out=../generated/contracts",
     "test": "node tests/run-tests.js --all --contracts=../generated/contracts --seed=../generated/contracts --clients=../generated/clients --stop",
     "test:unit": "node tests/run-tests.js --unit",

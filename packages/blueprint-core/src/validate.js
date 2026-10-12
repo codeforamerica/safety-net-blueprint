@@ -38,6 +38,7 @@ import {
 } from './indexes.js';
 import { resolverMap } from './paths.js';
 import { governedResource } from './attachment.js';
+import { readConfigs } from './contract-readers.js';
 import { duplicateRoutes } from './validator/route-validator.js';
 import { validateArazzo, operationIdsOf } from './validator/arazzo-validator.js';
 import { generate } from './generate.js';
@@ -50,7 +51,7 @@ import { generate } from './generate.js';
  * that a type missing from both places surfaces as a gap instead of passing.
  */
 const SCHEMA_VALIDATED_ONLY = new Set([
-  'asyncapi', 'schema', 'components', 'registry', 'config',
+  'asyncapi', 'schema', 'components', 'registry',
   'overlay', 'rules-examples', 'graph',
 ]);
 
@@ -457,11 +458,12 @@ function undefinedDomain(doc, defined) {
 }
 
 /**
- * Resources a machine governs that are not nested under its object.
+ * Resources a machine governs that are neither its own object nor nested under it.
  *
  * A machine's guards run with `object` its own record, found from the path of
  * the resource being created — so a resource it governs has to sit under that
- * record's item path, at any depth, or there is no record to guard with.
+ * record's item path, at any depth, or there is no record to guard with. Its
+ * own object is the exception: creating one is guarded with no record yet.
  *
  * @param {import('../types.js').Doc} doc - A state machine document
  * @param {import('../types.js').Doc[]} docs
@@ -489,13 +491,64 @@ function resourcesNotNested(doc, docs) {
     };
     if (governed) walk(governed.resource);
 
-    for (const name of names.filter((n) => !nested.has(n))) {
+    for (const name of names.filter((n) => n !== machine.object && !nested.has(n))) {
       errors.push({
         rule: 'resource-not-nested',
         message: `The ${machine.object} machine governs "${name}", which is not a resource nested under ` +
           `${machine.object}` + (nested.size ? ` (nested: ${[...nested].join(', ')})` : ', which has none') +
-          '. A machine guards only resources under its own object.',
+          '. A machine guards only its own object and the resources under it.',
         path: `${doc.path}#machines[${machine.object}].resources`,
+      });
+    }
+  }
+  return errors;
+}
+
+/**
+ * Catalogs that seed no resource, or one that cannot say where a record came from.
+ *
+ * A catalog names the resource its entries are. A name no OpenAPI document of
+ * the domain serves is almost always a typo, and its entries would be seeded
+ * nowhere. And the seeded records carry `source`, so the resource's schema
+ * has to declare it, or responses carry a field the contract never mentions.
+ *
+ * @param {import('../types.js').Doc} doc - A config document
+ * @param {import('../types.js').Doc[]} docs
+ * @param {Map<string, { properties: Map<string, object> }>} schemaIndex
+ * @returns {object[]}
+ */
+function configCatalogs(doc, docs, schemaIndex) {
+  const errors = [];
+  // Anything past the envelope is a catalog. One in another shape — a bare
+  // list, as catalogs once were — would otherwise seed nothing, silently.
+  for (const [key, value] of Object.entries(doc.content ?? {})) {
+    if (['$schema', 'version', 'domain'].includes(key)) continue;
+    if (typeof value?.resource !== 'string' || !Array.isArray(value?.entries)) {
+      errors.push({
+        rule: 'not-a-catalog',
+        message: `"${key}" is not a catalog. A catalog names the resource it seeds and lists its entries: ` +
+          `\`${key}: { resource: <Resource>, entries: [...] }\`.`,
+        path: `${doc.path}#${key}`,
+      });
+    }
+  }
+  const [config] = readConfigs([doc, ...docs.filter((d) => d !== doc && d.type === 'openapi')]);
+  for (const [key, catalog] of Object.entries(config?.catalogs ?? {})) {
+    const where = `${doc.path}#${key}`;
+    if (!catalog.resource) {
+      errors.push({
+        rule: 'unknown-config-resource',
+        message: `Catalog "${key}" seeds ${catalog.resourceName}, which no OpenAPI document in domain "${config.domain}" serves.`,
+        path: where,
+      });
+      continue;
+    }
+    if (!schemaIndex.get(catalog.resourceName)?.properties?.has('source')) {
+      errors.push({
+        rule: 'config-resource-without-source',
+        message: `${catalog.resourceName} is seeded by catalog "${key}" but does not declare \`source\`. ` +
+          'Add `source: { $ref: https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/ConfigSource }`.',
+        path: where,
       });
     }
   }
@@ -561,6 +614,10 @@ function validateDoc(doc, context) {
 
     case 'rules':
       errors.push(...validateRulesDoc(doc.content));
+      break;
+
+    case 'config':
+      errors.push(...configCatalogs(doc, context.docs, context.schemaIndex));
       break;
 
     case 'arazzo':

@@ -716,6 +716,116 @@
             "method": "GET",
             "header": [],
             "url": {
+              "raw": "{{baseUrl}}/transcription/profiles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "profiles"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Maximum number of items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of items to skip"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Transcription (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/profiles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "profiles"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "Get only 2 items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List All Transcription",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
               "raw": "{{baseUrl}}/transcription/transcripts",
               "host": [
                 "{{baseUrl}}"
@@ -919,6 +1029,45 @@
               "variables": [
                 "transcriptId",
                 "entryId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Error response has code and message\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('code');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Transcription (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/profiles/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "profiles",
+                "00000000-0000-0000-0000-000000000000"
+              ],
+              "variables": [
+                "profileId"
               ]
             }
           },

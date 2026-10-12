@@ -21,7 +21,7 @@ Domain: `workflow` | API: [workflow-openapi.yaml](../../../contracts/domains/wor
   - Store the completion outcome from the request (sets `outcome`)
   - Store optional completion notes from the request (sets `completionNotes`)
   - Emit: `workflow.task.completed` — Emit a domain event recording the completion and its outcome
-  - If `$request.createFollowUp is true`:
+  - If `has(request.createFollowUp) and request.createFollowUp is true`:
     - Create a follow-up task when caller requests one
 - **release** — Returns an in-progress task to the queue, clearing the assignment
   - Actors: case_worker, or supervisor
@@ -82,10 +82,10 @@ Domain: `workflow` | API: [workflow-openapi.yaml](../../../contracts/domains/wor
 - **sla-escalate** — System escalates a task when an SLA timer fires (creation deadline, warning, or breach)
   - Actors: system only
   - Transition: `pending`/`in_progress`/`escalated` → `escalated`
-  - If `escalatedAt is not set`:
+  - If `!has(object.escalatedAt) || object.escalatedAt is null`:
     - Record first escalation time; not overwritten on subsequent timer-triggered escalations (sets `escalatedAt`)
   - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
-  - If `reason is "sla_deadline_exceeded"`:
+  - If `has(request.reason) and request.reason is "sla_deadline_exceeded"`:
     - Emit: `workflow.task.sla_breached` — Emit a domain event recording the SLA deadline breach for federal compliance reporting
   - Else:
     - Emit: `workflow.task.escalated` — Emit a domain event recording the automatic escalation
@@ -128,11 +128,11 @@ Domain: `workflow` | API: [workflow-openapi.yaml](../../../contracts/domains/wor
   - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
   - Schedule auto-escalation 72 business hours after task creation.
 - **`workflow.task.updated`**
-  - If `$this.data.changes.exists(c, c.field is "isExpedited" || c.field is "programType")`:
+  - If `this.data.changes.exists(c, c.field is "isExpedited" || c.field is "programType")`:
     - Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).
-  - If `$this.data.changes.exists(c, c.field is "programType" || c.field is "queueId")`:
+  - If `this.data.changes.exists(c, c.field is "programType" || c.field is "queueId")`:
     - Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.
-  - If `$this.data.changes.exists(c, c.field is "slaDeadline") and slaDeadline is set`:
+  - If `this.data.changes.exists(c, c.field is "slaDeadline") and has(object.slaDeadline) and object.slaDeadline is not null`:
     - Schedule SLA warning escalation 48 hours before the task SLA deadline.
     - Schedule SLA breach escalation at the task SLA deadline.
 - **`workflow.creation_deadline`**
@@ -147,28 +147,28 @@ Domain: `workflow` | API: [workflow-openapi.yaml](../../../contracts/domains/wor
   - Auto-resume after 7 days verification timeout; passes timer event ID as causationid
 - **`eligibility.application.expedited`**
   - Look up: task
-  - If `id is set`:
+  - If `task is not null`:
     - `PATCH workflow/tasks/$task.id`
 - **`intake.application.submitted`**
   - Create an intake review task when an application is submitted
 - **`intake.application.closed`**
   - Look up: reviewTask, approvalTask
-  - If `id is set and status is "pending_review"`:
+  - If `reviewTask is not null and reviewTask.status is "pending_review"`:
     - Complete the caseworker task that was awaiting supervisor approval
-  - If `id is set and status is "in_progress"`:
+  - If `reviewTask is not null and reviewTask.status is "in_progress"`:
     - Complete the active caseworker task on application close
-  - If `id is set and status is "pending"`:
+  - If `reviewTask is not null and reviewTask.status is "pending"`:
     - Cancel the unclaimed caseworker task when the application was auto-determined at submission
-  - If `id is set`:
+  - If `approvalTask is not null`:
     - Complete the supervisor approval task
 - **`intake.determination.approval_needed`**
   - Look up: reviewTask
-  - If `id is set`:
+  - If `reviewTask is not null`:
     - Move caseworker task to pending_review while supervisor reviews the determination
   - Create a supervisor approval task
 - **`intake.determination.rejected`**
   - Look up: reviewTask, approvalTask
-  - If `id is set`:
+  - If `reviewTask is not null`:
     - Return the caseworker task to in_progress for revision
-  - If `id is set`:
+  - If `approvalTask is not null`:
     - Complete the supervisor approval task with a rejected outcome

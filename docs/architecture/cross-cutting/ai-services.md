@@ -229,36 +229,38 @@ machine `call:` step already uses — a method, a path, and a body built from
 ```yaml
 # data-exchange-config.yaml — endpoint and model overlaid per environment
 services:
-  - id: fact-extraction-bedrock
-    serviceType: fact_extraction
-    endpoint:
-      url: https://bedrock-runtime.us-east-1.amazonaws.com
-      auth: aws-sigv4            # a name, never a credential
-      authService: bedrock
-    config:
-      modelId: <model id>
-      prompt: >
-        Record only what the applicant or worker actually said. Leave out
-        anything not stated. Quote the words each value came from.
-    request:
-      POST: /model/$config.modelId/converse
-      body:
-        system:
-          - text: $config.prompt
-        messages:
-          - role: user
-            content:
-              - text: $input.transcript
-        toolConfig:
-          tools:
-            - toolSpec:
-                name: record
-                inputSchema:
-                  json: $input.resultSchema       # the blueprint's own schema
-          toolChoice:
-            tool: {name: record}                  # forces a schema-shaped answer
-    response:
-      result: $response.output.message.content[0].toolUse.input
+  resource: ExternalService
+  entries:
+    - id: fact-extraction-bedrock
+      serviceType: fact_extraction
+      endpoint:
+        url: https://bedrock-runtime.us-east-1.amazonaws.com
+        auth: aws-sigv4            # a name, never a credential
+        authService: bedrock
+      config:
+        modelId: <model id>
+        prompt: >
+          Record only what the applicant or worker actually said. Leave out
+          anything not stated. Quote the words each value came from.
+      request:
+        POST: /model/$config.modelId/converse
+        body:
+          system:
+            - text: $config.prompt
+          messages:
+            - role: user
+              content:
+                - text: $input.transcript
+          toolConfig:
+            tools:
+              - toolSpec:
+                  name: record
+                  inputSchema:
+                    json: $input.resultSchema       # the blueprint's own schema
+            toolChoice:
+              tool: {name: record}                  # forces a schema-shaped answer
+      response:
+        result: $response.output.message.content[0].toolUse.input
 ```
 
 Bedrock's Converse API lets a request require the model to answer by "calling"

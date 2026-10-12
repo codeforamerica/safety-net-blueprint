@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddTranscriptEntryData, AddTranscriptEntryErrors, AddTranscriptEntryResponses, CloseTranscriptData, CloseTranscriptErrors, CloseTranscriptResponses, CreateTranscriptData, CreateTranscriptErrors, CreateTranscriptResponses, DeleteTranscriptData, DeleteTranscriptErrors, DeleteTranscriptResponses, GetTranscriptData, GetTranscriptEntryData, GetTranscriptEntryErrors, GetTranscriptEntryResponses, GetTranscriptErrors, GetTranscriptResponses, ListTranscriptEntriesData, ListTranscriptEntriesErrors, ListTranscriptEntriesResponses, ListTranscriptsData, ListTranscriptsErrors, ListTranscriptsResponses, PauseTranscriptData, PauseTranscriptErrors, PauseTranscriptResponses, ResumeTranscriptData, ResumeTranscriptErrors, ResumeTranscriptResponses, UpdateTranscriptData, UpdateTranscriptEntryData, UpdateTranscriptEntryErrors, UpdateTranscriptEntryResponses, UpdateTranscriptErrors, UpdateTranscriptResponses } from './types.gen';
-import { zAddTranscriptEntryData, zAddTranscriptEntryResponse, zCloseTranscriptData, zCloseTranscriptResponse, zCreateTranscriptData, zCreateTranscriptResponse, zDeleteTranscriptData, zDeleteTranscriptResponse, zGetTranscriptData, zGetTranscriptEntryData, zGetTranscriptEntryResponse, zGetTranscriptResponse, zListTranscriptEntriesData, zListTranscriptEntriesResponse, zListTranscriptsData, zListTranscriptsResponse, zPauseTranscriptData, zPauseTranscriptResponse, zResumeTranscriptData, zResumeTranscriptResponse, zUpdateTranscriptData, zUpdateTranscriptEntryData, zUpdateTranscriptEntryResponse, zUpdateTranscriptResponse } from './zod.gen';
+import type { AddTranscriptEntryData, AddTranscriptEntryErrors, AddTranscriptEntryResponses, CloseTranscriptData, CloseTranscriptErrors, CloseTranscriptResponses, CreateTranscriptData, CreateTranscriptErrors, CreateTranscriptionProfileData, CreateTranscriptionProfileErrors, CreateTranscriptionProfileResponses, CreateTranscriptResponses, DeleteTranscriptData, DeleteTranscriptErrors, DeleteTranscriptResponses, GetTranscriptData, GetTranscriptEntryData, GetTranscriptEntryErrors, GetTranscriptEntryResponses, GetTranscriptErrors, GetTranscriptionProfileData, GetTranscriptionProfileErrors, GetTranscriptionProfileResponses, GetTranscriptResponses, ListTranscriptEntriesData, ListTranscriptEntriesErrors, ListTranscriptEntriesResponses, ListTranscriptionProfilesData, ListTranscriptionProfilesErrors, ListTranscriptionProfilesResponses, ListTranscriptsData, ListTranscriptsErrors, ListTranscriptsResponses, PauseTranscriptData, PauseTranscriptErrors, PauseTranscriptResponses, ResumeTranscriptData, ResumeTranscriptErrors, ResumeTranscriptResponses, UpdateTranscriptData, UpdateTranscriptEntryData, UpdateTranscriptEntryErrors, UpdateTranscriptEntryResponses, UpdateTranscriptErrors, UpdateTranscriptionProfileData, UpdateTranscriptionProfileErrors, UpdateTranscriptionProfileResponses, UpdateTranscriptResponses } from './types.gen';
+import { zAddTranscriptEntryData, zAddTranscriptEntryResponse, zCloseTranscriptData, zCloseTranscriptResponse, zCreateTranscriptData, zCreateTranscriptionProfileData, zCreateTranscriptionProfileResponse, zCreateTranscriptResponse, zDeleteTranscriptData, zDeleteTranscriptResponse, zGetTranscriptData, zGetTranscriptEntryData, zGetTranscriptEntryResponse, zGetTranscriptionProfileData, zGetTranscriptionProfileResponse, zGetTranscriptResponse, zListTranscriptEntriesData, zListTranscriptEntriesResponse, zListTranscriptionProfilesData, zListTranscriptionProfilesResponse, zListTranscriptsData, zListTranscriptsResponse, zPauseTranscriptData, zPauseTranscriptResponse, zResumeTranscriptData, zResumeTranscriptResponse, zUpdateTranscriptData, zUpdateTranscriptEntryData, zUpdateTranscriptEntryResponse, zUpdateTranscriptionProfileData, zUpdateTranscriptionProfileResponse, zUpdateTranscriptResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -37,7 +37,9 @@ export const listTranscripts = <ThrowOnError extends boolean = false>(options?: 
 /**
  * Start a transcript
  *
- * Start recording a conversation. The transcript begins in `recording`.
+ * Start recording a conversation, under a profile. The transcript begins
+ * in `recording`. It is refused when the profile does not exist, or when
+ * the profile names a transcription service and no `model` is given.
  *
  */
 export const createTranscript = <ThrowOnError extends boolean = false>(options: Options<CreateTranscriptData, ThrowOnError>) => (options.client ?? client).post<CreateTranscriptResponses, CreateTranscriptErrors, ThrowOnError>({
@@ -82,8 +84,9 @@ export const getTranscript = <ThrowOnError extends boolean = false>(options: Opt
 /**
  * Update a transcript
  *
- * Correct what a transcript records — its subject, provider or client.
- * Its status changes only through `pause`, `resume` and `close`.
+ * Correct what a transcript records — its subject, model or client. Its
+ * profile does not change, and its status changes only through `pause`,
+ * `resume` and `close`.
  *
  */
 export const updateTranscript = <ThrowOnError extends boolean = false>(options: Options<UpdateTranscriptData, ThrowOnError>) => (options.client ?? client).patch<UpdateTranscriptResponses, UpdateTranscriptErrors, ThrowOnError>({
@@ -163,6 +166,72 @@ export const updateTranscriptEntry = <ThrowOnError extends boolean = false>(opti
     responseType: 'json',
     responseValidator: async (data) => await zUpdateTranscriptEntryResponse.parseAsync(data),
     url: '/transcripts/{transcriptId}/entries/{entryId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List transcription profiles
+ *
+ * Retrieve a paginated list of profiles, by name.
+ */
+export const listTranscriptionProfiles = <ThrowOnError extends boolean = false>(options?: Options<ListTranscriptionProfilesData, ThrowOnError>) => (options?.client ?? client).get<ListTranscriptionProfilesResponses, ListTranscriptionProfilesErrors, ThrowOnError>({
+    requestValidator: async (data) => await zListTranscriptionProfilesData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zListTranscriptionProfilesResponse.parseAsync(data),
+    url: '/profiles',
+    ...options
+});
+
+/**
+ * Add a transcription profile
+ *
+ * Add a profile beside the ones the deployment's config seeds. It is
+ * marked `source: user`.
+ *
+ */
+export const createTranscriptionProfile = <ThrowOnError extends boolean = false>(options: Options<CreateTranscriptionProfileData, ThrowOnError>) => (options.client ?? client).post<CreateTranscriptionProfileResponses, CreateTranscriptionProfileErrors, ThrowOnError>({
+    requestValidator: async (data) => await zCreateTranscriptionProfileData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zCreateTranscriptionProfileResponse.parseAsync(data),
+    url: '/profiles',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get a transcription profile
+ *
+ * Retrieve a single profile by identifier.
+ */
+export const getTranscriptionProfile = <ThrowOnError extends boolean = false>(options: Options<GetTranscriptionProfileData, ThrowOnError>) => (options.client ?? client).get<GetTranscriptionProfileResponses, GetTranscriptionProfileErrors, ThrowOnError>({
+    requestValidator: async (data) => await zGetTranscriptionProfileData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zGetTranscriptionProfileResponse.parseAsync(data),
+    url: '/profiles/{profileId}',
+    ...options
+});
+
+/**
+ * Change a transcription profile
+ *
+ * Change a profile, including one the config seeded. The change applies to
+ * transcripts started from now on; the update event records each field
+ * before and after, so what the profile said when an earlier transcript
+ * started can still be looked up. Profiles are never deleted.
+ *
+ */
+export const updateTranscriptionProfile = <ThrowOnError extends boolean = false>(options: Options<UpdateTranscriptionProfileData, ThrowOnError>) => (options.client ?? client).patch<UpdateTranscriptionProfileResponses, UpdateTranscriptionProfileErrors, ThrowOnError>({
+    requestValidator: async (data) => await zUpdateTranscriptionProfileData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zUpdateTranscriptionProfileResponse.parseAsync(data),
+    url: '/profiles/{profileId}',
     ...options,
     headers: {
         'Content-Type': 'application/json',

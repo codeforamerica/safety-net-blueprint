@@ -532,7 +532,7 @@ async function main() {
     console.log('\nBundling: inlining external $refs...');
     for (const [relativePath, spec] of currentResults) {
       const filePath = join(outDir, relativePath);
-      const dereferenced = await bundleSpec(filePath);
+      const dereferenced = await bundleSpec(filePath, { setDir: outDir });
       const output = yaml.dump(dereferenced, {
         lineWidth: -1,
         noRefs: true,

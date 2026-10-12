@@ -830,10 +830,7 @@ components:
         retentionTrigger:
           $ref: "#/components/schemas/RetentionTrigger"
         source:
-          type: string
-          enum: [system, user]
-          readOnly: true
-          description: '"system" types are seeded from config and cannot be deleted. "user" types are created at runtime and can be deleted.'
+          $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/ConfigSource"
         createdAt:
           type: string
           format: date-time

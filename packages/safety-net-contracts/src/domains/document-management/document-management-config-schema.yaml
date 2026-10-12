@@ -21,14 +21,21 @@ properties:
     description: Must be "document-management".
 
   document-types:
-    type: array
+    type: object
     description: >
       Document type catalog. Defines the baseline types available across all deployments.
       All entries in a config file are config-managed: they are seeded by the mock
       server on startup (source: "system") and cannot be deleted via the API.
-    minItems: 1
-    items:
-      $ref: "#/$defs/DocumentTypeConfig"
+    required: [resource, entries]
+    additionalProperties: false
+    properties:
+      resource:
+        const: DocumentType
+      entries:
+        type: array
+        minItems: 1
+        items:
+          $ref: "#/$defs/DocumentTypeConfig"
 
 unevaluatedProperties: false
 

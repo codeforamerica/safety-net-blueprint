@@ -67,18 +67,29 @@ export function readMetrics(docs) {
 /**
  * Domain configuration catalogs, by domain.
  *
- * A catalog is any top-level array the document declares; everything else at
- * the top level is envelope metadata. `*-config-schema.yaml` is excluded for
- * free, because `discover` types it as `schema` rather than `config`.
+ * A catalog is a top-level entry that declares the resource it seeds and its
+ * entries — `queues: { resource: Queue, entries: [...] }`; everything else at
+ * the top level is envelope metadata. Each catalog reports what it seeds:
+ * `api`, the OpenAPI document of the domain declaring the resource, and
+ * `resource`, that resource in its model — both null when none does, which
+ * `validate` reports. `*-config-schema.yaml` is excluded for free, because
+ * `discover` types it as `schema` rather than `config`.
  *
  * @param {import('../types.js').Doc[]} docs
- * @returns {{ domain: string, version: string, catalogs: Record<string, object[]>, relativePath: string|null }[]}
+ * @returns {{ domain: string, version: string, catalogs: Record<string, { resourceName: string, entries: object[], api: object|null, resource: object|null }>, relativePath: string|null }[]}
  */
 export function readConfigs(docs) {
   return ofType(docs, 'config').map((doc) => {
     const catalogs = {};
     for (const [key, value] of Object.entries(doc.content)) {
-      if (!CONFIG_METADATA_KEYS.has(key) && Array.isArray(value)) catalogs[key] = value;
+      if (CONFIG_METADATA_KEYS.has(key) || typeof value?.resource !== 'string' || !Array.isArray(value.entries)) continue;
+      let attached = { api: null, resource: null };
+      try {
+        attached = governed(docs, doc.content.domain, value.resource);
+      } catch {
+        // Two resources with the name: reported where attachment is decided.
+      }
+      catalogs[key] = { resourceName: value.resource, entries: value.entries, ...attached };
     }
     return {
       domain: doc.content.domain,

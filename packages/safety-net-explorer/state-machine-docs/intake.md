@@ -89,15 +89,15 @@ Domain: `intake` | API: [intake-openapi.yaml](../../../contracts/domains/intake/
   - Set personId and personMatch on ApplicationMember; personId is set only on confirmed matches
 - **`intake.member_income.created`**
   - Look up: member (from `event.subject`), application (from `$member.applicationId`)
-  - If `$application.status is not "draft" and $application.status is not "withdrawn" and $application.status is not "closed"`:
-    - If `"snap" in $application.programsAppliedFor`:
+  - If `application is not null and application.status is not "draft" and application.status is not "withdrawn" and application.status is not "closed"`:
+    - If `has(application.programsAppliedFor) and "snap" in application.programsAppliedFor`:
       - `POST intake/applications/verifications`
 - **`intake.application_member.created`**
   - Look up: application (from `event.subject`)
-  - If `$application.status is not "draft" and $application.status is not "withdrawn" and $application.status is not "closed"`:
-    - If `"snap" in $application.programsAppliedFor`:
+  - If `application is not null and application.status is not "draft" and application.status is not "withdrawn" and application.status is not "closed"`:
+    - If `has(application.programsAppliedFor) and "snap" in application.programsAppliedFor`:
       - `POST intake/applications/verifications`
-    - If `"medicaid" in $application.programsAppliedFor`:
+    - If `has(application.programsAppliedFor) and "medicaid" in application.programsAppliedFor`:
       - `POST intake/applications/verifications`
       - `POST intake/applications/verifications`
 - **`communication.notice.sent`**

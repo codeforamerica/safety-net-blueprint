@@ -331,12 +331,7 @@ components:
           items:
             $ref: "../../common/components/common.yaml#/Program"
         source:
-          type: string
-          description: '"system" entries are defined in data-exchange-config.yaml and cannot be deleted via the API. "user" entries are added by states at runtime.'
-          enum:
-            - system
-            - user
-          readOnly: true
+          $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/ConfigSource"
         createdAt:
           type: string
           format: date-time

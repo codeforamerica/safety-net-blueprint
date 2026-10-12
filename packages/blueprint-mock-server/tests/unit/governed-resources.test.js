@@ -4,6 +4,9 @@
  *
  *   - a machine's `resources:` guards a nested create, with `object` the
  *     parent found from the path and `request` the body
+ *   - and its own object's create, with no `object` yet, and update, with
+ *     `object` the record being updated
+ *   - a config catalog seeds the resource it names, wherever its routes are
  *   - a context binding's `where` can be CEL, seeing `item`, `object`, `request`
  *   - a step's call means what the API's route means: a nested create, an
  *     update, an action
@@ -18,6 +21,8 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import { createMockServer } from '../../src/browser.js';
 import { createMemoryStore } from '../../src/stores/memory-store.js';
+import { seedConfigs } from '../../src/config-registry.js';
+import { extract } from '@codeforamerica/blueprint-core';
 
 const ok = (schema, status = 200) => ({ [status]: { content: { 'application/json': { schema: { $ref: `#/components/schemas/${schema}` } } } } });
 const IDEMPOTENCY_KEY = { name: 'Idempotency-Key', in: 'header', required: true, schema: { type: 'string', maxLength: 255 } };
@@ -33,6 +38,16 @@ const openapi = {
     '/boards/{boardId}': {
       parameters: [{ name: 'boardId', in: 'path', required: true, schema: { type: 'string' } }],
       get: { operationId: 'getBoard', responses: ok('Board') },
+      patch: { operationId: 'updateBoard', requestBody: { content: { 'application/json': { schema: { type: 'object' } } } }, responses: ok('Board') },
+    },
+    '/templates': {
+      get: { operationId: 'listTemplates', responses: ok('TemplateList') },
+      post: { operationId: 'createTemplate', requestBody: { content: { 'application/json': { schema: { type: 'object' } } } }, responses: ok('Template', 201) },
+    },
+    '/templates/{templateId}': {
+      parameters: [{ name: 'templateId', in: 'path', required: true, schema: { type: 'string' } }],
+      get: { operationId: 'getTemplate', responses: ok('Template') },
+      patch: { operationId: 'updateTemplate', requestBody: { content: { 'application/json': { schema: { type: 'object' } } } }, responses: ok('Template') },
     },
     '/boards/{boardId}/cards': {
       parameters: [{ name: 'boardId', in: 'path', required: true, schema: { type: 'string' } }],
@@ -55,7 +70,9 @@ const openapi = {
   },
   components: {
     schemas: {
-      Board: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string' } } },
+      Board: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string' }, name: { type: 'string' }, templateId: { type: 'string' } } },
+      Template: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, source: { enum: ['system', 'user'] } } },
+      TemplateList: { type: 'object', properties: { items: { type: 'array', items: { $ref: '#/components/schemas/Template' } } } },
       // Clients add notes. Holds are the machine's alone, so the create schema
       // does not allow them — and the full schema, which steps are checked
       // against, does.
@@ -83,8 +100,9 @@ const stateMachine = {
     states: [{ id: 'open' }, { id: 'closed' }],
     initialState: 'open',
     guards: [
-      { id: 'boardOpen', condition: 'object.status == "open"' },
+      { id: 'boardOpen', description: 'the board is open', condition: 'object.status == "open"' },
       { id: 'notDuringAHold', condition: 'holdAtCard == null' },
+      { id: 'templateExists', condition: '!has(request.templateId) || template != null' },
     ],
     actions: [
       {
@@ -99,6 +117,13 @@ const stateMachine = {
       { id: 'close', transition: { from: 'open', to: 'closed' }, steps: [{ set: { field: 'closedAt', value: '$now' } }] },
     ],
     resources: {
+      Board: {
+        create: {
+          context: [{ template: { from: 'demo/templates', where: 'item.id == request.templateId' } }],
+          guards: [{ conditions: ['templateExists'] }],
+        },
+        update: { guards: [{ conditions: ['boardOpen'] }] },
+      },
       Card: {
         create: {
           context: [{
@@ -120,6 +145,12 @@ const contracts = {
   docs: [
     { path: '/x/domains/demo/demo-openapi.yaml', relativePath: 'domains/demo/demo-openapi.yaml', domain: 'demo', type: 'openapi', provenance: null, content: openapi },
     { path: '/x/domains/demo/demo-state-machine.yaml', relativePath: 'domains/demo/demo-state-machine.yaml', domain: 'demo', type: 'state-machine', provenance: null, content: stateMachine },
+    {
+      path: '/x/domains/demo/demo-config.yaml', relativePath: 'domains/demo/demo-config.yaml', domain: 'demo', type: 'config', provenance: null,
+      // Keyed differently from the collection, so seeding can only have
+      // found it through the resource the catalog names.
+      content: { version: '1', domain: 'demo', starterTemplates: { resource: 'Template', entries: [{ id: 'kanban', name: 'Kanban', 'x-note': 'not stored' }] } },
+    },
   ],
 };
 
@@ -179,6 +210,41 @@ describe('a machine guarding a nested create', () => {
     assert.strictEqual((await addCard({ kind: 'note', at: '2026-01-01T00:00:05Z' })).status, 201, 'before the hold');
     assert.strictEqual((await addCard({ kind: 'note', at: '2026-01-01T00:00:15Z' })).status, 409, 'during it');
     assert.strictEqual((await addCard({ kind: 'note', at: '2026-01-01T00:00:25Z' })).status, 201, 'after it');
+  });
+});
+
+describe('a machine guarding its own object', () => {
+  test('guards its create with no record yet, seeing the body', async () => {
+    assert.strictEqual((await send('POST', '/demo/boards', { templateId: 'kanban' })).status, 201);
+    const { status, body } = await send('POST', '/demo/boards', { templateId: 'missing' });
+    assert.strictEqual(status, 409);
+    assert.match(body.message, /creating a Board\. Not met: templateExists/);
+  });
+
+  test('guards its update with the record being updated', async () => {
+    assert.strictEqual((await send('PATCH', `/demo/boards/${board.id}`, { name: 'Sprint' })).status, 200);
+    await send('POST', `/demo/boards/${board.id}/close`, {});
+    const { status, body } = await send('PATCH', `/demo/boards/${board.id}`, { name: 'Later' });
+    assert.strictEqual(status, 409);
+    assert.match(body.message, /updating this Board\. Not met: the board is open/);
+  });
+});
+
+describe('a config catalog', () => {
+  test('seeds the resource it names, marked system, without its x- fields', async () => {
+    const { body } = await send('GET', '/demo/templates/kanban');
+    assert.deepStrictEqual({ name: body.name, source: body.source, note: body['x-note'] }, { name: 'Kanban', source: 'system', note: undefined });
+  });
+
+  test('marks a record added through the API as user', async () => {
+    assert.strictEqual((await send('POST', '/demo/templates', { name: 'Mine' })).body.source, 'user');
+  });
+
+  test('seeds only what is missing, so a change made through the API is kept', () => {
+    const store = createMemoryStore();
+    store.insertResource('templates', { id: 'kanban', name: 'Renamed', source: 'system' });
+    seedConfigs(extract(extract(contracts, 'docs'), 'config'), store);
+    assert.strictEqual(store.findById('templates', 'kanban').name, 'Renamed');
   });
 });
 
