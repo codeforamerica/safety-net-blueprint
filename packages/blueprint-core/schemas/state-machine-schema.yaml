@@ -133,6 +133,8 @@ $defs:
                        domain-level guards with the same id.
         procedures   — named step sequences scoped to this machine; take precedence over
                        domain-level procedures with the same id.
+        resources    — resources nested under this machine's object, and the guards
+                       that decide when one may be created.
     required:
       - object
       - states
@@ -177,6 +179,20 @@ $defs:
           any domain-level guard with the same id.
         items:
           $ref: "#/$defs/Guard"
+      resources:
+        type: object
+        description: >
+          Resources nested under this machine's object — at any depth — keyed by
+          resource name, the schema each one's item GET returns. Creating one
+          runs the guards declared here, with `object` the record this machine
+          governs, found from the path, and `request` the body being created.
+          When several machines govern a resource along its path, every one must
+          pass. A name that is not nested under this machine's object is a
+          validation error.
+        propertyNames:
+          pattern: "^[A-Z][A-Za-z0-9]*$"
+        additionalProperties:
+          $ref: "#/$defs/GovernedResource"
       procedures:
         type: array
         description: >
@@ -338,6 +354,27 @@ $defs:
         minItems: 1
         items:
           $ref: "#/$defs/StepItem"
+
+  GovernedResource:
+    type: object
+    description: What a machine decides about one resource nested under its object.
+    additionalProperties: false
+    minProperties: 1
+    properties:
+      create:
+        type: object
+        description: >
+          When one may be created. Guards work as they do on an action: the
+          caller passes if ANY clause is satisfied, and a refusal answers 403
+          for actors or 409 for conditions.
+        additionalProperties: false
+        required:
+          - guards
+        properties:
+          guards:
+            $ref: "#/$defs/Guards"
+          context:
+            $ref: "#/$defs/ContextProperty"
 
   TransitionBlock:
     type: object
@@ -946,7 +983,7 @@ $defs:
   # entity (or null if not found). To work with multiple
   # records, use forEach: — same from:/where: syntax but iterates all matches.
   #
-  # WHERE SYNTAX — two forms:
+  # WHERE SYNTAX — three forms:
   #
   #   (1) Field-value equality pairs. Values can be $this.field, $alias.field,
   #       $object.field, or a literal string:
@@ -969,6 +1006,17 @@ $defs:
   #                 - { "==": [{ var: "applicationId" }, { var: "application.id" }] }
   #                 - { "!=": [{ var: "citizenshipStatus" }, "citizen"] }
   #
+  #   (3) CEL — a string. `item` is the candidate record; `object` and
+  #       `request` are the governed record and the request body; a prior
+  #       binding is named by its alias. Write it as valid CEL, without `$`,
+  #       since #445 moves every expression onto a spec-compliant evaluator,
+  #       which will also make the event available as `this`:
+  #
+  #       context:
+  #         - openPause:
+  #             from: transcription/transcripts/entries
+  #             where: item.kind == "pause" && item.transcriptId == object.id && item.endedAt == null
+  #
   # CHAINING
   #   Bindings resolve in declaration order. A binding may reference any alias
   #   already resolved above it in the same block, or from any outer scope level.
@@ -980,7 +1028,7 @@ $defs:
       expressions and { var: "alias.field" } in JSON Logic conditions.
       ContextBinding properties:
         from            — collection path to query (required).
-        where (optional) — filter condition; field-value pairs or JSON Logic.
+        where (optional) — filter condition; field-value pairs, JSON Logic, or a CEL string.
     minProperties: 1
     maxProperties: 1
     additionalProperties:
@@ -996,12 +1044,16 @@ $defs:
             intake/application-members, workflow/tasks).
         where:
           description: >
-            Filter condition — field-value equality pairs or a JSON Logic
-            expression. See ContextBinding comment block for full syntax.
+            Filter condition — field-value equality pairs, a JSON Logic
+            expression, or a CEL string. See ContextBinding comment block for
+            full syntax.
             Always returns the first matching record. Use forEach: to iterate
             over all matches.
           oneOf:
             - type: object
               description: Field-value equality pairs or JSON Logic expression.
               additionalProperties: true
+            - type: string
+              minLength: 1
+              description: A CEL expression, true for the record to bind.
 

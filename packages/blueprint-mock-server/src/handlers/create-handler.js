@@ -7,7 +7,7 @@ import { hasConfigManagedResources } from '../config-registry.js';
 import { applyEffects, applySteps } from '../state-machine-engine.js';
 import { initializeSlaInfo } from '../sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
-import { mergeByPrecedence, buildInlineRules } from '../collection-utils.js';
+import { mergeByPrecedence, buildInlineRules, singularOf } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractCallerRoles, callerHeader, traceparentOf } from '../auth-context.js';
@@ -96,7 +96,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       // malformed CloudEvents type with a leading dot. Better to emit an
       // unprefixed type than a broken one (#448).
       const domain = (apiMetadata.serverBasePath ?? '').replace(/^\//, '');
-      const object = endpoint.collectionName.replace(/s$/, '');
+      const object = singularOf(endpoint.collectionName);
 
       const onCreate = machine?.triggers?.onCreate ?? stateMachine?.onCreate;
 

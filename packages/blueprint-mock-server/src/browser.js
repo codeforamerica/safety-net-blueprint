@@ -33,6 +33,7 @@ import { registerConfigManaged } from './config-registry.js';
 import { initSchemaRegistry } from './validator.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 import { graphsOf, unresolvedRulesWarning } from './contract-views.js';
+import { createStepCalls } from './step-calls.js';
 
 
 
@@ -103,7 +104,8 @@ export async function createMockServer({
     }
   }
 
-  registerEventSubscriptions(stateMachines, slaTypes, apiSpecs, store);
+  const stepCalls = createStepCalls({ apiSpecs, stateMachines, slaTypes, store });
+  registerEventSubscriptions(stateMachines, slaTypes, apiSpecs, store, stepCalls);
   subscribeStubDispatch(store);
   if (rulesFiles.length > 0) buildRulesIndex(rulesFiles, graphs);
 
@@ -121,7 +123,7 @@ export async function createMockServer({
   if (compositions.length > 0) registerCompositionRoutes(routes, compositions, apiSpecs, { store });
   if (rulesFiles.length > 0) registerRulesRoutes(routes, rulesFiles, apiSpecs, graphs);
   const endpoints = registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines, slaTypes, metrics, { store });
-  registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaTypes, { store });
+  registerStateMachineRoutes(routes, stateMachines, apiSpecs, slaTypes, { store, stepCalls });
   overrideByOperationId(routes, contractOverrides({ store, registries }));
 
   // Last, so a route is forwarded whatever registered it, and before the

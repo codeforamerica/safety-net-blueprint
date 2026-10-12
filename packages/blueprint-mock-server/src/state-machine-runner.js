@@ -12,6 +12,50 @@ import { mergeByPrecedence, buildInlineRules } from './collection-utils.js';
 import { validate } from './validator.js';
 
 /**
+ * Check guard clauses, as an action's or a governed resource's create.
+ *
+ * OR semantics: the caller passes if ANY clause is satisfied. Within a clause,
+ * actors AND conditions must both pass. Named conditions come from the platform,
+ * the state machine document and the machine, the innermost winning.
+ *
+ * @param {Object} options
+ * @param {Array}  options.guardItems  - Guard clauses
+ * @param {Object} options.stateMachine
+ * @param {Object} options.machine
+ * @param {string[]} options.callerRoles
+ * @param {Object} options.resource    - The record the conditions read as `object`
+ * @param {Object} options.context     - Condition context: caller, object, request, now, entities
+ * @param {string} options.label       - Names what is guarded, for the refusal
+ * @returns {{ status: number, error: string }|null} The refusal, or null when the caller passes
+ */
+export function checkGuardClauses({ guardItems, stateMachine, machine, callerRoles, resource, context, label }) {
+  if (!guardItems || guardItems.length === 0) return null;
+
+  const guardsMap = Object.fromEntries(
+    [...(stateMachine._platformGuards || []), ...(stateMachine.guards || []), ...(machine?.guards || [])].map(g => [g.id, g])
+  );
+
+  const allActors = guardItems.flatMap(g => g.actors || []);
+  const callerHasAnyRole = allActors.length === 0 || callerRoles.some(r => allActors.includes(r));
+  if (!callerHasAnyRole) {
+    const uniqueActors = [...new Set(allActors)];
+    return { status: 403, error: `${capitalized(label)} requires one of: ${uniqueActors.join(', ')}` };
+  }
+
+  const clausePassed = guardItems.some(g => {
+    const clauseActors = g.actors || [];
+    if (clauseActors.length > 0 && !callerRoles.some(r => clauseActors.includes(r))) return false;
+    const clauseConditions = g.conditions || [];
+    if (clauseConditions.length === 0) return true;
+    return evaluateGuards(clauseConditions, guardsMap, resource, context).pass;
+  });
+
+  return clausePassed ? null : { status: 409, error: `No guard clause passed for ${label}` };
+}
+
+const capitalized = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/**
  * Execute a state machine transition programmatically.
  *
  * @param {Object} options
@@ -42,7 +86,8 @@ export function executeTransition({
   requestBody = {},
   traceparent = null,
   causationid = null,
-  store
+  store,
+  stepCalls = null
 }) {
   const timestamp = now || new Date().toISOString();
 
@@ -80,32 +125,8 @@ export function executeTransition({
   }
   const context = { ...baseContext, entities };
 
-  // OR semantics: caller passes if ANY guard clause is satisfied.
-  // Within a clause: actors AND conditions must both pass.
-  if (guardItems.length > 0) {
-    const guardsMap = Object.fromEntries(
-      [...(stateMachine._platformGuards || []), ...(stateMachine.guards || []), ...(machine?.guards || [])].map(g => [g.id, g])
-    );
-
-    const allActors = guardItems.flatMap(g => g.actors || []);
-    const callerHasAnyRole = allActors.length === 0 || callerRoles.some(r => allActors.includes(r));
-    if (!callerHasAnyRole) {
-      const uniqueActors = [...new Set(allActors)];
-      return { success: false, status: 403, error: `Action "${trigger}" requires one of: ${uniqueActors.join(', ')}` };
-    }
-
-    const clausePassed = guardItems.some(g => {
-      const clauseActors = g.actors || [];
-      if (clauseActors.length > 0 && !callerRoles.some(r => clauseActors.includes(r))) return false;
-      const clauseConditions = g.conditions || [];
-      if (clauseConditions.length === 0) return true;
-      return evaluateGuards(clauseConditions, guardsMap, resource, context).pass;
-    });
-
-    if (!clausePassed) {
-      return { success: false, status: 409, error: `No guard clause passed for action "${trigger}"` };
-    }
-  }
+  const refused = checkGuardClauses({ guardItems, stateMachine, machine, callerRoles, resource, context, label: `action "${trigger}"` });
+  if (refused) return { success: false, ...refused };
 
   // Request body validation: runs after authorization (403) and guard checks (409)
   if (operation?.schema?.request) {
@@ -143,6 +164,43 @@ export function executeTransition({
   for (const { entity, data } of pendingCreates) {
     try { store.create(entity, data); }
     catch (e) { console.error(`Failed to create ${entity}:`, e.message); }
+  }
+
+  // Calls that name a record — a nested create, an update, another action —
+  // mean what the API's route at that method and path means (step-calls.js).
+  if (stepCalls) {
+    const calls = [
+      ...pendingOperations.map(({ path, body }) => ({ method: 'POST', path, body })),
+      ...pendingAppends.map(({ path, body }) => ({ method: 'PATCH', path, body })),
+    ];
+    for (const call of calls) {
+      try {
+        stepCalls.apply(call, {
+          caller: { id: callerId, roles: callerRoles },
+          traceparent,
+          causationid,
+          now: timestamp,
+          runAction: ({ entry, collection, id, action, body }) => executeTransition({
+            resourceName: collection,
+            resourceId: id,
+            trigger: action,
+            callerId,
+            callerRoles,
+            now: timestamp,
+            stateMachine: entry.stateMachine,
+            machine: entry.machine,
+            slaTypes: stepCalls.slaTypesFor(entry.domain),
+            requestBody: body,
+            traceparent,
+            causationid,
+            store,
+            stepCalls,
+          }),
+        });
+      } catch (e) {
+        console.error(`Action "${trigger}": ${e.message}`);
+      }
+    }
   }
 
   const domain = stateMachine.domain;

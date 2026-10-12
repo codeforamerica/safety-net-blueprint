@@ -6,7 +6,7 @@ import { validate, createErrorResponse } from '../validator.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { applyEffects, applySteps } from '../state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
-import { mergeByPrecedence, buildInlineRules, extractPrimaryParam, capitalize } from '../collection-utils.js';
+import { mergeByPrecedence, buildInlineRules, extractPrimaryParam, capitalize, singularOf } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 import { extractAuthContext, extractCallerRoles, callerHeader, traceparentOf } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
@@ -207,7 +207,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
       // Emit updated event with complete field-level diff
       try {
         const domain = (apiMetadata.serverBasePath ?? '').replace(/^\//, '');
-        const object = endpoint.collectionName.replace(/s$/, '');
+        const object = singularOf(endpoint.collectionName);
         emitEvent({
         store,
           domain,

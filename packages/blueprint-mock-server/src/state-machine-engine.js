@@ -218,9 +218,12 @@ function evaluateCEL(condition, celData) {
     $now: celData.now || new Date().toISOString(),
   };
 
-  // Add entity aliases with $ prefix
+  // Entity aliases: `$alias`, as existing conditions write them, and the bare
+  // alias, which is valid CEL — #445 drops the `$` everywhere. A bare alias
+  // never shadows a runtime variable.
   for (const [alias, entity] of Object.entries(celData.entities || {})) {
     ctx[`$${alias}`] = entity;
+    if (!(alias in ctx)) ctx[alias] = entity;
   }
 
   const result = _evaluateCEL(condition, ctx);

@@ -37,6 +37,7 @@ import {
   buildRegistryEntryIndex,
 } from './indexes.js';
 import { resolverMap } from './paths.js';
+import { governedResource } from './attachment.js';
 
 /**
  * Contract types with no validator of their own.
@@ -84,6 +85,7 @@ export function validate(docs) {
   const collectionIndex = buildCollectionIndex(docs);
 
   const context = {
+    docs,
     definedDomains: definedDomains(docs),
     byRelativePath,
     schemaIndex,
@@ -446,6 +448,52 @@ function undefinedDomain(doc, defined) {
   }];
 }
 
+/**
+ * Resources a machine governs that are not nested under its object.
+ *
+ * A machine's guards run with `object` its own record, found from the path of
+ * the resource being created — so a resource it governs has to sit under that
+ * record's item path, at any depth, or there is no record to guard with.
+ *
+ * @param {import('../types.js').Doc} doc - A state machine document
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {object[]}
+ */
+function resourcesNotNested(doc, docs) {
+  const errors = [];
+  for (const machine of doc.content?.machines ?? []) {
+    const names = Object.keys(machine.resources ?? {});
+    if (names.length === 0) continue;
+
+    let governed;
+    try {
+      governed = governedResource(docs, doc.content.domain, machine.object);
+    } catch {
+      continue; // Two resources named for the object: reported where attachment is decided.
+    }
+
+    const nested = new Set();
+    const walk = (resource) => {
+      for (const child of resource.children) {
+        if (child.name) nested.add(child.name);
+        walk(child);
+      }
+    };
+    if (governed) walk(governed.resource);
+
+    for (const name of names.filter((n) => !nested.has(n))) {
+      errors.push({
+        rule: 'resource-not-nested',
+        message: `The ${machine.object} machine governs "${name}", which is not a resource nested under ` +
+          `${machine.object}` + (nested.size ? ` (nested: ${[...nested].join(', ')})` : ', which has none') +
+          '. A machine guards only resources under its own object.',
+        path: `${doc.path}#machines[${machine.object}].resources`,
+      });
+    }
+  }
+  return errors;
+}
+
 function validateDoc(doc, context) {
   const errors = [];
   const warnings = [];
@@ -500,6 +548,7 @@ function validateDoc(doc, context) {
         ...validateCrossArtifact(doc.path, doc.content, context.schemaIndex, context.collectionIndex)
       );
       errors.push(...validateEvents(doc, context.channels));
+      errors.push(...resourcesNotNested(doc, context.docs));
       break;
 
     case 'rules':

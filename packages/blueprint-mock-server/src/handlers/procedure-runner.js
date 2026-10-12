@@ -8,7 +8,7 @@ import { deriveCollectionName, resolveDotPath } from '../collection-utils.js';
 import { applySteps, resolveValue } from '../state-machine-engine.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
-import { bindableContext } from '../cel-evaluator.js';
+import { bindableContext, evaluateCEL } from '../cel-evaluator.js';
 
 
 /**
@@ -33,13 +33,14 @@ function resolveWhereValue(val, resource, context, resolved) {
  * Resolve context bindings from a state machine procedure's `context:` array.
  * Each item is { alias: { from, where? } }.
  *
- * RETURN TYPE — single entity vs. array:
- *   where: { id: <value> }           → single entity (findById); null if not found
- *   where: { otherField: <value> }   → array of all matching records (may be empty)
- *   JSON Logic where:                → array of all records passing the condition
+ * RETURN TYPE — always one record, or null. A binding names one record; to work
+ * with every match, a step uses forEach:, which takes the same from:/where:.
+ *   where: { id: <value> }           → that record (findById)
+ *   where: { otherField: <value> }   → the first record matching
+ *   JSON Logic or CEL where:         → the first record the condition is true for
  *   (no where)                       → binding is skipped with a warning; alias resolves to null
  *
- * WHERE CLAUSE — two supported forms:
+ * WHERE CLAUSE — three supported forms:
  *
  *   (1) Field-value equality pairs. Values may be:
  *         $object.field  → field on the primary resource being evaluated
@@ -47,11 +48,18 @@ function resolveWhereValue(val, resource, context, resolved) {
  *         $alias.field   → field on a previously resolved binding (chaining)
  *         literal string → exact match value
  *
- *   (2) JSON Logic expression — evaluated per-candidate record; matching records are
- *       collected into an array. Variable references:
+ *   (2) JSON Logic expression — evaluated per candidate record. Variable references:
  *         { var: "fieldName" }        → field on the candidate record
  *         { var: "this.field" }       → field on the triggering event/context
  *         { var: "alias.field" }      → field on a previously resolved binding
+ *
+ *   (3) CEL expression — a string, evaluated per candidate record:
+ *         item      → the candidate record
+ *         object    → the primary resource
+ *         request   → the request body
+ *         alias     → a previously resolved binding
+ *       Written as valid CEL, without `$`: #445 moves every expression onto a
+ *       spec-compliant evaluator, and these are written to need no change then.
  *
  * Bindings are resolved in order; each binding may reference previously resolved aliases.
  * A binding that finds no record resolves to null.
@@ -59,7 +67,7 @@ function resolveWhereValue(val, resource, context, resolved) {
  * @param {Array} contextBindings - Array of single-key objects { alias: { from, where } }
  * @param {Object} resource - Primary resource for $object.field resolution
  * @param {Object} [context] - Step context for $this.field and previously resolved alias resolution
- * @returns {Object} Map of alias → entity|array|null
+ * @returns {Object} Map of alias → entity|null
  */
 function resolveContextBindings(contextBindings, resource, context, store) {
   const resolved = {};
@@ -78,11 +86,25 @@ function resolveContextBindings(contextBindings, resource, context, store) {
       continue;
     }
 
+    if (typeof where === 'string') {
+      const { items: candidates } = store.findAll(collection, {}, { limit: null });
+      // No `this`: this evaluator runs the expression as JavaScript, where
+      // `this` cannot be bound. It comes with #445's spec-compliant evaluator.
+      const scope = {
+        ...(context?.entities ?? {}),
+        ...resolved,
+        object: resource,
+        request: context?.request ?? {},
+      };
+      resolved[alias] = candidates.find((item) => evaluateCEL(where, { ...scope, item }) === true) ?? null;
+      continue;
+    }
+
     const logicOperators = new Set(['==', '!=', '>', '>=', '<', '<=', 'and', 'or', 'not', 'in', '!', 'if', 'var', 'missing', 'all', 'none', 'some', 'merge', 'cat', 'substr', 'log']);
     const isJsonLogic = Object.keys(where).some(k => logicOperators.has(k));
 
     if (isJsonLogic) {
-      const { items: allItems } = store.findAll(collection, {});
+      const { items: allItems } = store.findAll(collection, {}, { limit: null });
       const logicData = {
         this: context?.this ?? {},
         object: resource,

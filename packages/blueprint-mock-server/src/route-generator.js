@@ -20,8 +20,10 @@ import { createDocumentContentHandler } from './handlers/document-content-handle
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, registerParentLink } from './composition-assembler.js';
 import { emitEvent } from './emit-event.js';
+import { governorsByCollection, checkGovernedCreate } from './governed-resources.js';
+import { idempotencyOf, withIdempotency } from './idempotency.js';
 import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
-import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX } from './search-engine.js';
+import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX, sortItems } from './search-engine.js';
 import { extractCallerRoles, callerHeader, traceparentOf } from './auth-context.js';
 
 /**
@@ -279,6 +281,7 @@ export function extractRequiredDefaults(responseSchema, follow = (x) => x) {
 export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaTypes = [], deps = {}) {
   const { store } = deps;
   const registeredEndpoints = [];
+  const governors = governorsByCollection(stateMachines);
 
   console.log(`  Registering routes for ${apiMetadata.title}...`);
 
@@ -404,7 +407,23 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
             const extraFilters = Object.fromEntries(
               Object.entries(query).filter(([k]) => !reservedParams.has(k))
             );
-            const { items, total } = store.findAll(endpointWithCollection.collectionName, { [parentField]: parentId, ...extraFilters }, { limit, offset });
+            const filters = { [parentField]: parentId, ...extraFilters };
+            let items;
+            let total;
+            if (endpoint.sortable || query.sort) {
+              // Ordered as the operation's x-sortable says, the same as a
+              // top-level list: every record under the parent, sorted, then paged.
+              const all = store.findAll(endpointWithCollection.collectionName, filters, { limit: null }).items;
+              const sorted = sortItems(all, query, endpoint.sortable);
+              if (sorted.error) {
+                const details = sorted.error.field !== undefined ? [{ field: sorted.error.field, message: sorted.error.message }] : [];
+                return Response.json({ code: sorted.error.code, message: sorted.error.message, details }, { status: 400 });
+              }
+              total = sorted.items.length;
+              items = sorted.items.slice(offset, offset + limit);
+            } else {
+              ({ items, total } = store.findAll(endpointWithCollection.collectionName, filters, { limit, offset }));
+            }
             const itemSchema = getItemSchema(endpoint.responseSchema, apiMetadata.schemas, apiMetadata.resolve?.schema);
             const expandFields = extractExpandFields(itemSchema, apiMetadata.resolve?.schema);
             const expandedItems = expandFields.length > 0
@@ -423,13 +442,30 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
           if (subMachineForEndpoint?.initialState) subRequiredDefaults.status = subMachineForEndpoint.initialState;
           if (Object.keys(subRequiredDefaults).length > 0) store.registerCollectionDefaults(collectionName, subRequiredDefaults);
           const baseCreateHandler = createCreateHandler(apiMetadata, endpointWithCollection, baseUrl, subSmForEndpoint, subDomainSlaTypes, subMachineForEndpoint, deps);
+          // The machines guarding this create, matched on the path as the API
+          // document writes it, without the server's base.
+          const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
+          const createGovernors = governors.get(`${apiMetadata.domain} ${relativePath}`) ?? [];
           handler = async (request, ctx) => {
             // Spread ALL path params, not just the last one — sub-sub-resource
             // routes (e.g. /applications/{applicationId}/members/{memberId}/incomes)
             // need every parent FK on the persisted record. See mergePathParamsIntoBody.
             // Passed through ctx because a Request body cannot be reassigned.
-            const body = mergePathParamsIntoBody(await jsonBody(request), ctx.params);
-            return baseCreateHandler(request, { ...ctx, body });
+            const sent = await jsonBody(request);
+            const body = mergePathParamsIntoBody(sent, ctx.params);
+            const refused = checkGovernedCreate({
+              governors: createGovernors,
+              params: ctx.params,
+              body,
+              caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
+              store,
+            });
+            if (refused) return Response.json({ code: refused.code, message: refused.message }, { status: refused.status });
+            // The body is validated as the client sent it, and the parent ids
+            // from the path merged in after — so a create schema that allows no
+            // extra fields still accepts a nested create, and the path's ids
+            // still win over anything the body says.
+            return baseCreateHandler(request, { ...ctx, body: sent, enrichmentData: { ...ctx.params } });
           };
           description = 'Create sub-resource';
         } else {
@@ -471,6 +507,11 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
       console.warn(`    Warning: Unsupported endpoint ${method.toUpperCase()} ${endpoint.path}`);
       continue;
     }
+
+    // An operation that declares the Idempotency-Key header honors it. Outermost,
+    // so a repeat is answered from what was stored without running anything.
+    const idempotency = idempotencyOf(endpoint);
+    if (idempotency.declared) handler = withIdempotency(handler, idempotency, deps);
 
     // Add to the route table. Express mounting happens once, afterwards, in
     // mountExpress — this function no longer knows about Express.

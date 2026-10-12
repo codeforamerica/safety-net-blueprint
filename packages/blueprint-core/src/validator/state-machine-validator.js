@@ -270,6 +270,33 @@ function* walkAllStrings(node) {
 // =============================================================================
 
 /**
+ * Check guard clauses: every actor a declared role, every condition a declared
+ * guard. Shared by actions and governed resources, which take the same clauses.
+ *
+ * @param {object[]|undefined} guards
+ * @param {string} path - Where the clauses are, for the error
+ * @param {Set<string>} validRoles
+ * @param {Set<string>} guardIds
+ * @returns {Array<{rule, message, path}>}
+ */
+function checkGuardClauses(guards, path, validRoles, guardIds) {
+  const errors = [];
+  for (const guard of (guards || [])) {
+    for (const actor of (guard.actors || [])) {
+      if (!validRoles.has(actor)) {
+        errors.push({ rule: 'invalid-actor-role', message: `Invalid actor role "${actor}" (valid: ${[...validRoles].join(', ')})`, path });
+      }
+    }
+    for (const condId of extractConditionIds(guard.conditions)) {
+      if (!guardIds.has(condId)) {
+        errors.push({ rule: 'unknown-guard', message: `Guard condition "${condId}" is not declared in this file or its extends chain`, path });
+      }
+    }
+  }
+  return errors;
+}
+
+/**
  * Validate within-file consistency of a state machine document.
  * @param {string} filePath - Path to the file (for loading extends)
  * @param {object} doc - Parsed YAML document
@@ -341,24 +368,18 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
         }
       }
 
-      for (const guard of (action.guards || [])) {
-        for (const actor of (guard.actors || [])) {
-          if (!validRoles.has(actor)) {
-            errors.push({ rule: 'invalid-actor-role', message: `Invalid actor role "${actor}" (valid: ${[...validRoles].join(', ')})`, path: `${ap}.guards` });
-          }
-        }
-        for (const condId of extractConditionIds(guard.conditions)) {
-          if (!guardIds.has(condId)) {
-            errors.push({ rule: 'unknown-guard', message: `Guard condition "${condId}" is not declared in this file or its extends chain`, path: `${ap}.guards` });
-          }
-        }
-      }
+      errors.push(...checkGuardClauses(action.guards, `${ap}.guards`, validRoles, guardIds));
 
       for (const callId of walkCallStrings(action.steps)) {
         if (!callableIds.has(callId)) {
           errors.push({ rule: 'unknown-callable', message: `call: "${callId}" references undeclared procedure or action`, path: `${ap}.steps` });
         }
       }
+    }
+
+    // A governed resource's create guards are checked as an action's are.
+    for (const [name, governed] of Object.entries(machine.resources || {})) {
+      errors.push(...checkGuardClauses(governed?.create?.guards, `${ctx}.resources[${name}].create.guards`, validRoles, guardIds));
     }
 
     // Validate events
