@@ -189,15 +189,10 @@ test('generateRulesResults — the endpoints are documented in an API document b
           ],
         },
         grossIncome: {
+          endpoint: { path: '/rules/gross-income' },
           inputs: { household: { type: 'object', properties: { income: { type: 'number' } } } },
           outputs: { gross: { type: 'number' } },
           facts: [{ path: 'gross', expression: 'household.income' }],
-        },
-        internalOnly: {
-          endpoint: false,
-          inputs: { x: { type: 'object', properties: { v: { type: 'number' } } } },
-          outputs: { result: { type: 'boolean' } },
-          facts: [{ path: 'result', expression: 'x.v > 0' }],
         },
       },
     },
@@ -211,18 +206,18 @@ test('generateRulesResults — the endpoints are documented in an API document b
   assert.deepEqual(api.servers, [{ url: '/eligibility' }], 'served under its domain');
 
   assert.strictEqual(api.paths['/assess-expedited-snap'].post.operationId, 'assessExpeditedSnap', 'a declared path is used');
-  assert.ok(api.paths['/rules/gross-income'].post, 'a ruleset declaring no endpoint gets /rules/{ruleset-name}');
-  assert.equal(Object.keys(api.paths).length, 2, 'endpoint: false gives no endpoint');
+  assert.ok(api.paths['/rules/gross-income'].post, 'each ruleset at the path it declares');
+  assert.equal(Object.keys(api.paths).length, 2, 'one endpoint per ruleset');
 
   assert.ok(api.components.schemas['ExpeditedSnapRequest'], 'request schema added');
   const responseSchema = api.components.schemas['ExpeditedSnapResponse'];
   assert.strictEqual(responseSchema.allOf[0].$ref, 'https://blueprint.codeforamerica.org/base/schemas/rules-evaluation.yaml#/EvaluationResult');
 });
 
-test('generateRulesResults — a rules file whose rulesets all opt out documents nothing', () => {
+test('generateRulesResults — a rules file declaring no paths documents nothing', () => {
   const { apis } = generateRulesResults([{
     relativePath: 'x-rules.yaml',
-    doc: { domain: 'x', rulesets: { a: { endpoint: false, inputs: {}, outputs: {}, facts: [{ path: 'a', expression: 'true' }] } } },
+    doc: { domain: 'x', rulesets: { a: { inputs: {}, outputs: {}, facts: [{ path: 'a', expression: 'true' }] } } },
   }]);
   assert.equal(apis.size, 0);
 });

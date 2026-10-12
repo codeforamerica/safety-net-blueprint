@@ -104,6 +104,7 @@ $defs:
       A named ruleset. Declares its inputs, outputs, and the facts that
       compute outputs from inputs via CEL expressions.
     required:
+      - endpoint
       - inputs
       - outputs
       - facts
@@ -111,12 +112,10 @@ $defs:
     properties:
       endpoint:
         description: >
-          Where the ruleset is evaluated. Every ruleset is reachable by default,
-          at /{domain}/rules/{ruleset-name}; declare a path to place it elsewhere,
-          or false to give it no endpoint.
-        oneOf:
-          - $ref: "#/$defs/Endpoint"
-          - const: false
+          Where the ruleset is evaluated. Every ruleset in the blueprint is
+          reachable through its API, at the path it declares — there is no
+          default, and no way to have none.
+        $ref: "#/$defs/Endpoint"
       inputs:
         $ref: "#/$defs/SchemaMap"
       outputs:
@@ -185,11 +184,12 @@ $defs:
     type: object
     description: >
       Places the ruleset's POST endpoint. The full path is the file-level domain
-      followed by `path` — /intake/applications/evaluate-interview-prompts — or
-      /{domain}/rules/{ruleset-name} when `path` is omitted. The request and
+      followed by `path` — /intake/applications/evaluate-interview-prompts. The request and
       response schemas are derived from the ruleset's inputs and outputs, and
       the endpoints are documented in an OpenAPI document resolve generates
       beside the rules file.
+    required:
+      - path
     additionalProperties: false
     properties:
       path:
@@ -203,7 +203,10 @@ $defs:
           a parameter in the path would be accepted and silently ignored — the
           path would promise resource hydration the endpoint does not perform.
           Pass the identifier as an input instead.
-        pattern: "^/[^{}]*$"
+        format: uri-template
+        # At least one segment, no parameters, no trailing slash: "/" would be
+        # the domain's root, and "/x/" differs from "/x" only by its slash.
+        pattern: "^(/[^/{}]+)+$"
 
   SchemaMap:
     type: object

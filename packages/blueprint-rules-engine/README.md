@@ -24,6 +24,21 @@ Compiling a `*-rules.yaml` contract into a graph is a build step, and it belongs
 package is the runtime. Keeping the two apart is what lets the evaluator ship to a
 browser: it depends on a CEL interpreter and nothing else.
 
+## Which to use
+
+A ruleset defined in a blueprint contract set is reachable through its API:
+every ruleset declares an endpoint, `POST /{domain}{path}`, which the mock
+server serves and a real implementation provides. An application should call
+that endpoint — through the typed client `blueprint-generate-ts-clients` emits,
+or any HTTP client — so the same call works against the mock, in a page or in
+Node, and against a real service.
+
+This package is for evaluating a ruleset without the blueprint's APIs: offline
+or in the browser with no server, in tooling, or in tests of a ruleset itself.
+It takes a compiled graph, the rules engine's own contract, which needs nothing
+else from the blueprint. To run a ruleset from the command line, use
+`blueprint-evaluate` from `@codeforamerica/blueprint-cli`.
+
 ## Usage
 
 ```js
@@ -166,4 +181,4 @@ what an engine could not express at all.
 
 - [`@codeforamerica/blueprint-core`](https://www.npmjs.com/package/@codeforamerica/blueprint-core) — compiles rulesets into graphs and resolves contracts
 - [`@codeforamerica/blueprint-cli`](https://www.npmjs.com/package/@codeforamerica/blueprint-cli) — `blueprint-evaluate` runs rulesets from the command line; `blueprint-generate-ts-clients` emits typed per-ruleset clients
-- [`@codeforamerica/blueprint-mock-server`](https://www.npmjs.com/package/@codeforamerica/blueprint-mock-server) — serves a POST endpoint for every ruleset that declares an `endpoint:`
+- [`@codeforamerica/blueprint-mock-server`](https://www.npmjs.com/package/@codeforamerica/blueprint-mock-server) — serves every ruleset's POST endpoint, at the path it declares

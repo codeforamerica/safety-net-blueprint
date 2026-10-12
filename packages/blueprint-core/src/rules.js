@@ -267,23 +267,17 @@ export function compileRuleset(domain, rulesetName, ruleset, resolve = () => nul
 // ── Endpoint overlay generation ──────────────────────────────────────────────
 
 /**
- * Where a ruleset is evaluated, relative to its domain: `endpoint.path` when
- * it declares one, `/rules/{ruleset-name}` when it does not, and null when it
- * opts out with `endpoint: false`.
- *
- * Every ruleset is reachable by default. Evaluating one is a pure function of
- * the inputs in the request — it reads no stored data and changes nothing —
- * so there is nothing to protect by leaving one out, and a ruleset no one can
- * call would be a surprise. The `rules` segment keeps a ruleset from claiming
- * the URL of a collection it happens to share a name with.
+ * Where a ruleset is evaluated, relative to its domain: the `endpoint.path` it
+ * declares. Every ruleset in the blueprint is reachable through its API, at a
+ * path its author chose — there is no default, and no way to have none. Null
+ * only for a ruleset that declares no path, which validation refuses.
  *
  * @param {string} rulesetName - e.g. "expeditedSnap"
  * @param {object} ruleset
- * @returns {string|null} e.g. "/rules/expedited-snap"
+ * @returns {string|null} e.g. "/determinations/evaluate-expedited-snap"
  */
 export function rulesetEndpointPath(rulesetName, ruleset) {
-  if (ruleset?.endpoint === false) return null;
-  return ruleset?.endpoint?.path ?? `/rules/${toKebabCase(rulesetName)}`;
+  return ruleset?.endpoint?.path ?? null;
 }
 
 /**
@@ -412,7 +406,3 @@ function toCamelCase(str) {
   return str.split('-').map((s, i) => i === 0 ? s : toPascalCase(s)).join('');
 }
 
-/** "expeditedSnap" → "expedited-snap". */
-function toKebabCase(str) {
-  return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
-}

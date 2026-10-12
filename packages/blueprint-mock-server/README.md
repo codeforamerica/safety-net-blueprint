@@ -21,6 +21,7 @@ A mock API server that reads resolved OpenAPI specs and state machine definition
 - **Database per domain** — each domain gets its own in-memory database with full CRUD support
 - **Seeding** — populates databases from example files; generates faker-based seed data when none exists
 - **State machine enforcement** — validates RPC transitions against guard conditions, actor restrictions, and current state
+- **Rules and compositions** — serves every ruleset's and composition's endpoint, at the path it declares
 - **SLA enforcement** — tracks SLA clocks and fires timer events when deadlines are reached
 - **Event streaming** — SSE endpoints emit domain events on state transitions
 - **Event and HTTP stubbing** — simulate downstream responses for testing event-driven flows

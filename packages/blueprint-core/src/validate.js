@@ -38,6 +38,7 @@ import {
 } from './indexes.js';
 import { resolverMap } from './paths.js';
 import { governedResource } from './attachment.js';
+import { duplicateRoutes } from './validator/route-validator.js';
 
 /**
  * Contract types with no validator of their own.
@@ -109,8 +110,11 @@ export function validate(docs) {
     },
   };
 
+  const routeErrors = duplicateRoutes(docs);
+
   const results = docs.map((doc) => {
     const { errors, warnings } = validateDoc(doc, context);
+    errors.push(...(routeErrors.get(doc.path) ?? []));
     return {
       path: doc.path,
       type: doc.type,

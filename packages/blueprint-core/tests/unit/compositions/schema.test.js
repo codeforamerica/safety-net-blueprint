@@ -13,6 +13,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
 import Ajv2020 from 'ajv/dist/2020.js';
+import addFormats from 'ajv-formats';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const contractsRoot = join(__dirname, '../../../');
@@ -22,10 +23,22 @@ function makeValidator() {
   const raw = readFileSync(schemaPath, 'utf8');
   const schema = yaml.load(raw);
   const ajv = new Ajv2020({ strict: false, allErrors: true });
+  addFormats(ajv); // as core's validator does, so `format` is enforced here too
   return ajv.compile(schema);
 }
 
+/**
+ * Validate, giving any composition that declares no endpoint one, so a test
+ * about some other part of a composition is not failed by the required
+ * endpoint. `validateAsWritten` checks a document exactly as given.
+ */
 function validate(doc) {
+  const compositions = Object.fromEntries(Object.entries(doc.compositions ?? {}).map(([name, c]) =>
+    [name, c && typeof c === 'object' && !('endpoint' in c) ? { ...c, endpoint: { path: `/test/${name}` } } : c]));
+  return validateAsWritten(doc.compositions ? { ...doc, compositions } : doc);
+}
+
+function validateAsWritten(doc) {
   const { $schema, ...data } = doc;
   const validator = makeValidator();
   const valid = validator(data);
@@ -277,6 +290,22 @@ test('compositions-schema endpoint declaration', async (t) => {
     };
     const { valid, errors } = validate(doc);
     assert.ok(valid, errorPaths(errors).join('\n'));
+  });
+
+  await t.test('every composition declares an endpoint', () => {
+    const { valid, errors } = validateAsWritten({
+      version: '1.0', domain: 'intake',
+      compositions: { members: { resource: 'application-members' } },
+    });
+    assert.ok(!valid);
+    assert.ok(errors.some((e) => e.params?.missingProperty === 'endpoint'), errorPaths(errors).join('; '));
+  });
+
+  await t.test('an endpoint path is one or more segments, with no trailing slash, and a URI template', () => {
+    for (const path of ['applications/x', '/applications/{applicationId/review', '/', '/applications/', '//x']) {
+      const { valid } = validate({ version: '1.0', domain: 'intake', compositions: { m: { resource: 'applications', endpoint: { path } } } });
+      assert.ok(!valid, path);
+    }
   });
 
   await t.test('endpoint requires path', () => {

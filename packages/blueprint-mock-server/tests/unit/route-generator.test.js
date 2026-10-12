@@ -637,7 +637,8 @@ const minimalRulesDoc = {
       outputs: { eligible: { type: 'boolean' } },
       facts: [{ path: 'eligible', expression: 'household.monthlyIncome < 1500' }],
     },
-    noEndpointRuleset: {
+    grossIncome: {
+      endpoint: { path: '/assess-gross-income' },
       inputs: { x: { type: 'object', properties: { v: { type: 'number' } } } },
       outputs: { result: { type: 'boolean' } },
       facts: [{ path: 'result', expression: 'x.v > 0' }],
@@ -654,23 +655,13 @@ test('registerRulesRoutes', async (t) => {
     assert.strictEqual(result.length, 0);
   });
 
-  await t.test('serves every ruleset, at /{domain} and its path or /{domain}/rules/{ruleset-name}', () => {
+  await t.test('serves every ruleset, at /{domain} and the path it declares', () => {
     const table = new Map();
     registerRulesRoutes(table, rulesEntry(minimalRulesDoc), [], graphsFor(minimalRulesDoc));
     assert.deepStrictEqual(listRoutes(table).map((r) => `${r.method} ${r.path}`), [
       'POST /eligibility/assess-snap-eligibility',
-      'POST /eligibility/rules/no-endpoint-ruleset',
+      'POST /eligibility/assess-gross-income',
     ]);
-  });
-
-  await t.test('a ruleset declaring endpoint: false is not served', () => {
-    const table = new Map();
-    const optedOut = {
-      ...minimalRulesDoc,
-      rulesets: { ...minimalRulesDoc.rulesets, noEndpointRuleset: { ...minimalRulesDoc.rulesets.noEndpointRuleset, endpoint: false } },
-    };
-    registerRulesRoutes(table, rulesEntry(optedOut), [], graphsFor(optedOut));
-    assert.deepStrictEqual(listRoutes(table).map((r) => r.path), ['/eligibility/assess-snap-eligibility']);
   });
 
   await t.test('handler returns evaluate result as JSON for complete inputs', async () => {

@@ -456,13 +456,9 @@ test('rulesetEndpointPath', async (t) => {
     assert.equal(rulesetEndpointPath('expeditedSnap', { endpoint: { path: '/assess-expedited-snap' } }), '/assess-expedited-snap');
   });
 
-  await t.test('no endpoint declared is /rules/{ruleset-name}, in kebab-case', () => {
-    assert.equal(rulesetEndpointPath('expeditedSnap', {}), '/rules/expedited-snap');
-    assert.equal(rulesetEndpointPath('expeditedSnap', { endpoint: {} }), '/rules/expedited-snap');
-  });
-
-  await t.test('endpoint: false is none', () => {
-    assert.equal(rulesetEndpointPath('expeditedSnap', { endpoint: false }), null);
+  await t.test('there is no default: a ruleset declaring no path has none', () => {
+    assert.equal(rulesetEndpointPath('expeditedSnap', {}), null);
+    assert.equal(rulesetEndpointPath('expeditedSnap', { endpoint: {} }), null);
   });
 });
 
@@ -487,9 +483,9 @@ test('generateRulesApi', async (t) => {
     },
   };
 
-  await t.test('returns null when every ruleset opts out', () => {
+  await t.test('returns null when no ruleset declares a path', () => {
     const result = generateRulesApi('eligibility', {
-      rulesets: { myRuleset: { endpoint: false, inputs: {}, outputs: {}, facts: [] } },
+      rulesets: { myRuleset: { inputs: {}, outputs: {}, facts: [] } },
     });
     assert.equal(result, null);
   });

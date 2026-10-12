@@ -181,28 +181,23 @@ declare integer cents.
 
 ## Endpoints
 
-Every ruleset is evaluated at a POST endpoint under its domain. By default
-that is `/{domain}/rules/{ruleset-name}`, with the name in kebab-case, so
-intake's `interviewPrompts` is at `/intake/rules/interview-prompts`. No
-declaration is needed.
-
-To place it elsewhere, give a path. It is still under the domain:
+Every ruleset is evaluated at a POST endpoint under its domain, at the path it
+declares:
 
 ```yaml
 endpoint:
   path: /applications/evaluate-interview-prompts   # → /intake/applications/evaluate-interview-prompts
 ```
 
-To give a ruleset no endpoint, say so:
+The endpoint is required, and there is no default path and no way to have
+none. A ruleset defined in the blueprint is reachable through its API, the same
+as a resource or a state machine action. To evaluate a ruleset without the
+blueprint's APIs, use its compiled graph with `@codeforamerica/blueprint-rules-engine`.
 
-```yaml
-endpoint: false
-```
-
-Every ruleset is reachable by default because evaluating one is safe to
-expose: it is a pure function of the inputs in the request, reading no stored
-data and changing nothing. The `rules` segment keeps a ruleset from claiming the
-URL of a collection that shares its name.
+The path is one or more segments with no trailing slash, takes no parameters — a ruleset is evaluated against
+the inputs in the request body, and nothing would bind a path segment — and
+must not be a route anything else in the set already has. Validation refuses a
+path another ruleset, composition, action or OpenAPI operation claims.
 
 The endpoints are documented in an OpenAPI document that resolve generates
 beside the rules file — `intake-rules-openapi.yaml` beside `intake-rules.yaml` —

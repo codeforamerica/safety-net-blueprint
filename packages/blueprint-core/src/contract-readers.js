@@ -215,9 +215,8 @@ export function readCompositions(docs) {
 
 /**
  * Rules documents, by domain, with the route each ruleset is evaluated at:
- * `/{domain}` and its endpoint path, or `/{domain}/rules/{ruleset-name}` when
- * it declares none (`rulesetEndpointPath`). A ruleset declaring
- * `endpoint: false` has no route.
+ * `/{domain}` and the endpoint path it declares (`rulesetEndpointPath`). A
+ * ruleset declaring no path, which validation refuses, has no route.
  *
  * @param {import('../types.js').Doc[]} docs
  * @returns {{ domain: string, doc: object, filePath: string, relativePath: string|null, rulesets: { name: string, path: string }[] }[]}
