@@ -1,53 +1,36 @@
 /**
- * Cross-validate a state machine's event references against AsyncAPI catalogs.
+ * Cross-validate a state machine's event references against the events the
+ * set documents.
  *
- * A state machine may only emit and subscribe to events that some AsyncAPI
- * document formally declares as a channel. Two rules, with different scopes:
+ * Every event a machine names in full must be documented: an AsyncAPI channel
+ * written by hand, or one resolve generates from the APIs and the machines'
+ * `emits:` declarations. An emit named by id is checked against the machine's
+ * own `emits:` (state-machine-validator.js), which is what generates its
+ * channel.
  *
- *   emit.type     must be a channel in the machine's own eventsSpec. A domain
- *                 publishes its own events, so emitting one it does not
- *                 declare means the contract and the behaviour disagree.
- *   onEvent.type  must be a channel in any document. Subscribing across
- *                 domains is the point of an event bus.
+ *   emit.type     a full type, written outside any machine — a shared
+ *                 procedure's request to another domain.
+ *   onEvent.type  subscribing across domains is the point of an event bus.
  *
  * Timer callbacks are exempt. They are derived from `timers:` declarations as
- * `{domain}.{timerId}` and are deliberately absent from domain catalogs — the
- * timer declaration names the event and `TimerCallbackEvent` in base-contracts
- * gives its payload, so a channel would be a second place to state the same
- * thing.
+ * `{domain}.{timerId}` — the timer declaration names the event and
+ * `TimerCallbackEvent` in base-contracts gives its payload.
  */
 
 /**
  * @param {import('../../types.js').Doc} doc - A state-machine document
- * @param {{ bySpec: Map<string, Set<string>>, all: Set<string> }} channels
+ * @param {{ all: Set<string> }} channels - Every documented event type
  * @returns {{ rule: string, message: string, path: string }[]}
  */
 export function validateEvents(doc, channels) {
   const errors = [];
   const machines = doc.model()?.machines ?? [];
-  const eventsSpec = doc.content?.eventsSpec;
-  const declared = eventsSpec ? channels.bySpec.get(eventsSpec) : null;
-
-  if (eventsSpec && !declared) {
-    errors.push({
-      rule: 'events-spec-missing',
-      message: `eventsSpec "${eventsSpec}" not found — emit types cannot be verified.`,
-      path: 'eventsSpec',
-    });
-  }
 
   for (const { type, path } of emittedTypes(machines, doc.content?.procedures)) {
-    if (!declared) {
-      if (eventsSpec) continue; // already reported above
-      errors.push({
-        rule: 'emit-without-events-spec',
-        message: `emit type "${type}" cannot be verified — no eventsSpec declared.`,
-        path,
-      });
-    } else if (!declared.has(type)) {
+    if (!channels.all.has(type)) {
       errors.push({
         rule: 'emit-type-undeclared',
-        message: `emit type "${type}" is not a channel in ${eventsSpec}.`,
+        message: `emit type "${type}" is not an event the set documents.`,
         path,
       });
     }
@@ -59,7 +42,7 @@ export function validateEvents(doc, channels) {
     if (!channels.all.has(type)) {
       errors.push({
         rule: 'subscription-type-undeclared',
-        message: `subscription type "${type}" is not a channel in any AsyncAPI document.`,
+        message: `subscription type "${type}" is not an event the set documents — an AsyncAPI channel, or one generated from an API or a machine's emits.`,
         path,
       });
     }

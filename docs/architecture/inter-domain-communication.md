@@ -66,10 +66,10 @@ State partners may overlay the `type` prefix to match their own namespace.
 
 Event contracts for each domain live in two artifacts:
 
-- **OpenAPI spec** (`x-events` section) — declares each event's CloudEvents type name and payload schema reference
-- **State machine** — declares which events cause the machine to emit further events. Object creation, field changes, and timer callbacks all arrive as named events in the machine's `events:` subscriptions, the same as any other domain event — there are no special-cased hook types (`onCreate`/`onUpdate`/`onTimer`); see [Fully event-driven model](cross-cutting/behavioral-contract-dsl.md#decision-4-fully-event-driven-model).
+- **OpenAPI spec** — every resource it writes sends a created, updated and deleted event, named for the resource, with no declaration needed
+- **State machine** — declares the other events its resource sends under `emits:`, each with the shape of its data, and reacts to events in `on:`. Object creation, field changes, and timer callbacks all arrive as named events in the machine's `on:` subscriptions, the same as any other domain event — there are no special-cased hook types (`onCreate`/`onUpdate`/`onTimer`); see [Fully event-driven model](cross-cutting/behavioral-contract-dsl.md#decision-4-fully-event-driven-model).
 
-AsyncAPI specs are generated from these two sources. State partners do not author AsyncAPI directly — they overlay the source artifacts and regenerate.
+Resolve generates the AsyncAPI documents from these two sources, one beside each API. State partners do not author AsyncAPI directly — they overlay the source artifacts and regenerate.
 
 ### Event emission model
 

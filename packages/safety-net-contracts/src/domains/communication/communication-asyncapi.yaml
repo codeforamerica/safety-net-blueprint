@@ -8,7 +8,7 @@ info:
     Event catalog for the Communication domain. All events are CloudEvents 1.0
     envelopes extending the base Event schema.
 
-    Event types follow the convention: communication.{entity}.{action}.
+    Event types follow the convention: communication.{resource}.{event}.
 
     The org-specific prefix is never written here — the resolver adds it at resolve
     time via the x-event-type-prefix overlay config.
@@ -16,6 +16,7 @@ info:
 channels:
   communication.notice.sent:
     address: communication.notice.sent
+    description: "Placeholder: generated once the communication domain declares the notice resource and state machine that send it."
     messages:
       noticeSent:
         $ref: '#/components/messages/NoticeSentMessage'

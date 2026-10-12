@@ -8,7 +8,7 @@ info:
     Event catalog for the Client Management domain. All events are CloudEvents 1.0
     envelopes extending the base Event schema.
 
-    Event types follow the convention: client_management.{entity}.{action}.
+    Event types follow the convention: client-management.{resource}.{event}.
 
     The org-specific prefix is never written here — the resolver adds it at resolve
     time via the x-event-type-prefix overlay config.
@@ -16,6 +16,7 @@ info:
 channels:
   client-management.person.match_resolved:
     address: client-management.person.match_resolved
+    description: "Placeholder: generated once client management declares the identity matching resource and state machine that send it."
     messages:
       personMatchResolved:
         $ref: '#/components/messages/PersonMatchResolvedMessage'

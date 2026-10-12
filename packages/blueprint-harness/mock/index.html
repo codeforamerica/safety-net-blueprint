@@ -2528,9 +2528,9 @@ const locate = (token, op) => {
     }
   }
 
-  // An event type, declared as a channel or alongside the API that emits it.
+  // An event type, as a channel — generated beside the API that emits it, or written by hand.
   for (const candidate of docs) {
-    const channel = candidate.content?.channels?.[token] ?? candidate.content?.['x-events']?.[token];
+    const channel = candidate.content?.channels?.[token];
     if (channel) {
       return { path: candidate.relativePath, yaml: snippet(token, channel, { prose: true }) };
     }

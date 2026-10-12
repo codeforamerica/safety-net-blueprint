@@ -454,6 +454,10 @@ async function main() {
   // own, generated beside it. Added before resolving, so it is resolved,
   // validated and written like any other document.
   docs.push(...generate(docs, 'rules-api'));
+  // The events each API's resources and their state machines send, documented
+  // in an AsyncAPI document beside it. Generated, like the rules endpoints, so
+  // it is validated and written like any other document.
+  docs.push(...generate(docs, 'events-asyncapi'));
 
   const generatedOverlays = generate(docs, 'overlay');
   const graphs = generate(docs, 'graph');

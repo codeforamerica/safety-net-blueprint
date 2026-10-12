@@ -110,12 +110,6 @@ describe('validateExtensionPlacement', () => {
     );
   });
 
-  test('x-events belongs at the root, and is accepted there', () => {
-    assert.deepEqual(check(spec({ 'x-events': [] })), []);
-    const [finding] = check(spec({ info: { title: 'I', 'x-events': [] } }));
-    assert.match(finding.message, /belongs at the document root/);
-  });
-
   test('reports every misplacement, not just the first', () => {
     assert.equal(check(spec({ 'x-status': 'deprecated', 'x-visibility': 'internal' })).length, 2);
   });

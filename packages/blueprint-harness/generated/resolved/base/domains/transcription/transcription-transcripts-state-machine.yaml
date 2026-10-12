@@ -1,7 +1,6 @@
 $schema: state-machine-schema.yaml
 version: "1.0"
 domain: transcription
-eventsSpec: transcription-transcripts-asyncapi.yaml
 machines:
   - object: Transcript
     states:

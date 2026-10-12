@@ -125,7 +125,7 @@ domains/intake/
   intake-compositions.yaml       # Composite view endpoints
   intake-annotations.yaml        # Field annotation metadata
   intake-annotations-docs.yaml   # Annotation documentation
-  intake-asyncapi.yaml           # AsyncAPI event catalog
+  intake-asyncapi.yaml           # Events sent from outside the contracts only (most are generated)
   intake-rules.yaml              # Rules contract (authored — inputs, outputs, facts as CEL expressions)
   intake-schema.yaml             # Shared domain schemas
   intake-mock-data.yaml          # Mock server seed data
@@ -133,6 +133,8 @@ domains/intake/
 ```
 
 Not every domain has every artifact — only the ones relevant to the domain.
+
+Resolve adds `intake-events-asyncapi.yaml` to the resolved set: every event the domain's resources and state machines send, generated from the API and each machine's `emits:`.
 
 **Pattern:** `{domain}-{artifact-type}[-{version}][-examples].{ext}`
 

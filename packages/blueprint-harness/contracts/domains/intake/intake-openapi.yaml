@@ -14,37 +14,6 @@ servers:
   - url: http://localhost:1080/intake
     description: Local development server
 
-x-events:
-  # CRUD lifecycle events — auto-emitted for every POST, PATCH, DELETE
-  application.created:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.created
-    summary: Emitted when an application is created.
-  application.updated:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.updated
-    summary: Emitted when an application is updated via PATCH.
-  application.deleted:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.deleted
-    summary: Emitted when an application is deleted.
-  applicationMember.created:
-    type: org.codeforamerica.safety-net-blueprint.intake.application-member.created
-    summary: Emitted when a household member is added to an application.
-  applicationMember.updated:
-    type: org.codeforamerica.safety-net-blueprint.intake.application-member.updated
-    summary: Emitted when a household member is updated via PATCH.
-  applicationMember.deleted:
-    type: org.codeforamerica.safety-net-blueprint.intake.application-member.deleted
-    summary: Emitted when a household member is removed from an application.
-  # State machine transition events
-  intake.application.submitted:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.submitted
-    summary: Emitted when an applicant formally submits an application, starting the regulatory processing clock.
-  intake.application.withdrawn:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.withdrawn
-    summary: Emitted when a household withdraws their application.
-  intake.application.closed:
-    type: org.codeforamerica.safety-net-blueprint.intake.application.closed
-    summary: Emitted when intake is complete and the application is closed.
-
 paths:
   /applications:
     get:

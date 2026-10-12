@@ -78,7 +78,11 @@ properties:
 
   eventsSpec:
     type: string
-    description: Filename of the associated AsyncAPI spec listing domain events.
+    deprecated: true
+    description: >
+      Deprecated and ignored. A machine declares the events it sends under
+      `emits:`, and resolve documents them in the AsyncAPI document it
+      generates beside the API.
 
   machines:
     type: array

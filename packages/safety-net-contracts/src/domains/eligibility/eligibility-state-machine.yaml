@@ -2,7 +2,6 @@ $schema: state-machine-schema.yaml
 extends: ../platform/platform-state-machine.yaml
 version: "1.0"
 domain: eligibility
-eventsSpec: eligibility-asyncapi.yaml
 
 machines:
   # ---------------------------------------------------------------------------

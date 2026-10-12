@@ -8,7 +8,7 @@ info:
     Event catalog for the Document Management domain. Covers document and version
     lifecycle events.
 
-    Event types follow the convention: document_management.{entity}.{action}.
+    Event types follow the convention: document-management.{resource}.{event}.
 
     The org-specific prefix is never written here — the resolver adds it at resolve
     time via the x-event-type-prefix overlay config.

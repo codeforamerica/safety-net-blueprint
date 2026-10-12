@@ -21,7 +21,6 @@ The machine-readable catalog is in [`docs/conventions/`](../conventions/) under 
 | `x-derived` | Spec | `*-openapi.yaml` | Schema property (on computed fields) |
 | `x-domain` | Spec | `*-openapi.yaml` | `info` level or operation level |
 | `x-environments` | Spec | Any spec node | `paths`, operations, schemas, or any other node |
-| `x-events` | Spec | `*-openapi.yaml` | Top-level (peer to `info:`, `paths:`) |
 | `x-enum-source` | Spec | `*-openapi.yaml` | Schema property (on string fields with contract-derived enum values) |
 | `x-relationship` | Spec + Config | `*-openapi.yaml`, `overlays/config.yaml` | Schema property (FK fields) or operation level (generated endpoints); or `config:` for default style |
 | `x-sortable` | Spec | `*-openapi.yaml` | List operation level |
@@ -144,21 +143,7 @@ See [Resolve Pipeline Architecture](resolve-pipeline.md#7-environment-filtering)
 
 ## x-events
 
-**File type:** `*-openapi.yaml` — top-level (peer to `info:`, `paths:`).
-
-Declares the domain events emitted by an API. Each key is an event name in dot notation (e.g., `task.created`). AsyncAPI specs and event documentation are generated from this section combined with the domain's state machine YAML.
-
-APIs that emit no events should declare `x-events: {}` to make the intent explicit.
-
-```yaml
-# workflow-openapi.yaml
-x-events:
-  task.created:
-    type: org.codeforamerica.safety-net-blueprint.workflow.task.created
-    summary: Emitted when a task is first created
-    payload:
-      $ref: "#/components/schemas/TaskCreatedEvent"
-```
+**Removed.** It declared an API's events beside AsyncAPI, and nothing read it. The events an API sends are now generated into an AsyncAPI document beside it, from its resources and each attached state machine's `emits:` — see the [events conventions](../conventions/events.yaml). Validation warns where `x-events` remains.
 
 ---
 

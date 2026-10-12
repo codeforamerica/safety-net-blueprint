@@ -6,7 +6,7 @@ export type ClientOptions = {
 
 export type Event = {
     /**
-     * Fully qualified CloudEvents event type following the convention {domain}.{entity}.{action} (e.g., intake.application.submitted). Must match a channel address declared in the domain's eventsSpec AsyncAPI file.
+     * Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
      *
      */
     type: string;
@@ -107,7 +107,7 @@ export type EventList = {
 } & {
     items: Array<{
         /**
-         * Fully qualified CloudEvents event type following the convention {domain}.{entity}.{action} (e.g., intake.application.submitted). Must match a channel address declared in the domain's eventsSpec AsyncAPI file.
+         * Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
          *
          */
         type: string;
@@ -406,7 +406,7 @@ export type ListEventsResponses = {
     } & {
         items: Array<{
             /**
-             * Fully qualified CloudEvents event type following the convention {domain}.{entity}.{action} (e.g., intake.application.submitted). Must match a channel address declared in the domain's eventsSpec AsyncAPI file.
+             * Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
              *
              */
             type: string;
@@ -491,7 +491,7 @@ export type ListEventsResponse = ListEventsResponses[keyof ListEventsResponses];
 export type PublishEventData = {
     body: {
         /**
-         * Fully qualified CloudEvents event type following the convention {domain}.{entity}.{action} (e.g., intake.application.submitted). Must match a channel address declared in the domain's eventsSpec AsyncAPI file.
+         * Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
          *
          */
         type: string;
@@ -641,7 +641,7 @@ export type PublishEventResponses = {
      */
     201: {
         /**
-         * Fully qualified CloudEvents event type following the convention {domain}.{entity}.{action} (e.g., intake.application.submitted). Must match a channel address declared in the domain's eventsSpec AsyncAPI file.
+         * Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
          *
          */
         type: string;
@@ -799,7 +799,7 @@ export type GetEventResponses = {
      */
     200: {
         /**
-         * Fully qualified CloudEvents event type following the convention {domain}.{entity}.{action} (e.g., intake.application.submitted). Must match a channel address declared in the domain's eventsSpec AsyncAPI file.
+         * Fully qualified CloudEvents event type, {domain}.{resource}.{event} (e.g., intake.application.submitted): the domain as declared, the resource's schema name in snake_case.
          *
          */
         type: string;

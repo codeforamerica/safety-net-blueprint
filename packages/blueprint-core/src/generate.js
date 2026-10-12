@@ -7,6 +7,8 @@
  *   overlay   OpenAPI Overlays that add the endpoints and schemas a
  *             composition, ruleset or state machine action implies
  *   graph     compiled decision graphs, one per ruleset
+ *   events-asyncapi  an AsyncAPI document beside each OpenAPI document, of the
+ *             events its resources and their state machines send
  *   postman   a Postman collection exercising every endpoint
  *   artifact  the whole contract set as one serializable object
  *
@@ -30,6 +32,7 @@ import { generateRulesResults } from './rules.js';
 import { detectComponentPrefix, rewriteComponentRefs } from './generate/refs.js';
 import { generateRpcOverlays } from './generate/rpc.js';
 import { buildPostman } from './generate/postman.js';
+import { buildEventCatalogs } from './generate/events.js';
 import { buildArtifact } from './artifact.js';
 import { fileNameOf } from './contract-types.js';
 import { declaredResource } from './attachment.js';
@@ -40,13 +43,15 @@ const BUILDERS = {
   overlay: buildOverlays,
   graph: buildGraphs,
   'rules-api': buildRulesApis,
+  'events-asyncapi': (positioned) => buildEventCatalogs(positioned)
+    .map(({ relativePath, content }) => toDoc({ path: relativePath, relativePath, type: 'asyncapi', content })),
   postman: buildPostman,
   artifact: buildArtifact,
 };
 
 /**
  * @param {import('../types.js').Doc[]} docs
- * @param {'overlay'|'graph'|'rules-api'|'postman'|'artifact'} type - Which artifact to build
+ * @param {'overlay'|'graph'|'rules-api'|'events-asyncapi'|'postman'|'artifact'} type - Which artifact to build
  * @param {object} [options] - Passed to the builder that needs them
  * @returns {*} Whatever that artifact is
  */

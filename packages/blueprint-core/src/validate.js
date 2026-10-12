@@ -51,7 +51,7 @@ import { generate } from './generate.js';
  * that a type missing from both places surfaces as a gap instead of passing.
  */
 const SCHEMA_VALIDATED_ONLY = new Set([
-  'asyncapi', 'schema', 'components', 'registry',
+  'schema', 'components', 'registry',
   'overlay', 'rules-examples', 'graph',
 ]);
 
@@ -87,6 +87,7 @@ export function validate(docs) {
 
   const schemaIndex = buildSchemaIndex(docs);
   const collectionIndex = buildCollectionIndex(docs);
+  const events = eventIndex(docs);
 
   const context = {
     docs,
@@ -104,12 +105,13 @@ export function validate(docs) {
     // needs every document registered before any can be validated against a
     // sibling's $id. Results are indexed so each document collects its own.
     schemaConformance: schemaConformanceByPath(yamlFiles),
-    channels: buildChannelIndex(docs),
+    channels: events.channels,
+    generatedEvents: events.generated,
     annotations: {
       specsByDomain: buildSpecsByDomain(docs),
       byRelativePath,
       actions: buildActionIndex(docs),
-      channels: buildChannelIndex(docs).all,
+      channels: events.channels.all,
       graphs: buildGraphIndex(docs),
       registryEntryIds: buildRegistryEntryIndex(docs),
     },
@@ -593,6 +595,57 @@ function removedNullable(doc) {
   return errors;
 }
 
+/**
+ * The events a set documents: every AsyncAPI channel, and every event resolve
+ * generates from the set's APIs and state machines, whether or not the set has
+ * been resolved yet.
+ *
+ * @param {import('../types.js').Doc[]} docs
+ * @returns {{ channels: { bySpec: Map<string, Set<string>>, all: Set<string> }, generated: Map<string, string> }}
+ *   `generated`: each generated event's type, to the path of the document it is generated into
+ */
+function eventIndex(docs) {
+  const channels = buildChannelIndex(docs);
+  const generated = new Map();
+  let catalogs = [];
+  try {
+    catalogs = generate(docs.filter((d) => d.relativePath !== null), 'events-asyncapi');
+  } catch {
+    // The set does not generate; that is reported where it fails.
+  }
+  for (const catalog of catalogs) {
+    for (const type of Object.keys(catalog.content.channels)) {
+      generated.set(type, catalog.relativePath);
+      channels.all.add(type);
+    }
+  }
+  return { channels, generated };
+}
+
+/**
+ * Channels written by hand that resolve generates.
+ *
+ * An event generated from the contracts has one source. A hand-written channel
+ * for it would be a second description that can drift from what is sent.
+ *
+ * @param {import('../types.js').Doc} doc - An AsyncAPI document
+ * @param {Map<string, string>} generated - From eventIndex
+ * @returns {object[]}
+ */
+function channelsGenerated(doc, generated) {
+  const errors = [];
+  for (const type of Object.keys(doc.content?.channels ?? {})) {
+    const into = generated?.get(type);
+    if (!into || into === doc.relativePath) continue;
+    errors.push({
+      rule: 'channel-generated',
+      message: `Channel "${type}" is generated into ${into} from the contracts. Remove it here.`,
+      path: `${doc.path}#channels.${type}`,
+    });
+  }
+  return errors;
+}
+
 function validateDoc(doc, context) {
   const errors = [];
   const warnings = [];
@@ -621,10 +674,30 @@ function validateDoc(doc, context) {
         (finding.severity === 'warning' ? warnings : errors).push(finding);
       }
       warnings.push(...sortDeclaredWithoutAllowlist(doc));
+      if (doc.content?.['x-events'] !== undefined) {
+        warnings.push({
+          rule: 'x-events-ignored',
+          message: '`x-events` is ignored: the events an API sends are generated into an AsyncAPI document beside it, ' +
+            'from its resources and their state machines\' `emits:`. Remove it.',
+          path: `${doc.path}#x-events`,
+        });
+      }
       break;
     }
 
+    case 'asyncapi':
+      errors.push(...channelsGenerated(doc, context.generatedEvents));
+      break;
+
     case 'state-machine':
+      if (doc.content?.eventsSpec !== undefined) {
+        warnings.push({
+          rule: 'deprecated-events-spec',
+          message: '`eventsSpec` is ignored: the events a machine sends are declared under its `emits:`, and ' +
+            'resolve documents them in the AsyncAPI document it generates beside the API. Remove it.',
+          path: doc.path,
+        });
+      }
       if (doc.content?.apiSpec !== undefined) {
         warnings.push({
           rule: 'deprecated-api-spec',

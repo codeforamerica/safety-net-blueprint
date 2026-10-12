@@ -107,52 +107,30 @@ events_endpoint:
       The `traceid` filter reconstructs causal chains across domains.
 
 # =============================================================================
-# x-events Convention
+# Event Catalog
 # =============================================================================
 
-x_events:
+event_catalog:
   description: |
-    The x-events OpenAPI extension declares the domain events emitted by a
-    domain's API. It lives at the top level of each domain's OpenAPI spec as
-    a cross-reference — declaring which events this API emits and pointing to
-    the canonical definitions in the domain's AsyncAPI spec. Event channel
-    definitions and message payload schemas are owned by AsyncAPI, not by
-    x-events. The exact mechanism for cross-referencing AsyncAPI from x-events
-    is being finalized.
+    Every event a domain sends is documented in AsyncAPI, and nearly all of it
+    is generated. Resolve writes `<name>-events-asyncapi.yaml` beside each
+    OpenAPI document: the created, updated and deleted events of each resource
+    its API writes, and every event the state machines attached to its
+    resources declare under `emits:`. Nobody writes these by hand, and a
+    hand-written channel for an event that is generated is a validation error.
 
-  source_of_truth:
-    owner: AsyncAPI
+  hand_written:
     description: |
-      AsyncAPI is the source of truth for event channel definitions, message
-      schemas, and channel naming. x-events in OpenAPI is a declaration of
-      intent — it names the events this API emits and refers to AsyncAPI for
-      the schema. Do not define event payload schemas inline in x-events or in
-      OpenAPI components/schemas; define them in AsyncAPI message definitions.
+      A domain's own `*-asyncapi.yaml` holds only events nothing in the
+      contracts sends — an adapter's result, say — each marked as a placeholder
+      until the resource or state machine that sends it is declared.
 
-  format:
-    location: Top level of each domain OpenAPI spec (alongside info, paths, components)
-    key: x-events
-    value: |
-      A map of event action names to event definitions. Each entry declares:
-        - type: the fully qualified CloudEvents type name
-        - summary: short description of what the event signals
-        - payload: $ref to the payload schema in components/schemas
-      Note: payload $ref will transition to reference AsyncAPI message schemas
-      once the cross-reference mechanism is finalized.
+  x_events:
+    description: |
+      Removed. OpenAPI's `x-events` repeated what AsyncAPI documents and nothing
+      read it; validation warns where it remains.
 
-  example: |
-    x-events:
-      application.submitted:
-        type: org.codeforamerica.safety-net-blueprint.intake.application.submitted
-        summary: Emitted when an application is formally submitted; starts the regulatory clock
-        payload:
-          $ref: "#/components/schemas/ApplicationSubmittedEvent"
-
-      application.withdrawn:
-        type: org.codeforamerica.safety-net-blueprint.intake.application.withdrawn
-        summary: Emitted when an application is withdrawn by the applicant or a caseworker
-        payload:
-          $ref: "#/components/schemas/ApplicationWithdrawnEvent"
+  naming: "{domain}.{resource}.{event} — see naming.yaml event_types."
 
   cloudevents_envelope:
     description: |
@@ -165,7 +143,7 @@ x_events:
         description: Unique event identifier (UUID)
         required: true
       - name: type
-        description: Fully qualified event type from x-events
+        description: Fully qualified event type, {domain}.{resource}.{event}
         required: true
       - name: source
         description: Domain base path (e.g., /intake, /workflow)
@@ -180,7 +158,7 @@ x_events:
         value: application/json
         required: true
       - name: data
-        description: Event payload; schema defined by the payload $ref in x-events
+        description: Event payload; schema defined by the event's AsyncAPI channel
         required: true
       - name: traceparent
         description: |
@@ -242,43 +220,28 @@ x_events:
       Every REST resource emits three standard lifecycle events automatically.
       These do not require any state machine declaration — the mock server emits
       them for every POST, PATCH, and DELETE, regardless of whether a state
-      machine is defined.
-
-      All three events must be declared in x-events. Their canonical channel
-      definitions and message schemas must exist in the domain's AsyncAPI spec.
-      This is enforced by convention; api:new scaffolds the x-events declarations
-      automatically.
+      machine is defined. Each is named for the resource, `{domain}.{resource}.created`,
+      and resolve generates its channel. A POST to a path that is no resource's
+      collection is a call, and a resource whose schema is the shared `Event` is
+      an event itself; neither emits a lifecycle event.
 
     events:
       - trigger: POST /resources
-        action: "{object}.created"
+        action: "{resource}.created"
         payload: Full resource snapshot (same shape as the main resource schema)
-        schema: "{Resource}CreatedEvent — $ref to the resource schema itself"
 
       - trigger: PATCH /resources/{id}
-        action: "{object}.updated"
+        action: "{resource}.updated"
         payload: Field-level diff listing changed fields with before/after values
-        schema: "$ref: ./schemas/events-schema.yaml#/ResourceUpdatedEvent (shared)"
 
       - trigger: DELETE /resources/{id}
-        action: "{object}.deleted"
+        action: "{resource}.deleted"
         payload: null
-        schema: "$ref: ./schemas/events-schema.yaml#/ResourceDeletedEvent (shared)"
 
     payload_schemas:
-      created: |
-        Domain-specific. $ref the resource schema directly:
-          {Resource}CreatedEvent:
-            description: Snapshot of the newly created {resource} resource.
-            $ref: "#/components/schemas/{Resource}"
-      updated: |
-        Shared across all domains. Use:
-          {Resource}UpdatedEvent:
-            $ref: "./schemas/events-schema.yaml#/ResourceUpdatedEvent"
-      deleted: |
-        Shared across all domains. Use:
-          {Resource}DeletedEvent:
-            $ref: "./schemas/events-schema.yaml#/ResourceDeletedEvent"
+      created: The resource itself, as its API's schema declares it.
+      updated: "The shared ResourceUpdatedEvent in base/schemas/events.yaml."
+      deleted: "The shared ResourceDeletedEvent in base/schemas/events.yaml."
 
     traceparent:
       description: |

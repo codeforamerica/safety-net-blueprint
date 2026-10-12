@@ -8,7 +8,7 @@ info:
     Event catalog for the Data Exchange domain. All events are CloudEvents 1.0
     envelopes extending the base Event schema.
 
-    Event types follow the convention: data_exchange.{entity}.{action}.
+    Event types follow the convention: data-exchange.{resource}.{event}.
 
     The org-specific prefix is never written here — the resolver adds it at resolve
     time via the x-event-type-prefix overlay config.
@@ -16,24 +16,28 @@ info:
 channels:
   data-exchange.call.completed:
     address: data-exchange.call.completed
+    description: "Placeholder: sent by a state's data exchange adapter today. Generated once a state machine on the service call declares it."
     messages:
       callCompleted:
         $ref: '#/components/messages/CallCompletedMessage'
 
   data-exchange.call.failed:
     address: data-exchange.call.failed
+    description: "Placeholder: sent by a state's data exchange adapter today. Generated once a state machine on the service call declares it."
     messages:
       callFailed:
         $ref: '#/components/messages/CallFailedMessage'
 
   data-exchange.call.submitted:
     address: data-exchange.call.submitted
+    description: "Placeholder: sent by a state's data exchange adapter today. Generated once a state machine on the service call declares it."
     messages:
       callSubmitted:
         $ref: '#/components/messages/CallSubmittedMessage'
 
   data-exchange.call.timed_out:
     address: data-exchange.call.timed_out
+    description: "Placeholder: sent by a state's data exchange adapter today. Generated once a state machine on the service call declares it."
     messages:
       callTimedOut:
         $ref: '#/components/messages/CallTimedOutMessage'

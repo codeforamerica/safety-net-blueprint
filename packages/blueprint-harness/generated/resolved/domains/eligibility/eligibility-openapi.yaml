@@ -8,10 +8,6 @@ info:
 servers:
   - url: http://localhost:1080/eligibility
     description: Local development server
-x-events:
-  eligibility.determination.complete:
-    type: org.codeforamerica.safety-net-blueprint.eligibility.determination.complete
-    summary: Emitted when an eligibility determination is finalized for all applied programs.
 paths:
   /determinations:
     get:

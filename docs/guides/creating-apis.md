@@ -56,7 +56,7 @@ Specs can live anywhere — the tooling takes a `--spec` argument pointing to an
 
 Create `{domain}-openapi.yaml` in your spec directory. Use the output of `api:new` as your starting point, then customize the schemas.
 
-> **x- extensions:** The `info` block requires `x-domain`, `x-status`, and `x-visibility`. Top-level `x-events` declares domain events. `x-relationship` annotates FK fields. See the [x-extensions reference](../architecture/x-extensions.md) for the full catalog.
+> **x- extensions:** The `info` block requires `x-domain`, `x-status`, and `x-visibility`. `x-relationship` annotates FK fields. See the [x-extensions reference](../architecture/x-extensions.md) for the full catalog.
 
 ### Step 3: Validate
 
