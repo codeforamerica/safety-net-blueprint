@@ -134,7 +134,7 @@ const send = async (method, path, body, headers = {}) => {
     body: body === undefined ? undefined : JSON.stringify(body),
   }));
   const text = await response.text();
-  return { status: response.status, body: text ? JSON.parse(text) : null };
+  return { status: response.status, body: text ? JSON.parse(text) : null, replayed: response.headers.get('idempotent-replayed') };
 };
 const addCard = (body, key = `key-${++keys}`) => send('POST', `/demo/boards/${board.id}/cards`, body, { 'idempotency-key': key });
 
@@ -160,6 +160,11 @@ describe('a machine guarding a nested create', () => {
     const { status, body } = await addCard({ kind: 'note', at: '2026-01-01T00:00:01Z' });
     assert.strictEqual(status, 409);
     assert.match(body.message, /creating a Card on this Board/);
+  });
+
+  test('reports a body missing a field as 422, not as a condition that failed', async () => {
+    const { status } = await addCard({ kind: 'note' });
+    assert.strictEqual(status, 422);
   });
 
   test('answers 404 when the parent does not exist', async () => {
@@ -243,6 +248,8 @@ describe('Idempotency-Key', () => {
     const first = await addCard({ kind: 'note', at: '2026-01-01T00:00:01Z' }, 'same');
     const again = await addCard({ kind: 'note', at: '2026-01-01T00:00:01Z' }, 'same');
     assert.strictEqual(again.status, 201);
+    assert.strictEqual(again.replayed, 'true', 'marked as a replay');
+    assert.strictEqual(first.replayed, 'false');
     assert.strictEqual(again.body.id, first.body.id);
     assert.strictEqual((await send('GET', `/demo/boards/${board.id}/cards`)).body.items.length, 1);
   });

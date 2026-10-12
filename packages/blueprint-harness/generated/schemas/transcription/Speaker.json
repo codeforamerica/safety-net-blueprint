@@ -1,0 +1,11 @@
+{
+  "type": "string",
+  "enum": [
+    "staff",
+    "client",
+    "unknown"
+  ],
+  "description": "Who said a line, as a role. A contract set replaces these by overlay —\nsafety-net-contracts might say `worker` and `applicant`.\n",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/Speaker"
+}

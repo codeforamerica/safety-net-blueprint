@@ -1,0 +1,108 @@
+{
+  "description": "An entry in a transcript's timeline, including server-managed fields.",
+  "type": "object",
+  "required": [
+    "id",
+    "transcriptId",
+    "kind",
+    "startedAt",
+    "endedAt",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "readOnly": true,
+      "description": "Unique identifier (server-generated)."
+    },
+    "transcriptId": {
+      "type": "string",
+      "format": "uuid",
+      "readOnly": true,
+      "description": "The transcript it belongs to."
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "line",
+        "gap",
+        "pause"
+      ],
+      "description": "`line`: something said or typed. `gap`: a stretch where nothing was\ncaptured — a dropped connection, a provider failure. `pause`: the\nconversation off the record, by choice.\n"
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When it began, by the client's clock. Entries are in this order."
+    },
+    "endedAt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "When it ended, by the client's clock. Null only for a pause still going on."
+    },
+    "text": {
+      "type": "string",
+      "description": "What was said or typed. Lines only."
+    },
+    "speaker": {
+      "type": "string",
+      "enum": [
+        "staff",
+        "client",
+        "unknown"
+      ],
+      "description": "Who said a line, as a role. A contract set replaces these by overlay —\nsafety-net-contracts might say `worker` and `applicant`.\n"
+    },
+    "speakerLabel": {
+      "type": "string",
+      "description": "The transcription service's own label for the speaker, e.g. `spk_0` or `ch_1`, kept so a mapping mistake can be corrected. Lines only."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "The transcription service's confidence in the line. Spoken lines only."
+    },
+    "cause": {
+      "type": "string",
+      "enum": [
+        "connection",
+        "provider",
+        "client",
+        "unknown"
+      ],
+      "description": "Why nothing was captured, as far as the client knows."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "readOnly": true,
+      "description": "When the entry was recorded, by the server's clock."
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "readOnly": true,
+      "description": "When the entry last changed, by the server's clock."
+    },
+    "links": {
+      "type": "object",
+      "readOnly": true,
+      "description": "Related resource links.",
+      "properties": {
+        "transcript": {
+          "type": "string",
+          "format": "uri-reference",
+          "description": "Link to the related Transcript resource."
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/TranscriptEntryCreatedEvent"
+}

@@ -29,6 +29,9 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers':
     'Content-Type, Authorization, X-Caller-Id, X-Caller-Roles, Idempotency-Key, traceparent',
   'Access-Control-Allow-Credentials': 'true',
+  // Response headers a page on another origin may read: where a create put
+  // its record, and whether a response is an Idempotency-Key replay.
+  'Access-Control-Expose-Headers': 'Location, Idempotent-Replayed',
 };
 
 /**

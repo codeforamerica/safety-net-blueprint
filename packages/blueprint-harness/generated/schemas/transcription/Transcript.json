@@ -60,11 +60,17 @@
             "closed"
           ]
         },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true,
+          "description": "When the conversation began, by the client's clock — the clock every time on its entries is on."
+        },
         "closedAt": {
           "type": "string",
           "format": "date-time",
           "readOnly": true,
-          "description": "When the transcript was closed."
+          "description": "When the transcript was closed, by the client's clock."
         },
         "createdAt": {
           "type": "string",

@@ -21,6 +21,22 @@ import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, registerParentLink } from './composition-assembler.js';
 import { emitEvent } from './emit-event.js';
 import { governorsByRoute, checkGoverned } from './governed-resources.js';
+import { validate as validateBody, createErrorResponse } from './validator.js';
+
+/**
+ * A check of a request body against an operation's schema, for a governed
+ * create or update to run between its role check and its conditions.
+ */
+function bodyCheckFor(endpoint, apiMetadata, key) {
+  return (body) => () => {
+    if (!endpoint.requestSchema) return null;
+    const { valid, errors } = validateBody(body, endpoint.requestSchema, key,
+      { relativePath: apiMetadata.relativePath, ref: endpoint.requestSchemaRef });
+    if (valid) return null;
+    const { message, details } = createErrorResponse(errors, 422);
+    return { status: 422, error: message, details };
+  };
+}
 import { idempotencyOf, withIdempotency } from './idempotency.js';
 import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
 import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX, sortItems } from './search-engine.js';
@@ -446,6 +462,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
           // document writes it, without the server's base.
           const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
           const createGovernors = governors.get(`create ${apiMetadata.domain} ${relativePath}`) ?? [];
+          const checkCreateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-create`);
           handler = async (request, ctx) => {
             // Spread ALL path params, not just the last one — sub-sub-resource
             // routes (e.g. /applications/{applicationId}/members/{memberId}/incomes)
@@ -460,8 +477,9 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
               body,
               caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
               store,
+              checkBody: checkCreateBody(sent),
             });
-            if (refused) return Response.json({ code: refused.code, message: refused.message }, { status: refused.status });
+            if (refused) return Response.json({ code: refused.code, message: refused.message, details: refused.details }, { status: refused.status });
             // The body is validated as the client sent it, and the parent ids
             // from the path merged in after — so a create schema that allows no
             // extra fields still accepts a nested create, and the path's ids
@@ -483,16 +501,19 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
         const baseUpdateHandler = createUpdateHandler(apiMetadata, endpointWithCollection, null, [], null, deps);
         const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
         const updateGovernors = governors.get(`update ${apiMetadata.domain} ${relativePath}`) ?? [];
+        const checkUpdateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-update`);
         handler = updateGovernors.length === 0 ? baseUpdateHandler : async (request, ctx) => {
+          const change = await jsonBody(request.clone());
           const refused = checkGoverned({
             governors: updateGovernors,
             verb: 'updating',
             params: ctx.params,
-            body: await jsonBody(request.clone()),
+            body: change,
             caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
             store,
+            checkBody: checkUpdateBody(change),
           });
-          if (refused) return Response.json({ code: refused.code, message: refused.message }, { status: refused.status });
+          if (refused) return Response.json({ code: refused.code, message: refused.message, details: refused.details }, { status: refused.status });
           return baseUpdateHandler(request, ctx);
         };
         description = 'Update sub-resource';

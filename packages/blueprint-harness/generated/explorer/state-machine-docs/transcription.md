@@ -8,13 +8,17 @@ Domain: `transcription` | API: [transcription-transcripts-openapi.yaml](../../..
 
 ### Actions
 
-- **pause** — Take the conversation off the record.
+- **pause** — Take the conversation off the record, at the time the client says.
   - Transition: `recording` → `paused`
+  - `POST transcription/transcripts/$object.id/entries`
   - Emit: `transcription.transcript.paused`
-- **resume** — Put the conversation back on the record.
+- **resume** — Put the conversation back on the record, at the time the client says.
   - Transition: `paused` → `recording`
+  - `PATCH transcription/transcripts/$object.id/entries/$openPause.id`
   - Emit: `transcription.transcript.resumed`
-- **close** — End the transcript.
+- **close** — End the transcript, at the time the client says. A pause still open ends then too.
   - Transition: `recording`/`paused` → `closed`
   - sets `closedAt`
+  - If `openPause is not null`:
+    - `PATCH transcription/transcripts/$object.id/entries/$openPause.id`
   - Emit: `transcription.transcript.closed`

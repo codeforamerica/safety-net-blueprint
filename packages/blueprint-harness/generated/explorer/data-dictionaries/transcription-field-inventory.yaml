@@ -10,4 +10,21 @@ transcript.provider: { type: enum, values: [aws-transcribe, elevenlabs-scribe, n
 transcript.model: { type: string }
 transcript.client: { type: string }
 transcript.status: { type: enum, values: [recording, paused, closed] }
+transcript.startedAt: { type: datetime }
 transcript.closedAt: { type: datetime }
+
+# ── TranscriptEntry ─────────────────────────────────────────────────────────────
+
+transcript.entries[]: { type: list(TranscriptEntry) }
+transcript.entries[].id: { type: uuid }
+transcript.entries[].transcriptId: { type: uuid, relationship: Transcript }
+transcript.entries[].kind: { type: enum, values: [line, gap, pause] }
+transcript.entries[].startedAt: { type: datetime }
+transcript.entries[].endedAt: { type: datetime }
+transcript.entries[].text: { type: string }
+transcript.entries[].speaker: { type: enum, values: [staff, client, unknown] }
+transcript.entries[].speakerLabel: { type: string }
+transcript.entries[].confidence: { type: number }
+transcript.entries[].cause: { type: enum, values: [connection, provider, client, unknown] }
+transcript.entries[].links: { type: object }
+transcript.entries[].links.transcript: { type: string }

@@ -271,8 +271,9 @@ async function testWorkflowLifecycle() {
       body: { name: 'Release guard test', programType: 'snap' },
     })).json();
     await fetch(`${BASE_URL}${TASK}/${id}/claim`, { method: 'POST', headers: CASEWORKER });
+    // A valid body, so what refuses it is the guard, not the body.
     const res = await fetch(`${BASE_URL}${TASK}/${id}/release`, {
-      method: 'POST', headers: OTHER_WORKER,
+      method: 'POST', headers: OTHER_WORKER, body: { reason: 'Not mine to release' },
     });
     assert.strictEqual(res.status, 409);
   });
@@ -313,7 +314,8 @@ async function testWorkflowLifecycle() {
       method: 'POST', headers: CASEWORKER,
       body: { name: 'Pending escalation guard', programType: 'snap' },
     })).json();
-    const res = await fetch(`${BASE_URL}${TASK}/${id}/escalate`, { method: 'POST', headers: CASEWORKER });
+    // A valid body, so what refuses it is the guard, not the body.
+    const res = await fetch(`${BASE_URL}${TASK}/${id}/escalate`, { method: 'POST', headers: CASEWORKER, body: { reason: 'Needs a supervisor' } });
     assert.strictEqual(res.status, 409);
   });
 

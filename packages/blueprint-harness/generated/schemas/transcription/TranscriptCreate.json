@@ -35,11 +35,19 @@
     },
     {
       "type": "object",
-      "description": "Payload to start a transcript. What produced it is required — the\nclient, the transcription service, and its model unless the service\nis `none` — so every transcript says where its lines came from. id, status, createdAt and updatedAt are set by the server.\n",
+      "description": "Payload to start a transcript. What produced it is required — the\nclient, the transcription service, and its model unless the service\nis `none` — so every transcript says where its lines came from — and\nwhen it started, by the client's clock. id, status, createdAt and\nupdatedAt are set by the server.\n",
       "required": [
         "provider",
-        "client"
+        "client",
+        "startedAt"
       ],
+      "properties": {
+        "startedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the conversation began, by the client's clock."
+        }
+      },
       "if": {
         "properties": {
           "provider": {

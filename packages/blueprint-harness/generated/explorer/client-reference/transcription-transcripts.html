@@ -97,12 +97,15 @@
       <div id="sidebar-nav">
         <div class="nav-section">
       <div class="nav-section-label">Methods</div>
-      <a href="#group-transcripts" class="nav-link">Transcripts <span class="nav-count">5</span></a><a href="#group-pause" class="nav-link">Pause <span class="nav-count">1</span></a><a href="#group-resume" class="nav-link">Resume <span class="nav-count">1</span></a><a href="#group-close" class="nav-link">Close <span class="nav-count">1</span></a>
+      <a href="#group-transcripts" class="nav-link">Transcripts <span class="nav-count">5</span></a><a href="#group-entries" class="nav-link">Entries <span class="nav-count">4</span></a><a href="#group-pause" class="nav-link">Pause <span class="nav-count">1</span></a><a href="#group-resume" class="nav-link">Resume <span class="nav-count">1</span></a><a href="#group-close" class="nav-link">Close <span class="nav-count">1</span></a>
     </div>
-    
+    <div class="nav-section">
+        <div class="nav-section-label">Constants</div>
+        <a href="#const-GapCause" class="nav-link">GapCause</a><a href="#const-Speaker" class="nav-link">Speaker</a><a href="#const-TranscriptEntryKind" class="nav-link">TranscriptEntryKind</a>
+      </div>
     <div class="nav-section">
         <div class="nav-section-label">Types</div>
-        <a href="#type-TranscriptWritable" class="nav-link">TranscriptWritable</a><a href="#type-Transcript" class="nav-link">Transcript</a><a href="#type-TranscriptCreate" class="nav-link">TranscriptCreate</a><a href="#type-TranscriptUpdate" class="nav-link">TranscriptUpdate</a><a href="#type-TranscriptList" class="nav-link">TranscriptList</a><a href="#type-TranscriptCreatedEvent" class="nav-link">TranscriptCreatedEvent</a><a href="#type-TranscriptUpdatedEvent" class="nav-link">TranscriptUpdatedEvent</a><a href="#type-TranscriptWritable2" class="nav-link">TranscriptWritable2</a><a href="#type-TranscriptListWritable" class="nav-link">TranscriptListWritable</a><a href="#type-TranscriptCreatedEventWritable" class="nav-link">TranscriptCreatedEventWritable</a>
+        <a href="#type-TranscriptWritable" class="nav-link">TranscriptWritable</a><a href="#type-Transcript" class="nav-link">Transcript</a><a href="#type-TranscriptCreate" class="nav-link">TranscriptCreate</a><a href="#type-TranscriptUpdate" class="nav-link">TranscriptUpdate</a><a href="#type-TranscriptList" class="nav-link">TranscriptList</a><a href="#type-TranscriptEntry" class="nav-link">TranscriptEntry</a><a href="#type-TranscriptEntryCreate" class="nav-link">TranscriptEntryCreate</a><a href="#type-TranscriptLineCreate" class="nav-link">TranscriptLineCreate</a><a href="#type-TranscriptGapCreate" class="nav-link">TranscriptGapCreate</a><a href="#type-TranscriptEntryUpdate" class="nav-link">TranscriptEntryUpdate</a><a href="#type-TranscriptEntryList" class="nav-link">TranscriptEntryList</a><a href="#type-TranscriptCreatedEvent" class="nav-link">TranscriptCreatedEvent</a><a href="#type-TranscriptUpdatedEvent" class="nav-link">TranscriptUpdatedEvent</a><a href="#type-TranscriptEntryCreatedEvent" class="nav-link">TranscriptEntryCreatedEvent</a><a href="#type-TranscriptEntryUpdatedEvent" class="nav-link">TranscriptEntryUpdatedEvent</a><a href="#type-AtRequest" class="nav-link">AtRequest</a><a href="#type-TranscriptWritable2" class="nav-link">TranscriptWritable2</a><a href="#type-TranscriptListWritable" class="nav-link">TranscriptListWritable</a><a href="#type-TranscriptEntryWritable" class="nav-link">TranscriptEntryWritable</a><a href="#type-TranscriptEntryListWritable" class="nav-link">TranscriptEntryListWritable</a><a href="#type-TranscriptCreatedEventWritable" class="nav-link">TranscriptCreatedEventWritable</a><a href="#type-TranscriptEntryCreatedEventWritable" class="nav-link">TranscriptEntryCreatedEventWritable</a>
       </div>
       </div>
     </nav>
@@ -254,6 +257,152 @@
     </div>
   </details>
 </div>
+      </section><section id="group-entries" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Entries (4)</h2>
+        <div id="ep-listTranscriptEntries" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">listTranscriptEntries<span style="color:#aaa;font-weight:400;">(transcriptId)</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">List a transcript's entries</span>
+      
+      <a href="#ep-listTranscriptEntries" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">transcription-transcripts.listTranscriptEntries({
+  path: { transcriptId: string },
+  query: { limit?: number, offset?: number, sort?: string, kind?: enum: },
+})</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">transcriptId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">limit</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">number</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">offset</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">number</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">sort</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">kind</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#b5490a;">enum: &quot;line&quot;, &quot;gap&quot;, &quot;pause&quot;</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">query</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#aaa;">optional</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div><div id="ep-addTranscriptEntry" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">addTranscriptEntry<span style="color:#aaa;font-weight:400;">(transcriptId)</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Add an entry to a transcript</span>
+      
+      <a href="#ep-addTranscriptEntry" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">transcription-transcripts.addTranscriptEntry({
+  path: { transcriptId: string },
+  body: { ... },
+})</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">transcriptId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div><div id="ep-getTranscriptEntry" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">getTranscriptEntry<span style="color:#aaa;font-weight:400;">(transcriptId, entryId)</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Get a transcript entry</span>
+      
+      <a href="#ep-getTranscriptEntry" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">transcription-transcripts.getTranscriptEntry({
+  path: { transcriptId: string, entryId: string },
+})</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">transcriptId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">entryId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div><div id="ep-updateTranscriptEntry" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <span style="font-family:monospace;font-size:13px;font-weight:700;color:#2B1A78;">updateTranscriptEntry<span style="color:#aaa;font-weight:400;">(transcriptId, entryId)</span></span>
+      <span style="font-size:11px;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">End a pause entry</span>
+      
+      <a href="#ep-updateTranscriptEntry" class="permalink" title="Link to this method">#</a>
+    </summary>
+    <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
+      <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">transcription-transcripts.updateTranscriptEntry({
+  path: { transcriptId: string, entryId: string },
+  body: { ... },
+})</pre>
+      
+    <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
+      <div style="font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#aaa;padding:4px 10px;background:#fafafa;border-bottom:1px solid #eee;">Parameters</div>
+      <table style="width:100%;border-collapse:collapse;"><tbody><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">transcriptId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">entryId</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr></tbody></table>
+    </div>
+    </div>
+  </details>
+</div>
       </section><section id="group-pause" style="margin-bottom:2.5rem;">
         <h2 style="font-size:0.875rem;font-weight:800;color:#888;margin-bottom:1rem;">Pause (1)</h2>
         <div id="ep-pauseTranscript" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
@@ -268,6 +417,7 @@
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">transcription-transcripts.pauseTranscript({
   path: { transcriptId: string },
+  body: { ... },
 })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
@@ -276,6 +426,11 @@
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">transcriptId</span></td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
     </tr></tbody></table>
     </div>
@@ -296,6 +451,7 @@
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">transcription-transcripts.resumeTranscript({
   path: { transcriptId: string },
+  body: { ... },
 })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
@@ -304,6 +460,11 @@
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">transcriptId</span></td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
     </tr></tbody></table>
     </div>
@@ -324,6 +485,7 @@
     <div style="padding:10px 14px;border-top:1px solid #f0f0f0;">
       <pre style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;background:#f6f8ff;border:1px solid #dde4f0;border-radius:4px;padding:8px 12px;overflow-x:auto;margin-bottom:10px;">transcription-transcripts.closeTranscript({
   path: { transcriptId: string },
+  body: { ... },
 })</pre>
       
     <div style="margin-top:10px;border:1px solid #eee;border-radius:4px;overflow:hidden;">
@@ -333,13 +495,51 @@
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">string</span></td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">path</td>
       <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
+    </tr><tr>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;"><span style="font-family:monospace;font-weight:600;color:#1a1a1a;">body</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-family:monospace;"><span style="color:#006152;">object</span></td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;color:#aaa;font-size:10px;">body</td>
+      <td style="padding:4px 10px;font-size:11.5px;border-bottom:1px solid #f2f2f2;font-size:10px;"><span style="color:#AF121D;font-weight:700;">required</span></td>
     </tr></tbody></table>
     </div>
     </div>
   </details>
 </div>
+      </section><section id="section-constants" style="margin-bottom:2.5rem;">
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Constants (3)</h2>
+        <div id="const-GapCause" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">GapCause</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (4 values)</span>
+      <a href="#const-GapCause" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'connection'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'provider'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'client'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'unknown'</span></div></div></div>
+  </details>
+</div><div id="const-Speaker" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">Speaker</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (3 values)</span>
+      <a href="#const-Speaker" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'staff'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'client'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'unknown'</span></div></div></div>
+  </details>
+</div><div id="const-TranscriptEntryKind" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">TranscriptEntryKind</code>
+      <span style="font-size:11px;color:#888;flex:1;">enum (3 values)</span>
+      <a href="#const-TranscriptEntryKind" class="permalink" title="Link to this constant">#</a>
+    </summary>
+    <div style="border-top:1px solid #f0f0f0;"><div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;"><div style="line-height:1.8;"><span style="color:#b5490a;">'line'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'gap'</span></div><div style="line-height:1.8;"><span style="color:#b5490a;">'pause'</span></div></div></div>
+  </details>
+</div>
       </section><section id="section-types" style="margin-bottom:2.5rem;">
-        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (10)</h2>
+        <h2 style="font-size:0.875rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#888;margin-bottom:1rem;">Types (22)</h2>
         <div id="type-TranscriptWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -410,6 +610,90 @@
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
+</div><div id="type-TranscriptEntry" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">TranscriptEntry</code>
+      <span style="font-size:11px;color:#aaa;">8 fields</span>
+      <a href="#type-TranscriptEntry" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">TranscriptEntry</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">kind</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;line&quot;, &quot;gap&quot;, &quot;pause&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">startedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">endedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">text</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">speaker</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;staff&quot;, &quot;client&quot;, &quot;unknown&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">speakerLabel</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">confidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">cause</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;connection&quot;, &quot;provider&quot;, &quot;client&quot;, &quot;unknown&quot;</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-TranscriptEntryCreate" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">TranscriptEntryCreate</code>
+      <span style="font-size:11px;color:#aaa;">7 fields</span>
+      <a href="#type-TranscriptEntryCreate" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">TranscriptEntryCreate</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">kind</span><span style="color:#888;">:</span> <span style="color:#b5490a;">&quot;line&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">startedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">endedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">text</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">speaker</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;staff&quot;, &quot;client&quot;, &quot;unknown&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">speakerLabel</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">confidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-TranscriptLineCreate" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">TranscriptLineCreate</code>
+      <span style="font-size:11px;color:#aaa;">7 fields</span>
+      <a href="#type-TranscriptLineCreate" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">TranscriptLineCreate</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">kind</span><span style="color:#888;">:</span> <span style="color:#b5490a;">&quot;line&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">startedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">endedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">text</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">speaker</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;staff&quot;, &quot;client&quot;, &quot;unknown&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">speakerLabel</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">confidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-TranscriptGapCreate" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">TranscriptGapCreate</code>
+      <span style="font-size:11px;color:#aaa;">4 fields</span>
+      <a href="#type-TranscriptGapCreate" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">TranscriptGapCreate</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">kind</span><span style="color:#888;">:</span> <span style="color:#b5490a;">&quot;gap&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">startedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">endedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">cause</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;connection&quot;, &quot;provider&quot;, &quot;client&quot;, &quot;unknown&quot;</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-TranscriptEntryUpdate" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">TranscriptEntryUpdate</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-TranscriptEntryUpdate" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">TranscriptEntryUpdate</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">endedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-TranscriptEntryList" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">TranscriptEntryList</code>
+      <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <a href="#type-TranscriptEntryList" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">TranscriptEntryList</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">items</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">?:</span> <span style="color:#006152;">boolean</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
 </div><div id="type-TranscriptCreatedEvent" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -435,6 +719,48 @@
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">TranscriptUpdatedEvent</span> <span style="color:#666;">{</span></div>
       <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">changes</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-TranscriptEntryCreatedEvent" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">TranscriptEntryCreatedEvent</code>
+      <span style="font-size:11px;color:#aaa;">8 fields</span>
+      <a href="#type-TranscriptEntryCreatedEvent" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">TranscriptEntryCreatedEvent</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">kind</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;line&quot;, &quot;gap&quot;, &quot;pause&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">startedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">endedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">text</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">speaker</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;staff&quot;, &quot;client&quot;, &quot;unknown&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">speakerLabel</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">confidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">cause</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;connection&quot;, &quot;provider&quot;, &quot;client&quot;, &quot;unknown&quot;</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-TranscriptEntryUpdatedEvent" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">TranscriptEntryUpdatedEvent</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-TranscriptEntryUpdatedEvent" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">TranscriptEntryUpdatedEvent</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">changes</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-AtRequest" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">AtRequest</code>
+      <span style="font-size:11px;color:#aaa;">1 field</span>
+      <a href="#type-AtRequest" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">AtRequest</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">at</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
@@ -466,6 +792,34 @@
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>
+</div><div id="type-TranscriptEntryWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">TranscriptEntryWritable</code>
+      <span style="font-size:11px;color:#aaa;">8 fields</span>
+      <a href="#type-TranscriptEntryWritable" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">TranscriptEntryWritable</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">kind</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;line&quot;, &quot;gap&quot;, &quot;pause&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">startedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">endedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">text</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">speaker</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;staff&quot;, &quot;client&quot;, &quot;unknown&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">speakerLabel</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">confidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">cause</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;connection&quot;, &quot;provider&quot;, &quot;client&quot;, &quot;unknown&quot;</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-TranscriptEntryListWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">TranscriptEntryListWritable</code>
+      <span style="font-size:11px;color:#aaa;">5 fields</span>
+      <a href="#type-TranscriptEntryListWritable" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">TranscriptEntryListWritable</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">items</span><span style="color:#888;">:</span> <span style="color:#006152;">array[object]</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">total</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">limit</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">offset</span><span style="color:#888;">:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">hasNext</span><span style="color:#888;">?:</span> <span style="color:#006152;">boolean</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
 </div><div id="type-TranscriptCreatedEventWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
   <details>
     <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
@@ -477,6 +831,20 @@
     <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
       <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">TranscriptCreatedEventWritable</span> <span style="color:#666;">{</span></div>
       <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">subjectType</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">subjectId</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">provider</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;aws-transcribe&quot;, &quot;elevenlabs-scribe&quot;, &quot;none&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">model</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">client</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div>
+      <div style="line-height:1.8;color:#666;">}</div>
+    </div>
+  </details>
+</div><div id="type-TranscriptEntryCreatedEventWritable" class="content-item" style="border:1px solid #E9CCBE;border-radius:6px;margin-bottom:8px;overflow:hidden;">
+  <details>
+    <summary style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fafafa;cursor:pointer;list-style:none;user-select:none;">
+      <span style="font-size:10px;color:#aaa;width:12px;flex-shrink:0;" class="chevron">▶</span>
+      <code style="font-size:13px;font-weight:700;color:#2B1A78;">TranscriptEntryCreatedEventWritable</code>
+      <span style="font-size:11px;color:#aaa;">8 fields</span>
+      <a href="#type-TranscriptEntryCreatedEventWritable" class="permalink" title="Link to this type">#</a>
+    </summary>
+    <div style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;padding:10px 14px;background:#f6f8ff;border-top:1px solid #eee;">
+      <div style="line-height:1.8;"><span style="color:#7c5cbf;">interface</span> <span style="color:#2B1A78;font-weight:700;">TranscriptEntryCreatedEventWritable</span> <span style="color:#666;">{</span></div>
+      <div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">kind</span><span style="color:#888;">:</span> <span style="color:#b5490a;">enum: &quot;line&quot;, &quot;gap&quot;, &quot;pause&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">startedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">endedAt</span><span style="color:#888;">:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">text</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">speaker</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;staff&quot;, &quot;client&quot;, &quot;unknown&quot;</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">speakerLabel</span><span style="color:#888;">?:</span> <span style="color:#006152;">string</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">confidence</span><span style="color:#888;">?:</span> <span style="color:#006152;">number</span></div><div style="line-height:1.8;"><span style="opacity:0.5;">  </span><span style="color:#1a1a1a;">cause</span><span style="color:#888;">?:</span> <span style="color:#b5490a;">enum: &quot;connection&quot;, &quot;provider&quot;, &quot;client&quot;, &quot;unknown&quot;</span></div>
       <div style="line-height:1.8;color:#666;">}</div>
     </div>
   </details>

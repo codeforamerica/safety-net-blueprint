@@ -1,9 +1,9 @@
 # Transcripts (Cross-Cutting)
 
-> **Status: draft, partly built.** The resource and its lifecycle exist, in the
-> framework's `transcription` domain (`blueprint-core/base-contracts/domains/transcription/transcription-transcripts-*.yaml`):
-> starting, pausing, resuming and closing a transcript, and their events. Lines,
-> gaps, settings and the idle timer are to come, as this design describes.
+> **Status: draft, partly built.** The resource, its lifecycle and its
+> timeline exist, in the framework's `transcription` domain
+> (`blueprint-core/base-contracts/domains/transcription/`). Settings and the
+> idle timer are to come, as this design describes.
 
 See [AI Services](ai-services.md) for how transcripts fit with suggestions,
 fact extraction and the interview, and [Contract-Driven Architecture](../contract-driven-architecture.md)
@@ -60,23 +60,39 @@ to the worker's screen and anything else listening.
 A transcript refers to what it records — for the interview assistant, the
 `Interview` — and records which client and provider produced it.
 
-- **States:** `recording`, `paused` and `closed`. A pause is deliberate: an
+- **Lifecycle:** recording, paused and closed. A pause is deliberate: an
   applicant may ask to go off the record. Once the `Interview` exists, starting
   and resuming are guarded on consent recorded on it.
-- **Lines**, listed under the transcript. Each has an id the client generates;
-  a speaker role — worker, applicant or unknown — and the provider's own speaker
-  label, since with one microphone in a room the provider labels speakers
-  `spk_0` and `spk_1` and something has to map them; the text; when it was
-  spoken; and whether it was spoken or typed. Fields that apply only to speech,
-  such as a confidence, are optional.
-- **Gaps**, where the conversation went untranscribed, each with a start and an
-  end. A gap is unintended and a pause is chosen, so the two are kept apart.
-- **Events:** each operation emits one — line added, gap recorded, paused,
-  resumed, closed — on the event stream.
+- **A timeline of entries,** in the order things happened. Three kinds, kept
+  apart because they mean different things to anyone relying on the record:
+  - **Lines:** something said or typed, with who said it as a role — the
+    contract set's roles to name — and the provider's own label for the
+    speaker, since with one microphone in a room a provider labels speakers
+    `spk_0` and `spk_1` and something has to map them.
+  - **Gaps:** stretches lost by accident. The record is incomplete there.
+  - **Pauses:** stretches off the record by choice. Nothing is missing. The
+    lifecycle writes them, never the client.
 
-Lines are records under the transcript, not stored events, so a transcript
+  Every entry is a period of the conversation, so one ordering and one set of
+  rules cover all three.
+- **Events:** each change emits one on the event stream.
+
+Entries are records under the transcript, not stored events, so a timeline
 lists and pages like any other resource. An hour-long interview is on the order
-of a thousand finished lines.
+of a thousand finished lines. A client can retry adding one without storing it
+twice: each add carries a key the client makes, and a retry carries the same
+one.
+
+**One clock: the client's.** The client reports when each line was said, so it
+also reports when the conversation started, paused, resumed and closed. Every
+rule then compares times from one clock, and never the client's against the
+server's. The server keeps its own record of when it received things, for
+auditing.
+
+**Entries do not change.** Once written, nothing about an entry changes but a
+pause's end, and only the lifecycle writes that — resuming or closing. The rule
+allowing it names the system as the only actor, so a contract set that renames
+its roles has to keep one for the system.
 
 **Only finished lines reach the blueprint.** Lines still firming up arrive
 several times a second, and the worker's own screen gets them from the client
@@ -109,17 +125,21 @@ cleans up what is abandoned, and records what produced each transcript.
 | Adds a line after closing | Refuses it |
 | Adds a line spoken while paused | Refuses it, so even a faulty client cannot get speech stored while the conversation is off the record |
 | Forgets to resume, and keeps adding lines | Refuses them, so the client finds out |
-| Sends the same line twice on a retry | Keeps one, by the line's id |
-| Sends lines out of order | Orders them by when they were spoken |
+| Sends the same line twice on a retry | Keeps one: a retry carries the same key as the first try |
+| Sends lines out of order | Lists them by when they started |
+| Reports a gap overlapping a pause | Refuses it: the pause already explains that time |
+| Sends a line that ends before it starts | Refuses it |
 | Never closes — the tab closed, the browser crashed | Closes it: after a configured time with no activity, by a declared timer, and when the `Interview` completes, by reacting to `interview.completed`. Either way it records a gap from the last line to the close, so the record shows it ended abnormally |
 
-**A line is judged by when it was spoken, not when it arrives.** A provider
+**An entry is judged by when it started, not when it arrives.** A provider
 finalizes a line a second or two after it is said, so a line spoken just before
-a pause can arrive just after it. It is accepted if the time it was spoken falls
-in a recording period, and refused if that time falls in a pause or after the
-close. Judging by arrival would be simpler, but would drop real speech from any
-client that does not send its pending lines before pausing — and the client is
-already trusted for the time on every line.
+a pause can arrive just after it. It is accepted if it started while recording,
+and refused if it started during a pause or after the close; a line that began
+on the record and ran past the click is kept. Judging by arrival would be
+simpler, but would drop real speech from any client that does not send its
+pending lines before pausing — and the client is already trusted for the time
+on every line. The transcript's lifecycle states these rules, and a refusal names the
+one that did not hold.
 
 **What the blueprint cannot know** is whether the client told the truth. A
 client that never pauses, or never reports a gap, looks the same as a

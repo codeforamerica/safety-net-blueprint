@@ -1,0 +1,35 @@
+{
+  "type": "object",
+  "description": "A stretch where nothing was captured, recorded once transcription works again or the transcript closes.",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "startedAt",
+    "endedAt"
+  ],
+  "properties": {
+    "kind": {
+      "const": "gap"
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "endedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "cause": {
+      "type": "string",
+      "enum": [
+        "connection",
+        "provider",
+        "client",
+        "unknown"
+      ],
+      "description": "Why nothing was captured, as far as the client knows."
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/TranscriptGapCreate"
+}

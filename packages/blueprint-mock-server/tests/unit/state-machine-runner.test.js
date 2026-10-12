@@ -522,3 +522,26 @@ test('executeTransition — if: true branch runs when condition met', () => {
   assert.strictEqual(result.success, true);
   assert.strictEqual(store.findById('testresources', 'res-steps-4').priority, 'high');
 });
+
+test('executeTransition — a body its schema refuses is 422, even when a condition reads it', () => {
+  store.insertResource('testresources', { id: 'res-order', status: 'pending' });
+  const stateMachine = { ...makeStateMachine(), guards: [{ id: 'atIsSet', condition: 'has(request.at)' }] };
+  const result = executeTransition({
+    store,
+    resourceName: 'testresources',
+    resourceId: 'res-order',
+    trigger: 'stamp',
+    callerId: 'user-1',
+    callerRoles: [ROLES.CASE_WORKER],
+    stateMachine,
+    machine: makeMachine([{
+      id: 'stamp',
+      guards: [{ conditions: ['atIsSet'] }],
+      schema: { request: { type: 'object', required: ['at'], properties: { at: { type: 'string' } } } },
+      steps: [{ set: { field: 'stampedAt', value: '$request.at' } }],
+    }]),
+    requestBody: {},
+    now: '2025-01-01T00:00:00Z',
+  });
+  assert.strictEqual(result.status, 422);
+});

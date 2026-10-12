@@ -407,6 +407,33 @@ const roleTypes = () => {
   return schema?.content.$defs.RoleType.enum ?? [];
 };
 
+/**
+ * Whether an operation takes an Idempotency-Key header — the shared
+ * IdempotencyKeyParam, which an operation lists to require one per create.
+ */
+const takesIdempotencyKey = (op) => (op.operation?.parameters ?? [])
+  .map((parameter) => deref(parameter, op.doc))
+  .some((p) => p?.in === 'header' && typeof p.name === 'string' && p.name.toLowerCase() === 'idempotency-key');
+
+/** The headers a step sends besides the caller's: a fresh key, where the operation takes one. */
+const keyHeaders = (op, key = crypto.randomUUID()) =>
+  takesIdempotencyKey(op) ? { 'Idempotency-Key': key } : {};
+
+/**
+ * The Idempotency-Key row: a fresh key each time the panel opens, which the
+ * reader can type over — `12345` twice is how to see a retry answered with
+ * the same entry, and `12345` with a different body how to see it refused.
+ */
+const idempotencyRow = () => {
+  const row = el('div', '', 'caller');
+  const box = el('input', '', 'caller-id');
+  box.type = 'text';
+  box.value = crypto.randomUUID();
+  box.setAttribute('aria-label', 'Idempotency-Key');
+  row.append(document.createTextNode('Idempotency-Key'), box);
+  return { row, value: () => box.value.trim() };
+};
+
 /** The "Calling as" row: an id, a kind of actor, and roles. */
 const callerRow = () => {
   const row = el('div', '', 'caller');
@@ -460,8 +487,8 @@ const callerRow = () => {
   return row;
 };
 
-const call = async (method, path, body) => {
-  const init = { method, headers: callerHeaders() };
+const call = async (method, path, body, headers = {}) => {
+  const init = { method, headers: { ...callerHeaders(), ...headers } };
   if (body instanceof FormData) {
     init.body = body;
   } else if (body !== undefined) {
@@ -620,6 +647,16 @@ const requestSchema = (op) => {
   return schema ? deref(schema, op.doc) : null;
 };
 
+/** A relative path, from the document at `from`: dirname, then each segment, with `..` going up. */
+const resolveRelative = (from, relative) => {
+  const parts = from.split('/').slice(0, -1);
+  for (const segment of relative.split('/')) {
+    if (segment === '..') parts.pop();
+    else if (segment !== '.' && segment !== '') parts.push(segment);
+  }
+  return parts.join('/');
+};
+
 const deref = (node, doc, seen = 0) => {
   if (!node || typeof node !== 'object' || seen > 8) return node;
   if (typeof node.$ref !== 'string') return node;
@@ -631,11 +668,17 @@ const deref = (node, doc, seen = 0) => {
     return deref(target, doc, seen + 1);
   }
 
-  // Another one. The reference may be written relative or as a URL, and the
-  // set is keyed by repository-relative path, so match on the tail.
+  // Another one. A relative reference resolves against the document it is
+  // written in — `../../components/parameters.yaml` from
+  // base/domains/transcription/ is base/components/parameters.yaml. One written
+  // as a URL is matched on its tail, since the set is keyed by relative path.
+  const relative = !/^[a-z]+:/i.test(file) && doc.relativePath
+    ? resolveRelative(doc.relativePath, file)
+    : null;
   const wanted = file.replace(/^.*?([^/]+\/[^/]+\/[^/]+)$/, '$1');
   const other = docs.find((candidate) => candidate.relativePath
-    && (candidate.relativePath === wanted || candidate.relativePath.endsWith(wanted)));
+    && (candidate.relativePath === relative
+      || (!relative && (candidate.relativePath === wanted || candidate.relativePath.endsWith(wanted)))));
   if (!other) return node;
   const target = fragment
     ? fragment.replace(/^\//, '').split('/').reduce((at, key) => at?.[key], other.content)
@@ -770,6 +813,9 @@ const collectProperties = (schema, doc) => {
 
 /** A plausible value for each required property, taking enums seriously. */
 const fromSchema = (schema, doc) => {
+  // One of several shapes — a line or a gap — is shown as the first.
+  const resolved = deref(schema, doc);
+  if (Array.isArray(resolved?.oneOf) && resolved.oneOf.length > 0) return fromSchema(deref(resolved.oneOf[0], doc), doc);
   const properties = collectProperties(schema, doc);
   const required = new Set([
     ...(schema?.required ?? []),
@@ -785,6 +831,7 @@ const fromSchema = (schema, doc) => {
 
 const valueFor = (declared, doc) => {
   if (!declared) return null;
+  if ('const' in declared) return declared.const;
   if (Array.isArray(declared.enum)) return declared.enum[0];
   switch (declared.type) {
     case 'integer': case 'number': return 0;
@@ -794,7 +841,9 @@ const valueFor = (declared, doc) => {
       return items ? [valueFor(items, doc)] : [];
     }
     case 'object': return fromSchema(declared, doc);
-    default: return declared.format === 'date-time' ? new Date().toISOString() : '';
+    default:
+      if (declared.format === 'date-time') return new Date().toISOString();
+      return declared.minLength > 0 ? 'example' : '';
   }
 };
 
@@ -2437,7 +2486,7 @@ const runWholeWalk = async (say) => {
     if (done.has(keyOf(op))) continue;
     say?.(`Running… ${index + 1} of ${steps.length}`);
     const { path, body } = await requestFor(op);
-    const result = await call(op.method, path, body);
+    const result = await call(op.method, path, body, keyHeaders(op));
     remember(op, result, body);
     ranCount += 1;
     // A step that failed stops the run rather than carrying on into the
@@ -2565,6 +2614,8 @@ const stepPanel = async (op, { live = true, number = null } = {}) => {
   panel.append(el('h2', number ? `${String(number).padStart(2, '0')} · ${op.step}` : (op.step ?? op.summary)));
   const sending = withParams(op.path, params) + (op.query ? `?${op.query}` : '');
   if (showAll && live) panel.append(callerRow());
+  const keyRow = showAll && live && takesIdempotencyKey(op) ? idempotencyRow() : null;
+  if (keyRow) panel.append(keyRow.row);
   panel.append(el('p', `${op.method} ${sending}`, 'path'));
 
   const bodyRef = op.operation.requestBody?.content?.['application/json']?.schema?.$ref;
@@ -2824,7 +2875,8 @@ const stepPanel = async (op, { live = true, number = null } = {}) => {
 
     // From the parameters as they are now: a value typed into a box after the
     // panel was drawn has to reach the request.
-    const result = await call(op.method, withParams(op.path, params) + (op.query ? `?${op.query}` : ''), body);
+    const headers = keyRow ? (keyRow.value() ? { 'Idempotency-Key': keyRow.value() } : {}) : keyHeaders(op);
+    const result = await call(op.method, withParams(op.path, params) + (op.query ? `?${op.query}` : ''), body, headers);
     remember(op, result, body);
     present(result);
 

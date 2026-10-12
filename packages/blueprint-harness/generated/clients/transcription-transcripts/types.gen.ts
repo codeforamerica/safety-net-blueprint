@@ -86,7 +86,11 @@ export type Transcript = {
      */
     status: 'recording' | 'paused' | 'closed';
     /**
-     * When the transcript was closed.
+     * When the conversation began, by the client's clock — the clock every time on its entries is on.
+     */
+    readonly startedAt?: string;
+    /**
+     * When the transcript was closed, by the client's clock.
      */
     readonly closedAt?: string;
     /**
@@ -131,7 +135,10 @@ export type TranscriptCreate = {
      */
     client?: string;
 } & {
-    [key: string]: unknown;
+    /**
+     * When the conversation began, by the client's clock.
+     */
+    startedAt: string;
 };
 
 export type TranscriptUpdate = {
@@ -216,7 +223,11 @@ export type TranscriptList = {
          */
         status: 'recording' | 'paused' | 'closed';
         /**
-         * When the transcript was closed.
+         * When the conversation began, by the client's clock — the clock every time on its entries is on.
+         */
+        readonly startedAt?: string;
+        /**
+         * When the transcript was closed, by the client's clock.
          */
         readonly closedAt?: string;
         /**
@@ -242,6 +253,283 @@ export type TranscriptList = {
     offset: number;
     /**
      * Whether more transcripts are available beyond this page.
+     */
+    hasNext?: boolean;
+};
+
+/**
+ * `line`: something said or typed. `gap`: a stretch where nothing was
+ * captured — a dropped connection, a provider failure. `pause`: the
+ * conversation off the record, by choice.
+ *
+ */
+export const TranscriptEntryKind = {
+    LINE: 'line',
+    GAP: 'gap',
+    PAUSE: 'pause'
+} as const;
+
+/**
+ * `line`: something said or typed. `gap`: a stretch where nothing was
+ * captured — a dropped connection, a provider failure. `pause`: the
+ * conversation off the record, by choice.
+ *
+ */
+export type TranscriptEntryKind = typeof TranscriptEntryKind[keyof typeof TranscriptEntryKind];
+
+/**
+ * Who said a line, as a role. A contract set replaces these by overlay —
+ * safety-net-contracts might say `worker` and `applicant`.
+ *
+ */
+export const Speaker = {
+    STAFF: 'staff',
+    CLIENT: 'client',
+    UNKNOWN: 'unknown'
+} as const;
+
+/**
+ * Who said a line, as a role. A contract set replaces these by overlay —
+ * safety-net-contracts might say `worker` and `applicant`.
+ *
+ */
+export type Speaker = typeof Speaker[keyof typeof Speaker];
+
+/**
+ * Why nothing was captured, as far as the client knows.
+ */
+export const GapCause = {
+    CONNECTION: 'connection',
+    PROVIDER: 'provider',
+    CLIENT: 'client',
+    UNKNOWN: 'unknown'
+} as const;
+
+/**
+ * Why nothing was captured, as far as the client knows.
+ */
+export type GapCause = typeof GapCause[keyof typeof GapCause];
+
+/**
+ * An entry in a transcript's timeline, including server-managed fields.
+ */
+export type TranscriptEntry = {
+    /**
+     * Unique identifier (server-generated).
+     */
+    readonly id: string;
+    /**
+     * The transcript it belongs to.
+     */
+    readonly transcriptId: string;
+    /**
+     * `line`: something said or typed. `gap`: a stretch where nothing was
+     * captured — a dropped connection, a provider failure. `pause`: the
+     * conversation off the record, by choice.
+     *
+     */
+    kind: 'line' | 'gap' | 'pause';
+    /**
+     * When it began, by the client's clock. Entries are in this order.
+     */
+    startedAt: string;
+    /**
+     * When it ended, by the client's clock. Null only for a pause still going on.
+     */
+    endedAt: string | null;
+    /**
+     * What was said or typed. Lines only.
+     */
+    text?: string;
+    /**
+     * Who said a line, as a role. A contract set replaces these by overlay —
+     * safety-net-contracts might say `worker` and `applicant`.
+     *
+     */
+    speaker?: 'staff' | 'client' | 'unknown';
+    /**
+     * The transcription service's own label for the speaker, e.g. `spk_0` or `ch_1`, kept so a mapping mistake can be corrected. Lines only.
+     */
+    speakerLabel?: string;
+    /**
+     * The transcription service's confidence in the line. Spoken lines only.
+     */
+    confidence?: number;
+    /**
+     * Why nothing was captured, as far as the client knows.
+     */
+    cause?: 'connection' | 'provider' | 'client' | 'unknown';
+    /**
+     * When the entry was recorded, by the server's clock.
+     */
+    readonly createdAt: string;
+    /**
+     * When the entry last changed, by the server's clock.
+     */
+    readonly updatedAt: string;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related Transcript resource.
+         */
+        transcript?: string;
+    };
+};
+
+export type TranscriptEntryCreate = {
+    kind: 'line';
+    /**
+     * When it began
+     */
+    startedAt: string;
+    /**
+     * When it ended. For a typed line
+     */
+    endedAt: string;
+    text: string;
+    /**
+     * Who said a line, as a role. A contract set replaces these by overlay —
+     * safety-net-contracts might say `worker` and `applicant`.
+     *
+     */
+    speaker: 'staff' | 'client' | 'unknown';
+    speakerLabel?: string;
+    confidence?: number;
+} | {
+    kind: 'gap';
+    startedAt: string;
+    endedAt: string;
+    /**
+     * Why nothing was captured, as far as the client knows.
+     */
+    cause?: 'connection' | 'provider' | 'client' | 'unknown';
+};
+
+/**
+ * A finished line, said or typed.
+ */
+export type TranscriptLineCreate = {
+    kind: 'line';
+    /**
+     * When it began
+     */
+    startedAt: string;
+    /**
+     * When it ended. For a typed line
+     */
+    endedAt: string;
+    text: string;
+    /**
+     * Who said a line, as a role. A contract set replaces these by overlay —
+     * safety-net-contracts might say `worker` and `applicant`.
+     *
+     */
+    speaker: 'staff' | 'client' | 'unknown';
+    speakerLabel?: string;
+    confidence?: number;
+};
+
+/**
+ * A stretch where nothing was captured, recorded once transcription works again or the transcript closes.
+ */
+export type TranscriptGapCreate = {
+    kind: 'gap';
+    startedAt: string;
+    endedAt: string;
+    /**
+     * Why nothing was captured, as far as the client knows.
+     */
+    cause?: 'connection' | 'provider' | 'client' | 'unknown';
+};
+
+/**
+ * When a pause ended. Written by resuming or closing the transcript.
+ */
+export type TranscriptEntryUpdate = {
+    endedAt: string;
+};
+
+export type TranscriptEntryList = {
+    items: Array<{
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * The transcript it belongs to.
+         */
+        readonly transcriptId: string;
+        /**
+         * `line`: something said or typed. `gap`: a stretch where nothing was
+         * captured — a dropped connection, a provider failure. `pause`: the
+         * conversation off the record, by choice.
+         *
+         */
+        kind: 'line' | 'gap' | 'pause';
+        /**
+         * When it began, by the client's clock. Entries are in this order.
+         */
+        startedAt: string;
+        /**
+         * When it ended, by the client's clock. Null only for a pause still going on.
+         */
+        endedAt: string | null;
+        /**
+         * What was said or typed. Lines only.
+         */
+        text?: string;
+        /**
+         * Who said a line, as a role. A contract set replaces these by overlay —
+         * safety-net-contracts might say `worker` and `applicant`.
+         *
+         */
+        speaker?: 'staff' | 'client' | 'unknown';
+        /**
+         * The transcription service's own label for the speaker, e.g. `spk_0` or `ch_1`, kept so a mapping mistake can be corrected. Lines only.
+         */
+        speakerLabel?: string;
+        /**
+         * The transcription service's confidence in the line. Spoken lines only.
+         */
+        confidence?: number;
+        /**
+         * Why nothing was captured, as far as the client knows.
+         */
+        cause?: 'connection' | 'provider' | 'client' | 'unknown';
+        /**
+         * When the entry was recorded, by the server's clock.
+         */
+        readonly createdAt: string;
+        /**
+         * When the entry last changed, by the server's clock.
+         */
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Transcript resource.
+             */
+            transcript?: string;
+        };
+    }>;
+    /**
+     * Total number of entries.
+     */
+    total: number;
+    /**
+     * Maximum number of entries requested.
+     */
+    limit: number;
+    /**
+     * Number of entries skipped before this page.
+     */
+    offset: number;
+    /**
+     * Whether more entries are available beyond this page.
      */
     hasNext?: boolean;
 };
@@ -292,7 +580,11 @@ export type TranscriptCreatedEvent = {
      */
     status: 'recording' | 'paused' | 'closed';
     /**
-     * When the transcript was closed.
+     * When the conversation began, by the client's clock — the clock every time on its entries is on.
+     */
+    readonly startedAt?: string;
+    /**
+     * When the transcript was closed, by the client's clock.
      */
     readonly closedAt?: string;
     /**
@@ -343,6 +635,111 @@ export type TranscriptUpdatedEvent = {
  */
 export type TranscriptDeletedEvent = {
     [key: string]: unknown;
+};
+
+/**
+ * An entry in a transcript's timeline, including server-managed fields.
+ */
+export type TranscriptEntryCreatedEvent = {
+    /**
+     * Unique identifier (server-generated).
+     */
+    readonly id: string;
+    /**
+     * The transcript it belongs to.
+     */
+    readonly transcriptId: string;
+    /**
+     * `line`: something said or typed. `gap`: a stretch where nothing was
+     * captured — a dropped connection, a provider failure. `pause`: the
+     * conversation off the record, by choice.
+     *
+     */
+    kind: 'line' | 'gap' | 'pause';
+    /**
+     * When it began, by the client's clock. Entries are in this order.
+     */
+    startedAt: string;
+    /**
+     * When it ended, by the client's clock. Null only for a pause still going on.
+     */
+    endedAt: string | null;
+    /**
+     * What was said or typed. Lines only.
+     */
+    text?: string;
+    /**
+     * Who said a line, as a role. A contract set replaces these by overlay —
+     * safety-net-contracts might say `worker` and `applicant`.
+     *
+     */
+    speaker?: 'staff' | 'client' | 'unknown';
+    /**
+     * The transcription service's own label for the speaker, e.g. `spk_0` or `ch_1`, kept so a mapping mistake can be corrected. Lines only.
+     */
+    speakerLabel?: string;
+    /**
+     * The transcription service's confidence in the line. Spoken lines only.
+     */
+    confidence?: number;
+    /**
+     * Why nothing was captured, as far as the client knows.
+     */
+    cause?: 'connection' | 'provider' | 'client' | 'unknown';
+    /**
+     * When the entry was recorded, by the server's clock.
+     */
+    readonly createdAt: string;
+    /**
+     * When the entry last changed, by the server's clock.
+     */
+    readonly updatedAt: string;
+    /**
+     * Related resource links.
+     */
+    readonly links?: {
+        /**
+         * Link to the related Transcript resource.
+         */
+        transcript?: string;
+    };
+};
+
+/**
+ * Payload for a CRUD-emitted updated event. Contains a field-level diff
+ * recording which fields changed and their before/after values.
+ *
+ * Emitted automatically by the mock server on every PATCH request.
+ * Consumers can react to specific field mutations without fetching the
+ * full resource.
+ *
+ */
+export type TranscriptEntryUpdatedEvent = {
+    /**
+     * List of fields that changed, with before and after values.
+     */
+    changes: Array<{
+        /**
+         * Dot-path of the changed field. Top-level fields are a simple name (e.g. `status`); nested fields use dot notation (e.g. `personalInformation.dateOfBirth`). Arrays are treated as leaf values — the path identifies the array field itself, not individual elements.
+         *
+         */
+        field: string;
+        /**
+         * Value of the field before the update.
+         */
+        before: unknown;
+        /**
+         * Value of the field after the update.
+         */
+        after: unknown;
+    }>;
+};
+
+export type AtRequest = {
+    /**
+     * When it happened, by the client's clock.
+     */
+    at: string;
 };
 
 /**
@@ -433,6 +830,107 @@ export type TranscriptListWritable = {
 };
 
 /**
+ * An entry in a transcript's timeline, including server-managed fields.
+ */
+export type TranscriptEntryWritable = {
+    /**
+     * `line`: something said or typed. `gap`: a stretch where nothing was
+     * captured — a dropped connection, a provider failure. `pause`: the
+     * conversation off the record, by choice.
+     *
+     */
+    kind: 'line' | 'gap' | 'pause';
+    /**
+     * When it began, by the client's clock. Entries are in this order.
+     */
+    startedAt: string;
+    /**
+     * When it ended, by the client's clock. Null only for a pause still going on.
+     */
+    endedAt: string | null;
+    /**
+     * What was said or typed. Lines only.
+     */
+    text?: string;
+    /**
+     * Who said a line, as a role. A contract set replaces these by overlay —
+     * safety-net-contracts might say `worker` and `applicant`.
+     *
+     */
+    speaker?: 'staff' | 'client' | 'unknown';
+    /**
+     * The transcription service's own label for the speaker, e.g. `spk_0` or `ch_1`, kept so a mapping mistake can be corrected. Lines only.
+     */
+    speakerLabel?: string;
+    /**
+     * The transcription service's confidence in the line. Spoken lines only.
+     */
+    confidence?: number;
+    /**
+     * Why nothing was captured, as far as the client knows.
+     */
+    cause?: 'connection' | 'provider' | 'client' | 'unknown';
+};
+
+export type TranscriptEntryListWritable = {
+    items: Array<{
+        /**
+         * `line`: something said or typed. `gap`: a stretch where nothing was
+         * captured — a dropped connection, a provider failure. `pause`: the
+         * conversation off the record, by choice.
+         *
+         */
+        kind: 'line' | 'gap' | 'pause';
+        /**
+         * When it began, by the client's clock. Entries are in this order.
+         */
+        startedAt: string;
+        /**
+         * When it ended, by the client's clock. Null only for a pause still going on.
+         */
+        endedAt: string | null;
+        /**
+         * What was said or typed. Lines only.
+         */
+        text?: string;
+        /**
+         * Who said a line, as a role. A contract set replaces these by overlay —
+         * safety-net-contracts might say `worker` and `applicant`.
+         *
+         */
+        speaker?: 'staff' | 'client' | 'unknown';
+        /**
+         * The transcription service's own label for the speaker, e.g. `spk_0` or `ch_1`, kept so a mapping mistake can be corrected. Lines only.
+         */
+        speakerLabel?: string;
+        /**
+         * The transcription service's confidence in the line. Spoken lines only.
+         */
+        confidence?: number;
+        /**
+         * Why nothing was captured, as far as the client knows.
+         */
+        cause?: 'connection' | 'provider' | 'client' | 'unknown';
+    }>;
+    /**
+     * Total number of entries.
+     */
+    total: number;
+    /**
+     * Maximum number of entries requested.
+     */
+    limit: number;
+    /**
+     * Number of entries skipped before this page.
+     */
+    offset: number;
+    /**
+     * Whether more entries are available beyond this page.
+     */
+    hasNext?: boolean;
+};
+
+/**
  * Client-writable fields of a transcript.
  */
 export type TranscriptCreatedEventWritable = {
@@ -479,9 +977,57 @@ export type TranscriptDeletedEventWritable = {
 };
 
 /**
+ * An entry in a transcript's timeline, including server-managed fields.
+ */
+export type TranscriptEntryCreatedEventWritable = {
+    /**
+     * `line`: something said or typed. `gap`: a stretch where nothing was
+     * captured — a dropped connection, a provider failure. `pause`: the
+     * conversation off the record, by choice.
+     *
+     */
+    kind: 'line' | 'gap' | 'pause';
+    /**
+     * When it began, by the client's clock. Entries are in this order.
+     */
+    startedAt: string;
+    /**
+     * When it ended, by the client's clock. Null only for a pause still going on.
+     */
+    endedAt: string | null;
+    /**
+     * What was said or typed. Lines only.
+     */
+    text?: string;
+    /**
+     * Who said a line, as a role. A contract set replaces these by overlay —
+     * safety-net-contracts might say `worker` and `applicant`.
+     *
+     */
+    speaker?: 'staff' | 'client' | 'unknown';
+    /**
+     * The transcription service's own label for the speaker, e.g. `spk_0` or `ch_1`, kept so a mapping mistake can be corrected. Lines only.
+     */
+    speakerLabel?: string;
+    /**
+     * The transcription service's confidence in the line. Spoken lines only.
+     */
+    confidence?: number;
+    /**
+     * Why nothing was captured, as far as the client knows.
+     */
+    cause?: 'connection' | 'provider' | 'client' | 'unknown';
+};
+
+/**
  * Unique identifier of the transcript.
  */
 export type TranscriptIdParam = string;
+
+/**
+ * Unique identifier of the entry.
+ */
+export type TranscriptEntryIdParam = string;
 
 export type ListTranscriptsData = {
     body?: never;
@@ -698,7 +1244,11 @@ export type ListTranscriptsResponses = {
              */
             status: 'recording' | 'paused' | 'closed';
             /**
-             * When the transcript was closed.
+             * When the conversation began, by the client's clock — the clock every time on its entries is on.
+             */
+            readonly startedAt?: string;
+            /**
+             * When the transcript was closed, by the client's clock.
              */
             readonly closedAt?: string;
             /**
@@ -764,7 +1314,10 @@ export type CreateTranscriptData = {
          */
         client?: string;
     } & {
-        [key: string]: unknown;
+        /**
+         * When the conversation began, by the client's clock.
+         */
+        startedAt: string;
     };
     path?: never;
     query?: never;
@@ -880,7 +1433,11 @@ export type CreateTranscriptResponses = {
          */
         status: 'recording' | 'paused' | 'closed';
         /**
-         * When the transcript was closed.
+         * When the conversation began, by the client's clock — the clock every time on its entries is on.
+         */
+        readonly startedAt?: string;
+        /**
+         * When the transcript was closed, by the client's clock.
          */
         readonly closedAt?: string;
         /**
@@ -1062,7 +1619,11 @@ export type GetTranscriptResponses = {
          */
         status: 'recording' | 'paused' | 'closed';
         /**
-         * When the transcript was closed.
+         * When the conversation began, by the client's clock — the clock every time on its entries is on.
+         */
+        readonly startedAt?: string;
+        /**
+         * When the transcript was closed, by the client's clock.
          */
         readonly closedAt?: string;
         /**
@@ -1251,7 +1812,11 @@ export type UpdateTranscriptResponses = {
          */
         status: 'recording' | 'paused' | 'closed';
         /**
-         * When the transcript was closed.
+         * When the conversation began, by the client's clock — the clock every time on its entries is on.
+         */
+        readonly startedAt?: string;
+        /**
+         * When the transcript was closed, by the client's clock.
          */
         readonly closedAt?: string;
         /**
@@ -1267,8 +1832,786 @@ export type UpdateTranscriptResponses = {
 
 export type UpdateTranscriptResponse = UpdateTranscriptResponses[keyof UpdateTranscriptResponses];
 
-export type PauseTranscriptData = {
+export type ListTranscriptEntriesData = {
     body?: never;
+    path: {
+        /**
+         * Unique identifier of the transcript.
+         */
+        transcriptId: string;
+    };
+    query?: {
+        /**
+         * Maximum number of items to return (1-100).
+         */
+        limit?: number;
+        /**
+         * Number of items to skip before collecting results.
+         */
+        offset?: number;
+        /**
+         * Comma-separated list of fields to sort the response by. Prefix a field
+         * with `-` for descending order. The first field is the primary sort;
+         * subsequent fields are tie-breakers in declaration order.
+         *
+         * **URL Encoding:** This parameter must be URL-encoded when sent over HTTP.
+         * Most HTTP clients handle this automatically. Examples below show
+         * human-readable syntax for clarity.
+         *
+         * Which fields a given list endpoint allows is declared in the operation's
+         * `x-sortable.fields` extension. Sending a field name not present in that
+         * list returns `400 FIELD_NOT_SORTABLE`. Sending a field name that doesn't
+         * exist on the resource schema returns `400 INVALID_SORT_FIELD`. When this
+         * parameter is omitted, the operation's `x-sortable.default` (if declared)
+         * is applied; otherwise no client-driven sort is applied. A configured
+         * tie-breaker (default `id`) is always appended for stable pagination.
+         *
+         * See `api-patterns.yaml#sorting` for the full convention and
+         * `docs/architecture/x-extensions.md` for the extension shape.
+         *
+         * ## Syntax
+         *
+         * | Pattern | Description | Example |
+         * |---------|-------------|---------|
+         * | `fieldName` | Ascending | `sort=createdAt` |
+         * | `-fieldName` | Descending | `sort=-createdAt` |
+         * | `field1,field2` | Multi-field | `sort=status,-priority` |
+         * | `nested.field` | Nested field via dot notation | `sort=name.lastName` |
+         *
+         * ## Examples
+         *
+         * - `sort=createdAt` — oldest first
+         * - `sort=-createdAt` — newest first
+         * - `sort=-priority,dueDate` — highest priority first, then oldest due date
+         * - `sort=name.lastName,name.firstName` — alphabetical by surname, then given name
+         *
+         */
+        sort?: string;
+        /**
+         * `line`: something said or typed. `gap`: a stretch where nothing was
+         * captured — a dropped connection, a provider failure. `pause`: the
+         * conversation off the record, by choice.
+         *
+         */
+        kind?: 'line' | 'gap' | 'pause';
+    };
+    url: '/transcripts/{transcriptId}/entries';
+};
+
+export type ListTranscriptEntriesErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type ListTranscriptEntriesError = ListTranscriptEntriesErrors[keyof ListTranscriptEntriesErrors];
+
+export type ListTranscriptEntriesResponses = {
+    /**
+     * The transcript's entries, in the order things happened.
+     */
+    200: {
+        items: Array<{
+            /**
+             * Unique identifier (server-generated).
+             */
+            readonly id: string;
+            /**
+             * The transcript it belongs to.
+             */
+            readonly transcriptId: string;
+            /**
+             * `line`: something said or typed. `gap`: a stretch where nothing was
+             * captured — a dropped connection, a provider failure. `pause`: the
+             * conversation off the record, by choice.
+             *
+             */
+            kind: 'line' | 'gap' | 'pause';
+            /**
+             * When it began, by the client's clock. Entries are in this order.
+             */
+            startedAt: string;
+            /**
+             * When it ended, by the client's clock. Null only for a pause still going on.
+             */
+            endedAt: string | null;
+            /**
+             * What was said or typed. Lines only.
+             */
+            text?: string;
+            /**
+             * Who said a line, as a role. A contract set replaces these by overlay —
+             * safety-net-contracts might say `worker` and `applicant`.
+             *
+             */
+            speaker?: 'staff' | 'client' | 'unknown';
+            /**
+             * The transcription service's own label for the speaker, e.g. `spk_0` or `ch_1`, kept so a mapping mistake can be corrected. Lines only.
+             */
+            speakerLabel?: string;
+            /**
+             * The transcription service's confidence in the line. Spoken lines only.
+             */
+            confidence?: number;
+            /**
+             * Why nothing was captured, as far as the client knows.
+             */
+            cause?: 'connection' | 'provider' | 'client' | 'unknown';
+            /**
+             * When the entry was recorded, by the server's clock.
+             */
+            readonly createdAt: string;
+            /**
+             * When the entry last changed, by the server's clock.
+             */
+            readonly updatedAt: string;
+            /**
+             * Related resource links.
+             */
+            readonly links?: {
+                /**
+                 * Link to the related Transcript resource.
+                 */
+                transcript?: string;
+            };
+        }>;
+        /**
+         * Total number of entries.
+         */
+        total: number;
+        /**
+         * Maximum number of entries requested.
+         */
+        limit: number;
+        /**
+         * Number of entries skipped before this page.
+         */
+        offset: number;
+        /**
+         * Whether more entries are available beyond this page.
+         */
+        hasNext?: boolean;
+    };
+};
+
+export type ListTranscriptEntriesResponse = ListTranscriptEntriesResponses[keyof ListTranscriptEntriesResponses];
+
+export type AddTranscriptEntryData = {
+    body: {
+        kind: 'line';
+        /**
+         * When it began
+         */
+        startedAt: string;
+        /**
+         * When it ended. For a typed line
+         */
+        endedAt: string;
+        text: string;
+        /**
+         * Who said a line, as a role. A contract set replaces these by overlay —
+         * safety-net-contracts might say `worker` and `applicant`.
+         *
+         */
+        speaker: 'staff' | 'client' | 'unknown';
+        speakerLabel?: string;
+        confidence?: number;
+    } | {
+        kind: 'gap';
+        startedAt: string;
+        endedAt: string;
+        /**
+         * Why nothing was captured, as far as the client knows.
+         */
+        cause?: 'connection' | 'provider' | 'client' | 'unknown';
+    };
+    headers: {
+        /**
+         * A key the client makes for one create, so a retry is not a second create.
+         * Send the same key with every retry of the same request: the first is
+         * created, and a repeat gets the same response back. The same key with a
+         * different request is refused with 422. Keys are scoped to the caller.
+         *
+         * Any value unique to the operation works; a UUID is recommended. An
+         * operation that lists this parameter requires it. Follows the IETF HTTP API
+         * working group's `Idempotency-Key` header draft, and the convention Stripe
+         * and others use.
+         *
+         */
+        'Idempotency-Key': string;
+    };
+    path: {
+        /**
+         * Unique identifier of the transcript.
+         */
+        transcriptId: string;
+    };
+    query?: never;
+    url: '/transcripts/{transcriptId}/entries';
+};
+
+export type AddTranscriptEntryErrors = {
+    /**
+     * The request is malformed or contains invalid parameters.
+     */
+    400: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The authenticated user does not have permission to perform this action.
+     */
+    403: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The transcript refuses the entry: it started while the transcript
+     * was paused or after it closed, it ends before it starts, or it is a
+     * gap overlapping a pause.
+     *
+     */
+    409: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The entry is not valid, or its `Idempotency-Key` was already used
+     * for a different request.
+     *
+     */
+    422: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type AddTranscriptEntryError = AddTranscriptEntryErrors[keyof AddTranscriptEntryErrors];
+
+export type AddTranscriptEntryResponses = {
+    /**
+     * An entry in a transcript's timeline, including server-managed fields.
+     */
+    201: {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * The transcript it belongs to.
+         */
+        readonly transcriptId: string;
+        /**
+         * `line`: something said or typed. `gap`: a stretch where nothing was
+         * captured — a dropped connection, a provider failure. `pause`: the
+         * conversation off the record, by choice.
+         *
+         */
+        kind: 'line' | 'gap' | 'pause';
+        /**
+         * When it began, by the client's clock. Entries are in this order.
+         */
+        startedAt: string;
+        /**
+         * When it ended, by the client's clock. Null only for a pause still going on.
+         */
+        endedAt: string | null;
+        /**
+         * What was said or typed. Lines only.
+         */
+        text?: string;
+        /**
+         * Who said a line, as a role. A contract set replaces these by overlay —
+         * safety-net-contracts might say `worker` and `applicant`.
+         *
+         */
+        speaker?: 'staff' | 'client' | 'unknown';
+        /**
+         * The transcription service's own label for the speaker, e.g. `spk_0` or `ch_1`, kept so a mapping mistake can be corrected. Lines only.
+         */
+        speakerLabel?: string;
+        /**
+         * The transcription service's confidence in the line. Spoken lines only.
+         */
+        confidence?: number;
+        /**
+         * Why nothing was captured, as far as the client knows.
+         */
+        cause?: 'connection' | 'provider' | 'client' | 'unknown';
+        /**
+         * When the entry was recorded, by the server's clock.
+         */
+        readonly createdAt: string;
+        /**
+         * When the entry last changed, by the server's clock.
+         */
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Transcript resource.
+             */
+            transcript?: string;
+        };
+    };
+};
+
+export type AddTranscriptEntryResponse = AddTranscriptEntryResponses[keyof AddTranscriptEntryResponses];
+
+export type GetTranscriptEntryData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier of the transcript.
+         */
+        transcriptId: string;
+        /**
+         * Unique identifier of the entry.
+         */
+        entryId: string;
+    };
+    query?: never;
+    url: '/transcripts/{transcriptId}/entries/{entryId}';
+};
+
+export type GetTranscriptEntryErrors = {
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type GetTranscriptEntryError = GetTranscriptEntryErrors[keyof GetTranscriptEntryErrors];
+
+export type GetTranscriptEntryResponses = {
+    /**
+     * An entry in a transcript's timeline, including server-managed fields.
+     */
+    200: {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * The transcript it belongs to.
+         */
+        readonly transcriptId: string;
+        /**
+         * `line`: something said or typed. `gap`: a stretch where nothing was
+         * captured — a dropped connection, a provider failure. `pause`: the
+         * conversation off the record, by choice.
+         *
+         */
+        kind: 'line' | 'gap' | 'pause';
+        /**
+         * When it began, by the client's clock. Entries are in this order.
+         */
+        startedAt: string;
+        /**
+         * When it ended, by the client's clock. Null only for a pause still going on.
+         */
+        endedAt: string | null;
+        /**
+         * What was said or typed. Lines only.
+         */
+        text?: string;
+        /**
+         * Who said a line, as a role. A contract set replaces these by overlay —
+         * safety-net-contracts might say `worker` and `applicant`.
+         *
+         */
+        speaker?: 'staff' | 'client' | 'unknown';
+        /**
+         * The transcription service's own label for the speaker, e.g. `spk_0` or `ch_1`, kept so a mapping mistake can be corrected. Lines only.
+         */
+        speakerLabel?: string;
+        /**
+         * The transcription service's confidence in the line. Spoken lines only.
+         */
+        confidence?: number;
+        /**
+         * Why nothing was captured, as far as the client knows.
+         */
+        cause?: 'connection' | 'provider' | 'client' | 'unknown';
+        /**
+         * When the entry was recorded, by the server's clock.
+         */
+        readonly createdAt: string;
+        /**
+         * When the entry last changed, by the server's clock.
+         */
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Transcript resource.
+             */
+            transcript?: string;
+        };
+    };
+};
+
+export type GetTranscriptEntryResponse = GetTranscriptEntryResponses[keyof GetTranscriptEntryResponses];
+
+export type UpdateTranscriptEntryData = {
+    /**
+     * When a pause ended. Written by resuming or closing the transcript.
+     */
+    body: {
+        endedAt: string;
+    };
+    path: {
+        /**
+         * Unique identifier of the transcript.
+         */
+        transcriptId: string;
+        /**
+         * Unique identifier of the entry.
+         */
+        entryId: string;
+    };
+    query?: never;
+    url: '/transcripts/{transcriptId}/entries/{entryId}';
+};
+
+export type UpdateTranscriptEntryErrors = {
+    /**
+     * The authenticated user does not have permission to perform this action.
+     */
+    403: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The requested resource was not found.
+     */
+    404: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * The request was well-formed but contained semantic errors.
+     */
+    422: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+    /**
+     * An unexpected error occurred on the server.
+     */
+    500: {
+        /**
+         * Machine-readable error code.
+         */
+        code: string;
+        /**
+         * Human-readable error description.
+         */
+        message: string;
+        /**
+         * Additional error details.
+         */
+        details?: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type UpdateTranscriptEntryError = UpdateTranscriptEntryErrors[keyof UpdateTranscriptEntryErrors];
+
+export type UpdateTranscriptEntryResponses = {
+    /**
+     * An entry in a transcript's timeline, including server-managed fields.
+     */
+    200: {
+        /**
+         * Unique identifier (server-generated).
+         */
+        readonly id: string;
+        /**
+         * The transcript it belongs to.
+         */
+        readonly transcriptId: string;
+        /**
+         * `line`: something said or typed. `gap`: a stretch where nothing was
+         * captured — a dropped connection, a provider failure. `pause`: the
+         * conversation off the record, by choice.
+         *
+         */
+        kind: 'line' | 'gap' | 'pause';
+        /**
+         * When it began, by the client's clock. Entries are in this order.
+         */
+        startedAt: string;
+        /**
+         * When it ended, by the client's clock. Null only for a pause still going on.
+         */
+        endedAt: string | null;
+        /**
+         * What was said or typed. Lines only.
+         */
+        text?: string;
+        /**
+         * Who said a line, as a role. A contract set replaces these by overlay —
+         * safety-net-contracts might say `worker` and `applicant`.
+         *
+         */
+        speaker?: 'staff' | 'client' | 'unknown';
+        /**
+         * The transcription service's own label for the speaker, e.g. `spk_0` or `ch_1`, kept so a mapping mistake can be corrected. Lines only.
+         */
+        speakerLabel?: string;
+        /**
+         * The transcription service's confidence in the line. Spoken lines only.
+         */
+        confidence?: number;
+        /**
+         * Why nothing was captured, as far as the client knows.
+         */
+        cause?: 'connection' | 'provider' | 'client' | 'unknown';
+        /**
+         * When the entry was recorded, by the server's clock.
+         */
+        readonly createdAt: string;
+        /**
+         * When the entry last changed, by the server's clock.
+         */
+        readonly updatedAt: string;
+        /**
+         * Related resource links.
+         */
+        readonly links?: {
+            /**
+             * Link to the related Transcript resource.
+             */
+            transcript?: string;
+        };
+    };
+};
+
+export type UpdateTranscriptEntryResponse = UpdateTranscriptEntryResponses[keyof UpdateTranscriptEntryResponses];
+
+export type PauseTranscriptData = {
+    body: {
+        /**
+         * When it happened, by the client's clock.
+         */
+        at: string;
+    };
     path: {
         /**
          * Unique identifier of the transcript.
@@ -1407,7 +2750,11 @@ export type PauseTranscriptResponses = {
          */
         status: 'recording' | 'paused' | 'closed';
         /**
-         * When the transcript was closed.
+         * When the conversation began, by the client's clock — the clock every time on its entries is on.
+         */
+        readonly startedAt?: string;
+        /**
+         * When the transcript was closed, by the client's clock.
          */
         readonly closedAt?: string;
         /**
@@ -1424,7 +2771,12 @@ export type PauseTranscriptResponses = {
 export type PauseTranscriptResponse = PauseTranscriptResponses[keyof PauseTranscriptResponses];
 
 export type ResumeTranscriptData = {
-    body?: never;
+    body: {
+        /**
+         * When it happened, by the client's clock.
+         */
+        at: string;
+    };
     path: {
         /**
          * Unique identifier of the transcript.
@@ -1563,7 +2915,11 @@ export type ResumeTranscriptResponses = {
          */
         status: 'recording' | 'paused' | 'closed';
         /**
-         * When the transcript was closed.
+         * When the conversation began, by the client's clock — the clock every time on its entries is on.
+         */
+        readonly startedAt?: string;
+        /**
+         * When the transcript was closed, by the client's clock.
          */
         readonly closedAt?: string;
         /**
@@ -1580,7 +2936,12 @@ export type ResumeTranscriptResponses = {
 export type ResumeTranscriptResponse = ResumeTranscriptResponses[keyof ResumeTranscriptResponses];
 
 export type CloseTranscriptData = {
-    body?: never;
+    body: {
+        /**
+         * When it happened, by the client's clock.
+         */
+        at: string;
+    };
     path: {
         /**
          * Unique identifier of the transcript.
@@ -1719,7 +3080,11 @@ export type CloseTranscriptResponses = {
          */
         status: 'recording' | 'paused' | 'closed';
         /**
-         * When the transcript was closed.
+         * When the conversation began, by the client's clock — the clock every time on its entries is on.
+         */
+        readonly startedAt?: string;
+        /**
+         * When the transcript was closed, by the client's clock.
          */
         readonly closedAt?: string;
         /**

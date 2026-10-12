@@ -37,6 +37,7 @@ export const zTranscript = z.object({
         'paused',
         'closed'
     ]),
+    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
@@ -52,7 +53,9 @@ export const zTranscriptCreate = z.object({
     ])),
     model: z.optional(z.string()),
     client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
-}).and(z.record(z.string(), z.unknown()));
+}).and(z.object({
+    startedAt: z.iso.datetime({ offset: true })
+}));
 
 export const zTranscriptUpdate = z.object({
     subjectType: z.optional(z.string()),
@@ -84,10 +87,187 @@ export const zTranscriptList = z.object({
             'paused',
             'closed'
         ]),
+        startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly()
     }))),
+    total: z.int().gte(0),
+    limit: z.int().gte(1).lte(100),
+    offset: z.int().gte(0),
+    hasNext: z.optional(z.boolean())
+});
+
+/**
+ * `line`: something said or typed. `gap`: a stretch where nothing was
+ * captured — a dropped connection, a provider failure. `pause`: the
+ * conversation off the record, by choice.
+ *
+ */
+export const zTranscriptEntryKind = z.enum([
+    'line',
+    'gap',
+    'pause'
+]);
+
+/**
+ * Who said a line, as a role. A contract set replaces these by overlay —
+ * safety-net-contracts might say `worker` and `applicant`.
+ *
+ */
+export const zSpeaker = z.enum([
+    'staff',
+    'client',
+    'unknown'
+]);
+
+/**
+ * Why nothing was captured, as far as the client knows.
+ */
+export const zGapCause = z.enum([
+    'connection',
+    'provider',
+    'client',
+    'unknown'
+]);
+
+/**
+ * An entry in a transcript's timeline, including server-managed fields.
+ */
+export const zTranscriptEntry = z.object({
+    id: z.uuid().readonly(),
+    transcriptId: z.uuid().readonly(),
+    kind: z.enum([
+        'line',
+        'gap',
+        'pause'
+    ]),
+    startedAt: z.iso.datetime({ offset: true }),
+    endedAt: z.union([
+        z.iso.datetime({ offset: true }),
+        z.null()
+    ]),
+    text: z.optional(z.string()),
+    speaker: z.optional(z.enum([
+        'staff',
+        'client',
+        'unknown'
+    ])),
+    speakerLabel: z.optional(z.string()),
+    confidence: z.optional(z.number().gte(0).lte(1)),
+    cause: z.optional(z.enum([
+        'connection',
+        'provider',
+        'client',
+        'unknown'
+    ])),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        transcript: z.optional(z.string())
+    }).readonly())
+});
+
+export const zTranscriptEntryCreate = z.union([
+    z.object({
+        kind: z.literal('line'),
+        startedAt: z.iso.datetime({ offset: true }),
+        endedAt: z.iso.datetime({ offset: true }),
+        text: z.string().min(1),
+        speaker: z.enum([
+            'staff',
+            'client',
+            'unknown'
+        ]),
+        speakerLabel: z.optional(z.string()),
+        confidence: z.optional(z.number().gte(0).lte(1))
+    }),
+    z.object({
+        kind: z.literal('gap'),
+        startedAt: z.iso.datetime({ offset: true }),
+        endedAt: z.iso.datetime({ offset: true }),
+        cause: z.optional(z.enum([
+            'connection',
+            'provider',
+            'client',
+            'unknown'
+        ]))
+    })
+]);
+
+/**
+ * A finished line, said or typed.
+ */
+export const zTranscriptLineCreate = z.object({
+    kind: z.literal('line'),
+    startedAt: z.iso.datetime({ offset: true }),
+    endedAt: z.iso.datetime({ offset: true }),
+    text: z.string().min(1),
+    speaker: z.enum([
+        'staff',
+        'client',
+        'unknown'
+    ]),
+    speakerLabel: z.optional(z.string()),
+    confidence: z.optional(z.number().gte(0).lte(1))
+});
+
+/**
+ * A stretch where nothing was captured, recorded once transcription works again or the transcript closes.
+ */
+export const zTranscriptGapCreate = z.object({
+    kind: z.literal('gap'),
+    startedAt: z.iso.datetime({ offset: true }),
+    endedAt: z.iso.datetime({ offset: true }),
+    cause: z.optional(z.enum([
+        'connection',
+        'provider',
+        'client',
+        'unknown'
+    ]))
+});
+
+/**
+ * When a pause ended. Written by resuming or closing the transcript.
+ */
+export const zTranscriptEntryUpdate = z.object({
+    endedAt: z.iso.datetime({ offset: true })
+});
+
+export const zTranscriptEntryList = z.object({
+    items: z.array(z.object({
+        id: z.uuid().readonly(),
+        transcriptId: z.uuid().readonly(),
+        kind: z.enum([
+            'line',
+            'gap',
+            'pause'
+        ]),
+        startedAt: z.iso.datetime({ offset: true }),
+        endedAt: z.union([
+            z.iso.datetime({ offset: true }),
+            z.null()
+        ]),
+        text: z.optional(z.string()),
+        speaker: z.optional(z.enum([
+            'staff',
+            'client',
+            'unknown'
+        ])),
+        speakerLabel: z.optional(z.string()),
+        confidence: z.optional(z.number().gte(0).lte(1)),
+        cause: z.optional(z.enum([
+            'connection',
+            'provider',
+            'client',
+            'unknown'
+        ])),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            transcript: z.optional(z.string())
+        }).readonly())
+    })),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
     offset: z.int().gte(0),
@@ -114,6 +294,7 @@ export const zTranscriptCreatedEvent = z.object({
         'paused',
         'closed'
     ]),
+    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
@@ -143,6 +324,64 @@ export const zTranscriptUpdatedEvent = z.object({
  *
  */
 export const zTranscriptDeletedEvent = z.record(z.string(), z.unknown());
+
+/**
+ * An entry in a transcript's timeline, including server-managed fields.
+ */
+export const zTranscriptEntryCreatedEvent = z.object({
+    id: z.uuid().readonly(),
+    transcriptId: z.uuid().readonly(),
+    kind: z.enum([
+        'line',
+        'gap',
+        'pause'
+    ]),
+    startedAt: z.iso.datetime({ offset: true }),
+    endedAt: z.union([
+        z.iso.datetime({ offset: true }),
+        z.null()
+    ]),
+    text: z.optional(z.string()),
+    speaker: z.optional(z.enum([
+        'staff',
+        'client',
+        'unknown'
+    ])),
+    speakerLabel: z.optional(z.string()),
+    confidence: z.optional(z.number().gte(0).lte(1)),
+    cause: z.optional(z.enum([
+        'connection',
+        'provider',
+        'client',
+        'unknown'
+    ])),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        transcript: z.optional(z.string())
+    }).readonly())
+});
+
+/**
+ * Payload for a CRUD-emitted updated event. Contains a field-level diff
+ * recording which fields changed and their before/after values.
+ *
+ * Emitted automatically by the mock server on every PATCH request.
+ * Consumers can react to specific field mutations without fetching the
+ * full resource.
+ *
+ */
+export const zTranscriptEntryUpdatedEvent = z.object({
+    changes: z.array(z.object({
+        field: z.string(),
+        before: z.unknown(),
+        after: z.unknown()
+    }))
+});
+
+export const zAtRequest = z.object({
+    at: z.iso.datetime({ offset: true })
+});
 
 /**
  * Client-writable fields of a transcript.
@@ -178,6 +417,69 @@ export const zTranscriptListWritable = z.object({
 });
 
 /**
+ * An entry in a transcript's timeline, including server-managed fields.
+ */
+export const zTranscriptEntryWritable = z.object({
+    kind: z.enum([
+        'line',
+        'gap',
+        'pause'
+    ]),
+    startedAt: z.iso.datetime({ offset: true }),
+    endedAt: z.union([
+        z.iso.datetime({ offset: true }),
+        z.null()
+    ]),
+    text: z.optional(z.string()),
+    speaker: z.optional(z.enum([
+        'staff',
+        'client',
+        'unknown'
+    ])),
+    speakerLabel: z.optional(z.string()),
+    confidence: z.optional(z.number().gte(0).lte(1)),
+    cause: z.optional(z.enum([
+        'connection',
+        'provider',
+        'client',
+        'unknown'
+    ]))
+});
+
+export const zTranscriptEntryListWritable = z.object({
+    items: z.array(z.object({
+        kind: z.enum([
+            'line',
+            'gap',
+            'pause'
+        ]),
+        startedAt: z.iso.datetime({ offset: true }),
+        endedAt: z.union([
+            z.iso.datetime({ offset: true }),
+            z.null()
+        ]),
+        text: z.optional(z.string()),
+        speaker: z.optional(z.enum([
+            'staff',
+            'client',
+            'unknown'
+        ])),
+        speakerLabel: z.optional(z.string()),
+        confidence: z.optional(z.number().gte(0).lte(1)),
+        cause: z.optional(z.enum([
+            'connection',
+            'provider',
+            'client',
+            'unknown'
+        ]))
+    })),
+    total: z.int().gte(0),
+    limit: z.int().gte(1).lte(100),
+    offset: z.int().gte(0),
+    hasNext: z.optional(z.boolean())
+});
+
+/**
  * Client-writable fields of a transcript.
  */
 export const zTranscriptCreatedEventWritable = z.object({
@@ -201,9 +503,44 @@ export const zTranscriptCreatedEventWritable = z.object({
 export const zTranscriptDeletedEventWritable = z.record(z.string(), z.unknown());
 
 /**
+ * An entry in a transcript's timeline, including server-managed fields.
+ */
+export const zTranscriptEntryCreatedEventWritable = z.object({
+    kind: z.enum([
+        'line',
+        'gap',
+        'pause'
+    ]),
+    startedAt: z.iso.datetime({ offset: true }),
+    endedAt: z.union([
+        z.iso.datetime({ offset: true }),
+        z.null()
+    ]),
+    text: z.optional(z.string()),
+    speaker: z.optional(z.enum([
+        'staff',
+        'client',
+        'unknown'
+    ])),
+    speakerLabel: z.optional(z.string()),
+    confidence: z.optional(z.number().gte(0).lte(1)),
+    cause: z.optional(z.enum([
+        'connection',
+        'provider',
+        'client',
+        'unknown'
+    ]))
+});
+
+/**
  * Unique identifier of the transcript.
  */
 export const zTranscriptIdParam = z.uuid();
+
+/**
+ * Unique identifier of the entry.
+ */
+export const zTranscriptEntryIdParam = z.uuid();
 
 export const zListTranscriptsData = z.object({
     body: z.optional(z.never()),
@@ -237,6 +574,7 @@ export const zListTranscriptsResponse = z.object({
             'paused',
             'closed'
         ]),
+        startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly()
@@ -258,7 +596,9 @@ export const zCreateTranscriptData = z.object({
         ])),
         model: z.optional(z.string()),
         client: z.optional(z.string().regex(/^[a-z0-9][a-z0-9.-]*\/[0-9A-Za-z.+-]+$/))
-    }).and(z.record(z.string(), z.unknown())),
+    }).and(z.object({
+        startedAt: z.iso.datetime({ offset: true })
+    })),
     path: z.optional(z.never()),
     query: z.optional(z.never())
 });
@@ -283,6 +623,7 @@ export const zCreateTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
+    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
@@ -329,6 +670,7 @@ export const zGetTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
+    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
@@ -372,13 +714,243 @@ export const zUpdateTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
+    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
 
-export const zPauseTranscriptData = z.object({
+export const zListTranscriptEntriesData = z.object({
     body: z.optional(z.never()),
+    path: z.object({
+        transcriptId: z.uuid()
+    }),
+    query: z.optional(z.object({
+        limit: z.optional(z.int().gte(1).lte(100)).default(25),
+        offset: z.optional(z.int().gte(0)).default(0),
+        sort: z.optional(z.string()),
+        kind: z.optional(z.enum([
+            'line',
+            'gap',
+            'pause'
+        ]))
+    }))
+});
+
+/**
+ * The transcript's entries, in the order things happened.
+ */
+export const zListTranscriptEntriesResponse = z.object({
+    items: z.array(z.object({
+        id: z.uuid().readonly(),
+        transcriptId: z.uuid().readonly(),
+        kind: z.enum([
+            'line',
+            'gap',
+            'pause'
+        ]),
+        startedAt: z.iso.datetime({ offset: true }),
+        endedAt: z.union([
+            z.iso.datetime({ offset: true }),
+            z.null()
+        ]),
+        text: z.optional(z.string()),
+        speaker: z.optional(z.enum([
+            'staff',
+            'client',
+            'unknown'
+        ])),
+        speakerLabel: z.optional(z.string()),
+        confidence: z.optional(z.number().gte(0).lte(1)),
+        cause: z.optional(z.enum([
+            'connection',
+            'provider',
+            'client',
+            'unknown'
+        ])),
+        createdAt: z.iso.datetime({ offset: true }).readonly(),
+        updatedAt: z.iso.datetime({ offset: true }).readonly(),
+        links: z.optional(z.object({
+            transcript: z.optional(z.string())
+        }).readonly())
+    })),
+    total: z.int().gte(0),
+    limit: z.int().gte(1).lte(100),
+    offset: z.int().gte(0),
+    hasNext: z.optional(z.boolean())
+});
+
+export const zAddTranscriptEntryData = z.object({
+    body: z.union([
+        z.object({
+            kind: z.literal('line'),
+            startedAt: z.iso.datetime({ offset: true }),
+            endedAt: z.iso.datetime({ offset: true }),
+            text: z.string().min(1),
+            speaker: z.enum([
+                'staff',
+                'client',
+                'unknown'
+            ]),
+            speakerLabel: z.optional(z.string()),
+            confidence: z.optional(z.number().gte(0).lte(1))
+        }),
+        z.object({
+            kind: z.literal('gap'),
+            startedAt: z.iso.datetime({ offset: true }),
+            endedAt: z.iso.datetime({ offset: true }),
+            cause: z.optional(z.enum([
+                'connection',
+                'provider',
+                'client',
+                'unknown'
+            ]))
+        })
+    ]),
+    path: z.object({
+        transcriptId: z.uuid()
+    }),
+    query: z.optional(z.never()),
+    headers: z.object({
+        'Idempotency-Key': z.string().min(1).max(255)
+    })
+});
+
+/**
+ * An entry in a transcript's timeline, including server-managed fields.
+ */
+export const zAddTranscriptEntryResponse = z.object({
+    id: z.uuid().readonly(),
+    transcriptId: z.uuid().readonly(),
+    kind: z.enum([
+        'line',
+        'gap',
+        'pause'
+    ]),
+    startedAt: z.iso.datetime({ offset: true }),
+    endedAt: z.union([
+        z.iso.datetime({ offset: true }),
+        z.null()
+    ]),
+    text: z.optional(z.string()),
+    speaker: z.optional(z.enum([
+        'staff',
+        'client',
+        'unknown'
+    ])),
+    speakerLabel: z.optional(z.string()),
+    confidence: z.optional(z.number().gte(0).lte(1)),
+    cause: z.optional(z.enum([
+        'connection',
+        'provider',
+        'client',
+        'unknown'
+    ])),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        transcript: z.optional(z.string())
+    }).readonly())
+});
+
+export const zGetTranscriptEntryData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        transcriptId: z.uuid(),
+        entryId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * An entry in a transcript's timeline, including server-managed fields.
+ */
+export const zGetTranscriptEntryResponse = z.object({
+    id: z.uuid().readonly(),
+    transcriptId: z.uuid().readonly(),
+    kind: z.enum([
+        'line',
+        'gap',
+        'pause'
+    ]),
+    startedAt: z.iso.datetime({ offset: true }),
+    endedAt: z.union([
+        z.iso.datetime({ offset: true }),
+        z.null()
+    ]),
+    text: z.optional(z.string()),
+    speaker: z.optional(z.enum([
+        'staff',
+        'client',
+        'unknown'
+    ])),
+    speakerLabel: z.optional(z.string()),
+    confidence: z.optional(z.number().gte(0).lte(1)),
+    cause: z.optional(z.enum([
+        'connection',
+        'provider',
+        'client',
+        'unknown'
+    ])),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        transcript: z.optional(z.string())
+    }).readonly())
+});
+
+export const zUpdateTranscriptEntryData = z.object({
+    body: z.object({
+        endedAt: z.iso.datetime({ offset: true })
+    }),
+    path: z.object({
+        transcriptId: z.uuid(),
+        entryId: z.uuid()
+    }),
+    query: z.optional(z.never())
+});
+
+/**
+ * An entry in a transcript's timeline, including server-managed fields.
+ */
+export const zUpdateTranscriptEntryResponse = z.object({
+    id: z.uuid().readonly(),
+    transcriptId: z.uuid().readonly(),
+    kind: z.enum([
+        'line',
+        'gap',
+        'pause'
+    ]),
+    startedAt: z.iso.datetime({ offset: true }),
+    endedAt: z.union([
+        z.iso.datetime({ offset: true }),
+        z.null()
+    ]),
+    text: z.optional(z.string()),
+    speaker: z.optional(z.enum([
+        'staff',
+        'client',
+        'unknown'
+    ])),
+    speakerLabel: z.optional(z.string()),
+    confidence: z.optional(z.number().gte(0).lte(1)),
+    cause: z.optional(z.enum([
+        'connection',
+        'provider',
+        'client',
+        'unknown'
+    ])),
+    createdAt: z.iso.datetime({ offset: true }).readonly(),
+    updatedAt: z.iso.datetime({ offset: true }).readonly(),
+    links: z.optional(z.object({
+        transcript: z.optional(z.string())
+    }).readonly())
+});
+
+export const zPauseTranscriptData = z.object({
+    body: z.object({
+        at: z.iso.datetime({ offset: true })
+    }),
     path: z.object({
         transcriptId: z.uuid()
     }),
@@ -405,13 +977,16 @@ export const zPauseTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
+    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
 
 export const zResumeTranscriptData = z.object({
-    body: z.optional(z.never()),
+    body: z.object({
+        at: z.iso.datetime({ offset: true })
+    }),
     path: z.object({
         transcriptId: z.uuid()
     }),
@@ -438,13 +1013,16 @@ export const zResumeTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
+    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
 
 export const zCloseTranscriptData = z.object({
-    body: z.optional(z.never()),
+    body: z.object({
+        at: z.iso.datetime({ offset: true })
+    }),
     path: z.object({
         transcriptId: z.uuid()
     }),
@@ -471,6 +1049,7 @@ export const zCloseTranscriptResponse = z.object({
         'paused',
         'closed'
     ]),
+    startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()

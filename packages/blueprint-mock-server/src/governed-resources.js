@@ -61,9 +61,10 @@ export function governorsByRoute(stateMachines) {
  * @param {Object} options.body      - The body being created, or the change
  * @param {{ id: string|null, roles: string[] }} options.caller
  * @param {Object} options.store
- * @returns {{ status: number, code: string, message: string }|null} The refusal, or null when every machine passes
+ * @param {Function} [options.checkBody] - `() => refusal|null`: the body against the operation's schema, after the role check
+ * @returns {{ status: number, code: string, message: string, details?: object[] }|null} The refusal, or null when every machine passes
  */
-export function checkGoverned({ governors, verb, params, body, caller, store }) {
+export function checkGoverned({ governors, verb, params, body, caller, store, checkBody }) {
   for (const { entry, name, operation, owner } of governors ?? []) {
     const collection = deriveCollectionName(owner.path('collection'), '');
     const record = store.findById(collection, params[owner.item.parameter]);
@@ -85,9 +86,11 @@ export function checkGoverned({ governors, verb, params, body, caller, store }) 
       resource: record,
       context: { ...baseContext, entities },
       label: `${verb} a ${name} on this ${entry.object}`,
+      checkBody,
     });
     if (refused) {
-      return { status: refused.status, code: refused.status === 403 ? 'FORBIDDEN' : 'CONFLICT', message: refused.error };
+      const code = { 403: 'FORBIDDEN', 422: 'VALIDATION_ERROR' }[refused.status] ?? 'CONFLICT';
+      return { status: refused.status, code, message: refused.error, ...(refused.details ? { details: refused.details } : {}) };
     }
   }
   return null;

@@ -3,6 +3,10 @@
 # its provider and never through the blueprint. Its lifecycle — recording,
 # paused, closed — is transcription-transcripts-state-machine.yaml beside this file.
 #
+# A transcript's timeline is its entries: lines said or typed, gaps where
+# nothing was captured, and pauses when the conversation was off the record.
+# The state machine decides when an entry is accepted.
+#
 # See docs/architecture/cross-cutting/transcripts.md for the design, including
 # the rules a client is held to.
 openapi: 3.1.0
@@ -18,6 +22,11 @@ info:
     A transcript refers to what it records — an interview, a call — and records
     which client, transcription service and model produced it. Updating corrects what it records;
     deleting removes it, and the event left behind says which one and by whom.
+
+    Its entries are its timeline, in the order things happened: lines, gaps
+    where nothing was captured, and pauses. Every time on a transcript and its
+    entries is the client's — when it started, paused, resumed and closed, and
+    when each line was said — so they are compared on one clock.
 servers:
   - url: https://api.example.com/transcription
     description: Production server
@@ -26,6 +35,8 @@ servers:
 tags:
   - name: Transcripts
     description: The written record of a conversation.
+  - name: Transcript entries
+    description: A transcript's timeline — lines, gaps and pauses.
 x-events:
   transcript.created:
     type: org.codeforamerica.safety-net-blueprint.transcription.transcript.created
@@ -42,6 +53,16 @@ x-events:
     summary: Emitted when a transcript is deleted. Records which transcript, and who deleted it.
     payload:
       $ref: "#/components/schemas/TranscriptDeletedEvent"
+  transcript_entry.created:
+    type: org.codeforamerica.safety-net-blueprint.transcription.transcript_entry.created
+    summary: Emitted when an entry is added to a transcript — a line, a gap, or a pause beginning.
+    payload:
+      $ref: "#/components/schemas/TranscriptEntryCreatedEvent"
+  transcript_entry.updated:
+    type: org.codeforamerica.safety-net-blueprint.transcription.transcript_entry.updated
+    summary: Emitted when an entry changes — a pause ending, as the transcript resumes or closes.
+    payload:
+      $ref: "#/components/schemas/TranscriptEntryUpdatedEvent"
 paths:
   /transcripts:
     get:
@@ -171,6 +192,153 @@ paths:
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
         "500":
           $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+  /transcripts/{transcriptId}/entries:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptIdParam"
+    get:
+      summary: List a transcript's entries
+      description: |
+        A transcript's timeline, in the order things happened — by `startedAt`.
+        Filter by `kind` for only its lines, gaps or pauses.
+      operationId: listTranscriptEntries
+      tags:
+        - Transcript entries
+      x-sortable:
+        fields: [startedAt]
+        default: startedAt
+        tieBreaker: id
+      parameters:
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam"
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SortParam"
+        - name: kind
+          in: query
+          description: Only entries of this kind.
+          schema:
+            $ref: "#/components/schemas/TranscriptEntryKind"
+      responses:
+        "200":
+          description: The transcript's entries, in the order things happened.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptEntryList"
+        "400":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "404":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+    post:
+      summary: Add an entry to a transcript
+      description: |
+        Add a finished line, or a gap where nothing was captured. Pauses are not
+        added here: pausing the transcript adds one.
+
+        Send an `Idempotency-Key` with every add, and the same key when retrying
+        one, so a retry is not a second line. The transcript refuses an entry
+        that started while it was paused or after it closed, an entry that ends
+        before it starts, and a gap that overlaps a pause.
+      operationId: addTranscriptEntry
+      tags:
+        - Transcript entries
+      parameters:
+        - $ref: "https://blueprint.codeforamerica.org/base/components/parameters.yaml#/IdempotencyKeyParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscriptEntryCreate"
+      responses:
+        "201":
+          description: Entry added.
+          headers:
+            Location:
+              description: URL of the new entry.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptEntry"
+        "400":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/BadRequest"
+        "403":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Forbidden"
+        "404":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "409":
+          description: |
+            The transcript refuses the entry: it started while the transcript
+            was paused or after it closed, it ends before it starts, or it is a
+            gap overlapping a pause.
+          content:
+            application/json:
+              schema:
+                $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Error"
+        "422":
+          description: |
+            The entry is not valid, or its `Idempotency-Key` was already used
+            for a different request.
+          content:
+            application/json:
+              schema:
+                $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Error"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+  /transcripts/{transcriptId}/entries/{entryId}:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptIdParam"
+      - $ref: "#/components/parameters/TranscriptEntryIdParam"
+    get:
+      summary: Get a transcript entry
+      description: Retrieve a single entry by identifier.
+      operationId: getTranscriptEntry
+      tags:
+        - Transcript entries
+      responses:
+        "200":
+          description: Entry retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptEntry"
+        "404":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
+    patch:
+      summary: End a pause entry
+      description: |
+        Set when a pause ended. Only the system may — resuming or closing the
+        transcript does it. Nothing else about an entry changes once it is
+        written, and entries are never deleted.
+      operationId: updateTranscriptEntry
+      tags:
+        - Transcript entries
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscriptEntryUpdate"
+      responses:
+        "200":
+          description: Entry updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptEntry"
+        "403":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/Forbidden"
+        "404":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/NotFound"
+        "422":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/UnprocessableEntity"
+        "500":
+          $ref: "https://blueprint.codeforamerica.org/base/components/responses.yaml#/InternalError"
 components:
   parameters:
     TranscriptIdParam:
@@ -182,6 +350,15 @@ components:
         type: string
         format: uuid
       example: 4d1f13f0-3e26-4c50-b2fb-8d140f7ec1c2
+    TranscriptEntryIdParam:
+      name: entryId
+      in: path
+      required: true
+      description: Unique identifier of the entry.
+      schema:
+        type: string
+        format: uuid
+      example: 9c2e4a10-7b1d-4f3e-8a62-1d5c0b7e9f24
   schemas:
     # Writable base: client-writable fields only. Transcript, TranscriptCreate
     # and TranscriptUpdate extend it via allOf, so a write never carries a
@@ -251,11 +428,16 @@ components:
               description: |
                 `recording` while the conversation is on the record, `paused`
                 while it is off it, and `closed` once it has ended.
+            startedAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: When the conversation began, by the client's clock — the clock every time on its entries is on.
             closedAt:
               type: string
               format: date-time
               readOnly: true
-              description: When the transcript was closed.
+              description: When the transcript was closed, by the client's clock.
             createdAt:
               type: string
               format: date-time
@@ -273,8 +455,15 @@ components:
           description: |
             Payload to start a transcript. What produced it is required — the
             client, the transcription service, and its model unless the service
-            is `none` — so every transcript says where its lines came from. id, status, createdAt and updatedAt are set by the server.
-          required: [provider, client]
+            is `none` — so every transcript says where its lines came from — and
+            when it started, by the client's clock. id, status, createdAt and
+            updatedAt are set by the server.
+          required: [provider, client, startedAt]
+          properties:
+            startedAt:
+              type: string
+              format: date-time
+              description: When the conversation began, by the client's clock.
           if:
             properties:
               provider:
@@ -320,6 +509,138 @@ components:
           type: boolean
           description: Whether more transcripts are available beyond this page.
 
+    TranscriptEntryKind:
+      type: string
+      enum: [line, gap, pause]
+      description: |
+        `line`: something said or typed. `gap`: a stretch where nothing was
+        captured — a dropped connection, a provider failure. `pause`: the
+        conversation off the record, by choice.
+
+    Speaker:
+      type: string
+      enum: [staff, client, unknown]
+      description: |
+        Who said a line, as a role. A contract set replaces these by overlay —
+        safety-net-contracts might say `worker` and `applicant`.
+
+    GapCause:
+      type: string
+      enum: [connection, provider, client, unknown]
+      description: Why nothing was captured, as far as the client knows.
+
+    TranscriptEntry:
+      description: An entry in a transcript's timeline, including server-managed fields.
+      type: object
+      required: [id, transcriptId, kind, startedAt, endedAt, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Unique identifier (server-generated).
+        transcriptId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: The transcript it belongs to.
+          x-relationship:
+            resource: Transcript
+        kind:
+          $ref: "#/components/schemas/TranscriptEntryKind"
+        startedAt:
+          type: string
+          format: date-time
+          description: When it began, by the client's clock. Entries are in this order.
+        endedAt:
+          type: [string, "null"]
+          format: date-time
+          description: When it ended, by the client's clock. Null only for a pause still going on.
+        text:
+          type: string
+          description: What was said or typed. Lines only.
+        speaker:
+          $ref: "#/components/schemas/Speaker"
+        speakerLabel:
+          type: string
+          description: The transcription service's own label for the speaker, e.g. `spk_0` or `ch_1`, kept so a mapping mistake can be corrected. Lines only.
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: The transcription service's confidence in the line. Spoken lines only.
+        cause:
+          $ref: "#/components/schemas/GapCause"
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When the entry was recorded, by the server's clock.
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When the entry last changed, by the server's clock.
+
+    # A client adds lines and gaps. Pauses are not in the create schema: only
+    # pausing the transcript writes one.
+    TranscriptEntryCreate:
+      oneOf:
+        - $ref: "#/components/schemas/TranscriptLineCreate"
+        - $ref: "#/components/schemas/TranscriptGapCreate"
+      discriminator:
+        propertyName: kind
+        mapping:
+          line: "#/components/schemas/TranscriptLineCreate"
+          gap: "#/components/schemas/TranscriptGapCreate"
+
+    TranscriptLineCreate:
+      type: object
+      description: A finished line, said or typed.
+      additionalProperties: false
+      required: [kind, startedAt, endedAt, text, speaker]
+      properties:
+        kind: {const: line}
+        startedAt: {type: string, format: date-time, description: When it began, by the client's clock.}
+        endedAt: {type: string, format: date-time, description: When it ended. For a typed line, the same as startedAt.}
+        text: {type: string, minLength: 1}
+        speaker: {$ref: "#/components/schemas/Speaker"}
+        speakerLabel: {type: string}
+        confidence: {type: number, minimum: 0, maximum: 1}
+
+    TranscriptGapCreate:
+      type: object
+      description: A stretch where nothing was captured, recorded once transcription works again or the transcript closes.
+      additionalProperties: false
+      required: [kind, startedAt, endedAt]
+      properties:
+        kind: {const: gap}
+        startedAt: {type: string, format: date-time}
+        endedAt: {type: string, format: date-time}
+        cause: {$ref: "#/components/schemas/GapCause"}
+
+    TranscriptEntryUpdate:
+      type: object
+      description: When a pause ended. Written by resuming or closing the transcript.
+      additionalProperties: false
+      required: [endedAt]
+      properties:
+        endedAt: {type: string, format: date-time}
+
+    TranscriptEntryList:
+      type: object
+      additionalProperties: false
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TranscriptEntry"
+        total: {type: integer, minimum: 0, description: Total number of entries.}
+        limit: {type: integer, minimum: 1, maximum: 100, description: Maximum number of entries requested.}
+        offset: {type: integer, minimum: 0, description: Number of entries skipped before this page.}
+        hasNext: {type: boolean, description: Whether more entries are available beyond this page.}
+
     # Event payload schemas — referenced by x-events above
     TranscriptCreatedEvent:
       description: Snapshot of the newly started transcript.
@@ -330,6 +651,13 @@ components:
 
     TranscriptDeletedEvent:
       $ref: "https://blueprint.codeforamerica.org/base/schemas/events.yaml#/ResourceDeletedEvent"
+
+    TranscriptEntryCreatedEvent:
+      description: Snapshot of the new entry.
+      $ref: "#/components/schemas/TranscriptEntry"
+
+    TranscriptEntryUpdatedEvent:
+      $ref: "https://blueprint.codeforamerica.org/base/schemas/events.yaml#/ResourceUpdatedEvent"
 
   examples:
     TranscriptExample1:
@@ -342,5 +670,6 @@ components:
         model: standard
         client: interview-assistant/0.1.0
         status: recording
+        startedAt: "2026-10-11T14:00:00Z"
         createdAt: "2026-10-11T14:00:00Z"
         updatedAt: "2026-10-11T14:00:00Z"

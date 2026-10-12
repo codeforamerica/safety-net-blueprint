@@ -3,7 +3,8 @@
  *
  * A client sends the same key with every retry of one request. The first is
  * handled; a repeat gets the stored response back instead of being handled
- * again; the same key with a different request is refused with 422. Keys are
+ * again, marked `Idempotent-Replayed: true`; the same key with a different
+ * request is refused with 422. Keys are
  * scoped to the caller. This follows the IETF HTTP API working group's
  * Idempotency-Key draft, and the convention Stripe and others use.
  *
@@ -54,7 +55,7 @@ export function withIdempotency(handler, { required }, { store }) {
     if (!key) {
       if (!required) return handler(request, ctx);
       return Response.json({
-        code: 'BAD_REQUEST',
+        code: 'IDEMPOTENCY_KEY_MISSING',
         message: 'The Idempotency-Key header is required for this operation',
         details: [{ field: 'Idempotency-Key', message: 'required' }],
       }, { status: 400 });
@@ -70,11 +71,11 @@ export function withIdempotency(handler, { required }, { store }) {
     if (stored) {
       if (stored.fingerprint !== fingerprint) {
         return Response.json({
-          code: 'UNPROCESSABLE_ENTITY',
+          code: 'IDEMPOTENCY_KEY_REUSED',
           message: 'This Idempotency-Key was already used for a different request. A retry sends the same request with the same key; a new request needs a new key.',
         }, { status: 422 });
       }
-      return new Response(stored.body, { status: stored.status, headers: stored.headers });
+      return new Response(stored.body, { status: stored.status, headers: { ...stored.headers, 'Idempotent-Replayed': 'true' } });
     }
 
     const response = await handler(request, ctx);
@@ -91,6 +92,9 @@ export function withIdempotency(handler, { required }, { store }) {
       if (typeof store.append === 'function') store.append(COLLECTION, record);
       else store.insertResource(COLLECTION, record);
     }
-    return response;
+    // Says whether this response is a replay, as docs/conventions/http.yaml asks.
+    const headers = new Headers(response.headers);
+    headers.set('Idempotent-Replayed', 'false');
+    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
   };
 }

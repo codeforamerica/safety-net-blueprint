@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "description": "When a pause ended. Written by resuming or closing the transcript.",
+  "additionalProperties": false,
+  "required": [
+    "endedAt"
+  ],
+  "properties": {
+    "endedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/TranscriptEntryUpdate"
+}

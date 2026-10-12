@@ -860,6 +860,88 @@
           ]
         },
         {
+          "name": "Get Non-Existent Transcription (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/00000000-0000-0000-0000-000000000000/entries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "00000000-0000-0000-0000-000000000000",
+                "entries"
+              ],
+              "variables": [
+                "transcriptId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Error response has code and message\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('code');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Transcription (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/00000000-0000-0000-0000-000000000000/entries/{{entryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "00000000-0000-0000-0000-000000000000",
+                "entries",
+                "{{entryId}}"
+              ],
+              "variables": [
+                "transcriptId",
+                "entryId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Error response has code and message\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('code');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Pause Transcription",
           "request": {
             "method": "POST",

@@ -1,6 +1,13 @@
 # The lifecycle of a transcript. A transcript starts in `recording` when it is
 # created; pausing takes the conversation off the record, resuming puts it back,
 # and closing ends it. See docs/architecture/cross-cutting/transcripts.md.
+#
+# Every time here is the client's — the transcript's startedAt, and the `at`
+# pause, resume and close are sent with — the same clock the times on its
+# entries are on, so nothing compares two clocks. A pause is an entry in the
+# transcript's timeline: pausing writes one with no end, and resuming or
+# closing gives it one. The transcript decides which entries it accepts, under
+# resources: below.
 $schema: state-machine-schema.yaml
 version: "1.0"
 domain: transcription
@@ -18,31 +25,119 @@ machines:
         slaClock: stopped
         description: The transcript has ended. Terminal.
     initialState: recording
+    guards:
+      - id: atAfterStart
+        condition: timestamp(request.at) >= timestamp(object.startedAt)
+      - id: atAfterPauseBegan
+        condition: openPause == null || timestamp(request.at) >= timestamp(openPause.startedAt)
+      - id: aPauseIsOpen
+        condition: openPause != null
+      # An entry is judged by when it started: one begun while recording is
+      # accepted even if it arrives after a pause, and one begun during a pause
+      # or after the close is refused.
+      - id: startedWhileRecording
+        condition: >-
+          timestamp(request.startedAt) >= timestamp(object.startedAt) &&
+          pauseAtStart == null &&
+          (!has(object.closedAt) || timestamp(request.startedAt) < timestamp(object.closedAt))
+      - id: endsAfterItStarts
+        condition: timestamp(request.endedAt) >= timestamp(request.startedAt)
+      # A pause already explains that time, so a gap may not overlap one.
+      - id: gapOutsidePauses
+        condition: request.kind != "gap" || pauseOverlap == null
     actions:
       - id: pause
-        description: Take the conversation off the record.
+        description: Take the conversation off the record, at the time the client says.
         transition:
           from: recording
           to: paused
+        schema:
+          request:
+            $ref: "#/$defs/AtRequest"
+        guards:
+          - conditions: [atAfterStart]
         steps:
+          - call:
+              POST: transcription/transcripts/$object.id/entries
+              body: {kind: pause, startedAt: $request.at, endedAt: null}
           - emit:
               type: transcription.transcript.paused
       - id: resume
-        description: Put the conversation back on the record.
+        description: Put the conversation back on the record, at the time the client says.
         transition:
           from: paused
           to: recording
+        schema:
+          request:
+            $ref: "#/$defs/AtRequest"
+        context:
+          - openPause:
+              from: transcription/transcripts/entries
+              where: item.kind == "pause" && item.transcriptId == object.id && item.endedAt == null
+        guards:
+          - conditions: [aPauseIsOpen, atAfterPauseBegan]
         steps:
+          - call:
+              PATCH: transcription/transcripts/$object.id/entries/$openPause.id
+              body: {endedAt: $request.at}
           - emit:
               type: transcription.transcript.resumed
       - id: close
-        description: End the transcript.
+        description: End the transcript, at the time the client says. A pause still open ends then too.
         transition:
           from: [recording, paused]
           to: closed
+        schema:
+          request:
+            $ref: "#/$defs/AtRequest"
+        context:
+          - openPause:
+              from: transcription/transcripts/entries
+              where: item.kind == "pause" && item.transcriptId == object.id && item.endedAt == null
+        guards:
+          - conditions: [atAfterStart, atAfterPauseBegan]
         steps:
           - set:
               field: closedAt
-              value: $now
+              value: $request.at
+          - if: openPause != null
+            then:
+              - call:
+                  PATCH: transcription/transcripts/$object.id/entries/$openPause.id
+                  body: {endedAt: $request.at}
           - emit:
               type: transcription.transcript.closed
+    resources:
+      TranscriptEntry:
+        create:
+          context:
+            - pauseAtStart:
+                from: transcription/transcripts/entries
+                where: >-
+                  item.kind == "pause" && item.transcriptId == object.id &&
+                  timestamp(item.startedAt) <= timestamp(request.startedAt) &&
+                  (item.endedAt == null || timestamp(item.endedAt) > timestamp(request.startedAt))
+            - pauseOverlap:
+                from: transcription/transcripts/entries
+                where: >-
+                  item.kind == "pause" && item.transcriptId == object.id &&
+                  timestamp(item.startedAt) < timestamp(request.endedAt) &&
+                  (item.endedAt == null || timestamp(item.endedAt) > timestamp(request.startedAt))
+          guards:
+            - conditions: [startedWhileRecording, endsAfterItStarts, gapOutsidePauses]
+        # Only the system changes an entry: resuming and closing end a pause,
+        # through the steps above, which are the machine's and not held to this.
+        update:
+          guards:
+            - actors: [system]
+
+$defs:
+  AtRequest:
+    type: object
+    additionalProperties: false
+    required: [at]
+    properties:
+      at:
+        type: string
+        format: date-time
+        description: When it happened, by the client's clock.

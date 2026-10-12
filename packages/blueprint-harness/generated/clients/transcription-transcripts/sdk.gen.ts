@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CloseTranscriptData, CloseTranscriptErrors, CloseTranscriptResponses, CreateTranscriptData, CreateTranscriptErrors, CreateTranscriptResponses, DeleteTranscriptData, DeleteTranscriptErrors, DeleteTranscriptResponses, GetTranscriptData, GetTranscriptErrors, GetTranscriptResponses, ListTranscriptsData, ListTranscriptsErrors, ListTranscriptsResponses, PauseTranscriptData, PauseTranscriptErrors, PauseTranscriptResponses, ResumeTranscriptData, ResumeTranscriptErrors, ResumeTranscriptResponses, UpdateTranscriptData, UpdateTranscriptErrors, UpdateTranscriptResponses } from './types.gen';
-import { zCloseTranscriptData, zCloseTranscriptResponse, zCreateTranscriptData, zCreateTranscriptResponse, zDeleteTranscriptData, zDeleteTranscriptResponse, zGetTranscriptData, zGetTranscriptResponse, zListTranscriptsData, zListTranscriptsResponse, zPauseTranscriptData, zPauseTranscriptResponse, zResumeTranscriptData, zResumeTranscriptResponse, zUpdateTranscriptData, zUpdateTranscriptResponse } from './zod.gen';
+import type { AddTranscriptEntryData, AddTranscriptEntryErrors, AddTranscriptEntryResponses, CloseTranscriptData, CloseTranscriptErrors, CloseTranscriptResponses, CreateTranscriptData, CreateTranscriptErrors, CreateTranscriptResponses, DeleteTranscriptData, DeleteTranscriptErrors, DeleteTranscriptResponses, GetTranscriptData, GetTranscriptEntryData, GetTranscriptEntryErrors, GetTranscriptEntryResponses, GetTranscriptErrors, GetTranscriptResponses, ListTranscriptEntriesData, ListTranscriptEntriesErrors, ListTranscriptEntriesResponses, ListTranscriptsData, ListTranscriptsErrors, ListTranscriptsResponses, PauseTranscriptData, PauseTranscriptErrors, PauseTranscriptResponses, ResumeTranscriptData, ResumeTranscriptErrors, ResumeTranscriptResponses, UpdateTranscriptData, UpdateTranscriptEntryData, UpdateTranscriptEntryErrors, UpdateTranscriptEntryResponses, UpdateTranscriptErrors, UpdateTranscriptResponses } from './types.gen';
+import { zAddTranscriptEntryData, zAddTranscriptEntryResponse, zCloseTranscriptData, zCloseTranscriptResponse, zCreateTranscriptData, zCreateTranscriptResponse, zDeleteTranscriptData, zDeleteTranscriptResponse, zGetTranscriptData, zGetTranscriptEntryData, zGetTranscriptEntryResponse, zGetTranscriptResponse, zListTranscriptEntriesData, zListTranscriptEntriesResponse, zListTranscriptsData, zListTranscriptsResponse, zPauseTranscriptData, zPauseTranscriptResponse, zResumeTranscriptData, zResumeTranscriptResponse, zUpdateTranscriptData, zUpdateTranscriptEntryData, zUpdateTranscriptEntryResponse, zUpdateTranscriptResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -99,40 +99,124 @@ export const updateTranscript = <ThrowOnError extends boolean = false>(options: 
 });
 
 /**
+ * List a transcript's entries
+ *
+ * A transcript's timeline, in the order things happened — by `startedAt`.
+ * Filter by `kind` for only its lines, gaps or pauses.
+ *
+ */
+export const listTranscriptEntries = <ThrowOnError extends boolean = false>(options: Options<ListTranscriptEntriesData, ThrowOnError>) => (options.client ?? client).get<ListTranscriptEntriesResponses, ListTranscriptEntriesErrors, ThrowOnError>({
+    requestValidator: async (data) => await zListTranscriptEntriesData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zListTranscriptEntriesResponse.parseAsync(data),
+    url: '/transcripts/{transcriptId}/entries',
+    ...options
+});
+
+/**
+ * Add an entry to a transcript
+ *
+ * Add a finished line, or a gap where nothing was captured. Pauses are not
+ * added here: pausing the transcript adds one.
+ *
+ * Send an `Idempotency-Key` with every add, and the same key when retrying
+ * one, so a retry is not a second line. The transcript refuses an entry
+ * that started while it was paused or after it closed, an entry that ends
+ * before it starts, and a gap that overlaps a pause.
+ *
+ */
+export const addTranscriptEntry = <ThrowOnError extends boolean = false>(options: Options<AddTranscriptEntryData, ThrowOnError>) => (options.client ?? client).post<AddTranscriptEntryResponses, AddTranscriptEntryErrors, ThrowOnError>({
+    requestValidator: async (data) => await zAddTranscriptEntryData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zAddTranscriptEntryResponse.parseAsync(data),
+    url: '/transcripts/{transcriptId}/entries',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get a transcript entry
+ *
+ * Retrieve a single entry by identifier.
+ */
+export const getTranscriptEntry = <ThrowOnError extends boolean = false>(options: Options<GetTranscriptEntryData, ThrowOnError>) => (options.client ?? client).get<GetTranscriptEntryResponses, GetTranscriptEntryErrors, ThrowOnError>({
+    requestValidator: async (data) => await zGetTranscriptEntryData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zGetTranscriptEntryResponse.parseAsync(data),
+    url: '/transcripts/{transcriptId}/entries/{entryId}',
+    ...options
+});
+
+/**
+ * End a pause entry
+ *
+ * Set when a pause ended. Only the system may — resuming or closing the
+ * transcript does it. Nothing else about an entry changes once it is
+ * written, and entries are never deleted.
+ *
+ */
+export const updateTranscriptEntry = <ThrowOnError extends boolean = false>(options: Options<UpdateTranscriptEntryData, ThrowOnError>) => (options.client ?? client).patch<UpdateTranscriptEntryResponses, UpdateTranscriptEntryErrors, ThrowOnError>({
+    requestValidator: async (data) => await zUpdateTranscriptEntryData.parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) => await zUpdateTranscriptEntryResponse.parseAsync(data),
+    url: '/transcripts/{transcriptId}/entries/{entryId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Pause transcript
  *
- * Take the conversation off the record.
+ * Take the conversation off the record, at the time the client says.
  */
 export const pauseTranscript = <ThrowOnError extends boolean = false>(options: Options<PauseTranscriptData, ThrowOnError>) => (options.client ?? client).post<PauseTranscriptResponses, PauseTranscriptErrors, ThrowOnError>({
     requestValidator: async (data) => await zPauseTranscriptData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zPauseTranscriptResponse.parseAsync(data),
     url: '/transcripts/{transcriptId}/pause',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
  * Resume transcript
  *
- * Put the conversation back on the record.
+ * Put the conversation back on the record, at the time the client says.
  */
 export const resumeTranscript = <ThrowOnError extends boolean = false>(options: Options<ResumeTranscriptData, ThrowOnError>) => (options.client ?? client).post<ResumeTranscriptResponses, ResumeTranscriptErrors, ThrowOnError>({
     requestValidator: async (data) => await zResumeTranscriptData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zResumeTranscriptResponse.parseAsync(data),
     url: '/transcripts/{transcriptId}/resume',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
  * Close transcript
  *
- * End the transcript.
+ * End the transcript, at the time the client says. A pause still open ends then too.
  */
 export const closeTranscript = <ThrowOnError extends boolean = false>(options: Options<CloseTranscriptData, ThrowOnError>) => (options.client ?? client).post<CloseTranscriptResponses, CloseTranscriptErrors, ThrowOnError>({
     requestValidator: async (data) => await zCloseTranscriptData.parseAsync(data),
     responseType: 'json',
     responseValidator: async (data) => await zCloseTranscriptResponse.parseAsync(data),
     url: '/transcripts/{transcriptId}/close',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
