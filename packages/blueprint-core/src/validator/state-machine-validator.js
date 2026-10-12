@@ -377,9 +377,11 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
       }
     }
 
-    // A governed resource's create guards are checked as an action's are.
+    // A governed resource's guards are checked as an action's are.
     for (const [name, governed] of Object.entries(machine.resources || {})) {
-      errors.push(...checkGuardClauses(governed?.create?.guards, `${ctx}.resources[${name}].create.guards`, validRoles, guardIds));
+      for (const operation of ['create', 'update']) {
+        errors.push(...checkGuardClauses(governed?.[operation]?.guards, `${ctx}.resources[${name}].${operation}.guards`, validRoles, guardIds));
+      }
     }
 
     // Validate events

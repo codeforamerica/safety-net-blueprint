@@ -66,6 +66,11 @@ describe('resources a machine governs', () => {
     assert.match(error.message, /governs "Speaker", which is not a resource nested under Transcript \(nested: TranscriptEntry, EntryNote\)/);
   });
 
+  test('have their update guards checked too', () => {
+    const doc = machine({ TranscriptEntry: { update: { guards: [{ actors: ['clerk'] }] } } });
+    assert.match(errorsOf(doc, 'invalid-actor-role')[0].path, /resources\[TranscriptEntry\]\.update\.guards/);
+  });
+
   test('have their guard clauses checked as an action\'s are', () => {
     const doc = machine({ TranscriptEntry: { create: { guards: [{ actors: ['clerk'], conditions: ['undeclared'] }] } } });
     assert.match(errorsOf(doc, 'invalid-actor-role')[0].path, /resources\[TranscriptEntry\]\.create\.guards/);

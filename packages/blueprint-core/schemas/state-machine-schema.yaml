@@ -134,7 +134,7 @@ $defs:
         procedures   — named step sequences scoped to this machine; take precedence over
                        domain-level procedures with the same id.
         resources    — resources nested under this machine's object, and the guards
-                       that decide when one may be created.
+                       that decide when one may be created or updated.
     required:
       - object
       - states
@@ -183,8 +183,8 @@ $defs:
         type: object
         description: >
           Resources nested under this machine's object — at any depth — keyed by
-          resource name, the schema each one's item GET returns. Creating one
-          runs the guards declared here, with `object` the record this machine
+          resource name, the schema each one's item GET returns. Creating or
+          updating one runs the guards declared here, with `object` the record this machine
           governs, found from the path, and `request` the body being created.
           When several machines govern a resource along its path, every one must
           pass. A name that is not nested under this machine's object is a
@@ -362,19 +362,27 @@ $defs:
     minProperties: 1
     properties:
       create:
-        type: object
+        $ref: "#/$defs/GovernedOperation"
+        description: When one may be created; `request` is the body being created.
+      update:
+        $ref: "#/$defs/GovernedOperation"
         description: >
-          When one may be created. Guards work as they do on an action: the
-          caller passes if ANY clause is satisfied, and a refusal answers 403
-          for actors or 409 for conditions.
-        additionalProperties: false
-        required:
-          - guards
-        properties:
-          guards:
-            $ref: "#/$defs/Guards"
-          context:
-            $ref: "#/$defs/ContextProperty"
+          When one may be updated; `request` is the change. A step's own update
+          is the machine's, and is not held to these guards.
+
+  GovernedOperation:
+    type: object
+    description: >
+      Guards work as they do on an action: the caller passes if ANY clause is
+      satisfied, and a refusal answers 403 for actors or 409 for conditions.
+    additionalProperties: false
+    required:
+      - guards
+    properties:
+      guards:
+        $ref: "#/$defs/Guards"
+      context:
+        $ref: "#/$defs/ContextProperty"
 
   TransitionBlock:
     type: object

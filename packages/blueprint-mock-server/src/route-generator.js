@@ -20,7 +20,7 @@ import { createDocumentContentHandler } from './handlers/document-content-handle
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 import { assembleSectionIndex, assembleSectionPanel, assemblePlainComposition, deriveStateResource, findStateRecord, listStateRecords, upsertStateRecord, toExpressPath, registerParentLink } from './composition-assembler.js';
 import { emitEvent } from './emit-event.js';
-import { governorsByCollection, checkGovernedCreate } from './governed-resources.js';
+import { governorsByRoute, checkGoverned } from './governed-resources.js';
 import { idempotencyOf, withIdempotency } from './idempotency.js';
 import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
 import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX, sortItems } from './search-engine.js';
@@ -281,7 +281,7 @@ export function extractRequiredDefaults(responseSchema, follow = (x) => x) {
 export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaTypes = [], deps = {}) {
   const { store } = deps;
   const registeredEndpoints = [];
-  const governors = governorsByCollection(stateMachines);
+  const governors = governorsByRoute(stateMachines);
 
   console.log(`  Registering routes for ${apiMetadata.title}...`);
 
@@ -445,7 +445,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
           // The machines guarding this create, matched on the path as the API
           // document writes it, without the server's base.
           const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
-          const createGovernors = governors.get(`${apiMetadata.domain} ${relativePath}`) ?? [];
+          const createGovernors = governors.get(`create ${apiMetadata.domain} ${relativePath}`) ?? [];
           handler = async (request, ctx) => {
             // Spread ALL path params, not just the last one — sub-sub-resource
             // routes (e.g. /applications/{applicationId}/members/{memberId}/incomes)
@@ -453,8 +453,9 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
             // Passed through ctx because a Request body cannot be reassigned.
             const sent = await jsonBody(request);
             const body = mergePathParamsIntoBody(sent, ctx.params);
-            const refused = checkGovernedCreate({
+            const refused = checkGoverned({
               governors: createGovernors,
+              verb: 'creating',
               params: ctx.params,
               body,
               caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
@@ -479,7 +480,21 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
         handler = createGetHandler(apiMetadata, endpointWithCollection, deps);
         description = 'Get sub-resource by ID';
       } else if (method === 'patch') {
-        handler = createUpdateHandler(apiMetadata, endpointWithCollection, null, [], null, deps);
+        const baseUpdateHandler = createUpdateHandler(apiMetadata, endpointWithCollection, null, [], null, deps);
+        const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
+        const updateGovernors = governors.get(`update ${apiMetadata.domain} ${relativePath}`) ?? [];
+        handler = updateGovernors.length === 0 ? baseUpdateHandler : async (request, ctx) => {
+          const refused = checkGoverned({
+            governors: updateGovernors,
+            verb: 'updating',
+            params: ctx.params,
+            body: await jsonBody(request.clone()),
+            caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
+            store,
+          });
+          if (refused) return Response.json({ code: refused.code, message: refused.message }, { status: refused.status });
+          return baseUpdateHandler(request, ctx);
+        };
         description = 'Update sub-resource';
       } else if (method === 'delete') {
         handler = createDeleteHandler(apiMetadata, endpointWithCollection, deps);

@@ -109,6 +109,7 @@ const stateMachine = {
           }],
           guards: [{ conditions: ['boardOpen', 'notDuringAHold'] }],
         },
+        update: { guards: [{ actors: ['system'] }] },
       },
     },
   }],
@@ -173,6 +174,30 @@ describe('a machine guarding a nested create', () => {
     assert.strictEqual((await addCard({ kind: 'note', at: '2026-01-01T00:00:05Z' })).status, 201, 'before the hold');
     assert.strictEqual((await addCard({ kind: 'note', at: '2026-01-01T00:00:15Z' })).status, 409, 'during it');
     assert.strictEqual((await addCard({ kind: 'note', at: '2026-01-01T00:00:25Z' })).status, 201, 'after it');
+  });
+});
+
+describe('a machine guarding a nested update', () => {
+  test('refuses a caller without the role, with 403', async () => {
+    const card = (await addCard({ kind: 'note', at: '2026-01-01T00:00:01Z' })).body;
+    const { status, body } = await send('PATCH', `/demo/boards/${board.id}/cards/${card.id}`, { text: 'edited' });
+    assert.strictEqual(status, 403);
+    assert.match(body.message, /Updating a Card on this Board requires one of: system/);
+  });
+
+  test('lets a caller with the role through', async () => {
+    const card = (await addCard({ kind: 'note', at: '2026-01-01T00:00:01Z' })).body;
+    const { status, body } = await send('PATCH', `/demo/boards/${board.id}/cards/${card.id}`, { text: 'edited' }, { 'x-caller-roles': 'system' });
+    assert.strictEqual(status, 200);
+    assert.strictEqual(body.text, 'edited');
+  });
+
+  test('does not hold the machine\'s own step to it', async () => {
+    // release runs as an ordinary caller, and its step updates the hold.
+    await send('POST', `/demo/boards/${board.id}/hold`, { at: '2026-01-01T00:00:10Z' });
+    await send('POST', `/demo/boards/${board.id}/release`, { at: '2026-01-01T00:00:20Z' });
+    const [hold] = (await send('GET', `/demo/boards/${board.id}/cards`)).body.items.filter((c) => c.kind === 'hold');
+    assert.strictEqual(hold.endedAt, '2026-01-01T00:00:20Z');
   });
 });
 
