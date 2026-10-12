@@ -286,14 +286,10 @@ template schema is written.
 
 ### Transcripts
 
-The written record of a conversation, in a `transcription` domain the framework provides: its
-states — recording, paused, closed — its lines and its gaps. A transcription
-client in the page streams audio straight to the provider and reports finished
-lines and gaps to the transcript; the blueprint holds the client to rules — it
-refuses a line spoken while paused or after closing, closes a transcript the
-client abandons, and judges each line by when it was spoken. Settings are a
-config catalog entry. The audio stream and the provider's protocol stay outside
-the blueprint. See [Transcripts](transcripts.md). *To define.*
+The written record of a conversation, in a `transcription` domain the framework
+provides. Built: its lifecycle, its timeline of lines, lost stretches and
+pauses, and the rules for accepting them. Its design, and what is still to
+come, is in [Transcripts](transcripts.md).
 
 ### Provider session
 
@@ -474,7 +470,7 @@ The audio stream stays out deliberately: providers design for the browser
 connecting directly, and a mock that relayed audio would become a real
 implementation of a provider integration.
 The blueprint's part is the transcript: what the client reports, and the rules
-it is held to. See [Transcripts](transcripts.md#why-the-audio-stream-stays-out-of-the-mock).
+it is held to. See [Transcripts](transcripts.md#decision-3-audio-never-passes-through-the-blueprint).
 
 ### On a server
 
