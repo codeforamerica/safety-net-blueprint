@@ -101,6 +101,13 @@ So when you add a feature to a tooling package, adding a contract here that exer
 **[`contracts/domains/intake/intake-compositions.yaml`](contracts/domains/intake/intake-compositions.yaml)**
 - Composite view definition that generates an additional GET endpoint in the intake OpenAPI spec
 
+### Scenarios
+
+**[`contracts/scenarios/transcript-lifecycle.arazzo.yaml`](contracts/scenarios/transcript-lifecycle.arazzo.yaml)**
+- An Arazzo scenario: a transcript started, recorded, paused, resumed and closed, with what it refuses along the way
+- Found by its contract type, not its folder — `scenarios/` is for organizing. Its domain comes from `info.x-domain`
+- Runs as a test against a fresh mock (`blueprint-mock-server/tests/unit/harness-scenarios.test.js`) and steps through in the demo page's Scenarios mode
+
 ### Overlays
 
 **[`contracts/overlays/enums.yaml`](contracts/overlays/enums.yaml)**

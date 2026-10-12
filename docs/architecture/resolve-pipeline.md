@@ -51,6 +51,7 @@ base spec directory (--spec)         overlay directory (--overlay)
                   *-state-machine.yaml  (copied)
                   *-sla-types.yaml      (copied)
                   *-metrics.yaml        (copied)
+                *.arazzo.yaml           (copied — scenarios, wherever they sit)
                 base/                   (blueprint-core base contracts)
                   components/
                   schemas/

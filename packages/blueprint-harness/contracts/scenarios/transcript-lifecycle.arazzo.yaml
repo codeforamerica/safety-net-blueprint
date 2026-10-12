@@ -1,0 +1,214 @@
+arazzo: 1.0.1
+info:
+  title: A transcript, from start to close
+  version: 1.0.0
+  x-domain: transcription
+  description: |
+    A worker's application transcribes an interview: it starts a transcript,
+    adds lines — retrying one — pauses when the applicant asks to go off the
+    record, and closes it at the end. Along the way the transcript keeps a line
+    said just before the pause, and refuses a line said during it, a lost
+    stretch overlapping it, a line after the close, and a client editing an
+    entry. Every time is the application's.
+sourceDescriptions:
+  # Relative to the resolved contract set, where the framework's documents sit
+  # under base/.
+  - name: transcripts
+    url: ../base/domains/transcription/transcription-transcripts-openapi.yaml
+    type: openapi
+components:
+  parameters:
+    caller:
+      name: X-Caller-Id
+      in: header
+      value: worker-1
+    transcript:
+      name: transcriptId
+      in: path
+      value: $steps.start.outputs.id
+workflows:
+  - workflowId: transcriptLifecycle
+    summary: Start, record, pause, resume and close a transcript, and see what it refuses.
+    steps:
+      - stepId: start
+        description: The worker starts a transcript of the interview.
+        operationId: createTranscript
+        parameters:
+          - reference: $components.parameters.caller
+        requestBody:
+          payload:
+            provider: aws-transcribe
+            model: standard
+            client: interview-assistant/0.1.0
+            startedAt: '2026-10-12T10:00:00Z'
+        successCriteria:
+          - condition: $statusCode == 201
+          - condition: $response.body#/status == 'recording'
+        outputs:
+          id: $response.body#/id
+
+      - stepId: firstLine
+        description: The first finished line arrives.
+        operationId: addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+          - name: Idempotency-Key
+            in: header
+            value: line-1
+        requestBody:
+          payload: {kind: line, startedAt: '2026-10-12T10:00:05Z', endedAt: '2026-10-12T10:00:06Z', text: Can you tell me who lives with you?, speaker: staff}
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          id: $response.body#/id
+
+      - stepId: retryFirstLine
+        description: The connection drops before the answer comes back, so the application sends the line again with the same key — and gets the same line, not a second one.
+        operationId: addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+          - name: Idempotency-Key
+            in: header
+            value: line-1
+        requestBody:
+          payload: {kind: line, startedAt: '2026-10-12T10:00:05Z', endedAt: '2026-10-12T10:00:06Z', text: Can you tell me who lives with you?, speaker: staff}
+        successCriteria:
+          - condition: $statusCode == 201
+          - condition: $response.body#/id == $steps.firstLine.outputs.id
+          - condition: $response.header.Idempotent-Replayed == 'true'
+
+      - stepId: pause
+        description: The applicant asks to go off the record.
+        operationId: pauseTranscript
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+        requestBody:
+          payload: {at: '2026-10-12T10:00:10Z'}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'paused'
+
+      - stepId: lineSaidBeforeThePause
+        description: A line said just before the pause arrives just after it. It started on the record, so it is kept.
+        operationId: addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+          - name: Idempotency-Key
+            in: header
+            value: line-2
+        requestBody:
+          payload: {kind: line, startedAt: '2026-10-12T10:00:08Z', endedAt: '2026-10-12T10:00:11Z', text: My two kids and my mother., speaker: client}
+        successCriteria:
+          - condition: $statusCode == 201
+
+      - stepId: lineSaidDuringThePause
+        description: A line said off the record is refused, even from a faulty application.
+        operationId: addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+          - name: Idempotency-Key
+            in: header
+            value: line-3
+        requestBody:
+          payload: {kind: line, startedAt: '2026-10-12T10:00:12Z', endedAt: '2026-10-12T10:00:13Z', text: Off the record., speaker: client}
+        successCriteria:
+          - condition: $statusCode == 409
+
+      - stepId: gapOverlappingThePause
+        description: A lost stretch overlapping the pause is refused — the pause already accounts for that time.
+        operationId: addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+          - name: Idempotency-Key
+            in: header
+            value: gap-1
+        requestBody:
+          payload: {kind: gap, startedAt: '2026-10-12T10:00:09Z', endedAt: '2026-10-12T10:00:11Z', cause: connection}
+        successCriteria:
+          - condition: $statusCode == 409
+
+      - stepId: resume
+        description: Back on the record.
+        operationId: resumeTranscript
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+        requestBody:
+          payload: {at: '2026-10-12T10:00:20Z'}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'recording'
+
+      - stepId: lineSaidDuringThePastPause
+        description: A late line from inside the pause that has ended is still refused.
+        operationId: addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+          - name: Idempotency-Key
+            in: header
+            value: line-4
+        requestBody:
+          payload: {kind: line, startedAt: '2026-10-12T10:00:15Z', endedAt: '2026-10-12T10:00:16Z', text: Still off the record., speaker: client}
+        successCriteria:
+          - condition: $statusCode == 409
+
+      - stepId: timeline
+        description: The timeline reads in the order things happened, with the pause in it.
+        operationId: listTranscriptEntries
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/total == 3
+          - condition: $response.body#/items/2/kind == 'pause'
+          - condition: $response.body#/items/2/endedAt == '2026-10-12T10:00:20Z'
+        outputs:
+          firstEntryId: $response.body#/items/0/id
+
+      - stepId: clientEditsAnEntry
+        description: Entries do not change — only the system may update one.
+        operationId: updateTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+          - name: entryId
+            in: path
+            value: $steps.timeline.outputs.firstEntryId
+        requestBody:
+          payload: {endedAt: '2026-10-12T10:00:59Z'}
+        successCriteria:
+          - condition: $statusCode == 403
+
+      - stepId: close
+        description: The interview ends.
+        operationId: closeTranscript
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+        requestBody:
+          payload: {at: '2026-10-12T10:00:30Z'}
+        successCriteria:
+          - condition: $statusCode == 200
+          - condition: $response.body#/status == 'closed'
+
+      - stepId: lineAfterTheClose
+        description: Nothing is added after the close.
+        operationId: addTranscriptEntry
+        parameters:
+          - reference: $components.parameters.caller
+          - reference: $components.parameters.transcript
+          - name: Idempotency-Key
+            in: header
+            value: line-5
+        requestBody:
+          payload: {kind: line, startedAt: '2026-10-12T10:00:31Z', endedAt: '2026-10-12T10:00:32Z', text: Too late., speaker: client}
+        successCriteria:
+          - condition: $statusCode == 409

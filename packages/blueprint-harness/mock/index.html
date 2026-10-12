@@ -280,6 +280,19 @@
   pre .label code { font-family: var(--mono); text-transform: none; letter-spacing: 0; }
   pre .label a { color: inherit; text-transform: none; letter-spacing: 0; border-bottom: 1px dotted currentColor; text-decoration: none; }
   pre.bad { background: #fdf6f6; border-color: #eccfcf; }
+  /* A scenario's steps: what each called, what came back, what it checked. */
+  ol.scenario-steps { padding-left: 1.2rem; margin: .8rem 0 0; }
+  ol.scenario-steps > li { margin: 0 0 .9rem; }
+  .scenario-steps .step-head { display: flex; gap: .5rem; align-items: baseline; flex-wrap: wrap; }
+  .scenario-steps .mark { font-weight: 700; width: 1rem; }
+  .scenario-steps .mark.passed { color: var(--ok); }
+  .scenario-steps .mark.failed { color: var(--bad); }
+  .scenario-steps .mark.pending { color: var(--muted); }
+  .scenario-steps .call { font-family: var(--mono); font-size: .8rem; color: var(--accent); }
+  .scenario-steps .checks { list-style: none; padding: 0; margin: .3rem 0 0; font-family: var(--mono); font-size: .78rem; }
+  .scenario-steps .checks .passed { color: var(--ok); }
+  .scenario-steps .checks .failed { color: var(--bad); }
+  .scenario-steps details { margin-top: .3rem; font-size: .8rem; }
   pre.bad .label { color: var(--bad); }
 
   .empty { color: var(--faint); font-size: .9rem; }
@@ -301,6 +314,7 @@
     </p>
     <div id="controls">
       <button id="mode" class="primary">Let me explore</button>
+      <button id="scenarios">Scenarios</button>
       <span class="sep"></span>
       <button id="reseed">Restart with data</button>
       <button id="empty">Start empty</button>
@@ -315,7 +329,7 @@
 </div>
 
 <script type="module">
-const { createMockServer, extract, generate } =
+const { createMockServer, extract, generate, runScenario, operationIndex } =
   globalThis.BlueprintMock ?? await import('./mock.js');
 
 const $ = (id) => document.getElementById(id);
@@ -339,6 +353,11 @@ let docs;          // every document in the set
 let mock;          // the server derived from them
 let seeded = true; // whether the last derive loaded the shipped records
 let showAll = false;  // the walk-through, or the whole reference
+// The contract set's Arazzo scenarios: whether they are what is showing, which
+// one, and what its last run answered.
+let scenarioMode = false;
+let selectedScenario = null;
+let scenarioRun = null;
 const done = new Set(); // steps of the walk already run, by method and path
 const made = new Map();  // collection → the id the walk created there
 const built = new Map(); // schema name → the id the walk created of that shape
@@ -1942,12 +1961,156 @@ const tourSteps = (ops) => {
  * *is* belongs on the right, next to the one you picked, not repeated down
  * the side.
  */
+// ── Scenarios ───────────────────────────────────────────────────────────────
+
+/** The set's Arazzo scenarios: found by contract type, grouped by the domain each declares. */
+const scenarios = () => docs.filter((doc) => doc.type === 'arazzo');
+
+const renderScenarioList = (nav) => {
+  const byDomain = new Map();
+  for (const doc of scenarios()) {
+    const domain = doc.domain ?? 'shared';
+    if (!byDomain.has(domain)) byDomain.set(domain, []);
+    byDomain.get(domain).push(doc);
+  }
+  if (byDomain.size === 0) {
+    nav.append(el('p', 'This contract set has no scenarios.', 'note'));
+    return;
+  }
+  for (const [domain, docsOfDomain] of [...byDomain].sort(([a], [b]) => a.localeCompare(b))) {
+    const box = el('details', '', 'group');
+    box.open = true;
+    box.append(el('summary', `${domain}  (${docsOfDomain.length})`));
+    const list = el('ul', '', 'ops');
+    for (const doc of docsOfDomain) {
+      const item = el('li');
+      const button = el('button', '', 'op');
+      button.append(el('span', doc.content.info?.title ?? doc.relativePath));
+      if (selectedScenario === doc.relativePath) button.classList.add('here');
+      button.onclick = () => { selectedScenario = doc.relativePath; renderGroups(); renderStage(); };
+      item.append(button);
+      list.append(item);
+    }
+    box.append(list);
+    nav.append(box);
+  }
+};
+
+/** A value as readable JSON, for a request or response body. */
+const asJson = (value) => (typeof value === 'string' ? value : JSON.stringify(value, null, 2));
+
+/** One step: what it calls, then — once run — what came back and what it checked. */
+const scenarioStepItem = (step, operations, result) => {
+  const item = el('li');
+  const head = el('div', '', 'step-head');
+  const state = result ? (result.passed ? 'passed' : 'failed') : 'pending';
+  head.append(el('span', { passed: '✓', failed: '✗', pending: '·' }[state], `mark ${state}`));
+  head.append(el('strong', step.stepId));
+  const operation = operations.get(step.operationId);
+  head.append(el('span', result
+    ? `${result.request.method} ${result.request.url} → ${result.response.status}`
+    : operation ? `${operation.method} ${operation.path}` : step.operationId, 'call'));
+  item.append(head);
+  if (step.description) item.append(el('p', step.description, 'note'));
+
+  const checks = el('ul', '', 'checks');
+  for (const criterion of step.successCriteria ?? []) {
+    const check = result?.checks.find((c) => c.condition === criterion.condition);
+    const mark = check ? (check.passed ? '✓ ' : '✗ ') : '· ';
+    checks.append(el('li', mark + criterion.condition, check ? (check.passed ? 'passed' : 'failed') : ''));
+  }
+  if (checks.children.length > 0) item.append(checks);
+
+  if (result) {
+    const sent = el('details');
+    sent.append(el('summary', 'Request and response'));
+    const request = el('pre');
+    request.textContent = `${result.request.method} ${result.request.url}\n`
+      + Object.entries(result.request.headers).map(([k, v]) => `${k}: ${v}`).join('\n')
+      + (result.request.body === undefined ? '' : `\n\n${asJson(result.request.body)}`);
+    const response = el('pre', '', result.passed ? '' : 'bad');
+    response.textContent = `${result.response.status}\n\n${asJson(result.response.body)}`;
+    sent.append(request, response);
+    item.append(sent);
+  }
+  return item;
+};
+
+const renderScenarioStage = (stage) => {
+  const doc = scenarios().find((d) => d.relativePath === selectedScenario);
+  const panel = el('div', '', 'panel');
+  if (!doc) {
+    panel.append(el('h2', 'Pick a scenario'));
+    panel.append(el('p',
+      'A scenario is a sequence of calls toward a goal, written as an Arazzo document — the '
+      + 'OpenAPI Initiative\'s format for API workflows. Each step names an operation in the '
+      + 'contracts, what it sends, and what makes it a success. The same file runs as a test.', 'note'));
+    stage.append(panel);
+    return;
+  }
+
+  const operations = operationIndex(docs);
+  if (doc.domain) panel.append(el('p', doc.domain, 'kindline'));
+  panel.append(el('h2', doc.content.info?.title ?? doc.relativePath));
+  if (doc.content.info?.description) panel.append(el('p', doc.content.info.description, 'note'));
+  panel.append(el('p', doc.relativePath, 'cited'));
+  stage.append(panel);
+
+  for (const workflow of doc.content.workflows ?? []) {
+    const box = el('div', '', 'panel');
+    box.append(el('h3', workflow.summary ?? workflow.workflowId));
+    const last = scenarioRun?.scenario === doc.relativePath
+      ? scenarioRun.results.find((r) => r.workflowId === workflow.workflowId)
+      : null;
+    if (last) {
+      const passedCount = last.steps.filter((s) => s.passed).length;
+      box.append(el('p', last.passed
+        ? `Passed — all ${last.steps.length} steps.`
+        : `Failed at step ${last.steps.length} of ${workflow.steps.length}; ${passedCount} passed before it.`,
+      last.passed ? 'note' : 'note bad'));
+    }
+    const run = el('button', last ? 'Run again' : 'Run on fresh data', 'primary');
+    run.title = 'Runs against a fresh copy of the data, so what you did while exploring does not change the result';
+    run.onclick = async () => {
+      run.disabled = true;
+      run.textContent = 'Running…';
+      // A fresh mock for every run, as the tests do, so a scenario never
+      // depends on what anything before it left behind.
+      await derive({ seed: true });
+      const fetchHere = (request) => {
+        const { pathname, search } = new URL(request.url);
+        return mock.fetch(new Request(new URL(basePath + pathname + search, location.origin), request));
+      };
+      try {
+        const results = await runScenario(doc.content, { fetch: fetchHere, operations: operationIndex(docs) });
+        scenarioRun = { scenario: doc.relativePath, results };
+      } catch (error) {
+        scenarioRun = { scenario: doc.relativePath, results: [], error: error.message };
+      }
+      renderStage();
+    };
+    box.append(run);
+    if (scenarioRun?.scenario === doc.relativePath && scenarioRun.error) {
+      box.append(el('p', scenarioRun.error, 'note bad'));
+    }
+
+    const list = el('ol', '', 'scenario-steps');
+    for (const step of workflow.steps ?? []) {
+      list.append(scenarioStepItem(step, operations, last?.steps.find((s) => s.stepId === step.stepId)));
+    }
+    box.append(list);
+    stage.append(box);
+  }
+};
+
 const renderGroups = () => {
   const nav = $('groups');
   // Kept across the rebuild, so the list does not jump back to the top.
   const scrolled = nav.scrollTop;
   nav.replaceChildren();
   requestAnimationFrame(() => { nav.scrollTop = scrolled; });
+
+  if (scenarioMode) { renderScenarioList(nav); return; }
 
   const everything = operations()
     .map((op) => ({ ...op, ...classify(op) }))
@@ -2503,6 +2666,8 @@ const renderStage = async () => {
   const stage = $('stage');
   stage.replaceChildren();
 
+  if (scenarioMode) { renderScenarioStage(stage); return; }
+
   // Every step at once, each showing what it answered. Same panels as the
   // walk, with nothing left to press.
   if (transcript) {
@@ -2919,6 +3084,8 @@ const boot = async () => {
   // twice and lets you pull the floor out from under step six on the way
   // past, so they are only live once you are off the walk and poking about.
   const mode = (wanted) => {
+    scenarioMode = false;
+    $('scenarios').classList.remove('here');
     showAll = wanted;
     $('mode').textContent = wanted ? 'Show me around' : 'Let me explore';
     for (const id of ['reseed', 'empty']) {
@@ -2932,6 +3099,14 @@ const boot = async () => {
     renderStage();
   };
   $('mode').onclick = () => mode(!showAll);
+  $('scenarios').onclick = () => {
+    scenarioMode = true;
+    selected = null;
+    transcript = false;
+    if (!selectedScenario) selectedScenario = scenarios()[0]?.relativePath ?? null;
+    renderGroups();
+    renderStage();
+  };
   $('reseed').onclick = () => derive({ seed: true });
   $('empty').onclick = () => derive({ seed: false });
 

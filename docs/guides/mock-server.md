@@ -336,6 +336,30 @@ Forwarding applies to requests that come into the mock. Two things it does not r
 - **Calls between domains inside the mock.** When one domain's state machine acts on another, the mock does it in-process. A forwarded domain is not called, and its real service never sees those changes. Adapter calls made by procedures are the same: an [HTTP stub](#http-stubs) can intercept one, forwarding cannot.
 - **The real service's events.** It publishes them to its own event bus, so the mocked domains do not react. It can publish them to the mock as well, at `POST /platform/events`.
 
+## Scenarios
+
+A scenario is a sequence of calls toward a goal, written as an [Arazzo](https://spec.openapis.org/arazzo/) document — the OpenAPI Initiative's format for API workflows. Each step names an operation in the contracts by its `operationId`, what it sends, what makes it a success, and what it carries to later steps. A scenario is a contract like any other: a file ending `.arazzo.yaml`, anywhere in the contract set, declaring its domain in `info.x-domain`. `validate` checks that every step calls an operation the set has and refers only to earlier steps.
+
+The same file runs as a test, steps through in the demo page's Scenarios mode, and runs against a real implementation with any Arazzo runner, such as Redocly's Respect. The mock's own runner, `runScenario` from `@codeforamerica/blueprint-mock-server/browser`, runs the subset the blueprint's scenarios use and refuses anything else by name, so a scenario never passes by not being checked:
+
+- steps by `operationId`, with `parameters` (path, query, header) and `requestBody.payload`
+- reusable parameters, `{ reference: $components.parameters.<name> }`
+- runtime expressions — `$statusCode`, `$response.body#/<pointer>`, `$response.header.<name>`, `$steps.<id>.outputs.<name>`, `$inputs.<name>` — whole, or embedded in a string as `{$…}`
+- `successCriteria` comparisons joined by `&&`, and `outputs`
+
+```js
+import { createMockServer, runScenario, operationIndex } from '@codeforamerica/blueprint-mock-server/browser';
+import { extract } from '@codeforamerica/blueprint-core/browser';
+
+const mock = await createMockServer({ contracts });
+const docs = extract(contracts, 'docs');
+const scenario = docs.find((doc) => doc.type === 'arazzo');
+const [workflow] = await runScenario(scenario.content, { fetch: mock.fetch, operations: operationIndex(docs) });
+workflow.passed; // and workflow.steps: each request, response and check
+```
+
+A failed step stops its workflow, since later steps would act on what it did not produce.
+
 ## The mock's own endpoints
 
 The routes the mock serves itself — `/health`, the stub endpoints, `/mock/reset` and `/mock/reseed` — are described in [`contracts/mock-openapi.yaml`](../../packages/blueprint-mock-server/contracts/mock-openapi.yaml), whose request bodies reference the stub schema. Show it in Swagger beside a contract set by passing `--spec` twice:

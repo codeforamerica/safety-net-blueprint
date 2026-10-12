@@ -29,6 +29,10 @@
 export const CONTRACT_TYPES = {
   openapi:          { suffix: '-openapi.yaml', domain: 'required', definesDomain: true },
   asyncapi:         { suffix: '-asyncapi.yaml', domain: 'required', definesDomain: true },
+  // An Arazzo scenario: a sequence of calls toward a goal, which runs as a test
+  // and draws a sequence diagram. It declares its domain in info.x-domain, as
+  // OpenAPI does — a flow across domains declares the one that owns it.
+  arazzo:           { suffix: '.arazzo.yaml', domain: 'required' },
   // A document with no machines is a library — guards and procedures any
   // domain inherits through `extends` — and is shared; see requiresDomain.
   'state-machine':  { schema: 'state-machine-schema.yaml', suffix: '-state-machine.yaml', authored: true, domain: 'required' },
@@ -68,8 +72,8 @@ export function isDeprecated(content) {
 }
 
 /**
- * The domain a document declares: `info['x-domain']` on OpenAPI and AsyncAPI,
- * `domain` on everything else.
+ * The domain a document declares: `info['x-domain']` on OpenAPI, AsyncAPI and
+ * Arazzo, `domain` on everything else.
  *
  * Declared, never inferred. Working a domain out from a folder, a filename
  * prefix or the Domain enum split domains in half whenever the guess differed
@@ -197,6 +201,7 @@ export function detectType(filename, doc) {
     // and is not required to carry a -overlay.yaml suffix.
     if (doc.openapi) return 'openapi';
     if (doc.asyncapi) return 'asyncapi';
+    if (doc.arazzo) return 'arazzo';
     // Carrying `actions:`, `config:` or both — all of them are overlays.
     if (doc.overlay) return 'overlay';
   }

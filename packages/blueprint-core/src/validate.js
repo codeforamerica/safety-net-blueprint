@@ -39,6 +39,8 @@ import {
 import { resolverMap } from './paths.js';
 import { governedResource } from './attachment.js';
 import { duplicateRoutes } from './validator/route-validator.js';
+import { validateArazzo, operationIdsOf } from './validator/arazzo-validator.js';
+import { generate } from './generate.js';
 
 /**
  * Contract types with no validator of their own.
@@ -87,6 +89,8 @@ export function validate(docs) {
 
   const context = {
     docs,
+    // Computed once, and only when the set has scenarios to check.
+    operationIds: docs.some((d) => d.type === 'arazzo') ? operationIdsOf(docs, generate) : null,
     definedDomains: definedDomains(docs),
     byRelativePath,
     schemaIndex,
@@ -557,6 +561,10 @@ function validateDoc(doc, context) {
 
     case 'rules':
       errors.push(...validateRulesDoc(doc.content));
+      break;
+
+    case 'arazzo':
+      errors.push(...validateArazzo(doc, context.operationIds));
       break;
 
     case 'sla-types':

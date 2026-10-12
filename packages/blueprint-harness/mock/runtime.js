@@ -12,5 +12,5 @@
  * here at build time instead of producing a page that cannot be built the
  * documented way.
  */
-export { createMockServer } from '@codeforamerica/blueprint-mock-server/browser';
+export { createMockServer, runScenario, operationIndex } from '@codeforamerica/blueprint-mock-server/browser';
 export { extract, generate } from '@codeforamerica/blueprint-core/browser';

@@ -34,6 +34,7 @@ import { initSchemaRegistry } from './validator.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 import { graphsOf, unresolvedRulesWarning } from './contract-views.js';
 import { createStepCalls } from './step-calls.js';
+export { runScenario, operationIndex } from './arazzo.js';
 
 
 
