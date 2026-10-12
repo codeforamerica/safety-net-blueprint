@@ -302,6 +302,24 @@ function checkGuardClauses(guards, path, validRoles, guardIds) {
  * @param {object} doc - Parsed YAML document
  * @returns {Array<{rule, message, path}>}
  */
+/**
+ * The event ids a step list sends by short name, at any depth.
+ *
+ * @param {object[]} steps - Authored steps
+ * @returns {string[]}
+ */
+function shortEmitsIn(steps) {
+  const out = [];
+  for (const step of steps || []) {
+    if (!step || typeof step !== 'object') continue;
+    if (typeof step.emit === 'string') out.push(step.emit);
+    else if (step.emit?.event) out.push(step.emit.event);
+    out.push(...shortEmitsIn(step.then), ...shortEmitsIn(step.else), ...shortEmitsIn(step.do));
+    for (const branch of Object.values(step.when || {})) out.push(...shortEmitsIn(branch));
+  }
+  return out;
+}
+
 export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROLES } = {}) {
   const errors = [];
   if (!doc || typeof doc !== 'object') return errors;
@@ -319,6 +337,33 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
       if (s?.id) {
         if (seenStates.has(s.id)) errors.push({ rule: 'duplicate-id', message: `Duplicate state id "${s.id}"`, path: `${ctx}.states` });
         seenStates.add(s.id);
+      }
+    }
+
+    // `events:` was renamed; a machine still declaring it would react to nothing.
+    if (machine.events !== undefined) {
+      errors.push({ rule: 'renamed-key', message: '`events:` is now `on:` — the events this machine reacts to.', path: `${ctx}.events` });
+    }
+
+    // Every event a step sends by id is one the machine declares under emits.
+    const emitted = new Set();
+    for (const e of (machine.emits || [])) {
+      if (!e?.id) continue;
+      if (emitted.has(e.id)) errors.push({ rule: 'duplicate-id', message: `Duplicate emitted event id "${e.id}"`, path: `${ctx}.emits` });
+      emitted.add(e.id);
+    }
+    for (const [key, holders] of [['actions', machine.actions], ['on', machine.on], ['procedures', machine.procedures]]) {
+      for (const holder of holders || []) {
+        for (const name of shortEmitsIn(holder?.steps)) {
+          if (!emitted.has(name)) {
+            errors.push({
+              rule: 'undeclared-emit',
+              message: `emit "${name}" is not an event the ${machine.object} machine declares under emits` +
+                (emitted.size ? ` (declared: ${[...emitted].join(', ')})` : ', which declares none') + '.',
+              path: `${ctx}.${key}[${holder.id ?? holder.type ?? '?'}]`,
+            });
+          }
+        }
       }
     }
 
@@ -385,8 +430,8 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
     }
 
     // Validate events
-    for (const event of (machine.events || [])) {
-      const ep = `${ctx}.events[${event.type ?? '?'}]`;
+    for (const event of (machine.on || [])) {
+      const ep = `${ctx}.on[${event.type ?? '?'}]`;
       for (const callId of walkCallStrings(event.steps)) {
         if (!callableIds.has(callId)) {
           errors.push({ rule: 'unknown-callable', message: `call: "${callId}" references undeclared procedure or action`, path: ep });
@@ -480,8 +525,8 @@ export function validateCrossArtifact(filePath, doc, schemaIndex, endpointIndex,
     for (const action of (machine.actions || [])) {
       registerContext(action.context, `${ctx}.actions[${action.id}].context`);
     }
-    for (const event of (machine.events || [])) {
-      registerContext(event.context, `${ctx}.events[${event.type}].context`);
+    for (const event of (machine.on || [])) {
+      registerContext(event.context, `${ctx}.on[${event.type}].context`);
     }
     for (const proc of (machine.procedures || [])) {
       registerContext(proc.context, `${ctx}.procedures[${proc.id}].context`);
@@ -574,8 +619,8 @@ export function validateCrossArtifact(filePath, doc, schemaIndex, endpointIndex,
     for (const action of (machine.actions || [])) {
       validateCallPaths(action.steps, `${ctx}.actions[${action.id}].steps`);
     }
-    for (const event of (machine.events || [])) {
-      validateCallPaths(event.steps, `${ctx}.events[${event.type}].steps`);
+    for (const event of (machine.on || [])) {
+      validateCallPaths(event.steps, `${ctx}.on[${event.type}].steps`);
     }
     for (const proc of (machine.procedures || [])) {
       const procSteps = [...(proc.steps || []), ...(proc.then || [])];
@@ -588,7 +633,7 @@ export function validateCrossArtifact(filePath, doc, schemaIndex, endpointIndex,
     // the machine (call bodies + context where: clauses) and checks those against the enum.
     const allMachineSteps = [
       ...(machine.actions || []).flatMap(a => a.steps || []),
-      ...(machine.events || []).flatMap(e => e.steps || []),
+      ...(machine.on || []).flatMap(e => e.steps || []),
       ...(machine.procedures || []).flatMap(p => [...(p.steps || []), ...(p.then || [])]),
     ];
     const literalsByField = collectCallBodyLiterals(allMachineSteps);
@@ -597,7 +642,7 @@ export function validateCrossArtifact(filePath, doc, schemaIndex, endpointIndex,
     const allContextItems = [
       ...(machine.context || []),
       ...(machine.actions || []).flatMap(a => a.context || []),
-      ...(machine.events || []).flatMap(e => e.context || []),
+      ...(machine.on || []).flatMap(e => e.context || []),
       ...(machine.procedures || []).flatMap(p => p.context || []),
     ];
     for (const item of allContextItems) {

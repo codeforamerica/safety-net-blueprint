@@ -59,11 +59,11 @@ test('emitEvent', async (t) => {
     console.log('  ✓ Derives type from domain + object + action');
   });
 
-  await t.test('normalizes hyphenated domain to underscores in event type', () => {
+  await t.test('keeps a hyphenated domain as declared in the event type', () => {
     store.clearAll('events');
     const stored = emitEvent({ store: store,
       domain: 'data-exchange',
-      object: 'service-call',
+      object: 'external_service_call',
       action: 'created',
       resourceId: 'sc-1',
       source: '/data-exchange',
@@ -71,8 +71,8 @@ test('emitEvent', async (t) => {
       now: '2024-01-01T00:00:00.000Z',
     });
 
-    assert.strictEqual(stored.type, 'data_exchange.service_call.created');
-    console.log('  ✓ Normalizes hyphenated domain/object to underscores');
+    assert.strictEqual(stored.type, 'data-exchange.external_service_call.created');
+    console.log('  ✓ Keeps a hyphenated domain as declared');
   });
 
   await t.test('generates a unique id for each event', () => {

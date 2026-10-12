@@ -440,7 +440,7 @@ test('executeTransition — emit: subject override uses value expression instead
     id: 'complete',
     transition: { from: 'pending', to: 'completed' },
     guards: [],
-    steps: [{ emit: { type: 'eligibility.application.determination_completed', subject: '$object.parentId', data: {} } }]
+    steps: [{ emit: { type: 'eligibility.determination.completed', subject: '$object.parentId', data: {} } }]
   }]);
 
   const result = executeTransition({
@@ -458,8 +458,8 @@ test('executeTransition — emit: subject override uses value expression instead
 
   assert.strictEqual(result.success, true);
   const { items: events } = store.findAll('events', {});
-  const emitted = events.find(e => e.type && e.type.includes('determination_completed'));
-  assert.ok(emitted, 'determination_completed event should be stored');
+  const emitted = events.find(e => e.type === 'eligibility.determination.completed');
+  assert.ok(emitted, 'the completed event should be stored');
   assert.strictEqual(emitted.subject, 'parent-app-99', 'subject should be the overridden value, not the resource id');
 });
 

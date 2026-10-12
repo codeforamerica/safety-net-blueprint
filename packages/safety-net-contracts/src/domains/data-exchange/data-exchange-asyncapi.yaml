@@ -14,26 +14,26 @@ info:
     time via the x-event-type-prefix overlay config.
 
 channels:
-  data_exchange.call.completed:
-    address: data_exchange.call.completed
+  data-exchange.call.completed:
+    address: data-exchange.call.completed
     messages:
       callCompleted:
         $ref: '#/components/messages/CallCompletedMessage'
 
-  data_exchange.call.failed:
-    address: data_exchange.call.failed
+  data-exchange.call.failed:
+    address: data-exchange.call.failed
     messages:
       callFailed:
         $ref: '#/components/messages/CallFailedMessage'
 
-  data_exchange.call.submitted:
-    address: data_exchange.call.submitted
+  data-exchange.call.submitted:
+    address: data-exchange.call.submitted
     messages:
       callSubmitted:
         $ref: '#/components/messages/CallSubmittedMessage'
 
-  data_exchange.call.timed_out:
-    address: data_exchange.call.timed_out
+  data-exchange.call.timed_out:
+    address: data-exchange.call.timed_out
     messages:
       callTimedOut:
         $ref: '#/components/messages/CallTimedOutMessage'
@@ -41,25 +41,25 @@ channels:
 components:
   messages:
     CallCompletedMessage:
-      name: data_exchange.call.completed
+      name: data-exchange.call.completed
       summary: Emitted when an external service call returns a conclusive, inconclusive, or partial result.
       payload:
         $ref: '#/components/schemas/CallCompletedEvent'
 
     CallFailedMessage:
-      name: data_exchange.call.failed
+      name: data-exchange.call.failed
       summary: Emitted when an external service call fails due to a connection, service, or authentication error.
       payload:
         $ref: '#/components/schemas/CallFailedEvent'
 
     CallSubmittedMessage:
-      name: data_exchange.call.submitted
+      name: data-exchange.call.submitted
       summary: Emitted when a service call is submitted to an external service.
       payload:
         $ref: '#/components/schemas/CallSubmittedEvent'
 
     CallTimedOutMessage:
-      name: data_exchange.call.timed_out
+      name: data-exchange.call.timed_out
       summary: Emitted when a service call exceeds its timeout threshold.
       payload:
         $ref: '#/components/schemas/CallTimedOutEvent'
@@ -73,7 +73,7 @@ components:
           properties:
             type:
               type: string
-              const: data_exchange.call.completed
+              const: data-exchange.call.completed
             data:
               $ref: '#/components/schemas/CallCompletedData'
 
@@ -123,14 +123,14 @@ components:
           properties:
             type:
               type: string
-              const: data_exchange.call.failed
+              const: data-exchange.call.failed
             data:
               $ref: '#/components/schemas/CallFailedData'
 
     # subject: serviceCallId
     CallFailedData:
       type: object
-      description: Payload for the data_exchange.call.failed event.
+      description: Payload for the data-exchange.call.failed event.
       additionalProperties: false
       required:
         - serviceType
@@ -165,14 +165,14 @@ components:
           properties:
             type:
               type: string
-              const: data_exchange.call.submitted
+              const: data-exchange.call.submitted
             data:
               $ref: '#/components/schemas/CallSubmittedData'
 
     # subject: serviceCallId
     CallSubmittedData:
       type: object
-      description: Payload for the data_exchange.call.submitted event.
+      description: Payload for the data-exchange.call.submitted event.
       additionalProperties: false
       required:
         - serviceType
@@ -199,14 +199,14 @@ components:
           properties:
             type:
               type: string
-              const: data_exchange.call.timed_out
+              const: data-exchange.call.timed_out
             data:
               $ref: '#/components/schemas/CallTimedOutData'
 
     # subject: serviceCallId
     CallTimedOutData:
       type: object
-      description: Payload for the data_exchange.call.timed_out event.
+      description: Payload for the data-exchange.call.timed_out event.
       additionalProperties: false
       required:
         - serviceType

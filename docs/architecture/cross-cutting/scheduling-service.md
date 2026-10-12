@@ -64,7 +64,7 @@ timers:
 The state machine subscribes to each timer event by its full name:
 
 ```yaml
-events:
+on:
   - name: intake.snap_deadline
     steps:
       - call: {POST: intake/applications/$this.subject/auto-deny, body: {reason: snap_deadline_exceeded}}

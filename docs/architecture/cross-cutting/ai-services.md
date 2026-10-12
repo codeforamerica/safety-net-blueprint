@@ -200,7 +200,7 @@ Exchange already has the pieces:
   asynchronous;
 - per-service-type input and result schemas — the call's `data` is already
   polymorphic on `serviceType`;
-- results announced as `data_exchange.call.completed`.
+- results announced as `data-exchange.call.completed`.
 
 So an AI call is a new **service type**, with its own input and result schemas,
 and nothing else new:

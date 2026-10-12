@@ -147,7 +147,7 @@ events:
 
   # expedited screening result — intake sets isExpedited: true on the application;
   # workflow subscribes directly to assign the expedited SLA track (no re-publish needed)
-  - name: eligibility.application.expedited
+  - name: eligibility.determination.expedited
     publisher: eligibility
     status: implemented
     subscribers:
@@ -157,7 +157,7 @@ events:
   # per-person per-program decision outcome — fires on auto-determination at submission
   # (Medicaid, all checks conclusive, 45 CFR § 435.911) or after application.review_completed;
   # may fire multiple times as individual Decisions resolve
-  - name: eligibility.application.decision_completed
+  - name: eligibility.decision.completed
     publisher: eligibility
     status: implemented
     subscribers:
@@ -165,7 +165,7 @@ events:
 
   # fires once all program+member combinations on the application are determined;
   # triggers intake to update final status and close the application
-  - name: eligibility.application.determination_completed
+  - name: eligibility.determination.completed
     publisher: eligibility
     status: implemented
     subscribers:
@@ -560,14 +560,14 @@ flows:
                     operands:
                       - label: Intake
                         steps:
-                          - event: eligibility.application.expedited
+                          - event: eligibility.determination.expedited
                             from: eligibility
                             to: intake
                           - self: intake
                             label: Set isExpedited = true on application
                       - label: Workflow
                         steps:
-                          - event: eligibility.application.expedited
+                          - event: eligibility.determination.expedited
                             from: eligibility
                             to: workflow
                           - self: workflow
@@ -603,7 +603,7 @@ flows:
                     type: opt
                     label: "if all Medicaid electronic checks conclusive at submission (45 CFR § 435.911)"
                     steps:
-                      - event: eligibility.application.decision_completed
+                      - event: eligibility.decision.completed
                         from: eligibility
                         to: intake
                         note: One per auto-resolved Medicaid Decision; Decision.submissionChecks records the electronic check results
@@ -773,7 +773,7 @@ flows:
   - id: determination
     label: Eligibility Determination
     domain: intake
-    description: "Two paths to determination: (A) auto — Medicaid-only; eligibility runs electronic checks at submission and records formal Decisions immediately when data is conclusive (45 CFR § 435.911); (B) manual — caseworker completes review, intake fires application.review_completed, eligibility runs rules engine for all pending Decisions. Both paths converge at eligibility.application.determination_completed."
+    description: "Two paths to determination: (A) auto — Medicaid-only; eligibility runs electronic checks at submission and records formal Decisions immediately when data is conclusive (45 CFR § 435.911); (B) manual — caseworker completes review, intake fires application.review_completed, eligibility runs rules engine for all pending Decisions. Both paths converge at eligibility.determination.completed."
     participants: [caseworker, supervisor, intake, workflow, eligibility, communications, case_management]
     steps:
       - fragment: auto-determination
@@ -801,7 +801,7 @@ flows:
           - self: eligibility
             label: Runs rules engine for all undetermined program+member combinations
             note: Skips any already auto-determined at submission; uses verification evidence and household data
-          - event: eligibility.application.decision_completed
+          - event: eligibility.decision.completed
             from: eligibility
             to: intake
             note: Per person per program; may fire multiple times as each resolves
@@ -809,7 +809,7 @@ flows:
             label: Decision recorded per person per program
 
       # ── Shared convergence (both paths arrive here) ────────────────────────
-      - event: eligibility.application.determination_completed
+      - event: eligibility.determination.completed
         from: eligibility
         to: intake
         note: Fires once all program+member combinations are determined

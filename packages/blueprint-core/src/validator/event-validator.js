@@ -81,7 +81,7 @@ export function validateEvents(doc, channels) {
  */
 function* emittedTypes(machines, topLevelProcedures) {
   for (const machine of machines) {
-    for (const holderKey of ['actions', 'events', 'procedures']) {
+    for (const holderKey of ['actions', 'on', 'procedures']) {
       for (const holder of machine[holderKey] ?? []) {
         const where = `machines[${machine.object ?? '?'}].${holderKey}[${holder.id ?? holder.type ?? '?'}]`;
         yield* emitsIn(holder.steps, where);
@@ -120,9 +120,9 @@ function* emitsIn(steps, where) {
  */
 function* subscribedTypes(machines) {
   for (const machine of machines) {
-    for (const event of machine.events ?? []) {
+    for (const event of machine.on ?? []) {
       if (event.type) {
-        yield { type: event.type, path: `machines[${machine.object ?? '?'}].events` };
+        yield { type: event.type, path: `machines[${machine.object ?? '?'}].on` };
       }
     }
   }

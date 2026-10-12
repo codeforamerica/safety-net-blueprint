@@ -58,10 +58,12 @@ rpc_endpoints:
 #     Sets a field on the resource being operated on.
 #
 #   emit:
-#     event: <eventSuffix>          # e.g. "submitted" → emitted as domain.object.submitted
+#     event: <name>                 # e.g. "submitted" → emitted as intake.application.submitted
 #     data:
 #       <key>: <value expression>   # $now, $object.field, $request.field, etc.
-#     Emits a domain event from the resource's domain/object after the transition.
+#     Emits an event the machine declares under emits:, named {domain}.{resource}.{name} —
+#     the domain as declared, the resource's schema name in snake_case. With no data,
+#     write just `emit: <name>`.
 #
 #   evaluate: <ruleId>
 #     Evaluates a named rule from the state machine's rules: section. The rule

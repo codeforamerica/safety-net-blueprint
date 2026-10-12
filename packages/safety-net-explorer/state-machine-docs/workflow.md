@@ -145,7 +145,7 @@ Domain: `workflow` | API: [workflow-openapi.yaml](../../../contracts/domains/wor
   - Auto-cancel after 30 days client unresponsive
 - **`workflow.verification_timeout`**
   - Auto-resume after 7 days verification timeout; passes timer event ID as causationid
-- **`eligibility.application.expedited`**
+- **`eligibility.determination.expedited`**
   - Look up: task
   - If `task is not null`:
     - `PATCH workflow/tasks/$task.id`
@@ -161,12 +161,12 @@ Domain: `workflow` | API: [workflow-openapi.yaml](../../../contracts/domains/wor
     - Cancel the unclaimed caseworker task when the application was auto-determined at submission
   - If `approvalTask is not null`:
     - Complete the supervisor approval task
-- **`intake.determination.approval_needed`**
+- **`intake.application.approval_needed`**
   - Look up: reviewTask
   - If `reviewTask is not null`:
     - Move caseworker task to pending_review while supervisor reviews the determination
   - Create a supervisor approval task
-- **`intake.determination.rejected`**
+- **`intake.application.determination_rejected`**
   - Look up: reviewTask, approvalTask
   - If `reviewTask is not null`:
     - Return the caseworker task to in_progress for revision

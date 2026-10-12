@@ -106,7 +106,7 @@ const platformSM = platformSMPath
 const subscribers = new Map();
 for (const sm of smDatas) {
   for (const machine of sm.machines ?? []) {
-    for (const ev of machine.events ?? []) {
+    for (const ev of machine.on ?? []) {
       if (!subscribers.has(ev.type)) subscribers.set(ev.type, []);
       subscribers.get(ev.type).push({
         domain:      sm.domain,

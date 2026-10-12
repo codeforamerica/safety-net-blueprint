@@ -210,6 +210,32 @@ export function extractMetadata(spec, resourceName, resolve = null) {
  * @param {import('@codeforamerica/blueprint-core').Doc[]} docs
  * @returns {object[]} One metadata object per OpenAPI document
  */
+/**
+ * Give each create, update and delete the resource it acts on, and say which
+ * POSTs are calls rather than creates — both read from core's model of the
+ * document, never worked out here.
+ *
+ * A create acts on a resource's collection, an update or a delete on its item.
+ * A POST to a path that is no resource's collection — an adapter's evaluate
+ * endpoint, with no list and no item — is a call: the mock keeps nothing for it
+ * and emits no event. An operation on one key of a metadata map has no
+ * resource either, and emits none.
+ *
+ * @param {object} metadata - From extractMetadata
+ * @param {import('@codeforamerica/blueprint-core').Doc} doc
+ */
+function markResources(metadata, doc) {
+  const resources = doc.model?.()?.resources ?? [];
+  const base = metadata.serverBasePath ?? '';
+  for (const endpoint of metadata.endpoints) {
+    const path = base && endpoint.path.startsWith(base) ? endpoint.path.slice(base.length) : endpoint.path;
+    const part = endpoint.method === 'POST' ? 'collection' : 'item';
+    const resource = resources.find((r) => r.path(part) === path);
+    if (!resource && endpoint.method === 'POST') { endpoint.isCall = true; continue; }
+    if (resource?.name) endpoint.resource = { name: resource.name, eventName: resource.eventName };
+  }
+}
+
 export function apiSpecsFromDocs(docs) {
   const loaded = [];
 
@@ -221,7 +247,9 @@ export function apiSpecsFromDocs(docs) {
       // it by; the spec's own name comes from its file and can differ.
       // `doc` is the document itself, so core's answer to what something
       // attaches to (`extract`'s `api`) finds the API loaded from it.
-      loaded.push({ ...extractMetadata(doc.content, name, resolve), resolve, relativePath: doc.relativePath, domain: doc.domain ?? null, doc });
+      const metadata = extractMetadata(doc.content, name, resolve);
+      markResources(metadata, doc);
+      loaded.push({ ...metadata, resolve, relativePath: doc.relativePath, domain: doc.domain ?? null, doc });
     } catch (error) {
       console.warn(`Warning: Could not read spec ${name}:`, error.message);
     }

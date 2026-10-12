@@ -175,3 +175,16 @@ export function singularOf(collectionName) {
   if (collectionName.endsWith('ss')) return collectionName;
   return collectionName.replace(/s$/, '');
 }
+
+/**
+ * The domain an API's events are named for: the one it declares, as written
+ * — `case-management`, not `case_management`. A document declaring none falls
+ * back to its server's base path, which is how the domain was read before
+ * documents had to declare one.
+ *
+ * @param {{ domain?: string|null, serverBasePath?: string }} apiMetadata
+ * @returns {string}
+ */
+export function eventDomainOf(apiMetadata) {
+  return apiMetadata.domain ?? (apiMetadata.serverBasePath ?? '').replace(/^\//, '');
+}

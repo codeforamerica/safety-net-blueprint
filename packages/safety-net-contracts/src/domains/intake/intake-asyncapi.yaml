@@ -69,20 +69,20 @@ channels:
       applicationMemberCreated:
         $ref: '#/components/messages/ApplicationMemberCreatedMessage'
 
-  intake.determination.approval_needed:
-    address: intake.determination.approval_needed
+  intake.application.approval_needed:
+    address: intake.application.approval_needed
     messages:
       determinationApprovalNeeded:
         $ref: '#/components/messages/DeterminationApprovalNeededMessage'
 
-  intake.determination.rejected:
-    address: intake.determination.rejected
+  intake.application.determination_rejected:
+    address: intake.application.determination_rejected
     messages:
       determinationRejected:
         $ref: '#/components/messages/DeterminationRejectedMessage'
 
-  intake.member_income.created:
-    address: intake.member_income.created
+  intake.income.created:
+    address: intake.income.created
     messages:
       memberIncomeCreated:
         $ref: '#/components/messages/MemberIncomeCreatedMessage'
@@ -180,19 +180,19 @@ components:
         $ref: '#/components/schemas/ApplicationWithdrawnEvent'
 
     DeterminationApprovalNeededMessage:
-      name: intake.determination.approval_needed
+      name: intake.application.approval_needed
       summary: Triggers supervisor approval task creation; states configure approval thresholds via rules overlay.
       payload:
         $ref: '#/components/schemas/DeterminationApprovalNeededEvent'
 
     DeterminationRejectedMessage:
-      name: intake.determination.rejected
+      name: intake.application.determination_rejected
       summary: Signals the determination was rejected; workflow returns the caseworker task to in_progress.
       payload:
         $ref: '#/components/schemas/DeterminationRejectedEvent'
 
     MemberIncomeCreatedMessage:
-      name: intake.member_income.created
+      name: intake.income.created
       summary: Emitted when an income record is added to a member (auto-emitted on POST). Subject is memberId.
       payload:
         $ref: '#/components/schemas/MemberIncomeCreatedEvent'
@@ -395,7 +395,7 @@ components:
           properties:
             type:
               type: string
-              const: intake.determination.approval_needed
+              const: intake.application.approval_needed
 
     # subject: determinationId
     DeterminationRejectedEvent:
@@ -405,7 +405,7 @@ components:
           properties:
             type:
               type: string
-              const: intake.determination.rejected
+              const: intake.application.determination_rejected
 
     # subject: memberId
     MemberIncomeCreatedEvent:
@@ -415,7 +415,7 @@ components:
           properties:
             type:
               type: string
-              const: intake.member_income.created
+              const: intake.income.created
 
     # subject: verificationId
     VerificationCreatedEvent:

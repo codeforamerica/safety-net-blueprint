@@ -185,7 +185,7 @@ test('createCreateHandler — emitted event subject is the created resource id, 
   store.clearAll('events');
 
   const apiMetadata = { serverBasePath: '/test' };
-  const endpoint = { collectionName: 'testitems', path: '/testitems', requestSchema: null };
+  const endpoint = { collectionName: 'testitems', path: '/testitems', requestSchema: null, resource: { name: 'TestItem', eventName: 'test_item' } };
 
   const handler = createCreateHandler(apiMetadata, endpoint, 'http://localhost:1080', null, [], null, DEPS);
 
@@ -207,7 +207,7 @@ test('createCreateHandler — emitted event subject is the created resource id, 
   assert.notStrictEqual(createdId, parentId, 'created resource id must not equal the parent id');
 
   const { items } = store.findAll('events', {});
-  const createdEvent = items.find(e => e.type === 'test.testitem.created');
+  const createdEvent = items.find(e => e.type === 'test.test_item.created');
   assert.ok(createdEvent, 'must have emitted a created event');
   assert.strictEqual(createdEvent.subject, createdId, 'event subject must be the child resource id, not the parent id');
 });
@@ -217,7 +217,7 @@ test('createCreateHandler — emitted event includes authid and authtype from ca
   store.clearAll('events');
 
   const apiMetadata = { serverBasePath: '/test' };
-  const endpoint = { collectionName: 'testitems', path: '/testitems', requestSchema: null };
+  const endpoint = { collectionName: 'testitems', path: '/testitems', requestSchema: null, resource: { name: 'TestItem', eventName: 'test_item' } };
 
   const handler = createCreateHandler(apiMetadata, endpoint, 'http://localhost:1080', null, [], null, DEPS);
 
@@ -230,7 +230,7 @@ test('createCreateHandler — emitted event includes authid and authtype from ca
   await readResponse(handler(request, { params: {} }));
 
   const { items } = store.findAll('events', {});
-  const createdEvent = items.find(e => e.type === 'test.testitem.created');
+  const createdEvent = items.find(e => e.type === 'test.test_item.created');
   assert.ok(createdEvent, 'must have emitted a created event');
   assert.strictEqual(createdEvent.authid, 'caseworker-42');
   assert.strictEqual(createdEvent.authtype, 'user');
@@ -241,7 +241,7 @@ test('createCreateHandler — emitted event leaves out authid and authtype when 
   store.clearAll('events');
 
   const apiMetadata = { serverBasePath: '/test' };
-  const endpoint = { collectionName: 'testitems', path: '/testitems', requestSchema: null };
+  const endpoint = { collectionName: 'testitems', path: '/testitems', requestSchema: null, resource: { name: 'TestItem', eventName: 'test_item' } };
 
   const handler = createCreateHandler(apiMetadata, endpoint, 'http://localhost:1080', null, [], null, DEPS);
 
@@ -250,7 +250,7 @@ test('createCreateHandler — emitted event leaves out authid and authtype when 
   await readResponse(handler(request, { params: {} }));
 
   const { items } = store.findAll('events', {});
-  const createdEvent = items.find(e => e.type === 'test.testitem.created');
+  const createdEvent = items.find(e => e.type === 'test.test_item.created');
   assert.ok(createdEvent, 'must have emitted a created event');
   assert.ok(!('authid' in createdEvent), 'no caller, no authid');
   assert.ok(!('authtype' in createdEvent), 'no caller, no authtype');

@@ -39,32 +39,32 @@ beforeEach(() => clearAllStubs());
 
 test('registerStub — assigns human-readable ID from on suffix', () => {
   const stub = registerStub(makeStub(
-    'data_exchange.service_call.created',
-    { type: 'data_exchange.call.completed' }
+    'data-exchange.external_service_call.created',
+    { type: 'data-exchange.call.completed' }
   ));
-  assert.strictEqual(stub.id, 'service_call.created-1');
+  assert.strictEqual(stub.id, 'external_service_call.created-1');
 });
 
 test('registerStub — increments counter per suffix', () => {
-  const a = registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed' }));
-  const b = registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed' }));
-  assert.strictEqual(a.id, 'service_call.created-1');
-  assert.strictEqual(b.id, 'service_call.created-2');
+  const a = registerStub(makeStub('data-exchange.external_service_call.created', { type: 'data-exchange.call.completed' }));
+  const b = registerStub(makeStub('data-exchange.external_service_call.created', { type: 'data-exchange.call.completed' }));
+  assert.strictEqual(a.id, 'external_service_call.created-1');
+  assert.strictEqual(b.id, 'external_service_call.created-2');
 });
 
 test('registerStub — different suffixes use independent counters', () => {
-  const a = registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed' }));
-  const b = registerStub(makeStub('data_exchange.call.completed', { type: 'intake.application.submitted' }));
-  assert.strictEqual(a.id, 'service_call.created-1');
+  const a = registerStub(makeStub('data-exchange.external_service_call.created', { type: 'data-exchange.call.completed' }));
+  const b = registerStub(makeStub('data-exchange.call.completed', { type: 'intake.application.submitted' }));
+  assert.strictEqual(a.id, 'external_service_call.created-1');
   assert.strictEqual(b.id, 'call.completed-1');
 });
 
 test('registerStub — ID uses last two dot-segments of on field', () => {
   const stub = registerStub(makeStub(
-    'data_exchange.service_call.created',
-    { type: 'data_exchange.call.completed' }
+    'data-exchange.external_service_call.created',
+    { type: 'data-exchange.call.completed' }
   ));
-  assert.ok(stub.id.startsWith('service_call.created-'));
+  assert.ok(stub.id.startsWith('external_service_call.created-'));
 });
 
 test('registerStub — throws when on is missing', () => {
@@ -76,7 +76,7 @@ test('registerStub — throws when on is missing', () => {
 
 test('registerStub — throws when response is present but missing type', () => {
   assert.throws(
-    () => registerStub({ on: 'data_exchange.service_call.created', response: {} }),
+    () => registerStub({ on: 'data-exchange.external_service_call.created', response: {} }),
     /response/
   );
 });
@@ -92,26 +92,26 @@ test('registerStub — allows stub without response (timer stub format)', () => 
 // =============================================================================
 
 test('matchAndPop — matches by exact type', () => {
-  registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed' }));
-  const stub = matchAndPop('data_exchange.service_call.created', makeEnvelope('data_exchange.service_call.created'));
+  registerStub(makeStub('data-exchange.external_service_call.created', { type: 'data-exchange.call.completed' }));
+  const stub = matchAndPop('data-exchange.external_service_call.created', makeEnvelope('data-exchange.external_service_call.created'));
   assert.ok(stub, 'should match');
   assert.strictEqual(listStubs().length, 0);
 });
 
 test('matchAndPop — matches exact type in on field', () => {
-  const eventType = 'data_exchange.service_call.created';
-  registerStub(makeStub(eventType, { type: 'data_exchange.call.completed' }));
+  const eventType = 'data-exchange.external_service_call.created';
+  registerStub(makeStub(eventType, { type: 'data-exchange.call.completed' }));
   const stub = matchAndPop(eventType, makeEnvelope(eventType));
   assert.ok(stub);
 });
 
 test('matchAndPop — returns null when no stub registered', () => {
-  const result = matchAndPop('data_exchange.service_call.created', makeEnvelope('data_exchange.service_call.created'));
+  const result = matchAndPop('data-exchange.external_service_call.created', makeEnvelope('data-exchange.external_service_call.created'));
   assert.strictEqual(result, null);
 });
 
 test('matchAndPop — returns null when type does not match', () => {
-  registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed' }));
+  registerStub(makeStub('data-exchange.external_service_call.created', { type: 'data-exchange.call.completed' }));
   const result = matchAndPop('intake.application.submitted', makeEnvelope('intake.application.submitted'));
   assert.strictEqual(result, null);
   assert.strictEqual(listStubs().length, 1);
@@ -122,9 +122,9 @@ test('matchAndPop — returns null when type does not match', () => {
 // =============================================================================
 
 test('matchAndPop — pops first matching stub (FIFO)', () => {
-  const a = registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }));
-  const b = registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed', data: { result: 'inconclusive' } }));
-  const eventType = 'data_exchange.service_call.created';
+  const a = registerStub(makeStub('data-exchange.external_service_call.created', { type: 'data-exchange.call.completed', data: { result: 'conclusive' } }));
+  const b = registerStub(makeStub('data-exchange.external_service_call.created', { type: 'data-exchange.call.completed', data: { result: 'inconclusive' } }));
+  const eventType = 'data-exchange.external_service_call.created';
   const first = matchAndPop(eventType, makeEnvelope(eventType));
   assert.strictEqual(first.id, a.id);
   assert.strictEqual(listStubs().length, 1);
@@ -132,9 +132,9 @@ test('matchAndPop — pops first matching stub (FIFO)', () => {
 });
 
 test('matchAndPop — second pop returns second stub', () => {
-  registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }));
-  const b = registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed', data: { result: 'inconclusive' } }));
-  const eventType = 'data_exchange.service_call.created';
+  registerStub(makeStub('data-exchange.external_service_call.created', { type: 'data-exchange.call.completed', data: { result: 'conclusive' } }));
+  const b = registerStub(makeStub('data-exchange.external_service_call.created', { type: 'data-exchange.call.completed', data: { result: 'inconclusive' } }));
+  const eventType = 'data-exchange.external_service_call.created';
   matchAndPop(eventType, makeEnvelope(eventType));
   const second = matchAndPop(eventType, makeEnvelope(eventType));
   assert.strictEqual(second.id, b.id);
@@ -147,22 +147,22 @@ test('matchAndPop — second pop returns second stub', () => {
 
 test('matchAndPop — matches when all match criteria satisfied', () => {
   registerStub(makeStub(
-    'data_exchange.service_call.created',
-    { type: 'data_exchange.call.completed' },
+    'data-exchange.external_service_call.created',
+    { type: 'data-exchange.call.completed' },
     { 'data.serviceType': 'fdsh_ssa' }
   ));
-  const eventType = 'data_exchange.service_call.created';
+  const eventType = 'data-exchange.external_service_call.created';
   const stub = matchAndPop(eventType, makeEnvelope(eventType, { serviceType: 'fdsh_ssa' }));
   assert.ok(stub);
 });
 
 test('matchAndPop — skips stub when match criteria not satisfied', () => {
   registerStub(makeStub(
-    'data_exchange.service_call.created',
-    { type: 'data_exchange.call.completed' },
+    'data-exchange.external_service_call.created',
+    { type: 'data-exchange.call.completed' },
     { 'data.serviceType': 'fdsh_ssa' }
   ));
-  const eventType = 'data_exchange.service_call.created';
+  const eventType = 'data-exchange.external_service_call.created';
   const stub = matchAndPop(eventType, makeEnvelope(eventType, { serviceType: 'save' }));
   assert.strictEqual(stub, null);
   assert.strictEqual(listStubs().length, 1);
@@ -170,16 +170,16 @@ test('matchAndPop — skips stub when match criteria not satisfied', () => {
 
 test('matchAndPop — skips non-matching stub and returns next matching one', () => {
   registerStub(makeStub(
-    'data_exchange.service_call.created',
-    { type: 'data_exchange.call.completed', data: { result: 'inconclusive' } },
+    'data-exchange.external_service_call.created',
+    { type: 'data-exchange.call.completed', data: { result: 'inconclusive' } },
     { 'data.serviceType': 'fdsh_ssa' }
   ));
   const b = registerStub(makeStub(
-    'data_exchange.service_call.created',
-    { type: 'data_exchange.call.completed', data: { result: 'conclusive' } }
+    'data-exchange.external_service_call.created',
+    { type: 'data-exchange.call.completed', data: { result: 'conclusive' } }
     // no match filter — matches any
   ));
-  const eventType = 'data_exchange.service_call.created';
+  const eventType = 'data-exchange.external_service_call.created';
   const stub = matchAndPop(eventType, makeEnvelope(eventType, { serviceType: 'save' }));
   assert.strictEqual(stub.id, b.id);
   assert.strictEqual(listStubs().length, 1);
@@ -187,11 +187,11 @@ test('matchAndPop — skips non-matching stub and returns next matching one', ()
 
 test('matchAndPop — empty match object matches any event of that type', () => {
   registerStub(makeStub(
-    'data_exchange.service_call.created',
-    { type: 'data_exchange.call.completed' },
+    'data-exchange.external_service_call.created',
+    { type: 'data-exchange.call.completed' },
     {}
   ));
-  const eventType = 'data_exchange.service_call.created';
+  const eventType = 'data-exchange.external_service_call.created';
   const stub = matchAndPop(eventType, makeEnvelope(eventType, { serviceType: 'save' }));
   assert.ok(stub);
 });
@@ -253,10 +253,10 @@ test('clearStubs — removes all stubs', () => {
 });
 
 test('clearStubs — resets ID counters', () => {
-  registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed' }));
+  registerStub(makeStub('data-exchange.external_service_call.created', { type: 'data-exchange.call.completed' }));
   clearStubs();
-  const stub = registerStub(makeStub('data_exchange.service_call.created', { type: 'data_exchange.call.completed' }));
-  assert.strictEqual(stub.id, 'service_call.created-1');
+  const stub = registerStub(makeStub('data-exchange.external_service_call.created', { type: 'data-exchange.call.completed' }));
+  assert.strictEqual(stub.id, 'external_service_call.created-1');
 });
 
 // =============================================================================

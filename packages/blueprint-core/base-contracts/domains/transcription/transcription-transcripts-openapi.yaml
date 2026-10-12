@@ -78,12 +78,12 @@ x-events:
     payload:
       $ref: "#/components/schemas/TranscriptEntryUpdatedEvent"
   profile.created:
-    type: org.codeforamerica.safety-net-blueprint.transcription.profile.created
+    type: org.codeforamerica.safety-net-blueprint.transcription.transcription_profile.created
     summary: Emitted when a profile is added through the API.
     payload:
       $ref: "#/components/schemas/TranscriptionProfileCreatedEvent"
   profile.updated:
-    type: org.codeforamerica.safety-net-blueprint.transcription.profile.updated
+    type: org.codeforamerica.safety-net-blueprint.transcription.transcription_profile.updated
     summary: Emitted when a profile is changed. Records each field before and after, so what a profile said when a transcript started can be looked up.
     payload:
       $ref: "#/components/schemas/TranscriptionProfileUpdatedEvent"

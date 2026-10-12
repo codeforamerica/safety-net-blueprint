@@ -142,8 +142,8 @@ A refusal names the rule that did not hold.
 | `transcription.transcript_entry.created` | A line, a lost stretch or a pause was added | Adding an entry, or pausing | The worker's screen; anything reading the conversation live |
 | `transcription.transcript_entry.updated` | A pause ended | Resuming, or closing while paused | The worker's screen |
 | `transcription.transcript.updated` / `.deleted` | What a transcript records was corrected, or it was removed | Updating or deleting it | Audit |
-| `transcription.profile.created` | A profile was added through the API | Adding a profile | Audit |
-| `transcription.profile.updated` | A profile changed; records each change with what it changed from | Changing a profile | Audit; anyone asking what a transcript was started under |
+| `transcription.transcription_profile.created` | A profile was added through the API | Adding a profile | Audit |
+| `transcription.transcription_profile.updated` | A profile changed; records each change with what it changed from | Changing a profile | Audit; anyone asking what a transcript was started under |
 
 ## Contract artifacts
 

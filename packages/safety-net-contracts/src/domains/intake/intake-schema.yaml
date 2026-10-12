@@ -1235,7 +1235,7 @@ $defs:
           resource: Application
       appointments:
         type: array
-        description: Appointment IDs from the scheduling domain accumulated for this interview obligation. Populated by the rules engine when scheduling.appointment.scheduled fires.
+        description: Appointment IDs from the scheduling domain accumulated for this interview obligation. Populated by the rules engine when scheduling.appointment.created fires.
         readOnly: true
         items:
           type: string
@@ -1537,7 +1537,7 @@ $defs:
   PersonMatch:
     title: PersonMatch
     type: object
-    description: Person matching state for an application member. Populated when client_management.person.match_resolved is received. Null until matching begins.
+    description: Person matching state for an application member. Populated when client-management.person.match_resolved is received. Null until matching begins.
     properties:
       matchStatus:
         type: string

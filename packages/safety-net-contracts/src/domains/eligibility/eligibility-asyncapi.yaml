@@ -14,20 +14,20 @@ info:
     time via the x-event-type-prefix overlay config.
 
 channels:
-  eligibility.application.decision_completed:
-    address: eligibility.application.decision_completed
+  eligibility.decision.completed:
+    address: eligibility.decision.completed
     messages:
       decisionCompleted:
         $ref: '#/components/messages/DecisionCompletedMessage'
 
-  eligibility.application.determination_completed:
-    address: eligibility.application.determination_completed
+  eligibility.determination.completed:
+    address: eligibility.determination.completed
     messages:
       determinationCompleted:
         $ref: '#/components/messages/DeterminationCompletedMessage'
 
-  eligibility.application.expedited:
-    address: eligibility.application.expedited
+  eligibility.determination.expedited:
+    address: eligibility.determination.expedited
     messages:
       applicationExpedited:
         $ref: '#/components/messages/ApplicationExpeditedMessage'
@@ -53,19 +53,19 @@ channels:
 components:
   messages:
     DecisionCompletedMessage:
-      name: eligibility.application.decision_completed
+      name: eligibility.decision.completed
       summary: Intake records the outcome per member; Determination checks if all Decisions are resolved.
       payload:
         $ref: '#/components/schemas/DecisionCompletedEvent'
 
     DeterminationCompletedMessage:
-      name: eligibility.application.determination_completed
+      name: eligibility.determination.completed
       summary: Signals all program Decisions are resolved; Intake subscribes to close the application.
       payload:
         $ref: '#/components/schemas/DeterminationCompletedEvent'
 
     ApplicationExpeditedMessage:
-      name: eligibility.application.expedited
+      name: eligibility.determination.expedited
       summary: Intake stores the flag; Workflow switches the intake task to the expedited SLA track (7 CFR § 273.2(i)).
       payload:
         $ref: '#/components/schemas/ApplicationExpeditedEvent'
@@ -97,7 +97,7 @@ components:
           properties:
             type:
               type: string
-              const: eligibility.application.expedited
+              const: eligibility.determination.expedited
 
     # subject: decisionId
     DecisionCompletedEvent:
@@ -107,7 +107,7 @@ components:
           properties:
             type:
               type: string
-              const: eligibility.application.decision_completed
+              const: eligibility.decision.completed
             data:
               $ref: '#/components/schemas/DecisionCompletedData'
 
@@ -182,7 +182,7 @@ components:
           properties:
             type:
               type: string
-              const: eligibility.application.determination_completed
+              const: eligibility.determination.completed
 
     # subject: determinationId
     DeterminationWithdrawnEvent:

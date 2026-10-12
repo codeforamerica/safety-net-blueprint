@@ -123,9 +123,9 @@ The Eligibility domain emits three event types. One fires at submission when the
 
 | Event | Why it's needed | Trigger | Primary consumers |
 |---|---|---|---|
-| `eligibility.application.expedited` | SNAP requires the agency to notify caseworkers within 1 business day so the application can be prioritized (7 CFR § 273.2(i)); Workflow needs the flag to switch the intake task to the expedited SLA track | Expedited screening completes at submission and application meets criteria | Intake (set `isExpedited` on application), Workflow (apply expedited SLA track) |
-| `eligibility.application.decision_completed` | Intake must record each decision outcome per-person per-program as it resolves; this event may fire multiple times — including at submission for Medicaid Decisions auto-resolved via ex parte evaluation | A Decision transitions to a terminal state (`approved`, `denied`, `ineligible`) | Intake |
-| `eligibility.application.determination_completed` | Intake requires a single signal that the application is fully determined before closing it and triggering case creation. See [Decision 5](#decision-5-all-determined-tracking). | All Decisions in a Determination reach a terminal state | Intake |
+| `eligibility.determination.expedited` | SNAP requires the agency to notify caseworkers within 1 business day so the application can be prioritized (7 CFR § 273.2(i)); Workflow needs the flag to switch the intake task to the expedited SLA track | Expedited screening completes at submission and application meets criteria | Intake (set `isExpedited` on application), Workflow (apply expedited SLA track) |
+| `eligibility.decision.completed` | Intake must record each decision outcome per-person per-program as it resolves; this event may fire multiple times — including at submission for Medicaid Decisions auto-resolved via ex parte evaluation | A Decision transitions to a terminal state (`approved`, `denied`, `ineligible`) | Intake |
+| `eligibility.determination.completed` | Intake requires a single signal that the application is fully determined before closing it and triggering case creation. See [Decision 5](#decision-5-all-determined-tracking). | All Decisions in a Determination reach a terminal state | Intake |
 
 Eligibility also subscribes to `application.withdrawn` from Intake. When an application is withdrawn, Eligibility moves the Determination to `withdrawn`; any already-resolved Decisions remain as the audit record.
 
@@ -232,7 +232,7 @@ Eligibility also subscribes to `application.withdrawn` from Intake. When an appl
 **What's being decided:** How Eligibility knows when all person-program combinations for an application are resolved so it can fire the all-determined signal.
 
 **Options:**
-- **(A)** ✓ Eligibility tracks Decision terminal states internally on the Determination; when the last pending Decision resolves, Eligibility fires `eligibility.application.determination_completed`
+- **(A)** ✓ Eligibility tracks Decision terminal states internally on the Determination; when the last pending Decision resolves, Eligibility fires `eligibility.determination.completed`
 - **(B)** Intake tracks which determination events it has received and fires a signal when the count matches the expected set
 
 **Decision:** Option A is the right owner: the entity that owns the Decisions can directly observe when the last one resolves. Option B requires Intake to know in advance how many person-program combinations exist, which is not always deterministic — some members may be found categorically ineligible before evaluation completes, reducing the expected count.
@@ -320,11 +320,11 @@ Eligibility also subscribes to `application.withdrawn` from Intake. When an appl
 
 **Considerations:**
 - The NOA must wait until both determination paths have fully converged: the auto path (Medicaid RTE) and the manual path (caseworker review and optional supervisor approval); sending the notice before supervisor approval could mean notifying the applicant of an outcome that gets revised
-- `eligibility.application.determination_completed` fires when all Decisions are resolved, but supervisor approval (when required by state policy) happens after this event on the manual path — there is no contracted `determination.approved` event from workflow to signal completion
+- `eligibility.determination.completed` fires when all Decisions are resolved, but supervisor approval (when required by state policy) happens after this event on the manual path — there is no contracted `determination.approved` event from workflow to signal completion
 - `intake.application.closed` is intake's authoritative signal that all post-determination steps are complete; both paths converge here with no new events required; state configurations without supervisor approval close immediately after `determination_completed`
 
 **Options:**
-- **(A)** `eligibility.application.determination_completed` — fires when all Decisions are resolved; but fires before supervisor approval on the manual path; requires a new `determination.approved` event to handle the approval gate
+- **(A)** `eligibility.determination.completed` — fires when all Decisions are resolved; but fires before supervisor approval on the manual path; requires a new `determination.approved` event to handle the approval gate
 - **(B)** ✓ `intake.application.closed` — fires after all post-determination steps are complete; supervisor approval gates the close on the manual path; both paths converge cleanly; no new events needed
 
 **Deferred:** Full implementation requires the Communications domain design (not yet designed) and an intake rule set that creates a notice resource at close. Tracked in #248.

@@ -441,7 +441,7 @@ function applyCallObjectStep(spec, context, pendingCreates, pendingOperations, p
       const entity = deriveCollectionName(rawPath, domain);
       const pathSegs = rawPath.split('/').filter(s => s && !s.startsWith('{'));
       const lastSeg = pathSegs[pathSegs.length - 1] || '';
-      const eventObject = lastSeg.endsWith('s') ? lastSeg.slice(0, -1) : lastSeg;
+      const eventObject = (lastSeg.endsWith('s') ? lastSeg.slice(0, -1) : lastSeg).replace(/-/g, '_');
       const stubUrl = '/' + rawPath.split('/').slice(1).join('/');
       pendingCreates.push({ entity, domain, eventObject, stubUrl, data: body });
     }
@@ -661,7 +661,7 @@ export function applySteps(steps, resource, context, store) {
           const entity = deriveCollectionName(rawPath, domain);
           const pathSegs = rawPath.split('/').filter(s => s && !s.startsWith('{'));
           const lastSeg = pathSegs[pathSegs.length - 1] || '';
-          const eventObject = lastSeg.endsWith('s') ? lastSeg.slice(0, -1) : lastSeg;
+          const eventObject = (lastSeg.endsWith('s') ? lastSeg.slice(0, -1) : lastSeg).replace(/-/g, '_');
           pendingCreates.push({ entity, domain, eventObject, data: body });
         }
       } else {

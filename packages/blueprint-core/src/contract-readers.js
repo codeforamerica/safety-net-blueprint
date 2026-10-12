@@ -25,6 +25,7 @@
 import { followRef, indexByRelativePath, splitRef, pointerInto } from './ref-lookup.js';
 import { governedResource, declaredResource } from './attachment.js';
 import { rulesetEndpointPath } from './rules.js';
+import { expandEmits } from './event-names.js';
 
 /** Envelope keys a config document carries that are not catalogs. */
 const CONFIG_METADATA_KEYS = new Set(['$schema', 'version', 'domain']);
@@ -109,7 +110,7 @@ export function readConfigs(docs) {
  * `machine` points at the machine and `stateMachine` at the document holding
  * it, so a caller never has to ask which shape it was given.
  *
- * Two things are resolved against the set while reading:
+ * Three things are resolved against the set while reading:
  *
  *   `extends:`        the extended document's guards and procedures are
  *                     attached as `_platformGuards` / `_platformProcedures`.
@@ -118,6 +119,8 @@ export function readConfigs(docs) {
  *                     document that extends it.
  *   action `$ref`s    `schema.request` and `schema.response` are replaced by
  *                     what they point at.
+ *   short emits       `emit: paused` gets its full type,
+ *                     `transcription.transcript.paused` (event-names.js).
  *
  * @param {import('../types.js').Doc[]} docs
  * Each entry also carries what its machine governs: `api`, the OpenAPI
@@ -177,6 +180,9 @@ export function readStateMachines(docs) {
     };
 
     if (Array.isArray(stateMachine.machines)) {
+      // Short-named emits get their full types, as resolve gives them, so an
+      // unresolved set reads the same.
+      stateMachine.machines = stateMachine.machines.map((m) => expandEmits(m, entry.domain));
       for (const machine of stateMachine.machines) {
         if (!machine.object) continue;
         results.push({ ...entry, object: machine.object, ...governed(docs, entry.domain, machine.object), machine });

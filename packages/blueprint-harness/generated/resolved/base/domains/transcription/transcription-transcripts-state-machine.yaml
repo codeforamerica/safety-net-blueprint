@@ -40,6 +40,13 @@ machines:
       - id: gapOutsidePauses
         description: a gap does not overlap a pause
         condition: request.kind != "gap" || pauseOverlap == null
+    emits:
+      - id: paused
+        description: The conversation went off the record. Anything said until it resumes is not stored.
+      - id: resumed
+        description: The conversation is back on the record.
+      - id: closed
+        description: The transcript has ended.
     actions:
       - id: pause
         description: Take the conversation off the record, at the time the client says.
@@ -60,6 +67,7 @@ machines:
                 startedAt: $request.at
                 endedAt: null
           - emit:
+              event: paused
               type: transcription.transcript.paused
       - id: resume
         description: Put the conversation back on the record, at the time the client says.
@@ -83,6 +91,7 @@ machines:
               body:
                 endedAt: $request.at
           - emit:
+              event: resumed
               type: transcription.transcript.resumed
       - id: close
         description: End the transcript, at the time the client says. A pause still open ends then too.
@@ -113,6 +122,7 @@ machines:
                   body:
                     endedAt: $request.at
           - emit:
+              event: closed
               type: transcription.transcript.closed
     resources:
       Transcript:

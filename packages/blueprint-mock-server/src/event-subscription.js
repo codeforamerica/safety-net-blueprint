@@ -181,10 +181,10 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
     currentDispatch = null;
   }
 
-  // Collect events entries from new-format state machines
+  // Collect each machine's on: entries — the events it reacts to
   const machineEventSubs = [];
   for (const smEntry of allStateMachines) {
-    const onEvents = smEntry.machine?.events;
+    const onEvents = smEntry.machine?.on;
     if (!Array.isArray(onEvents)) continue;
     for (const entry of onEvents) {
       if (entry.type && Array.isArray(entry.steps)) {
@@ -276,13 +276,20 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         }
 
         // Handle collection creates
-        for (const { entity, domain: entDomain, eventObject, data } of pendingCreates) {
+        for (const { entity, domain: entDomain, eventObject, stubUrl, data } of pendingCreates) {
           try {
             const created = store.create(entity, data);
+            // Named for the resource the API serves at that path, where the
+            // route can be found; otherwise for the path's last segment.
+            let object = eventObject || entity.replace(/s$/, '');
+            try {
+              const resolved = currentStepCalls?.resolve('POST', `${entDomain}${stubUrl ?? ''}`);
+              if (resolved?.resource?.eventName) object = resolved.resource.eventName;
+            } catch { /* not a declared route: keep the path's name */ }
             emitEvent({
         store,
               domain: entDomain || smEntry.domain,
-              object: eventObject || entity.replace(/s$/, ''),
+              object,
               action: 'created',
               resourceId: created.id,
               source: `/${entDomain || smEntry.domain}`,

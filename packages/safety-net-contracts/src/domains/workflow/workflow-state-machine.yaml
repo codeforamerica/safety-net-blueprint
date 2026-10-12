@@ -15,6 +15,153 @@ machines:
       - {id: awaiting_verification, slaClock: paused,   description: "Task paused while waiting for a verification result"}
       - {id: pending_review,        slaClock: running,  description: "Task submitted for supervisor review before completion"}
     initialState: pending
+    emits:
+      - id: claimed
+        description: Records the claim and who claimed the task.
+        schema:
+          type: object
+          additionalProperties: false
+          required:
+            - assignedToId
+          properties:
+            assignedToId:
+              type: string
+              format: uuid
+              description: The worker who claimed the task.
+              x-relationship:
+                resource: User
+                domain: platform
+      - id: completed
+        description: Records the completion and its outcome.
+        schema:
+          type: object
+          additionalProperties: false
+          required:
+            - outcome
+          properties:
+            outcome:
+              type: string
+              description: The outcome recorded with the completion.
+      - id: released
+        description: Records the release and its reason.
+        schema:
+          type: object
+          additionalProperties: false
+          properties:
+            reason:
+              type: string
+              description: Why the task was released.
+      - id: escalated
+        description: Records the escalation and its reason.
+        schema:
+          type: object
+          additionalProperties: false
+          required:
+            - reason
+          properties:
+            reason:
+              type: string
+              description: Why the task was escalated.
+      - id: de-escalated
+        description: Records de-escalation of a task.
+      - id: cancelled
+        description: >-
+          Records cancellation of a task. When system-triggered (e.g., client unresponsive),
+          `causationid` carries the ID of the triggering event and `reason` is `client_unresponsive`.
+        schema:
+          type: object
+          additionalProperties: false
+          properties:
+            reason:
+              type: string
+              description: Why the task was cancelled.
+              enum:
+                - client_unresponsive
+      - id: reopened
+        description: Records the reopen and its reason.
+        schema:
+          type: object
+          additionalProperties: false
+          properties:
+            reason:
+              type: string
+              description: Why the task was reopened.
+      - id: awaiting_client
+        description: Records that the task is blocked waiting on client action.
+      - id: awaiting_verification
+        description: Records that the task is blocked waiting on a verification result.
+      - id: resumed
+        description: >-
+          Records resumption from an awaiting state. When system-triggered (timer or verification
+          result), `causationid` carries the ID of the triggering event.
+      - id: sla_breached
+        description: Records an SLA deadline breach for federal compliance reporting.
+        schema:
+          type: object
+          additionalProperties: false
+          required:
+            - reason
+          properties:
+            reason:
+              type: string
+              description: Why the SLA was breached.
+      - id: submitted_for_review
+        description: Records submission for supervisor review.
+      - id: approved
+        description: Records supervisor approval of a submitted-for-review task.
+        schema:
+          type: object
+          additionalProperties: false
+          required:
+            - outcome
+          properties:
+            outcome:
+              type: string
+              description: The outcome recorded with the approval.
+      - id: returned_to_worker
+        description: Records the return for revision and its reason.
+        schema:
+          type: object
+          additionalProperties: false
+          required:
+            - reason
+          properties:
+            reason:
+              type: string
+              description: Why the task was returned for revision.
+      - id: assigned
+        description: Records direct assignment of a task to a worker or queue.
+        schema:
+          type: object
+          additionalProperties: false
+          properties:
+            assignedToId:
+              type: string
+              format: uuid
+              description: The worker the task was assigned to.
+              x-relationship:
+                resource: User
+                domain: platform
+            queueId:
+              type: string
+              format: uuid
+              description: The queue the task was assigned to.
+              x-relationship:
+                resource: Queue
+      - id: priority_changed
+        description: Records the priority change.
+        schema:
+          type: object
+          additionalProperties: false
+          required:
+            - priority
+          properties:
+            priority:
+              type: integer
+              description: The new priority value.
+            reason:
+              type: string
+              description: Why the priority was changed.
     actions:
       - id: claim
         description: "POST /tasks/{taskId}/claim — Caseworker takes ownership of an unassigned pending task"
@@ -24,7 +171,7 @@ machines:
         transition: {from: pending, to: in_progress}
         steps:
           - set: {field: assignedToId, value: $caller.id, description: Assign task to the claiming worker}
-          - emit: {type: workflow.task.claimed, data: {assignedToId: $caller.id}, description: Emit a domain event recording the claim and who claimed the task}
+          - emit: {event: claimed, data: {assignedToId: $caller.id}, description: Emit a domain event recording the claim and who claimed the task}
       - id: complete
         description: "POST /tasks/{taskId}/complete — Marks an in-progress task done with an outcome and optional notes"
         guards:
@@ -40,7 +187,7 @@ machines:
           - set: {field: completedAt, value: $now, description: Record when work finished}
           - set: {field: outcome, value: $request.outcome, description: Store the completion outcome from the request}
           - set: {field: completionNotes, value: $request.notes, description: Store optional completion notes from the request}
-          - emit: {type: workflow.task.completed, data: {outcome: $request.outcome}, description: Emit a domain event recording the completion and its outcome}
+          - emit: {event: completed, data: {outcome: $request.outcome}, description: Emit a domain event recording the completion and its outcome}
           - if: has(request.createFollowUp) && request.createFollowUp == true
             then: [{call: {POST: workflow/tasks, body: {$merge: $object, status: pending}}, description: Create a follow-up task when caller requests one}]
       - id: release
@@ -54,7 +201,7 @@ machines:
             $ref: "#/$defs/ReleaseTaskRequest"
         steps:
           - set: {field: assignedToId, value: null, description: Clear assignment so task returns to queue}
-          - emit: {type: workflow.task.released, data: {reason: $request.reason}, description: Emit a domain event recording the release and its reason}
+          - emit: {event: released, data: {reason: $request.reason}, description: Emit a domain event recording the release and its reason}
           - call: assignToQueue
           - call: setPriority
       - id: escalate
@@ -71,7 +218,7 @@ machines:
         steps:
           - set: {field: escalatedAt, value: $now, description: Record when the task was escalated}
           - call: setPriority
-          - emit: {type: workflow.task.escalated, data: {reason: $request.reason}, description: Emit a domain event recording the escalation}
+          - emit: {event: escalated, data: {reason: $request.reason}, description: Emit a domain event recording the escalation}
       - id: de-escalate
         description: "POST /tasks/{taskId}/de-escalate — Returns an escalated task to the pending queue"
         guards:
@@ -84,7 +231,7 @@ machines:
         steps:
           - call: assignToQueue
           - call: setPriority
-          - emit: {type: workflow.task.de-escalated, description: Emit a domain event recording the de-escalation}
+          - emit: {event: de-escalated, description: Emit a domain event recording the de-escalation}
       - id: cancel
         description: "POST /tasks/{taskId}/cancel — Supervisor cancels a task from any active state"
         guards:
@@ -98,7 +245,7 @@ machines:
             $ref: "#/$defs/CancelTaskRequest"
         steps:
           - set: {field: cancelledAt, value: $now, description: Record when the task was cancelled}
-          - emit: {type: workflow.task.cancelled, data: {reason: $request.reason}, description: Emit a domain event recording the cancellation}
+          - emit: {event: cancelled, data: {reason: $request.reason}, description: Emit a domain event recording the cancellation}
       - id: reopen
         description: "POST /tasks/{taskId}/reopen — Supervisor returns a cancelled task to the pending queue"
         guards:
@@ -112,7 +259,7 @@ machines:
           - set: {field: cancelledAt, value: null, description: Clear the cancellation timestamp on reopen}
           - call: assignToQueue
           - call: setPriority
-          - emit: {type: workflow.task.reopened, data: {reason: $request.reason}, description: Emit a domain event recording the reopen}
+          - emit: {event: reopened, data: {reason: $request.reason}, description: Emit a domain event recording the reopen}
       - id: await-client
         description: "POST /tasks/{taskId}/await-client — Pauses an in-progress task while waiting for a client response"
         guards:
@@ -125,7 +272,7 @@ machines:
         steps:
           - set: {field: blockedAt, value: $now, description: Record when the task entered a waiting state}
           - call: scheduleClientTimeout
-          - emit: {type: workflow.task.awaiting_client, description: Emit a domain event recording the block}
+          - emit: {event: awaiting_client, description: Emit a domain event recording the block}
       - id: await-verification
         description: "POST /tasks/{taskId}/await-verification — Pauses an in-progress task while waiting for a verification result"
         guards:
@@ -138,7 +285,7 @@ machines:
         steps:
           - set: {field: blockedAt, value: $now, description: Record when the task entered a waiting state}
           - call: scheduleVerificationTimeout
-          - emit: {type: workflow.task.awaiting_verification, description: Emit a domain event recording the block}
+          - emit: {event: awaiting_verification, description: Emit a domain event recording the block}
       - id: resume
         description: "POST /tasks/{taskId}/resume — Resumes a blocked task, cancelling any active wait timers"
         guards:
@@ -149,7 +296,7 @@ machines:
           - set: {field: blockedAt, value: null, description: Clear the block timestamp on resume}
           - call: cancelClientTimeout
           - call: cancelVerificationTimeout
-          - emit: {type: workflow.task.resumed, description: Emit a domain event recording the resumption}
+          - emit: {event: resumed, description: Emit a domain event recording the resumption}
       - id: auto-resume
         description: "POST /tasks/{taskId}/auto-resume — System resumes a verification-blocked task when the timeout fires or a verification result arrives"
         guards:
@@ -162,7 +309,7 @@ machines:
         steps:
           - set: {field: blockedAt, value: null, description: Clear the block timestamp on system resume}
           - call: cancelVerificationTimeout
-          - emit: {type: workflow.task.resumed, causationid: $request.causationid, description: Emit a domain event recording the automated resumption; causationid links to the triggering event}
+          - emit: {event: resumed, causationid: $request.causationid, description: Emit a domain event recording the automated resumption; causationid links to the triggering event}
       - id: sla-escalate
         description: "POST /tasks/{taskId}/sla-escalate — System escalates a task when an SLA timer fires (creation deadline, warning, or breach)"
         guards:
@@ -177,8 +324,8 @@ machines:
             then: [{set: {field: escalatedAt, value: $now, description: "Record first escalation time; not overwritten on subsequent timer-triggered escalations"}}]
           - call: setPriority
           - if: has(request.reason) && request.reason == "sla_deadline_exceeded"
-            then: [{emit: {type: workflow.task.sla_breached, data: {reason: $request.reason}, description: Emit a domain event recording the SLA deadline breach for federal compliance reporting}}]
-            else: [{emit: {type: workflow.task.escalated, data: {reason: $request.reason}, description: Emit a domain event recording the automatic escalation}}]
+            then: [{emit: {event: sla_breached, data: {reason: $request.reason}, description: Emit a domain event recording the SLA deadline breach for federal compliance reporting}}]
+            else: [{emit: {event: escalated, data: {reason: $request.reason}, description: Emit a domain event recording the automatic escalation}}]
       - id: auto-cancel
         description: "POST /tasks/{taskId}/auto-cancel — System cancels a client-blocked task after 30 days without a response"
         guards:
@@ -187,7 +334,7 @@ machines:
         transition: {from: awaiting_client, to: cancelled}
         steps:
           - set: {field: cancelledAt, value: $now, description: Record when the task was automatically cancelled}
-          - emit: {type: workflow.task.cancelled, data: {reason: client_unresponsive}, description: Emit a domain event recording the automatic cancellation}
+          - emit: {event: cancelled, data: {reason: client_unresponsive}, description: Emit a domain event recording the automatic cancellation}
       - id: submit-for-review
         description: "POST /tasks/{taskId}/submit-for-review — Worker submits a completed task to a supervisor for review and approval"
         guards:
@@ -197,7 +344,7 @@ machines:
             conditions: [callerIsSystem]
         transition: {from: [in_progress, escalated], to: pending_review}
         steps:
-          - emit: {type: workflow.task.submitted_for_review, description: Emit a domain event recording the submission for review}
+          - emit: {event: submitted_for_review, description: Emit a domain event recording the submission for review}
       - id: approve
         description: "POST /tasks/{taskId}/approve — Supervisor approves a submitted task and records the final outcome"
         guards:
@@ -213,7 +360,7 @@ machines:
           - set: {field: completedAt, value: $now, description: Record when work was approved and completed}
           - set: {field: outcome, value: $request.outcome, description: Store the outcome from the supervisor's approval}
           - set: {field: completionNotes, value: $request.notes, description: Store optional notes from the supervisor}
-          - emit: {type: workflow.task.approved, data: {outcome: $request.outcome}, description: Emit a domain event recording the approval}
+          - emit: {event: approved, data: {outcome: $request.outcome}, description: Emit a domain event recording the approval}
       - id: return-to-worker
         description: "POST /tasks/{taskId}/return-to-worker — Supervisor sends a review-pending task back to the worker with feedback"
         guards:
@@ -226,7 +373,7 @@ machines:
           request:
             $ref: "#/$defs/ReturnToWorkerRequest"
         steps:
-          - emit: {type: workflow.task.returned_to_worker, data: {reason: $request.reason}, description: Emit a domain event recording the return for revision}
+          - emit: {event: returned_to_worker, data: {reason: $request.reason}, description: Emit a domain event recording the return for revision}
       - id: assign
         description: "POST /tasks/{taskId}/assign — Supervisor reassigns a task to a specific caseworker or moves it to a different queue"
         guards:
@@ -240,7 +387,7 @@ machines:
         steps:
           - set: {field: assignedToId, value: $request.assignedToId, description: Assign the task to the specified caseworker}
           - set: {field: queueId, value: $request.queueId, description: Optionally move the task to a different queue}
-          - emit: {type: workflow.task.assigned, data: {assignedToId: $request.assignedToId, queueId: $request.queueId}, description: Emit a domain event recording the assignment}
+          - emit: {event: assigned, data: {assignedToId: $request.assignedToId, queueId: $request.queueId}, description: Emit a domain event recording the assignment}
       - id: set-priority
         description: "POST /tasks/{taskId}/set-priority — Supervisor manually overrides the task priority"
         guards:
@@ -253,8 +400,8 @@ machines:
             $ref: "#/$defs/SetPriorityRequest"
         steps:
           - set: {field: priority, value: $request.priority, description: Override the task priority}
-          - emit: {type: workflow.task.priority_changed, data: {priority: $request.priority, reason: $request.reason}, description: Emit a domain event recording the priority change}
-    events:
+          - emit: {event: priority_changed, data: {priority: $request.priority, reason: $request.reason}, description: Emit a domain event recording the priority change}
+    on:
       - type: workflow.task.created
         description: Route and prioritize a new task, then schedule its 72-hour creation deadline
         transition: {}
@@ -292,7 +439,7 @@ machines:
         description: Auto-resume after 7 calendar days waiting on verification
         steps:
           - call: {POST: workflow/tasks/$this.subject/auto-resume, body: {causationid: $this.id}, description: Auto-resume after 7 days verification timeout; passes timer event ID as causationid}
-      - type: eligibility.application.expedited
+      - type: eligibility.determination.expedited
         description: Flag the intake review task as expedited and switch it to the 7-day SLA when SNAP expedited criteria are confirmed (7 CFR § 273.2(i))
         context:
           - task: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
@@ -342,7 +489,7 @@ machines:
                   body:
                     outcome: application_closed
                   description: Complete the supervisor approval task
-      - type: intake.determination.approval_needed
+      - type: intake.application.approval_needed
         description: Move the caseworker's review task to pending_review and create a supervisor approval task when a determination requires sign-off
         context:
           - reviewTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
@@ -361,7 +508,7 @@ machines:
                 subjectType: application
                 subjectId: $this.subject
               description: Create a supervisor approval task
-      - type: intake.determination.rejected
+      - type: intake.application.determination_rejected
         description: Return the caseworker's review task to in_progress and complete the supervisor approval task when a determination is rejected
         context:
           - reviewTask: {from: workflow/tasks, where: {subjectId: $this.subject, taskType: application_review}}
@@ -598,5 +745,5 @@ $defs:
         format: uuid
         description: >
           ID of the event that triggered this resumption (e.g., the
-          workflow.verification_timeout or data_exchange.call.completed event).
+          workflow.verification_timeout or data-exchange.call.completed event).
           Propagated to the emitted workflow.task.resumed event envelope.

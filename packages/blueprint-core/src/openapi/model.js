@@ -14,6 +14,8 @@
  * all additions to these objects, nothing moved.
  */
 
+import { snakeCase } from '../event-names.js';
+
 /**
  * @param {object} content - An OpenAPI document's content
  * @returns {{ servers: { url: string, base: string }[], resources: Resource[] }}
@@ -34,6 +36,8 @@ export function buildApiModel(content) {
     return node;
   };
 
+  const refOf = (operation, status) => operation?.responses?.[status]?.content?.['application/json']?.schema?.$ref;
+
   for (const [path, pathItem] of Object.entries(content?.paths ?? {})) {
     const segments = path.split('/').filter(Boolean);
     const items = itemDepth(segments);
@@ -43,12 +47,31 @@ export function buildApiModel(content) {
     // one always has its ancestors, named or not.
     const node = nodeFor(segments.slice(0, items * 2));
 
-    // An item path that is the whole path, read with GET, names its resource
-    // by the schema it returns.
-    if (items * 2 === segments.length && pathItem?.get) {
-      const ref = pathItem.get.responses?.['200']?.content?.['application/json']?.schema?.$ref;
-      if (typeof ref === 'string' && node.name === null) node.name = ref.split('/').pop();
+    // An item path that is the whole path names its resource by the schema it
+    // returns — when changed, where it can be, since that is the record
+    // itself; a read can answer with a wrapper around it, as review progress
+    // by section answers with a list.
+    if (items * 2 === segments.length && node.name === null) {
+      const ref = [pathItem?.patch, pathItem?.put, pathItem?.get].map((op) => refOf(op, '200')).find((r) => typeof r === 'string');
+      if (ref) node.name = ref.split('/').pop();
     }
+  }
+
+  // A collection that can be listed and added to, with no item endpoint of
+  // its own, is still a resource, named for what its create returns. Read
+  // after every item path, so one that does have an item is not made twice.
+  for (const [path, pathItem] of Object.entries(content?.paths ?? {})) {
+    const segments = path.split('/').filter(Boolean);
+    const items = itemDepth(segments);
+    if (segments.length !== items * 2 + 1 || isParameter(segments.at(-1)) || !pathItem?.get || !pathItem?.post) continue;
+    const parent = items > 0 ? nodeFor(segments.slice(0, items * 2)) : null;
+    const siblings = parent ? parent.children : resources.filter((r) => r.parent === null);
+    if (siblings.some((r) => r.collection.segment === segments.at(-1))) continue;
+    const node = createResource(parent, segments.at(-1), null);
+    const ref = refOf(pathItem.post, '201');
+    if (typeof ref === 'string') node.name = ref.split('/').pop();
+    resources.push(node);
+    if (parent) parent.children.push(node);
   }
 
   return { servers: serversOf(content), resources };
@@ -56,12 +79,13 @@ export function buildApiModel(content) {
 
 /**
  * @typedef {object} Resource
- * @property {string|null} name - The schema its item endpoint returns; null when none is stated
+ * @property {string|null} name - The schema its item endpoint returns, changed or read; null when none is stated
+ * @property {string|null} eventName - `name` in snake_case, as its events name it: `application_member`
  * @property {Resource|null} parent
  * @property {Resource[]} children
  * @property {{ segment: string }} collection
- * @property {{ parameter: string }} item
- * @property {(part: 'item'|'collection') => string} path - Relative to the server, as OpenAPI writes paths
+ * @property {{ parameter: string|null }} item - No parameter for a collection with no item endpoint
+ * @property {(part: 'item'|'collection') => string|null} path - Relative to the server, as OpenAPI writes paths; null for an item that has no endpoint
  */
 
 /**
@@ -73,13 +97,15 @@ export function buildApiModel(content) {
 function createResource(parent, segment, parameter) {
   return {
     name: null,
+    get eventName() { return this.name ? snakeCase(this.name) : null; },
     parent,
     children: [],
     collection: { segment },
     item: { parameter },
     path(part) {
       const collectionPath = `${this.parent ? this.parent.path('item') : ''}/${this.collection.segment}`;
-      return part === 'collection' ? collectionPath : `${collectionPath}/{${this.item.parameter}}`;
+      if (part === 'collection') return collectionPath;
+      return this.item.parameter ? `${collectionPath}/{${this.item.parameter}}` : null;
     },
   };
 }

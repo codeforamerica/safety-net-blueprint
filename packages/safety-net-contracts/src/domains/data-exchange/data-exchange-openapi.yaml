@@ -14,7 +14,7 @@ info:
     The request carries no PII — adapters retrieve sensitive fields from the
     source domain using `requestingResourceId` and the resource type declared
     in the ExternalService catalog. Results are delivered via the
-    `data_exchange.call.completed` event and queryable via the event log.
+    `data-exchange.call.completed` event and queryable via the event log.
 
     Context passthrough: calling domains attach namespace-keyed metadata to
     a service call (e.g., `PUT /service-calls/{id}/metadata/intake`) before

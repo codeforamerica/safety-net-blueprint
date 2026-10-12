@@ -64,7 +64,7 @@ describe('validateEvents', () => {
   test('subscription to an undeclared channel is an error', () => {
     const doc = stateMachineDoc({
       domain: 'intake',
-      machines: [{ events: [{ type: 'billing.invoice.paid', steps: [] }] }],
+      machines: [{ on: [{ type: 'billing.invoice.paid', steps: [] }] }],
     });
 
     const errors = validateEvents(doc, channels(['intake.application.submitted']));
@@ -86,7 +86,7 @@ describe('validateEvents', () => {
       domain: 'intake',
       machines: [{
         timers: [{ id: 'review_reminder' }],
-        events: [{ type: 'intake.review_reminder', steps: [] }],
+        on: [{ type: 'intake.review_reminder', steps: [] }],
       }],
     });
 
@@ -100,7 +100,7 @@ describe('validateEvents', () => {
       domain: 'intake',
       machines: [{
         timers: [{ id: 'review_reminder' }],
-        events: [{ type: 'ca.intake.review_reminder', steps: [] }],
+        on: [{ type: 'ca.intake.review_reminder', steps: [] }],
       }],
     });
 
@@ -113,7 +113,7 @@ describe('validateEvents', () => {
       domain: 'intake',
       machines: [{
         timers: [{ id: 'review_reminder' }],
-        events: [{ type: 'xintake.review_reminder', steps: [] }],
+        on: [{ type: 'xintake.review_reminder', steps: [] }],
       }],
     });
 
@@ -127,7 +127,7 @@ describe('validateEvents', () => {
       domain: 'intake',
       machines: [{
         timers: [{ id: 'review_reminder' }],
-        events: [{ type: 'ca.intake.other_reminder', steps: [] }],
+        on: [{ type: 'ca.intake.other_reminder', steps: [] }],
       }],
     });
 

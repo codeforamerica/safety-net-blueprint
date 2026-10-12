@@ -26,6 +26,15 @@ machines:
       - id: review_reminder
         description: |
           Fires when an application has been awaiting caseworker review for too long. The callback event (intake.review_reminder) triggers an escalation notice.
+    emits:
+      - id: submitted
+        description: TODO — describe when this event is emitted and who consumes it.
+      - id: closed
+        description: TODO — describe when this event is emitted and who consumes it.
+      - id: withdrawn
+        description: TODO — describe when this event is emitted and who consumes it.
+      - id: review-reminder
+        description: Emitted when an application has been awaiting caseworker review for too long.
     actions:
       - id: submit
         description: Formally submits a draft application, starting the regulatory processing clock.
@@ -38,12 +47,13 @@ machines:
               value: $now
               description: Record the submission timestamp (regulatory clock start).
           - emit:
-              type: intake.application.submitted
+              event: submitted
               subject: $object.id
               data:
                 id: $object.id
                 programsAppliedFor: $object.programsAppliedFor
               description: Triggers eligibility screening, caseworker task creation, and confirmation notice.
+              type: intake.application.submitted
           - call: requestTimer
             with:
               timerId: review_reminder
@@ -73,6 +83,7 @@ machines:
           to: closed
         steps:
           - emit:
+              event: closed
               type: intake.application.closed
       - id: withdraw
         description: Withdraws the application at the household's request.
@@ -88,8 +99,9 @@ machines:
               - case_worker
         steps:
           - emit:
+              event: withdrawn
               type: intake.application.withdrawn
-    events:
+    "on":
       - type: intake.review_reminder
         description: |
           Escalates an application that has been awaiting caseworker review for too long. Fired by the scheduling service when the review_reminder timer expires.
@@ -97,8 +109,9 @@ machines:
           from: submitted
         steps:
           - emit:
-              type: intake.application.review-reminder
+              event: review-reminder
               description: Notify supervisors that this application needs immediate attention.
+              type: intake.application.review-reminder
 $defs:
   CloseRequest:
     type: object

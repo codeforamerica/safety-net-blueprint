@@ -101,8 +101,9 @@ export function authContext(callerId, callerRoles = []) {
  */
 export function emitEvent({ domain, object, action, resourceId, subject, source, data = null, callerId = null, callerRoles = [], traceparent = null, causationid = null, now = null, store }) {
   const timestamp = now || new Date().toISOString();
-  const normalizedDomain = domain.replace(/-/g, '_');
-  const normalizedObject = object.replace(/-/g, '_');
+  // The domain as declared, hyphens and all; the resource already in snake_case.
+  const normalizedDomain = domain;
+  const normalizedObject = object;
   // An empty domain would produce ".application.created" — a CloudEvents type
   // with a leading dot and no domain, which nothing can subscribe to. A spec
   // declaring no localhost server URL has no domain prefix to contribute, so

@@ -127,8 +127,10 @@ $defs:
                        POST /{resource}/{id}/{actionId} endpoint.
                        Guards are evaluated with OR semantics across clauses: the caller
                        passes if ANY clause satisfies (actors AND conditions within a clause).
-        events       — reactions to named domain events arriving on a subscription.
+        on           — reactions to named domain events arriving on a subscription.
                        Array — one entry per subscribed event name.
+        emits        — the events this machine's resource sends, declared once each
+                       by short name; a step sends one with `emit: <name>`.
         guards       — named conditions scoped to this machine; take precedence over
                        domain-level guards with the same id.
         procedures   — named step sequences scoped to this machine; take precedence over
@@ -159,11 +161,20 @@ $defs:
         description: Actor- or system-triggered operations. Each becomes a POST /{resource}/{id}/{actionId} endpoint.
         items:
           $ref: "#/$defs/Transition"
-      events:
+      on:
         type: array
-        description: Event subscriptions — automatic reactions to external domain events arriving on a subscription.
+        description: Event subscriptions — automatic reactions to domain events arriving on a subscription.
         items:
           $ref: "#/$defs/OnEvent"
+      emits:
+        type: array
+        description: >
+          The events this machine's resource sends, beside the created, updated
+          and deleted events every resource sends. Each is named here once, and
+          its full name is `{domain}.{resource}.{id}` — `transcription.transcript.paused`.
+          A step sends one by its id: `emit: paused`.
+        items:
+          $ref: "#/$defs/EmittedEvent"
       timers:
         type: array
         description: >
@@ -236,7 +247,7 @@ $defs:
   # handler inherit those bindings automatically.
   #
   # Example:
-  #   events:
+  #   on:
   #     - name: workflow.task.claimed
   #       context:
   #         - reviewTask:
@@ -657,20 +668,66 @@ $defs:
           value: {description: Value expression ($now, $caller.field, $object.field, $request.field, or a literal).}
           description: {type: string}
 
-  # EmitStep.emit is typed as EventBase from schemas/events.yaml.
-  # EventBase defines: type (required), subject, causationid, data, description.
-  # The emit.type value must match a channel address in the domain's eventsSpec AsyncAPI file.
-  # This is enforced by validate-events.js at validation time.
+  # An emit names an event of its own machine by id — `emit: paused`, or
+  # `emit: { event: paused, data: ... }` — and resolve gives it its full type.
+  # A step outside any machine, in a domain-level procedure, has no resource to
+  # name an event after, so it names one in full with `type`.
   EmitStep:
     type: object
-    description: Emit a domain event. The type must match a channel in the domain's eventsSpec AsyncAPI file.
+    description: Send an event — one its machine declares under emits, by id.
     required: [emit]
     additionalProperties: false
     properties:
       emit:
-        allOf:
-          - $ref: 'https://blueprint.codeforamerica.org/base/schemas/events.yaml#/$defs/EventBase'
-        unevaluatedProperties: false
+        oneOf:
+          - type: string
+            pattern: "^[a-z][a-z0-9_-]*$"
+            description: The id of an event the machine declares under emits.
+          - type: object
+            additionalProperties: false
+            anyOf:
+              - required: [event]
+              - required: [type]
+            properties:
+              event:
+                type: string
+                pattern: "^[a-z][a-z0-9_-]*$"
+                description: The id of an event the machine declares under emits.
+              type:
+                type: string
+                description: >
+                  The full event type. Written by resolve for an event named by
+                  id; written by hand only outside any machine.
+              subject:
+                type: string
+                description: The entity the event is about. Defaults to the emitting resource's id.
+              causationid:
+                type: string
+                description: Value expression for the id of the event that caused this one.
+              data:
+                type: object
+                additionalProperties: true
+                description: The event's data. Field values are value expressions resolved at emit time.
+              description:
+                type: string
+
+  EmittedEvent:
+    type: object
+    description: An event a machine's resource sends.
+    required: [id]
+    additionalProperties: false
+    properties:
+      id:
+        type: string
+        pattern: "^[a-z][a-z0-9_-]*$"
+        description: Its short name, e.g. `paused`. The full name is `{domain}.{resource}.{id}`.
+      description:
+        type: string
+        description: What happened, for a subscriber.
+      schema:
+        type: object
+        additionalProperties: true
+        description: JSON Schema for the event's data. Absent when the event carries none.
 
   CallStep:
     type: object

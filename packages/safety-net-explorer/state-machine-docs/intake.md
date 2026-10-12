@@ -26,7 +26,7 @@ Domain: `intake` | API: [intake-openapi.yaml](../../../contracts/domains/intake/
 - **submit-for-approval** — System routes the application to supervisor review when state-configured approval thresholds are met
   - Actors: system only
   - Transition: `under_review` → `pending_approval`
-  - Emit: `intake.determination.approval_needed` — triggers supervisor approval task creation; states configure approval thresholds via rules overlay
+  - Emit: `intake.application.approval_needed` — triggers supervisor approval task creation; states configure approval thresholds via rules overlay
     - Subscribed by: [Workflow/Task](workflow.md)
 - **approve-determination** — Supervisor approves the determination; closes the application and triggers NOA and case creation
   - Actors: supervisor
@@ -37,7 +37,7 @@ Domain: `intake` | API: [intake-openapi.yaml](../../../contracts/domains/intake/
 - **reject-determination** — Supervisor rejects the determination and returns the application to the caseworker for revision
   - Actors: supervisor
   - Transition: `pending_approval` → `under_review`
-  - Emit: `intake.determination.rejected` — signals the determination was rejected; workflow returns the caseworker task to in_progress via return-to-worker
+  - Emit: `intake.application.determination_rejected` — signals the determination was rejected; workflow returns the caseworker task to in_progress via return-to-worker
     - Subscribed by: [Workflow/Task](workflow.md)
 - **close** — Marks a reviewed application as closed after all determinations are complete
   - Actors: case_worker, supervisor, or system
@@ -62,32 +62,32 @@ Domain: `intake` | API: [intake-openapi.yaml](../../../contracts/domains/intake/
   - Look up: application (from `event.subject`)
   - Create electronic Verifications per member (identity, citizenship, immigration) and per income source (income), and document Verifications at the household level for the given program. Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.
   - Create electronic Verifications per member (identity, citizenship, immigration) and per income source (income), and document Verifications at the household level for the given program. Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.
-- **`data_exchange.call.completed`**
+- **`data-exchange.call.completed`**
   - Look up: verification (from `event.data.metadata.intake.verificationId`)
   - Transition the Verification based on the service call result; on inconclusive/partial/error, creates a document fallback per ex parte rules (42 CFR § 435.911)
-- **`scheduling.appointment.scheduled`**
+- **`scheduling.appointment.created`**
   - Append the appointmentId to Interview.appointments when an appointment is scheduled against an interview subject. Non-interview appointments (subjectType != interview) are ignored.
-- **`document_management.document_version.uploaded`**
+- **`document-management.document_version.created`**
   - Look up: verification (from `event.data.metadata.intake.verificationId`)
   - Satisfy the Verification and record the uploaded document version as evidence; trigger only fires when metadata.intake.verificationId resolves to a known Verification
 - **`eligibility.determination.created`**
   - For each:
     - For each `$member.programsAppliedFor`:
       - `POST eligibility/determinations/decisions`
-- **`eligibility.application.decision_completed`**
+- **`eligibility.decision.completed`**
   - Look up: member (from `event.data.memberId`)
   - Write eligibility outcome to ApplicationMember.programDeterminations. Informational write-back only — does not trigger application close. Medicaid RTE results may arrive before intake closes; SNAP results typically arrive after.
-- **`eligibility.application.determination_completed`**
+- **`eligibility.determination.completed`**
   - If `false`:
     - Route to supervisor approval when state-configured thresholds are met; states replace this condition with their CEL threshold expression via rules overlay
   - Else:
     - Close the application when all determinations are in and no supervisor approval is required
-- **`eligibility.application.expedited`**
+- **`eligibility.determination.expedited`**
   - Set isExpedited on the application when eligibility screening confirms expedited criteria are met
-- **`client_management.person.match_resolved`**
+- **`client-management.person.match_resolved`**
   - Look up: member (from `event.subject`)
   - Set personId and personMatch on ApplicationMember; personId is set only on confirmed matches
-- **`intake.member_income.created`**
+- **`intake.income.created`**
   - Look up: member (from `event.subject`), application (from `$member.applicationId`)
   - If `application is not null and application.status is not "draft" and application.status is not "withdrawn" and application.status is not "closed"`:
     - If `has(application.programsAppliedFor) and "snap" in application.programsAppliedFor`:

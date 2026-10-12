@@ -7,7 +7,7 @@ import { hasConfigManagedResources } from '../config-registry.js';
 import { applyEffects, applySteps } from '../state-machine-engine.js';
 import { initializeSlaInfo } from '../sla-engine.js';
 import { executeProcedures, resolveContextLayers } from './procedure-runner.js';
-import { mergeByPrecedence, buildInlineRules, singularOf } from '../collection-utils.js';
+import { mergeByPrecedence, buildInlineRules, eventDomainOf } from '../collection-utils.js';
 import { emitEvent } from '../emit-event.js';
 import { matchAndPopHttp } from '../mock-stub-engine.js';
 import { extractCallerRoles, callerHeader, traceparentOf } from '../auth-context.js';
@@ -33,6 +33,16 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const httpStub = matchAndPopHttp(request.method, pathname);
       if (httpStub) {
         return Response.json(httpStub.response?.body ?? {}, { status: httpStub.response?.status ?? 200 });
+      }
+
+      // A POST to a path with no list and no item is a call, not a create — an
+      // adapter's evaluate endpoint, say. The mock cannot work out its answer
+      // and keeps nothing for it; a stub stands in for it.
+      if (endpoint.isCall) {
+        return Response.json({
+          code: 'NOT_IMPLEMENTED',
+          message: `${request.method} ${pathname} is a call the mock cannot answer itself. Register an HTTP stub for it: POST /mock/stubs/http with match { method: "${request.method}", url: "${pathname}" }.`,
+        }, { status: 501 });
       }
 
       // A sub-resource POST passes its parent path params already merged in.
@@ -91,12 +101,11 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
       const callerId = callerHeader(request, 'x-caller-id');
       const now = new Date().toISOString();
       const traceparent = traceparentOf(request);
-      // A spec with no localhost server URL has no domain prefix, and
-      // prefixing with an empty string produced ".application.created" — a
-      // malformed CloudEvents type with a leading dot. Better to emit an
-      // unprefixed type than a broken one (#448).
-      const domain = (apiMetadata.serverBasePath ?? '').replace(/^\//, '');
-      const object = singularOf(endpoint.collectionName);
+      // Named for the domain as declared and the resource the create acts on:
+      // `intake.application_member.created`. A path that is no resource's
+      // emits none.
+      const domain = eventDomainOf(apiMetadata);
+      const object = endpoint.resource?.eventName ?? null;
 
       const onCreate = machine?.triggers?.onCreate ?? stateMachine?.onCreate;
 
@@ -174,7 +183,7 @@ export function createCreateHandler(apiMetadata, endpoint, baseUrl, stateMachine
 
       // Auto-emit created event with full resource snapshot (after effects applied)
       const callerRoles = extractCallerRoles(request);
-      try {
+      if (object) try {
         emitEvent({
         store,
           domain,

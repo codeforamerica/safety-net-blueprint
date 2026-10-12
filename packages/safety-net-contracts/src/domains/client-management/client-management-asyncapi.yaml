@@ -14,8 +14,8 @@ info:
     time via the x-event-type-prefix overlay config.
 
 channels:
-  client_management.person.match_resolved:
-    address: client_management.person.match_resolved
+  client-management.person.match_resolved:
+    address: client-management.person.match_resolved
     messages:
       personMatchResolved:
         $ref: '#/components/messages/PersonMatchResolvedMessage'
@@ -23,7 +23,7 @@ channels:
 components:
   messages:
     PersonMatchResolvedMessage:
-      name: client_management.person.match_resolved
+      name: client-management.person.match_resolved
       summary: Emitted once per applying member after Client Management attempts to match against existing person records.
       payload:
         $ref: '#/components/schemas/PersonMatchResolvedEvent'
@@ -37,7 +37,7 @@ components:
           properties:
             type:
               type: string
-              const: client_management.person.match_resolved
+              const: client-management.person.match_resolved
             data:
               $ref: '#/components/schemas/PersonMatchResolvedData'
 

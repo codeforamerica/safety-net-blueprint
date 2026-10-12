@@ -187,7 +187,7 @@ function buildModel(type, content) {
     machines: (content.machines ?? []).map((machine) => ({
       ...machine,
       actions: normalizeStepHolders(machine.actions),
-      events: normalizeStepHolders(machine.events),
+      on: normalizeStepHolders(machine.on),
       procedures: normalizeStepHolders(machine.procedures),
     })),
     procedures: normalizeStepHolders(content.procedures),
@@ -282,6 +282,8 @@ function normalizeStep(step) {
   // set and emit carry their own description inside the body, so spread last.
   const kind = Object.keys(step)[0] ?? 'unknown';
   const body = step[kind];
+  // `emit: paused` names an event of the machine by id.
+  if (kind === 'emit' && typeof body === 'string') return { kind, event: body, children: [] };
   return {
     kind,
     ...(body && typeof body === 'object' && !Array.isArray(body) ? body : {}),

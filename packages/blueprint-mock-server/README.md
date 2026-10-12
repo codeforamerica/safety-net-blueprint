@@ -227,7 +227,7 @@ The mock server supports event stubs for testing event-driven behavior without a
 
 ```
 POST /mock/stubs/events
-{ "on": "data_exchange.service_call.created", "response": { "type": "data_exchange.call.completed", "data": { "result": "conclusive" } } }
+{ "on": "data-exchange.external_service_call.created", "response": { "type": "data-exchange.call.completed", "data": { "result": "conclusive" } } }
 ```
 
 Stubs are checked against [`schemas/stubs-schema.json`](schemas/stubs-schema.json). See the [mock server guide](../../docs/guides/mock-server.md#event-stubs) for both kinds of stub.

@@ -38,7 +38,8 @@ platform-state-machine.yaml          domain-state-machine.yaml
                                       │       ├── initialState: state on creation
                                       │       ├── context:      named data bindings
                                       │       ├── actions:      actor/system-triggered state changes
-                                      │       ├── events:       event subscriptions
+                                      │       ├── on:           event subscriptions
+                                      │       ├── emits:        events its resource sends
                                       │       ├── guards:       conditions scoped to this machine
                                       │       └── procedures:   step sequences scoped to this machine
                                       ├── guards:     conditions shared across all machines
@@ -77,7 +78,7 @@ Declares what domain objects are, what states they can be in, and who can act on
 
 ### Execution layer
 
-Declares what happens when events fire: which events a machine subscribes to, what procedures run in response, and what steps those procedures execute. This is the `events:` and `procedures:` sections.
+Declares what happens when events fire: which events a machine subscribes to, what procedures run in response, and what steps those procedures execute. This is the `on:`, `emits:` and `procedures:` sections.
 
 ### Expression layer
 
@@ -177,10 +178,12 @@ context:
 
 ## Event model
 
-All machine reactions are named event subscriptions in the `events:` section. Object creation, field changes, and timer callbacks use the same event subscription model as cross-domain events.
+A machine reacts to events in its `on:` section, and declares the events its resource sends in `emits:`. The names follow XState's: `on` for what a machine receives, `emit` for what it sends.
+
+Reactions are named event subscriptions. Object creation, field changes, and timer callbacks use the same event subscription model as cross-domain events.
 
 ```yaml
-events:
+on:
   - name: intake.application.submitted
     steps:
       - call: createProgramVerifications
@@ -192,6 +195,25 @@ events:
 ```
 
 All events are CloudEvents. The `name:` field is the CloudEvents `type` attribute.
+
+Every event is named `{domain}.{resource}.{event}`: the domain as declared, the resource as its schema is named in snake_case, and the event's own name. A resource's created, updated and deleted events need no declaring. Every other event a resource sends is declared once in its machine's `emits:`, with the shape of its data, and a step sends it by that name:
+
+```yaml
+emits:
+  - id: claimed
+    description: Records the claim and who claimed the task.
+    schema:
+      type: object
+      required: [assignedToId]
+      properties:
+        assignedToId: {type: string, format: uuid}
+actions:
+  - id: claim
+    steps:
+      - emit: {event: claimed, data: {assignedToId: $caller.id}}   # workflow.task.claimed
+```
+
+An event is always named for the resource that sends it. A step with no data to send writes just `emit: claimed`.
 
 ## Timer design
 
@@ -223,7 +245,7 @@ timers:
   - id: snap_deadline
     description: 30-calendar-day SNAP processing deadline
 
-events:
+on:
   - name: intake.snap_deadline
     steps:
       - call: {POST: intake/applications/$this.subject/auto-deny, body: {reason: snap_deadline_exceeded}}
@@ -367,7 +389,7 @@ Removal of special-cased trigger types (`onCreate:`, `onUpdate:`, `onTimer:`) is
 
 **Options:**
 - **(A)** Keep `triggers:` as a separate block alongside `events:` — simpler to read for creation/update cases, but maintains two parallel models and hides lifecycle reactions from the event log
-- **(B) ✓** Fully event-driven — `onCreate:`, `onUpdate:`, and `onTimer:` become named event subscriptions in `events:`; all machine reactions visible in one place
+- **(B) ✓** Fully event-driven — `onCreate:`, `onUpdate:`, and `onTimer:` become named event subscriptions in `events:` (since renamed `on:`); all machine reactions visible in one place
 
 **Decision:** Fully event-driven (B). The `triggers:` block is removed. `onCreate:` becomes a subscription to the domain's own creation event (e.g., `workflow.task.created`). `onUpdate:` becomes a subscription to the domain's update event (e.g., `workflow.task.updated`) with a CEL condition filtering on changed fields. `onTimer:` is replaced by the timer-as-event pattern (Decision 5).
 

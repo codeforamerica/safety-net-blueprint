@@ -185,7 +185,7 @@ export function generateOverviewHtml(allStateMachines, outputDir, eventIndex, hu
       const multiMachine = sm.machines.length > 1;
       const anchor = multiMachine ? `#${machine.object.toLowerCase()}` : '';
       const actionCount = (machine.actions || []).length;
-      const eventCount = (machine.events || []).length;
+      const eventCount = (machine.on || []).length;
       const badges = (machine.states || []).map(s => stateBadge(s.id)).join(' ');
       return `<tr>
         <td style="white-space:nowrap;"><a href="${sm.domain}.html${anchor}" style="font-weight:600;color:${COLORS.darkBlue};">${titleCase(sm.domain)}</a></td>
@@ -300,8 +300,8 @@ export function generateHtml(sm, outputDir, eventIndex, allStateMachines, hubHre
     })() : '';
 
     // Events table
-    const eventsHtml = (machine.events || []).length ? (() => {
-      const rows = machine.events.map(sub => {
+    const eventsHtml = (machine.on || []).length ? (() => {
+      const rows = machine.on.map(sub => {
         const emitter = eventIndex?.emitters[sub.type];
         const emitterLink = emitter
           ? `<a href="${emitter.domain}.html">${titleCase(emitter.domain)}/${emitter.object}</a>`

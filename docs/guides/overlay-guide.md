@@ -241,7 +241,7 @@ State machine files use a top-level `machines:` array. Use a filter expression t
 - target: $.machines[?(@.object == 'Task')].events
   description: React to county transfer events
   append:
-    - name: case_management.case.county_transferred
+    - name: case-management.case.county_transferred
       steps:
         - call: assignToQueue
 ```

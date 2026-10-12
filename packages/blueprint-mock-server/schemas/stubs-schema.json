@@ -13,7 +13,7 @@
           "description": "The CloudEvents type of the event to answer.",
           "type": "string",
           "minLength": 1,
-          "examples": ["data_exchange.service_call.created"]
+          "examples": ["data-exchange.external_service_call.created"]
         },
         "match": {
           "description": "Dot paths into the triggering event's envelope, each with the value it must equal. Omitted or empty matches any event of that type.",

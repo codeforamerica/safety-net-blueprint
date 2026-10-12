@@ -17,7 +17,7 @@
  * caught while a record only the machine may write, a pause entry, is allowed.
  */
 
-import { deriveCollectionName, singularOf } from './collection-utils.js';
+import { deriveCollectionName } from './collection-utils.js';
 import { emitEvent } from './emit-event.js';
 import { validate } from './validator.js';
 import { buildChanges } from './handlers/update-handler.js';
@@ -121,10 +121,12 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
   function apply({ method, path, body = {} }, { caller, traceparent = null, causationid = null, now, runAction } = {}) {
     const resolved = resolve(method, path);
     const collection = collectionOf(resolved.resource);
-    const event = (action, resourceId, data) => emitEvent({
+    // Named for the resource, as a client's write is: a machine's write is
+    // the same event.
+    const event = (action, resourceId, data) => resolved.resource.eventName && emitEvent({
       store,
       domain: resolved.api.domain,
-      object: singularOf(collection),
+      object: resolved.resource.eventName,
       action,
       resourceId,
       source: `/${resolved.api.base.join('/')}`,

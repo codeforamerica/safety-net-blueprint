@@ -14,8 +14,8 @@ info:
     time via the x-event-type-prefix overlay config.
 
 channels:
-  scheduling.appointment.scheduled:
-    address: scheduling.appointment.scheduled
+  scheduling.appointment.created:
+    address: scheduling.appointment.created
     messages:
       appointmentScheduled:
         $ref: '#/components/messages/AppointmentScheduledMessage'
@@ -35,7 +35,7 @@ channels:
 components:
   messages:
     AppointmentScheduledMessage:
-      name: scheduling.appointment.scheduled
+      name: scheduling.appointment.created
       summary: Emitted when an appointment is booked; intake subscribes to store the appointment reference on the application.
       payload:
         $ref: '#/components/schemas/AppointmentScheduledEvent'
@@ -61,7 +61,7 @@ components:
           properties:
             type:
               type: string
-              const: scheduling.appointment.scheduled
+              const: scheduling.appointment.created
             data:
               $ref: '#/components/schemas/AppointmentScheduledData'
 

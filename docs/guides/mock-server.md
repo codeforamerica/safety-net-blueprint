@@ -134,7 +134,7 @@ curl -X POST http://localhost:1080/platform/events \
   -H "Content-Type: application/json" \
   -d '{
     "specversion": "1.0",
-    "type": "org.codeforamerica.safety-net-blueprint.data_exchange.call.completed",
+    "type": "org.codeforamerica.safety-net-blueprint.data-exchange.call.completed",
     "source": "/data-exchange",
     "subject": "<service-call-id>",
     "data": { "result": "conclusive", "serviceType": "fdsh_ssa" }
@@ -153,10 +153,10 @@ When any event fires, the engine scans registered stubs in order (FIFO) and pops
 curl -X POST http://localhost:1080/mock/stubs/events \
   -H "Content-Type: application/json" \
   -d '{
-    "on": "data_exchange.service_call.created",
+    "on": "data-exchange.external_service_call.created",
     "match": { "data.serviceType": "fdsh_ssa" },
     "response": {
-      "type": "data_exchange.call.completed",
+      "type": "data-exchange.call.completed",
       "data": { "result": "inconclusive" }
     }
   }'
@@ -167,7 +167,7 @@ curl -X POST http://localhost:1080/mock/stubs/events \
 - `response.type` — the event type to fire when matched
 - `response.data` — merged with the trigger event's data; only specify what changes
 
-The response envelope is built by merging: an entity ID derived from the trigger's `subject` (e.g., `serviceCallId`), the trigger event's data, then `response.data` overrides. The fired event's `causationid` is set to the trigger event's `id`, so a scenario can fetch the response for a specific trigger with `GET /platform/events?causationid=<trigger event id>`.
+The response envelope is built by merging: an entity ID derived from the trigger's `subject`, named for the trigger's resource (e.g., `externalServiceCallId`), the trigger event's data, then `response.data` overrides. The fired event's `causationid` is set to the trigger event's `id`, so a scenario can fetch the response for a specific trigger with `GET /platform/events?causationid=<trigger event id>`.
 
 **Stub IDs** are human-readable: `service_call.created-1`, `service_call.created-2`, etc.
 

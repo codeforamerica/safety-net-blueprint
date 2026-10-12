@@ -107,7 +107,7 @@
           <td><strong style="color:#2B1A78;">submit-for-approval</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-submit-for-approval" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">System routes the application to supervisor review when state-configured approval thresholds are met</span></td>
           <td style="white-space:nowrap;"><span style="font-size:12px;">System</span></td>
           <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">under_review</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending_approval</span></span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-intake.determination.approval_needed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.determination.approval_needed</a> — triggers supervisor approval task creation; states configure approval thresholds via rules overlay</li></ul></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-intake.application.approval_needed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.application.approval_needed</a> — triggers supervisor approval task creation; states configure approval thresholds via rules overlay</li></ul></td>
         </tr><tr id="action-approve-determination">
           <td><strong style="color:#2B1A78;">approve-determination</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-approve-determination" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Supervisor approves the determination; closes the application and triggers NOA and case creation</span></td>
           <td style="white-space:nowrap;"><span style="font-size:12px;">Supervisor</span></td>
@@ -117,7 +117,7 @@
           <td><strong style="color:#2B1A78;">reject-determination</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-reject-determination" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Supervisor rejects the determination and returns the application to the caseworker for revision</span></td>
           <td style="white-space:nowrap;"><span style="font-size:12px;">Supervisor</span></td>
           <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">pending_approval</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #ffd280;background:#FFF3E0;color:#8a5a00;">under_review</span></span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-intake.determination.rejected" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.determination.rejected</a> — signals the determination was rejected; workflow returns the caseworker task to in_progress via return-to-worker</li></ul></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Emit <a href="../event-catalog/index.html#event-intake.application.determination_rejected" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">intake.application.determination_rejected</a> — signals the determination was rejected; workflow returns the caseworker task to in_progress via return-to-worker</li></ul></td>
         </tr><tr id="action-close">
           <td><strong style="color:#2B1A78;">close</strong> <a href="../api-reference/intake.html#op-post-applications-applicationId-close" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Marks a reviewed application as closed after all determinations are complete</span></td>
           <td style="white-space:nowrap;"><span style="font-size:12px;">Case Worker, Supervisor, System</span></td>
@@ -151,15 +151,15 @@
           <td><a href="intake.html">Intake/Application</a></td>
           <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Create electronic Verifications per member (identity, citizenship, immigration) and per income source (income), and document Verifications at the household level for the given program. Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.</li><li>Create electronic Verifications per member (identity, citizenship, immigration) and per income source (income), and document Verifications at the household level for the given program. Residency is a SNAP-required household-level obligation (7 CFR § 273.2(f)(1)(iii)) — no electronic check exists, so it is created as document-type.</li></ul></td>
         </tr><tr>
-          <td><code>data_exchange.call.completed</code></td>
+          <td><code>data-exchange.call.completed</code></td>
           <td><span style="color:#999;font-size:11px;">unknown</span></td>
           <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Transition the Verification based on the service call result; on inconclusive/partial/error, creates a document fallback per ex parte rules (42 CFR § 435.911)</li></ul></td>
         </tr><tr>
-          <td><code>scheduling.appointment.scheduled</code></td>
+          <td><code>scheduling.appointment.created</code></td>
           <td><span style="color:#999;font-size:11px;">unknown</span></td>
           <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Append the appointmentId to Interview.appointments when an appointment is scheduled against an interview subject. Non-interview appointments (subjectType != interview) are ignored.</li></ul></td>
         </tr><tr>
-          <td><code>document_management.document_version.uploaded</code></td>
+          <td><code>document-management.document_version.created</code></td>
           <td><span style="color:#999;font-size:11px;">unknown</span></td>
           <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Satisfy the Verification and record the uploaded document version as evidence; trigger only fires when metadata.intake.verificationId resolves to a known Verification</li></ul></td>
         </tr><tr>
@@ -167,23 +167,23 @@
           <td><span style="color:#999;font-size:11px;">unknown</span></td>
           <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>For each:<ul style="margin:2px 0 0 14px;"><li>For each <code>$member.programsAppliedFor</code>:<ul style="margin:2px 0 0 14px;"><li>{"POST":"eligibility/determinations/decisions","body":{"determinationId":"$this.subject","applicationId":"$this.data.applicationId","memberId":"$member.id","program":"$program","status":"pending"}}</li></ul></li></ul></li></ul></td>
         </tr><tr>
-          <td><code>eligibility.application.decision_completed</code></td>
+          <td><code>eligibility.decision.completed</code></td>
           <td><a href="eligibility.html">Eligibility/Decision</a></td>
           <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Write eligibility outcome to ApplicationMember.programDeterminations. Informational write-back only — does not trigger application close. Medicaid RTE results may arrive before intake closes; SNAP results typically arrive after.</li></ul></td>
         </tr><tr>
-          <td><code>eligibility.application.determination_completed</code></td>
+          <td><code>eligibility.determination.completed</code></td>
           <td><a href="eligibility.html">Eligibility/Determination</a></td>
           <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>false</code>:<ul style="margin:2px 0 0 14px;"><li>Route to supervisor approval when state-configured thresholds are met; states replace this condition with their CEL threshold expression via rules overlay</li></ul><br>Else:<ul style="margin:2px 0 0 14px;"><li>Close the application when all determinations are in and no supervisor approval is required</li></ul></li></ul></td>
         </tr><tr>
-          <td><code>eligibility.application.expedited</code></td>
+          <td><code>eligibility.determination.expedited</code></td>
           <td><a href="eligibility.html">Eligibility/Determination</a></td>
           <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Set isExpedited on the application when eligibility screening confirms expedited criteria are met</li></ul></td>
         </tr><tr>
-          <td><code>client_management.person.match_resolved</code></td>
+          <td><code>client-management.person.match_resolved</code></td>
           <td><span style="color:#999;font-size:11px;">unknown</span></td>
           <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Set personId and personMatch on ApplicationMember; personId is set only on confirmed matches</li></ul></td>
         </tr><tr>
-          <td><code>intake.member_income.created</code></td>
+          <td><code>intake.income.created</code></td>
           <td><span style="color:#999;font-size:11px;">unknown</span></td>
           <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>application is not null and application.status is not "draft" and application.status is not "withdrawn" and application.status is not "closed"</code>:<ul style="margin:2px 0 0 14px;"><li>If <code>has(application.programsAppliedFor) and "snap" in application.programsAppliedFor</code>:<ul style="margin:2px 0 0 14px;"><li>{"POST":"intake/applications/verifications","body":{"applicationId":"$application.id","sourceId":"$this.data.id","sourceType":"income","category":"income","verificationType":"electronic"}}</li></ul></li></ul></li></ul></td>
         </tr><tr>

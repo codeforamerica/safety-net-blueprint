@@ -377,10 +377,10 @@ export function generate(sm, outputDir, eventIndex, allStateMachines) {
       lines.push('');
     }
 
-    if (machine.events?.length) {
+    if (machine.on?.length) {
       lines.push('### Event subscriptions');
       lines.push('');
-      for (const sub of machine.events) {
+      for (const sub of machine.on) {
         lines.push(renderEventSubLine(sub, sm, machine, eventIndex, allStateMachines));
       }
       lines.push('');

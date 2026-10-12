@@ -28,7 +28,7 @@ sequenceDiagram
     Intake->>Intake: create Interview record
 
     Caseworker->>Scheduling: schedule appointment (subjectType: interview)
-    Scheduling-->>Intake: scheduling.appointment.scheduled
+    Scheduling-->>Intake: scheduling.appointment.created
     Intake->>Intake: append appointmentId to Interview.appointments
 
     DocMgmt-->>Intake: document-management.document.verified
