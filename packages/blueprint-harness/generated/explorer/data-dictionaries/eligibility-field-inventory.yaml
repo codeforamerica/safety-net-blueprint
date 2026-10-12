@@ -18,7 +18,7 @@ determination.decisions[].id: { type: uuid }
 determination.decisions[].determinationId: { type: uuid, relationship: Determination }
 determination.decisions[].program: { type: enum, values: [snap, medicaid, chip, tanf] }
 determination.decisions[].eligible: { type: boolean }
-determination.decisions[].reason: { type: string }
-determination.decisions[].benefitAmount: { type: number }
+determination.decisions[].reason: { type: [string, 'null'] }
+determination.decisions[].benefitAmount: { type: [number, 'null'] }
 determination.decisions[].links: { type: object }
 determination.decisions[].links.determination: { type: string }

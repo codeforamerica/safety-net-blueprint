@@ -105,17 +105,15 @@ components:
             - inconclusive
             - partial
         metadata:
-          type: object
+          type: [object, "null"]
           description: Domain-keyed metadata echoed back from the service call record. Enables calling domains to resume without querying the service call.
           additionalProperties:
             type: object
             additionalProperties: true
-          nullable: true
         serviceResult:
-          type: object
+          type: [object, "null"]
           description: Service-type-specific result payload. Polymorphic on `serviceType`.
           additionalProperties: true
-          nullable: true
 
     # subject: serviceCallId
     CallFailedEvent:
@@ -154,11 +152,10 @@ components:
             - service_error
             - authentication_error
         metadata:
-          type: object
+          type: [object, "null"]
           additionalProperties:
             type: object
             additionalProperties: true
-          nullable: true
 
     # subject: serviceCallId
     CallSubmittedEvent:
@@ -189,11 +186,10 @@ components:
           x-relationship:
             resource: Polymorphic
         metadata:
-          type: object
+          type: [object, "null"]
           additionalProperties:
             type: object
             additionalProperties: true
-          nullable: true
 
     # subject: serviceCallId
     CallTimedOutEvent:
@@ -224,8 +220,7 @@ components:
           x-relationship:
             resource: Polymorphic
         metadata:
-          type: object
+          type: [object, "null"]
           additionalProperties:
             type: object
             additionalProperties: true
-          nullable: true

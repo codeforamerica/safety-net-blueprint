@@ -305,6 +305,22 @@ test('Validator Tests', async (t) => {
     console.log('  ✓ Detects additional properties with field name in error');
   });
 
+  await t.test('validate - names a field a closed, composed schema does not declare', () => {
+    // allOf with unevaluatedProperties: false, as the contracts close their
+    // write schemas. The draft-07 validator ignored the keyword entirely.
+    const schema = {
+      allOf: [{ type: 'object', properties: { name: { type: 'string' } } }],
+      unevaluatedProperties: false
+    };
+
+    const result = validate({ name: 'John', provider: 'none' }, schema, 'unevaluated-props');
+
+    assert.strictEqual(result.valid, false);
+    assert.ok(result.errors.some(e => e.field === 'provider' && e.message.includes('additional property')));
+
+    console.log('  ✓ Names a field a closed, composed schema does not declare');
+  });
+
   // ==========================================================================
   // allOf / anyOf / oneOf Handling
   // ==========================================================================

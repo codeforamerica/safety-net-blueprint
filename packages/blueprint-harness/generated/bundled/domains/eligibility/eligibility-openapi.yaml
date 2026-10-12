@@ -264,9 +264,10 @@ paths:
                           readOnly: true
                           description: Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
                         determinedAt:
-                          type: string
+                          type:
+                            - string
+                            - "null"
                           format: date-time
-                          nullable: true
                           readOnly: true
                           description: Timestamp when the determination was finalized. Null until complete.
                         createdAt:
@@ -400,9 +401,10 @@ paths:
                     readOnly: true
                     description: Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
                   determinedAt:
-                    type: string
+                    type:
+                      - string
+                      - "null"
                     format: date-time
-                    nullable: true
                     readOnly: true
                     description: Timestamp when the determination was finalized. Null until complete.
                   createdAt:
@@ -508,9 +510,10 @@ paths:
                     readOnly: true
                     description: Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
                   determinedAt:
-                    type: string
+                    type:
+                      - string
+                      - "null"
                     format: date-time
-                    nullable: true
                     readOnly: true
                     description: Timestamp when the determination was finalized. Null until complete.
                   createdAt:
@@ -611,9 +614,10 @@ paths:
                     readOnly: true
                     description: Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
                   determinedAt:
-                    type: string
+                    type:
+                      - string
+                      - "null"
                     format: date-time
-                    nullable: true
                     readOnly: true
                     description: Timestamp when the determination was finalized. Null until complete.
                   createdAt:
@@ -752,13 +756,15 @@ paths:
                           type: boolean
                           description: Whether the household is eligible for this program.
                         reason:
-                          type: string
-                          nullable: true
+                          type:
+                            - string
+                            - "null"
                           description: Explanation of the eligibility decision.
                         benefitAmount:
-                          type: number
+                          type:
+                            - number
+                            - "null"
                           minimum: 0
-                          nullable: true
                           description: Estimated monthly benefit amount if eligible (dollars).
                         createdAt:
                           type: string
@@ -870,13 +876,15 @@ paths:
                     type: boolean
                     description: Whether the household is eligible for this program.
                   reason:
-                    type: string
-                    nullable: true
+                    type:
+                      - string
+                      - "null"
                     description: Explanation of the eligibility decision.
                   benefitAmount:
-                    type: number
+                    type:
+                      - number
+                      - "null"
                     minimum: 0
-                    nullable: true
                     description: Estimated monthly benefit amount if eligible (dollars).
                   createdAt:
                     type: string
@@ -969,9 +977,10 @@ paths:
                     readOnly: true
                     description: Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
                   determinedAt:
-                    type: string
+                    type:
+                      - string
+                      - "null"
                     format: date-time
-                    nullable: true
                     readOnly: true
                     description: Timestamp when the determination was finalized. Null until complete.
                   createdAt:
@@ -1170,9 +1179,10 @@ components:
           readOnly: true
           description: Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
         determinedAt:
-          type: string
+          type:
+            - string
+            - "null"
           format: date-time
-          nullable: true
           readOnly: true
           description: Timestamp when the determination was finalized. Null until complete.
         createdAt:
@@ -1276,9 +1286,10 @@ components:
                 readOnly: true
                 description: Whether this household qualifies for expedited processing (7 CFR § 273.2(i)).
               determinedAt:
-                type: string
+                type:
+                  - string
+                  - "null"
                 format: date-time
-                nullable: true
                 readOnly: true
                 description: Timestamp when the determination was finalized. Null until complete.
               createdAt:
@@ -1347,13 +1358,15 @@ components:
           type: boolean
           description: Whether the household is eligible for this program.
         reason:
-          type: string
-          nullable: true
+          type:
+            - string
+            - "null"
           description: Explanation of the eligibility decision.
         benefitAmount:
-          type: number
+          type:
+            - number
+            - "null"
           minimum: 0
-          nullable: true
           description: Estimated monthly benefit amount if eligible (dollars).
         createdAt:
           type: string
@@ -1417,13 +1430,15 @@ components:
                 type: boolean
                 description: Whether the household is eligible for this program.
               reason:
-                type: string
-                nullable: true
+                type:
+                  - string
+                  - "null"
                 description: Explanation of the eligibility decision.
               benefitAmount:
-                type: number
+                type:
+                  - number
+                  - "null"
                 minimum: 0
-                nullable: true
                 description: Estimated monthly benefit amount if eligible (dollars).
               createdAt:
                 type: string

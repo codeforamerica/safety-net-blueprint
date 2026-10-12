@@ -383,15 +383,17 @@ paths:
                                 - withdrawn
                                 - closed
                             submittedAt:
-                              type: string
+                              type:
+                                - string
+                                - "null"
                               format: date-time
-                              nullable: true
                               readOnly: true
                               description: Timestamp when the application was formally submitted. Null until submitted.
                             openedAt:
-                              type: string
+                              type:
+                                - string
+                                - "null"
                               format: date-time
-                              nullable: true
                               readOnly: true
                               description: Timestamp when a caseworker began active review. Null until the application is opened.
                             slaTypeCode:
@@ -728,9 +730,10 @@ paths:
                                       type: string
                                       description: A human-readable name for the document.
                                     documentDate:
-                                      type: string
+                                      type:
+                                        - string
+                                        - "null"
                                       format: date
-                                      nullable: true
                                       description: The date the document itself bears, which is not the date it arrived.
                                 - type: object
                                   required:
@@ -767,9 +770,10 @@ paths:
                                         resource: DocumentVersion
                                         style: links-only
                                     retentionDeadline:
-                                      type: string
+                                      type:
+                                        - string
+                                        - "null"
                                       format: date-time
-                                      nullable: true
                                       readOnly: true
                                       description: When this document becomes eligible for disposition.
                                     metadata:
@@ -1103,15 +1107,17 @@ paths:
                           - withdrawn
                           - closed
                       submittedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when the application was formally submitted. Null until submitted.
                       openedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when a caseworker began active review. Null until the application is opened.
                       slaTypeCode:
@@ -1448,9 +1454,10 @@ paths:
                                 type: string
                                 description: A human-readable name for the document.
                               documentDate:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date
-                                nullable: true
                                 description: The date the document itself bears, which is not the date it arrived.
                           - type: object
                             required:
@@ -1487,9 +1494,10 @@ paths:
                                   resource: DocumentVersion
                                   style: links-only
                               retentionDeadline:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date-time
-                                nullable: true
                                 readOnly: true
                                 description: When this document becomes eligible for disposition.
                               metadata:
@@ -1720,15 +1728,17 @@ paths:
                           - withdrawn
                           - closed
                       submittedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when the application was formally submitted. Null until submitted.
                       openedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when a caseworker began active review. Null until the application is opened.
                       slaTypeCode:
@@ -2065,9 +2075,10 @@ paths:
                                 type: string
                                 description: A human-readable name for the document.
                               documentDate:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date
-                                nullable: true
                                 description: The date the document itself bears, which is not the date it arrived.
                           - type: object
                             required:
@@ -2104,9 +2115,10 @@ paths:
                                   resource: DocumentVersion
                                   style: links-only
                               retentionDeadline:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date-time
-                                nullable: true
                                 readOnly: true
                                 description: When this document becomes eligible for disposition.
                               metadata:
@@ -2416,15 +2428,17 @@ paths:
                           - withdrawn
                           - closed
                       submittedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when the application was formally submitted. Null until submitted.
                       openedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when a caseworker began active review. Null until the application is opened.
                       slaTypeCode:
@@ -2761,9 +2775,10 @@ paths:
                                 type: string
                                 description: A human-readable name for the document.
                               documentDate:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date
-                                nullable: true
                                 description: The date the document itself bears, which is not the date it arrived.
                           - type: object
                             required:
@@ -2800,9 +2815,10 @@ paths:
                                   resource: DocumentVersion
                                   style: links-only
                               retentionDeadline:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date-time
-                                nullable: true
                                 readOnly: true
                                 description: When this document becomes eligible for disposition.
                               metadata:
@@ -4869,15 +4885,17 @@ paths:
                           - withdrawn
                           - closed
                       submittedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when the application was formally submitted. Null until submitted.
                       openedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when a caseworker began active review. Null until the application is opened.
                       slaTypeCode:
@@ -5214,9 +5232,10 @@ paths:
                                 type: string
                                 description: A human-readable name for the document.
                               documentDate:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date
-                                nullable: true
                                 description: The date the document itself bears, which is not the date it arrived.
                           - type: object
                             required:
@@ -5253,9 +5272,10 @@ paths:
                                   resource: DocumentVersion
                                   style: links-only
                               retentionDeadline:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date-time
-                                nullable: true
                                 readOnly: true
                                 description: When this document becomes eligible for disposition.
                               metadata:
@@ -5556,15 +5576,17 @@ paths:
                           - withdrawn
                           - closed
                       submittedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when the application was formally submitted. Null until submitted.
                       openedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when a caseworker began active review. Null until the application is opened.
                       slaTypeCode:
@@ -5901,9 +5923,10 @@ paths:
                                 type: string
                                 description: A human-readable name for the document.
                               documentDate:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date
-                                nullable: true
                                 description: The date the document itself bears, which is not the date it arrived.
                           - type: object
                             required:
@@ -5940,9 +5963,10 @@ paths:
                                   resource: DocumentVersion
                                   style: links-only
                               retentionDeadline:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date-time
-                                nullable: true
                                 readOnly: true
                                 description: When this document becomes eligible for disposition.
                               metadata:
@@ -6261,15 +6285,17 @@ paths:
                           - withdrawn
                           - closed
                       submittedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when the application was formally submitted. Null until submitted.
                       openedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when a caseworker began active review. Null until the application is opened.
                       slaTypeCode:
@@ -6606,9 +6632,10 @@ paths:
                                 type: string
                                 description: A human-readable name for the document.
                               documentDate:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date
-                                nullable: true
                                 description: The date the document itself bears, which is not the date it arrived.
                           - type: object
                             required:
@@ -6645,9 +6672,10 @@ paths:
                                   resource: DocumentVersion
                                   style: links-only
                               retentionDeadline:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date-time
-                                nullable: true
                                 readOnly: true
                                 description: When this document becomes eligible for disposition.
                               metadata:
@@ -6948,15 +6976,17 @@ paths:
                           - withdrawn
                           - closed
                       submittedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when the application was formally submitted. Null until submitted.
                       openedAt:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: date-time
-                        nullable: true
                         readOnly: true
                         description: Timestamp when a caseworker began active review. Null until the application is opened.
                       slaTypeCode:
@@ -7293,9 +7323,10 @@ paths:
                                 type: string
                                 description: A human-readable name for the document.
                               documentDate:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date
-                                nullable: true
                                 description: The date the document itself bears, which is not the date it arrived.
                           - type: object
                             required:
@@ -7332,9 +7363,10 @@ paths:
                                   resource: DocumentVersion
                                   style: links-only
                               retentionDeadline:
-                                type: string
+                                type:
+                                  - string
+                                  - "null"
                                 format: date-time
-                                nullable: true
                                 readOnly: true
                                 description: When this document becomes eligible for disposition.
                               metadata:
@@ -8346,9 +8378,10 @@ paths:
                               type: string
                               readOnly: true
                             itemId:
-                              type: string
+                              type:
+                                - string
+                                - "null"
                               format: uuid
-                              nullable: true
                               readOnly: true
                               x-relationship:
                                 resource: Polymorphic
@@ -8475,9 +8508,10 @@ paths:
                         type: string
                         readOnly: true
                       itemId:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: uuid
-                        nullable: true
                         readOnly: true
                         x-relationship:
                           resource: Polymorphic
@@ -8636,9 +8670,10 @@ paths:
                         type: string
                         readOnly: true
                       itemId:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: uuid
-                        nullable: true
                         readOnly: true
                         x-relationship:
                           resource: Polymorphic
@@ -8803,9 +8838,10 @@ paths:
                         type: string
                         readOnly: true
                       itemId:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: uuid
-                        nullable: true
                         readOnly: true
                         x-relationship:
                           resource: Polymorphic
@@ -8918,9 +8954,10 @@ paths:
                         type: string
                         readOnly: true
                       itemId:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: uuid
-                        nullable: true
                         readOnly: true
                         x-relationship:
                           resource: Polymorphic
@@ -9079,9 +9116,10 @@ paths:
                         type: string
                         readOnly: true
                       itemId:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: uuid
-                        nullable: true
                         readOnly: true
                         x-relationship:
                           resource: Polymorphic
@@ -9432,15 +9470,17 @@ components:
                 - withdrawn
                 - closed
             submittedAt:
-              type: string
+              type:
+                - string
+                - "null"
               format: date-time
-              nullable: true
               readOnly: true
               description: Timestamp when the application was formally submitted. Null until submitted.
             openedAt:
-              type: string
+              type:
+                - string
+                - "null"
               format: date-time
-              nullable: true
               readOnly: true
               description: Timestamp when a caseworker began active review. Null until the application is opened.
             slaTypeCode:
@@ -9777,9 +9817,10 @@ components:
                       type: string
                       description: A human-readable name for the document.
                     documentDate:
-                      type: string
+                      type:
+                        - string
+                        - "null"
                       format: date
-                      nullable: true
                       description: The date the document itself bears, which is not the date it arrived.
                 - type: object
                   required:
@@ -9816,9 +9857,10 @@ components:
                         resource: DocumentVersion
                         style: links-only
                     retentionDeadline:
-                      type: string
+                      type:
+                        - string
+                        - "null"
                       format: date-time
-                      nullable: true
                       readOnly: true
                       description: When this document becomes eligible for disposition.
                     metadata:
@@ -10203,15 +10245,17 @@ components:
                       - withdrawn
                       - closed
                   submittedAt:
-                    type: string
+                    type:
+                      - string
+                      - "null"
                     format: date-time
-                    nullable: true
                     readOnly: true
                     description: Timestamp when the application was formally submitted. Null until submitted.
                   openedAt:
-                    type: string
+                    type:
+                      - string
+                      - "null"
                     format: date-time
-                    nullable: true
                     readOnly: true
                     description: Timestamp when a caseworker began active review. Null until the application is opened.
                   slaTypeCode:
@@ -10548,9 +10592,10 @@ components:
                             type: string
                             description: A human-readable name for the document.
                           documentDate:
-                            type: string
+                            type:
+                              - string
+                              - "null"
                             format: date
-                            nullable: true
                             description: The date the document itself bears, which is not the date it arrived.
                       - type: object
                         required:
@@ -10587,9 +10632,10 @@ components:
                               resource: DocumentVersion
                               style: links-only
                           retentionDeadline:
-                            type: string
+                            type:
+                              - string
+                              - "null"
                             format: date-time
-                            nullable: true
                             readOnly: true
                             description: When this document becomes eligible for disposition.
                           metadata:
@@ -11919,9 +11965,10 @@ components:
               type: string
               readOnly: true
             itemId:
-              type: string
+              type:
+                - string
+                - "null"
               format: uuid
-              nullable: true
               readOnly: true
               x-relationship:
                 resource: Polymorphic
@@ -11970,9 +12017,10 @@ components:
                     type: string
                     readOnly: true
                   itemId:
-                    type: string
+                    type:
+                      - string
+                      - "null"
                     format: uuid
-                    nullable: true
                     readOnly: true
                     x-relationship:
                       resource: Polymorphic
@@ -12017,9 +12065,10 @@ components:
               type: string
               description: A human-readable name for the document.
             documentDate:
-              type: string
+              type:
+                - string
+                - "null"
               format: date
-              nullable: true
               description: The date the document itself bears, which is not the date it arrived.
         - type: object
           required:
@@ -12056,9 +12105,10 @@ components:
                 resource: DocumentVersion
                 style: links-only
             retentionDeadline:
-              type: string
+              type:
+                - string
+                - "null"
               format: date-time
-              nullable: true
               readOnly: true
               description: When this document becomes eligible for disposition.
             metadata:
@@ -12095,7 +12145,8 @@ components:
           type: string
           description: A human-readable name for the document.
         documentDate:
-          type: string
+          type:
+            - string
+            - "null"
           format: date
-          nullable: true
           description: The date the document itself bears, which is not the date it arrived.

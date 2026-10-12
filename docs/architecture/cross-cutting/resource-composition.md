@@ -247,7 +247,7 @@ compositions:
         type: object
         properties:
           status: { type: string, enum: [not_started, in_progress, complete, flagged], default: not_started }
-          notes: { type: object, nullable: true, additionalProperties: true }
+          notes: { type: [object, "null"], additionalProperties: true }
       methods: [put, patch]
     sections:
       identity:

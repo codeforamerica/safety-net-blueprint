@@ -84,7 +84,7 @@ export function followSchema(schema, doc, docs) {
 
   // A ref alongside sibling keywords: the ref supplies the base and the
   // siblings narrow it. Keeping both matches how the specs are written —
-  // `{ allOf: [$ref], nullable: true }` and `{ $ref, description }` both occur.
+  // `{ $ref, readOnly: true }` and `{ $ref, description }` both occur.
   const { $ref, ...siblings } = schema;
   return Object.keys(siblings).length > 0 ? { ...resolved, ...siblings } : resolved;
 }

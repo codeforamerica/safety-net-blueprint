@@ -666,9 +666,8 @@ components:
           maxLength: 200
           description: Human-readable label (e.g. "Jane Smith — Pay Stub March 2026"). Distinct from the upload filename.
         documentDate:
-          type: string
+          type: [string, "null"]
           format: date
-          nullable: true
           description: The date on the document's face (e.g. a pay stub date). Required when the document type's retentionTrigger is document_date.
         lifecycleState:
           $ref: "#/components/schemas/DocumentLifecycleState"
@@ -682,9 +681,8 @@ components:
           x-relationship:
             resource: DocumentVersion
         retentionDeadline:
-          type: string
+          type: [string, "null"]
           format: date
-          nullable: true
           description: The date when the retention period ends. Null until the document enters retained state.
         metadata:
           type: object
@@ -695,13 +693,11 @@ components:
             Opaque correlation context structured as nested objects per domain namespace.
             Example: {"intake":{"verificationId":"ver-abc-123"},"workflow":{"taskId":"tsk-xyz-456"}}
         dispositionApprovedBy:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Identity of the records manager who authorized destruction. Null until destroyed state.
         dispositionApprovedAt:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
           description: When destruction was authorized. Null until destroyed state.
         createdAt:
           type: string
@@ -719,9 +715,8 @@ components:
           type: string
           maxLength: 200
         documentDate:
-          type: string
+          type: [string, "null"]
           format: date
-          nullable: true
 
     DocumentList:
       type: object
@@ -921,9 +916,8 @@ components:
           description: Identity of who created the link. Required for HIPAA chain-of-custody (45 CFR § 164.312).
           x-data-classification: pii
         closedAt:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
           description: Set when the subject closes. Used as the retention trigger timestamp for case_closure and application_denial retention types.
         createdAt:
           type: string

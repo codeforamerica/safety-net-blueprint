@@ -618,9 +618,8 @@ export function generateStateSchemas(stateConfig) {
     // cannot be declared statically. Without the annotation it reads as an
     // undeclared foreign key and fails pattern validation.
     itemId: {
-      type: 'string',
+      type: ['string', 'null'],
       format: 'uuid',
-      nullable: true,
       readOnly: true,
       'x-relationship': { resource: 'Polymorphic' },
     },

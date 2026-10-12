@@ -174,11 +174,11 @@ export type Application = {
     /**
      * Timestamp when the application was formally submitted. Null until submitted.
      */
-    readonly submittedAt?: string;
+    readonly submittedAt?: string | null;
     /**
      * Timestamp when a caseworker began active review. Null until the application is opened.
      */
-    readonly openedAt?: string;
+    readonly openedAt?: string | null;
     /**
      * SLA type governing the processing deadline for this application.
      */
@@ -384,7 +384,7 @@ export type Application = {
         /**
          * The date the document itself bears, which is not the date it arrived.
          */
-        documentDate?: string;
+        documentDate?: string | null;
     } & {
         readonly id: string;
         /**
@@ -402,7 +402,7 @@ export type Application = {
         /**
          * When this document becomes eligible for disposition.
          */
-        readonly retentionDeadline?: string;
+        readonly retentionDeadline?: string | null;
         /**
          * Arbitrary key-value metadata supplied at upload.
          */
@@ -691,11 +691,11 @@ export type ApplicationList = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -901,7 +901,7 @@ export type ApplicationList = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -919,7 +919,7 @@ export type ApplicationList = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -1820,7 +1820,7 @@ export type ReviewProgress = {
 } & {
     readonly id: string;
     readonly section: string;
-    readonly itemId?: string;
+    readonly itemId?: string | null;
     readonly createdAt: string;
     readonly updatedAt: string;
 };
@@ -1840,7 +1840,7 @@ export type ReviewProgressListResponse = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     }>;
@@ -1862,7 +1862,7 @@ export type Document = {
     /**
      * The date the document itself bears, which is not the date it arrived.
      */
-    documentDate?: string;
+    documentDate?: string | null;
 } & {
     readonly id: string;
     /**
@@ -1880,7 +1880,7 @@ export type Document = {
     /**
      * When this document becomes eligible for disposition.
      */
-    readonly retentionDeadline?: string;
+    readonly retentionDeadline?: string | null;
     /**
      * Arbitrary key-value metadata supplied at upload.
      */
@@ -1912,7 +1912,7 @@ export type DocumentWritable = {
     /**
      * The date the document itself bears, which is not the date it arrived.
      */
-    documentDate?: string;
+    documentDate?: string | null;
 };
 
 export type ApplicationWritableWritable = {
@@ -2189,7 +2189,7 @@ export type ApplicationWritable2 = {
         /**
          * The date the document itself bears, which is not the date it arrived.
          */
-        documentDate?: string;
+        documentDate?: string | null;
     } & {
         /**
          * Arbitrary key-value metadata supplied at upload.
@@ -2539,7 +2539,7 @@ export type ApplicationListWritable = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             /**
              * Arbitrary key-value metadata supplied at upload.
@@ -2889,7 +2889,7 @@ export type DocumentWritable2 = {
     /**
      * The date the document itself bears, which is not the date it arrived.
      */
-    documentDate?: string;
+    documentDate?: string | null;
 } & {
     /**
      * Arbitrary key-value metadata supplied at upload.
@@ -3157,11 +3157,11 @@ export type ListApplicationsResponses = {
             /**
              * Timestamp when the application was formally submitted. Null until submitted.
              */
-            readonly submittedAt?: string;
+            readonly submittedAt?: string | null;
             /**
              * Timestamp when a caseworker began active review. Null until the application is opened.
              */
-            readonly openedAt?: string;
+            readonly openedAt?: string | null;
             /**
              * SLA type governing the processing deadline for this application.
              */
@@ -3367,7 +3367,7 @@ export type ListApplicationsResponses = {
                 /**
                  * The date the document itself bears, which is not the date it arrived.
                  */
-                documentDate?: string;
+                documentDate?: string | null;
             } & {
                 readonly id: string;
                 /**
@@ -3385,7 +3385,7 @@ export type ListApplicationsResponses = {
                 /**
                  * When this document becomes eligible for disposition.
                  */
-                readonly retentionDeadline?: string;
+                readonly retentionDeadline?: string | null;
                 /**
                  * Arbitrary key-value metadata supplied at upload.
                  */
@@ -3651,11 +3651,11 @@ export type CreateApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -3861,7 +3861,7 @@ export type CreateApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -3879,7 +3879,7 @@ export type CreateApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -4092,11 +4092,11 @@ export type GetApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -4302,7 +4302,7 @@ export type GetApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -4320,7 +4320,7 @@ export type GetApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -4580,11 +4580,11 @@ export type UpdateApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -4790,7 +4790,7 @@ export type UpdateApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -4808,7 +4808,7 @@ export type UpdateApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -6262,11 +6262,11 @@ export type SubmitApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -6472,7 +6472,7 @@ export type SubmitApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -6490,7 +6490,7 @@ export type SubmitApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -6729,11 +6729,11 @@ export type OpenApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -6939,7 +6939,7 @@ export type OpenApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -6957,7 +6957,7 @@ export type OpenApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -7205,11 +7205,11 @@ export type CloseApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -7415,7 +7415,7 @@ export type CloseApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -7433,7 +7433,7 @@ export type CloseApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -7672,11 +7672,11 @@ export type WithdrawApplicationResponses = {
         /**
          * Timestamp when the application was formally submitted. Null until submitted.
          */
-        readonly submittedAt?: string;
+        readonly submittedAt?: string | null;
         /**
          * Timestamp when a caseworker began active review. Null until the application is opened.
          */
-        readonly openedAt?: string;
+        readonly openedAt?: string | null;
         /**
          * SLA type governing the processing deadline for this application.
          */
@@ -7882,7 +7882,7 @@ export type WithdrawApplicationResponses = {
             /**
              * The date the document itself bears, which is not the date it arrived.
              */
-            documentDate?: string;
+            documentDate?: string | null;
         } & {
             readonly id: string;
             /**
@@ -7900,7 +7900,7 @@ export type WithdrawApplicationResponses = {
             /**
              * When this document becomes eligible for disposition.
              */
-            readonly retentionDeadline?: string;
+            readonly retentionDeadline?: string | null;
             /**
              * Arbitrary key-value metadata supplied at upload.
              */
@@ -8629,7 +8629,7 @@ export type ListReviewProgressBySectionResponses = {
         } & {
             readonly id: string;
             readonly section: string;
-            readonly itemId?: string;
+            readonly itemId?: string | null;
             readonly createdAt: string;
             readonly updatedAt: string;
         }>;
@@ -8759,7 +8759,7 @@ export type UpdateReviewProgressBySectionResponses = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     };
@@ -8884,7 +8884,7 @@ export type ReplaceReviewProgressBySectionResponses = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     };
@@ -8967,7 +8967,7 @@ export type GetReviewProgressByItemResponses = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     };
@@ -9096,7 +9096,7 @@ export type UpdateReviewProgressByItemResponses = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     };
@@ -9225,7 +9225,7 @@ export type ReplaceReviewProgressByItemResponses = {
     } & {
         readonly id: string;
         readonly section: string;
-        readonly itemId?: string;
+        readonly itemId?: string | null;
         readonly createdAt: string;
         readonly updatedAt: string;
     };

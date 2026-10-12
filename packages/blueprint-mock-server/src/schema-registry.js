@@ -19,7 +19,7 @@
  * by ID". That was true only because something else had already resolved them.
  */
 
-import Ajv from 'ajv';
+import Ajv from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 
 /** Scheme for document identifiers. Hierarchical, so `../` resolves. */
@@ -59,12 +59,8 @@ export function schemaIdFor(relativePath) {
  * @returns {import('ajv').default}
  */
 export function createAjv(options = {}) {
-  // The default build is draft-07, and the documents declare 2020-12. That
-  // mismatch is deliberate for now and tracked in #461: the 2020-12 build
-  // enforces `unevaluatedProperties`, which draft-07 ignores as unknown, and
-  // switching fails 8 seed records that have always passed. Making validation
-  // stricter is a change worth doing deliberately, not as a side effect of
-  // resolving refs differently.
+  // The 2020-12 build, the dialect the documents declare, so keywords such as
+  // `unevaluatedProperties` are enforced rather than ignored as unknown.
   const ajv = new Ajv({ strict: false, allErrors: true, ...options });
   addFormats(ajv);
   return ajv;
@@ -73,20 +69,11 @@ export function createAjv(options = {}) {
 /**
  * A document ajv will accept, derived from one it will not.
  *
- * Two things are removed, and one added:
+ * One thing is removed, and one added:
  *
  *   `$schema`   names the dialect, and a blueprint contract names a blueprint
  *               schema file rather than a meta-schema, which ajv cannot
  *               resolve as a dialect.
- *   `nullable`  only where no sibling `type` is declared. ajv 8 handles
- *               `{ type: string, nullable: true }` correctly, and removing it
- *               there would reject the `null` that such a field exists to
- *               allow. What it cannot handle is `{ allOf: [$ref], nullable:
- *               true }`, where it throws for want of a `type` — so the
- *               keyword goes only when there is nothing for it to qualify.
- *               A workaround: `nullable` is an OpenAPI 3.0 keyword and these
- *               documents declare 3.1, which replaced it with
- *               `type: [X, 'null']`. Tracked in #461.
  *   `$id`       set to the document's path, so relative refs out of it resolve.
  *
  * One normalized copy per document — bounded by the size of the set, not
@@ -100,13 +87,9 @@ function withoutOpenApiExtensions(node) {
   if (Array.isArray(node)) return node.map(withoutOpenApiExtensions);
   if (!node || typeof node !== 'object') return node;
 
-  // `nullable` is meaningful to ajv only alongside a `type` it can widen.
-  const keepsNullable = typeof node.type === 'string' || Array.isArray(node.type);
-
   const out = {};
   for (const [key, value] of Object.entries(node)) {
     if (key === '$schema') continue;
-    if (key === 'nullable' && !keepsNullable) continue;
     out[key] = withoutOpenApiExtensions(value);
   }
   return out;

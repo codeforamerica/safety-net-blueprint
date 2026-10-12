@@ -60,7 +60,7 @@ components:
             - document_request_income_verification
             - document_request_residency_verification
         metadata:
-          type: object
+          type: [object, "null"]
           description: >
             Domain-keyed correlation context. Keys are domain names; values are
             arbitrary objects defined by the triggering domain. Treated as opaque
@@ -69,4 +69,3 @@ components:
           additionalProperties:
             type: object
             additionalProperties: true
-          nullable: true

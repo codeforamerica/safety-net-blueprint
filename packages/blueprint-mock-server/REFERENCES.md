@@ -79,9 +79,10 @@ set:
   allow.
 - The 2020-12 ajv build adopted for the dialect the documents declare. It
   enforces `unevaluatedProperties`, which draft-07 ignores, so seed data that
-  had always passed began failing. Reverted — `createAjv` in
-  `src/schema-registry.js` builds a draft-07 validator deliberately, and says
-  so there.
+  had always passed began failing. Reverted at the time, and done since, in
+  #461: `createAjv` builds a 2020-12 validator, the contracts write
+  `type: [X, "null"]` where they wrote `nullable: true`, and the seed data that
+  failed was corrected.
 - `extractRequiredDefaults` reading `allOf` members without following them, so
   a required array came back `undefined` instead of `[]` — silently.
 - `extractExpandFields`, `extractLinksFields` and `extractDerivedFields` doing

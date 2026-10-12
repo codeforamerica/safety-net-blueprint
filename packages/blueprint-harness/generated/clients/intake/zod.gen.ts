@@ -86,8 +86,14 @@ export const zApplication = z.object({
         'withdrawn',
         'closed'
     ]),
-    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    submittedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
+    openedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
     slaInfo: z.optional(z.array(z.object({
         slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
@@ -189,7 +195,10 @@ export const zApplication = z.object({
     proofOfIncomeDocument: z.optional(z.object({
         documentTypeId: z.string(),
         title: z.string(),
-        documentDate: z.optional(z.iso.date().nullable())
+        documentDate: z.optional(z.union([
+            z.iso.date(),
+            z.null()
+        ]))
     }).and(z.object({
         id: z.uuid().readonly(),
         lifecycleState: z.enum([
@@ -199,7 +208,10 @@ export const zApplication = z.object({
         ]),
         legalHold: z.optional(z.boolean().readonly()),
         latestVersionId: z.uuid().readonly(),
-        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        retentionDeadline: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
         metadata: z.optional(z.record(z.string(), z.unknown())),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
@@ -339,8 +351,14 @@ export const zApplicationList = z.object({
             'withdrawn',
             'closed'
         ]),
-        submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-        openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        submittedAt: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
+        openedAt: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
         slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
         slaInfo: z.optional(z.array(z.object({
             slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
@@ -442,7 +460,10 @@ export const zApplicationList = z.object({
         proofOfIncomeDocument: z.optional(z.object({
             documentTypeId: z.string(),
             title: z.string(),
-            documentDate: z.optional(z.iso.date().nullable())
+            documentDate: z.optional(z.union([
+                z.iso.date(),
+                z.null()
+            ]))
         }).and(z.object({
             id: z.uuid().readonly(),
             lifecycleState: z.enum([
@@ -452,7 +473,10 @@ export const zApplicationList = z.object({
             ]),
             legalHold: z.optional(z.boolean().readonly()),
             latestVersionId: z.uuid().readonly(),
-            retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+            retentionDeadline: z.optional(z.union([
+                z.iso.datetime({ offset: true }).readonly(),
+                z.null()
+            ]).readonly()),
             metadata: z.optional(z.record(z.string(), z.unknown())),
             createdAt: z.iso.datetime({ offset: true }).readonly(),
             updatedAt: z.iso.datetime({ offset: true }).readonly(),
@@ -942,7 +966,10 @@ export const zReviewProgress = z.object({
 }).and(z.object({
     id: z.uuid().readonly(),
     section: z.string().readonly(),
-    itemId: z.optional(z.uuid().readonly().nullable()),
+    itemId: z.optional(z.union([
+        z.uuid().readonly(),
+        z.null()
+    ]).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
@@ -961,7 +988,10 @@ export const zReviewProgressListResponse = z.object({
     }).and(z.object({
         id: z.uuid().readonly(),
         section: z.string().readonly(),
-        itemId: z.optional(z.uuid().readonly().nullable()),
+        itemId: z.optional(z.union([
+            z.uuid().readonly(),
+            z.null()
+        ]).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly()
     }))),
@@ -974,7 +1004,10 @@ export const zReviewProgressListResponse = z.object({
 export const zDocument = z.object({
     documentTypeId: z.string(),
     title: z.string(),
-    documentDate: z.optional(z.iso.date().nullable())
+    documentDate: z.optional(z.union([
+        z.iso.date(),
+        z.null()
+    ]))
 }).and(z.object({
     id: z.uuid().readonly(),
     lifecycleState: z.enum([
@@ -984,7 +1017,10 @@ export const zDocument = z.object({
     ]),
     legalHold: z.optional(z.boolean().readonly()),
     latestVersionId: z.uuid().readonly(),
-    retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    retentionDeadline: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     metadata: z.optional(z.record(z.string(), z.unknown())),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
@@ -996,7 +1032,10 @@ export const zDocument = z.object({
 export const zDocumentWritable = z.object({
     documentTypeId: z.string(),
     title: z.string(),
-    documentDate: z.optional(z.iso.date().nullable())
+    documentDate: z.optional(z.union([
+        z.iso.date(),
+        z.null()
+    ]))
 });
 
 export const zApplicationWritableWritable = z.object({
@@ -1141,7 +1180,10 @@ export const zApplicationWritable2 = z.object({
     proofOfIncomeDocument: z.optional(z.object({
         documentTypeId: z.string(),
         title: z.string(),
-        documentDate: z.optional(z.iso.date().nullable())
+        documentDate: z.optional(z.union([
+            z.iso.date(),
+            z.null()
+        ]))
     }).and(z.object({
         metadata: z.optional(z.record(z.string(), z.unknown()))
     })))
@@ -1320,7 +1362,10 @@ export const zApplicationListWritable = z.object({
         proofOfIncomeDocument: z.optional(z.object({
             documentTypeId: z.string(),
             title: z.string(),
-            documentDate: z.optional(z.iso.date().nullable())
+            documentDate: z.optional(z.union([
+                z.iso.date(),
+                z.null()
+            ]))
         }).and(z.object({
             metadata: z.optional(z.record(z.string(), z.unknown()))
         })))
@@ -1517,7 +1562,10 @@ export const zReviewProgressListResponseWritable = z.object({
 export const zDocumentWritable2 = z.object({
     documentTypeId: z.string(),
     title: z.string(),
-    documentDate: z.optional(z.iso.date().nullable())
+    documentDate: z.optional(z.union([
+        z.iso.date(),
+        z.null()
+    ]))
 }).and(z.object({
     metadata: z.optional(z.record(z.string(), z.unknown()))
 }));
@@ -1594,8 +1642,14 @@ export const zListApplicationsResponse = z.object({
             'withdrawn',
             'closed'
         ]),
-        submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-        openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        submittedAt: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
+        openedAt: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
         slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
         slaInfo: z.optional(z.array(z.object({
             slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
@@ -1697,7 +1751,10 @@ export const zListApplicationsResponse = z.object({
         proofOfIncomeDocument: z.optional(z.object({
             documentTypeId: z.string(),
             title: z.string(),
-            documentDate: z.optional(z.iso.date().nullable())
+            documentDate: z.optional(z.union([
+                z.iso.date(),
+                z.null()
+            ]))
         }).and(z.object({
             id: z.uuid().readonly(),
             lifecycleState: z.enum([
@@ -1707,7 +1764,10 @@ export const zListApplicationsResponse = z.object({
             ]),
             legalHold: z.optional(z.boolean().readonly()),
             latestVersionId: z.uuid().readonly(),
-            retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+            retentionDeadline: z.optional(z.union([
+                z.iso.datetime({ offset: true }).readonly(),
+                z.null()
+            ]).readonly()),
             metadata: z.optional(z.record(z.string(), z.unknown())),
             createdAt: z.iso.datetime({ offset: true }).readonly(),
             updatedAt: z.iso.datetime({ offset: true }).readonly(),
@@ -1822,8 +1882,14 @@ export const zCreateApplicationResponse = z.object({
         'withdrawn',
         'closed'
     ]),
-    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    submittedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
+    openedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
     slaInfo: z.optional(z.array(z.object({
         slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
@@ -1925,7 +1991,10 @@ export const zCreateApplicationResponse = z.object({
     proofOfIncomeDocument: z.optional(z.object({
         documentTypeId: z.string(),
         title: z.string(),
-        documentDate: z.optional(z.iso.date().nullable())
+        documentDate: z.optional(z.union([
+            z.iso.date(),
+            z.null()
+        ]))
     }).and(z.object({
         id: z.uuid().readonly(),
         lifecycleState: z.enum([
@@ -1935,7 +2004,10 @@ export const zCreateApplicationResponse = z.object({
         ]),
         legalHold: z.optional(z.boolean().readonly()),
         latestVersionId: z.uuid().readonly(),
-        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        retentionDeadline: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
         metadata: z.optional(z.record(z.string(), z.unknown())),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
@@ -2026,8 +2098,14 @@ export const zGetApplicationResponse = z.object({
         'withdrawn',
         'closed'
     ]),
-    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    submittedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
+    openedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
     slaInfo: z.optional(z.array(z.object({
         slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
@@ -2129,7 +2207,10 @@ export const zGetApplicationResponse = z.object({
     proofOfIncomeDocument: z.optional(z.object({
         documentTypeId: z.string(),
         title: z.string(),
-        documentDate: z.optional(z.iso.date().nullable())
+        documentDate: z.optional(z.union([
+            z.iso.date(),
+            z.null()
+        ]))
     }).and(z.object({
         id: z.uuid().readonly(),
         lifecycleState: z.enum([
@@ -2139,7 +2220,10 @@ export const zGetApplicationResponse = z.object({
         ]),
         legalHold: z.optional(z.boolean().readonly()),
         latestVersionId: z.uuid().readonly(),
-        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        retentionDeadline: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
         metadata: z.optional(z.record(z.string(), z.unknown())),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
@@ -2251,8 +2335,14 @@ export const zUpdateApplicationResponse = z.object({
         'withdrawn',
         'closed'
     ]),
-    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    submittedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
+    openedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
     slaInfo: z.optional(z.array(z.object({
         slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
@@ -2354,7 +2444,10 @@ export const zUpdateApplicationResponse = z.object({
     proofOfIncomeDocument: z.optional(z.object({
         documentTypeId: z.string(),
         title: z.string(),
-        documentDate: z.optional(z.iso.date().nullable())
+        documentDate: z.optional(z.union([
+            z.iso.date(),
+            z.null()
+        ]))
     }).and(z.object({
         id: z.uuid().readonly(),
         lifecycleState: z.enum([
@@ -2364,7 +2457,10 @@ export const zUpdateApplicationResponse = z.object({
         ]),
         legalHold: z.optional(z.boolean().readonly()),
         latestVersionId: z.uuid().readonly(),
-        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        retentionDeadline: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
         metadata: z.optional(z.record(z.string(), z.unknown())),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
@@ -2981,8 +3077,14 @@ export const zSubmitApplicationResponse = z.object({
         'withdrawn',
         'closed'
     ]),
-    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    submittedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
+    openedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
     slaInfo: z.optional(z.array(z.object({
         slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
@@ -3084,7 +3186,10 @@ export const zSubmitApplicationResponse = z.object({
     proofOfIncomeDocument: z.optional(z.object({
         documentTypeId: z.string(),
         title: z.string(),
-        documentDate: z.optional(z.iso.date().nullable())
+        documentDate: z.optional(z.union([
+            z.iso.date(),
+            z.null()
+        ]))
     }).and(z.object({
         id: z.uuid().readonly(),
         lifecycleState: z.enum([
@@ -3094,7 +3199,10 @@ export const zSubmitApplicationResponse = z.object({
         ]),
         legalHold: z.optional(z.boolean().readonly()),
         latestVersionId: z.uuid().readonly(),
-        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        retentionDeadline: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
         metadata: z.optional(z.record(z.string(), z.unknown())),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
@@ -3172,8 +3280,14 @@ export const zOpenApplicationResponse = z.object({
         'withdrawn',
         'closed'
     ]),
-    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    submittedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
+    openedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
     slaInfo: z.optional(z.array(z.object({
         slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
@@ -3275,7 +3389,10 @@ export const zOpenApplicationResponse = z.object({
     proofOfIncomeDocument: z.optional(z.object({
         documentTypeId: z.string(),
         title: z.string(),
-        documentDate: z.optional(z.iso.date().nullable())
+        documentDate: z.optional(z.union([
+            z.iso.date(),
+            z.null()
+        ]))
     }).and(z.object({
         id: z.uuid().readonly(),
         lifecycleState: z.enum([
@@ -3285,7 +3402,10 @@ export const zOpenApplicationResponse = z.object({
         ]),
         legalHold: z.optional(z.boolean().readonly()),
         latestVersionId: z.uuid().readonly(),
-        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        retentionDeadline: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
         metadata: z.optional(z.record(z.string(), z.unknown())),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
@@ -3366,8 +3486,14 @@ export const zCloseApplicationResponse = z.object({
         'withdrawn',
         'closed'
     ]),
-    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    submittedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
+    openedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
     slaInfo: z.optional(z.array(z.object({
         slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
@@ -3469,7 +3595,10 @@ export const zCloseApplicationResponse = z.object({
     proofOfIncomeDocument: z.optional(z.object({
         documentTypeId: z.string(),
         title: z.string(),
-        documentDate: z.optional(z.iso.date().nullable())
+        documentDate: z.optional(z.union([
+            z.iso.date(),
+            z.null()
+        ]))
     }).and(z.object({
         id: z.uuid().readonly(),
         lifecycleState: z.enum([
@@ -3479,7 +3608,10 @@ export const zCloseApplicationResponse = z.object({
         ]),
         legalHold: z.optional(z.boolean().readonly()),
         latestVersionId: z.uuid().readonly(),
-        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        retentionDeadline: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
         metadata: z.optional(z.record(z.string(), z.unknown())),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
@@ -3557,8 +3689,14 @@ export const zWithdrawApplicationResponse = z.object({
         'withdrawn',
         'closed'
     ]),
-    submittedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
-    openedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    submittedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
+    openedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     slaTypeCode: z.optional(z.enum(['snap_standard', 'medicaid_standard'])),
     slaInfo: z.optional(z.array(z.object({
         slaTypeCode: z.enum(['snap_standard', 'medicaid_standard']),
@@ -3660,7 +3798,10 @@ export const zWithdrawApplicationResponse = z.object({
     proofOfIncomeDocument: z.optional(z.object({
         documentTypeId: z.string(),
         title: z.string(),
-        documentDate: z.optional(z.iso.date().nullable())
+        documentDate: z.optional(z.union([
+            z.iso.date(),
+            z.null()
+        ]))
     }).and(z.object({
         id: z.uuid().readonly(),
         lifecycleState: z.enum([
@@ -3670,7 +3811,10 @@ export const zWithdrawApplicationResponse = z.object({
         ]),
         legalHold: z.optional(z.boolean().readonly()),
         latestVersionId: z.uuid().readonly(),
-        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        retentionDeadline: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
         metadata: z.optional(z.record(z.string(), z.unknown())),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
@@ -3782,7 +3926,10 @@ export const zListReviewProgressBySectionResponse = z.object({
     }).and(z.object({
         id: z.uuid().readonly(),
         section: z.string().readonly(),
-        itemId: z.optional(z.uuid().readonly().nullable()),
+        itemId: z.optional(z.union([
+            z.uuid().readonly(),
+            z.null()
+        ]).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly()
     }))),
@@ -3821,7 +3968,10 @@ export const zUpdateReviewProgressBySectionResponse = z.object({
 }).and(z.object({
     id: z.uuid().readonly(),
     section: z.string().readonly(),
-    itemId: z.optional(z.uuid().readonly().nullable()),
+    itemId: z.optional(z.union([
+        z.uuid().readonly(),
+        z.null()
+    ]).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
@@ -3855,7 +4005,10 @@ export const zReplaceReviewProgressBySectionResponse = z.object({
 }).and(z.object({
     id: z.uuid().readonly(),
     section: z.string().readonly(),
-    itemId: z.optional(z.uuid().readonly().nullable()),
+    itemId: z.optional(z.union([
+        z.uuid().readonly(),
+        z.null()
+    ]).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
@@ -3883,7 +4036,10 @@ export const zGetReviewProgressByItemResponse = z.object({
 }).and(z.object({
     id: z.uuid().readonly(),
     section: z.string().readonly(),
-    itemId: z.optional(z.uuid().readonly().nullable()),
+    itemId: z.optional(z.union([
+        z.uuid().readonly(),
+        z.null()
+    ]).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
@@ -3918,7 +4074,10 @@ export const zUpdateReviewProgressByItemResponse = z.object({
 }).and(z.object({
     id: z.uuid().readonly(),
     section: z.string().readonly(),
-    itemId: z.optional(z.uuid().readonly().nullable()),
+    itemId: z.optional(z.union([
+        z.uuid().readonly(),
+        z.null()
+    ]).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));
@@ -3953,7 +4112,10 @@ export const zReplaceReviewProgressByItemResponse = z.object({
 }).and(z.object({
     id: z.uuid().readonly(),
     section: z.string().readonly(),
-    itemId: z.optional(z.uuid().readonly().nullable()),
+    itemId: z.optional(z.union([
+        z.uuid().readonly(),
+        z.null()
+    ]).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly()
 }));

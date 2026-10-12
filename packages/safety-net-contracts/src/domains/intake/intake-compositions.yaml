@@ -53,8 +53,7 @@ compositions:
               - flagged
             default: not_started
           notes:
-            type: object
-            nullable: true
+            type: [object, "null"]
             additionalProperties: true
             description: >
               Caseworker notes for this review section. Updated via PATCH on the

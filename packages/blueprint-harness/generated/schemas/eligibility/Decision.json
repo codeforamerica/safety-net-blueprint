@@ -35,14 +35,18 @@
       "description": "Whether the household is eligible for this program."
     },
     "reason": {
-      "type": "string",
-      "nullable": true,
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Explanation of the eligibility decision."
     },
     "benefitAmount": {
-      "type": "number",
+      "type": [
+        "number",
+        "null"
+      ],
       "minimum": 0,
-      "nullable": true,
       "description": "Estimated monthly benefit amount if eligible (dollars)."
     },
     "createdAt": {

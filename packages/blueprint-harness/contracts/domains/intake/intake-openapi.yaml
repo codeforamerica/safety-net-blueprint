@@ -401,15 +401,13 @@ components:
               x-enum-source: "states[].id"
               description: Current lifecycle status of the application.
             submittedAt:
-              type: string
+              type: [string, "null"]
               format: date-time
-              nullable: true
               readOnly: true
               description: Timestamp when the application was formally submitted. Null until submitted.
             openedAt:
-              type: string
+              type: [string, "null"]
               format: date-time
-              nullable: true
               readOnly: true
               description: Timestamp when a caseworker began active review. Null until the application is opened.
             slaTypeCode:

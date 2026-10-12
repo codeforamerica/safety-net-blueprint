@@ -40,7 +40,7 @@ export type Determination = {
     /**
      * Timestamp when the determination was finalized. Null until complete.
      */
-    readonly determinedAt?: string;
+    readonly determinedAt?: string | null;
     /**
      * Timestamp when the determination was created.
      */
@@ -101,7 +101,7 @@ export type DeterminationList = {
         /**
          * Timestamp when the determination was finalized. Null until complete.
          */
-        readonly determinedAt?: string;
+        readonly determinedAt?: string | null;
         /**
          * Timestamp when the determination was created.
          */
@@ -146,11 +146,11 @@ export type Decision = {
     /**
      * Explanation of the eligibility decision.
      */
-    reason?: string;
+    reason?: string | null;
     /**
      * Estimated monthly benefit amount if eligible (dollars).
      */
-    benefitAmount?: number;
+    benefitAmount?: number | null;
     readonly createdAt: string;
     readonly updatedAt: string;
     /**
@@ -185,11 +185,11 @@ export type DecisionList = {
         /**
          * Explanation of the eligibility decision.
          */
-        reason?: string;
+        reason?: string | null;
         /**
          * Estimated monthly benefit amount if eligible (dollars).
          */
-        benefitAmount?: number;
+        benefitAmount?: number | null;
         readonly createdAt: string;
         readonly updatedAt: string;
         /**
@@ -258,11 +258,11 @@ export type DecisionWritable = {
     /**
      * Explanation of the eligibility decision.
      */
-    reason?: string;
+    reason?: string | null;
     /**
      * Estimated monthly benefit amount if eligible (dollars).
      */
-    benefitAmount?: number;
+    benefitAmount?: number | null;
 };
 
 export type DecisionListWritable = {
@@ -282,11 +282,11 @@ export type DecisionListWritable = {
         /**
          * Explanation of the eligibility decision.
          */
-        reason?: string;
+        reason?: string | null;
         /**
          * Estimated monthly benefit amount if eligible (dollars).
          */
-        benefitAmount?: number;
+        benefitAmount?: number | null;
     }>;
     total: number;
     limit: number;
@@ -475,7 +475,7 @@ export type ListDeterminationsResponses = {
             /**
              * Timestamp when the determination was finalized. Null until complete.
              */
-            readonly determinedAt?: string;
+            readonly determinedAt?: string | null;
             /**
              * Timestamp when the determination was created.
              */
@@ -573,7 +573,7 @@ export type CreateDeterminationResponses = {
         /**
          * Timestamp when the determination was finalized. Null until complete.
          */
-        readonly determinedAt?: string;
+        readonly determinedAt?: string | null;
         /**
          * Timestamp when the determination was created.
          */
@@ -649,7 +649,7 @@ export type GetDeterminationResponses = {
         /**
          * Timestamp when the determination was finalized. Null until complete.
          */
-        readonly determinedAt?: string;
+        readonly determinedAt?: string | null;
         /**
          * Timestamp when the determination was created.
          */
@@ -739,7 +739,7 @@ export type UpdateDeterminationResponses = {
         /**
          * Timestamp when the determination was finalized. Null until complete.
          */
-        readonly determinedAt?: string;
+        readonly determinedAt?: string | null;
         /**
          * Timestamp when the determination was created.
          */
@@ -825,11 +825,11 @@ export type ListDecisionsResponses = {
             /**
              * Explanation of the eligibility decision.
              */
-            reason?: string;
+            reason?: string | null;
             /**
              * Estimated monthly benefit amount if eligible (dollars).
              */
-            benefitAmount?: number;
+            benefitAmount?: number | null;
             readonly createdAt: string;
             readonly updatedAt: string;
             /**
@@ -908,11 +908,11 @@ export type GetDecisionResponses = {
         /**
          * Explanation of the eligibility decision.
          */
-        reason?: string;
+        reason?: string | null;
         /**
          * Estimated monthly benefit amount if eligible (dollars).
          */
-        benefitAmount?: number;
+        benefitAmount?: number | null;
         readonly createdAt: string;
         readonly updatedAt: string;
         /**
@@ -1046,7 +1046,7 @@ export type CompleteDeterminationResponses = {
         /**
          * Timestamp when the determination was finalized. Null until complete.
          */
-        readonly determinedAt?: string;
+        readonly determinedAt?: string | null;
         /**
          * Timestamp when the determination was created.
          */

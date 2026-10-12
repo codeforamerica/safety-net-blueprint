@@ -555,6 +555,44 @@ function configCatalogs(doc, docs, schemaIndex) {
   return errors;
 }
 
+/**
+ * `nullable`, which OpenAPI 3.1 removed.
+ *
+ * The documents declare OpenAPI 3.1, whose schemas are JSON Schema 2020-12:
+ * a field that may be null says `type: [string, "null"]`. `nullable: true` is
+ * the 3.0 spelling. A validator implementing 2020-12 either ignores it, so a
+ * null is refused, or — beside `allOf` with no `type` — refuses the schema.
+ *
+ * @param {import('../types.js').Doc} doc
+ * @returns {object[]}
+ */
+function removedNullable(doc) {
+  if (!['openapi', 'asyncapi', 'schema', 'components', 'compositions'].includes(doc.type)) return [];
+  const errors = [];
+  const walk = (node, at) => {
+    if (Array.isArray(node)) { node.forEach((item, i) => walk(item, `${at}/${i}`)); return; }
+    if (!node || typeof node !== 'object') return;
+    if (node.nullable === true) {
+      errors.push({
+        rule: 'nullable-keyword',
+        message: `${at || '/'} uses \`nullable\`, which OpenAPI 3.1 removed. Write \`type: [<type>, "null"]\`, ` +
+          'or for a $ref, `anyOf: [{ $ref: ... }, { type: "null" }]`.',
+        path: `${doc.path}#${at}`,
+      });
+    }
+    for (const [key, value] of Object.entries(node)) {
+      // A property named `nullable` is a field, not the keyword.
+      if (key === 'properties' && value && typeof value === 'object') {
+        for (const [name, schema] of Object.entries(value)) walk(schema, `${at}/properties/${name}`);
+      } else {
+        walk(value, `${at}/${key}`);
+      }
+    }
+  };
+  walk(doc.content, '');
+  return errors;
+}
+
 function validateDoc(doc, context) {
   const errors = [];
   const warnings = [];
@@ -564,6 +602,7 @@ function validateDoc(doc, context) {
   errors.push(...brokenFragmentRefs(doc));
   errors.push(...brokenExternalRefs(doc, context.byRelativePath));
   errors.push(...unresolvedRelationshipResources(doc, context.schemaIndex));
+  errors.push(...removedNullable(doc));
   const conformance = context.schemaConformance.get(doc.relativePath ?? doc.path);
   if (conformance) {
     errors.push(...conformance.errors);

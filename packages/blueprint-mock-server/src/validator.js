@@ -2,11 +2,11 @@
  * Request validator using JSON Schema / OpenAPI schemas
  */
 
-import Ajv from 'ajv';
+import Ajv from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import { createAjv, registerDocuments, validatorForRef } from './schema-registry.js';
 
-// Create AJV instance with OpenAPI 3.1 support
+// The 2020-12 build: OpenAPI 3.1's schema dialect
 const ajv = new Ajv({
   strict: false,
   validateFormats: true,
@@ -101,13 +101,6 @@ function prepareSchemaForValidation(schema) {
   delete prepared.$id;
   delete prepared.$schema;
 
-  // Strip `nullable` — it's an OpenAPI 3.0 extension keyword, not a JSON Schema
-  // concept. AJV 8.x has a built-in `nullable` handler from its JTD vocabulary
-  // that requires `type` to be present in the same object, which throws on the
-  // common OpenAPI pattern `{ allOf: [$ref: ...], nullable: true }`. Nullability
-  // is enforced at the OpenAPI spec layer; the mock server doesn't need to validate it.
-  delete prepared.nullable;
-  
   // If schema has properties, check for readOnly fields
   if (prepared.properties) {
     prepared.properties = { ...prepared.properties };
@@ -274,6 +267,12 @@ export function validate(data, schema, schemaKey, source = null) {
           }
         }
       }
+    }
+    // A field a closed, composed schema does not declare — the same answer
+    else if (err.keyword === 'unevaluatedProperties' && err.params?.unevaluatedProperty) {
+      const basePath = field && field !== 'body' ? field + '.' : '';
+      field = basePath + err.params.unevaluatedProperty;
+      message = `is not allowed (additional property)`;
     }
     // Handle required field error - include the missing field
     else if (err.keyword === 'required' && err.params?.missingProperty) {

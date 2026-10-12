@@ -410,17 +410,15 @@ components:
           $ref: "#/components/schemas/ExternalServiceCallStatus"
           description: Current state in the call lifecycle.
         data:
-          type: object
+          type: [object, "null"]
           description: Optional per-call non-PII context (e.g., which FDSH sub-components to request). Polymorphic on `serviceType`.
           additionalProperties: true
-          nullable: true
         metadata:
-          type: object
+          type: [object, "null"]
           description: Namespace-keyed metadata attached by calling domains for context passthrough. Keys are domain names; values are arbitrary objects.
           additionalProperties:
             type: object
             additionalProperties: true
-          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -470,17 +468,15 @@ components:
           $ref: "#/components/schemas/CallMode"
           description: Override the ExternalService default call mode for this submission. If omitted, the catalog default is used.
         data:
-          type: object
+          type: [object, "null"]
           description: Optional per-call non-PII context. Polymorphic on the `serviceType` of the referenced ExternalService.
           additionalProperties: true
-          nullable: true
         metadata:
-          type: object
+          type: [object, "null"]
           description: Initial domain-keyed metadata to attach at submission time. Equivalent to calling PUT /metadata/{domain} immediately after creation.
           additionalProperties:
             type: object
             additionalProperties: true
-          nullable: true
 
     ExternalServiceCallList:
       type: object

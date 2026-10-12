@@ -1602,16 +1602,15 @@ $defs:
         format: date-time
         description: When the notice was sent.
       dueAt:
-        type: string
+        type: [string, "null"]
         format: date-time
-        nullable: true
         description: Deadline by which the applicant must respond.
       channel:
-        type: string
-        nullable: true
+        type: [string, "null"]
         description: Channel through which the notice was sent.
         enum:
           - email
           - in_person
           - mail
           - portal
+          - null

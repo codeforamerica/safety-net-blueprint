@@ -18,7 +18,10 @@ export const zDetermination = z.object({
         'complete'
     ]),
     expedited: z.boolean().readonly(),
-    determinedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    determinedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
@@ -51,7 +54,10 @@ export const zDeterminationList = z.object({
             'complete'
         ]),
         expedited: z.boolean().readonly(),
-        determinedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        determinedAt: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         links: z.optional(z.object({
@@ -74,8 +80,14 @@ export const zDecision = z.object({
         'tanf'
     ]),
     eligible: z.boolean(),
-    reason: z.optional(z.string().nullable()),
-    benefitAmount: z.optional(z.number().gte(0).nullable()),
+    reason: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
+    benefitAmount: z.optional(z.union([
+        z.number().gte(0),
+        z.null()
+    ])),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
@@ -94,8 +106,14 @@ export const zDecisionList = z.object({
             'tanf'
         ]),
         eligible: z.boolean(),
-        reason: z.optional(z.string().nullable()),
-        benefitAmount: z.optional(z.number().gte(0).nullable()),
+        reason: z.optional(z.union([
+            z.string(),
+            z.null()
+        ])),
+        benefitAmount: z.optional(z.union([
+            z.number().gte(0),
+            z.null()
+        ])),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         links: z.optional(z.object({
@@ -139,8 +157,14 @@ export const zDecisionWritable = z.object({
         'tanf'
     ]),
     eligible: z.boolean(),
-    reason: z.optional(z.string().nullable()),
-    benefitAmount: z.optional(z.number().gte(0).nullable())
+    reason: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
+    benefitAmount: z.optional(z.union([
+        z.number().gte(0),
+        z.null()
+    ]))
 });
 
 export const zDecisionListWritable = z.object({
@@ -153,8 +177,14 @@ export const zDecisionListWritable = z.object({
             'tanf'
         ]),
         eligible: z.boolean(),
-        reason: z.optional(z.string().nullable()),
-        benefitAmount: z.optional(z.number().gte(0).nullable())
+        reason: z.optional(z.union([
+            z.string(),
+            z.null()
+        ])),
+        benefitAmount: z.optional(z.union([
+            z.number().gte(0),
+            z.null()
+        ]))
     })),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
@@ -198,7 +228,10 @@ export const zListDeterminationsResponse = z.object({
             'complete'
         ]),
         expedited: z.boolean().readonly(),
-        determinedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        determinedAt: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         links: z.optional(z.object({
@@ -234,7 +267,10 @@ export const zCreateDeterminationResponse = z.object({
         'complete'
     ]),
     expedited: z.boolean().readonly(),
-    determinedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    determinedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
@@ -262,7 +298,10 @@ export const zGetDeterminationResponse = z.object({
         'complete'
     ]),
     expedited: z.boolean().readonly(),
-    determinedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    determinedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
@@ -296,7 +335,10 @@ export const zUpdateDeterminationResponse = z.object({
         'complete'
     ]),
     expedited: z.boolean().readonly(),
-    determinedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    determinedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
@@ -329,8 +371,14 @@ export const zListDecisionsResponse = z.object({
             'tanf'
         ]),
         eligible: z.boolean(),
-        reason: z.optional(z.string().nullable()),
-        benefitAmount: z.optional(z.number().gte(0).nullable()),
+        reason: z.optional(z.union([
+            z.string(),
+            z.null()
+        ])),
+        benefitAmount: z.optional(z.union([
+            z.number().gte(0),
+            z.null()
+        ])),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         links: z.optional(z.object({
@@ -365,8 +413,14 @@ export const zGetDecisionResponse = z.object({
         'tanf'
     ]),
     eligible: z.boolean(),
-    reason: z.optional(z.string().nullable()),
-    benefitAmount: z.optional(z.number().gte(0).nullable()),
+    reason: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
+    benefitAmount: z.optional(z.union([
+        z.number().gte(0),
+        z.null()
+    ])),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
@@ -394,7 +448,10 @@ export const zCompleteDeterminationResponse = z.object({
         'complete'
     ]),
     expedited: z.boolean().readonly(),
-    determinedAt: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    determinedAt: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({

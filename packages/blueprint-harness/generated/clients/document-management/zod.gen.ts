@@ -5,13 +5,19 @@ import { z } from 'zod';
 export const zDocumentWritable = z.object({
     documentTypeId: z.string(),
     title: z.string(),
-    documentDate: z.optional(z.iso.date().nullable())
+    documentDate: z.optional(z.union([
+        z.iso.date(),
+        z.null()
+    ]))
 });
 
 export const zDocument = z.object({
     documentTypeId: z.string(),
     title: z.string(),
-    documentDate: z.optional(z.iso.date().nullable())
+    documentDate: z.optional(z.union([
+        z.iso.date(),
+        z.null()
+    ]))
 }).and(z.object({
     id: z.uuid().readonly(),
     lifecycleState: z.enum([
@@ -21,7 +27,10 @@ export const zDocument = z.object({
     ]),
     legalHold: z.optional(z.boolean().readonly()),
     latestVersionId: z.uuid().readonly(),
-    retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    retentionDeadline: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     metadata: z.optional(z.record(z.string(), z.unknown())),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
@@ -49,7 +58,10 @@ export const zDocumentList = z.object({
     items: z.array(z.object({
         documentTypeId: z.string(),
         title: z.string(),
-        documentDate: z.optional(z.iso.date().nullable())
+        documentDate: z.optional(z.union([
+            z.iso.date(),
+            z.null()
+        ]))
     }).and(z.object({
         id: z.uuid().readonly(),
         lifecycleState: z.enum([
@@ -59,7 +71,10 @@ export const zDocumentList = z.object({
         ]),
         legalHold: z.optional(z.boolean().readonly()),
         latestVersionId: z.uuid().readonly(),
-        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        retentionDeadline: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
         metadata: z.optional(z.record(z.string(), z.unknown())),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
@@ -76,7 +91,10 @@ export const zDocumentList = z.object({
 export const zDocumentWritable2 = z.object({
     documentTypeId: z.string(),
     title: z.string(),
-    documentDate: z.optional(z.iso.date().nullable())
+    documentDate: z.optional(z.union([
+        z.iso.date(),
+        z.null()
+    ]))
 }).and(z.object({
     metadata: z.optional(z.record(z.string(), z.unknown()))
 }));
@@ -87,7 +105,10 @@ export const zDocumentListWritable = z.object({
     items: z.array(z.object({
         documentTypeId: z.string(),
         title: z.string(),
-        documentDate: z.optional(z.iso.date().nullable())
+        documentDate: z.optional(z.union([
+            z.iso.date(),
+            z.null()
+        ]))
     }).and(z.object({
         metadata: z.optional(z.record(z.string(), z.unknown()))
     }))),
@@ -115,7 +136,10 @@ export const zListDocumentsResponse = z.object({
     items: z.array(z.object({
         documentTypeId: z.string(),
         title: z.string(),
-        documentDate: z.optional(z.iso.date().nullable())
+        documentDate: z.optional(z.union([
+            z.iso.date(),
+            z.null()
+        ]))
     }).and(z.object({
         id: z.uuid().readonly(),
         lifecycleState: z.enum([
@@ -125,7 +149,10 @@ export const zListDocumentsResponse = z.object({
         ]),
         legalHold: z.optional(z.boolean().readonly()),
         latestVersionId: z.uuid().readonly(),
-        retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+        retentionDeadline: z.optional(z.union([
+            z.iso.datetime({ offset: true }).readonly(),
+            z.null()
+        ]).readonly()),
         metadata: z.optional(z.record(z.string(), z.unknown())),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
@@ -155,7 +182,10 @@ export const zUploadDocumentData = z.object({
 export const zUploadDocumentResponse = z.object({
     documentTypeId: z.string(),
     title: z.string(),
-    documentDate: z.optional(z.iso.date().nullable())
+    documentDate: z.optional(z.union([
+        z.iso.date(),
+        z.null()
+    ]))
 }).and(z.object({
     id: z.uuid().readonly(),
     lifecycleState: z.enum([
@@ -165,7 +195,10 @@ export const zUploadDocumentResponse = z.object({
     ]),
     legalHold: z.optional(z.boolean().readonly()),
     latestVersionId: z.uuid().readonly(),
-    retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    retentionDeadline: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     metadata: z.optional(z.record(z.string(), z.unknown())),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
@@ -188,7 +221,10 @@ export const zGetDocumentData = z.object({
 export const zGetDocumentResponse = z.object({
     documentTypeId: z.string(),
     title: z.string(),
-    documentDate: z.optional(z.iso.date().nullable())
+    documentDate: z.optional(z.union([
+        z.iso.date(),
+        z.null()
+    ]))
 }).and(z.object({
     id: z.uuid().readonly(),
     lifecycleState: z.enum([
@@ -198,7 +234,10 @@ export const zGetDocumentResponse = z.object({
     ]),
     legalHold: z.optional(z.boolean().readonly()),
     latestVersionId: z.uuid().readonly(),
-    retentionDeadline: z.optional(z.iso.datetime({ offset: true }).readonly().nullable()),
+    retentionDeadline: z.optional(z.union([
+        z.iso.datetime({ offset: true }).readonly(),
+        z.null()
+    ]).readonly()),
     metadata: z.optional(z.record(z.string(), z.unknown())),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
