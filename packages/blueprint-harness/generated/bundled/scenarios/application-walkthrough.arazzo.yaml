@@ -4,11 +4,15 @@ info:
   version: 1.0.0
   x-domain: intake
   description: |
-    A household applies for SNAP online and uploads a pay stub as proof of
-    income. The application is submitted, opened for review, closed, and seen
-    as a review view; two rulesets screen it; and the event log shows what
-    every domain recorded along the way. Each step shows a different kind of
-    thing the contracts declare, all served by the mock with no custom code.
+    A household applies for SNAP online and a caseworker takes the application from submission to close, showing what the mock does from the contracts alone:
+
+    - separate shapes for what a client writes and what the system keeps, and derived fields
+    - a file upload and an expanded relationship
+    - search, sorting and paging
+    - a lifecycle that refuses moves made out of turn
+    - a composed view, and rules that explain their answers
+    - one event log across every domain
+    - the mock's own stand-ins and reset
 sourceDescriptions:
   - name: intake
     url: ../domains/intake/intake-openapi.yaml

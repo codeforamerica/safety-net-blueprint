@@ -4,19 +4,12 @@ info:
   version: 1.0.0
   x-domain: transcription
   description: |
-    The interview software a caseworker uses transcribes an interview. An
-    administrator adds the profile it runs under. The software starts a
-    transcript under that profile, adds lines — retrying one — pauses when the
-    applicant asks to go off the record, and closes it at the end. Along the
-    way the transcript refuses to start without a model or under a profile that
-    doesn't exist; keeps a line said just before the pause; and refuses a line
-    said during it, a lost stretch overlapping it, a line after the close, and
-    the software editing an entry. All the times sent come from the
-    transcription software's clock, not the server's.
+    A caseworker's interview software transcribes an interview from start to close, then abandons a second transcript, exercising the transcription domain end to end:
 
-    Then a second transcript, under a profile with an idle timeout, is started
-    and never written to. The mock stands in for the scheduler, so the idle
-    check comes at once, finds nothing, and the transcript closes itself.
+    - profiles, and what a transcript needs before it can start
+    - a timeline of lines, gaps and pauses, each judged by when it started
+    - retries recognized by their Idempotency-Key, and entries that never change
+    - closing, and the idle timeout, with the mock standing in for the scheduler
 sourceDescriptions:
   # Relative to the resolved contract set, where the framework's documents sit
   # under base/.

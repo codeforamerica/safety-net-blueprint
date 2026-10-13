@@ -1243,6 +1243,18 @@ const operationFor = (step) => {
   return { ref, op: op ? { ...op, ...classify(op) } : null };
 };
 
+/**
+ * A scenario's introduction, from its description: the first paragraph, and
+ * the bullets after it — what the tour demonstrates.
+ */
+const introOf = (doc) => {
+  const panelParts = [];
+  const { title, points } = describe({ description: doc.content.info?.description, stepId: '' });
+  if (title) panelParts.push(el('p', title, 'note'));
+  if (points.length > 0) panelParts.push(noticeList(points, null));
+  return panelParts;
+};
+
 /** The run of the tour on this server, started at its first step. */
 const runnerFor = (doc) => {
   if (!tourRunner) {
@@ -1322,8 +1334,18 @@ const renderTourNav = (nav, doc) => {
       el('span', run ? '✓' : String(index + 1).padStart(2, '0'), run ? 'n run' : 'n'),
       el('span', describe(entry.step).title)
     );
-    if (!tourWhole && tourStep === index) button.classList.add('here');
-    button.onclick = () => { tourWhole = false; tourStep = index; renderGroups(); renderStage(); };
+    if (tourStep === index) button.classList.add('here');
+    button.onclick = () => {
+      tourStep = index;
+      // On the whole page, a step is a place on it to go to.
+      if (tourWhole) {
+        renderGroups();
+        document.getElementById(`tour-step-${index}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      renderGroups();
+      renderStage();
+    };
     item.append(button);
     list.append(item);
   }
@@ -1354,12 +1376,8 @@ const tourIntro = (doc) => {
   // without anybody remembering to come back here.
   const total = operations().map((candidate) => ({ ...candidate, ...classify(candidate) }))
     .filter((candidate) => candidate.kind !== 'stream').length + stubStep().length + controlSteps().length;
-  panel.append(el('h2', 'Start at step one'));
-  if (doc.content.info?.description) panel.append(el('p', doc.content.info.description, 'note'));
-  panel.append(el('p',
-    `${entries.length} steps, in the order you would actually do them. Each one sends a real `
-    + 'request to the server this page derived a moment ago, and afterwards tells you which '
-    + 'line of which contract made it answer that way. Run one and the next appears.', 'note'));
+  panel.append(el('h2', doc.content.info?.title ?? 'Start at step one'));
+  panel.append(...introOf(doc));
   panel.append(el('p',
     `Or press Let me explore for all ${total} operations, with nothing held back `
     + 'and everything editable.', 'note'));
@@ -1455,6 +1473,7 @@ const tourStepPanel = (doc, entries, index, { live = true } = {}) => {
   const result = tourResults.get(entry.key);
   const sending = result?.request ?? runnerFor(doc).preview(entry.workflow.workflowId, step);
   const panel = el('div', '', 'panel');
+  panel.id = `tour-step-${index}`;
 
   const group = op ? GROUPS.find((candidate) => candidate.holds(op.kind)) : GROUPS.find((candidate) => candidate.id === 'control');
   if (group) panel.append(el('p', group.title, 'kindline'));
@@ -1566,7 +1585,7 @@ const renderTourStage = (stage, doc) => {
     // step at a time, with nothing left to press.
     const panel = el('div', '', 'panel');
     panel.append(el('h2', doc.content.info?.title ?? doc.relativePath));
-    if (doc.content.info?.description) panel.append(el('p', doc.content.info.description, 'note'));
+    panel.append(...introOf(doc));
     const again = el('button', 'One step at a time', 'primary');
     again.onclick = () => { tourWhole = false; tourStep = 0; renderGroups(); renderStage(); };
     panel.append(again);
