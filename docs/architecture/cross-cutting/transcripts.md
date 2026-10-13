@@ -101,6 +101,10 @@ has a start and an end, so one ordering and one set of rules cover every kind.
   wrong mapping be corrected later.
 - **Confidence** (spoken lines) — how sure the service was, for anyone weighing a
   line as evidence.
+- **Language** (lines) — the language the line was transcribed in, as the service
+  reported it. People move between languages within a conversation, so each line
+  says its own rather than the speaker or the transcript; anything that
+  translates a line, or cites one, needs to know.
 - **Cause** (gaps) — why nothing was captured, as far as the software knows:
   the connection, the service, the software, or unknown. It shows how
   reliable a transcript is.

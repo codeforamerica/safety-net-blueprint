@@ -26,6 +26,7 @@ transcript.entries[].text: { type: string }
 transcript.entries[].speaker: { type: enum, values: [staff, client, unknown] }
 transcript.entries[].speakerLabel: { type: string }
 transcript.entries[].confidence: { type: number }
+transcript.entries[].language: { type: string }
 transcript.entries[].cause: { type: enum, values: [connection, provider, client, unknown] }
 transcript.entries[].links: { type: object }
 transcript.entries[].links.transcript: { type: string }

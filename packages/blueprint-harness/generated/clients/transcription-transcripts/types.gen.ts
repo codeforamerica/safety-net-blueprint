@@ -440,6 +440,10 @@ export type TranscriptEntry = {
      */
     confidence?: number;
     /**
+     * Preferred language (BCP 47 language tag).
+     */
+    language?: string;
+    /**
      * Why nothing was captured, as far as the client knows.
      */
     cause?: 'connection' | 'provider' | 'client' | 'unknown';
@@ -481,6 +485,10 @@ export type TranscriptEntryCreate = {
     speaker: 'staff' | 'client' | 'unknown';
     speakerLabel?: string;
     confidence?: number;
+    /**
+     * Preferred language (BCP 47 language tag).
+     */
+    language?: string;
 } | {
     kind: 'gap';
     startedAt: string;
@@ -513,6 +521,10 @@ export type TranscriptLineCreate = {
     speaker: 'staff' | 'client' | 'unknown';
     speakerLabel?: string;
     confidence?: number;
+    /**
+     * Preferred language (BCP 47 language tag).
+     */
+    language?: string;
 };
 
 /**
@@ -578,6 +590,10 @@ export type TranscriptEntryList = {
          * The transcription service's confidence in the line. Spoken lines only.
          */
         confidence?: number;
+        /**
+         * Preferred language (BCP 47 language tag).
+         */
+        language?: string;
         /**
          * Why nothing was captured, as far as the client knows.
          */
@@ -1062,6 +1078,10 @@ export type TranscriptEntryWritable = {
      */
     confidence?: number;
     /**
+     * Preferred language (BCP 47 language tag).
+     */
+    language?: string;
+    /**
      * Why nothing was captured, as far as the client knows.
      */
     cause?: 'connection' | 'provider' | 'client' | 'unknown';
@@ -1102,6 +1122,10 @@ export type TranscriptEntryListWritable = {
          * The transcription service's confidence in the line. Spoken lines only.
          */
         confidence?: number;
+        /**
+         * Preferred language (BCP 47 language tag).
+         */
+        language?: string;
         /**
          * Why nothing was captured, as far as the client knows.
          */
@@ -2429,6 +2453,10 @@ export type ListTranscriptEntriesResponses = {
              */
             confidence?: number;
             /**
+             * Preferred language (BCP 47 language tag).
+             */
+            language?: string;
+            /**
              * Why nothing was captured, as far as the client knows.
              */
             cause?: 'connection' | 'provider' | 'client' | 'unknown';
@@ -2491,6 +2519,10 @@ export type AddTranscriptEntryData = {
         speaker: 'staff' | 'client' | 'unknown';
         speakerLabel?: string;
         confidence?: number;
+        /**
+         * Preferred language (BCP 47 language tag).
+         */
+        language?: string;
     } | {
         kind: 'gap';
         startedAt: string;
@@ -2696,6 +2728,10 @@ export type AddTranscriptEntryResponses = {
          */
         confidence?: number;
         /**
+         * Preferred language (BCP 47 language tag).
+         */
+        language?: string;
+        /**
          * Why nothing was captured, as far as the client knows.
          */
         cause?: 'connection' | 'provider' | 'client' | 'unknown';
@@ -2826,6 +2862,10 @@ export type GetTranscriptEntryResponses = {
          * The transcription service's confidence in the line. Spoken lines only.
          */
         confidence?: number;
+        /**
+         * Preferred language (BCP 47 language tag).
+         */
+        language?: string;
         /**
          * Why nothing was captured, as far as the client knows.
          */
@@ -3000,6 +3040,10 @@ export type UpdateTranscriptEntryResponses = {
          * The transcription service's confidence in the line. Spoken lines only.
          */
         confidence?: number;
+        /**
+         * Preferred language (BCP 47 language tag).
+         */
+        language?: string;
         /**
          * Why nothing was captured, as far as the client knows.
          */

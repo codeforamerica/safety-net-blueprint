@@ -796,6 +796,13 @@ components:
           minimum: 0
           maximum: 1
           description: The transcription service's confidence in the line. Spoken lines only.
+        language:
+          $ref: ../../schemas/enums.yaml#/$defs/Language
+          description: |
+            The language the line was transcribed in, as the transcription
+            service reported it — one of its profile's languages. People switch
+            languages within a conversation, so each line says its own. Absent
+            where the service does not report one.
         cause:
           $ref: "#/components/schemas/GapCause"
         createdAt:
@@ -860,6 +867,8 @@ components:
           type: number
           minimum: 0
           maximum: 1
+        language:
+          $ref: ../../schemas/enums.yaml#/$defs/Language
     TranscriptGapCreate:
       type: object
       description: A stretch where nothing was captured, recorded once transcription works again or the transcript closes.

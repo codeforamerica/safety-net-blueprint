@@ -692,6 +692,13 @@ components:
           minimum: 0
           maximum: 1
           description: The transcription service's confidence in the line. Spoken lines only.
+        language:
+          $ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/Language"
+          description: |
+            The language the line was transcribed in, as the transcription
+            service reported it — one of its profile's languages. People switch
+            languages within a conversation, so each line says its own. Absent
+            where the service does not report one.
         cause:
           $ref: "#/components/schemas/GapCause"
         createdAt:
@@ -730,6 +737,7 @@ components:
         speaker: {$ref: "#/components/schemas/Speaker"}
         speakerLabel: {type: string}
         confidence: {type: number, minimum: 0, maximum: 1}
+        language: {$ref: "https://blueprint.codeforamerica.org/base/schemas/enums.yaml#/$defs/Language"}
 
     TranscriptGapCreate:
       type: object

@@ -404,9 +404,13 @@ export function findOperation(machine, transitionName, resource) {
     return { operation: null, error: `Unknown action: ${transitionName}` };
   }
 
+  // Read the way a guard's refusal reads: what was asked, and what it needs.
+  const object = String(machine.object ?? 'record').replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
+  const from = [...new Set(actions.filter(op => op.id === transitionName).flatMap(op => [op.transition.from].flat()))];
+  const states = from.length < 2 ? from.join('') : `${from.slice(0, -1).join(', ')} or ${from.at(-1)}`;
   return {
     operation: null,
-    error: `Cannot ${transitionName}: resource is currently "${resource.status}"`
+    error: `Can't ${transitionName.replace(/-/g, ' ')} this ${object}. It requires that the ${object} is ${states}, and it is ${resource.status}.`
   };
 }
 

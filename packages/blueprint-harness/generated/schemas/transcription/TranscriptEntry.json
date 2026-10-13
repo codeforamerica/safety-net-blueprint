@@ -68,6 +68,11 @@
       "maximum": 1,
       "description": "The transcription service's confidence in the line. Spoken lines only."
     },
+    "language": {
+      "type": "string",
+      "description": "Preferred language (BCP 47 language tag).",
+      "pattern": "^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$"
+    },
     "cause": {
       "type": "string",
       "enum": [

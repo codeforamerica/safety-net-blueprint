@@ -165,6 +165,7 @@ export const zTranscriptEntry = z.object({
     ])),
     speakerLabel: z.optional(z.string()),
     confidence: z.optional(z.number().gte(0).lte(1)),
+    language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)),
     cause: z.optional(z.enum([
         'connection',
         'provider',
@@ -190,7 +191,8 @@ export const zTranscriptEntryCreate = z.union([
             'unknown'
         ]),
         speakerLabel: z.optional(z.string()),
-        confidence: z.optional(z.number().gte(0).lte(1))
+        confidence: z.optional(z.number().gte(0).lte(1)),
+        language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/))
     }),
     z.object({
         kind: z.literal('gap'),
@@ -219,7 +221,8 @@ export const zTranscriptLineCreate = z.object({
         'unknown'
     ]),
     speakerLabel: z.optional(z.string()),
-    confidence: z.optional(z.number().gte(0).lte(1))
+    confidence: z.optional(z.number().gte(0).lte(1)),
+    language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/))
 });
 
 /**
@@ -266,6 +269,7 @@ export const zTranscriptEntryList = z.object({
         ])),
         speakerLabel: z.optional(z.string()),
         confidence: z.optional(z.number().gte(0).lte(1)),
+        language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)),
         cause: z.optional(z.enum([
             'connection',
             'provider',
@@ -439,6 +443,7 @@ export const zTranscriptEntryWritable = z.object({
     ])),
     speakerLabel: z.optional(z.string()),
     confidence: z.optional(z.number().gte(0).lte(1)),
+    language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)),
     cause: z.optional(z.enum([
         'connection',
         'provider',
@@ -467,6 +472,7 @@ export const zTranscriptEntryListWritable = z.object({
         ])),
         speakerLabel: z.optional(z.string()),
         confidence: z.optional(z.number().gte(0).lte(1)),
+        language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)),
         cause: z.optional(z.enum([
             'connection',
             'provider',
@@ -787,6 +793,7 @@ export const zListTranscriptEntriesResponse = z.object({
         ])),
         speakerLabel: z.optional(z.string()),
         confidence: z.optional(z.number().gte(0).lte(1)),
+        language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)),
         cause: z.optional(z.enum([
             'connection',
             'provider',
@@ -818,7 +825,8 @@ export const zAddTranscriptEntryData = z.object({
                 'unknown'
             ]),
             speakerLabel: z.optional(z.string()),
-            confidence: z.optional(z.number().gte(0).lte(1))
+            confidence: z.optional(z.number().gte(0).lte(1)),
+            language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/))
         }),
         z.object({
             kind: z.literal('gap'),
@@ -865,6 +873,7 @@ export const zAddTranscriptEntryResponse = z.object({
     ])),
     speakerLabel: z.optional(z.string()),
     confidence: z.optional(z.number().gte(0).lte(1)),
+    language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)),
     cause: z.optional(z.enum([
         'connection',
         'provider',
@@ -911,6 +920,7 @@ export const zGetTranscriptEntryResponse = z.object({
     ])),
     speakerLabel: z.optional(z.string()),
     confidence: z.optional(z.number().gte(0).lte(1)),
+    language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)),
     cause: z.optional(z.enum([
         'connection',
         'provider',
@@ -959,6 +969,7 @@ export const zUpdateTranscriptEntryResponse = z.object({
     ])),
     speakerLabel: z.optional(z.string()),
     confidence: z.optional(z.number().gte(0).lte(1)),
+    language: z.optional(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)),
     cause: z.optional(z.enum([
         'connection',
         'provider',
