@@ -158,7 +158,29 @@ function registerOwnRoutes(routes, { store, apiNames = [], readDocs, configs = [
     return new Response(null, { status: 204 });
   });
   console.log('  POST   /mock/reseed - Re-seed all collections from seed files');
+
+  // Each by the operationId contracts/mock-openapi.yaml gives it, so a
+  // scenario can call the mock's own routes as it calls an API's.
+  for (const [key, operationId] of Object.entries(CONTROL_OPERATIONS)) {
+    const route = routes.get(key);
+    if (route) route.operationId = operationId;
+  }
 }
+
+/** The mock's own routes, by the operationIds contracts/mock-openapi.yaml declares. */
+export const CONTROL_OPERATIONS = {
+  'GET /health': 'getHealth',
+  'POST /mock/stubs/events': 'registerEventStub',
+  'GET /mock/stubs/events': 'listEventStubs',
+  'DELETE /mock/stubs/events': 'clearEventStubs',
+  'DELETE /mock/stubs/events/{id}': 'removeEventStub',
+  'POST /mock/stubs/http': 'registerHttpStub',
+  'GET /mock/stubs/http': 'listHttpStubs',
+  'DELETE /mock/stubs/http': 'clearHttpStubs',
+  'DELETE /mock/stubs/http/{id}': 'removeHttpStub',
+  'POST /mock/reset': 'resetMock',
+  'POST /mock/reseed': 'reseedMock',
+};
 
 /**
  * Handlers for endpoints the contract declares but generated CRUD cannot serve.

@@ -10,7 +10,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { createMockServer, runScenario, operationIndex } from '../../src/browser.js';
+import { createMockServer, runScenario, operationIndex, controlOperations } from '../../src/browser.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 
 const contracts = JSON.parse(readFileSync(fileURLToPath(new URL('../../../blueprint-harness/generated/mock/contracts.json', import.meta.url)), 'utf8'));
@@ -28,7 +28,8 @@ for (const scenario of scenarios) {
     let results;
     try {
       const mock = await createMockServer({ contracts, seed: true });
-      results = await runScenario(scenario.content, { fetch: mock.fetch, operations: operationIndex(docs) });
+      const operations = new Map([...operationIndex(docs), ...controlOperations(mock)]);
+      results = await runScenario(scenario.content, { fetch: mock.fetch, operations });
     } finally {
       console.log = log; console.warn = warn;
     }

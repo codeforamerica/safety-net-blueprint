@@ -63,6 +63,7 @@ export function extractExpandFields(schema, follow = (x) => x) {
 
   const fields = [];
   const propertySources = propertiesOf(schema, follow);
+  const declared = new Set(propertySources.flatMap((props) => Object.keys(props)));
 
   for (const props of propertySources) {
     for (const [fieldName, propDef] of Object.entries(props)) {
@@ -76,6 +77,9 @@ export function extractExpandFields(schema, follow = (x) => x) {
           fkField,
           resource: rel.resource,
           collection: resourceToCollection(rel.resource),
+          // The schema keeps the key too when it is writable (the Writable
+          // pattern); otherwise the expanded record replaces it.
+          keepFk: declared.has(fkField),
         });
       }
     }
@@ -91,7 +95,8 @@ export function extractExpandFields(schema, follow = (x) => x) {
  * For each expand field:
  *   - reads the FK value from record[fkField]
  *   - calls lookup(collection, fkValue) to fetch the related object
- *   - if found: removes fkField, sets fieldName to the related object
+ *   - if found: sets fieldName to the related object, and removes fkField
+ *     unless the schema declares it too (keepFk)
  *   - if not found: leaves the record unchanged for that field
  *
  * @param {object} record - Raw DB record
@@ -104,13 +109,14 @@ export function applyExpand(record, expandFields, lookup) {
 
   const result = { ...record };
 
-  for (const { fieldName, fkField, collection } of expandFields) {
+  for (const { fieldName, fkField, collection, keepFk } of expandFields) {
     const fkValue = result[fkField];
     if (!fkValue) continue;
 
     const related = lookup(collection, fkValue);
     if (related) {
       result[fieldName] = related;
+      if (!keepFk && fkField !== fieldName) delete result[fkField];
     }
   }
 
@@ -160,15 +166,28 @@ export function getItemSchema(listSchema, schemas, follow = (x) => x) {
 }
 
 /**
- * Convert a PascalCase resource name to a kebab-case plural collection name.
- * e.g. ApplicationMember → application-members
+ * Where each resource's records are kept, by resource name, read from core's
+ * model of the API documents when they are loaded (spec-loader.js) — so a
+ * TranscriptionProfile served at /profiles is found in `profiles`.
  *
- * This mirrors the convention used by deriveCollectionName for sub-resources.
+ * @type {Map<string, string>}
+ */
+const collectionsByResource = new Map();
+
+/** @param {Map<string, string>} collections - Resource name → collection */
+export function registerResourceCollections(collections) {
+  for (const [name, collection] of collections) collectionsByResource.set(name, collection);
+}
+
+/**
+ * The collection a resource's records are kept in. One the model names is
+ * found there; otherwise the name is converted by convention — ApplicationMember
+ * → application-members — which is how it was found before the model said.
  */
 function resourceToCollection(resource) {
-  return resource
+  return collectionsByResource.get(resource) ?? (resource
     .replace(/([A-Z])/g, (_, c, i) => (i === 0 ? c.toLowerCase() : `-${c.toLowerCase()}`))
-    + 's';
+    + 's');
 }
 
 /**
@@ -185,6 +204,7 @@ export function extractLinksFields(schema, follow = (x) => x) {
 
   const fields = [];
   const propertySources = propertiesOf(schema, follow);
+  const declared = new Set(propertySources.flatMap((props) => Object.keys(props)));
 
   for (const props of propertySources) {
     for (const [fieldName, propDef] of Object.entries(props)) {
@@ -248,6 +268,7 @@ export function extractDerivedFields(schema, follow = (x) => x) {
 
   const fields = [];
   const propertySources = propertiesOf(schema, follow);
+  const declared = new Set(propertySources.flatMap((props) => Object.keys(props)));
 
   for (const props of propertySources) {
     for (const [fieldName, propDef] of Object.entries(props)) {

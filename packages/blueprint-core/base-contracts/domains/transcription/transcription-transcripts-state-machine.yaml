@@ -8,6 +8,12 @@
 # transcript's timeline: pausing writes one with no end, and resuming or
 # closing gives it one. Under resources: below, the transcript decides when one
 # may be started — under a profile that exists — and which entries it accepts.
+#
+# A recording transcript nobody writes to closes itself, when its profile sets
+# an idleTimeout. Starting or resuming asks for an idle check after that long;
+# when it comes, a transcript still recording with nothing new since closes at
+# lastActivityAt, and one with something new asks again. A paused transcript
+# is left alone: resuming asks again.
 $schema: state-machine-schema.yaml
 version: "1.0"
 domain: transcription
@@ -24,6 +30,13 @@ machines:
         slaClock: stopped
         description: The transcript has ended. Terminal.
     initialState: recording
+    context:
+      - profile:
+          from: transcription/profiles
+          where: item.id == object.profileId
+    timers:
+      - id: idle_check
+        description: Whether a recording transcript has gone quiet for its profile's idleTimeout.
     guards:
       - id: atAfterStart
         description: the time given is not before the transcript started
@@ -99,6 +112,7 @@ machines:
           - call:
               PATCH: transcription/transcripts/$object.id/entries/$openPause.id
               body: {endedAt: $request.at}
+          - call: requestIdleCheck
           - emit: resumed
       - id: close
         description: End the transcript, at the time the client says. A pause still open ends then too.
@@ -124,6 +138,52 @@ machines:
                   PATCH: transcription/transcripts/$object.id/entries/$openPause.id
                   body: {endedAt: $request.at}
           - emit: closed
+    on:
+      - type: transcription.transcript.created
+        description: Ask for the first idle check, when the profile sets a timeout.
+        transition: {}
+        steps:
+          - call: requestIdleCheck
+      # Every line or gap is activity. A pause is the transcript's own entry,
+      # not the software's, so it does not count.
+      - type: transcription.transcript_entry.created
+        description: Record when the software was last heard from.
+        steps:
+          - if: this.data.kind != "pause"
+            then:
+              - call:
+                  PATCH: transcription/transcripts/$this.data.transcriptId
+                  body: {lastActivityAt: $this.data.endedAt}
+      - type: transcription.idle_check
+        description: Close a transcript that has gone quiet; ask again if something arrived since the last check.
+        transition: {from: recording}
+        context:
+          - newActivity:
+              from: transcription/transcripts/entries
+              where: >-
+                item.transcriptId == object.id && item.kind != "pause" &&
+                timestamp(item.createdAt) > timestamp(this.data.since)
+        steps:
+          - if: newActivity != null
+            then:
+              - call: requestIdleCheck
+            else:
+              - if: has(object.lastActivityAt)
+                then:
+                  - call: {POST: transcription/transcripts/$object.id/close, body: {at: $object.lastActivityAt}}
+                else:
+                  - call: {POST: transcription/transcripts/$object.id/close, body: {at: $object.startedAt}}
+    procedures:
+      - id: requestIdleCheck
+        description: Ask the scheduler for an idle check after the profile's idleTimeout, if it sets one.
+        if: profile != null && has(profile.idleTimeout)
+        then:
+          - emit:
+              type: scheduling.timer.requested
+              data:
+                timerId: "transcription.idle_check.{$object.id}"
+                fireAfter: $profile.idleTimeout
+                callback: {event: transcription.idle_check, data: {since: $now}}
     resources:
       Transcript:
         create:

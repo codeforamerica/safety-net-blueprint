@@ -11,6 +11,7 @@ transcript.client: { type: string }
 transcript.status: { type: enum, values: [recording, paused, closed] }
 transcript.startedAt: { type: datetime }
 transcript.closedAt: { type: datetime }
+transcript.lastActivityAt: { type: datetime }
 transcript.profile: { type: string, relationship: TranscriptionProfile }
 
 # ── TranscriptEntry ─────────────────────────────────────────────────────────────
@@ -36,4 +37,5 @@ profile.name: { type: string }
 profile.description: { type: string }
 profile.provider: { type: enum, values: [aws-transcribe, elevenlabs-scribe, none] }
 profile.languages[]: { type: string }
+profile.idleTimeout: { type: string }
 profile.source: { type: enum, values: [system, user] }

@@ -21,6 +21,7 @@ import { deriveCollectionName } from './collection-utils.js';
 import { emitEvent } from './emit-event.js';
 import { validate } from './validator.js';
 import { buildChanges } from './handlers/update-handler.js';
+import { extractExpandFields, applyExpand } from './handlers/expand-utils.js';
 
 /**
  * @param {Object} options
@@ -95,10 +96,18 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
   /** The collection a resource is stored in, as the mock names it. */
   const collectionOf = (resource) => deriveCollectionName(resource.path('collection'), '');
 
-  /** Check a record against its resource's full schema; throw naming what is wrong. */
-  function checkRecord(resolved, record) {
+  /**
+   * Check a record against its resource's full schema, as the API would return
+   * it — a related record the contract shows expanded is checked expanded —
+   * and throw naming what is wrong.
+   */
+  function checkRecord(resolved, stored) {
     const schema = resolved.api.doc.content?.components?.schemas?.[resolved.resource.name];
     if (!schema) return;
+    const follow = (node) => (typeof node?.$ref === 'string' && node.$ref.startsWith('#/')
+      ? node.$ref.slice(2).split('/').reduce((at, key) => at?.[key], resolved.api.doc.content) ?? node
+      : node);
+    const record = applyExpand(stored, extractExpandFields(schema, follow), store.findById);
     const source = { relativePath: resolved.api.doc.relativePath, ref: `#/components/schemas/${resolved.resource.name}` };
     const { valid, errors } = validate(record, schema, `step-call-${resolved.api.domain}-${resolved.resource.name}`, source);
     if (!valid) {

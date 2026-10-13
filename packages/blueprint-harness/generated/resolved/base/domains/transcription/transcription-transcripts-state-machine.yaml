@@ -14,6 +14,13 @@ machines:
         slaClock: stopped
         description: The transcript has ended. Terminal.
     initialState: recording
+    context:
+      - profile:
+          from: transcription/profiles
+          where: item.id == object.profileId
+    timers:
+      - id: idle_check
+        description: Whether a recording transcript has gone quiet for its profile's idleTimeout.
     guards:
       - id: atAfterStart
         description: the time given is not before the transcript started
@@ -89,6 +96,7 @@ machines:
               PATCH: transcription/transcripts/$object.id/entries/$openPause.id
               body:
                 endedAt: $request.at
+          - call: requestIdleCheck
           - emit:
               event: resumed
               type: transcription.transcript.resumed
@@ -123,6 +131,59 @@ machines:
           - emit:
               event: closed
               type: transcription.transcript.closed
+    "on":
+      - type: transcription.transcript.created
+        description: Ask for the first idle check, when the profile sets a timeout.
+        transition: {}
+        steps:
+          - call: requestIdleCheck
+      - type: transcription.transcript_entry.created
+        description: Record when the software was last heard from.
+        steps:
+          - if: this.data.kind != "pause"
+            then:
+              - call:
+                  PATCH: transcription/transcripts/$this.data.transcriptId
+                  body:
+                    lastActivityAt: $this.data.endedAt
+      - type: transcription.idle_check
+        description: Close a transcript that has gone quiet; ask again if something arrived since the last check.
+        transition:
+          from: recording
+        context:
+          - newActivity:
+              from: transcription/transcripts/entries
+              where: item.transcriptId == object.id && item.kind != "pause" && timestamp(item.createdAt) > timestamp(this.data.since)
+        steps:
+          - if: newActivity != null
+            then:
+              - call: requestIdleCheck
+            else:
+              - if: has(object.lastActivityAt)
+                then:
+                  - call:
+                      POST: transcription/transcripts/$object.id/close
+                      body:
+                        at: $object.lastActivityAt
+                else:
+                  - call:
+                      POST: transcription/transcripts/$object.id/close
+                      body:
+                        at: $object.startedAt
+    procedures:
+      - id: requestIdleCheck
+        description: Ask the scheduler for an idle check after the profile's idleTimeout, if it sets one.
+        if: profile != null && has(profile.idleTimeout)
+        then:
+          - emit:
+              type: scheduling.timer.requested
+              data:
+                timerId: transcription.idle_check.{$object.id}
+                fireAfter: $profile.idleTimeout
+                callback:
+                  event: transcription.idle_check
+                  data:
+                    since: $now
     resources:
       Transcript:
         create:

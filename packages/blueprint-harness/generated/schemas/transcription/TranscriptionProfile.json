@@ -42,6 +42,11 @@
             "pattern": "^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$"
           },
           "description": "The languages the conversation may be in. One fixes the language;\nseveral let the service tell which is being spoken among them.\nAbsent, the service detects the language itself — which not every\nservice can do.\n"
+        },
+        "idleTimeout": {
+          "type": "string",
+          "format": "duration",
+          "description": "How long a recording transcript may go without a line or gap before\nit closes itself, as an ISO 8601 duration. It is checked when the\ntime is up and again after any activity since, so a quiet\ntranscript closes between one and two of these after it was last\nheard from. Absent, a transcript never closes for being idle.\n"
         }
       }
     },

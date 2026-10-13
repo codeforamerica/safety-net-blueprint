@@ -29,6 +29,7 @@ export const zTranscript = z.object({
     ]),
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     profile: z.optional(z.object({
@@ -39,7 +40,8 @@ export const zTranscript = z.object({
             'elevenlabs-scribe',
             'none'
         ]),
-        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+        idleTimeout: z.optional(z.string())
     }).and(z.object({
         id: z.uuid().readonly(),
         source: z.enum(['system', 'user']),
@@ -80,6 +82,7 @@ export const zTranscriptList = z.object({
         ]),
         startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+        lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         profile: z.optional(z.object({
@@ -90,7 +93,8 @@ export const zTranscriptList = z.object({
                 'elevenlabs-scribe',
                 'none'
             ]),
-            languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+            languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+            idleTimeout: z.optional(z.string())
         }).and(z.object({
             id: z.uuid().readonly(),
             source: z.enum(['system', 'user']),
@@ -291,7 +295,8 @@ export const zTranscriptionProfileWritable = z.object({
         'elevenlabs-scribe',
         'none'
     ])),
-    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+    idleTimeout: z.optional(z.string())
 });
 
 /**
@@ -305,7 +310,8 @@ export const zTranscriptionProfile = z.object({
         'elevenlabs-scribe',
         'none'
     ]),
-    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+    idleTimeout: z.optional(z.string())
 }).and(z.object({
     id: z.uuid().readonly(),
     source: z.enum(['system', 'user']),
@@ -321,7 +327,8 @@ export const zTranscriptionProfileCreate = z.object({
         'elevenlabs-scribe',
         'none'
     ])),
-    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+    idleTimeout: z.optional(z.string())
 }).and(z.record(z.string(), z.unknown()));
 
 export const zTranscriptionProfileUpdate = z.object({
@@ -332,7 +339,8 @@ export const zTranscriptionProfileUpdate = z.object({
         'elevenlabs-scribe',
         'none'
     ])),
-    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+    idleTimeout: z.optional(z.string())
 }).and(z.record(z.string(), z.unknown()));
 
 export const zTranscriptionProfileList = z.object({
@@ -344,7 +352,8 @@ export const zTranscriptionProfileList = z.object({
             'elevenlabs-scribe',
             'none'
         ]),
-        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+        idleTimeout: z.optional(z.string())
     }).and(z.object({
         id: z.uuid().readonly(),
         source: z.enum(['system', 'user']),
@@ -378,7 +387,8 @@ export const zTranscriptWritable2 = z.object({
             'elevenlabs-scribe',
             'none'
         ]),
-        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+        idleTimeout: z.optional(z.string())
     }))
 }));
 
@@ -397,7 +407,8 @@ export const zTranscriptListWritable = z.object({
                 'elevenlabs-scribe',
                 'none'
             ]),
-            languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+            languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+            idleTimeout: z.optional(z.string())
         }))
     }))),
     total: z.int().gte(0),
@@ -480,7 +491,8 @@ export const zTranscriptionProfileWritable2 = z.object({
         'elevenlabs-scribe',
         'none'
     ]),
-    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+    idleTimeout: z.optional(z.string())
 });
 
 export const zTranscriptionProfileListWritable = z.object({
@@ -492,7 +504,8 @@ export const zTranscriptionProfileListWritable = z.object({
             'elevenlabs-scribe',
             'none'
         ]),
-        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+        idleTimeout: z.optional(z.string())
     })),
     total: z.int().gte(0),
     limit: z.int().gte(1).lte(100),
@@ -544,6 +557,7 @@ export const zListTranscriptsResponse = z.object({
         ]),
         startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+        lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         profile: z.optional(z.object({
@@ -554,7 +568,8 @@ export const zListTranscriptsResponse = z.object({
                 'elevenlabs-scribe',
                 'none'
             ]),
-            languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+            languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+            idleTimeout: z.optional(z.string())
         }).and(z.object({
             id: z.uuid().readonly(),
             source: z.enum(['system', 'user']),
@@ -599,6 +614,7 @@ export const zCreateTranscriptResponse = z.object({
     ]),
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     profile: z.optional(z.object({
@@ -609,7 +625,8 @@ export const zCreateTranscriptResponse = z.object({
             'elevenlabs-scribe',
             'none'
         ]),
-        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+        idleTimeout: z.optional(z.string())
     }).and(z.object({
         id: z.uuid().readonly(),
         source: z.enum(['system', 'user']),
@@ -656,6 +673,7 @@ export const zGetTranscriptResponse = z.object({
     ]),
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     profile: z.optional(z.object({
@@ -666,7 +684,8 @@ export const zGetTranscriptResponse = z.object({
             'elevenlabs-scribe',
             'none'
         ]),
-        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+        idleTimeout: z.optional(z.string())
     }).and(z.object({
         id: z.uuid().readonly(),
         source: z.enum(['system', 'user']),
@@ -705,6 +724,7 @@ export const zUpdateTranscriptResponse = z.object({
     ]),
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     profile: z.optional(z.object({
@@ -715,7 +735,8 @@ export const zUpdateTranscriptResponse = z.object({
             'elevenlabs-scribe',
             'none'
         ]),
-        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+        idleTimeout: z.optional(z.string())
     }).and(z.object({
         id: z.uuid().readonly(),
         source: z.enum(['system', 'user']),
@@ -974,7 +995,8 @@ export const zListTranscriptionProfilesResponse = z.object({
             'elevenlabs-scribe',
             'none'
         ]),
-        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+        idleTimeout: z.optional(z.string())
     }).and(z.object({
         id: z.uuid().readonly(),
         source: z.enum(['system', 'user']),
@@ -996,7 +1018,8 @@ export const zCreateTranscriptionProfileData = z.object({
             'elevenlabs-scribe',
             'none'
         ])),
-        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+        idleTimeout: z.optional(z.string())
     }).and(z.record(z.string(), z.unknown())),
     path: z.optional(z.never()),
     query: z.optional(z.never())
@@ -1013,7 +1036,8 @@ export const zCreateTranscriptionProfileResponse = z.object({
         'elevenlabs-scribe',
         'none'
     ]),
-    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+    idleTimeout: z.optional(z.string())
 }).and(z.object({
     id: z.uuid().readonly(),
     source: z.enum(['system', 'user']),
@@ -1040,7 +1064,8 @@ export const zGetTranscriptionProfileResponse = z.object({
         'elevenlabs-scribe',
         'none'
     ]),
-    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+    idleTimeout: z.optional(z.string())
 }).and(z.object({
     id: z.uuid().readonly(),
     source: z.enum(['system', 'user']),
@@ -1057,7 +1082,8 @@ export const zUpdateTranscriptionProfileData = z.object({
             'elevenlabs-scribe',
             'none'
         ])),
-        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+        idleTimeout: z.optional(z.string())
     }).and(z.record(z.string(), z.unknown())),
     path: z.object({
         profileId: z.uuid()
@@ -1076,7 +1102,8 @@ export const zUpdateTranscriptionProfileResponse = z.object({
         'elevenlabs-scribe',
         'none'
     ]),
-    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+    languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+    idleTimeout: z.optional(z.string())
 }).and(z.object({
     id: z.uuid().readonly(),
     source: z.enum(['system', 'user']),
@@ -1111,6 +1138,7 @@ export const zPauseTranscriptResponse = z.object({
     ]),
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     profile: z.optional(z.object({
@@ -1121,7 +1149,8 @@ export const zPauseTranscriptResponse = z.object({
             'elevenlabs-scribe',
             'none'
         ]),
-        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+        idleTimeout: z.optional(z.string())
     }).and(z.object({
         id: z.uuid().readonly(),
         source: z.enum(['system', 'user']),
@@ -1157,6 +1186,7 @@ export const zResumeTranscriptResponse = z.object({
     ]),
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     profile: z.optional(z.object({
@@ -1167,7 +1197,8 @@ export const zResumeTranscriptResponse = z.object({
             'elevenlabs-scribe',
             'none'
         ]),
-        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+        idleTimeout: z.optional(z.string())
     }).and(z.object({
         id: z.uuid().readonly(),
         source: z.enum(['system', 'user']),
@@ -1203,6 +1234,7 @@ export const zCloseTranscriptResponse = z.object({
     ]),
     startedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     closedAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
+    lastActivityAt: z.optional(z.iso.datetime({ offset: true }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     profile: z.optional(z.object({
@@ -1213,7 +1245,8 @@ export const zCloseTranscriptResponse = z.object({
             'elevenlabs-scribe',
             'none'
         ]),
-        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1))
+        languages: z.optional(z.array(z.string().regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)).min(1)),
+        idleTimeout: z.optional(z.string())
     }).and(z.object({
         id: z.uuid().readonly(),
         source: z.enum(['system', 'user']),

@@ -10,7 +10,9 @@
  * This runs the subset the blueprint's scenarios use, and refuses the rest by
  * name rather than skipping it, so a scenario never passes by not being
  * checked:
- *   - steps by `operationId`, found in the set's OpenAPI documents
+ *   - steps by `operationId`, found in the set's OpenAPI documents or among
+ *     the mock's own routes — qualified as `$sourceDescriptions.<name>.<id>`
+ *     when the document names more than one source, as Arazzo requires
  *   - `parameters` (path, query, header) and `requestBody.payload`
  *   - reusable parameters, `{ reference: $components.parameters.<name> }`
  *   - runtime expressions: $statusCode, $response.body#/<pointer>,
@@ -21,6 +23,8 @@
  * Standard enough that Redocly's Respect runs the same documents against a
  * served mock.
  */
+
+import { CONTROL_OPERATIONS } from './platform-routes.js';
 
 const SUPPORTED_STEP_FIELDS = new Set(['stepId', 'description', 'operationId', 'parameters', 'requestBody', 'successCriteria', 'outputs']);
 
@@ -47,6 +51,39 @@ export function operationIndex(docs) {
     }
   }
   return index;
+}
+
+/**
+ * The mock's own routes — stubs, reset, reseed — as operations, by the
+ * operationIds contracts/mock-openapi.yaml declares. A scenario that stands
+ * the mock in for something, a scheduler say, calls them like any API's.
+ *
+ * @param {{ routes: Map<string, object> }} mock - From createMockServer
+ * @returns {Map<string, { method: string, path: string }>}
+ */
+export function controlOperations(mock) {
+  const index = new Map();
+  for (const [key, operationId] of Object.entries(CONTROL_OPERATIONS)) {
+    if (!mock?.routes?.has(key)) continue;
+    const [method, path] = key.split(' ');
+    index.set(operationId, { method, path });
+  }
+  return index;
+}
+
+/**
+ * The operation a step names: `createTranscript`, or qualified by the source
+ * it belongs to, `$sourceDescriptions.transcripts.createTranscript`.
+ */
+function operationOf(step, sources, operations) {
+  const qualified = /^\$sourceDescriptions\.([^.]+)\.(.+)$/.exec(step.operationId ?? '');
+  if (qualified) {
+    if (!sources.has(qualified[1])) {
+      throw new Error(`Step ${step.stepId} names source ${qualified[1]}, which the document's sourceDescriptions do not declare`);
+    }
+    return operations.get(qualified[2]);
+  }
+  return operations.get(step.operationId);
 }
 
 /** A JSON Pointer into a value: `/items/0/id`. */
@@ -129,6 +166,7 @@ function holds(condition, scope) {
  */
 export async function runScenario(arazzo, { fetch, operations, inputs = {}, origin = 'http://localhost', onStep } = {}) {
   const components = arazzo.components ?? {};
+  const sources = new Set((arazzo.sourceDescriptions ?? []).map((source) => source.name));
   const results = [];
 
   for (const workflow of arazzo.workflows ?? []) {
@@ -139,7 +177,7 @@ export async function runScenario(arazzo, { fetch, operations, inputs = {}, orig
     for (const step of workflow.steps ?? []) {
       const unsupported = Object.keys(step).filter((k) => !SUPPORTED_STEP_FIELDS.has(k) && !k.startsWith('x-'));
       if (unsupported.length > 0) throw new Error(`Step ${step.stepId} uses ${unsupported.join(', ')}, which this runner does not support`);
-      const operation = operations.get(step.operationId);
+      const operation = operationOf(step, sources, operations);
       if (!operation) throw new Error(`Step ${step.stepId} names operation ${step.operationId}, which no API in the set declares`);
 
       let path = operation.path;

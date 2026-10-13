@@ -78,6 +78,10 @@ export type Transcript = {
      */
     readonly closedAt?: string;
     /**
+     * When the last line or gap ended, by the client's clock. A transcript closed for being idle closes at this time.
+     */
+    readonly lastActivityAt?: string;
+    /**
      * When the transcript was started.
      */
     readonly createdAt: string;
@@ -113,6 +117,15 @@ export type Transcript = {
          *
          */
         languages?: Array<string>;
+        /**
+         * How long a recording transcript may go without a line or gap before
+         * it closes itself, as an ISO 8601 duration. It is checked when the
+         * time is up and again after any activity since, so a quiet
+         * transcript closes between one and two of these after it was last
+         * heard from. Absent, a transcript never closes for being idle.
+         *
+         */
+        idleTimeout?: string;
     } & {
         /**
          * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
@@ -242,6 +255,10 @@ export type TranscriptList = {
          */
         readonly closedAt?: string;
         /**
+         * When the last line or gap ended, by the client's clock. A transcript closed for being idle closes at this time.
+         */
+        readonly lastActivityAt?: string;
+        /**
          * When the transcript was started.
          */
         readonly createdAt: string;
@@ -277,6 +294,15 @@ export type TranscriptList = {
              *
              */
             languages?: Array<string>;
+            /**
+             * How long a recording transcript may go without a line or gap before
+             * it closes itself, as an ISO 8601 duration. It is checked when the
+             * time is up and again after any activity since, so a quiet
+             * transcript closes between one and two of these after it was last
+             * heard from. Absent, a transcript never closes for being idle.
+             *
+             */
+            idleTimeout?: string;
         } & {
             /**
              * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
@@ -620,6 +646,15 @@ export type TranscriptionProfileWritable = {
      *
      */
     languages?: Array<string>;
+    /**
+     * How long a recording transcript may go without a line or gap before
+     * it closes itself, as an ISO 8601 duration. It is checked when the
+     * time is up and again after any activity since, so a quiet
+     * transcript closes between one and two of these after it was last
+     * heard from. Absent, a transcript never closes for being idle.
+     *
+     */
+    idleTimeout?: string;
 };
 
 /**
@@ -650,6 +685,15 @@ export type TranscriptionProfile = {
      *
      */
     languages?: Array<string>;
+    /**
+     * How long a recording transcript may go without a line or gap before
+     * it closes itself, as an ISO 8601 duration. It is checked when the
+     * time is up and again after any activity since, so a quiet
+     * transcript closes between one and two of these after it was last
+     * heard from. Absent, a transcript never closes for being idle.
+     *
+     */
+    idleTimeout?: string;
 } & {
     /**
      * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
@@ -695,6 +739,15 @@ export type TranscriptionProfileCreate = {
      *
      */
     languages?: Array<string>;
+    /**
+     * How long a recording transcript may go without a line or gap before
+     * it closes itself, as an ISO 8601 duration. It is checked when the
+     * time is up and again after any activity since, so a quiet
+     * transcript closes between one and two of these after it was last
+     * heard from. Absent, a transcript never closes for being idle.
+     *
+     */
+    idleTimeout?: string;
 } & {
     [key: string]: unknown;
 };
@@ -724,6 +777,15 @@ export type TranscriptionProfileUpdate = {
      *
      */
     languages?: Array<string>;
+    /**
+     * How long a recording transcript may go without a line or gap before
+     * it closes itself, as an ISO 8601 duration. It is checked when the
+     * time is up and again after any activity since, so a quiet
+     * transcript closes between one and two of these after it was last
+     * heard from. Absent, a transcript never closes for being idle.
+     *
+     */
+    idleTimeout?: string;
 } & {
     [key: string]: unknown;
 };
@@ -757,6 +819,15 @@ export type TranscriptionProfileList = {
          *
          */
         languages?: Array<string>;
+        /**
+         * How long a recording transcript may go without a line or gap before
+         * it closes itself, as an ISO 8601 duration. It is checked when the
+         * time is up and again after any activity since, so a quiet
+         * transcript closes between one and two of these after it was last
+         * heard from. Absent, a transcript never closes for being idle.
+         *
+         */
+        idleTimeout?: string;
     } & {
         /**
          * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
@@ -856,6 +927,15 @@ export type TranscriptWritable2 = {
          *
          */
         languages?: Array<string>;
+        /**
+         * How long a recording transcript may go without a line or gap before
+         * it closes itself, as an ISO 8601 duration. It is checked when the
+         * time is up and again after any activity since, so a quiet
+         * transcript closes between one and two of these after it was last
+         * heard from. Absent, a transcript never closes for being idle.
+         *
+         */
+        idleTimeout?: string;
     };
 };
 
@@ -915,6 +995,15 @@ export type TranscriptListWritable = {
              *
              */
             languages?: Array<string>;
+            /**
+             * How long a recording transcript may go without a line or gap before
+             * it closes itself, as an ISO 8601 duration. It is checked when the
+             * time is up and again after any activity since, so a quiet
+             * transcript closes between one and two of these after it was last
+             * heard from. Absent, a transcript never closes for being idle.
+             *
+             */
+            idleTimeout?: string;
         };
     }>;
     /**
@@ -1064,6 +1153,15 @@ export type TranscriptionProfileWritable2 = {
      *
      */
     languages?: Array<string>;
+    /**
+     * How long a recording transcript may go without a line or gap before
+     * it closes itself, as an ISO 8601 duration. It is checked when the
+     * time is up and again after any activity since, so a quiet
+     * transcript closes between one and two of these after it was last
+     * heard from. Absent, a transcript never closes for being idle.
+     *
+     */
+    idleTimeout?: string;
 };
 
 export type TranscriptionProfileListWritable = {
@@ -1092,6 +1190,15 @@ export type TranscriptionProfileListWritable = {
          *
          */
         languages?: Array<string>;
+        /**
+         * How long a recording transcript may go without a line or gap before
+         * it closes itself, as an ISO 8601 duration. It is checked when the
+         * time is up and again after any activity since, so a quiet
+         * transcript closes between one and two of these after it was last
+         * heard from. Absent, a transcript never closes for being idle.
+         *
+         */
+        idleTimeout?: string;
     }>;
     /**
      * Total number of profiles.
@@ -1341,6 +1448,10 @@ export type ListTranscriptsResponses = {
              */
             readonly closedAt?: string;
             /**
+             * When the last line or gap ended, by the client's clock. A transcript closed for being idle closes at this time.
+             */
+            readonly lastActivityAt?: string;
+            /**
              * When the transcript was started.
              */
             readonly createdAt: string;
@@ -1376,6 +1487,15 @@ export type ListTranscriptsResponses = {
                  *
                  */
                 languages?: Array<string>;
+                /**
+                 * How long a recording transcript may go without a line or gap before
+                 * it closes itself, as an ISO 8601 duration. It is checked when the
+                 * time is up and again after any activity since, so a quiet
+                 * transcript closes between one and two of these after it was last
+                 * heard from. Absent, a transcript never closes for being idle.
+                 *
+                 */
+                idleTimeout?: string;
             } & {
                 /**
                  * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
@@ -1586,6 +1706,10 @@ export type CreateTranscriptResponses = {
          */
         readonly closedAt?: string;
         /**
+         * When the last line or gap ended, by the client's clock. A transcript closed for being idle closes at this time.
+         */
+        readonly lastActivityAt?: string;
+        /**
          * When the transcript was started.
          */
         readonly createdAt: string;
@@ -1621,6 +1745,15 @@ export type CreateTranscriptResponses = {
              *
              */
             languages?: Array<string>;
+            /**
+             * How long a recording transcript may go without a line or gap before
+             * it closes itself, as an ISO 8601 duration. It is checked when the
+             * time is up and again after any activity since, so a quiet
+             * transcript closes between one and two of these after it was last
+             * heard from. Absent, a transcript never closes for being idle.
+             *
+             */
+            idleTimeout?: string;
         } & {
             /**
              * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
@@ -1811,6 +1944,10 @@ export type GetTranscriptResponses = {
          */
         readonly closedAt?: string;
         /**
+         * When the last line or gap ended, by the client's clock. A transcript closed for being idle closes at this time.
+         */
+        readonly lastActivityAt?: string;
+        /**
          * When the transcript was started.
          */
         readonly createdAt: string;
@@ -1846,6 +1983,15 @@ export type GetTranscriptResponses = {
              *
              */
             languages?: Array<string>;
+            /**
+             * How long a recording transcript may go without a line or gap before
+             * it closes itself, as an ISO 8601 duration. It is checked when the
+             * time is up and again after any activity since, so a quiet
+             * transcript closes between one and two of these after it was last
+             * heard from. Absent, a transcript never closes for being idle.
+             *
+             */
+            idleTimeout?: string;
         } & {
             /**
              * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
@@ -2035,6 +2181,10 @@ export type UpdateTranscriptResponses = {
          */
         readonly closedAt?: string;
         /**
+         * When the last line or gap ended, by the client's clock. A transcript closed for being idle closes at this time.
+         */
+        readonly lastActivityAt?: string;
+        /**
          * When the transcript was started.
          */
         readonly createdAt: string;
@@ -2070,6 +2220,15 @@ export type UpdateTranscriptResponses = {
              *
              */
             languages?: Array<string>;
+            /**
+             * How long a recording transcript may go without a line or gap before
+             * it closes itself, as an ISO 8601 duration. It is checked when the
+             * time is up and again after any activity since, so a quiet
+             * transcript closes between one and two of these after it was last
+             * heard from. Absent, a transcript never closes for being idle.
+             *
+             */
+            idleTimeout?: string;
         } & {
             /**
              * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
@@ -3064,6 +3223,15 @@ export type ListTranscriptionProfilesResponses = {
              *
              */
             languages?: Array<string>;
+            /**
+             * How long a recording transcript may go without a line or gap before
+             * it closes itself, as an ISO 8601 duration. It is checked when the
+             * time is up and again after any activity since, so a quiet
+             * transcript closes between one and two of these after it was last
+             * heard from. Absent, a transcript never closes for being idle.
+             *
+             */
+            idleTimeout?: string;
         } & {
             /**
              * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
@@ -3130,6 +3298,15 @@ export type CreateTranscriptionProfileData = {
          *
          */
         languages?: Array<string>;
+        /**
+         * How long a recording transcript may go without a line or gap before
+         * it closes itself, as an ISO 8601 duration. It is checked when the
+         * time is up and again after any activity since, so a quiet
+         * transcript closes between one and two of these after it was last
+         * heard from. Absent, a transcript never closes for being idle.
+         *
+         */
+        idleTimeout?: string;
     } & {
         [key: string]: unknown;
     };
@@ -3229,6 +3406,15 @@ export type CreateTranscriptionProfileResponses = {
          *
          */
         languages?: Array<string>;
+        /**
+         * How long a recording transcript may go without a line or gap before
+         * it closes itself, as an ISO 8601 duration. It is checked when the
+         * time is up and again after any activity since, so a quiet
+         * transcript closes between one and two of these after it was last
+         * heard from. Absent, a transcript never closes for being idle.
+         *
+         */
+        idleTimeout?: string;
     } & {
         /**
          * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
@@ -3336,6 +3522,15 @@ export type GetTranscriptionProfileResponses = {
          *
          */
         languages?: Array<string>;
+        /**
+         * How long a recording transcript may go without a line or gap before
+         * it closes itself, as an ISO 8601 duration. It is checked when the
+         * time is up and again after any activity since, so a quiet
+         * transcript closes between one and two of these after it was last
+         * heard from. Absent, a transcript never closes for being idle.
+         *
+         */
+        idleTimeout?: string;
     } & {
         /**
          * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
@@ -3385,6 +3580,15 @@ export type UpdateTranscriptionProfileData = {
          *
          */
         languages?: Array<string>;
+        /**
+         * How long a recording transcript may go without a line or gap before
+         * it closes itself, as an ISO 8601 duration. It is checked when the
+         * time is up and again after any activity since, so a quiet
+         * transcript closes between one and two of these after it was last
+         * heard from. Absent, a transcript never closes for being idle.
+         *
+         */
+        idleTimeout?: string;
     } & {
         [key: string]: unknown;
     };
@@ -3508,6 +3712,15 @@ export type UpdateTranscriptionProfileResponses = {
          *
          */
         languages?: Array<string>;
+        /**
+         * How long a recording transcript may go without a line or gap before
+         * it closes itself, as an ISO 8601 duration. It is checked when the
+         * time is up and again after any activity since, so a quiet
+         * transcript closes between one and two of these after it was last
+         * heard from. Absent, a transcript never closes for being idle.
+         *
+         */
+        idleTimeout?: string;
     } & {
         /**
          * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
@@ -3676,6 +3889,10 @@ export type PauseTranscriptResponses = {
          */
         readonly closedAt?: string;
         /**
+         * When the last line or gap ended, by the client's clock. A transcript closed for being idle closes at this time.
+         */
+        readonly lastActivityAt?: string;
+        /**
          * When the transcript was started.
          */
         readonly createdAt: string;
@@ -3711,6 +3928,15 @@ export type PauseTranscriptResponses = {
              *
              */
             languages?: Array<string>;
+            /**
+             * How long a recording transcript may go without a line or gap before
+             * it closes itself, as an ISO 8601 duration. It is checked when the
+             * time is up and again after any activity since, so a quiet
+             * transcript closes between one and two of these after it was last
+             * heard from. Absent, a transcript never closes for being idle.
+             *
+             */
+            idleTimeout?: string;
         } & {
             /**
              * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
@@ -3880,6 +4106,10 @@ export type ResumeTranscriptResponses = {
          */
         readonly closedAt?: string;
         /**
+         * When the last line or gap ended, by the client's clock. A transcript closed for being idle closes at this time.
+         */
+        readonly lastActivityAt?: string;
+        /**
          * When the transcript was started.
          */
         readonly createdAt: string;
@@ -3915,6 +4145,15 @@ export type ResumeTranscriptResponses = {
              *
              */
             languages?: Array<string>;
+            /**
+             * How long a recording transcript may go without a line or gap before
+             * it closes itself, as an ISO 8601 duration. It is checked when the
+             * time is up and again after any activity since, so a quiet
+             * transcript closes between one and two of these after it was last
+             * heard from. Absent, a transcript never closes for being idle.
+             *
+             */
+            idleTimeout?: string;
         } & {
             /**
              * Unique identifier — given in the config for a seeded profile, server-generated for one added here.
@@ -4084,6 +4323,10 @@ export type CloseTranscriptResponses = {
          */
         readonly closedAt?: string;
         /**
+         * When the last line or gap ended, by the client's clock. A transcript closed for being idle closes at this time.
+         */
+        readonly lastActivityAt?: string;
+        /**
          * When the transcript was started.
          */
         readonly createdAt: string;
@@ -4119,6 +4362,15 @@ export type CloseTranscriptResponses = {
              *
              */
             languages?: Array<string>;
+            /**
+             * How long a recording transcript may go without a line or gap before
+             * it closes itself, as an ISO 8601 duration. It is checked when the
+             * time is up and again after any activity since, so a quiet
+             * transcript closes between one and two of these after it was last
+             * heard from. Absent, a transcript never closes for being idle.
+             *
+             */
+            idleTimeout?: string;
         } & {
             /**
              * Unique identifier — given in the config for a seeded profile, server-generated for one added here.

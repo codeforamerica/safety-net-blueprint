@@ -69,10 +69,18 @@
     <td><code>intake.review_reminder</code> <a href="#event-intake.review_reminder" class="permalink" title="Link to this event">#</a></td>
     <td><span style="color:#999;font-size:11px;">none</span></td>
     <td><a href="../state-machine-docs/intake.html#machine-application">Intake / Application</a></td>
+  </tr><tr id="event-transcription.idle_check">
+    <td><code>transcription.idle_check</code> <a href="#event-transcription.idle_check" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/transcription.html#machine-transcript">Transcription / Transcript</a></td>
   </tr><tr id="event-transcription.transcript.closed">
     <td><code>transcription.transcript.closed</code> <a href="#event-transcription.transcript.closed" class="permalink" title="Link to this event">#</a></td>
     <td><a href="../state-machine-docs/transcription.html#machine-transcript">Transcription / Transcript</a></td>
     <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-transcription.transcript.created">
+    <td><code>transcription.transcript.created</code> <a href="#event-transcription.transcript.created" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/transcription.html#machine-transcript">Transcription / Transcript</a></td>
   </tr><tr id="event-transcription.transcript.paused">
     <td><code>transcription.transcript.paused</code> <a href="#event-transcription.transcript.paused" class="permalink" title="Link to this event">#</a></td>
     <td><a href="../state-machine-docs/transcription.html#machine-transcript">Transcription / Transcript</a></td>
@@ -81,6 +89,10 @@
     <td><code>transcription.transcript.resumed</code> <a href="#event-transcription.transcript.resumed" class="permalink" title="Link to this event">#</a></td>
     <td><a href="../state-machine-docs/transcription.html#machine-transcript">Transcription / Transcript</a></td>
     <td><span style="color:#999;font-size:11px;">none</span></td>
+  </tr><tr id="event-transcription.transcript_entry.created">
+    <td><code>transcription.transcript_entry.created</code> <a href="#event-transcription.transcript_entry.created" class="permalink" title="Link to this event">#</a></td>
+    <td><span style="color:#999;font-size:11px;">none</span></td>
+    <td><a href="../state-machine-docs/transcription.html#machine-transcript">Transcription / Transcript</a></td>
   </tr></tbody>
       </table>
     </div>
@@ -88,7 +100,7 @@
   <h2 style="font-size:1rem;font-weight:700;color:#2B1A78;margin:2.5rem 0 0.5rem;">Subscribed but not emitted</h2>
   <p style="font-size:13px;color:#666;margin-bottom:0.75rem;">These events are subscribed to but have no emitter in the current state machines.</p>
   <ul style="font-size:13px;color:#666;padding-left:1.25rem;">
-    <li><code>intake.review_reminder</code></li>
+    <li><code>intake.review_reminder</code></li><li><code>transcription.idle_check</code></li><li><code>transcription.transcript.created</code></li><li><code>transcription.transcript_entry.created</code></li>
   </ul>
   </div>
   <script>

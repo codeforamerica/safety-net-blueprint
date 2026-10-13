@@ -346,15 +346,19 @@ The same file runs as a test, steps through in the demo page's Scenarios mode, a
 - reusable parameters, `{ reference: $components.parameters.<name> }`
 - runtime expressions — `$statusCode`, `$response.body#/<pointer>`, `$response.header.<name>`, `$steps.<id>.outputs.<name>`, `$inputs.<name>` — whole, or embedded in a string as `{$…}`
 - `successCriteria` comparisons joined by `&&`, and `outputs`
+- more than one source, with each step's operation qualified as `$sourceDescriptions.<name>.<operationId>`, as Arazzo requires
+
+A scenario can call the mock's own routes too — registering a stub that stands in for a scheduler, say. Name `https://blueprint.codeforamerica.org/mock/mock-openapi.yaml` as a source and call its operations by the operationIds in `contracts/mock-openapi.yaml`; `controlOperations(mock)` gives them to the runner. Such a scenario runs against the mock only, and `validate` leaves the source's operations to the runner, which checks them where they are served.
 
 ```js
-import { createMockServer, runScenario, operationIndex } from '@codeforamerica/blueprint-mock-server/browser';
+import { createMockServer, runScenario, operationIndex, controlOperations } from '@codeforamerica/blueprint-mock-server/browser';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 
 const mock = await createMockServer({ contracts });
 const docs = extract(contracts, 'docs');
 const scenario = docs.find((doc) => doc.type === 'arazzo');
-const [workflow] = await runScenario(scenario.content, { fetch: mock.fetch, operations: operationIndex(docs) });
+const operations = new Map([...operationIndex(docs), ...controlOperations(mock)]);
+const [workflow] = await runScenario(scenario.content, { fetch: mock.fetch, operations });
 workflow.passed; // and workflow.steps: each request, response and check
 ```
 

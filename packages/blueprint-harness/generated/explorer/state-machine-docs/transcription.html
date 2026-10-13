@@ -85,7 +85,7 @@
           <td><strong style="color:#2B1A78;">resume</strong> <a href="../api-reference/transcription.html#op-post-transcripts-transcriptId-resume" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">Put the conversation back on the record, at the time the client says.</span></td>
           <td style="white-space:nowrap;"></td>
           <td><span style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:3px;"><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">paused</span><span style="color:#aaa;padding:0 2px;">→</span><span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:2px 8px;border-radius:100px;border:1px solid #C2C0E8;background:#E6EBF9;color:#5650BE;">recording</span></span></td>
-          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>{"PATCH":"transcription/transcripts/$object.id/entries/$openPause.id","body":{"endedAt":"$request.at"}}</li><li>Emit <a href="../event-catalog/index.html#event-transcription.transcript.resumed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">transcription.transcript.resumed</a></li></ul></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>{"PATCH":"transcription/transcripts/$object.id/entries/$openPause.id","body":{"endedAt":"$request.at"}}</li><li>Ask the scheduler for an idle check after the profile's idleTimeout, if it sets one.</li><li>Emit <a href="../event-catalog/index.html#event-transcription.transcript.resumed" style="font-family:monospace;font-size:12px;background:#F7EDE8;padding:1px 5px;border-radius:3px;border:1px solid #E9CCBE;color:#5650BE;text-decoration:none;">transcription.transcript.resumed</a></li></ul></td>
         </tr><tr id="action-close">
           <td><strong style="color:#2B1A78;">close</strong> <a href="../api-reference/transcription.html#op-post-transcripts-transcriptId-close" title="View API endpoint" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;">API →</a><br><span style="font-size:12px;color:#666;">End the transcript, at the time the client says. A pause still open ends then too.</span></td>
           <td style="white-space:nowrap;"></td>
@@ -94,7 +94,32 @@
         </tr></tbody>
           </table>
         </div>
-      
+      <h4 style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#666;margin:1.5rem 0 0.625rem;">Event Subscriptions</h4>
+        <div style="background:#FFFFFF;border:1px solid #E9CCBE;border-radius:6px;overflow:hidden;">
+          <table style="table-layout:fixed;">
+            <colgroup>
+              <col style="width:30%">
+              <col style="width:20%">
+              <col style="width:50%">
+            </colgroup>
+            <thead><tr>
+              <th>Event</th><th>Emitted by</th><th>Handler steps</th>
+            </tr></thead>
+            <tbody><tr>
+          <td><code>transcription.transcript.created</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>Ask the scheduler for an idle check after the profile's idleTimeout, if it sets one.</li></ul></td>
+        </tr><tr>
+          <td><code>transcription.transcript_entry.created</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>this.data.kind is not "pause"</code>:<ul style="margin:2px 0 0 14px;"><li>{"PATCH":"transcription/transcripts/$this.data.transcriptId","body":{"lastActivityAt":"$this.data.endedAt"}}</li></ul></li></ul></td>
+        </tr><tr>
+          <td><code>transcription.idle_check</code></td>
+          <td><span style="color:#999;font-size:11px;">unknown</span></td>
+          <td><ul style="margin:4px 0 0 16px;font-size:12px;color:#666;"><li>If <code>newActivity is not null</code>:<ul style="margin:2px 0 0 14px;"><li>Ask the scheduler for an idle check after the profile's idleTimeout, if it sets one.</li></ul><br>Else:<ul style="margin:2px 0 0 14px;"><li>If <code>has(object.lastActivityAt)</code>:<ul style="margin:2px 0 0 14px;"><li>{"POST":"transcription/transcripts/$object.id/close","body":{"at":"$object.lastActivityAt"}}</li></ul><br>Else:<ul style="margin:2px 0 0 14px;"><li>{"POST":"transcription/transcripts/$object.id/close","body":{"at":"$object.startedAt"}}</li></ul></li></ul></li></ul></td>
+        </tr></tbody>
+          </table>
+        </div>
     </section></div>
   <script>
     document.querySelectorAll('[data-expand-id]').forEach(btn => {

@@ -71,9 +71,17 @@
       <td><span style="color:#999;font-size:11px;">unknown</span></td>
       <td><a href="intake.html">Intake/Application</a></td>
     </tr><tr>
+      <td><code>transcription.idle_check</code></td>
+      <td><span style="color:#999;font-size:11px;">unknown</span></td>
+      <td><a href="transcription.html">Transcription/Transcript</a></td>
+    </tr><tr>
       <td><code>transcription.transcript.closed</code></td>
       <td><a href="transcription.html">Transcription/Transcript</a></td>
       <td><span style="color:#999;font-size:11px;">none</span></td>
+    </tr><tr>
+      <td><code>transcription.transcript.created</code></td>
+      <td><span style="color:#999;font-size:11px;">unknown</span></td>
+      <td><a href="transcription.html">Transcription/Transcript</a></td>
     </tr><tr>
       <td><code>transcription.transcript.paused</code></td>
       <td><a href="transcription.html">Transcription/Transcript</a></td>
@@ -82,6 +90,10 @@
       <td><code>transcription.transcript.resumed</code></td>
       <td><a href="transcription.html">Transcription/Transcript</a></td>
       <td><span style="color:#999;font-size:11px;">none</span></td>
+    </tr><tr>
+      <td><code>transcription.transcript_entry.created</code></td>
+      <td><span style="color:#999;font-size:11px;">unknown</span></td>
+      <td><a href="transcription.html">Transcription/Transcript</a></td>
     </tr></tbody>
       </table>
     </div>
@@ -89,7 +101,7 @@
     <h3 style="font-size:1rem;font-weight:700;color:#2B1A78;margin:2rem 0 0.75rem;">Subscribed but not emitted</h3>
     <p style="font-size:13px;color:#666;margin-bottom:0.75rem;">These events are subscribed to but have no emitter in the current state machines.</p>
     <ul style="font-size:13px;color:#666;">
-      <li><code>intake.review_reminder</code></li>
+      <li><code>intake.review_reminder</code></li><li><code>transcription.idle_check</code></li><li><code>transcription.transcript.created</code></li><li><code>transcription.transcript_entry.created</code></li>
     </ul></div>
   <script>
     document.querySelectorAll('[data-expand-id]').forEach(btn => {

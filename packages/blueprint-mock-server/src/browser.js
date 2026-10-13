@@ -28,13 +28,13 @@ import { createDispatcher, overrideByOperationId } from './http/route-table.js';
 import { applyForwarding } from './forwarding.js';
 import { seedAllDatabases } from './seeder.js';
 import { registerEventSubscriptions } from './event-subscription.js';
-import { subscribeStubDispatch } from './mock-stub-engine.js';
+import { subscribeStubDispatch, clearAllStubs } from './mock-stub-engine.js';
 import { seedConfigs } from './config-registry.js';
 import { initSchemaRegistry } from './validator.js';
 import { extract } from '@codeforamerica/blueprint-core/browser';
 import { graphsOf, unresolvedRulesWarning } from './contract-views.js';
 import { createStepCalls } from './step-calls.js';
-export { runScenario, operationIndex } from './arazzo.js';
+export { runScenario, operationIndex, controlOperations } from './arazzo.js';
 
 
 
@@ -98,6 +98,9 @@ export async function createMockServer({
 
   const stepCalls = createStepCalls({ apiSpecs, stateMachines, slaTypes, store });
   registerEventSubscriptions(stateMachines, slaTypes, apiSpecs, store, stepCalls);
+  // Stubs are kept per module, not per server: a new server starts with none,
+  // so one registered on the server it replaces cannot answer here.
+  clearAllStubs();
   subscribeStubDispatch(store);
   if (rulesFiles.length > 0) buildRulesIndex(rulesFiles, graphs);
 

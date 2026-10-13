@@ -60,6 +60,9 @@ export function validateArazzo(doc, operationIds) {
   }
   if (!Array.isArray(c.workflows) || c.workflows.length === 0) err('arazzo-shape', '`workflows` has at least one workflow.', 'workflows');
 
+  const sources = new Map((c.sourceDescriptions ?? []).map((source) => [source.name, source]));
+  const outside = (source) => /^https?:\/\//.test(source?.url ?? '');
+
   for (const workflow of c.workflows ?? []) {
     const where = `workflows[${workflow.workflowId ?? '?'}]`;
     if (!workflow.workflowId) err('arazzo-shape', 'Each workflow has a workflowId.', where);
@@ -71,8 +74,21 @@ export function validateArazzo(doc, operationIds) {
 
       const targets = ['operationId', 'operationPath', 'workflowId'].filter((k) => step[k] !== undefined);
       if (targets.length !== 1) err('arazzo-shape', 'A step names exactly one of operationId, operationPath or workflowId.', stepWhere);
-      if (step.operationId && operationIds && !operationIds.has(step.operationId)) {
-        err('unknown-operation', `Step "${step.stepId}" calls ${step.operationId}, which no API in the set declares.`, stepWhere);
+      if (step.operationId) {
+        // With more than one source, Arazzo requires each operation to say
+        // which it belongs to: `$sourceDescriptions.<name>.<operationId>`.
+        const qualified = /^\$sourceDescriptions\.([^.]+)\.(.+)$/.exec(step.operationId);
+        const source = qualified ? sources.get(qualified[1]) : null;
+        const id = qualified ? qualified[2] : step.operationId;
+        if (qualified && !source) {
+          err('arazzo-shape', `Step "${step.stepId}" names source "${qualified[1]}", which sourceDescriptions does not declare.`, stepWhere);
+        } else if (!qualified && sources.size > 1) {
+          err('arazzo-shape', `Step "${step.stepId}" names ${id} without its source; with more than one source, write $sourceDescriptions.<name>.${id}.`, stepWhere);
+        } else if (operationIds && !outside(source) && !operationIds.has(id)) {
+          // A source outside the set — the mock's own routes, by URL — is
+          // checked where it is served, not here.
+          err('unknown-operation', `Step "${step.stepId}" calls ${id}, which no API in the set declares.`, stepWhere);
+        }
       }
 
       // A step can carry forward only what an earlier step produced.

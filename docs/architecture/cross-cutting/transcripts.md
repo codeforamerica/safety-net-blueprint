@@ -1,10 +1,9 @@
 # Transcripts (Cross-Cutting)
 
-> **Status: draft, partly built.** The transcript, its lifecycle and its
-> timeline exist, in the framework's `transcription` domain
-> (`blueprint-core/base-contracts/domains/transcription/`), with the profiles a
-> transcript is started under. Closing an abandoned transcript is to come, as
-> this design describes.
+> **Status: draft, built.** The transcript, its lifecycle, its timeline, the
+> profiles it is started under, and closing an abandoned one exist, in the
+> framework's `transcription` domain
+> (`blueprint-core/base-contracts/domains/transcription/`).
 
 See [AI Services](ai-services.md) for how transcripts fit with suggestions,
 fact extraction and the interview, and [Contract-Driven Architecture](../contract-driven-architecture.md)
@@ -58,6 +57,8 @@ The record of one conversation.
 - **When it started and closed** — by the software's clock, the same clock
   every time on its entries uses, so every comparison is between times from one
   clock.
+- **When it was last heard from** — when its last line or gap ended, by the
+  software's clock. A transcript closed for being idle closes at that time.
 - **Status** — recording, paused or closed. See the lifecycle below.
 
 A transcript is refused when its profile does not exist, or when the profile
@@ -127,7 +128,7 @@ What a transcript accepts follows from the lifecycle:
 | Sends the same line again on a retry | Keeps one |
 | Sends lines out of order | Lists them in the order they were said |
 | Changes an entry once written | Refuses it. Only the lifecycle ends a pause |
-| Never closes — the browser closed, the machine crashed | *Planned:* closes it after a configured time without activity, recording the lost stretch, so the record shows it ended abnormally |
+| Never closes — the browser closed, the machine crashed | Closes it, when its profile sets an idle timeout, between one and two of those after the software was last heard from — at the time it was last heard from |
 
 A refusal names the rule that did not hold.
 
@@ -439,8 +440,9 @@ A state chooses its profiles by overlaying the configuration the framework
 provides, and adds or changes them through the API. A deploy adds only the
 profiles not already there, so a change made through the API is kept.
 
-*Planned:* how long a transcript may go without activity before it closes itself,
-as a setting of the profile.
+A profile also sets how long a recording transcript may go without activity
+before it closes itself. A profile that sets none leaves its transcripts open
+until they are closed; the profiles the framework provides set 30 minutes.
 
 ## Out of scope
 
@@ -463,11 +465,11 @@ as a setting of the profile.
 | Telling speakers apart | Transcription services label speakers or channels | partial — each line keeps the service's label and a role mapped from it |
 | Going off the record | Recording controls pause and resume | partial — pauses are kept in the timeline and enforced |
 | Removing sensitive details from the text | Many services can redact personal information | gap |
-| Closing an abandoned transcript | — | planned |
+| Closing an abandoned transcript | — | built — after the profile's idle timeout |
 
 ## References
 
 - [AI Services](ai-services.md) — how transcripts feed fact extraction and suggestions
-- [Scheduling Service](scheduling-service.md) — the timers closing an abandoned transcript will use
+- [Scheduling Service](scheduling-service.md) — the timers closing an abandoned transcript uses
 - [IETF Idempotency-Key HTTP header draft](https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/)
 - [Amazon Transcribe streaming](https://docs.aws.amazon.com/transcribe/latest/dg/streaming.html)

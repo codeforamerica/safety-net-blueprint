@@ -330,7 +330,7 @@
 
 <script type="application/json" id="page-config">{"sourceUrl":"https://github.com/codeforamerica/safety-net-blueprint/blob/main/packages/blueprint-harness/contracts"}</script>
 <script type="module">
-const { createMockServer, extract, generate, runScenario, operationIndex } =
+const { createMockServer, extract, generate, runScenario, operationIndex, controlOperations } =
   globalThis.BlueprintMock ?? await import('./mock.js');
 
 const $ = (id) => document.getElementById(id);
@@ -2007,7 +2007,8 @@ const scenarioStepItem = (step, operations, result) => {
   const state = result ? (result.passed ? 'passed' : 'failed') : 'pending';
   head.append(el('span', { passed: '✓', failed: '✗', pending: '·' }[state], `mark ${state}`));
   head.append(el('strong', step.stepId));
-  const operation = operations.get(step.operationId);
+  // A step names its operation bare, or qualified by its source.
+  const operation = operations.get(String(step.operationId).replace(/^\$sourceDescriptions\.[^.]+\./, ''));
   head.append(el('span', result
     ? `${result.request.method} ${result.request.url} → ${result.response.status}`
     : operation ? `${operation.method} ${operation.path}` : step.operationId, 'call'));
@@ -2050,7 +2051,7 @@ const renderScenarioStage = (stage) => {
     return;
   }
 
-  const operations = operationIndex(docs);
+  const operations = new Map([...operationIndex(docs), ...controlOperations(mock)]);
   if (doc.domain) panel.append(el('p', doc.domain, 'kindline'));
   panel.append(el('h2', doc.content.info?.title ?? doc.relativePath));
   if (doc.content.info?.description) panel.append(el('p', doc.content.info.description, 'note'));
@@ -2083,7 +2084,8 @@ const renderScenarioStage = (stage) => {
         return mock.fetch(new Request(new URL(basePath + pathname + search, location.origin), request));
       };
       try {
-        const results = await runScenario(doc.content, { fetch: fetchHere, operations: operationIndex(docs) });
+        const operations = new Map([...operationIndex(docs), ...controlOperations(mock)]);
+        const results = await runScenario(doc.content, { fetch: fetchHere, operations });
         scenarioRun = { scenario: doc.relativePath, results };
       } catch (error) {
         scenarioRun = { scenario: doc.relativePath, results: [], error: error.message };

@@ -14,6 +14,8 @@
  */
 
 import { resolverFor } from './schema-refs.js';
+import { deriveCollectionName } from './collection-utils.js';
+import { registerResourceCollections } from './handlers/expand-utils.js';
 
 /** `x-relationship.type`s resolve stamps on the operations it generates from other contracts. */
 const GENERATED = new Set(['state-machine-action', 'composition', 'ruleset']);
@@ -254,6 +256,18 @@ export function apiSpecsFromDocs(docs) {
       console.warn(`Warning: Could not read spec ${name}:`, error.message);
     }
   }
+
+  // Where each resource's records are kept, so a related record is found by
+  // its resource's name without guessing at its collection.
+  const collections = new Map();
+  for (const api of loaded) {
+    for (const resource of api.doc.model?.()?.resources ?? []) {
+      if (resource.name && !collections.has(resource.name)) {
+        collections.set(resource.name, deriveCollectionName(resource.path('collection'), ''));
+      }
+    }
+  }
+  registerResourceCollections(collections);
 
   return loaded;
 }

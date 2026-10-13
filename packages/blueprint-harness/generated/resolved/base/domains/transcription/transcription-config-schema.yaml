@@ -55,3 +55,7 @@ $defs:
         uniqueItems: true
         items:
           $ref: ../../schemas/enums.yaml#/$defs/Language
+      idleTimeout:
+        type: string
+        format: duration
+        description: How long a recording transcript may go without activity before it closes itself.

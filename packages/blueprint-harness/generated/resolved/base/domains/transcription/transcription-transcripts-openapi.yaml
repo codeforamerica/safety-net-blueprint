@@ -635,6 +635,11 @@ components:
               format: date-time
               readOnly: true
               description: When the transcript was closed, by the client's clock.
+            lastActivityAt:
+              type: string
+              format: date-time
+              readOnly: true
+              description: When the last line or gap ended, by the client's clock. A transcript closed for being idle closes at this time.
             createdAt:
               type: string
               format: date-time
@@ -951,6 +956,16 @@ components:
           example:
             - en-US
             - es-US
+        idleTimeout:
+          type: string
+          format: duration
+          description: |
+            How long a recording transcript may go without a line or gap before
+            it closes itself, as an ISO 8601 duration. It is checked when the
+            time is up and again after any activity since, so a quiet
+            transcript closes between one and two of these after it was last
+            heard from. Absent, a transcript never closes for being idle.
+          example: PT30M
     TranscriptionProfile:
       description: A profile, including server-managed fields.
       unevaluatedProperties: false
