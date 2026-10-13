@@ -1,12 +1,12 @@
 <FactDictionaryModule>
   <Fact path="/household_monthlyIncome">
     <Writable>
-      <Int/>
+      <Rational/>
     </Writable>
   </Fact>
   <Fact path="/household_monthlyExpenses">
     <Writable>
-      <Int/>
+      <Rational/>
     </Writable>
   </Fact>
   <Fact path="/household_members">
