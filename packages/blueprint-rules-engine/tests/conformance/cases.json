@@ -255,6 +255,108 @@
           "$.application.submittedAt"
         ]
       }
+    },
+    "booleans": {
+      "$schema": "https://blueprint.codeforamerica.org/schemas/graph-schema.yaml",
+      "domain": "eligibility",
+      "ruleset": "conformance",
+      "outputs": [
+        "answer"
+      ],
+      "inputs": {
+        "$.p.flag": {
+          "type": "boolean",
+          "default": false
+        },
+        "$.p.n": {
+          "type": "integer"
+        }
+      },
+      "facts": {
+        "answer": {
+          "expression": "!p.flag && p.n > 1"
+        }
+      },
+      "dependencies": {
+        "answer": [
+          "$.p.flag",
+          "$.p.n"
+        ]
+      }
+    },
+    "shortCircuit": {
+      "$schema": "https://blueprint.codeforamerica.org/schemas/graph-schema.yaml",
+      "domain": "eligibility",
+      "ruleset": "conformance",
+      "outputs": [
+        "earningsExempt",
+        "anyExempt",
+        "band",
+        "defaultSettles",
+        "defaultSettlesOr"
+      ],
+      "inputs": {
+        "$.p.working": {
+          "type": "boolean"
+        },
+        "$.p.hours": {
+          "type": "integer"
+        },
+        "$.p.pregnant": {
+          "type": "boolean"
+        },
+        "$.p.student": {
+          "type": "boolean",
+          "default": false
+        },
+        "$.policy.minHours": {
+          "type": "integer",
+          "default": 30
+        },
+        "$.p.carer": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "facts": {
+        "earningsExempt": {
+          "expression": "p.working && p.hours >= policy.minHours"
+        },
+        "anyExempt": {
+          "expression": "p.pregnant || p.student"
+        },
+        "band": {
+          "expression": "p.working ? 'working' : 'not working'"
+        },
+        "defaultSettles": {
+          "expression": "p.student && p.pregnant"
+        },
+        "defaultSettlesOr": {
+          "expression": "p.carer || p.pregnant"
+        }
+      },
+      "dependencies": {
+        "earningsExempt": [
+          "$.p.working",
+          "$.p.hours",
+          "$.policy.minHours"
+        ],
+        "anyExempt": [
+          "$.p.pregnant",
+          "$.p.student"
+        ],
+        "band": [
+          "$.p.working"
+        ],
+        "defaultSettles": [
+          "$.p.student",
+          "$.p.pregnant"
+        ],
+        "defaultSettlesOr": [
+          "$.p.carer",
+          "$.p.pregnant"
+        ]
+      }
     }
   },
   "cases": [
@@ -814,6 +916,164 @@
         "submittedYear": {
           "state": "complete",
           "value": 2025
+        }
+      }
+    },
+    {
+      "name": "a boolean default is used — placeholder",
+      "graph": "booleans",
+      "note": "A declared boolean default stands in for an unsupplied answer the same way a numeric one does: the fact computes, and is a placeholder because it rests on the default.",
+      "inputs": {
+        "p": {
+          "n": 5
+        }
+      },
+      "expect": {
+        "answer": {
+          "state": "placeholder",
+          "value": true
+        }
+      }
+    },
+    {
+      "name": "a supplied boolean overrides its default — complete",
+      "graph": "booleans",
+      "inputs": {
+        "p": {
+          "flag": true,
+          "n": 5
+        }
+      },
+      "expect": {
+        "answer": {
+          "state": "complete",
+          "value": false
+        }
+      }
+    },
+    {
+      "name": "and: a known false settles it — complete, whatever the other side",
+      "graph": "shortCircuit",
+      "note": "false && x is false for every x, so the answer rests on nothing but the false: not on the unanswered hours, and not on the defaulted policy. Reporting it missing or placeholder would hold up an answer that is already settled.",
+      "inputs": {
+        "p": {
+          "working": false
+        }
+      },
+      "expect": {
+        "earningsExempt": {
+          "state": "complete",
+          "value": false
+        }
+      }
+    },
+    {
+      "name": "and: when nothing settles it, every unresolved side is named",
+      "graph": "shortCircuit",
+      "inputs": {
+        "p": {
+          "working": true
+        }
+      },
+      "expect": {
+        "earningsExempt": {
+          "state": "missing",
+          "missing": [
+            "$.p.hours"
+          ]
+        }
+      }
+    },
+    {
+      "name": "and: a true side and a defaulted side — placeholder",
+      "graph": "shortCircuit",
+      "note": "Both sides were needed, and one rests on a default.",
+      "inputs": {
+        "p": {
+          "working": true,
+          "hours": 40
+        }
+      },
+      "expect": {
+        "earningsExempt": {
+          "state": "placeholder",
+          "value": true
+        }
+      }
+    },
+    {
+      "name": "or: a known true settles it — complete, whatever the other side",
+      "graph": "shortCircuit",
+      "inputs": {
+        "p": {
+          "pregnant": true
+        }
+      },
+      "expect": {
+        "anyExempt": {
+          "state": "complete",
+          "value": true
+        }
+      }
+    },
+    {
+      "name": "or: a false and a defaulted false — placeholder",
+      "graph": "shortCircuit",
+      "inputs": {
+        "p": {
+          "pregnant": false
+        }
+      },
+      "expect": {
+        "anyExempt": {
+          "state": "placeholder",
+          "value": false
+        }
+      }
+    },
+    {
+      "name": "conditional: an unknown condition is missing",
+      "graph": "shortCircuit",
+      "note": "It is not known which branch applies, so there is no answer yet.",
+      "inputs": {
+        "p": {}
+      },
+      "expect": {
+        "band": {
+          "state": "missing",
+          "missing": [
+            "$.p.working"
+          ]
+        }
+      }
+    },
+    {
+      "name": "and: a defaulted false and an unanswered side — missing",
+      "graph": "shortCircuit",
+      "note": "student defaults to false, which would settle the and; pregnant is unanswered. The default does not outweigh the unanswered input.",
+      "inputs": {
+        "p": {}
+      },
+      "expect": {
+        "defaultSettles": {
+          "state": "missing",
+          "missing": [
+            "$.p.pregnant"
+          ]
+        }
+      }
+    },
+    {
+      "name": "or: a defaulted true settles it even while the other side is unanswered — placeholder",
+      "graph": "shortCircuit",
+      "note": "The counterpart to the and case above, and deliberately not its mirror: a provisional true settles an or, a provisional false does not settle an and while another operand is unanswered. The result is flagged placeholder, so it claims no more than that it rests on the default.",
+      "inputs": {
+        "p": {}
+      },
+      "expect": {
+        "defaultSettlesOr": {
+          "state": "placeholder",
+          "value": true
         }
       }
     }

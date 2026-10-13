@@ -12,7 +12,7 @@
  * @throws {Error} with CEL's own message when the expression does not evaluate
  */
 
-import { run, isCelError, isCelList, isCelMap } from '@bufbuild/cel';
+import { run, plan, celEnv, celError, isCelError, isCelList, isCelMap } from '@bufbuild/cel';
 import { toJson } from '@bufbuild/protobuf';
 import { TimestampSchema, DurationSchema } from '@bufbuild/protobuf/wkt';
 
@@ -76,5 +76,29 @@ export function evaluateCEL(expr, context = {}) {
   // applied to '(double, int)'" when an input meets an integer literal.
   if (isCelError(result)) throw new Error(result.message);
 
+  return celToJs(result);
+}
+
+/**
+ * Evaluate one node of a parsed expression, as `evaluateCEL` evaluates text.
+ *
+ * The evaluator takes `&&`, `||` and `? :` apart to give each operand its own
+ * state, so it has parsed nodes to evaluate, not strings. Turning a node back
+ * into text does not work in general — the parser expands `exists`, `all` and
+ * `filter` into comprehensions, which have no text form — so the node is
+ * planned directly. This is what `run` does with the node it parses, so a node
+ * evaluates exactly as the same text would.
+ *
+ * @param {import('@bufbuild/cel').Expr} node
+ * @param {Object} context
+ */
+export function evaluateCELNode(node, context = {}) {
+  let result;
+  try {
+    result = plan(celEnv(), node)(context);
+  } catch (e) {
+    result = celError(e);
+  }
+  if (isCelError(result)) throw new Error(result.message);
   return celToJs(result);
 }
