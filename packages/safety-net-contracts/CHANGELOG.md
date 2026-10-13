@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.2
+
+### Patch Changes
+
+- 869d7d5: Before, validating or resolving the contract set reported references that named nothing in it: AsyncAPI documents pointing at a `schemas/events.yaml` that is not the canonical base events schema, and `x-relationship.resource` values naming a `domain/collection` path where a schema name belongs. Now every reference resolves. `EmployerInfo` is gone from `common/components/common.yaml` — it referenced a schema deleted in July, so it could not resolve either; use `Organization`, which carries the same fields. (#447)
+- Updated dependencies [d715967]
+- Updated dependencies [7164d54]
+- Updated dependencies [3e2a2ba]
+- Updated dependencies [e3d9062]
+- Updated dependencies [3e2a2ba]
+- Updated dependencies [86e9c50]
+- Updated dependencies [27eda23]
+- Updated dependencies [3e2a2ba]
+- Updated dependencies [185fd8e]
+- Updated dependencies [912c3f0]
+- Updated dependencies [d0e30fe]
+- Updated dependencies [3e2a2ba]
+  - @codeforamerica/blueprint-mock-server@0.3.0
+
 ## 0.1.1
 
 ### Patch Changes

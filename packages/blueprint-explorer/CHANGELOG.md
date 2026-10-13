@@ -1,5 +1,21 @@
 # @codeforamerica/blueprint-explorer
 
+## 0.2.1
+
+### Patch Changes
+
+- cd494f0: Before, building an explorer for a contract set with no rule graphs ended the whole build at that tool and exited 0, so the API reference, event catalog, client reference and hub went unwritten while every caller recorded a success. Now the tool is skipped, the build continues, and the hub links a section only where one was generated.
+- Updated dependencies [fe0c210]
+- Updated dependencies [62cb9e6]
+- Updated dependencies [fe0c210]
+- Updated dependencies [57981c8]
+- Updated dependencies [fe0c210]
+- Updated dependencies [fe0c210]
+- Updated dependencies [869d7d5]
+- Updated dependencies [7164d54]
+- Updated dependencies [c268256]
+  - @codeforamerica/blueprint-core@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes
