@@ -1,5 +1,28 @@
 # @codeforamerica/blueprint-cli
 
+## 0.4.0
+
+### Minor Changes
+
+- 27eda23: Before, booting the mock server meant pointing it at a contracts directory for it to walk. Now `blueprint-bundle-contracts --spec=<dir> --out=contracts.json` writes the set to one JSON file that `blueprint-mock --spec=contracts.json` or a browser can boot from, with `--domain=<name>` to include a single domain. (#448)
+
+### Patch Changes
+
+- 62cb9e6: Before, `--env-variables` merged the whole environment over the file, so any `${VAR}` in a contract could pick up a machine value — `${HOME}` resolved to a developer's home directory. Now the file declares which variables exist and the environment supplies values only for those; an undeclared one is reported as unresolved. Declare it in the file if you were relying on it. (#464)
+- 62cb9e6: Before, `blueprint-resolve` wrote output even when a `${VAR}` placeholder had no value, leaving the literal text in the artifacts — and validation passed, because an event type and the channel it names were given the same literal. Now resolve reports the unresolved names and exits without writing. (#464)
+- Updated dependencies [fe0c210]
+- Updated dependencies [62cb9e6]
+- Updated dependencies [fe0c210]
+- Updated dependencies [57981c8]
+- Updated dependencies [fe0c210]
+- Updated dependencies [fe0c210]
+- Updated dependencies [869d7d5]
+- Updated dependencies [7164d54]
+- Updated dependencies [c268256]
+- Updated dependencies [cd494f0]
+  - @codeforamerica/blueprint-core@0.3.0
+  - @codeforamerica/blueprint-explorer@0.2.1
+
 ## 0.3.0
 
 ### Minor Changes
