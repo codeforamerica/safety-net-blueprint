@@ -46,6 +46,7 @@ Resources and services every domain uses.
 
 | Document | What it covers |
 |----------|---------------|
+| [Platform](cross-cutting/platform.md) | The infrastructure every contract set gets: one event log across domains, and the registries the contracts declare |
 | [Search](cross-cutting/search.md) | Cross-domain search patterns |
 | [Transcripts](cross-cutting/transcripts.md) | The written record of a conversation, and the rules a transcription client is held to |
 | [Scheduling Service](cross-cutting/scheduling-service.md) | The shared scheduling infrastructure |

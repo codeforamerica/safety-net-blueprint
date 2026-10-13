@@ -32,6 +32,8 @@ npm run api:new -- --name "households" --domain "intake" --resource "Household"
 
 This generates `{name}-openapi.yaml` with full CRUD paths, schemas, an inline example, and all required `info` fields (`x-domain`, `x-status`, `x-visibility`).
 
+A new domain doesn't need an event log or registry endpoints of its own: the [platform domain](../architecture/cross-cutting/platform.md) comes with the framework, and every contract set gets it. Its events are documented for it — resolve generates an events AsyncAPI document beside each API — and the [contract files conventions](../conventions/contract-files.yaml) cover how its files sit beside the framework's.
+
 ---
 
 ## Manual Creation Guide

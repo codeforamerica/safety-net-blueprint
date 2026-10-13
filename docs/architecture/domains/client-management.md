@@ -106,7 +106,7 @@ Intake's Application state machine handles both the initial and follow-up events
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| OpenAPI spec | Alpha | `persons-openapi.yaml` — Person CRUD. Declares `person.match_resolved` in `x-events`. |
-| Event schemas | Defined | `schemas/client-management-events.yaml` — `PersonMatchResolvedEvent` and `PersonMatchCandidate` |
+| OpenAPI spec | Alpha | `client-management-openapi.yaml` — Person CRUD. |
+| Event schemas | Defined | `client-management-asyncapi.yaml` — `client-management.person.match_resolved` is a placeholder channel, with `PersonMatchResolvedEvent` and `PersonMatchCandidate`, until the matching resource and its state machine exist. |
 | Event subscriptions | TBD | `intake.application.submitted` |
 | Event publications | Defined | `client-management.person.match_resolved` |

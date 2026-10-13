@@ -340,8 +340,10 @@ when recertification is modeled. *To define.*
 
 ### Events
 
-Declared in AsyncAPI, in whichever domain owns each resource: a transcript's
-line added, gap recorded, paused, resumed and closed; `suggestion.proposed`,
+Declared in the `emits:` of each resource's state machine, in whichever domain
+owns it, and generated into that domain's events AsyncAPI document. A
+transcript's paused, resumed and closed exist, and an entry's created event
+covers a line or gap recorded. Still to come: `suggestion.proposed`,
 `.accepted`, `.rejected` and `.expired`; `interview.started` and
 `interview.completed`. *To define.*
 

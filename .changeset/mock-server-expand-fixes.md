@@ -2,4 +2,4 @@
 "@codeforamerica/blueprint-mock-server": patch
 ---
 
-Before, an expanded relationship kept its foreign key even where the resolved schema drops it, and a related record served at a path not matching its name, like `TranscriptionProfile` at `/profiles`, was never found. Now the response follows the resolved schema, the related record is found wherever its API serves it, and a new mock server starts with no stubs left from an earlier one. (#470)
+Before, an expanded relationship kept a foreign key the resolved schema drops, and a related record served at a path not named for it was never found. Now the response follows the resolved schema and the record is found wherever its API serves it. (#470)

@@ -1,0 +1,71 @@
+# Contract Conventions — How Contract Files Make Up a Domain
+# Part of the blueprint conventions. See conventions/ for the full set.
+#
+# A contract set is a directory of files. These rules are what let files from
+# the framework, a state, and a capability sit side by side without anyone
+# editing anyone else's.
+
+version: "1.0"
+
+contract_files:
+
+  standalone_and_additive:
+    rule: Every file is a complete document of its type, and a set is all of its files together.
+    rationale: >
+      Adding a file adds what it declares; nothing has to be edited to make
+      room for it. A domain can span several documents of one type — a
+      framework file beside a set's own, an API beside its adapter's API —
+      and each stays readable on its own.
+
+  found_by_type:
+    rule: A file's type comes from its content or its suffix (-openapi.yaml, -state-machine.yaml, .arazzo.yaml and the rest). Folders are for organizing only.
+    rationale: >
+      Moving or regrouping files changes nothing. No tool reads meaning into a
+      directory name or a file name beyond its type suffix.
+
+  domain_declared:
+    rule: Every file that belongs to a domain declares it — info.x-domain on OpenAPI, AsyncAPI and Arazzo, domain on everything else. Shared building blocks (schemas, components) and overlays declare none.
+    rationale: >
+      A domain is never inferred from a folder, a file name or an enum. A set's
+      domains are the ones its OpenAPI, AsyncAPI and rules documents declare;
+      any other file naming a domain none of them declare fails validation,
+      which catches a misspelling before it quietly starts a domain of its own.
+
+  attached_by_resource:
+    rule: A state machine attaches to the resource named for its object, and a composition to the resource it names, in whichever document of the domain declares it. A config catalog names the resource it seeds.
+    rationale: >
+      What something governs is a declaration, not a file-name match, so
+      splitting or renaming an API document never detaches its behavior.
+
+  one_source_per_route:
+    rule: Each route — method and path — is declared once in the whole set.
+    rationale: >
+      Two files declaring one route would leave which one is served to load
+      order. Validation refuses the pair (duplicate-route), and resolve refuses
+      a hand-written operation that a generated one would replace.
+
+  change_by_overlay:
+    rule: Change what another file declares with an overlay, never by editing it — above all, never by editing a framework file.
+    rationale: >
+      A state's changes stay separate from what it builds on, so the framework
+      can be upgraded underneath them and every change is reviewable as a
+      change.
+
+  combine_by_type:
+    rule: Registry files of one type combine into one list, and an entry id may appear in only one of them.
+    rationale: >
+      Each domain, or a state, can add entries to a shared registry with a file
+      of its own. A duplicate id fails at boot, where it would otherwise be
+      first one wins.
+
+  framework_files:
+    rule: The framework's base contracts are copied into every set under base/. A capability's domain — transcription, say — is included only when the set's configuration lists it in x-capabilities.
+    rationale: >
+      Every set gets the platform's infrastructure without writing it, and opts
+      into a capability rather than carrying contracts it does not use.
+
+  generated_files:
+    rule: Resolve writes documents a set does not author — an API document beside each rules file, an events AsyncAPI document beside each OpenAPI document — into the resolved set only. They are never edited.
+    rationale: >
+      What the contracts imply is documented the same way as what they declare,
+      from one source, so the two cannot drift.

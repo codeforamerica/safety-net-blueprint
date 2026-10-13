@@ -65,7 +65,7 @@ Emitted after a notice is sent.
 | Artifact | Status | Notes |
 |----------|--------|-------|
 | OpenAPI spec | Alpha | `communication-openapi.yaml` — shell spec. No REST paths yet. `communication.notice.sent` is a placeholder in `communication-asyncapi.yaml` until the notice resource and its state machine exist. |
-| Event schemas | Defined | `schemas/communication-events.yaml` — `NoticeSentEvent` |
+| Event schemas | Defined | `communication-asyncapi.yaml` — `NoticeSentEvent` |
 | State machine YAML | TBD | Notice lifecycle |
 | Rules YAML | TBD | Routing rules, retry policies |
 | Metrics YAML | TBD | Delivery success rates, time-to-send |

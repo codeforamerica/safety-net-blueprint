@@ -120,19 +120,15 @@ Each domain under `packages/safety-net-contracts/src/domains/{domain}/` follows 
 ```
 domains/intake/
   intake-openapi.yaml            # OpenAPI spec (hand-authored or scaffolded)
-  intake-openapi-examples.yaml   # Seed/example data (included in mock server)
   intake-state-machine.yaml      # State machine (transitions, guards, effects)
   intake-compositions.yaml       # Composite view endpoints
   intake-annotations.yaml        # Field annotation metadata
   intake-annotations-docs.yaml   # Annotation documentation
-  intake-asyncapi.yaml           # Events sent from outside the contracts only (most are generated)
-  intake-rules.yaml              # Rules contract (authored — inputs, outputs, facts as CEL expressions)
   intake-schema.yaml             # Shared domain schemas
   intake-mock-data.yaml          # Mock server seed data
-  authored/                      # Source tables for generated YAML (CSV)
 ```
 
-Not every domain has every artifact — only the ones relevant to the domain.
+Not every domain has every artifact — only the ones relevant to the domain. A domain may also have a hand-written `{domain}-asyncapi.yaml` for events not yet backed by a resource, as `communication-asyncapi.yaml` does, and a `{domain}-rules.yaml` rules contract.
 
 Resolve adds `intake-events-asyncapi.yaml` to the resolved set: every event the domain's resources and state machines send, generated from the API and each machine's `emits:`.
 

@@ -106,8 +106,9 @@ cross_domain_communication:
         may optionally react. The producer has no knowledge of its consumers.
         Examples: application submitted, task claimed, determination completed.
       contract_surface: >
-        Declared in the producing domain's x-events section. Payload schema is
-        the contract; adding a new consumer requires no change to the producer.
+        Declared in the producing machine's emits:, from which resolve generates
+        the domain's events AsyncAPI document. Payload schema is the contract;
+        adding a new consumer requires no change to the producer.
 
     async_command:
       description: >
@@ -140,7 +141,7 @@ cross_domain_communication:
 #
 # Example: at submission, intake creates a Verification and a data-exchange
 # service call. It PUTs { intake: { verificationId: "ver-abc" } } onto the
-# service call. When data-exchange.service-call.completed fires, the intake
+# service call. When data-exchange.call.completed fires, the intake
 # rule reads event.data.metadata.intake.verificationId and transitions the
 # correct Verification directly.
 
@@ -207,6 +208,6 @@ context_passthrough:
       Intake creates a Verification and a data-exchange service call at
       submission. It sets metadata.intake.verificationId on the service call
       (via the createResource metadata field in rules). When
-      data-exchange.service-call.completed fires, the intake rule reads
+      data-exchange.call.completed fires, the intake rule reads
       event.data.metadata.intake.verificationId and calls triggerTransition
       on the correct Verification — no query needed.

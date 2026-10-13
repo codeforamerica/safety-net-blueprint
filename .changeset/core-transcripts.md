@@ -3,4 +3,4 @@
 "@codeforamerica/blueprint-cli": minor
 ---
 
-A contract set can now include the framework's `transcription` capability by listing it in `x-capabilities` in its config overlay: `/transcription/transcripts` starts, pauses, resumes and closes transcripts by the client's clock, each under a profile from `/transcription/profiles` that names its transcription service from a `transcription-services` registry, through the new `x-enum-source: { registry: <type> }` form. Its timeline is `/transcripts/{id}/entries` — lines, gaps and pauses — an entry is accepted only if it started while the transcript was recording, and a recording transcript closes itself after its profile's `idleTimeout` without activity. (#470)
+A contract set can now include the framework's `transcription` capability by listing it in `x-capabilities`: `/transcription/transcripts` records transcripts under a profile from `/transcription/profiles`, with their timeline at `/transcripts/{id}/entries`. A new `x-enum-source: { registry: <type> }` form draws an enum from a registry. (#470)

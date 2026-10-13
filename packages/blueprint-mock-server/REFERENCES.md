@@ -102,5 +102,5 @@ reading it — and in two CLI scripts. All Node-only, none on the browser path.
 ## See also
 
 - `ROUTING.md` — the route table and why the matcher is hand-rolled
-- `src/schema-registry.js` — how documents are registered with ajv, and why the
-  validator is built for draft-07 while the documents declare 2020-12
+- `src/schema-registry.js` — how documents are registered with the 2020-12 ajv
+  validator

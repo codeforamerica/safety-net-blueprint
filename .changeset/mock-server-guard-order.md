@@ -3,4 +3,4 @@
 "@codeforamerica/blueprint-core": minor
 ---
 
-Before, a guarded action or create whose body was missing a field its condition read answered `409 No guard clause passed`, naming nothing. Now the body is checked against its schema after the caller's roles and before the conditions, answering 422, and a 409 names each condition not met, by the guard's new optional `description` or by its id. (#470)
+Before, a guarded action or create whose body was missing a field its condition read answered `409 No guard clause passed`, naming nothing. Now the body is checked against its schema first and answers 422, and a 409 reads as a sentence naming each unmet condition by the guard's new optional `description` or its id: `Can't create a transcript. It requires that …`. (#470)

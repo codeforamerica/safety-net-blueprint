@@ -156,11 +156,15 @@ may produce false negatives on source files since overlays have not been applied
 
 ### 4. OpenAPI Generation {#openapi-generation}
 
-After overlays have been applied, `resolve.js` generates OpenAPI paths and schemas from two source types:
+After overlays have been applied, `resolve.js` generates OpenAPI paths and schemas from two source types, and two documents of its own:
 
 **RPC endpoints** — `resolve.js` reads all `*-state-machine.yaml` files and generates RPC transition endpoints for each one (e.g. `POST /tasks/{id}/claim`), derived from the state machine's action definitions.
 
 **Composition endpoints and schemas** — `resolve.js` reads all `*-compositions.yaml` files and generates composite view endpoints (e.g. `GET /applications/{id}/review`), state endpoints (e.g. `PATCH /applications/{id}/review-progress/{section}`), and the corresponding request/response schemas. If the composition sets `parentLink: true`, it also adds `_links.<compositionId>` to the parent resource's response schema. See [Resource Composition](cross-cutting/resource-composition.md) for the full config reference.
+
+**Rules APIs** — beside each rules file, an OpenAPI document of its evaluate endpoints (`intake-rules-openapi.yaml` beside `intake-rules.yaml`).
+
+**Events AsyncAPI** — beside each OpenAPI document, `<name>-events-asyncapi.yaml`: every event its resources send — created, updated and deleted, and each attached state machine's `emits:` — with the shape of each event's data. A hand-written AsyncAPI document holds only events not yet backed by a resource.
 
 Because generation runs after overlays, any overlay modifications to `*-state-machine.yaml` or `*-compositions.yaml` files are reflected in the generated output.
 

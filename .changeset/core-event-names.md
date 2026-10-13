@@ -1,5 +1,7 @@
 ---
 "@codeforamerica/blueprint-core": minor
+"@codeforamerica/blueprint-cli": patch
+"@codeforamerica/blueprint-explorer": patch
 ---
 
-**Breaking:** A state machine's `events:` is now `on:`, and the events its resource sends are declared once under `emits:` and sent by name (`emit: claimed`), which resolve expands to `{domain}.{resource}.{event}` — the domain as declared, the resource's schema name in snake_case. (#470)
+**Breaking:** Before, a state machine subscribed under `events:` and emitted full event names. Now it subscribes under `on:`, declares its resource's events once under `emits:` and sends them by name (`emit: claimed`), which resolve expands to `{domain}.{resource}.{event}`. (#470)

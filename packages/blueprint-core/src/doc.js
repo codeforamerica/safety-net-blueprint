@@ -44,9 +44,8 @@ export function toDoc({ path, relativePath = null, domain = null, type, content 
   return {
     path: path ?? relativePath,
     relativePath,
-    // discover() resolves this against the whole set, which is the only way
-    // the path-segment and filename fallbacks can work. Loading a file alone
-    // still gets the two answers the content itself provides.
+    // A domain is only ever declared: info.x-domain, or domain on anything
+    // that is not OpenAPI, AsyncAPI or Arazzo.
     domain: domain ?? content?.info?.['x-domain'] ?? content?.domain ?? null,
     type,
     content,

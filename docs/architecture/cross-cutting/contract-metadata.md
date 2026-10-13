@@ -167,7 +167,7 @@ The cross-reference validator resolves keys as follows:
 |---------|-----------------|
 | `schema` | OpenAPI component schema field paths in `{domain}-openapi.yaml` |
 | `operations` | State machine action IDs in `{domain}-state-machine.yaml` and OpenAPI operationIds |
-| `events` | AsyncAPI channel addresses in `{domain}-asyncapi.yaml` |
+| `events` | AsyncAPI channel addresses in the domain's AsyncAPI documents, including the generated `*-events-asyncapi.yaml` |
 
 Policy ID references in `policies: [...]` are also validated — referencing a policy ID that does
 not exist in any policy file produces a warning.

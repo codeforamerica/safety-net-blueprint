@@ -126,7 +126,7 @@ So when you add a feature to a tooling package, adding a contract here that exer
 
 ### Policies
 
-**[`contracts/platform/platform-policies.yaml`](contracts/platform/platform-policies.yaml)**
+**[`contracts/domains/platform/platform-registry-policies.yaml`](contracts/domains/platform/platform-registry-policies.yaml)**
 - Platform-level eligibility policy definitions
 - Exercises overlay targeting of policy files
 

@@ -162,14 +162,14 @@ curl -X POST http://localhost:1080/mock/stubs/events \
   }'
 ```
 
-- `on` — the CloudEvents type suffix to match (no platform prefix, underscores)
+- `on` — the CloudEvents type suffix to match, with no platform prefix (`data-exchange.external_service_call.created`)
 - `match` — optional dot-path field matchers against the event envelope; all must match
 - `response.type` — the event type to fire when matched
 - `response.data` — merged with the trigger event's data; only specify what changes
 
 The response envelope is built by merging: an entity ID derived from the trigger's `subject`, named for the trigger's resource (e.g., `externalServiceCallId`), the trigger event's data, then `response.data` overrides. The fired event's `causationid` is set to the trigger event's `id`, so a scenario can fetch the response for a specific trigger with `GET /platform/events?causationid=<trigger event id>`.
 
-**Stub IDs** are human-readable: `service_call.created-1`, `service_call.created-2`, etc.
+**Stub IDs** are human-readable, from the last two segments of `on`: `external_service_call.created-1`, `external_service_call.created-2`, etc.
 
 ### Timer stubs
 
@@ -200,9 +200,9 @@ Match on `data.callback.event` — the event type embedded in the scheduling req
 ### Managing event stubs
 
 ```bash
-curl http://localhost:1080/mock/stubs/events                                    # list all
-curl -X DELETE http://localhost:1080/mock/stubs/events/service_call.created-1   # remove one
-curl -X DELETE http://localhost:1080/mock/stubs/events                          # clear all
+curl http://localhost:1080/mock/stubs/events                                             # list all
+curl -X DELETE http://localhost:1080/mock/stubs/events/external_service_call.created-1   # remove one
+curl -X DELETE http://localhost:1080/mock/stubs/events                                   # clear all
 ```
 
 ## HTTP stubs
@@ -340,7 +340,7 @@ Forwarding applies to requests that come into the mock. Two things it does not r
 
 A scenario is a sequence of calls toward a goal, written as an [Arazzo](https://spec.openapis.org/arazzo/) document — the OpenAPI Initiative's format for API workflows. Each step names an operation in the contracts by its `operationId`, what it sends, what makes it a success, and what it carries to later steps. A scenario is a contract like any other: a file ending `.arazzo.yaml`, anywhere in the contract set, declaring its domain in `info.x-domain`. `validate` checks that every step calls an operation the set has and refers only to earlier steps.
 
-The same file runs as a test, is one of the tours in the demo page's Show me around — drawn the way the walk-through is, a step at a time — and runs against a real implementation with any Arazzo runner, such as Redocly's Respect. The mock's own runner, `runScenario` from `@codeforamerica/blueprint-mock-server/browser`, runs the subset the blueprint's scenarios use and refuses anything else by name, so a scenario never passes by not being checked:
+The same file runs as a test, is one of the tours in the demo page's Show me around — the walk-through among them, each drawn a step at a time — and runs against a real implementation with any Arazzo runner, such as Redocly's Respect. The mock's own runner, `runScenario` from `@codeforamerica/blueprint-mock-server/browser`, runs the subset the blueprint's scenarios use and refuses anything else by name, so a scenario never passes by not being checked:
 
 - steps by `operationId`, with `parameters` (path, query, header) and `requestBody.payload` — sent as JSON, or for an upload as `multipart/form-data`, where a part the operation declares as a file is given as `{ fileName, contentType, content }`
 - reusable parameters, `{ reference: $components.parameters.<name> }`

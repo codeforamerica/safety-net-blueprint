@@ -321,7 +321,7 @@ Eligibility also subscribes to `application.withdrawn` from Intake. When an appl
 **Considerations:**
 - The NOA must wait until both determination paths have fully converged: the auto path (Medicaid RTE) and the manual path (caseworker review and optional supervisor approval); sending the notice before supervisor approval could mean notifying the applicant of an outcome that gets revised
 - `eligibility.determination.completed` fires when all Decisions are resolved, but supervisor approval (when required by state policy) happens after this event on the manual path — there is no contracted `determination.approved` event from workflow to signal completion
-- `intake.application.closed` is intake's authoritative signal that all post-determination steps are complete; both paths converge here with no new events required; state configurations without supervisor approval close immediately after `determination_completed`
+- `intake.application.closed` is intake's authoritative signal that all post-determination steps are complete; both paths converge here with no new events required; state configurations without supervisor approval close immediately after `eligibility.determination.completed`
 
 **Options:**
 - **(A)** `eligibility.determination.completed` — fires when all Decisions are resolved; but fires before supervisor approval on the manual path; requires a new `determination.approved` event to handle the approval gate
@@ -434,7 +434,7 @@ Eligibility also subscribes to `application.withdrawn` from Intake. When an appl
 - **(A)** No trial run support — evaluation only happens on the official event-driven path; caseworkers cannot preview outcomes before marking review complete
 - **(B)** ✓ Add evaluate endpoints for both trial and official runs; audit history comes from entity lifecycle events on Decision and Determination (updated entity state logged via `decision.updated` and `determination.updated`); trace context propagated through snapshot refresh → rules engine → status update links the data state to the outcome in the event log
 
-**Decision:** Option B reuses existing platform infrastructure and avoids a new entity. The snapshot refresh on each evaluate call naturally produces `decision.updated` and `determination.updated` events recording the updated entity state — replaying these events reconstructs the data state at any point in the review cycle. For official runs, the trace ID propagated through the evaluate sequence links the data snapshot to the Decision outcomes in the event log. Trial runs return projected outcomes synchronously and publish the same lifecycle events; they do not update `Decision.status` or fire `decision_completed` events.
+**Decision:** Option B reuses existing platform infrastructure and avoids a new entity. The snapshot refresh on each evaluate call naturally produces `decision.updated` and `determination.updated` events recording the updated entity state — replaying these events reconstructs the data state at any point in the review cycle. For official runs, the trace ID propagated through the evaluate sequence links the data snapshot to the Decision outcomes in the event log. Trial runs return projected outcomes synchronously and publish the same lifecycle events; they do not update `Decision.status` or fire `eligibility.decision.completed` events.
 
 ---
 

@@ -196,7 +196,8 @@ event_catalog:
     description: |
       AsyncAPI channel names follow the same segments as the CloudEvents type
       but without the reverse-DNS prefix. The domain matches the API's x-domain
-      value; the entity is the kebab-case resource name; the verb is the action.
+      value; the entity is the resource's schema name in snake_case
+      (application_member); the verb is the action.
     examples:
       - intake.application.submitted
       - intake.application.withdrawn

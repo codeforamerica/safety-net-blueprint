@@ -122,7 +122,7 @@ Timer-triggered transitions fire automatically when durations elapse. See [Decis
 
 ### Reactive behavior
 
-Task creation and field-change reactions are handled via event subscriptions in the state machine's `events:` block, not special lifecycle hooks. When a task is created, `assignToQueue` and `setPriority` run and initial timers are scheduled. When `isExpedited` or `programType` change via PATCH, priority is re-evaluated. Transition-internal field changes do not trigger the update subscription.
+Task creation and field-change reactions are handled via event subscriptions in the state machine's `on:` block, not special lifecycle hooks. When a task is created, `assignToQueue` and `setPriority` run and initial timers are scheduled. When `isExpedited` or `programType` change via PATCH, priority is re-evaluated. Transition-internal field changes do not trigger the update subscription.
 
 ## SLA and deadline management
 

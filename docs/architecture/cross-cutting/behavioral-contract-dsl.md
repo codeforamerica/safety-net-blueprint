@@ -184,17 +184,17 @@ Reactions are named event subscriptions. Object creation, field changes, and tim
 
 ```yaml
 on:
-  - name: intake.application.submitted
+  - type: intake.application.submitted
     steps:
       - call: createProgramVerifications
-  - name: workflow.task.claimed
+  - type: workflow.task.claimed
     context:
       - task: {from: workflow/tasks, where: {id: $this.subject}}
     steps:
       - call: openApplication
 ```
 
-All events are CloudEvents. The `name:` field is the CloudEvents `type` attribute.
+All events are CloudEvents. The `type:` field is the CloudEvents `type` attribute.
 
 Every event is named `{domain}.{resource}.{event}`: the domain as declared, the resource as its schema is named in snake_case, and the event's own name. A resource's created, updated and deleted events need no declaring. Every other event a resource sends is declared once in its machine's `emits:`, with the shape of its data, and a step sends it by that name:
 

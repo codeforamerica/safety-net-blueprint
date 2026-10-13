@@ -194,35 +194,36 @@ Filter expressions support string, numeric, and boolean values:
 
 ### State machine targets
 
-State machine files use a top-level `machines:` array. Use a filter expression to target a specific machine by its `object` name, then drill into `transitions`, `events`, `procedures`, or `guards`:
+State machine files use a top-level `machines:` array. Use a filter expression to target a specific machine by its `object` name, then drill into its `actions`, `emits`, or `on`. Guards and procedures are top-level lists shared by every machine in the file:
 
 **Add a guard to a specific transition:**
 
 ```yaml
-- target: $.machines[?(@.object == 'Task')].transitions[?(@.id == 'claim')].guards
+- target: $.machines[?(@.object == 'Task')].actions[?(@.id == 'claim')].guards
   description: Require office match before claiming
   update:
-    - actors: [caseworker]
+    - actors: [case_worker]
       conditions:
         - callerOfficeMatchesTask
 ```
 
-**Add a new transition:**
+**Add a new action:**
 
 ```yaml
-- target: $.machines[?(@.object == 'Task')].transitions
-  description: Add supervisor-override transition for state-specific escalation path
+- target: $.machines[?(@.object == 'Task')].actions
+  description: Add supervisor-override action for state-specific escalation path
   append:
     - id: supervisor-override
       description: POST /tasks/{taskId}/supervisor-override — Supervisor bypasses standard escalation
       guards:
         - actors: [supervisor]
-      from: [in_progress, pending]
-      to: escalated
+      transition: {from: [in_progress, pending], to: escalated}
       steps:
-        - set: { escalatedAt: $now, escalationReason: supervisor_override }
-        - emit: workflow.task.escalated
+        - set: {field: escalatedAt, value: $now}
+        - emit: escalated
 ```
+
+An `emit:` step names one of the machine's `emits:` by its short id; resolve expands it to `workflow.task.escalated`.
 
 **Replace a procedure's steps:**
 
@@ -232,16 +233,16 @@ State machine files use a top-level `machines:` array. Use a filter expression t
   update:
     id: assignToQueue
     steps:
-      - set: { queueId: $context.countyQueue.id }
+      - set: {field: queueId, value: $countyQueue.id}
 ```
 
 **Add a new event subscription:**
 
 ```yaml
-- target: $.machines[?(@.object == 'Task')].events
+- target: $.machines[?(@.object == 'Task')].on
   description: React to county transfer events
   append:
-    - name: case-management.case.county_transferred
+    - type: case-management.case.county_transferred
       steps:
         - call: assignToQueue
 ```
