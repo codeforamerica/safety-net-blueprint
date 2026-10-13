@@ -222,6 +222,8 @@
   }
   .panel .path { font-family: var(--mono); font-size: .82rem; color: var(--accent); margin: 0 0 .7rem; }
   .panel .note { color: var(--muted); font-size: .9rem; margin: 0 0 .9rem; max-width: 46rem; }
+  .panel ul.note { padding-left: 1.1rem; }
+  .panel ul.note li { margin: 0 0 .25rem; }
   .panel .cited { font-family: var(--mono); font-size: .74rem; color: var(--faint); margin: 0 0 .9rem; }
   .panel .cited code { background: #eef2f6; color: var(--ink); padding: .08em .3em; border-radius: 3px; }
   .panel .cited a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted currentColor; }
@@ -303,8 +305,8 @@
     <p class="lede">
       An entire server, generated from a set of contracts, running in this tab.
       <b>No custom code.</b> Everything is derived on the fly when the server
-      boots. Change a contract and the API changes with it; hand it a different
-      contract set and it is a different system.
+      boots, so what you see here is what these contracts say, and nothing
+      else.
     </p>
     <div id="controls">
       <button id="mode" class="primary">Let me explore</button>
@@ -1252,7 +1254,12 @@ const introOf = (doc) => {
   const panelParts = [];
   const { title, points } = describe({ description: doc.content.info?.description, stepId: '' });
   if (title) panelParts.push(el('p', title, 'note'));
-  if (points.length > 0) panelParts.push(noticeList(points, null));
+  if (points.length > 0) {
+    // Read as part of the introduction, so set like the sentence above them.
+    const list = noticeList(points, null);
+    list.className = 'note';
+    panelParts.push(list);
+  }
   return panelParts;
 };
 
@@ -1890,6 +1897,15 @@ const locate = (token, op) => {
     return { path: here, yaml: snippet(token, op.operation.responses[token], { prose: true }) };
   }
 
+  // A header one of this operation's responses declares, matched the way
+  // HTTP matches header names.
+  for (const response of Object.values(op.operation?.responses ?? {})) {
+    for (const [name, header] of Object.entries(deref(response, doc)?.headers ?? {})) {
+      if (name.toLowerCase() !== token.toLowerCase()) continue;
+      return { path: here, yaml: snippet(name, deref(header, doc), { prose: true }) };
+    }
+  }
+
   // The move this operation is, in the document that declares it: the action
   // by name, the states it joins, or whichever of its steps mentions the
   // token — which is how `intake.review_reminder` leads to the `timerId` it
@@ -1969,16 +1985,24 @@ const locate = (token, op) => {
   // fields of the record it projects, and those are not on the shape the
   // composition answers with — they are on the resource it reads them off.
   for (const [name, schema] of Object.entries(doc?.content?.components?.schemas ?? {})) {
-    const declared = schema.properties?.[token];
+    const declared = collectProperties(schema, doc)[token];
     if (!declared) continue;
     return { path: here, yaml: `# ${name}\n${snippet(token, declared)}` };
   }
 
-  // A procedure a state machine calls, and the machine's own states.
-  for (const candidate of docs.filter((d) => d.type === 'state-machine')) {
-    const procedure = (candidate.content?.procedures ?? []).find((one) => one.id === token);
-    if (procedure) {
-      return { path: candidate.relativePath, yaml: snippet(token, essential(procedure)) };
+  // Something a state machine declares under an id of its own: a guard — the
+  // condition a refusal names — a procedure it calls, or a timer it asks for.
+  // The machines of this operation's domain are looked at first, since guard
+  // ids are a machine's own and another domain may reuse one. A machine's
+  // own come before the file's, which every machine in it shares.
+  const machines = docs.filter((d) => d.type === 'state-machine')
+    .sort((a, b) => (b.domain === op.domain) - (a.domain === op.domain));
+  for (const candidate of machines) {
+    for (const holder of [...(candidate.content?.machines ?? []), candidate.content ?? {}]) {
+      for (const list of ['guards', 'procedures', 'timers']) {
+        const declared = (holder[list] ?? []).find((one) => one.id === token);
+        if (declared) return { path: candidate.relativePath, yaml: asList(essential(declared)) };
+      }
     }
   }
 

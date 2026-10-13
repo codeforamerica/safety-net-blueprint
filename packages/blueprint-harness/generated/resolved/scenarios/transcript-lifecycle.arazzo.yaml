@@ -35,8 +35,10 @@ workflows:
         description: |
           Add a profile
 
-          - An administrator adds the profile English interviews run under: the transcription service and its languages.
-          - Profiles the config seeds are marked `source: system`; one added here is `user`.
+          - You sent a `TranscriptionProfileCreate` and got back a `TranscriptionProfile`: the shape an administrator writes, and the shape the system keeps.
+          - `provider` takes its values from the `transcription-services` registry, through `x-enum-source`. `aws-transcribe` is an entry there; a service no entry names is refused, and a contract set adds one with a registry file of its own.
+          - `source` is `user` for a profile added through the API, and `system` for the ones the config seeds.
+          - No `idleTimeout`, so transcripts under this profile never close for being idle.
         operationId: $sourceDescriptions.transcripts.createTranscriptionProfile
         parameters:
           - name: X-Caller-Id
@@ -57,8 +59,9 @@ workflows:
         description: |
           Start without a model
 
-          - Refused with 409: under a profile with a transcription service, a transcript says which model produced its lines.
-          - The refusal names the condition not met, from the guard's description.
+          - Refused with `409` by `modelGivenForTheService`: under a profile whose `provider` is a transcription service, a transcript has to say which `model` produced its lines.
+          - The refusal is the guard's description, written as a sentence. `profileExists` passed, so only the condition not met is named.
+          - A guard runs on a plain create because the state machine governs `Transcript` under `resources:`. No action is involved.
         operationId: $sourceDescriptions.transcripts.createTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -73,7 +76,8 @@ workflows:
         description: |
           Start under a profile that does not exist
 
-          - The profile id doesn't belong to any profile, so the transcript is refused with 409.
+          - Refused with `409` by `profileExists`: the guard reads the profile `profileId` names, through the machine's context, and there isn't one.
+          - Both guards run, and each one not met is named. `modelGivenForTheService` passes here, since without a profile there is no service to need a model.
         operationId: $sourceDescriptions.transcripts.createTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -89,8 +93,9 @@ workflows:
         description: |
           Start the transcript
 
-          - The caseworker's software starts a transcript of the interview, under the profile.
-          - It begins in `recording`, with `startedAt` by the software's clock.
+          - `TranscriptCreate` requires `profileId`, `client` and `startedAt`. `model` is required by the guard, not the schema, because a profile whose `provider` is `none` needs none.
+          - `status` is `recording` because that is the state machine's initial state. Nothing in the request set it.
+          - `startedAt` is by the software's clock, and every time on the transcript's entries is compared on that same clock.
         operationId: $sourceDescriptions.transcripts.createTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -110,8 +115,9 @@ workflows:
         description: |
           Add the first line
 
-          - A finished line arrives, with an `Idempotency-Key`.
-          - Its start and end times come from the transcription software's clock, not the server's, so every time on a transcript is compared on one clock.
+          - `Idempotency-Key` is declared on this operation, from the shared parameters every domain uses. The mock remembers the key with its answer.
+          - The body is a `TranscriptLineCreate`, one of the kinds `TranscriptEntryCreate` chooses between by `kind`.
+          - `startedWhileRecording`, `endsAfterItStarts` and `gapOutsidePauses` all passed: the guards the machine puts on every new entry.
         operationId: $sourceDescriptions.transcripts.addTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -134,8 +140,8 @@ workflows:
         description: |
           Send it again
 
-          - The connection drops before the answer comes back, so the software sends the line again with the same key.
-          - It gets the same line back, marked `Idempotent-Replayed`, not a second one.
+          - Same `Idempotency-Key`, same body: the mock answers with the line it already stored, with the same `id` and `Idempotent-Replayed: true`. No second line is written.
+          - The same key with a different body would be refused with `422`. A retry is the same request; a new request needs a new key.
         operationId: $sourceDescriptions.transcripts.addTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -158,7 +164,9 @@ workflows:
         description: |
           Go off the record
 
-          - The applicant asks to stop. Pausing adds an open pause entry to the timeline.
+          - `pause` is an action of the transcript's state machine, from `recording` to `paused`, guarded by `atAfterStart`.
+          - Its steps write a `pause` entry with no `endedAt`, and emit `paused`, which resolve names `transcription.transcript.paused`.
+          - `at` is by the software's clock too. `AtRequest` declares it, for pausing, resuming and closing alike.
         operationId: $sourceDescriptions.transcripts.pauseTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -173,8 +181,8 @@ workflows:
         description: |
           A line said just before the pause
 
-          - It arrives just after the pause began, but it started on the record, so it is kept.
-          - A line is judged by when it started, not when it arrived.
+          - It arrived after the pause, but its `startedAt` is before it, and `startedWhileRecording` judges an entry by when it started. Kept.
+          - Software sends a line once it is finished, so a line still being spoken when the pause came always arrives late.
         operationId: $sourceDescriptions.transcripts.addTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -195,7 +203,8 @@ workflows:
         description: |
           A line said during the pause
 
-          - Refused with 409: nothing said off the record is kept, even from faulty software.
+          - Refused with `409` by `startedWhileRecording`: a pause was open when the line started.
+          - The server refuses it, not the software. Nothing said off the record is kept, even from software that keeps sending.
         operationId: $sourceDescriptions.transcripts.addTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -216,7 +225,8 @@ workflows:
         description: |
           A lost stretch overlapping the pause
 
-          - Refused with 409: the pause already accounts for that time.
+          - Refused with `409` by `gapOutsidePauses`. A gap is time the software lost, and the pause already accounts for that stretch.
+          - `cause` says why the time was lost: `connection` here, one of the values `GapCause` declares.
         operationId: $sourceDescriptions.transcripts.addTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -236,7 +246,8 @@ workflows:
         description: |
           Back on the record
 
-          - Resuming gives the open pause its end time.
+          - `resume` goes from `paused` to `recording`, guarded by `aPauseIsOpen` and `atAfterPauseBegan`.
+          - It gives the open pause its `endedAt` with a `PATCH` the machine makes itself, then calls `requestIdleCheck`, which does nothing here: this profile has no `idleTimeout`.
         operationId: $sourceDescriptions.transcripts.resumeTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -251,7 +262,7 @@ workflows:
         description: |
           A late line from inside the past pause
 
-          - Still refused: the pause has ended, but the line started inside it.
+          - Still refused by `startedWhileRecording`: the pause is over, but the line started inside it.
         operationId: $sourceDescriptions.transcripts.addTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -272,8 +283,8 @@ workflows:
         description: |
           Read the timeline
 
-          - Lines, gaps and pauses in the order they happened, by `startedAt`.
-          - The pause is in it, with its end time.
+          - A `TranscriptEntryList`: lines, gaps and pauses together, in the order they happened by `startedAt`.
+          - `total` is 3: the two lines kept, and the pause with the `endedAt` resuming gave it. The refused entries left nothing behind.
         operationId: $sourceDescriptions.transcripts.listTranscriptEntries
         parameters:
           - reference: $components.parameters.caller
@@ -289,7 +300,8 @@ workflows:
         description: |
           Try to change an entry
 
-          - Refused with 403: entries do not change, and only the system may update one.
+          - Refused with `403`: the machine lets only `system` update a `TranscriptEntry`, and the caller's role is checked before the body is.
+          - Resuming and closing end a pause through the machine's own steps, which are not held to this.
         operationId: $sourceDescriptions.transcripts.updateTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -306,8 +318,8 @@ workflows:
         description: |
           Close the transcript
 
-          - The interview ends.
-          - `lastActivityAt` says when the software was last heard from: the end of its last line.
+          - `close` goes from `recording` or `paused` to `closed`, and sets `closedAt` to the `at` sent.
+          - `lastActivityAt` is when the last line or gap ended, kept up to date by the machine's subscription to `transcription.transcript_entry.created`. A pause doesn't count: it is the transcript's own entry, not the software's.
         operationId: $sourceDescriptions.transcripts.closeTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -323,7 +335,7 @@ workflows:
         description: |
           A line after the close
 
-          - Refused with 409: nothing is added after the close.
+          - Refused with `409` by `startedWhileRecording`: the line started after `closedAt`.
         operationId: $sourceDescriptions.transcripts.addTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -344,7 +356,7 @@ workflows:
         description: |
           Add a profile with an idle timeout
 
-          - Its transcripts close themselves after 30 quiet minutes: `idleTimeout: PT30M`.
+          - `idleTimeout` is an ISO 8601 duration, `PT30M`. A recording transcript under this profile that hears nothing for that long closes itself.
         operationId: $sourceDescriptions.transcripts.createTranscriptionProfile
         parameters:
           - name: X-Caller-Id
@@ -365,8 +377,8 @@ workflows:
         description: |
           Stand in for the scheduler
 
-          - Nobody waits 30 minutes in a test. A stub on the mock answers the next idle check request at once, as if the time had passed.
-          - This step calls the mock's own route, so the scenario runs against the mock.
+          - `requestIdleCheck` emits `scheduling.timer.requested`, asking the scheduler to send an `idle_check` once the profile's `idleTimeout` has passed.
+          - Nobody waits 30 minutes in a test. This stub, on the mock's own route, answers the next idle check request at once, as if the time had passed.
         operationId: $sourceDescriptions.mock.registerEventStub
         requestBody:
           payload:
@@ -379,7 +391,8 @@ workflows:
         description: |
           Start a transcript and go quiet
 
-          - The software starts a transcript and is never heard from again.
+          - Creating it asks for the first idle check: the machine's subscription to `transcription.transcript.created` calls `requestIdleCheck`.
+          - No line or gap ever arrives.
         operationId: $sourceDescriptions.transcripts.createTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -397,8 +410,8 @@ workflows:
         description: |
           It closed itself
 
-          - The idle check found nothing since it was asked for, so the transcript closed.
-          - It closed at the time it was last heard from: here, when it started.
+          - When the `idle_check` came, nothing had arrived since it was asked for, so the machine closed the transcript.
+          - It closed at `lastActivityAt`, or at `startedAt` when there was none, as here. An idle transcript closes when it was last heard from, not when the check ran.
         operationId: $sourceDescriptions.transcripts.getTranscript
         parameters:
           - reference: $components.parameters.caller
