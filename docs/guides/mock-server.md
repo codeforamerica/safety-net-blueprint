@@ -340,12 +340,13 @@ Forwarding applies to requests that come into the mock. Two things it does not r
 
 A scenario is a sequence of calls toward a goal, written as an [Arazzo](https://spec.openapis.org/arazzo/) document — the OpenAPI Initiative's format for API workflows. Each step names an operation in the contracts by its `operationId`, what it sends, what makes it a success, and what it carries to later steps. A scenario is a contract like any other: a file ending `.arazzo.yaml`, anywhere in the contract set, declaring its domain in `info.x-domain`. `validate` checks that every step calls an operation the set has and refers only to earlier steps.
 
-The same file runs as a test, steps through in the demo page's Scenarios mode, and runs against a real implementation with any Arazzo runner, such as Redocly's Respect. The mock's own runner, `runScenario` from `@codeforamerica/blueprint-mock-server/browser`, runs the subset the blueprint's scenarios use and refuses anything else by name, so a scenario never passes by not being checked:
+The same file runs as a test, is one of the tours in the demo page's Show me around — drawn the way the walk-through is, a step at a time — and runs against a real implementation with any Arazzo runner, such as Redocly's Respect. The mock's own runner, `runScenario` from `@codeforamerica/blueprint-mock-server/browser`, runs the subset the blueprint's scenarios use and refuses anything else by name, so a scenario never passes by not being checked:
 
-- steps by `operationId`, with `parameters` (path, query, header) and `requestBody.payload`
+- steps by `operationId`, with `parameters` (path, query, header) and `requestBody.payload` — sent as JSON, or for an upload as `multipart/form-data`, where a part the operation declares as a file is given as `{ fileName, contentType, content }`
 - reusable parameters, `{ reference: $components.parameters.<name> }`
 - runtime expressions — `$statusCode`, `$response.body#/<pointer>`, `$response.header.<name>`, `$steps.<id>.outputs.<name>`, `$inputs.<name>` — whole, or embedded in a string as `{$…}`
 - `successCriteria` comparisons joined by `&&`, and `outputs`
+- `startScenario`, which runs a scenario a step at a time on the same server, as the demo page's tours do; `runScenario` runs it through, or `until` a given step
 - more than one source, with each step's operation qualified as `$sourceDescriptions.<name>.<operationId>`, as Arazzo requires
 
 A scenario can call the mock's own routes too — registering a stub that stands in for a scheduler, say. Name `https://blueprint.codeforamerica.org/mock/mock-openapi.yaml` as a source and call its operations by the operationIds in `contracts/mock-openapi.yaml`; `controlOperations(mock)` gives them to the runner. Such a scenario runs against the mock only, and `validate` leaves the source's operations to the runner, which checks them where they are served.
@@ -363,6 +364,8 @@ workflow.passed; // and workflow.steps: each request, response and check
 ```
 
 A failed step stops its workflow, since later steps would act on what it did not produce.
+
+A step's `description` is CommonMark: its first paragraph is the step's title, and a bullet list after it is what the demo page shows under What to notice. Any Arazzo tool shows the same text.
 
 ## The mock's own endpoints
 

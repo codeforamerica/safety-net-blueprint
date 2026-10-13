@@ -7,7 +7,7 @@
 # entries are on, so nothing compares two clocks. A pause is an entry in the
 # transcript's timeline: pausing writes one with no end, and resuming or
 # closing gives it one. Under resources: below, the transcript decides when one
-# may be started — under a profile that exists — and which entries it accepts.
+# is refused — under a profile that doesn't exist — and which entries it accepts.
 #
 # A recording transcript nobody writes to closes itself, when its profile sets
 # an idleTimeout. Starting or resuming asks for an idle check after that long;
@@ -47,10 +47,11 @@ machines:
       - id: aPauseIsOpen
         description: a pause is open
         condition: openPause != null
-      # A transcript is started under a profile that exists, and says which
-      # model produced its lines unless the profile's service is `none`.
+      # A transcript naming a profile that doesn't exist is refused, and so is
+      # one that doesn't say which model produced its lines — unless the
+      # profile's service is `none`.
       - id: profileExists
-        description: the transcript's profile exists
+        description: the profile it names exists
         condition: profile != null
       - id: modelGivenForTheService
         description: a model is given when the profile names a transcription service

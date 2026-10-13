@@ -103,10 +103,15 @@ So when you add a feature to a tooling package, adding a contract here that exer
 
 ### Scenarios
 
+**[`contracts/scenarios/application-walkthrough.arazzo.yaml`](contracts/scenarios/application-walkthrough.arazzo.yaml)**
+- The demo page's walk-through: an application from creation to close, through every kind of thing the contracts declare, including an upload and the mock's own stub, reset and reseed
+- The tour Show me around opens with (`--first-tour` in `scripts/regenerate.js`). Each step's first line is its title in the page, and its bullets are what to notice
+- Written down, not worked out from the contracts, so it reads the same however the set changes
+
 **[`contracts/scenarios/transcript-lifecycle.arazzo.yaml`](contracts/scenarios/transcript-lifecycle.arazzo.yaml)**
 - An Arazzo scenario: a transcript started, recorded, paused, resumed and closed, with what it refuses along the way
 - Found by its contract type, not its folder — `scenarios/` is for organizing. Its domain comes from `info.x-domain`
-- Runs as a test against a fresh mock (`blueprint-mock-server/tests/unit/harness-scenarios.test.js`) and steps through in the demo page's Scenarios mode
+- Runs as a test against a fresh mock (`blueprint-mock-server/tests/unit/harness-scenarios.test.js`) and is a tour in the demo page's Show me around
 
 ### Overlays
 

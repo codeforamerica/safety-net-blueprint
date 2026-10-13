@@ -9,9 +9,10 @@ info:
     transcript under that profile, adds lines — retrying one — pauses when the
     applicant asks to go off the record, and closes it at the end. Along the
     way the transcript refuses to start without a model or under a profile that
-    does not exist; keeps a line said just before the pause; and refuses a line
+    doesn't exist; keeps a line said just before the pause; and refuses a line
     said during it, a lost stretch overlapping it, a line after the close, and
-    the software editing an entry. Every time is by the software's clock.
+    the software editing an entry. All the times sent come from the
+    transcription software's clock, not the server's.
 
     Then a second transcript, under a profile with an idle timeout, is started
     and never written to. The mock stands in for the scheduler, so the idle
@@ -38,7 +39,11 @@ workflows:
     summary: Start, record, pause, resume and close a transcript, and see what it refuses.
     steps:
       - stepId: addProfile
-        description: An administrator adds the profile interviews in English run under.
+        description: |
+          Add a profile
+
+          - An administrator adds the profile English interviews run under: the transcription service and its languages.
+          - Profiles the config seeds are marked `source: system`; one added here is `user`.
         operationId: $sourceDescriptions.transcripts.createTranscriptionProfile
         parameters:
           - name: X-Caller-Id
@@ -56,7 +61,11 @@ workflows:
         outputs:
           id: $response.body#/id
       - stepId: startWithoutAModel
-        description: A transcript under a profile with a transcription service has to say which model produced its lines.
+        description: |
+          Start without a model
+
+          - Refused with 409: under a profile with a transcription service, a transcript says which model produced its lines.
+          - The refusal names the condition not met, from the guard's description.
         operationId: $sourceDescriptions.transcripts.createTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -68,7 +77,10 @@ workflows:
         successCriteria:
           - condition: $statusCode == 409
       - stepId: startUnderAMissingProfile
-        description: A transcript is started under a profile that exists.
+        description: |
+          Start under a profile that does not exist
+
+          - The profile id doesn't belong to any profile, so the transcript is refused with 409.
         operationId: $sourceDescriptions.transcripts.createTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -81,7 +93,11 @@ workflows:
         successCriteria:
           - condition: $statusCode == 409
       - stepId: start
-        description: The caseworker starts a transcript of the interview.
+        description: |
+          Start the transcript
+
+          - The caseworker's software starts a transcript of the interview, under the profile.
+          - It begins in `recording`, with `startedAt` by the software's clock.
         operationId: $sourceDescriptions.transcripts.createTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -98,7 +114,11 @@ workflows:
         outputs:
           id: $response.body#/id
       - stepId: firstLine
-        description: The first finished line arrives.
+        description: |
+          Add the first line
+
+          - A finished line arrives, with an `Idempotency-Key`.
+          - Its start and end times come from the transcription software's clock, not the server's, so every time on a transcript is compared on one clock.
         operationId: $sourceDescriptions.transcripts.addTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -118,7 +138,11 @@ workflows:
         outputs:
           id: $response.body#/id
       - stepId: retryFirstLine
-        description: The connection drops before the answer comes back, so the software sends the line again with the same key — and gets the same line, not a second one.
+        description: |
+          Send it again
+
+          - The connection drops before the answer comes back, so the software sends the line again with the same key.
+          - It gets the same line back, marked `Idempotent-Replayed`, not a second one.
         operationId: $sourceDescriptions.transcripts.addTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -138,7 +162,10 @@ workflows:
           - condition: $response.body#/id == $steps.firstLine.outputs.id
           - condition: $response.header.Idempotent-Replayed == 'true'
       - stepId: pause
-        description: The applicant asks to go off the record.
+        description: |
+          Go off the record
+
+          - The applicant asks to stop. Pausing adds an open pause entry to the timeline.
         operationId: $sourceDescriptions.transcripts.pauseTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -150,7 +177,11 @@ workflows:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'paused'
       - stepId: lineSaidBeforeThePause
-        description: A line said just before the pause arrives just after it. It started on the record, so it is kept.
+        description: |
+          A line said just before the pause
+
+          - It arrives just after the pause began, but it started on the record, so it is kept.
+          - A line is judged by when it started, not when it arrived.
         operationId: $sourceDescriptions.transcripts.addTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -168,7 +199,10 @@ workflows:
         successCriteria:
           - condition: $statusCode == 201
       - stepId: lineSaidDuringThePause
-        description: A line said off the record is refused, even from faulty software.
+        description: |
+          A line said during the pause
+
+          - Refused with 409: nothing said off the record is kept, even from faulty software.
         operationId: $sourceDescriptions.transcripts.addTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -186,7 +220,10 @@ workflows:
         successCriteria:
           - condition: $statusCode == 409
       - stepId: gapOverlappingThePause
-        description: A lost stretch overlapping the pause is refused — the pause already accounts for that time.
+        description: |
+          A lost stretch overlapping the pause
+
+          - Refused with 409: the pause already accounts for that time.
         operationId: $sourceDescriptions.transcripts.addTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -203,7 +240,10 @@ workflows:
         successCriteria:
           - condition: $statusCode == 409
       - stepId: resume
-        description: Back on the record.
+        description: |
+          Back on the record
+
+          - Resuming gives the open pause its end time.
         operationId: $sourceDescriptions.transcripts.resumeTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -215,7 +255,10 @@ workflows:
           - condition: $statusCode == 200
           - condition: $response.body#/status == 'recording'
       - stepId: lineSaidDuringThePastPause
-        description: A late line from inside the pause that has ended is still refused.
+        description: |
+          A late line from inside the past pause
+
+          - Still refused: the pause has ended, but the line started inside it.
         operationId: $sourceDescriptions.transcripts.addTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -233,7 +276,11 @@ workflows:
         successCriteria:
           - condition: $statusCode == 409
       - stepId: timeline
-        description: The timeline reads in the order things happened, with the pause in it.
+        description: |
+          Read the timeline
+
+          - Lines, gaps and pauses in the order they happened, by `startedAt`.
+          - The pause is in it, with its end time.
         operationId: $sourceDescriptions.transcripts.listTranscriptEntries
         parameters:
           - reference: $components.parameters.caller
@@ -246,7 +293,10 @@ workflows:
         outputs:
           firstEntryId: $response.body#/items/0/id
       - stepId: clientEditsAnEntry
-        description: Entries do not change — only the system may update one.
+        description: |
+          Try to change an entry
+
+          - Refused with 403: entries do not change, and only the system may update one.
         operationId: $sourceDescriptions.transcripts.updateTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -260,7 +310,11 @@ workflows:
         successCriteria:
           - condition: $statusCode == 403
       - stepId: close
-        description: The interview ends.
+        description: |
+          Close the transcript
+
+          - The interview ends.
+          - `lastActivityAt` says when the software was last heard from: the end of its last line.
         operationId: $sourceDescriptions.transcripts.closeTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -273,7 +327,10 @@ workflows:
           - condition: $response.body#/status == 'closed'
           - condition: $response.body#/lastActivityAt == '2026-10-12T10:00:11Z'
       - stepId: lineAfterTheClose
-        description: Nothing is added after the close.
+        description: |
+          A line after the close
+
+          - Refused with 409: nothing is added after the close.
         operationId: $sourceDescriptions.transcripts.addTranscriptEntry
         parameters:
           - reference: $components.parameters.caller
@@ -291,7 +348,10 @@ workflows:
         successCriteria:
           - condition: $statusCode == 409
       - stepId: addTimedProfile
-        description: An administrator adds a profile whose transcripts close themselves after 30 quiet minutes.
+        description: |
+          Add a profile with an idle timeout
+
+          - Its transcripts close themselves after 30 quiet minutes: `idleTimeout: PT30M`.
         operationId: $sourceDescriptions.transcripts.createTranscriptionProfile
         parameters:
           - name: X-Caller-Id
@@ -309,7 +369,11 @@ workflows:
         outputs:
           id: $response.body#/id
       - stepId: standInForTheScheduler
-        description: Nobody waits 30 minutes in a test. The mock answers the next idle check request at once, as if the time had passed.
+        description: |
+          Stand in for the scheduler
+
+          - Nobody waits 30 minutes in a test. A stub on the mock answers the next idle check request at once, as if the time had passed.
+          - This step calls the mock's own route, so the scenario runs against the mock.
         operationId: $sourceDescriptions.mock.registerEventStub
         requestBody:
           payload:
@@ -319,7 +383,10 @@ workflows:
         successCriteria:
           - condition: $statusCode == 201
       - stepId: startAndGoQuiet
-        description: The software starts a transcript and is never heard from again.
+        description: |
+          Start a transcript and go quiet
+
+          - The software starts a transcript and is never heard from again.
         operationId: $sourceDescriptions.transcripts.createTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -334,7 +401,11 @@ workflows:
         outputs:
           id: $response.body#/id
       - stepId: quietTranscriptClosedItself
-        description: The idle check found nothing since it was asked for, so the transcript closed — at the time it was last heard from, here when it started.
+        description: |
+          It closed itself
+
+          - The idle check found nothing since it was asked for, so the transcript closed.
+          - It closed at the time it was last heard from: here, when it started.
         operationId: $sourceDescriptions.transcripts.getTranscript
         parameters:
           - reference: $components.parameters.caller

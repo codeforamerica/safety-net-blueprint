@@ -882,8 +882,9 @@ $defs:
         type: string
         description: >
           What must be true, in words a client developer reads — "the
-          transcript's profile exists". A refusal names each condition that was
-          not met by this description, or by its id where there is none.
+          transcript's profile exists". A refusal reads "Can't create a
+          transcript. It requires that the transcript's profile exists.", or
+          names the guard's id where there is no description.
       condition:
         type: string
         description: >

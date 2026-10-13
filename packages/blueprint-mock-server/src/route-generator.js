@@ -379,7 +379,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
         const sent = await jsonBody(request.clone());
         const refused = checkGoverned({
           governors: createGovernors,
-          verb: 'creating',
+          verb: 'create',
           params: ctx.params,
           body: sent,
           caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
@@ -491,7 +491,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
             const body = mergePathParamsIntoBody(sent, ctx.params);
             const refused = checkGoverned({
               governors: createGovernors,
-              verb: 'creating',
+              verb: 'create',
               params: ctx.params,
               body,
               caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
@@ -525,7 +525,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
           const change = await jsonBody(request.clone());
           const refused = checkGoverned({
             governors: updateGovernors,
-            verb: 'updating',
+            verb: 'update',
             params: ctx.params,
             body: change,
             caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },
@@ -560,7 +560,7 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
         const change = await jsonBody(request.clone());
         const refused = checkGoverned({
           governors: updateGovernors,
-          verb: 'updating',
+          verb: 'update',
           params: ctx.params,
           body: change,
           caller: { id: callerHeader(request, 'x-caller-id'), roles: extractCallerRoles(request) },

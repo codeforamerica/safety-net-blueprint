@@ -45,7 +45,7 @@ export function checkGuardClauses({ guardItems, stateMachine, machine, callerRol
   const callerHasAnyRole = allActors.length === 0 || callerRoles.some(r => allActors.includes(r));
   if (!callerHasAnyRole) {
     const uniqueActors = [...new Set(allActors)];
-    return { status: 403, error: `${capitalized(label)} requires one of: ${uniqueActors.join(', ')}` };
+    return { status: 403, error: `Only ${listed(uniqueActors, 'or')} can ${label}.` };
   }
 
   const invalid = checkBody?.();
@@ -64,14 +64,18 @@ export function checkGuardClauses({ guardItems, stateMachine, machine, callerRol
   });
 
   if (clausePassed) return null;
-  // Each condition as its guard describes it, or by its id where it has no
-  // description.
-  const notMet = [...new Set(failed)].map((id) => guardsMap[id]?.description ?? id);
-  const why = notMet.length > 0 ? `. Not met: ${notMet.join('; ')}` : '';
-  return { status: 409, error: `No guard clause passed for ${label}${why}` };
+  // Each condition not met, as its guard describes it — or by its id where it
+  // has no description.
+  const reasons = [...new Set(failed)].map((id) => (guardsMap[id]?.description ?? `the ${id} condition holds`).replace(/\.$/, ''));
+  return { status: 409, error: `Can't ${label}.${reasons.length ? ` It requires that ${reasons.join(', and that ')}.` : ''}` };
 }
 
-const capitalized = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+/** `['a', 'b', 'c']` → `a, b or c`. */
+const listed = (items, conjunction) => (items.length < 2 ? items.join('')
+  : `${items.slice(0, -1).join(', ')} ${conjunction} ${items.at(-1)}`);
+
+/** `TranscriptEntry` → `transcript entry`, for a refusal a person reads. */
+export const inWords = (name) => String(name).replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
 
 /**
  * Execute a state machine transition programmatically.
@@ -148,7 +152,7 @@ export function executeTransition({
     const { valid, errors } = validate(requestBody, operation.schema.request, `${stateMachine.domain ?? 'unknown'}-${machine?.object ?? 'unknown'}-operation-${trigger}`);
     return valid ? null : { status: 422, error: 'Request body validation failed', details: errors };
   };
-  const refused = checkGuardClauses({ guardItems, stateMachine, machine, callerRoles, resource, context, label: `action "${trigger}"`, checkBody });
+  const refused = checkGuardClauses({ guardItems, stateMachine, machine, callerRoles, resource, context, label: `${trigger.replace(/-/g, ' ')} this ${inWords(machine?.object ?? 'record')}`, checkBody });
   if (refused) return { success: false, ...refused };
 
   const updated = { ...resource };

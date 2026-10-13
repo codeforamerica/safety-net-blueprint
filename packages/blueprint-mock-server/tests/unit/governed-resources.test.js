@@ -190,7 +190,7 @@ describe('a machine guarding a nested create', () => {
     await send('POST', `/demo/boards/${board.id}/close`, {});
     const { status, body } = await addCard({ kind: 'note', at: '2026-01-01T00:00:01Z' });
     assert.strictEqual(status, 409);
-    assert.match(body.message, /creating a Card on this Board/);
+    assert.match(body.message, /Can't create a card on this board\. It requires that /);
   });
 
   test('reports a body missing a field as 422, not as a condition that failed', async () => {
@@ -218,7 +218,7 @@ describe('a machine guarding its own object', () => {
     assert.strictEqual((await send('POST', '/demo/boards', { templateId: 'kanban' })).status, 201);
     const { status, body } = await send('POST', '/demo/boards', { templateId: 'missing' });
     assert.strictEqual(status, 409);
-    assert.match(body.message, /creating a Board\. Not met: templateExists/);
+    assert.match(body.message, /Can't create a board\. It requires that the templateExists condition holds\./);
   });
 
   test('guards its update with the record being updated', async () => {
@@ -226,7 +226,7 @@ describe('a machine guarding its own object', () => {
     await send('POST', `/demo/boards/${board.id}/close`, {});
     const { status, body } = await send('PATCH', `/demo/boards/${board.id}`, { name: 'Later' });
     assert.strictEqual(status, 409);
-    assert.match(body.message, /updating this Board\. Not met: the board is open/);
+    assert.match(body.message, /Can't update this board\. It requires that the board is open\./);
   });
 });
 
@@ -253,7 +253,7 @@ describe('a machine guarding a nested update', () => {
     const card = (await addCard({ kind: 'note', at: '2026-01-01T00:00:01Z' })).body;
     const { status, body } = await send('PATCH', `/demo/boards/${board.id}/cards/${card.id}`, { text: 'edited' });
     assert.strictEqual(status, 403);
-    assert.match(body.message, /Updating a Card on this Board requires one of: system/);
+    assert.match(body.message, /Only system can update a card on this board\./);
   });
 
   test('lets a caller with the role through', async () => {

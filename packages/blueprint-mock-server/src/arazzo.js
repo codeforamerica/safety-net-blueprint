@@ -13,7 +13,8 @@
  *   - steps by `operationId`, found in the set's OpenAPI documents or among
  *     the mock's own routes — qualified as `$sourceDescriptions.<name>.<id>`
  *     when the document names more than one source, as Arazzo requires
- *   - `parameters` (path, query, header) and `requestBody.payload`
+ *   - `parameters` (path, query, header) and `requestBody.payload`, sent as
+ *     JSON or, for an upload, as multipart/form-data with its file parts as files
  *   - reusable parameters, `{ reference: $components.parameters.<name> }`
  *   - runtime expressions: $statusCode, $response.body#/<pointer>,
  *     $response.header.<name>, $steps.<id>.outputs.<name>, $inputs.<name>,
@@ -33,7 +34,7 @@ const SUPPORTED_STEP_FIELDS = new Set(['stepId', 'description', 'operationId', '
  * method and full path a request to it goes to.
  *
  * @param {Array<{ type: string, content: object }>} docs
- * @returns {Map<string, { method: string, path: string }>}
+ * @returns {Map<string, { method: string, path: string, multipart?: boolean, files?: string[] }>}
  */
 export function operationIndex(docs) {
   const index = new Map();
@@ -46,7 +47,18 @@ export function operationIndex(docs) {
     for (const [path, item] of Object.entries(doc.content?.paths ?? {})) {
       for (const method of ['get', 'put', 'post', 'patch', 'delete']) {
         const id = item?.[method]?.operationId;
-        if (id && !index.has(id)) index.set(id, { method: method.toUpperCase(), path: `${base}${path}` });
+        if (!id || index.has(id)) continue;
+        const entry = { method: method.toUpperCase(), path: `${base}${path}` };
+        // An upload: which of its parts are files, so a step sends those as files.
+        const form = item[method].requestBody?.content?.['multipart/form-data']?.schema;
+        if (form) {
+          const follow = (node) => (typeof node?.$ref === 'string' && node.$ref.startsWith('#/')
+            ? node.$ref.slice(2).split('/').reduce((at, key) => at?.[key], doc.content) : node);
+          const properties = follow(form)?.properties ?? {};
+          entry.multipart = true;
+          entry.files = Object.entries(properties).filter(([, p]) => follow(p)?.format === 'binary').map(([name]) => name);
+        }
+        index.set(id, entry);
       }
     }
   }
@@ -153,6 +165,152 @@ function holds(condition, scope) {
 }
 
 /**
+ * A body a step sends as multipart/form-data, as the parts it is made of. A
+ * part the operation declares as a file (`format: binary`) is sent as one —
+ * given as `{ fileName, contentType, content }`, or as its content alone — and
+ * every other part as text.
+ */
+function formOf(payload, files) {
+  const form = new FormData();
+  for (const [name, value] of Object.entries(payload ?? {})) {
+    if (files.includes(name)) {
+      const file = value && typeof value === 'object' ? value : { content: value };
+      form.append(name, new File([String(file.content ?? '')], file.fileName ?? `${name}.bin`, { type: file.contentType ?? 'application/octet-stream' }));
+    } else {
+      form.append(name, typeof value === 'string' ? value : JSON.stringify(value));
+    }
+  }
+  return form;
+}
+
+/**
+ * A run of an Arazzo document that goes a step at a time, on the same server
+ * throughout — as a reader steps through one in a page, each step acting on
+ * what the ones before it made.
+ *
+ * @param {object} arazzo - The document's content
+ * @param {Object} options - As for runScenario
+ * @returns {{ results: object[], next: Function, runUntil: Function, preview: Function, finished: Function }}
+ *   `next()` runs the next step and returns its result, or null when there is
+ *   none; `runUntil(until)` runs on to a step, or to the end; `preview(step)`
+ *   says what a step would send, from what the steps before it produced;
+ *   `results` are each workflow's run so far.
+ */
+export function startScenario(arazzo, { fetch, operations, inputs = {}, origin = 'http://localhost', onStep } = {}) {
+  const components = arazzo.components ?? {};
+  const sources = new Set((arazzo.sourceDescriptions ?? []).map((source) => source.name));
+  const results = [];
+  const queue = (arazzo.workflows ?? []).flatMap((workflow) => (workflow.steps ?? []).map((step) => ({ workflow, step })));
+  const scopes = new Map();
+  let position = 0;
+  let stopped = null; // the workflow a failed step stopped
+
+  const scopeOf = (workflow) => {
+    if (!scopes.has(workflow.workflowId)) {
+      scopes.set(workflow.workflowId, { inputs: inputs[workflow.workflowId] ?? {}, steps: {} });
+      results.push({ workflowId: workflow.workflowId, summary: workflow.summary, passed: true, steps: [] });
+    }
+    return scopes.get(workflow.workflowId);
+  };
+
+  /** What a step sends, worked out from what the steps before it produced. */
+  function requestOf(step, scope) {
+    const unsupported = Object.keys(step).filter((k) => !SUPPORTED_STEP_FIELDS.has(k) && !k.startsWith('x-'));
+    if (unsupported.length > 0) throw new Error(`Step ${step.stepId} uses ${unsupported.join(', ')}, which this runner does not support`);
+    const operation = operationOf(step, sources, operations);
+    if (!operation) throw new Error(`Step ${step.stepId} names operation ${step.operationId}, which no API in the set declares`);
+
+    let path = operation.path;
+    const query = new URLSearchParams();
+    const multipart = step.requestBody?.contentType === 'multipart/form-data' || (!step.requestBody?.contentType && operation.multipart);
+    const headers = multipart ? {} : { 'content-type': 'application/json' };
+    for (const raw of step.parameters ?? []) {
+      const parameter = raw.reference
+        ? components.parameters?.[raw.reference.replace(/^\$components\.parameters\./, '')]
+        : raw;
+      if (!parameter) throw new Error(`Step ${step.stepId} references ${raw.reference}, which the document's components do not declare`);
+      const value = resolve(raw.value ?? parameter.value, scope);
+      if (parameter.in === 'path') path = path.replace(`{${parameter.name}}`, encodeURIComponent(value));
+      else if (parameter.in === 'query') query.set(parameter.name, value);
+      else if (parameter.in === 'header') headers[parameter.name] = String(value);
+      else throw new Error(`Step ${step.stepId}: parameter ${parameter.name} is in ${parameter.in}, which this runner does not support`);
+    }
+    const body = step.requestBody ? resolve(step.requestBody.payload, scope) : undefined;
+    return { operation, method: operation.method, path: `${path}${query.size ? `?${query}` : ''}`, headers, body, multipart };
+  }
+
+  async function next() {
+    while (position < queue.length && stopped && queue[position].workflow.workflowId === stopped) position += 1;
+    if (position >= queue.length) return null;
+    const { workflow, step } = queue[position];
+    position += 1;
+    const scope = scopeOf(workflow);
+    const request = requestOf(step, scope);
+
+    const response = await fetch(new Request(`${origin}${request.path}`, {
+      method: request.method,
+      headers: request.headers,
+      body: request.body === undefined ? undefined
+        : request.multipart ? formOf(request.body, request.operation.files ?? []) : JSON.stringify(request.body),
+    }));
+    const text = await response.text();
+    let parsed = text;
+    try { parsed = text ? JSON.parse(text) : null; } catch { /* not JSON */ }
+    const responseHeaders = Object.fromEntries([...response.headers.entries()].map(([k, v]) => [k.toLowerCase(), v]));
+    const stepScope = { ...scope, response: { status: response.status, statusText: response.statusText, body: parsed, headers: responseHeaders } };
+
+    const checks = (step.successCriteria ?? []).map((criterion) => {
+      if (criterion.type && criterion.type !== 'simple') throw new Error(`Step ${step.stepId}: ${criterion.type} criteria are not supported`);
+      return { condition: criterion.condition, passed: holds(criterion.condition, stepScope) };
+    });
+    const passed = checks.every((c) => c.passed);
+    const outputs = passed
+      ? Object.fromEntries(Object.entries(step.outputs ?? {}).map(([k, e]) => [k, resolve(e, stepScope)]))
+      : {};
+    scope.steps[step.stepId] = { outputs };
+
+    const result = {
+      workflowId: workflow.workflowId,
+      stepId: step.stepId,
+      description: step.description,
+      operationId: step.operationId,
+      request: { method: request.method, url: request.path, headers: request.headers, body: request.body, multipart: request.multipart },
+      response: stepScope.response,
+      checks,
+      passed,
+      outputs,
+    };
+    const run = results.find((r) => r.workflowId === workflow.workflowId);
+    run.steps.push(result);
+    onStep?.(result);
+    // A failed step stops its workflow: later steps would act on what it did
+    // not produce.
+    if (!passed) { run.passed = false; stopped = workflow.workflowId; }
+    return result;
+  }
+
+  async function runUntil(until = null) {
+    let result;
+    while ((result = await next())) {
+      if (until && result.workflowId === until.workflowId && result.stepId === until.stepId) break;
+    }
+    return results;
+  }
+
+  function preview(workflowId, step) {
+    const workflow = (arazzo.workflows ?? []).find((w) => w.workflowId === workflowId);
+    try {
+      const { method, path, headers, body, multipart } = requestOf(step, scopes.get(workflowId) ?? { inputs: inputs[workflowId] ?? {}, steps: {} });
+      return { method, url: path, headers, body, multipart };
+    } catch {
+      return null; // refers to a step that has not run
+    }
+  }
+
+  return { results, next, runUntil, preview, finished: () => position >= queue.length };
+}
+
+/**
  * Run each workflow of an Arazzo document, step by step.
  *
  * @param {object} arazzo - The document's content
@@ -162,77 +320,9 @@ function holds(condition, scope) {
  * @param {object} [options.inputs] - Workflow inputs, by workflowId
  * @param {string} [options.origin] - Request origin, for building URLs
  * @param {Function} [options.onStep] - Called with each step's result as it finishes
+ * @param {{ workflowId: string, stepId: string }} [options.until] - Stop after this step
  * @returns {Promise<Array<{ workflowId: string, passed: boolean, steps: object[] }>>}
  */
-export async function runScenario(arazzo, { fetch, operations, inputs = {}, origin = 'http://localhost', onStep } = {}) {
-  const components = arazzo.components ?? {};
-  const sources = new Set((arazzo.sourceDescriptions ?? []).map((source) => source.name));
-  const results = [];
-
-  for (const workflow of arazzo.workflows ?? []) {
-    const scope = { inputs: inputs[workflow.workflowId] ?? {}, steps: {} };
-    const run = { workflowId: workflow.workflowId, summary: workflow.summary, passed: true, steps: [] };
-    results.push(run);
-
-    for (const step of workflow.steps ?? []) {
-      const unsupported = Object.keys(step).filter((k) => !SUPPORTED_STEP_FIELDS.has(k) && !k.startsWith('x-'));
-      if (unsupported.length > 0) throw new Error(`Step ${step.stepId} uses ${unsupported.join(', ')}, which this runner does not support`);
-      const operation = operationOf(step, sources, operations);
-      if (!operation) throw new Error(`Step ${step.stepId} names operation ${step.operationId}, which no API in the set declares`);
-
-      let path = operation.path;
-      const query = new URLSearchParams();
-      const headers = { 'content-type': 'application/json' };
-      for (const raw of step.parameters ?? []) {
-        const parameter = raw.reference
-          ? components.parameters?.[raw.reference.replace(/^\$components\.parameters\./, '')]
-          : raw;
-        if (!parameter) throw new Error(`Step ${step.stepId} references ${raw.reference}, which the document's components do not declare`);
-        const value = resolve(raw.value ?? parameter.value, scope);
-        if (parameter.in === 'path') path = path.replace(`{${parameter.name}}`, encodeURIComponent(value));
-        else if (parameter.in === 'query') query.set(parameter.name, value);
-        else if (parameter.in === 'header') headers[parameter.name] = String(value);
-        else throw new Error(`Step ${step.stepId}: parameter ${parameter.name} is in ${parameter.in}, which this runner does not support`);
-      }
-      const body = step.requestBody ? resolve(step.requestBody.payload, scope) : undefined;
-      const url = `${origin}${path}${query.size ? `?${query}` : ''}`;
-
-      const response = await fetch(new Request(url, {
-        method: operation.method,
-        headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
-      }));
-      const text = await response.text();
-      let parsed = text;
-      try { parsed = text ? JSON.parse(text) : null; } catch { /* not JSON */ }
-      const responseHeaders = Object.fromEntries([...response.headers.entries()].map(([k, v]) => [k.toLowerCase(), v]));
-      const stepScope = { ...scope, response: { status: response.status, body: parsed, headers: responseHeaders } };
-
-      const checks = (step.successCriteria ?? []).map((criterion) => {
-        if (criterion.type && criterion.type !== 'simple') throw new Error(`Step ${step.stepId}: ${criterion.type} criteria are not supported`);
-        return { condition: criterion.condition, passed: holds(criterion.condition, stepScope) };
-      });
-      const passed = checks.every((c) => c.passed);
-      const outputs = passed
-        ? Object.fromEntries(Object.entries(step.outputs ?? {}).map(([k, e]) => [k, resolve(e, stepScope)]))
-        : {};
-      scope.steps[step.stepId] = { outputs };
-
-      const result = {
-        stepId: step.stepId,
-        description: step.description,
-        operationId: step.operationId,
-        request: { method: operation.method, url: `${path}${query.size ? `?${query}` : ''}`, headers, body },
-        response: stepScope.response,
-        checks,
-        passed,
-      };
-      run.steps.push(result);
-      onStep?.(result);
-      // A failed step stops its workflow: later steps would act on what it
-      // did not produce.
-      if (!passed) { run.passed = false; break; }
-    }
-  }
-  return results;
+export async function runScenario(arazzo, { until, ...options } = {}) {
+  return startScenario(arazzo, options).runUntil(until);
 }

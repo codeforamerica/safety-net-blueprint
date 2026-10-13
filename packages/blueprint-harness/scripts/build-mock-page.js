@@ -82,6 +82,8 @@ Options:
   --overlay=<dir>   Authored overlays, carried alongside the artifact so the
                     page can show how this deployment customizes the base
                     contracts. Optional — resolve has already applied them.
+  --first-tour=<p>  The scenario Show me around opens with, by its path in the set
+                    (e.g. scenarios/application-walkthrough.arazzo.yaml); else the first
   --source-url=<u>  Base URL the authored contracts are browsable at, so each
                     step can link to the file it cites. Omit and the page
                     names the file without linking — it cannot guess where a
@@ -96,13 +98,14 @@ standalone.html as a single file that works from file://.
 `.trim();
 
 function parseArgs(argv) {
-  const options = { specDirs: [], sourceDir: null, overlayDir: null, sourceUrl: null, domains: [], out: null, help: false };
+  const options = { specDirs: [], sourceDir: null, overlayDir: null, sourceUrl: null, firstTour: null, domains: [], out: null, help: false };
   for (const arg of argv) {
     if (arg === '--help' || arg === '-h') options.help = true;
     else if (arg.startsWith('--spec=')) options.specDirs.push(arg.slice('--spec='.length));
     else if (arg.startsWith('--source=')) options.sourceDir = arg.slice('--source='.length);
     else if (arg.startsWith('--overlay=')) options.overlayDir = arg.slice('--overlay='.length);
     else if (arg.startsWith('--source-url=')) options.sourceUrl = arg.slice('--source-url='.length).replace(/\/$/, '');
+    else if (arg.startsWith('--first-tour=')) options.firstTour = arg.slice('--first-tour='.length);
     else if (arg.startsWith('--domain=')) options.domains.push(arg.slice('--domain='.length));
     else if (arg.startsWith('--out=')) options.out = arg.slice('--out='.length);
     else throw new Error(`Unknown argument: ${arg}`);
@@ -194,7 +197,7 @@ function main() {
   console.log('\nBundling the mock server...');
   bundle('esm', join(outDir, 'mock.js'));
 
-  const config = JSON.stringify({ sourceUrl: options.sourceUrl ?? null });
+  const config = JSON.stringify({ sourceUrl: options.sourceUrl ?? null, firstTour: options.firstTour ?? null });
   const configTag =
     `<script type="application/json" id="page-config">${config.replace(/</g, '\\u003c')}</script>\n`;
 

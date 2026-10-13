@@ -15,7 +15,7 @@
  */
 
 import { resolveContextLayers } from './handlers/procedure-runner.js';
-import { checkGuardClauses } from './state-machine-runner.js';
+import { checkGuardClauses, inWords } from './state-machine-runner.js';
 import { deriveCollectionName } from './collection-utils.js';
 
 /**
@@ -67,7 +67,7 @@ export function governorsByRoute(stateMachines) {
  *
  * @param {Object} options
  * @param {Array}  options.governors - This route's, from `governorsByRoute`
- * @param {'creating'|'updating'} options.verb - Names the operation, for the refusal
+ * @param {'create'|'update'} options.verb - Names the operation, for the refusal
  * @param {Object} options.params    - The request's path parameters
  * @param {Object} options.body      - The body being created, or the change
  * @param {{ id: string|null, roles: string[] }} options.caller
@@ -99,7 +99,8 @@ export function checkGoverned({ governors, verb, params, body, caller, store, ch
       callerRoles: caller.roles,
       resource: record,
       context: { ...baseContext, entities },
-      label: owner === entry.resource && name === entry.object ? `${verb} this ${name}` : record ? `${verb} a ${name} on this ${entry.object}` : `${verb} a ${name}`,
+      label: owner === entry.resource && name === entry.object ? `${verb} this ${inWords(name)}`
+        : record ? `${verb} a ${inWords(name)} on this ${inWords(entry.object)}` : `${verb} a ${inWords(name)}`,
       checkBody,
     });
     if (refused) {

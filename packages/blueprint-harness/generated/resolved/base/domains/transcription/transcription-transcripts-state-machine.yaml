@@ -32,7 +32,7 @@ machines:
         description: a pause is open
         condition: openPause != null
       - id: profileExists
-        description: the transcript's profile exists
+        description: the profile it names exists
         condition: profile != null
       - id: modelGivenForTheService
         description: a model is given when the profile names a transcription service
