@@ -30,7 +30,8 @@
 
 import { timestampFromDate } from '@bufbuild/protobuf/wkt';
 
-import { evaluateCEL } from './cel.js';
+import { parse } from '@bufbuild/cel';
+import { evaluateCELNode } from './cel.js';
 
 // ── Type checking ─────────────────────────────────────────────────────────────
 
@@ -388,18 +389,29 @@ export function evaluate(graph, inputs) {
       continue;
     }
 
-    if (missingPaths.size > 0) {
-      nodes[factName] = { type, state: 'missing', value: null, missing: [...missingPaths] };
+    const factDecl = graph.facts[factName];
+    const expr = factDecl?.expression;
+    if (!expr) {
+      if (missingPaths.size > 0) {
+        nodes[factName] = { type, state: 'missing', value: null, missing: [...missingPaths] };
+      }
       continue;
     }
 
-    const factDecl = graph.facts[factName];
-    const expr = factDecl?.expression;
-    if (!expr) continue;
+    // What each dependency contributes, read by the evaluation below for
+    // whichever part of the expression mentions it.
+    const depState = (dep) => {
+      if (defaultedDeps.has(dep)) return { state: 'placeholder' };
+      if (!dep.startsWith('$.')) {
+        if (resolved[dep] !== undefined) return { state: 'complete' };
+        return { state: 'missing', missing: nodes[dep]?.state === 'missing' ? nodes[dep].missing : [dep] };
+      }
+      return missingPaths.has(dep) ? { state: 'missing', missing: [dep] } : { state: 'complete' };
+    };
 
-    let result;
+    let outcome;
     try {
-      result = evaluateCEL(expr, scope);
+      outcome = evaluateWithStates(expr, deps, depState, scope);
     } catch (err) {
       nodes[factName] = {
         type,
@@ -410,6 +422,12 @@ export function evaluate(graph, inputs) {
       continue;
     }
 
+    if (outcome.state === 'missing') {
+      nodes[factName] = { type, state: 'missing', value: null, missing: [...new Set(outcome.missing)] };
+      continue;
+    }
+
+    const result = outcome.value;
     resolved[factName] = result;
     // A fact declares its type just as an input does, and a fact reading it
     // has to see the same CEL type either way — otherwise `a * 2` fails on a
@@ -418,11 +436,142 @@ export function evaluate(graph, inputs) {
     scope[factName] =
       factDecl?.type === 'integer' && Number.isInteger(result) ? BigInt(result) : result;
 
-    const state = defaultedDeps.size > 0 ? 'placeholder' : 'complete';
-    nodes[factName] = { type, state, value: result };
+    nodes[factName] = { type, state: outcome.state, value: result };
   }
 
   return nodes;
+}
+
+// ── States through and, or and the conditional ───────────────────────────────
+
+const STANDING = { complete: 0, placeholder: 1, missing: 2 };
+const lessSettled = (a, b) => (STANDING[a] >= STANDING[b] ? a : b);
+
+/**
+ * Evaluate a fact's expression, giving its result the standing the result
+ * actually rests on.
+ *
+ * A fact's state used to be read off its dependency list before anything was
+ * evaluated: any defaulted input made it a placeholder, any missing one made it
+ * missing. That is right for most expressions and wrong for the three that do
+ * not always need every operand. `false && x` is false whatever x is, so it is
+ * complete even when x is unanswered or rests on a default; likewise
+ * `true || x`. FactGraph combines states this way, through All, Any and
+ * Switch, and so does any interview that wants an answer as soon as one is
+ * settled — an exempt person should not be held up by the hours question.
+ *
+ * So `&&`, `||`, `!` and `? :` are evaluated operand by operand, each carrying
+ * a state; anything else is a leaf, evaluated whole from the dependencies it
+ * mentions, exactly as a fact used to be. A complete operand settles an and/or
+ * outright. One that settles it on a default does so for `or` always, and for
+ * `and` only when nothing else is unanswered — FactGraph's Any and All, matched
+ * as they are. A conditional whose condition is unknown is missing — it is not
+ * known which branch applies — where FactGraph takes the first branch whose
+ * condition is known; that one is not matched, because it names a result that
+ * can turn out wrong.
+ *
+ * Errors are not part of this: a wrong-type input still errors every fact that
+ * reads it, before any evaluation, as the conformance corpus requires.
+ *
+ * @returns {{ state: 'complete'|'placeholder'|'missing', value?: *, missing?: string[] }}
+ */
+function evaluateWithStates(expr, deps, depState, scope) {
+  const parsed = parse(expr);
+  return statesOf(parsed.expr, deps, depState, scope);
+}
+
+function statesOf(node, deps, depState, scope) {
+  const call = node.exprKind.case === 'callExpr' ? node.exprKind.value : null;
+  const fn = call?.function;
+
+  if (fn === '_&&_' || fn === '_||_') {
+    const settles = fn === '_&&_' ? false : true;
+    const sides = call.args.map((a) => statesOf(a, deps, depState, scope));
+    // A complete operand that settles the result decides it outright.
+    if (sides.some((s) => s.state === 'complete' && s.value === settles)) {
+      return { state: 'complete', value: settles };
+    }
+    // An operand that settles it only on a default: here `and` and `or` differ,
+    // deliberately, because FactGraph's All and Any do. A defaulted `true`
+    // settles an `or` — a provisional true, labelled as such — even while
+    // another operand is unanswered. A defaulted `false` does not settle an
+    // `and` while one is: the result is unanswered. Asymmetric, and kept so: the
+    // point is to answer as FactGraph answers, and both outcomes are flagged
+    // (placeholder, missing), so neither claims more than is known.
+    const placeholderSettles = sides.some((s) => s.state === 'placeholder' && s.value === settles);
+    if (placeholderSettles && fn === '_||_') return { state: 'placeholder', value: settles };
+    const missing = sides.filter((s) => s.state === 'missing');
+    if (missing.length) return { state: 'missing', missing: missing.flatMap((s) => s.missing) };
+    if (placeholderSettles) return { state: 'placeholder', value: settles };
+    return { state: sides.map((s) => s.state).reduce(lessSettled), value: !settles };
+  }
+
+  if (fn === '!_') {
+    const inner = statesOf(call.args[0], deps, depState, scope);
+    return inner.state === 'missing' ? inner : { state: inner.state, value: !inner.value };
+  }
+
+  if (fn === '_?_:_') {
+    const cond = statesOf(call.args[0], deps, depState, scope);
+    if (cond.state === 'missing') return cond;
+    const branch = statesOf(cond.value ? call.args[1] : call.args[2], deps, depState, scope);
+    if (branch.state === 'missing') return branch;
+    return { state: lessSettled(cond.state, branch.state), value: branch.value };
+  }
+
+  return leafStates(node, deps, depState, scope);
+}
+
+/**
+ * A part of an expression with no and/or/conditional at its top: evaluated
+ * whole, from the dependencies it mentions.
+ *
+ * Which dependencies a part mentions is read from the names it uses: a fact by
+ * its identifier, an input by the dotted path it starts with — `screener.isWorking`
+ * mentions `$.screener.isWorking`, and `household.members` mentions every
+ * `$.household.members[]` path. Over-matching only ever makes a part less
+ * settled than it could be, never gives it a wrong value.
+ */
+function leafStates(node, deps, depState, scope) {
+  const chains = new Set();
+  (function walk(n) {
+    const k = n.exprKind;
+    if (k.case === 'identExpr') { chains.add(k.value.name); return; }
+    if (k.case === 'selectExpr') {
+      const parts = [];
+      let cur = n;
+      while (cur.exprKind.case === 'selectExpr') { parts.unshift(cur.exprKind.value.field); cur = cur.exprKind.value.operand; }
+      if (cur.exprKind.case === 'identExpr') { chains.add([cur.exprKind.value.name, ...parts].join('.')); return; }
+      walk(cur);
+      return;
+    }
+    if (k.case === 'callExpr') { if (k.value.target) walk(k.value.target); k.value.args.forEach(walk); return; }
+    if (k.case === 'listExpr') { k.value.elements.forEach(walk); return; }
+    if (k.case === 'structExpr') { k.value.entries.forEach((e) => e.value && walk(e.value)); return; }
+    if (k.case === 'comprehensionExpr') {
+      const c = k.value;
+      [c.iterRange, c.accuInit, c.loopCondition, c.loopStep, c.result].forEach((x) => x && walk(x));
+    }
+  })(node);
+
+  const mentions = (dep) => {
+    if (!dep.startsWith('$.')) return chains.has(dep);
+    const base = dep.slice(2).split('[]')[0];
+    for (const c of chains) {
+      if (c === base || base.startsWith(c + '.') || c.startsWith(base + '.')) return true;
+    }
+    return false;
+  };
+
+  let state = 'complete';
+  const missing = [];
+  for (const dep of deps.filter(mentions)) {
+    const s = depState(dep);
+    if (s.state === 'missing') missing.push(...s.missing);
+    else state = lessSettled(state, s.state);
+  }
+  if (missing.length) return { state: 'missing', missing };
+  return { state, value: evaluateCELNode(node, scope) };
 }
 
 // ── Internal fluent API (intra-package use only; not exported from index.js) ──
