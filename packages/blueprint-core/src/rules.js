@@ -255,12 +255,21 @@ export function compileRuleset(domain, rulesetName, ruleset, resolve = () => nul
     ? Object.keys(ruleset.outputs)
     : factPaths.slice(-1);
 
+  // Constants are written into the graph with their values, so whatever
+  // evaluates the graph has them, and where a value comes from can change
+  // without any evaluator noticing.
+  const constants = Object.fromEntries(Object.entries(ruleset.constants ?? {}).map(([name, p]) => [
+    name,
+    { value: p.value, ...(p.type ? { type: p.type } : {}), ...(p.description ? { description: p.description } : {}) },
+  ]));
+
   return {
     $schema: 'https://blueprint.codeforamerica.org/schemas/graph-schema.yaml',
     domain,
     ruleset: rulesetName,
     outputs,
     inputs: expandedInputs,
+    ...(Object.keys(constants).length ? { constants } : {}),
     facts,
     dependencies,
   };

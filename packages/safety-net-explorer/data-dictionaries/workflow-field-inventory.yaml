@@ -35,3 +35,19 @@ task.slaInfo[].status: { type: enum, values: [active, warning, paused, breached,
 task.slaInfo[].clockStartedAt: { type: datetime }
 task.slaInfo[].deadline: { type: datetime }
 task.slaDeadline: { type: datetime }
+
+# ── Metric ──────────────────────────────────────────────────────────────────────
+
+metric.id: { type: string }
+metric.name: { type: string }
+metric.aggregate: { type: enum, values: [count, ratio, duration] }
+metric.value: { type: [number, 'null'] }
+metric.breakdown: { type: [object, 'null'] }
+metric.targets[]: { type: list(MetricTarget) }
+metric.targets[].stat: { type: string }
+metric.targets[].operator: { type: enum, values: [<, <=, '>', '>=', '=='] }
+metric.targets[].amount: { type: number }
+metric.targets[].unit: { type: enum, values: [hours, minutes, days, percent, count] }
+metric.targets[].label: { type: string }
+metric.targets[].direction: { type: enum, values: [up, down] }
+metric.computedAt: { type: datetime }

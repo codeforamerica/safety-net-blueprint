@@ -56,14 +56,10 @@ export type ApplicationWritable = {
      */
     proofOfIncomeDocumentId?: string;
     /**
-     * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+     * A first application, or an application for recertification — the same kind of request.
      *
      */
     type?: 'new' | 'renewal';
-    /**
-     * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-     */
-    caseId?: string;
     /**
      * The date of the application's interview.
      */
@@ -87,10 +83,6 @@ export type ApplicationWritable = {
          * Link to the related Document resource.
          */
         proofOfIncomeDocument?: string;
-        /**
-         * Link to the related Case resource.
-         */
-        case?: string;
     };
 };
 
@@ -149,14 +141,10 @@ export type Application = {
      */
     proofOfIncomeDocumentId?: string;
     /**
-     * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+     * A first application, or an application for recertification — the same kind of request.
      *
      */
     type?: 'new' | 'renewal';
-    /**
-     * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-     */
-    caseId?: string;
     /**
      * The date of the application's interview.
      */
@@ -180,10 +168,6 @@ export type Application = {
          * Link to the related Document resource.
          */
         proofOfIncomeDocument?: string;
-        /**
-         * Link to the related Case resource.
-         */
-        case?: string;
     };
 } & {
     /**
@@ -191,14 +175,14 @@ export type Application = {
      */
     readonly id: string;
     /**
-     * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household the case's current determination certified, copied when the renewal is opened so the baseline holds still through the review.
+     * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
      *
      */
     readonly previousHousehold?: {
         /**
-         * The number of people the household says buy and prepare food together.
+         * The number of people who buy and prepare food together, as the household states it.
          */
-        statedSize?: number;
+        size?: number;
         /**
          * Whether the household says its utilities are included in the rent.
          */
@@ -206,11 +190,11 @@ export type Application = {
         /**
          * Total monthly income, as the household states it.
          */
-        statedMonthlyIncome?: number;
+        monthlyIncome?: number;
         /**
          * Total monthly expenses, as the household states them.
          */
-        statedMonthlyExpenses?: number;
+        monthlyExpenses?: number;
         members?: Array<{
             /**
              * The member's key within the household.
@@ -610,14 +594,10 @@ export type ApplicationCreate = {
      */
     proofOfIncomeDocumentId?: string;
     /**
-     * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+     * A first application, or an application for recertification — the same kind of request.
      *
      */
     type?: 'new' | 'renewal';
-    /**
-     * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-     */
-    caseId?: string;
     /**
      * The date of the application's interview.
      */
@@ -641,10 +621,6 @@ export type ApplicationCreate = {
          * Link to the related Document resource.
          */
         proofOfIncomeDocument?: string;
-        /**
-         * Link to the related Case resource.
-         */
-        case?: string;
     };
 };
 
@@ -700,14 +676,10 @@ export type ApplicationUpdate = {
      */
     proofOfIncomeDocumentId?: string;
     /**
-     * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+     * A first application, or an application for recertification — the same kind of request.
      *
      */
     type?: 'new' | 'renewal';
-    /**
-     * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-     */
-    caseId?: string;
     /**
      * The date of the application's interview.
      */
@@ -731,10 +703,6 @@ export type ApplicationUpdate = {
          * Link to the related Document resource.
          */
         proofOfIncomeDocument?: string;
-        /**
-         * Link to the related Case resource.
-         */
-        case?: string;
     };
 };
 
@@ -942,14 +910,10 @@ export type ApplicationList = {
          */
         proofOfIncomeDocumentId?: string;
         /**
-         * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+         * A first application, or an application for recertification — the same kind of request.
          *
          */
         type?: 'new' | 'renewal';
-        /**
-         * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-         */
-        caseId?: string;
         /**
          * The date of the application's interview.
          */
@@ -973,10 +937,6 @@ export type ApplicationList = {
              * Link to the related Document resource.
              */
             proofOfIncomeDocument?: string;
-            /**
-             * Link to the related Case resource.
-             */
-            case?: string;
         };
     } & {
         /**
@@ -984,14 +944,14 @@ export type ApplicationList = {
          */
         readonly id: string;
         /**
-         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household the case's current determination certified, copied when the renewal is opened so the baseline holds still through the review.
+         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
          *
          */
         readonly previousHousehold?: {
             /**
-             * The number of people the household says buy and prepare food together.
+             * The number of people who buy and prepare food together, as the household states it.
              */
-            statedSize?: number;
+            size?: number;
             /**
              * Whether the household says its utilities are included in the rent.
              */
@@ -999,11 +959,11 @@ export type ApplicationList = {
             /**
              * Total monthly income, as the household states it.
              */
-            statedMonthlyIncome?: number;
+            monthlyIncome?: number;
             /**
              * Total monthly expenses, as the household states them.
              */
-            statedMonthlyExpenses?: number;
+            monthlyExpenses?: number;
             members?: Array<{
                 /**
                  * The member's key within the household.
@@ -2361,14 +2321,10 @@ export type ApplicationWritableWritable = {
      */
     proofOfIncomeDocumentId?: string;
     /**
-     * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+     * A first application, or an application for recertification — the same kind of request.
      *
      */
     type?: 'new' | 'renewal';
-    /**
-     * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-     */
-    caseId?: string;
     /**
      * The date of the application's interview.
      */
@@ -2441,14 +2397,10 @@ export type ApplicationWritable2 = {
      */
     proofOfIncomeDocumentId?: string;
     /**
-     * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+     * A first application, or an application for recertification — the same kind of request.
      *
      */
     type?: 'new' | 'renewal';
-    /**
-     * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-     */
-    caseId?: string;
     /**
      * The date of the application's interview.
      */
@@ -2672,14 +2624,10 @@ export type ApplicationCreateWritable = {
      */
     proofOfIncomeDocumentId?: string;
     /**
-     * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+     * A first application, or an application for recertification — the same kind of request.
      *
      */
     type?: 'new' | 'renewal';
-    /**
-     * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-     */
-    caseId?: string;
     /**
      * The date of the application's interview.
      */
@@ -2749,14 +2697,10 @@ export type ApplicationUpdateWritable = {
      */
     proofOfIncomeDocumentId?: string;
     /**
-     * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+     * A first application, or an application for recertification — the same kind of request.
      *
      */
     type?: 'new' | 'renewal';
-    /**
-     * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-     */
-    caseId?: string;
     /**
      * The date of the application's interview.
      */
@@ -2892,14 +2836,10 @@ export type ApplicationListWritable = {
          */
         proofOfIncomeDocumentId?: string;
         /**
-         * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+         * A first application, or an application for recertification — the same kind of request.
          *
          */
         type?: 'new' | 'renewal';
-        /**
-         * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-         */
-        caseId?: string;
         /**
          * The date of the application's interview.
          */
@@ -3636,14 +3576,10 @@ export type ListApplicationsResponses = {
              */
             proofOfIncomeDocumentId?: string;
             /**
-             * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+             * A first application, or an application for recertification — the same kind of request.
              *
              */
             type?: 'new' | 'renewal';
-            /**
-             * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-             */
-            caseId?: string;
             /**
              * The date of the application's interview.
              */
@@ -3667,10 +3603,6 @@ export type ListApplicationsResponses = {
                  * Link to the related Document resource.
                  */
                 proofOfIncomeDocument?: string;
-                /**
-                 * Link to the related Case resource.
-                 */
-                case?: string;
             };
         } & {
             /**
@@ -3678,14 +3610,14 @@ export type ListApplicationsResponses = {
              */
             readonly id: string;
             /**
-             * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household the case's current determination certified, copied when the renewal is opened so the baseline holds still through the review.
+             * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
              *
              */
             readonly previousHousehold?: {
                 /**
-                 * The number of people the household says buy and prepare food together.
+                 * The number of people who buy and prepare food together, as the household states it.
                  */
-                statedSize?: number;
+                size?: number;
                 /**
                  * Whether the household says its utilities are included in the rent.
                  */
@@ -3693,11 +3625,11 @@ export type ListApplicationsResponses = {
                 /**
                  * Total monthly income, as the household states it.
                  */
-                statedMonthlyIncome?: number;
+                monthlyIncome?: number;
                 /**
                  * Total monthly expenses, as the household states them.
                  */
-                statedMonthlyExpenses?: number;
+                monthlyExpenses?: number;
                 members?: Array<{
                     /**
                      * The member's key within the household.
@@ -4118,14 +4050,10 @@ export type CreateApplicationData = {
          */
         proofOfIncomeDocumentId?: string;
         /**
-         * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+         * A first application, or an application for recertification — the same kind of request.
          *
          */
         type?: 'new' | 'renewal';
-        /**
-         * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-         */
-        caseId?: string;
         /**
          * The date of the application's interview.
          */
@@ -4149,10 +4077,6 @@ export type CreateApplicationData = {
              * Link to the related Document resource.
              */
             proofOfIncomeDocument?: string;
-            /**
-             * Link to the related Case resource.
-             */
-            case?: string;
         };
     } & {
         [key: string]: unknown;
@@ -4241,14 +4165,10 @@ export type CreateApplicationResponses = {
          */
         proofOfIncomeDocumentId?: string;
         /**
-         * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+         * A first application, or an application for recertification — the same kind of request.
          *
          */
         type?: 'new' | 'renewal';
-        /**
-         * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-         */
-        caseId?: string;
         /**
          * The date of the application's interview.
          */
@@ -4272,10 +4192,6 @@ export type CreateApplicationResponses = {
              * Link to the related Document resource.
              */
             proofOfIncomeDocument?: string;
-            /**
-             * Link to the related Case resource.
-             */
-            case?: string;
         };
     } & {
         /**
@@ -4283,14 +4199,14 @@ export type CreateApplicationResponses = {
          */
         readonly id: string;
         /**
-         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household the case's current determination certified, copied when the renewal is opened so the baseline holds still through the review.
+         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
          *
          */
         readonly previousHousehold?: {
             /**
-             * The number of people the household says buy and prepare food together.
+             * The number of people who buy and prepare food together, as the household states it.
              */
-            statedSize?: number;
+            size?: number;
             /**
              * Whether the household says its utilities are included in the rent.
              */
@@ -4298,11 +4214,11 @@ export type CreateApplicationResponses = {
             /**
              * Total monthly income, as the household states it.
              */
-            statedMonthlyIncome?: number;
+            monthlyIncome?: number;
             /**
              * Total monthly expenses, as the household states them.
              */
-            statedMonthlyExpenses?: number;
+            monthlyExpenses?: number;
             members?: Array<{
                 /**
                  * The member's key within the household.
@@ -4776,14 +4692,10 @@ export type GetApplicationResponses = {
          */
         proofOfIncomeDocumentId?: string;
         /**
-         * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+         * A first application, or an application for recertification — the same kind of request.
          *
          */
         type?: 'new' | 'renewal';
-        /**
-         * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-         */
-        caseId?: string;
         /**
          * The date of the application's interview.
          */
@@ -4807,10 +4719,6 @@ export type GetApplicationResponses = {
              * Link to the related Document resource.
              */
             proofOfIncomeDocument?: string;
-            /**
-             * Link to the related Case resource.
-             */
-            case?: string;
         };
     } & {
         /**
@@ -4818,14 +4726,14 @@ export type GetApplicationResponses = {
          */
         readonly id: string;
         /**
-         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household the case's current determination certified, copied when the renewal is opened so the baseline holds still through the review.
+         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
          *
          */
         readonly previousHousehold?: {
             /**
-             * The number of people the household says buy and prepare food together.
+             * The number of people who buy and prepare food together, as the household states it.
              */
-            statedSize?: number;
+            size?: number;
             /**
              * Whether the household says its utilities are included in the rent.
              */
@@ -4833,11 +4741,11 @@ export type GetApplicationResponses = {
             /**
              * Total monthly income, as the household states it.
              */
-            statedMonthlyIncome?: number;
+            monthlyIncome?: number;
             /**
              * Total monthly expenses, as the household states them.
              */
-            statedMonthlyExpenses?: number;
+            monthlyExpenses?: number;
             members?: Array<{
                 /**
                  * The member's key within the household.
@@ -5241,14 +5149,10 @@ export type UpdateApplicationData = {
          */
         proofOfIncomeDocumentId?: string;
         /**
-         * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+         * A first application, or an application for recertification — the same kind of request.
          *
          */
         type?: 'new' | 'renewal';
-        /**
-         * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-         */
-        caseId?: string;
         /**
          * The date of the application's interview.
          */
@@ -5272,10 +5176,6 @@ export type UpdateApplicationData = {
              * Link to the related Document resource.
              */
             proofOfIncomeDocument?: string;
-            /**
-             * Link to the related Case resource.
-             */
-            case?: string;
         };
     } & {
         [key: string]: unknown;
@@ -5375,14 +5275,10 @@ export type UpdateApplicationResponses = {
          */
         proofOfIncomeDocumentId?: string;
         /**
-         * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+         * A first application, or an application for recertification — the same kind of request.
          *
          */
         type?: 'new' | 'renewal';
-        /**
-         * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-         */
-        caseId?: string;
         /**
          * The date of the application's interview.
          */
@@ -5406,10 +5302,6 @@ export type UpdateApplicationResponses = {
              * Link to the related Document resource.
              */
             proofOfIncomeDocument?: string;
-            /**
-             * Link to the related Case resource.
-             */
-            case?: string;
         };
     } & {
         /**
@@ -5417,14 +5309,14 @@ export type UpdateApplicationResponses = {
          */
         readonly id: string;
         /**
-         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household the case's current determination certified, copied when the renewal is opened so the baseline holds still through the review.
+         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
          *
          */
         readonly previousHousehold?: {
             /**
-             * The number of people the household says buy and prepare food together.
+             * The number of people who buy and prepare food together, as the household states it.
              */
-            statedSize?: number;
+            size?: number;
             /**
              * Whether the household says its utilities are included in the rent.
              */
@@ -5432,11 +5324,11 @@ export type UpdateApplicationResponses = {
             /**
              * Total monthly income, as the household states it.
              */
-            statedMonthlyIncome?: number;
+            monthlyIncome?: number;
             /**
              * Total monthly expenses, as the household states them.
              */
-            statedMonthlyExpenses?: number;
+            monthlyExpenses?: number;
             members?: Array<{
                 /**
                  * The member's key within the household.
@@ -7432,14 +7324,10 @@ export type SubmitApplicationResponses = {
          */
         proofOfIncomeDocumentId?: string;
         /**
-         * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+         * A first application, or an application for recertification — the same kind of request.
          *
          */
         type?: 'new' | 'renewal';
-        /**
-         * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-         */
-        caseId?: string;
         /**
          * The date of the application's interview.
          */
@@ -7463,10 +7351,6 @@ export type SubmitApplicationResponses = {
              * Link to the related Document resource.
              */
             proofOfIncomeDocument?: string;
-            /**
-             * Link to the related Case resource.
-             */
-            case?: string;
         };
     } & {
         /**
@@ -7474,14 +7358,14 @@ export type SubmitApplicationResponses = {
          */
         readonly id: string;
         /**
-         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household the case's current determination certified, copied when the renewal is opened so the baseline holds still through the review.
+         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
          *
          */
         readonly previousHousehold?: {
             /**
-             * The number of people the household says buy and prepare food together.
+             * The number of people who buy and prepare food together, as the household states it.
              */
-            statedSize?: number;
+            size?: number;
             /**
              * Whether the household says its utilities are included in the rent.
              */
@@ -7489,11 +7373,11 @@ export type SubmitApplicationResponses = {
             /**
              * Total monthly income, as the household states it.
              */
-            statedMonthlyIncome?: number;
+            monthlyIncome?: number;
             /**
              * Total monthly expenses, as the household states them.
              */
-            statedMonthlyExpenses?: number;
+            monthlyExpenses?: number;
             members?: Array<{
                 /**
                  * The member's key within the household.
@@ -7993,14 +7877,10 @@ export type OpenApplicationResponses = {
          */
         proofOfIncomeDocumentId?: string;
         /**
-         * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+         * A first application, or an application for recertification — the same kind of request.
          *
          */
         type?: 'new' | 'renewal';
-        /**
-         * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-         */
-        caseId?: string;
         /**
          * The date of the application's interview.
          */
@@ -8024,10 +7904,6 @@ export type OpenApplicationResponses = {
              * Link to the related Document resource.
              */
             proofOfIncomeDocument?: string;
-            /**
-             * Link to the related Case resource.
-             */
-            case?: string;
         };
     } & {
         /**
@@ -8035,14 +7911,14 @@ export type OpenApplicationResponses = {
          */
         readonly id: string;
         /**
-         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household the case's current determination certified, copied when the renewal is opened so the baseline holds still through the review.
+         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
          *
          */
         readonly previousHousehold?: {
             /**
-             * The number of people the household says buy and prepare food together.
+             * The number of people who buy and prepare food together, as the household states it.
              */
-            statedSize?: number;
+            size?: number;
             /**
              * Whether the household says its utilities are included in the rent.
              */
@@ -8050,11 +7926,11 @@ export type OpenApplicationResponses = {
             /**
              * Total monthly income, as the household states it.
              */
-            statedMonthlyIncome?: number;
+            monthlyIncome?: number;
             /**
              * Total monthly expenses, as the household states them.
              */
-            statedMonthlyExpenses?: number;
+            monthlyExpenses?: number;
             members?: Array<{
                 /**
                  * The member's key within the household.
@@ -8563,14 +8439,10 @@ export type CloseApplicationResponses = {
          */
         proofOfIncomeDocumentId?: string;
         /**
-         * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+         * A first application, or an application for recertification — the same kind of request.
          *
          */
         type?: 'new' | 'renewal';
-        /**
-         * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-         */
-        caseId?: string;
         /**
          * The date of the application's interview.
          */
@@ -8594,10 +8466,6 @@ export type CloseApplicationResponses = {
              * Link to the related Document resource.
              */
             proofOfIncomeDocument?: string;
-            /**
-             * Link to the related Case resource.
-             */
-            case?: string;
         };
     } & {
         /**
@@ -8605,14 +8473,14 @@ export type CloseApplicationResponses = {
          */
         readonly id: string;
         /**
-         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household the case's current determination certified, copied when the renewal is opened so the baseline holds still through the review.
+         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
          *
          */
         readonly previousHousehold?: {
             /**
-             * The number of people the household says buy and prepare food together.
+             * The number of people who buy and prepare food together, as the household states it.
              */
-            statedSize?: number;
+            size?: number;
             /**
              * Whether the household says its utilities are included in the rent.
              */
@@ -8620,11 +8488,11 @@ export type CloseApplicationResponses = {
             /**
              * Total monthly income, as the household states it.
              */
-            statedMonthlyIncome?: number;
+            monthlyIncome?: number;
             /**
              * Total monthly expenses, as the household states them.
              */
-            statedMonthlyExpenses?: number;
+            monthlyExpenses?: number;
             members?: Array<{
                 /**
                  * The member's key within the household.
@@ -9124,14 +8992,10 @@ export type WithdrawApplicationResponses = {
          */
         proofOfIncomeDocumentId?: string;
         /**
-         * A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
+         * A first application, or an application for recertification — the same kind of request.
          *
          */
         type?: 'new' | 'renewal';
-        /**
-         * The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-         */
-        caseId?: string;
         /**
          * The date of the application's interview.
          */
@@ -9155,10 +9019,6 @@ export type WithdrawApplicationResponses = {
              * Link to the related Document resource.
              */
             proofOfIncomeDocument?: string;
-            /**
-             * Link to the related Case resource.
-             */
-            case?: string;
         };
     } & {
         /**
@@ -9166,14 +9026,14 @@ export type WithdrawApplicationResponses = {
          */
         readonly id: string;
         /**
-         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household the case's current determination certified, copied when the renewal is opened so the baseline holds still through the review.
+         * The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
          *
          */
         readonly previousHousehold?: {
             /**
-             * The number of people the household says buy and prepare food together.
+             * The number of people who buy and prepare food together, as the household states it.
              */
-            statedSize?: number;
+            size?: number;
             /**
              * Whether the household says its utilities are included in the rent.
              */
@@ -9181,11 +9041,11 @@ export type WithdrawApplicationResponses = {
             /**
              * Total monthly income, as the household states it.
              */
-            statedMonthlyIncome?: number;
+            monthlyIncome?: number;
             /**
              * Total monthly expenses, as the household states them.
              */
-            statedMonthlyExpenses?: number;
+            monthlyExpenses?: number;
             members?: Array<{
                 /**
                  * The member's key within the household.

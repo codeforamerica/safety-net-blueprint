@@ -132,6 +132,24 @@ properties:
     propertyNames:
       pattern: "^\\$\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?(\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?)*$"
 
+  constants:
+    type: object
+    description: >
+      The ruleset's constants with their values, bound when the graph is
+      compiled. The evaluator puts them in scope as `constants`, as given
+      values: a fact resting on one is complete, not a placeholder.
+    additionalProperties:
+      type: object
+      required: [value]
+      properties:
+        value: {}
+        type:
+          type: string
+        description:
+          type: string
+    propertyNames:
+      pattern: "^[a-zA-Z][a-zA-Z0-9]*$"
+
   facts:
     type: object
     description: >

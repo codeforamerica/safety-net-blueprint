@@ -11,7 +11,7 @@ rulesets:
             liquidResources: 75
             monthlyShelterCost: 800
             isMigrantFarmworker: false
-          parameters:
+          policy:
             incomeThreshold: 150
             resourceThreshold: 100
 
@@ -22,7 +22,7 @@ rulesets:
             liquidResources: 50
             monthlyShelterCost: 650
             isMigrantFarmworker: false
-          parameters:
+          policy:
             incomeThreshold: 150
             resourceThreshold: 100
 
@@ -33,7 +33,7 @@ rulesets:
             liquidResources: 60
             monthlyShelterCost: 1000
             isMigrantFarmworker: true
-          parameters:
+          policy:
             incomeThreshold: 150
             resourceThreshold: 100
 
@@ -44,6 +44,6 @@ rulesets:
             liquidResources: 500
             monthlyShelterCost: 1200
             isMigrantFarmworker: false
-          parameters:
+          policy:
             incomeThreshold: 150
             resourceThreshold: 100

@@ -200,6 +200,17 @@ export function validateRuleset(domain, rulesetName, ruleset) {
   // input `household`, and `risks.cashIncome` a fact in the group `risks` — so
   // a fact can't repeat another, start with an input's name, or be a group too.
   const inputNames = new Set(Object.keys(ruleset.inputs || {}));
+  // Constants are in scope as `constants`, so that name is taken too.
+  if (ruleset.constants) {
+    if (inputNames.has('constants')) {
+      errors.push({
+        rule: 'constants-input',
+        message: 'An input named "constants" would hide the ruleset\'s constants, which facts read as `constants.<name>`. Rename the input.',
+        path: `${base}.inputs.constants`,
+      });
+    }
+    inputNames.add('constants');
+  }
   const paths = new Set();
   for (const { path } of ruleset.facts || []) {
     if (typeof path !== 'string') continue;

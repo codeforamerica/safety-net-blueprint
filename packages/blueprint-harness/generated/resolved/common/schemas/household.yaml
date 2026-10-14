@@ -3,18 +3,18 @@ $defs:
     type: object
     description: A household's circumstances at one point in time.
     properties:
-      statedSize:
+      size:
         type: integer
         minimum: 1
-        description: The number of people the household says buy and prepare food together.
+        description: The number of people who buy and prepare food together, as the household states it.
       utilitiesIncludedInRent:
         type: boolean
         description: Whether the household says its utilities are included in the rent.
-      statedMonthlyIncome:
+      monthlyIncome:
         type: number
         minimum: 0
         description: Total monthly income, as the household states it.
-      statedMonthlyExpenses:
+      monthlyExpenses:
         type: number
         minimum: 0
         description: Total monthly expenses, as the household states them.

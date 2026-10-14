@@ -257,7 +257,7 @@ workflows:
               liquidResources: 75
               monthlyShelterCost: 800
               isMigrantFarmworker: false
-            parameters:
+            policy:
               incomeThreshold: 150
               resourceThreshold: 100
         successCriteria:
@@ -266,8 +266,8 @@ workflows:
         description: |
           Gather what the interview flags compare against
 
-          - A renewal: a household already on SNAP recertifying its case. The application points at the case, and the case at the determination that certified the household a year ago.
-          - `previous` is that certified household, copied onto the renewal when it opened, so the baseline holds still through the review. `verified` is what the state's wage records and a verified pay stub show. `asOf` is the interview date.
+          - A renewal: a household already on SNAP recertifying.
+          - `previous` is the household as last certified, copied onto the renewal when it opened, so the baseline holds still through the review. `verified` is what the state's wage records and a verified pay stub show. `asOf` is the interview date.
           - The `interviewFlagsInputs` composition translates the data model into the ruleset's inputs by alias — `interviewDate as asOf`, `previousHousehold as previous` — so the rules speak their own vocabulary and nothing between them maps by hand.
         operationId: $sourceDescriptions.intake.getInterviewFlagsInputs
         parameters:
@@ -300,10 +300,10 @@ workflows:
             verified: $steps.gatherWhatTheFlagsCompareAgainst.outputs.verified
             programsAppliedFor: $steps.gatherWhatTheFlagsCompareAgainst.outputs.programsAppliedFor
             current:
-              statedSize: 3
+              size: 3
               utilitiesIncludedInRent: true
-              statedMonthlyIncome: 2200
-              statedMonthlyExpenses: 2600
+              monthlyIncome: 2200
+              monthlyExpenses: 2600
               members:
                 - id: client
                   dateOfBirth: "1985-03-02"

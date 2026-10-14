@@ -20,16 +20,15 @@ ApplicationExample3:
   id: 66666666-6666-4666-8666-666666666666
   status: submitted
   type: renewal
-  caseId: 44444444-4444-4444-8444-444444444444
   interviewDate: "2026-10-14"
   programsAppliedFor:
     - snap
   channel: phone
   previousHousehold:
-    statedSize: 3
+    size: 3
     utilitiesIncludedInRent: true
-    statedMonthlyIncome: 2400
-    statedMonthlyExpenses: 1500
+    monthlyIncome: 2400
+    monthlyExpenses: 1500
     members:
       - id: client
         dateOfBirth: "1985-03-02"

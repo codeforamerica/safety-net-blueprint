@@ -7,7 +7,7 @@ export type ExpeditedSnapInputs = {
     monthlyShelterCost?: number;
     isMigrantFarmworker?: boolean;
   };
-  parameters?: {
+  policy?: {
     incomeThreshold?: number;
     resourceThreshold?: number;
   };

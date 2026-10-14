@@ -763,16 +763,7 @@ components:
             - renewal
           default: new
           description: |
-            A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
-        caseId:
-          type: string
-          format: uuid
-          description: The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-          x-relationship:
-            type: fk
-            domain: case-management
-            resource: Case
-            style: links-only
+            A first application, or an application for recertification — the same kind of request.
         interviewDate:
           type: string
           format: date
@@ -796,10 +787,6 @@ components:
               type: string
               format: uri-reference
               description: Link to the related Document resource.
-            case:
-              type: string
-              format: uri-reference
-              description: Link to the related Case resource.
     Application:
       description: A benefit application record, including server-managed fields.
       unevaluatedProperties: false
@@ -823,7 +810,7 @@ components:
               $ref: ../../common/schemas/household.yaml#/$defs/Household
               readOnly: true
               description: |
-                The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household the case's current determination certified, copied when the renewal is opened so the baseline holds still through the review.
+                The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
             programCount:
               type: integer
               readOnly: true

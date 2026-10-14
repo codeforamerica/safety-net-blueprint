@@ -18,16 +18,16 @@ outputs:
   - inconsistencies.earnedIncomeWithoutJob
   - inconsistencies.utilitiesIncludedButBilled
 inputs:
-  $.current.statedSize:
+  $.current.size:
     type: integer
-    description: The number of people the household says buy and prepare food together.
+    description: The number of people who buy and prepare food together, as the household states it.
   $.current.utilitiesIncludedInRent:
     type: boolean
     description: Whether the household says its utilities are included in the rent.
-  $.current.statedMonthlyIncome:
+  $.current.monthlyIncome:
     type: number
     description: Total monthly income, as the household states it.
-  $.current.statedMonthlyExpenses:
+  $.current.monthlyExpenses:
     type: number
     description: Total monthly expenses, as the household states them.
   $.current.members[]:
@@ -105,16 +105,16 @@ inputs:
       - biweekly
       - semimonthly
       - monthly
-  $.previous.statedSize:
+  $.previous.size:
     type: integer
-    description: The number of people the household says buy and prepare food together.
+    description: The number of people who buy and prepare food together, as the household states it.
   $.previous.utilitiesIncludedInRent:
     type: boolean
     description: Whether the household says its utilities are included in the rent.
-  $.previous.statedMonthlyIncome:
+  $.previous.monthlyIncome:
     type: number
     description: Total monthly income, as the household states it.
-  $.previous.statedMonthlyExpenses:
+  $.previous.monthlyExpenses:
     type: number
     description: Total monthly expenses, as the household states them.
   $.previous.members[]:
@@ -229,26 +229,24 @@ inputs:
   $.programsAppliedFor[]:
     type: array
     description: The programs the household applied for.
-  $.parameters.weeklyToMonthly:
-    type: number
+constants:
+  weeklyToMonthly:
+    value: 4.3
     description: What weekly pay is multiplied by for a month. SNAP allows 4.3, or the exact 52 ÷ 12 (7 CFR § 273.10(c)(2)).
-    default: 4.3
-  $.parameters.biweeklyToMonthly:
-    type: number
+  biweeklyToMonthly:
+    value: 2.15
     description: What pay every two weeks is multiplied by for a month. SNAP allows 2.15, or the exact 26 ÷ 12 (7 CFR § 273.10(c)(2)).
-    default: 2.15
-  $.parameters.differenceAllowed:
-    type: number
+  differenceAllowed:
+    value: 0.1
     description: How far apart two amounts can be, as a fraction, before they count as different.
-    default: 0.1
-  $.parameters.childCareAgeUnder:
+  childCareAgeUnder:
+    value: 13
     type: integer
     description: The age under which a child is taken to need care while the adults work.
-    default: 13
 facts:
   monthlyFactor:
     expression: |
-      {'weekly': parameters.weeklyToMonthly, 'biweekly': parameters.biweeklyToMonthly,
+      {'weekly': constants.weeklyToMonthly, 'biweekly': constants.biweeklyToMonthly,
        'semimonthly': 2.0, 'monthly': 1.0, 'irregular': 1.0}
     description: |
       What one payment is multiplied by for a month's worth, by how often it's paid. Irregular income is taken as the household's monthly figure.
@@ -267,7 +265,7 @@ facts:
         asOf.getFullYear() - m.dateOfBirth.getFullYear()
         - ((asOf.getMonth() < m.dateOfBirth.getMonth()
             || (asOf.getMonth() == m.dateOfBirth.getMonth() && asOf.getDate() < m.dateOfBirth.getDate())) ? 1 : 0)
-        < parameters.childCareAgeUnder)
+        < constants.childCareAgeUnder)
     type: boolean
     description: A member is younger than the age a child is taken to need care, on the interview date.
   risks.earnedIncomeVaries:
@@ -310,15 +308,15 @@ facts:
     type: boolean
     description: The household applied for SNAP and another program, whose reporting rules differ.
   inconsistencies.incomeBelowExpenses:
-    expression: current.statedMonthlyIncome < current.statedMonthlyExpenses
+    expression: current.monthlyIncome < current.monthlyExpenses
     type: boolean
     description: The household's stated monthly income doesn't cover its stated monthly expenses.
   inconsistencies.wagesDifferFromWageRecords:
     expression: |
       verified.exists(v, v.kind == 'wage_record' && !current.incomes.exists(i,
         i.memberId == v.memberId && i.source == 'earned' && i.frequency != 'irregular'
-        && i.amount * monthlyFactor[i.frequency] >= v.amount / 3.0 * (1.0 - parameters.differenceAllowed)
-        && i.amount * monthlyFactor[i.frequency] <= v.amount / 3.0 * (1.0 + parameters.differenceAllowed)))
+        && i.amount * monthlyFactor[i.frequency] >= v.amount / 3.0 * (1.0 - constants.differenceAllowed)
+        && i.amount * monthlyFactor[i.frequency] <= v.amount / 3.0 * (1.0 + constants.differenceAllowed)))
     type: boolean
     description: |
       A member's monthly wages in the wage records differ by more than the allowed difference from their reported earned income, or they report no regular earned income.
@@ -326,12 +324,12 @@ facts:
     expression: |
       verified.exists(v, v.kind == 'pay_stub' && has(v.incomeId) && has(v.frequency)
         && current.incomes.exists(i, i.id == v.incomeId && i.frequency != 'irregular'
-          && (i.amount * monthlyFactor[i.frequency] < v.amount * monthlyFactor[v.frequency] * (1.0 - parameters.differenceAllowed)
-              || i.amount * monthlyFactor[i.frequency] > v.amount * monthlyFactor[v.frequency] * (1.0 + parameters.differenceAllowed))))
+          && (i.amount * monthlyFactor[i.frequency] < v.amount * monthlyFactor[v.frequency] * (1.0 - constants.differenceAllowed)
+              || i.amount * monthlyFactor[i.frequency] > v.amount * monthlyFactor[v.frequency] * (1.0 + constants.differenceAllowed))))
     type: boolean
     description: A reported income differs by more than the allowed difference, a month at a time, from its verified pay stub.
   inconsistencies.householdSizeDiffersFromMembers:
-    expression: current.statedSize != size(current.members)
+    expression: current.size != size(current.members)
     type: boolean
     description: The stated household size isn't the number of members reported.
   inconsistencies.jobWithoutEarnedIncome:
@@ -349,16 +347,12 @@ facts:
     type: boolean
     description: The household says utilities are included in the rent, but reports a utility bill.
 dependencies:
-  monthlyFactor:
-    - $.parameters.weeklyToMonthly
-    - $.parameters.biweeklyToMonthly
   hasElderlyOrDisabledMember:
     - $.current.members[]
     - $.asOf
   hasChild:
     - $.current.members[]
     - $.asOf
-    - $.parameters.childCareAgeUnder
   risks.earnedIncomeVaries:
     - $.current.incomes[]
   risks.cashOrSelfEmploymentIncome:
@@ -382,20 +376,18 @@ dependencies:
   risks.multipleProgramsApplied:
     - $.programsAppliedFor[]
   inconsistencies.incomeBelowExpenses:
-    - $.current.statedMonthlyIncome
-    - $.current.statedMonthlyExpenses
+    - $.current.monthlyIncome
+    - $.current.monthlyExpenses
   inconsistencies.wagesDifferFromWageRecords:
     - $.current.incomes[]
     - $.verified[]
-    - $.parameters.differenceAllowed
     - monthlyFactor
   inconsistencies.incomeDiffersFromPayStub:
     - $.current.incomes[]
     - $.verified[]
-    - $.parameters.differenceAllowed
     - monthlyFactor
   inconsistencies.householdSizeDiffersFromMembers:
-    - $.current.statedSize
+    - $.current.size
     - $.current.members[]
   inconsistencies.jobWithoutEarnedIncome:
     - $.current.jobs[]

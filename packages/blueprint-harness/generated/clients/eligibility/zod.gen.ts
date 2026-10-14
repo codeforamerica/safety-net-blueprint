@@ -22,59 +22,6 @@ export const zDetermination = z.object({
         z.iso.datetime({ offset: true }).readonly(),
         z.null()
     ]).readonly()),
-    certifiedHousehold: z.optional(z.object({
-        statedSize: z.optional(z.int().gte(1)),
-        utilitiesIncludedInRent: z.optional(z.boolean()),
-        statedMonthlyIncome: z.optional(z.number().gte(0)),
-        statedMonthlyExpenses: z.optional(z.number().gte(0)),
-        members: z.optional(z.array(z.object({
-            id: z.string(),
-            dateOfBirth: z.optional(z.iso.date()),
-            isDisabled: z.optional(z.boolean())
-        }))),
-        jobs: z.optional(z.array(z.object({
-            id: z.string(),
-            memberId: z.string(),
-            employer: z.optional(z.string())
-        }))),
-        incomes: z.optional(z.array(z.object({
-            id: z.string(),
-            memberId: z.string(),
-            jobId: z.optional(z.string()),
-            source: z.enum([
-                'earned',
-                'self_employment',
-                'unearned'
-            ]),
-            amount: z.number().gte(0),
-            frequency: z.enum([
-                'weekly',
-                'biweekly',
-                'semimonthly',
-                'monthly',
-                'irregular'
-            ]),
-            paidInCash: z.optional(z.boolean()),
-            amountVaries: z.optional(z.boolean())
-        }))),
-        expenses: z.optional(z.array(z.object({
-            type: z.enum([
-                'rent',
-                'mortgage',
-                'utilities',
-                'dependent_care',
-                'medical',
-                'child_support'
-            ]),
-            amount: z.number().gte(0),
-            frequency: z.enum([
-                'weekly',
-                'biweekly',
-                'semimonthly',
-                'monthly'
-            ])
-        })))
-    }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
@@ -111,59 +58,6 @@ export const zDeterminationList = z.object({
             z.iso.datetime({ offset: true }).readonly(),
             z.null()
         ]).readonly()),
-        certifiedHousehold: z.optional(z.object({
-            statedSize: z.optional(z.int().gte(1)),
-            utilitiesIncludedInRent: z.optional(z.boolean()),
-            statedMonthlyIncome: z.optional(z.number().gte(0)),
-            statedMonthlyExpenses: z.optional(z.number().gte(0)),
-            members: z.optional(z.array(z.object({
-                id: z.string(),
-                dateOfBirth: z.optional(z.iso.date()),
-                isDisabled: z.optional(z.boolean())
-            }))),
-            jobs: z.optional(z.array(z.object({
-                id: z.string(),
-                memberId: z.string(),
-                employer: z.optional(z.string())
-            }))),
-            incomes: z.optional(z.array(z.object({
-                id: z.string(),
-                memberId: z.string(),
-                jobId: z.optional(z.string()),
-                source: z.enum([
-                    'earned',
-                    'self_employment',
-                    'unearned'
-                ]),
-                amount: z.number().gte(0),
-                frequency: z.enum([
-                    'weekly',
-                    'biweekly',
-                    'semimonthly',
-                    'monthly',
-                    'irregular'
-                ]),
-                paidInCash: z.optional(z.boolean()),
-                amountVaries: z.optional(z.boolean())
-            }))),
-            expenses: z.optional(z.array(z.object({
-                type: z.enum([
-                    'rent',
-                    'mortgage',
-                    'utilities',
-                    'dependent_care',
-                    'medical',
-                    'child_support'
-                ]),
-                amount: z.number().gte(0),
-                frequency: z.enum([
-                    'weekly',
-                    'biweekly',
-                    'semimonthly',
-                    'monthly'
-                ])
-            })))
-        }).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         links: z.optional(z.object({
@@ -338,59 +232,6 @@ export const zListDeterminationsResponse = z.object({
             z.iso.datetime({ offset: true }).readonly(),
             z.null()
         ]).readonly()),
-        certifiedHousehold: z.optional(z.object({
-            statedSize: z.optional(z.int().gte(1)),
-            utilitiesIncludedInRent: z.optional(z.boolean()),
-            statedMonthlyIncome: z.optional(z.number().gte(0)),
-            statedMonthlyExpenses: z.optional(z.number().gte(0)),
-            members: z.optional(z.array(z.object({
-                id: z.string(),
-                dateOfBirth: z.optional(z.iso.date()),
-                isDisabled: z.optional(z.boolean())
-            }))),
-            jobs: z.optional(z.array(z.object({
-                id: z.string(),
-                memberId: z.string(),
-                employer: z.optional(z.string())
-            }))),
-            incomes: z.optional(z.array(z.object({
-                id: z.string(),
-                memberId: z.string(),
-                jobId: z.optional(z.string()),
-                source: z.enum([
-                    'earned',
-                    'self_employment',
-                    'unearned'
-                ]),
-                amount: z.number().gte(0),
-                frequency: z.enum([
-                    'weekly',
-                    'biweekly',
-                    'semimonthly',
-                    'monthly',
-                    'irregular'
-                ]),
-                paidInCash: z.optional(z.boolean()),
-                amountVaries: z.optional(z.boolean())
-            }))),
-            expenses: z.optional(z.array(z.object({
-                type: z.enum([
-                    'rent',
-                    'mortgage',
-                    'utilities',
-                    'dependent_care',
-                    'medical',
-                    'child_support'
-                ]),
-                amount: z.number().gte(0),
-                frequency: z.enum([
-                    'weekly',
-                    'biweekly',
-                    'semimonthly',
-                    'monthly'
-                ])
-            })))
-        }).readonly()),
         createdAt: z.iso.datetime({ offset: true }).readonly(),
         updatedAt: z.iso.datetime({ offset: true }).readonly(),
         links: z.optional(z.object({
@@ -430,59 +271,6 @@ export const zCreateDeterminationResponse = z.object({
         z.iso.datetime({ offset: true }).readonly(),
         z.null()
     ]).readonly()),
-    certifiedHousehold: z.optional(z.object({
-        statedSize: z.optional(z.int().gte(1)),
-        utilitiesIncludedInRent: z.optional(z.boolean()),
-        statedMonthlyIncome: z.optional(z.number().gte(0)),
-        statedMonthlyExpenses: z.optional(z.number().gte(0)),
-        members: z.optional(z.array(z.object({
-            id: z.string(),
-            dateOfBirth: z.optional(z.iso.date()),
-            isDisabled: z.optional(z.boolean())
-        }))),
-        jobs: z.optional(z.array(z.object({
-            id: z.string(),
-            memberId: z.string(),
-            employer: z.optional(z.string())
-        }))),
-        incomes: z.optional(z.array(z.object({
-            id: z.string(),
-            memberId: z.string(),
-            jobId: z.optional(z.string()),
-            source: z.enum([
-                'earned',
-                'self_employment',
-                'unearned'
-            ]),
-            amount: z.number().gte(0),
-            frequency: z.enum([
-                'weekly',
-                'biweekly',
-                'semimonthly',
-                'monthly',
-                'irregular'
-            ]),
-            paidInCash: z.optional(z.boolean()),
-            amountVaries: z.optional(z.boolean())
-        }))),
-        expenses: z.optional(z.array(z.object({
-            type: z.enum([
-                'rent',
-                'mortgage',
-                'utilities',
-                'dependent_care',
-                'medical',
-                'child_support'
-            ]),
-            amount: z.number().gte(0),
-            frequency: z.enum([
-                'weekly',
-                'biweekly',
-                'semimonthly',
-                'monthly'
-            ])
-        })))
-    }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
@@ -514,59 +302,6 @@ export const zGetDeterminationResponse = z.object({
         z.iso.datetime({ offset: true }).readonly(),
         z.null()
     ]).readonly()),
-    certifiedHousehold: z.optional(z.object({
-        statedSize: z.optional(z.int().gte(1)),
-        utilitiesIncludedInRent: z.optional(z.boolean()),
-        statedMonthlyIncome: z.optional(z.number().gte(0)),
-        statedMonthlyExpenses: z.optional(z.number().gte(0)),
-        members: z.optional(z.array(z.object({
-            id: z.string(),
-            dateOfBirth: z.optional(z.iso.date()),
-            isDisabled: z.optional(z.boolean())
-        }))),
-        jobs: z.optional(z.array(z.object({
-            id: z.string(),
-            memberId: z.string(),
-            employer: z.optional(z.string())
-        }))),
-        incomes: z.optional(z.array(z.object({
-            id: z.string(),
-            memberId: z.string(),
-            jobId: z.optional(z.string()),
-            source: z.enum([
-                'earned',
-                'self_employment',
-                'unearned'
-            ]),
-            amount: z.number().gte(0),
-            frequency: z.enum([
-                'weekly',
-                'biweekly',
-                'semimonthly',
-                'monthly',
-                'irregular'
-            ]),
-            paidInCash: z.optional(z.boolean()),
-            amountVaries: z.optional(z.boolean())
-        }))),
-        expenses: z.optional(z.array(z.object({
-            type: z.enum([
-                'rent',
-                'mortgage',
-                'utilities',
-                'dependent_care',
-                'medical',
-                'child_support'
-            ]),
-            amount: z.number().gte(0),
-            frequency: z.enum([
-                'weekly',
-                'biweekly',
-                'semimonthly',
-                'monthly'
-            ])
-        })))
-    }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
@@ -604,59 +339,6 @@ export const zUpdateDeterminationResponse = z.object({
         z.iso.datetime({ offset: true }).readonly(),
         z.null()
     ]).readonly()),
-    certifiedHousehold: z.optional(z.object({
-        statedSize: z.optional(z.int().gte(1)),
-        utilitiesIncludedInRent: z.optional(z.boolean()),
-        statedMonthlyIncome: z.optional(z.number().gte(0)),
-        statedMonthlyExpenses: z.optional(z.number().gte(0)),
-        members: z.optional(z.array(z.object({
-            id: z.string(),
-            dateOfBirth: z.optional(z.iso.date()),
-            isDisabled: z.optional(z.boolean())
-        }))),
-        jobs: z.optional(z.array(z.object({
-            id: z.string(),
-            memberId: z.string(),
-            employer: z.optional(z.string())
-        }))),
-        incomes: z.optional(z.array(z.object({
-            id: z.string(),
-            memberId: z.string(),
-            jobId: z.optional(z.string()),
-            source: z.enum([
-                'earned',
-                'self_employment',
-                'unearned'
-            ]),
-            amount: z.number().gte(0),
-            frequency: z.enum([
-                'weekly',
-                'biweekly',
-                'semimonthly',
-                'monthly',
-                'irregular'
-            ]),
-            paidInCash: z.optional(z.boolean()),
-            amountVaries: z.optional(z.boolean())
-        }))),
-        expenses: z.optional(z.array(z.object({
-            type: z.enum([
-                'rent',
-                'mortgage',
-                'utilities',
-                'dependent_care',
-                'medical',
-                'child_support'
-            ]),
-            amount: z.number().gte(0),
-            frequency: z.enum([
-                'weekly',
-                'biweekly',
-                'semimonthly',
-                'monthly'
-            ])
-        })))
-    }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({
@@ -770,59 +452,6 @@ export const zCompleteDeterminationResponse = z.object({
         z.iso.datetime({ offset: true }).readonly(),
         z.null()
     ]).readonly()),
-    certifiedHousehold: z.optional(z.object({
-        statedSize: z.optional(z.int().gte(1)),
-        utilitiesIncludedInRent: z.optional(z.boolean()),
-        statedMonthlyIncome: z.optional(z.number().gte(0)),
-        statedMonthlyExpenses: z.optional(z.number().gte(0)),
-        members: z.optional(z.array(z.object({
-            id: z.string(),
-            dateOfBirth: z.optional(z.iso.date()),
-            isDisabled: z.optional(z.boolean())
-        }))),
-        jobs: z.optional(z.array(z.object({
-            id: z.string(),
-            memberId: z.string(),
-            employer: z.optional(z.string())
-        }))),
-        incomes: z.optional(z.array(z.object({
-            id: z.string(),
-            memberId: z.string(),
-            jobId: z.optional(z.string()),
-            source: z.enum([
-                'earned',
-                'self_employment',
-                'unearned'
-            ]),
-            amount: z.number().gte(0),
-            frequency: z.enum([
-                'weekly',
-                'biweekly',
-                'semimonthly',
-                'monthly',
-                'irregular'
-            ]),
-            paidInCash: z.optional(z.boolean()),
-            amountVaries: z.optional(z.boolean())
-        }))),
-        expenses: z.optional(z.array(z.object({
-            type: z.enum([
-                'rent',
-                'mortgage',
-                'utilities',
-                'dependent_care',
-                'medical',
-                'child_support'
-            ]),
-            amount: z.number().gte(0),
-            frequency: z.enum([
-                'weekly',
-                'biweekly',
-                'semimonthly',
-                'monthly'
-            ])
-        })))
-    }).readonly()),
     createdAt: z.iso.datetime({ offset: true }).readonly(),
     updatedAt: z.iso.datetime({ offset: true }).readonly(),
     links: z.optional(z.object({

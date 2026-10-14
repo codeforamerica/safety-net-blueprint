@@ -279,11 +279,6 @@ components:
           format: date-time
           readOnly: true
           description: Timestamp when the determination was finalized. Null until complete.
-        certifiedHousehold:
-          $ref: ../../common/schemas/household.yaml#/$defs/Household
-          readOnly: true
-          description: |
-            The household as this determination certified it: what a renewal compares the household's answers against at the next interview.
         createdAt:
           type: string
           format: date-time

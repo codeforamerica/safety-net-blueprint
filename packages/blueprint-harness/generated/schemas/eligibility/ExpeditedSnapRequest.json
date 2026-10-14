@@ -24,7 +24,7 @@
         }
       }
     },
-    "parameters": {
+    "policy": {
       "type": "object",
       "properties": {
         "incomeThreshold": {

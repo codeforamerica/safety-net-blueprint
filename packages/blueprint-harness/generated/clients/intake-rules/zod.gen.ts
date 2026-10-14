@@ -7,10 +7,10 @@ import { z } from 'zod';
  */
 export const zInterviewFlagsRequest = z.object({
     current: z.optional(z.object({
-        statedSize: z.optional(z.int().gte(1)),
+        size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
-        statedMonthlyIncome: z.optional(z.number().gte(0)),
-        statedMonthlyExpenses: z.optional(z.number().gte(0)),
+        monthlyIncome: z.optional(z.number().gte(0)),
+        monthlyExpenses: z.optional(z.number().gte(0)),
         members: z.optional(z.array(z.object({
             id: z.string(),
             dateOfBirth: z.optional(z.iso.date()),
@@ -60,10 +60,10 @@ export const zInterviewFlagsRequest = z.object({
         })))
     })),
     previous: z.optional(z.object({
-        statedSize: z.optional(z.int().gte(1)),
+        size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
-        statedMonthlyIncome: z.optional(z.number().gte(0)),
-        statedMonthlyExpenses: z.optional(z.number().gte(0)),
+        monthlyIncome: z.optional(z.number().gte(0)),
+        monthlyExpenses: z.optional(z.number().gte(0)),
         members: z.optional(z.array(z.object({
             id: z.string(),
             dateOfBirth: z.optional(z.iso.date()),
@@ -126,13 +126,7 @@ export const zInterviewFlagsRequest = z.object({
         ]))
     }))),
     asOf: z.optional(z.iso.date()),
-    programsAppliedFor: z.optional(z.array(z.string())),
-    parameters: z.optional(z.object({
-        weeklyToMonthly: z.optional(z.number()).default(4.3),
-        biweeklyToMonthly: z.optional(z.number()).default(2.15),
-        differenceAllowed: z.optional(z.number()).default(0.1),
-        childCareAgeUnder: z.optional(z.int()).default(13)
-    }))
+    programsAppliedFor: z.optional(z.array(z.string()))
 });
 
 /**
@@ -165,10 +159,10 @@ export const zInterviewFlagsResponse = z.array(z.union([
 export const zEvaluateInterviewFlagsData = z.object({
     body: z.object({
         current: z.optional(z.object({
-            statedSize: z.optional(z.int().gte(1)),
+            size: z.optional(z.int().gte(1)),
             utilitiesIncludedInRent: z.optional(z.boolean()),
-            statedMonthlyIncome: z.optional(z.number().gte(0)),
-            statedMonthlyExpenses: z.optional(z.number().gte(0)),
+            monthlyIncome: z.optional(z.number().gte(0)),
+            monthlyExpenses: z.optional(z.number().gte(0)),
             members: z.optional(z.array(z.object({
                 id: z.string(),
                 dateOfBirth: z.optional(z.iso.date()),
@@ -218,10 +212,10 @@ export const zEvaluateInterviewFlagsData = z.object({
             })))
         })),
         previous: z.optional(z.object({
-            statedSize: z.optional(z.int().gte(1)),
+            size: z.optional(z.int().gte(1)),
             utilitiesIncludedInRent: z.optional(z.boolean()),
-            statedMonthlyIncome: z.optional(z.number().gte(0)),
-            statedMonthlyExpenses: z.optional(z.number().gte(0)),
+            monthlyIncome: z.optional(z.number().gte(0)),
+            monthlyExpenses: z.optional(z.number().gte(0)),
             members: z.optional(z.array(z.object({
                 id: z.string(),
                 dateOfBirth: z.optional(z.iso.date()),
@@ -284,13 +278,7 @@ export const zEvaluateInterviewFlagsData = z.object({
             ]))
         }))),
         asOf: z.optional(z.iso.date()),
-        programsAppliedFor: z.optional(z.array(z.string())),
-        parameters: z.optional(z.object({
-            weeklyToMonthly: z.optional(z.number()).default(4.3),
-            biweeklyToMonthly: z.optional(z.number()).default(2.15),
-            differenceAllowed: z.optional(z.number()).default(0.1),
-            childCareAgeUnder: z.optional(z.int()).default(13)
-        }))
+        programsAppliedFor: z.optional(z.array(z.string()))
     }),
     path: z.optional(z.never()),
     query: z.optional(z.never())

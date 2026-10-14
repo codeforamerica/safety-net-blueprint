@@ -2,10 +2,10 @@ import type { FactNode } from '@codeforamerica/blueprint-rules-engine';
 
 export type InterviewFlagsInputs = {
   current?: {
-    statedSize?: number;
+    size?: number;
     utilitiesIncludedInRent?: boolean;
-    statedMonthlyIncome?: number;
-    statedMonthlyExpenses?: number;
+    monthlyIncome?: number;
+    monthlyExpenses?: number;
     members?: Array<{
       id?: string;
       dateOfBirth?: string;
@@ -33,10 +33,10 @@ export type InterviewFlagsInputs = {
     }>;
   };
   previous?: {
-    statedSize?: number;
+    size?: number;
     utilitiesIncludedInRent?: boolean;
-    statedMonthlyIncome?: number;
-    statedMonthlyExpenses?: number;
+    monthlyIncome?: number;
+    monthlyExpenses?: number;
     members?: Array<{
       id?: string;
       dateOfBirth?: string;
@@ -73,12 +73,6 @@ export type InterviewFlagsInputs = {
   }>;
   asOf?: string;
   programsAppliedFor?: Array<unknown>;
-  parameters?: {
-    weeklyToMonthly?: number;
-    biweeklyToMonthly?: number;
-    differenceAllowed?: number;
-    childCareAgeUnder?: number;
-  };
 };
 
 export type InterviewFlagsResult = {

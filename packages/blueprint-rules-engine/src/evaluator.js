@@ -28,7 +28,8 @@
  * @module evaluator
  */
 
-import { timestampFromDate } from '@bufbuild/protobuf/wkt';
+import { timestampFromDate, TimestampSchema } from '@bufbuild/protobuf/wkt';
+import { reflect } from '@bufbuild/protobuf/reflect';
 
 import { parse } from '@bufbuild/cel';
 import { evaluateCELNode } from './cel.js';
@@ -258,7 +259,11 @@ function coerceDeclared(spec, value) {
     const date = new Date(text);
     // An unparseable value is left alone so it is reported as a bad input
     // rather than silently becoming an epoch date.
-    return Number.isNaN(date.getTime()) ? undefined : timestampFromDate(date);
+    // Bound already reflected. A bare Timestamp message is reflected by CEL each
+    // time it's read, which looks its type up in a registry only an evaluation
+    // has — so a date read afterwards failed: a fact returning the members
+    // whose date of birth passes a test could not be converted back.
+    return Number.isNaN(date.getTime()) ? undefined : reflect(TimestampSchema, timestampFromDate(date));
   }
 
   return undefined;
@@ -346,6 +351,16 @@ export function evaluate(graph, inputs) {
 
   // Last, so it also covers values written in by the two passes above.
   coerceDeclaredInputs(scope, inputs, graph.inputs);
+
+  // The ruleset's constants, from the graph — given values, not inputs, so
+  // nothing a caller sends replaces them and nothing resting on them is a
+  // placeholder.
+  if (graph.constants) {
+    scope.constants = Object.fromEntries(Object.entries(graph.constants).map(([name, { value, type }]) => [
+      name,
+      coerceDeclared({ type }, value) ?? value,
+    ]));
+  }
 
   const inputTypeErrors = buildInputTypeErrors(graph.inputs, inputs);
   const resolved = {};

@@ -307,6 +307,13 @@ function requestBodySchemaName(rawOp) {
   return refToSchemaName(content?.schema?.$ref);
 }
 
+/** Whether a schema is a page of records — an `items` array — rather than one. */
+function isListEnvelope(schema) {
+  if (!schema || typeof schema !== 'object') return false;
+  if (schema.properties?.items?.type === 'array') return true;
+  return (schema.allOf ?? []).some(isListEnvelope);
+}
+
 // ─── Per-spec processing ──────────────────────────────────────────────────────
 
 async function processSpec(specPath, outputPath, ctx = {}) {
@@ -383,7 +390,9 @@ async function processSpec(specPath, outputPath, ctx = {}) {
 
   // ── Detect all root resources ─────────────────────────────────────────────
   //
-  // A root is any /{collection}/{id} path with a PATCH that has a request body.
+  // A root is any /{collection}/{id} path that returns a record or accepts one.
+  // A read-only resource is still data — this used to require a PATCH, which
+  // left every domain without updates (case management, documents) undocumented.
   // The dot-notation prefix is derived from the ID parameter name (e.g. applicationId → application).
   // Domains with multiple top-level resources (e.g. workflow: queues + tasks) produce
   // one section per root plus their respective sub-resources.
@@ -392,23 +401,27 @@ async function processSpec(specPath, outputPath, ctx = {}) {
   for (const [rawPath, methods] of Object.entries(rawPaths)) {
     const match = rawPath.match(/^\/([^/]+)\/\{([^}]+)\}$/);
     if (!match) continue;
-    const schemaName = requestBodySchemaName(methods.patch);
-    if (!schemaName) continue;
+    const writableSchemaName = requestBodySchemaName(methods.patch);
+    // A GET that answers with a page of records (the registry's /registry/{type})
+    // is a list, not a record.
+    const readName = responseSchemaName(methods.get);
+    const readableSchemaName = isListEnvelope(schemas[readName]) ? null : readName;
+    if (!writableSchemaName && !readableSchemaName) continue;
     roots.push({
       collection: match[1],
       prefix: match[2].replace(/Id$/, ''), // e.g. 'applicationId' → 'application'
-      writableSchemaName: schemaName,
-      readableSchemaName: responseSchemaName(methods.get),
+      writableSchemaName,
+      readableSchemaName,
     });
   }
 
   if (roots.length === 0) {
-    console.warn(`  ${specFilename}: no root resource found (need PATCH /{collection}/{id} with request body) — skipping`);
+    console.warn(`  ${specFilename}: no root resource found (need /{collection}/{id} returning or accepting a record) — skipping`);
     return;
   }
 
   for (const { collection: rootCollection, prefix: rootPrefix, writableSchemaName: rootWritableSchemaName, readableSchemaName: rootReadableSchemaName } of roots) {
-    console.log(`  Root resource: ${rootCollection} (prefix: ${rootPrefix}, writable schema: ${rootWritableSchemaName})`);
+    console.log(`  Root resource: ${rootCollection} (prefix: ${rootPrefix}, schema: ${rootReadableSchemaName ?? rootWritableSchemaName})`);
 
     // ── Scan sub-resource paths in spec order ───────────────────────────────
     //

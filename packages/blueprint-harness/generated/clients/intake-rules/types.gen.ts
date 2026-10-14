@@ -13,9 +13,9 @@ export type InterviewFlagsRequest = {
      */
     current?: {
         /**
-         * The number of people the household says buy and prepare food together.
+         * The number of people who buy and prepare food together, as the household states it.
          */
-        statedSize?: number;
+        size?: number;
         /**
          * Whether the household says its utilities are included in the rent.
          */
@@ -23,11 +23,11 @@ export type InterviewFlagsRequest = {
         /**
          * Total monthly income, as the household states it.
          */
-        statedMonthlyIncome?: number;
+        monthlyIncome?: number;
         /**
          * Total monthly expenses, as the household states them.
          */
-        statedMonthlyExpenses?: number;
+        monthlyExpenses?: number;
         members?: Array<{
             /**
              * The member's key within the household.
@@ -89,9 +89,9 @@ export type InterviewFlagsRequest = {
      */
     previous?: {
         /**
-         * The number of people the household says buy and prepare food together.
+         * The number of people who buy and prepare food together, as the household states it.
          */
-        statedSize?: number;
+        size?: number;
         /**
          * Whether the household says its utilities are included in the rent.
          */
@@ -99,11 +99,11 @@ export type InterviewFlagsRequest = {
         /**
          * Total monthly income, as the household states it.
          */
-        statedMonthlyIncome?: number;
+        monthlyIncome?: number;
         /**
          * Total monthly expenses, as the household states them.
          */
-        statedMonthlyExpenses?: number;
+        monthlyExpenses?: number;
         members?: Array<{
             /**
              * The member's key within the household.
@@ -198,27 +198,6 @@ export type InterviewFlagsRequest = {
      * The programs the household applied for.
      */
     programsAppliedFor?: Array<string>;
-    /**
-     * Choices a state makes, with defaults.
-     */
-    parameters?: {
-        /**
-         * What weekly pay is multiplied by for a month. SNAP allows 4.3, or the exact 52 ÷ 12 (7 CFR § 273.10(c)(2)).
-         */
-        weeklyToMonthly?: number;
-        /**
-         * What pay every two weeks is multiplied by for a month. SNAP allows 2.15, or the exact 26 ÷ 12 (7 CFR § 273.10(c)(2)).
-         */
-        biweeklyToMonthly?: number;
-        /**
-         * How far apart two amounts can be, as a fraction, before they count as different.
-         */
-        differenceAllowed?: number;
-        /**
-         * The age under which a child is taken to need care while the adults work.
-         */
-        childCareAgeUnder?: number;
-    };
 };
 
 /**
@@ -277,9 +256,9 @@ export type EvaluateInterviewFlagsData = {
          */
         current?: {
             /**
-             * The number of people the household says buy and prepare food together.
+             * The number of people who buy and prepare food together, as the household states it.
              */
-            statedSize?: number;
+            size?: number;
             /**
              * Whether the household says its utilities are included in the rent.
              */
@@ -287,11 +266,11 @@ export type EvaluateInterviewFlagsData = {
             /**
              * Total monthly income, as the household states it.
              */
-            statedMonthlyIncome?: number;
+            monthlyIncome?: number;
             /**
              * Total monthly expenses, as the household states them.
              */
-            statedMonthlyExpenses?: number;
+            monthlyExpenses?: number;
             members?: Array<{
                 /**
                  * The member's key within the household.
@@ -353,9 +332,9 @@ export type EvaluateInterviewFlagsData = {
          */
         previous?: {
             /**
-             * The number of people the household says buy and prepare food together.
+             * The number of people who buy and prepare food together, as the household states it.
              */
-            statedSize?: number;
+            size?: number;
             /**
              * Whether the household says its utilities are included in the rent.
              */
@@ -363,11 +342,11 @@ export type EvaluateInterviewFlagsData = {
             /**
              * Total monthly income, as the household states it.
              */
-            statedMonthlyIncome?: number;
+            monthlyIncome?: number;
             /**
              * Total monthly expenses, as the household states them.
              */
-            statedMonthlyExpenses?: number;
+            monthlyExpenses?: number;
             members?: Array<{
                 /**
                  * The member's key within the household.
@@ -462,27 +441,6 @@ export type EvaluateInterviewFlagsData = {
          * The programs the household applied for.
          */
         programsAppliedFor?: Array<string>;
-        /**
-         * Choices a state makes, with defaults.
-         */
-        parameters?: {
-            /**
-             * What weekly pay is multiplied by for a month. SNAP allows 4.3, or the exact 52 ÷ 12 (7 CFR § 273.10(c)(2)).
-             */
-            weeklyToMonthly?: number;
-            /**
-             * What pay every two weeks is multiplied by for a month. SNAP allows 2.15, or the exact 26 ÷ 12 (7 CFR § 273.10(c)(2)).
-             */
-            biweeklyToMonthly?: number;
-            /**
-             * How far apart two amounts can be, as a fraction, before they count as different.
-             */
-            differenceAllowed?: number;
-            /**
-             * The age under which a child is taken to need care while the adults work.
-             */
-            childCareAgeUnder?: number;
-        };
     };
     path?: never;
     query?: never;

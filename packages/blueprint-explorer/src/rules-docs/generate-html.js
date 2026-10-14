@@ -308,9 +308,8 @@ export function generateRulesetHtml(graph, annotations, registries, examples, ru
 
   let apiLinkHtml = '';
   if (endpointInfo) {
-    const { path, method } = endpointInfo;
-    const anchor = `op-${method}-${path.replace(/\//g, '-').replace(/[{}]/g, '').replace(/--+/g, '-').replace(/^-|-$/g, '')}`;
-    apiLinkHtml = apiReferenceLink(apiReferenceHref(graph.domain, method, path), 'API endpoint →', 'font-size:11px;border-radius:4px;padding:2px 8px;margin-left:10px;');
+    const { path, method, page = graph.domain } = endpointInfo;
+    apiLinkHtml = apiReferenceLink(apiReferenceHref(page, method, path), 'API endpoint →', 'font-size:11px;border-radius:4px;padding:2px 8px;margin-left:10px;');
   }
 
   const svgHtml = buildGraphSvg(graph, `arrow-${rulesetName}`);

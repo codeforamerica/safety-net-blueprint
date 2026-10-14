@@ -16,10 +16,10 @@ rulesets:
           asOf: "2026-10-14"
           programsAppliedFor: [snap]
           previous:
-            statedSize: 3
+            size: 3
             utilitiesIncludedInRent: true
-            statedMonthlyIncome: 2400
-            statedMonthlyExpenses: 1500
+            monthlyIncome: 2400
+            monthlyExpenses: 1500
             members:
               - { id: client, dateOfBirth: "1985-03-02", isDisabled: false }
               - { id: daughter, dateOfBirth: "2007-06-10", isDisabled: false }
@@ -31,10 +31,10 @@ rulesets:
             expenses:
               - { type: rent, amount: 1150, frequency: monthly }
           current:
-            statedSize: 3
+            size: 3
             utilitiesIncludedInRent: true
-            statedMonthlyIncome: 2200
-            statedMonthlyExpenses: 2600
+            monthlyIncome: 2200
+            monthlyExpenses: 2600
             members:
               - { id: client, dateOfBirth: "1985-03-02", isDisabled: false }
               - { id: daughter, dateOfBirth: "2007-06-10", isDisabled: false }
@@ -58,10 +58,10 @@ rulesets:
           asOf: "2026-10-14"
           programsAppliedFor: [snap]
           previous:
-            statedSize: 2
+            size: 2
             utilitiesIncludedInRent: true
-            statedMonthlyIncome: 1900
-            statedMonthlyExpenses: 1300
+            monthlyIncome: 1900
+            monthlyExpenses: 1300
             members:
               - { id: client, dateOfBirth: "1990-04-01", isDisabled: false }
               - { id: partner, dateOfBirth: "1988-08-12", isDisabled: false }
@@ -72,10 +72,10 @@ rulesets:
             expenses:
               - { type: rent, amount: 900, frequency: monthly }
           current:
-            statedSize: 2
+            size: 2
             utilitiesIncludedInRent: true
-            statedMonthlyIncome: 1900
-            statedMonthlyExpenses: 1350
+            monthlyIncome: 1900
+            monthlyExpenses: 1350
             members:
               - { id: client, dateOfBirth: "1990-04-01", isDisabled: false }
               - { id: partner, dateOfBirth: "1988-08-12", isDisabled: false }

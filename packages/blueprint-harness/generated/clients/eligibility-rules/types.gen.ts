@@ -29,7 +29,7 @@ export type ExpeditedSnapRequest = {
          */
         isMigrantFarmworker?: boolean;
     };
-    parameters?: {
+    policy?: {
         /**
          * Monthly gross income threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
          */
@@ -113,7 +113,7 @@ export type EvaluateExpeditedSnapData = {
              */
             isMigrantFarmworker?: boolean;
         };
-        parameters?: {
+        policy?: {
             /**
              * Monthly gross income threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
              */

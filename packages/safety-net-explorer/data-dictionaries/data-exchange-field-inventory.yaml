@@ -1,0 +1,23 @@
+# data-exchange field inventory
+# Do not edit — regenerate with: node generate-field-inventory.mjs --domain=data-exchange
+
+# ── ExternalService ─────────────────────────────────────────────────────────────
+
+service.id: { type: uuid }
+service.name: { type: string }
+service.serviceType: { type: enum, values: [fdsh_ssa, fdsh_vlp, fdsh_fti, fdsh_medicare, fdsh_vci, ssa_ievs, irs_ievs, swica, uib, save, enrollment_check, incarceration_check] }
+service.defaultCallMode: { type: enum, values: [async, sync] }
+service.programs[]: { type: enum, values: [snap, medicaid, chip, tanf, aca] }
+service.source: { type: enum, values: [system, user] }
+
+# ── ExternalServiceCall ─────────────────────────────────────────────────────────
+
+serviceCall.id: { type: uuid }
+serviceCall.serviceId: { type: uuid, relationship: ExternalService }
+serviceCall.requestingResourceId: { type: uuid, relationship: Polymorphic }
+serviceCall.serviceType: { type: enum, values: [fdsh_ssa, fdsh_vlp, fdsh_fti, fdsh_medicare, fdsh_vci, ssa_ievs, irs_ievs, swica, uib, save, enrollment_check, incarceration_check] }
+serviceCall.requestingResourceType: { type: string }
+serviceCall.callMode: { type: enum, values: [async, sync] }
+serviceCall.status: { type: enum, values: [pending, completed, failed, timed_out] }
+serviceCall.data: { type: [object, 'null'] }
+serviceCall.metadata: { type: [object, 'null'] }

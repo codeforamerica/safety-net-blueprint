@@ -22,10 +22,10 @@ rulesets:
   # not from here. Each fact's annotations in intake-annotations.yaml carry why
   # it matters, the questions to probe with, the regulation behind it and the
   # sources it comes from. The harness is fictional: the situations are drawn
-  # from FNS guidance and published payment error data. The choices a state
-  # makes — how pay is converted to a month, how big a difference counts, how
-  # young a child needs care — are `parameters` with defaults, which a state's
-  # overlay changes.
+  # from FNS guidance and published payment error data. Values the facts read
+  # — how pay is converted to a month, how big a difference counts, how young a
+  # child needs care — are the ruleset's `constants`, which a state's overlay
+  # changes.
 
   interviewFlags:
     endpoint:
@@ -48,26 +48,20 @@ rulesets:
         type: array
         items: { type: string }
         description: The programs the household applied for.
-      parameters:
-        type: object
-        description: Choices a state makes, with defaults.
-        properties:
-          weeklyToMonthly:
-            type: number
-            default: 4.3
-            description: What weekly pay is multiplied by for a month. SNAP allows 4.3, or the exact 52 ÷ 12 (7 CFR § 273.10(c)(2)).
-          biweeklyToMonthly:
-            type: number
-            default: 2.15
-            description: What pay every two weeks is multiplied by for a month. SNAP allows 2.15, or the exact 26 ÷ 12 (7 CFR § 273.10(c)(2)).
-          differenceAllowed:
-            type: number
-            default: 0.1
-            description: How far apart two amounts can be, as a fraction, before they count as different.
-          childCareAgeUnder:
-            type: integer
-            default: 13
-            description: The age under which a child is taken to need care while the adults work.
+    constants:
+      weeklyToMonthly:
+        value: 4.3
+        description: What weekly pay is multiplied by for a month. SNAP allows 4.3, or the exact 52 ÷ 12 (7 CFR § 273.10(c)(2)).
+      biweeklyToMonthly:
+        value: 2.15
+        description: What pay every two weeks is multiplied by for a month. SNAP allows 2.15, or the exact 26 ÷ 12 (7 CFR § 273.10(c)(2)).
+      differenceAllowed:
+        value: 0.1
+        description: How far apart two amounts can be, as a fraction, before they count as different.
+      childCareAgeUnder:
+        value: 13
+        type: integer
+        description: The age under which a child is taken to need care while the adults work.
     facts:
       # ── Shared ─────────────────────────────────────────────────────────────
       - path: monthlyFactor
@@ -75,7 +69,7 @@ rulesets:
           What one payment is multiplied by for a month's worth, by how often it's
           paid. Irregular income is taken as the household's monthly figure.
         expression: >
-          {'weekly': parameters.weeklyToMonthly, 'biweekly': parameters.biweeklyToMonthly,
+          {'weekly': constants.weeklyToMonthly, 'biweekly': constants.biweeklyToMonthly,
            'semimonthly': 2.0, 'monthly': 1.0, 'irregular': 1.0}
 
       - path: hasElderlyOrDisabledMember
@@ -96,7 +90,7 @@ rulesets:
             asOf.getFullYear() - m.dateOfBirth.getFullYear()
             - ((asOf.getMonth() < m.dateOfBirth.getMonth()
                 || (asOf.getMonth() == m.dateOfBirth.getMonth() && asOf.getDate() < m.dateOfBirth.getDate())) ? 1 : 0)
-            < parameters.childCareAgeUnder)
+            < constants.childCareAgeUnder)
 
       # ── Risks ──────────────────────────────────────────────────────────────
       - path: risks.earnedIncomeVaries
@@ -153,7 +147,7 @@ rulesets:
       - path: inconsistencies.incomeBelowExpenses
         type: boolean
         description: The household's stated monthly income doesn't cover its stated monthly expenses.
-        expression: "current.statedMonthlyIncome < current.statedMonthlyExpenses"
+        expression: "current.monthlyIncome < current.monthlyExpenses"
 
       - path: inconsistencies.wagesDifferFromWageRecords
         type: boolean
@@ -163,8 +157,8 @@ rulesets:
         expression: >
           verified.exists(v, v.kind == 'wage_record' && !current.incomes.exists(i,
             i.memberId == v.memberId && i.source == 'earned' && i.frequency != 'irregular'
-            && i.amount * monthlyFactor[i.frequency] >= v.amount / 3.0 * (1.0 - parameters.differenceAllowed)
-            && i.amount * monthlyFactor[i.frequency] <= v.amount / 3.0 * (1.0 + parameters.differenceAllowed)))
+            && i.amount * monthlyFactor[i.frequency] >= v.amount / 3.0 * (1.0 - constants.differenceAllowed)
+            && i.amount * monthlyFactor[i.frequency] <= v.amount / 3.0 * (1.0 + constants.differenceAllowed)))
 
       - path: inconsistencies.incomeDiffersFromPayStub
         type: boolean
@@ -172,13 +166,13 @@ rulesets:
         expression: >
           verified.exists(v, v.kind == 'pay_stub' && has(v.incomeId) && has(v.frequency)
             && current.incomes.exists(i, i.id == v.incomeId && i.frequency != 'irregular'
-              && (i.amount * monthlyFactor[i.frequency] < v.amount * monthlyFactor[v.frequency] * (1.0 - parameters.differenceAllowed)
-                  || i.amount * monthlyFactor[i.frequency] > v.amount * monthlyFactor[v.frequency] * (1.0 + parameters.differenceAllowed))))
+              && (i.amount * monthlyFactor[i.frequency] < v.amount * monthlyFactor[v.frequency] * (1.0 - constants.differenceAllowed)
+                  || i.amount * monthlyFactor[i.frequency] > v.amount * monthlyFactor[v.frequency] * (1.0 + constants.differenceAllowed))))
 
       - path: inconsistencies.householdSizeDiffersFromMembers
         type: boolean
         description: The stated household size isn't the number of members reported.
-        expression: "current.statedSize != size(current.members)"
+        expression: "current.size != size(current.members)"
 
       - path: inconsistencies.jobWithoutEarnedIncome
         type: boolean

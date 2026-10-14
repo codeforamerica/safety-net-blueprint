@@ -21,7 +21,7 @@ rulesets:
           isMigrantFarmworker:
             type: boolean
             description: Whether any household member is a migrant or seasonal farmworker.
-      parameters:
+      policy:
         type: object
         properties:
           incomeThreshold:
@@ -36,11 +36,11 @@ rulesets:
       - path: isLowIncome
         type: boolean
         description: Monthly gross income is below the expedited income threshold.
-        expression: household.monthlyGrossIncome < parameters.incomeThreshold
+        expression: household.monthlyGrossIncome < policy.incomeThreshold
       - path: hasLowResources
         type: boolean
         description: Liquid resources are below the expedited resource threshold.
-        expression: household.liquidResources < parameters.resourceThreshold
+        expression: household.liquidResources < policy.resourceThreshold
       - path: isCombinedUnderShelter
         type: boolean
         description: Combined income and liquid resources are less than monthly shelter cost.
@@ -48,7 +48,7 @@ rulesets:
       - path: isMigrantWithLowResources
         type: boolean
         description: Household includes a migrant or seasonal farmworker with low liquid resources.
-        expression: household.isMigrantFarmworker && household.liquidResources < parameters.resourceThreshold
+        expression: household.isMigrantFarmworker && household.liquidResources < policy.resourceThreshold
       - path: isExpeditedEligible
         type: boolean
         description: |

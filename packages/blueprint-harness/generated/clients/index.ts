@@ -1,4 +1,3 @@
-export * as caseManagement from './case-management/index.js';
 export * as documentManagement from './document-management/index.js';
 export * as eligibility from './eligibility/index.js';
 export * as eligibilityRules from './eligibility-rules/index.js';

@@ -995,9 +995,9 @@ describe('assembleSectionPanel — sorting', () => {
 describe('a plain composition with aliased fields', () => {
   test('projects each source field under its alias, nested paths included', () => {
     store.clearAll('alias-roots');
-    store.insertResource('alias-roots', { id: 'r1', interviewDate: '2026-10-01', household: { statedSize: 4 }, status: 'open' });
+    store.insertResource('alias-roots', { id: 'r1', interviewDate: '2026-10-01', household: { size: 4 }, status: 'open' });
     const result = assemblePlainComposition(
-      { resource: 'alias-roots', fields: ['interviewDate as asOf', 'household.statedSize as size', 'status'], endpoint: { path: '/alias-roots/{rootId}/view' } },
+      { resource: 'alias-roots', fields: ['interviewDate as asOf', 'household.size as size', 'status'], endpoint: { path: '/alias-roots/{rootId}/view' } },
       { rootId: 'r1' },
       { store },
     );

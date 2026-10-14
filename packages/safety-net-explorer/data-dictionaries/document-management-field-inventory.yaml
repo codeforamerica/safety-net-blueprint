@@ -14,3 +14,31 @@ document.retentionDeadline: { type: date }
 document.metadata: { type: object }
 document.dispositionApprovedBy: { type: [string, 'null'] }
 document.dispositionApprovedAt: { type: datetime }
+
+# ── DocumentVersion ─────────────────────────────────────────────────────────────
+
+documentVersion.id: { type: uuid }
+documentVersion.documentId: { type: uuid, relationship: Document }
+documentVersion.versionNumber: { type: integer }
+documentVersion.fileName: { type: string }
+documentVersion.mimeType: { type: string }
+documentVersion.sizeBytes: { type: integer }
+documentVersion.contentHash: { type: string }
+documentVersion.uploadedById: { type: string }
+
+# ── DocumentType ────────────────────────────────────────────────────────────────
+
+documentType.id: { type: uuid }
+documentType.name: { type: string }
+documentType.retentionYears: { type: integer }
+documentType.retentionTrigger: { type: enum, values: [case_closure, application_denial, document_date, submission_date] }
+documentType.source: { type: enum, values: [system, user] }
+
+# ── DocumentLink ────────────────────────────────────────────────────────────────
+
+documentLink.id: { type: uuid }
+documentLink.documentId: { type: uuid, relationship: Document }
+documentLink.subjectId: { type: uuid, relationship: Polymorphic }
+documentLink.subjectType: { type: enum, values: [application, case] }
+documentLink.linkedBy: { type: string }
+documentLink.closedAt: { type: datetime }

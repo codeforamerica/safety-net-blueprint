@@ -397,3 +397,43 @@ test('grouped facts', async (t) => {
     assert.match(found[0].message, /"risks" is a fact and also groups "risks.cashIncome"/);
   });
 });
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+test('constants', async (t) => {
+  const ruleset = (extra = {}) => ({
+    inputs: { a: { type: 'object', properties: { age: { type: 'integer' } } } },
+    constants: { childAgeUnder: { value: 13, type: 'integer', description: 'Under this, a child.' } },
+    outputs: { isChild: { type: 'boolean' } },
+    facts: [{ path: 'isChild', expression: 'a.age < constants.childAgeUnder' }],
+    ...extra,
+  });
+
+  await t.test('compile into the graph with their values', () => {
+    const graph = compileRuleset('intake', 'flags', ruleset());
+    assert.deepEqual(graph.constants, {
+      childAgeUnder: { value: 13, type: 'integer', description: 'Under this, a child.' },
+    });
+  });
+
+  await t.test('a ruleset reading them validates', () => {
+    assert.deepEqual(validateRuleset('intake', 'flags', ruleset()), []);
+  });
+
+  await t.test('an input named constants is refused', () => {
+    const errors = validateRuleset('intake', 'flags', ruleset({
+      inputs: { a: { type: 'object' }, constants: { type: 'object' } },
+    }));
+    assert.equal(errors.filter((e) => e.rule === 'constants-input').length, 1);
+  });
+
+  await t.test('a fact named constants is refused, grouped or not', () => {
+    for (const path of ['constants', 'constants.x']) {
+      const errors = validateRuleset('intake', 'flags', ruleset({
+        outputs: { [path]: { type: 'boolean' } },
+        facts: [{ path, expression: 'true' }],
+      }));
+      assert.equal(errors.filter((e) => e.rule === 'fact-shadows-input').length, 1, path);
+    }
+  });
+});

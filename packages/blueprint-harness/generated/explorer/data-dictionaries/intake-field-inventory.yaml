@@ -4,7 +4,6 @@
 # ── Application ─────────────────────────────────────────────────────────────────
 
 application.proofOfIncomeDocumentId: { type: uuid, relationship: Document }
-application.caseId: { type: uuid, relationship: Case }
 application.id: { type: uuid }
 application.programsAppliedFor[]: { type: enum, values: [snap, medicaid, chip, tanf] }
 application.channel: { type: enum, values: [online, phone, in_person, mail] }
@@ -23,12 +22,11 @@ application.labels: { type: object }
 application.countyCode: { type: string }
 application.links: { type: object }
 application.links.proofOfIncomeDocument: { type: string }
-application.links.case: { type: string }
 application.previousHousehold: { type: object }
-application.previousHousehold.statedSize: { type: integer }
+application.previousHousehold.size: { type: integer }
 application.previousHousehold.utilitiesIncludedInRent: { type: boolean }
-application.previousHousehold.statedMonthlyIncome: { type: number }
-application.previousHousehold.statedMonthlyExpenses: { type: number }
+application.previousHousehold.monthlyIncome: { type: number }
+application.previousHousehold.monthlyExpenses: { type: number }
 application.previousHousehold.members[]: { type: list }
 application.previousHousehold.members[].id: { type: string }
 application.previousHousehold.members[].dateOfBirth: { type: date }

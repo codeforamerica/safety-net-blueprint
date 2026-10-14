@@ -93,12 +93,7 @@
             "renewal"
           ],
           "default": "new",
-          "description": "A first application, or an application for recertification — the same kind of request, tied to the household's existing case.\n"
-        },
-        "caseId": {
-          "type": "string",
-          "format": "uuid",
-          "description": "The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet."
+          "description": "A first application, or an application for recertification — the same kind of request.\n"
         },
         "interviewDate": {
           "type": "string",
@@ -126,11 +121,6 @@
               "type": "string",
               "format": "uri-reference",
               "description": "Link to the related Document resource."
-            },
-            "case": {
-              "type": "string",
-              "format": "uri-reference",
-              "description": "Link to the related Case resource."
             }
           }
         }

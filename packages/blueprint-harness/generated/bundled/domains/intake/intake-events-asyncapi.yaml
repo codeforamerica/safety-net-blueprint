@@ -203,16 +203,7 @@ channels:
                             - renewal
                           default: new
                           description: |
-                            A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
-                        caseId:
-                          type: string
-                          format: uuid
-                          description: The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-                          x-relationship:
-                            type: fk
-                            domain: case-management
-                            resource: Case
-                            style: links-only
+                            A first application, or an application for recertification — the same kind of request.
                         interviewDate:
                           type: string
                           format: date
@@ -236,10 +227,6 @@ channels:
                               type: string
                               format: uri-reference
                               description: Link to the related Document resource.
-                            case:
-                              type: string
-                              format: uri-reference
-                              description: Link to the related Case resource.
                     - type: object
                       properties:
                         id:
@@ -250,21 +237,21 @@ channels:
                         previousHousehold:
                           readOnly: true
                           description: |
-                            The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household the case's current determination certified, copied when the renewal is opened so the baseline holds still through the review.
+                            The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
                           type: object
                           properties:
-                            statedSize:
+                            size:
                               type: integer
                               minimum: 1
-                              description: The number of people the household says buy and prepare food together.
+                              description: The number of people who buy and prepare food together, as the household states it.
                             utilitiesIncludedInRent:
                               type: boolean
                               description: Whether the household says its utilities are included in the rent.
-                            statedMonthlyIncome:
+                            monthlyIncome:
                               type: number
                               minimum: 0
                               description: Total monthly income, as the household states it.
-                            statedMonthlyExpenses:
+                            monthlyExpenses:
                               type: number
                               minimum: 0
                               description: Total monthly expenses, as the household states them.
@@ -2522,16 +2509,7 @@ components:
                           - renewal
                         default: new
                         description: |
-                          A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
-                      caseId:
-                        type: string
-                        format: uuid
-                        description: The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-                        x-relationship:
-                          type: fk
-                          domain: case-management
-                          resource: Case
-                          style: links-only
+                          A first application, or an application for recertification — the same kind of request.
                       interviewDate:
                         type: string
                         format: date
@@ -2555,10 +2533,6 @@ components:
                             type: string
                             format: uri-reference
                             description: Link to the related Document resource.
-                          case:
-                            type: string
-                            format: uri-reference
-                            description: Link to the related Case resource.
                   - type: object
                     properties:
                       id:
@@ -2569,21 +2543,21 @@ components:
                       previousHousehold:
                         readOnly: true
                         description: |
-                          The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household the case's current determination certified, copied when the renewal is opened so the baseline holds still through the review.
+                          The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
                         type: object
                         properties:
-                          statedSize:
+                          size:
                             type: integer
                             minimum: 1
-                            description: The number of people the household says buy and prepare food together.
+                            description: The number of people who buy and prepare food together, as the household states it.
                           utilitiesIncludedInRent:
                             type: boolean
                             description: Whether the household says its utilities are included in the rent.
-                          statedMonthlyIncome:
+                          monthlyIncome:
                             type: number
                             minimum: 0
                             description: Total monthly income, as the household states it.
-                          statedMonthlyExpenses:
+                          monthlyExpenses:
                             type: number
                             minimum: 0
                             description: Total monthly expenses, as the household states them.
@@ -4807,16 +4781,7 @@ components:
                         - renewal
                       default: new
                       description: |
-                        A first application, or an application for recertification — the same kind of request, tied to the household's existing case.
-                    caseId:
-                      type: string
-                      format: uuid
-                      description: The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
-                      x-relationship:
-                        type: fk
-                        domain: case-management
-                        resource: Case
-                        style: links-only
+                        A first application, or an application for recertification — the same kind of request.
                     interviewDate:
                       type: string
                       format: date
@@ -4840,10 +4805,6 @@ components:
                           type: string
                           format: uri-reference
                           description: Link to the related Document resource.
-                        case:
-                          type: string
-                          format: uri-reference
-                          description: Link to the related Case resource.
                 - type: object
                   properties:
                     id:
@@ -4854,21 +4815,21 @@ components:
                     previousHousehold:
                       readOnly: true
                       description: |
-                        The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household the case's current determination certified, copied when the renewal is opened so the baseline holds still through the review.
+                        The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household as last certified, copied when the renewal is opened so the baseline holds still through the review.
                       type: object
                       properties:
-                        statedSize:
+                        size:
                           type: integer
                           minimum: 1
-                          description: The number of people the household says buy and prepare food together.
+                          description: The number of people who buy and prepare food together, as the household states it.
                         utilitiesIncludedInRent:
                           type: boolean
                           description: Whether the household says its utilities are included in the rent.
-                        statedMonthlyIncome:
+                        monthlyIncome:
                           type: number
                           minimum: 0
                           description: Total monthly income, as the household states it.
-                        statedMonthlyExpenses:
+                        monthlyExpenses:
                           type: number
                           minimum: 0
                           description: Total monthly expenses, as the household states them.

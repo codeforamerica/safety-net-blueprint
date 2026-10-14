@@ -23,18 +23,18 @@ paths:
                   type: object
                   description: A household's circumstances at one point in time.
                   properties:
-                    statedSize:
+                    size:
                       type: integer
                       minimum: 1
-                      description: The number of people the household says buy and prepare food together.
+                      description: The number of people who buy and prepare food together, as the household states it.
                     utilitiesIncludedInRent:
                       type: boolean
                       description: Whether the household says its utilities are included in the rent.
-                    statedMonthlyIncome:
+                    monthlyIncome:
                       type: number
                       minimum: 0
                       description: Total monthly income, as the household states it.
-                    statedMonthlyExpenses:
+                    monthlyExpenses:
                       type: number
                       minimum: 0
                       description: Total monthly expenses, as the household states them.
@@ -146,18 +146,18 @@ paths:
                   type: object
                   description: A household's circumstances at one point in time.
                   properties:
-                    statedSize:
+                    size:
                       type: integer
                       minimum: 1
-                      description: The number of people the household says buy and prepare food together.
+                      description: The number of people who buy and prepare food together, as the household states it.
                     utilitiesIncludedInRent:
                       type: boolean
                       description: Whether the household says its utilities are included in the rent.
-                    statedMonthlyIncome:
+                    monthlyIncome:
                       type: number
                       minimum: 0
                       description: Total monthly income, as the household states it.
-                    statedMonthlyExpenses:
+                    monthlyExpenses:
                       type: number
                       minimum: 0
                       description: Total monthly expenses, as the household states them.
@@ -308,26 +308,6 @@ paths:
                   items:
                     type: string
                   description: The programs the household applied for.
-                parameters:
-                  type: object
-                  description: Choices a state makes, with defaults.
-                  properties:
-                    weeklyToMonthly:
-                      type: number
-                      default: 4.3
-                      description: What weekly pay is multiplied by for a month. SNAP allows 4.3, or the exact 52 ÷ 12 (7 CFR § 273.10(c)(2)).
-                    biweeklyToMonthly:
-                      type: number
-                      default: 2.15
-                      description: What pay every two weeks is multiplied by for a month. SNAP allows 2.15, or the exact 26 ÷ 12 (7 CFR § 273.10(c)(2)).
-                    differenceAllowed:
-                      type: number
-                      default: 0.1
-                      description: How far apart two amounts can be, as a fraction, before they count as different.
-                    childCareAgeUnder:
-                      type: integer
-                      default: 13
-                      description: The age under which a child is taken to need care while the adults work.
       responses:
         "200":
           description: interviewFlags evaluation result.
@@ -469,18 +449,18 @@ components:
           type: object
           description: A household's circumstances at one point in time.
           properties:
-            statedSize:
+            size:
               type: integer
               minimum: 1
-              description: The number of people the household says buy and prepare food together.
+              description: The number of people who buy and prepare food together, as the household states it.
             utilitiesIncludedInRent:
               type: boolean
               description: Whether the household says its utilities are included in the rent.
-            statedMonthlyIncome:
+            monthlyIncome:
               type: number
               minimum: 0
               description: Total monthly income, as the household states it.
-            statedMonthlyExpenses:
+            monthlyExpenses:
               type: number
               minimum: 0
               description: Total monthly expenses, as the household states them.
@@ -592,18 +572,18 @@ components:
           type: object
           description: A household's circumstances at one point in time.
           properties:
-            statedSize:
+            size:
               type: integer
               minimum: 1
-              description: The number of people the household says buy and prepare food together.
+              description: The number of people who buy and prepare food together, as the household states it.
             utilitiesIncludedInRent:
               type: boolean
               description: Whether the household says its utilities are included in the rent.
-            statedMonthlyIncome:
+            monthlyIncome:
               type: number
               minimum: 0
               description: Total monthly income, as the household states it.
-            statedMonthlyExpenses:
+            monthlyExpenses:
               type: number
               minimum: 0
               description: Total monthly expenses, as the household states them.
@@ -754,26 +734,6 @@ components:
           items:
             type: string
           description: The programs the household applied for.
-        parameters:
-          type: object
-          description: Choices a state makes, with defaults.
-          properties:
-            weeklyToMonthly:
-              type: number
-              default: 4.3
-              description: What weekly pay is multiplied by for a month. SNAP allows 4.3, or the exact 52 ÷ 12 (7 CFR § 273.10(c)(2)).
-            biweeklyToMonthly:
-              type: number
-              default: 2.15
-              description: What pay every two weeks is multiplied by for a month. SNAP allows 2.15, or the exact 26 ÷ 12 (7 CFR § 273.10(c)(2)).
-            differenceAllowed:
-              type: number
-              default: 0.1
-              description: How far apart two amounts can be, as a fraction, before they count as different.
-            childCareAgeUnder:
-              type: integer
-              default: 13
-              description: The age under which a child is taken to need care while the adults work.
     InterviewFlagsResponse:
       allOf:
         - type: array

@@ -118,6 +118,21 @@ $defs:
         $ref: "#/$defs/Endpoint"
       inputs:
         $ref: "#/$defs/SchemaMap"
+      constants:
+        description: >
+          Named values the ruleset's facts read as `constants.<name>` — a
+          conversion factor, a threshold, a choice a state makes. They are not
+          data: a caller doesn't send them, and a result resting on one is
+          complete, not a placeholder. Fixed in the contract; a state changes
+          one with an overlay. Each is an object so that where a value comes
+          from can be declared later without changing its shape — evaluators
+          read the value from the compiled graph, never from here.
+        type: object
+        minProperties: 1
+        propertyNames:
+          pattern: "^[a-zA-Z][a-zA-Z0-9]*$"
+        additionalProperties:
+          $ref: "#/$defs/Constant"
       outputs:
         $ref: "#/$defs/SchemaMap"
       facts:
@@ -130,6 +145,28 @@ $defs:
         minItems: 1
         items:
           $ref: "#/$defs/Fact"
+
+  Constant:
+    # Example:
+    #   differenceAllowed:
+    #     value: 0.1
+    #     description: How far apart two amounts can be, as a fraction, before they count as different.
+    type: object
+    description: One named value a ruleset's facts read.
+    required: [value]
+    additionalProperties: false
+    properties:
+      value:
+        description: The value, of any JSON type.
+      type:
+        type: string
+        enum: [integer, number, string, boolean, array, object]
+        description: >
+          What CEL sees the value as. `integer` is a whole number in integer
+          arithmetic — compare it with another integer, such as an age; a
+          number without a type is a double.
+      description:
+        type: string
 
   Fact:
     # Example — derived fact:

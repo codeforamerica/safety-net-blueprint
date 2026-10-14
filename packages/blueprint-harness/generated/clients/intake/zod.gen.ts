@@ -32,13 +32,11 @@ export const zApplicationWritable = z.object({
     })),
     proofOfIncomeDocumentId: z.optional(z.uuid()),
     type: z.optional(z.enum(['new', 'renewal'])),
-    caseId: z.optional(z.uuid()),
     interviewDate: z.optional(z.iso.date()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10)),
     links: z.optional(z.object({
-        proofOfIncomeDocument: z.optional(z.string()),
-        case: z.optional(z.string())
+        proofOfIncomeDocument: z.optional(z.string())
     }).readonly())
 });
 
@@ -75,21 +73,19 @@ export const zApplication = z.object({
     })),
     proofOfIncomeDocumentId: z.optional(z.uuid()),
     type: z.optional(z.enum(['new', 'renewal'])),
-    caseId: z.optional(z.uuid()),
     interviewDate: z.optional(z.iso.date()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10)),
     links: z.optional(z.object({
-        proofOfIncomeDocument: z.optional(z.string()),
-        case: z.optional(z.string())
+        proofOfIncomeDocument: z.optional(z.string())
     }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
     previousHousehold: z.optional(z.object({
-        statedSize: z.optional(z.int().gte(1)),
+        size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
-        statedMonthlyIncome: z.optional(z.number().gte(0)),
-        statedMonthlyExpenses: z.optional(z.number().gte(0)),
+        monthlyIncome: z.optional(z.number().gte(0)),
+        monthlyExpenses: z.optional(z.number().gte(0)),
         members: z.optional(z.array(z.object({
             id: z.string(),
             dateOfBirth: z.optional(z.iso.date()),
@@ -324,13 +320,11 @@ export const zApplicationCreate = z.object({
     })),
     proofOfIncomeDocumentId: z.optional(z.uuid()),
     type: z.optional(z.enum(['new', 'renewal'])),
-    caseId: z.optional(z.uuid()),
     interviewDate: z.optional(z.iso.date()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10)),
     links: z.optional(z.object({
-        proofOfIncomeDocument: z.optional(z.string()),
-        case: z.optional(z.string())
+        proofOfIncomeDocument: z.optional(z.string())
     }).readonly())
 });
 
@@ -364,13 +358,11 @@ export const zApplicationUpdate = z.object({
     })),
     proofOfIncomeDocumentId: z.optional(z.uuid()),
     type: z.optional(z.enum(['new', 'renewal'])),
-    caseId: z.optional(z.uuid()),
     interviewDate: z.optional(z.iso.date()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10)),
     links: z.optional(z.object({
-        proofOfIncomeDocument: z.optional(z.string()),
-        case: z.optional(z.string())
+        proofOfIncomeDocument: z.optional(z.string())
     }).readonly())
 });
 
@@ -483,21 +475,19 @@ export const zApplicationList = z.object({
         })),
         proofOfIncomeDocumentId: z.optional(z.uuid()),
         type: z.optional(z.enum(['new', 'renewal'])),
-        caseId: z.optional(z.uuid()),
         interviewDate: z.optional(z.iso.date()),
         labels: z.optional(z.record(z.string(), z.string())),
         countyCode: z.optional(z.string().max(10)),
         links: z.optional(z.object({
-            proofOfIncomeDocument: z.optional(z.string()),
-            case: z.optional(z.string())
+            proofOfIncomeDocument: z.optional(z.string())
         }).readonly())
     }).and(z.object({
         id: z.uuid().readonly(),
         previousHousehold: z.optional(z.object({
-            statedSize: z.optional(z.int().gte(1)),
+            size: z.optional(z.int().gte(1)),
             utilitiesIncludedInRent: z.optional(z.boolean()),
-            statedMonthlyIncome: z.optional(z.number().gte(0)),
-            statedMonthlyExpenses: z.optional(z.number().gte(0)),
+            monthlyIncome: z.optional(z.number().gte(0)),
+            monthlyExpenses: z.optional(z.number().gte(0)),
             members: z.optional(z.array(z.object({
                 id: z.string(),
                 dateOfBirth: z.optional(z.iso.date()),
@@ -1277,7 +1267,6 @@ export const zApplicationWritableWritable = z.object({
     })),
     proofOfIncomeDocumentId: z.optional(z.uuid()),
     type: z.optional(z.enum(['new', 'renewal'])),
-    caseId: z.optional(z.uuid()),
     interviewDate: z.optional(z.iso.date()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10))
@@ -1316,7 +1305,6 @@ export const zApplicationWritable2 = z.object({
     })),
     proofOfIncomeDocumentId: z.optional(z.uuid()),
     type: z.optional(z.enum(['new', 'renewal'])),
-    caseId: z.optional(z.uuid()),
     interviewDate: z.optional(z.iso.date()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10))
@@ -1434,7 +1422,6 @@ export const zApplicationCreateWritable = z.object({
     })),
     proofOfIncomeDocumentId: z.optional(z.uuid()),
     type: z.optional(z.enum(['new', 'renewal'])),
-    caseId: z.optional(z.uuid()),
     interviewDate: z.optional(z.iso.date()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10))
@@ -1470,7 +1457,6 @@ export const zApplicationUpdateWritable = z.object({
     })),
     proofOfIncomeDocumentId: z.optional(z.uuid()),
     type: z.optional(z.enum(['new', 'renewal'])),
-    caseId: z.optional(z.uuid()),
     interviewDate: z.optional(z.iso.date()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10))
@@ -1541,7 +1527,6 @@ export const zApplicationListWritable = z.object({
         })),
         proofOfIncomeDocumentId: z.optional(z.uuid()),
         type: z.optional(z.enum(['new', 'renewal'])),
-        caseId: z.optional(z.uuid()),
         interviewDate: z.optional(z.iso.date()),
         labels: z.optional(z.record(z.string(), z.string())),
         countyCode: z.optional(z.string().max(10))
@@ -1885,21 +1870,19 @@ export const zListApplicationsResponse = z.object({
         })),
         proofOfIncomeDocumentId: z.optional(z.uuid()),
         type: z.optional(z.enum(['new', 'renewal'])),
-        caseId: z.optional(z.uuid()),
         interviewDate: z.optional(z.iso.date()),
         labels: z.optional(z.record(z.string(), z.string())),
         countyCode: z.optional(z.string().max(10)),
         links: z.optional(z.object({
-            proofOfIncomeDocument: z.optional(z.string()),
-            case: z.optional(z.string())
+            proofOfIncomeDocument: z.optional(z.string())
         }).readonly())
     }).and(z.object({
         id: z.uuid().readonly(),
         previousHousehold: z.optional(z.object({
-            statedSize: z.optional(z.int().gte(1)),
+            size: z.optional(z.int().gte(1)),
             utilitiesIncludedInRent: z.optional(z.boolean()),
-            statedMonthlyIncome: z.optional(z.number().gte(0)),
-            statedMonthlyExpenses: z.optional(z.number().gte(0)),
+            monthlyIncome: z.optional(z.number().gte(0)),
+            monthlyExpenses: z.optional(z.number().gte(0)),
             members: z.optional(z.array(z.object({
                 id: z.string(),
                 dateOfBirth: z.optional(z.iso.date()),
@@ -2140,13 +2123,11 @@ export const zCreateApplicationData = z.object({
         })),
         proofOfIncomeDocumentId: z.optional(z.uuid()),
         type: z.optional(z.enum(['new', 'renewal'])),
-        caseId: z.optional(z.uuid()),
         interviewDate: z.optional(z.iso.date()),
         labels: z.optional(z.record(z.string(), z.string())),
         countyCode: z.optional(z.string().max(10)),
         links: z.optional(z.object({
-            proofOfIncomeDocument: z.optional(z.string()),
-            case: z.optional(z.string())
+            proofOfIncomeDocument: z.optional(z.string())
         }).readonly())
     }).and(z.record(z.string(), z.unknown())),
     path: z.optional(z.never()),
@@ -2186,21 +2167,19 @@ export const zCreateApplicationResponse = z.object({
     })),
     proofOfIncomeDocumentId: z.optional(z.uuid()),
     type: z.optional(z.enum(['new', 'renewal'])),
-    caseId: z.optional(z.uuid()),
     interviewDate: z.optional(z.iso.date()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10)),
     links: z.optional(z.object({
-        proofOfIncomeDocument: z.optional(z.string()),
-        case: z.optional(z.string())
+        proofOfIncomeDocument: z.optional(z.string())
     }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
     previousHousehold: z.optional(z.object({
-        statedSize: z.optional(z.int().gte(1)),
+        size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
-        statedMonthlyIncome: z.optional(z.number().gte(0)),
-        statedMonthlyExpenses: z.optional(z.number().gte(0)),
+        monthlyIncome: z.optional(z.number().gte(0)),
+        monthlyExpenses: z.optional(z.number().gte(0)),
         members: z.optional(z.array(z.object({
             id: z.string(),
             dateOfBirth: z.optional(z.iso.date()),
@@ -2459,21 +2438,19 @@ export const zGetApplicationResponse = z.object({
     })),
     proofOfIncomeDocumentId: z.optional(z.uuid()),
     type: z.optional(z.enum(['new', 'renewal'])),
-    caseId: z.optional(z.uuid()),
     interviewDate: z.optional(z.iso.date()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10)),
     links: z.optional(z.object({
-        proofOfIncomeDocument: z.optional(z.string()),
-        case: z.optional(z.string())
+        proofOfIncomeDocument: z.optional(z.string())
     }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
     previousHousehold: z.optional(z.object({
-        statedSize: z.optional(z.int().gte(1)),
+        size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
-        statedMonthlyIncome: z.optional(z.number().gte(0)),
-        statedMonthlyExpenses: z.optional(z.number().gte(0)),
+        monthlyIncome: z.optional(z.number().gte(0)),
+        monthlyExpenses: z.optional(z.number().gte(0)),
         members: z.optional(z.array(z.object({
             id: z.string(),
             dateOfBirth: z.optional(z.iso.date()),
@@ -2709,13 +2686,11 @@ export const zUpdateApplicationData = z.object({
         })),
         proofOfIncomeDocumentId: z.optional(z.uuid()),
         type: z.optional(z.enum(['new', 'renewal'])),
-        caseId: z.optional(z.uuid()),
         interviewDate: z.optional(z.iso.date()),
         labels: z.optional(z.record(z.string(), z.string())),
         countyCode: z.optional(z.string().max(10)),
         links: z.optional(z.object({
-            proofOfIncomeDocument: z.optional(z.string()),
-            case: z.optional(z.string())
+            proofOfIncomeDocument: z.optional(z.string())
         }).readonly())
     }).and(z.record(z.string(), z.unknown())),
     path: z.object({
@@ -2757,21 +2732,19 @@ export const zUpdateApplicationResponse = z.object({
     })),
     proofOfIncomeDocumentId: z.optional(z.uuid()),
     type: z.optional(z.enum(['new', 'renewal'])),
-    caseId: z.optional(z.uuid()),
     interviewDate: z.optional(z.iso.date()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10)),
     links: z.optional(z.object({
-        proofOfIncomeDocument: z.optional(z.string()),
-        case: z.optional(z.string())
+        proofOfIncomeDocument: z.optional(z.string())
     }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
     previousHousehold: z.optional(z.object({
-        statedSize: z.optional(z.int().gte(1)),
+        size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
-        statedMonthlyIncome: z.optional(z.number().gte(0)),
-        statedMonthlyExpenses: z.optional(z.number().gte(0)),
+        monthlyIncome: z.optional(z.number().gte(0)),
+        monthlyExpenses: z.optional(z.number().gte(0)),
         members: z.optional(z.array(z.object({
             id: z.string(),
             dateOfBirth: z.optional(z.iso.date()),
@@ -3674,21 +3647,19 @@ export const zSubmitApplicationResponse = z.object({
     })),
     proofOfIncomeDocumentId: z.optional(z.uuid()),
     type: z.optional(z.enum(['new', 'renewal'])),
-    caseId: z.optional(z.uuid()),
     interviewDate: z.optional(z.iso.date()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10)),
     links: z.optional(z.object({
-        proofOfIncomeDocument: z.optional(z.string()),
-        case: z.optional(z.string())
+        proofOfIncomeDocument: z.optional(z.string())
     }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
     previousHousehold: z.optional(z.object({
-        statedSize: z.optional(z.int().gte(1)),
+        size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
-        statedMonthlyIncome: z.optional(z.number().gte(0)),
-        statedMonthlyExpenses: z.optional(z.number().gte(0)),
+        monthlyIncome: z.optional(z.number().gte(0)),
+        monthlyExpenses: z.optional(z.number().gte(0)),
         members: z.optional(z.array(z.object({
             id: z.string(),
             dateOfBirth: z.optional(z.iso.date()),
@@ -3934,21 +3905,19 @@ export const zOpenApplicationResponse = z.object({
     })),
     proofOfIncomeDocumentId: z.optional(z.uuid()),
     type: z.optional(z.enum(['new', 'renewal'])),
-    caseId: z.optional(z.uuid()),
     interviewDate: z.optional(z.iso.date()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10)),
     links: z.optional(z.object({
-        proofOfIncomeDocument: z.optional(z.string()),
-        case: z.optional(z.string())
+        proofOfIncomeDocument: z.optional(z.string())
     }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
     previousHousehold: z.optional(z.object({
-        statedSize: z.optional(z.int().gte(1)),
+        size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
-        statedMonthlyIncome: z.optional(z.number().gte(0)),
-        statedMonthlyExpenses: z.optional(z.number().gte(0)),
+        monthlyIncome: z.optional(z.number().gte(0)),
+        monthlyExpenses: z.optional(z.number().gte(0)),
         members: z.optional(z.array(z.object({
             id: z.string(),
             dateOfBirth: z.optional(z.iso.date()),
@@ -4197,21 +4166,19 @@ export const zCloseApplicationResponse = z.object({
     })),
     proofOfIncomeDocumentId: z.optional(z.uuid()),
     type: z.optional(z.enum(['new', 'renewal'])),
-    caseId: z.optional(z.uuid()),
     interviewDate: z.optional(z.iso.date()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10)),
     links: z.optional(z.object({
-        proofOfIncomeDocument: z.optional(z.string()),
-        case: z.optional(z.string())
+        proofOfIncomeDocument: z.optional(z.string())
     }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
     previousHousehold: z.optional(z.object({
-        statedSize: z.optional(z.int().gte(1)),
+        size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
-        statedMonthlyIncome: z.optional(z.number().gte(0)),
-        statedMonthlyExpenses: z.optional(z.number().gte(0)),
+        monthlyIncome: z.optional(z.number().gte(0)),
+        monthlyExpenses: z.optional(z.number().gte(0)),
         members: z.optional(z.array(z.object({
             id: z.string(),
             dateOfBirth: z.optional(z.iso.date()),
@@ -4457,21 +4424,19 @@ export const zWithdrawApplicationResponse = z.object({
     })),
     proofOfIncomeDocumentId: z.optional(z.uuid()),
     type: z.optional(z.enum(['new', 'renewal'])),
-    caseId: z.optional(z.uuid()),
     interviewDate: z.optional(z.iso.date()),
     labels: z.optional(z.record(z.string(), z.string())),
     countyCode: z.optional(z.string().max(10)),
     links: z.optional(z.object({
-        proofOfIncomeDocument: z.optional(z.string()),
-        case: z.optional(z.string())
+        proofOfIncomeDocument: z.optional(z.string())
     }).readonly())
 }).and(z.object({
     id: z.uuid().readonly(),
     previousHousehold: z.optional(z.object({
-        statedSize: z.optional(z.int().gte(1)),
+        size: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
-        statedMonthlyIncome: z.optional(z.number().gte(0)),
-        statedMonthlyExpenses: z.optional(z.number().gte(0)),
+        monthlyIncome: z.optional(z.number().gte(0)),
+        monthlyExpenses: z.optional(z.number().gte(0)),
         members: z.optional(z.array(z.object({
             id: z.string(),
             dateOfBirth: z.optional(z.iso.date()),

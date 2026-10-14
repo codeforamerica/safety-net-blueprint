@@ -296,6 +296,37 @@ describe('evaluator — input defaults', () => {
   });
 });
 
+describe('evaluator — constants', () => {
+  const graph = {
+    outputs: ['monthly', 'isChild'],
+    inputs: { '$.w.weekly': { type: 'number' }, '$.p.age': { type: 'integer' } },
+    constants: {
+      weeklyToMonthly: { value: 4.3 },
+      childAgeUnder: { value: 13, type: 'integer' },
+    },
+    facts: {
+      monthly: { expression: 'w.weekly * constants.weeklyToMonthly' },
+      isChild: { expression: 'p.age < constants.childAgeUnder' },
+    },
+    dependencies: { monthly: ['$.w.weekly'], isChild: ['$.p.age'] },
+  };
+
+  it('reads them from the graph, and a result resting on one is complete', () => {
+    const nodes = evaluate(graph, { w: { weekly: 250 }, p: { age: 9 } });
+    assert.deepStrictEqual([nodes.monthly.state, nodes.monthly.value], ['complete', 1075]);
+    assert.deepStrictEqual([nodes.isChild.state, nodes.isChild.value], ['complete', true]);
+  });
+
+  it('an integer constant compares with an integer input', () => {
+    assert.strictEqual(evaluate(graph, { w: { weekly: 1 }, p: { age: 13 } }).isChild.value, false);
+  });
+
+  it('a caller cannot replace one', () => {
+    const nodes = evaluate(graph, { w: { weekly: 250 }, p: { age: 9 }, constants: { weeklyToMonthly: 1 } });
+    assert.strictEqual(nodes.monthly.value, 1075);
+  });
+});
+
 /**
  * CEL's timestamp and duration are protobuf well-known types, not primitives.
  * Left alone they reach the caller as @bufbuild/cel's internal message
@@ -504,6 +535,26 @@ describe('evaluator — declared dates reach CEL as timestamps', () => {
     const node = evaluate(graph, { asOf: '2026-10-14' }).f;
     assert.strictEqual(node.state, 'complete');
     assert.strictEqual(node.value, 2026);
+  });
+
+  it('a fact can return records holding dates', () => {
+    // A bare Timestamp message is reflected by CEL each time it's read, which
+    // needs a registry only an evaluation has. Converting a returned list of
+    // records back to plain values happens afterwards, so it failed with
+    // "cannot use `getEvalContext` outside of an evaluation".
+    const graph = {
+      outputs: ['elders'],
+      inputs: {
+        '$.asOf': { type: 'string', format: 'date' },
+        '$.h.members[]': { type: 'array' },
+        '$.h.members[].dateOfBirth': { type: 'string', format: 'date' },
+      },
+      facts: { elders: { expression: 'h.members.filter(m, asOf.getFullYear() - m.dateOfBirth.getFullYear() >= 60)' } },
+      dependencies: { elders: ['$.asOf', '$.h.members[]'] },
+    };
+    const node = evaluate(graph, { asOf: '2026-10-14', h: { members: [{ dateOfBirth: '1958-05-20' }, { dateOfBirth: '2018-01-15' }] } }).elders;
+    assert.strictEqual(node.state, 'complete');
+    assert.deepStrictEqual(node.value, [{ dateOfBirth: '1958-05-20T00:00:00Z' }]);
   });
 
   it('collection sub-fields bind too, without mutating the input', () => {

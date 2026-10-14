@@ -124,6 +124,36 @@ What none of these do yet is connect at runtime: a rules endpoint evaluates
 whatever body it is given. A composition documents and validates the mapping;
 it does not enforce it.
 
+## Constants: values no one sends
+
+A conversion factor, a threshold, an age a state picks — values the facts
+need that aren't about the case. They go in `constants`, not `inputs`:
+
+```yaml
+constants:
+  weeklyToMonthly:
+    value: 4.3
+    description: What weekly pay is multiplied by for a month.
+  childCareAgeUnder:
+    value: 13
+    type: integer
+
+facts:
+  - path: monthlyPay
+    expression: job.weeklyPay * constants.weeklyToMonthly
+```
+
+A fact reads one as `constants.<name>`. The caller doesn't send it and can't
+replace it, and a result resting on one is complete. An input with a default
+works out to the same number but comes back as a `placeholder`, which means
+"we assumed this, please confirm" — the wrong message for 4.3.
+
+A state changes a constant with an overlay. Its value is written into the
+compiled graph, and evaluators read it from there, so where the value comes
+from can change later without any evaluator changing. A number without a
+`type` is a double in CEL; declare `type: integer` for one compared with an
+integer, such as an age.
+
 ## Facts
 
 A fact is a [CEL][cel] expression over inputs and other facts — the same
@@ -258,8 +288,8 @@ ruleset reports as missing, which is usually the more interesting case.
 `blueprint-validate` reports cycles, facts that are never used and not declared
 as outputs, CEL expressions that do not parse, `$.path` references that do not
 match the declared inputs, and names that would mean two things: a fact
-declared twice, a fact starting with an input's name, and a path that's both a
-fact and a group. It does not check that an expression computes
+declared twice, a fact starting with an input's name, a path that's both a
+fact and a group, and an input named `constants` alongside a `constants` block. It does not check that an expression computes
 the right answer — that is what examples and the conformance corpus are for.
 
 [cel-datetime]: https://github.com/google/cel-spec/blob/master/doc/langdef.md#datetime-functions
