@@ -262,58 +262,71 @@ workflows:
               liquidResources: 75
               monthlyShelterCost: 800
               isMigrantFarmworker: false
-            policy:
+            parameters:
               incomeThreshold: 150
               resourceThreshold: 100
         successCriteria:
           - condition: $statusCode == 200
+      - stepId: gatherWhatTheFlagsCompareAgainst
+        description: |
+          Gather what the interview flags compare against
+
+          - A renewal: a household already on SNAP recertifying its case. The application points at the case, and the case at the determination that certified the household a year ago.
+          - `previous` is that certified household, copied onto the renewal when it opened, so the baseline holds still through the review. `verified` is what the state's wage records and a verified pay stub show. `asOf` is the interview date.
+          - The `interviewFlagsInputs` composition translates the data model into the ruleset's inputs by alias — `interviewDate as asOf`, `previousHousehold as previous` — so the rules speak their own vocabulary and nothing between them maps by hand.
+        operationId: $sourceDescriptions.intake.getInterviewFlagsInputs
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: 66666666-6666-4666-8666-666666666666
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          asOf: $response.body#/asOf
+          previous: $response.body#/previous
+          verified: $response.body#/verified
+          programsAppliedFor: $response.body#/programsAppliedFor
       - stepId: evaluateInterviewFlags
         description: |
           Evaluate interviewFlags
 
-          - A recertification where the household's mother moved in, warehouse hours were cut, there's cash work, and rent went up. One call answers in two trees: `risks`, situations where payment errors are common, and `inconsistencies`, things in this case that don't agree.
-          - Six of the nine risks come back true, among them `risks.householdChangedSinceLastCertification` and `risks.cashOrSelfEmploymentIncome`. A risk isn't a sign this case is wrong. `inconsistencies.wagesDifferFromWageRecords` is: the state's wage records show 1800 a month, and the application 1100.
-          - Every flag is worked out from data — members, incomes, expenses, the last certification and data matches — never from a conclusion the caller sent. `risks.earnedIncomeVaries` reads each income's `payPattern`.
-          - `interviewFlags.risks.elderlyOrDisabledWithoutMedicalCosts` carries more than a true or false. Its annotations give the reason, the questions to probe with, the regulation behind it (`snap-elderly-disabled-deductions`) and the sources the situation comes from, so the rule and what somebody says out loud are one declaration.
+          - `current` is what the household is reporting in the interview, sent by the worker's screen: the client's mother has moved in with Social Security, warehouse hours were cut, there's cash work cleaning offices, rent went up, and the electric bill is in the client's name. Everything else came from the step before.
+          - One call answers in two groups: `risks`, situations where payment errors are common, and `inconsistencies`, things in this case that don't agree. `risks.householdChangedSincePrevious` is true — the mother is new — and so is `inconsistencies.wagesDifferFromWageRecords`: the wage records show about 1800 a month, and the household reports about 1100.
+          - Every flag is worked out from data, never a conclusion the caller sent: ages from dates of birth and the interview date, monthly amounts from what's paid and how often.
+          - `interviewFlags.risks.elderlyOrDisabledWithoutMedicalCosts` carries more than a true or false. Its annotations give the reason, the questions to probe with, the regulation behind it (`snap-elderly-disabled-deductions`) and the sources the situation comes from.
         operationId: $sourceDescriptions.intakeRules.evaluateInterviewFlags
         parameters:
           - reference: $components.parameters.caller
         requestBody:
           payload:
-            application:
-              programsAppliedFor: [snap]
-              householdSize: 4
+            asOf: $steps.gatherWhatTheFlagsCompareAgainst.outputs.asOf
+            previous: $steps.gatherWhatTheFlagsCompareAgainst.outputs.previous
+            verified: $steps.gatherWhatTheFlagsCompareAgainst.outputs.verified
+            programsAppliedFor: $steps.gatherWhatTheFlagsCompareAgainst.outputs.programsAppliedFor
+            current:
+              statedSize: 3
+              utilitiesIncludedInRent: true
+              statedMonthlyIncome: 2200
+              statedMonthlyExpenses: 2600
               members:
-                - { id: client, age: 41, isDisabled: false }
-                - { id: daughter, age: 19, isDisabled: false }
-                - { id: son, age: 8, isDisabled: false }
-                - { id: mother, age: 68, isDisabled: false }
+                - { id: client, dateOfBirth: "1985-03-02", isDisabled: false }
+                - { id: daughter, dateOfBirth: "2007-06-10", isDisabled: false }
+                - { id: son, dateOfBirth: "2018-01-15", isDisabled: false }
+                - { id: mother, dateOfBirth: "1958-05-20", isDisabled: false }
               jobs:
-                - { id: warehouse, memberId: client }
+                - { id: warehouse, memberId: client, employer: Northgate Distribution }
               incomes:
-                - { id: wages, memberId: client, jobId: warehouse, type: earned, payPattern: irregular, monthlyAmount: 1100 }
-                - { id: cleaning, memberId: client, type: self_employment, payPattern: cash, monthlyAmount: 200 }
-                - { id: ss, memberId: mother, type: unearned, payPattern: regular, monthlyAmount: 900 }
+                - { id: wages, memberId: client, jobId: warehouse, source: earned, amount: 510, frequency: biweekly, paidInCash: false, amountVaries: true }
+                - { id: cleaning, memberId: client, source: self_employment, amount: 200, frequency: irregular, paidInCash: true, amountVaries: true }
+                - { id: ss, memberId: mother, source: unearned, amount: 900, frequency: monthly, paidInCash: false, amountVaries: false }
               expenses:
-                - { category: rent, monthlyAmount: 1400 }
-              reportedMonthlyIncome: 2200
-              reportedMonthlyExpenses: 2600
-              utilitiesIncludedInRent: false
-              claimsUtilityAllowance: true
-              hasChangedCircumstances: false
-            lastCertification:
-              memberIds: [client, daughter, son]
-              incomes:
-                - { id: wages, memberId: client, jobId: warehouse, type: earned, payPattern: regular, monthlyAmount: 2400 }
-              expenses:
-                - { category: rent, monthlyAmount: 1150 }
-            dataMatches:
-              wageRecords:
-                - { memberId: client, monthlyWages: 1800 }
-              payStubs:
-                - { incomeId: wages, monthlyAmount: 1100 }
+                - { type: rent, amount: 1400, frequency: monthly }
+                - { type: utilities, amount: 128, frequency: monthly }
         successCriteria:
           - condition: $statusCode == 200
+          - condition: $response.body#/risks.householdChangedSincePrevious/value == true
+          - condition: $response.body#/inconsistencies.wagesDifferFromWageRecords/value == true
       - stepId: seeWhatTheWalkEmitted
         description: |
           See what the walk emitted

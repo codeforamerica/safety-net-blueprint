@@ -1,75 +1,90 @@
 $schema: "https://blueprint.codeforamerica.org/schemas/rules-examples-schema.yaml"
 domain: intake
 
-# One fictional household at its recertification: the client's mother has moved
-# in with Social Security, the client's warehouse hours were cut, there's cash
-# work cleaning offices, and the rent went up.
+# The renewal in intake-mock-data.yaml (ApplicationExample3): `previous`,
+# `verified`, `asOf` and `programsAppliedFor` are what the interviewFlagsInputs
+# composition returns for it, and `current` is what the household reports in the
+# interview — the client's mother has moved in with Social Security, warehouse
+# hours were cut, there's cash work cleaning offices, rent went up, and the
+# electric bill is in the client's name.
 
 rulesets:
   interviewFlags:
     examples:
-      - description: A recertification where much has changed and the application doesn't agree with itself
+      - description: A renewal where much has changed and the answers don't agree
         inputs:
-          application:
-            programsAppliedFor: [snap]
-            householdSize: 3
-            members:
-              - { id: client, age: 41, isDisabled: false }
-              - { id: daughter, age: 19, isDisabled: false }
-              - { id: son, age: 8, isDisabled: false }
-              - { id: mother, age: 68, isDisabled: false }
-            jobs:
-              - { id: warehouse, memberId: client }
-            incomes:
-              - { id: wages, memberId: client, jobId: warehouse, type: earned, payPattern: irregular, monthlyAmount: 1100 }
-              - { id: cleaning, memberId: client, type: self_employment, payPattern: cash, monthlyAmount: 200 }
-              - { id: ss, memberId: mother, type: unearned, payPattern: regular, monthlyAmount: 900 }
-            expenses:
-              - { category: rent, monthlyAmount: 1400 }
-            reportedMonthlyIncome: 2200
-            reportedMonthlyExpenses: 2600
+          asOf: "2026-10-14"
+          programsAppliedFor: [snap]
+          previous:
+            statedSize: 3
             utilitiesIncludedInRent: true
-            claimsUtilityAllowance: true
-            hasChangedCircumstances: true
-          lastCertification:
-            memberIds: [client, daughter, son]
+            statedMonthlyIncome: 2400
+            statedMonthlyExpenses: 1500
+            members:
+              - { id: client, dateOfBirth: "1985-03-02", isDisabled: false }
+              - { id: daughter, dateOfBirth: "2007-06-10", isDisabled: false }
+              - { id: son, dateOfBirth: "2018-01-15", isDisabled: false }
+            jobs:
+              - { id: warehouse, memberId: client, employer: Northgate Distribution }
             incomes:
-              - { id: wages, memberId: client, jobId: warehouse, type: earned, payPattern: regular, monthlyAmount: 2400 }
+              - { id: wages, memberId: client, jobId: warehouse, source: earned, amount: 1110, frequency: biweekly, paidInCash: false, amountVaries: false }
             expenses:
-              - { category: rent, monthlyAmount: 1150 }
-          dataMatches:
-            wageRecords:
-              - { memberId: client, monthlyWages: 1800 }
-            payStubs:
-              - { incomeId: wages, monthlyAmount: 1820 }
+              - { type: rent, amount: 1150, frequency: monthly }
+          current:
+            statedSize: 3
+            utilitiesIncludedInRent: true
+            statedMonthlyIncome: 2200
+            statedMonthlyExpenses: 2600
+            members:
+              - { id: client, dateOfBirth: "1985-03-02", isDisabled: false }
+              - { id: daughter, dateOfBirth: "2007-06-10", isDisabled: false }
+              - { id: son, dateOfBirth: "2018-01-15", isDisabled: false }
+              - { id: mother, dateOfBirth: "1958-05-20", isDisabled: false }
+            jobs:
+              - { id: warehouse, memberId: client, employer: Northgate Distribution }
+            incomes:
+              - { id: wages, memberId: client, jobId: warehouse, source: earned, amount: 510, frequency: biweekly, paidInCash: false, amountVaries: true }
+              - { id: cleaning, memberId: client, source: self_employment, amount: 200, frequency: irregular, paidInCash: true, amountVaries: true }
+              - { id: ss, memberId: mother, source: unearned, amount: 900, frequency: monthly, paidInCash: false, amountVaries: false }
+            expenses:
+              - { type: rent, amount: 1400, frequency: monthly }
+              - { type: utilities, amount: 128, frequency: monthly }
+          verified:
+            - { kind: wage_record, memberId: client, period: 2026-Q3, amount: 5400 }
+            - { kind: pay_stub, memberId: client, incomeId: wages, period: "2026-09-26", amount: 840, frequency: biweekly }
 
       - description: Nothing changed, nothing error-prone, and everything agrees — no flags raised
         inputs:
-          application:
-            programsAppliedFor: [snap]
-            householdSize: 2
-            members:
-              - { id: client, age: 34, isDisabled: false }
-              - { id: partner, age: 36, isDisabled: false }
-            jobs:
-              - { id: clinic, memberId: partner }
-            incomes:
-              - { id: salary, memberId: partner, jobId: clinic, type: earned, payPattern: regular, monthlyAmount: 1900 }
-            expenses:
-              - { category: rent, monthlyAmount: 950 }
-            reportedMonthlyIncome: 1900
-            reportedMonthlyExpenses: 1400
+          asOf: "2026-10-14"
+          programsAppliedFor: [snap]
+          previous:
+            statedSize: 2
             utilitiesIncludedInRent: true
-            claimsUtilityAllowance: false
-            hasChangedCircumstances: false
-          lastCertification:
-            memberIds: [client, partner]
+            statedMonthlyIncome: 1900
+            statedMonthlyExpenses: 1300
+            members:
+              - { id: client, dateOfBirth: "1990-04-01", isDisabled: false }
+              - { id: partner, dateOfBirth: "1988-08-12", isDisabled: false }
+            jobs:
+              - { id: clinic, memberId: partner, employer: Eastside Clinic }
             incomes:
-              - { id: salary, memberId: partner, jobId: clinic, type: earned, payPattern: regular, monthlyAmount: 1900 }
+              - { id: salary, memberId: partner, jobId: clinic, source: earned, amount: 950, frequency: semimonthly, paidInCash: false, amountVaries: false }
             expenses:
-              - { category: rent, monthlyAmount: 900 }
-          dataMatches:
-            wageRecords:
-              - { memberId: partner, monthlyWages: 1880 }
-            payStubs:
-              - { incomeId: salary, monthlyAmount: 1900 }
+              - { type: rent, amount: 900, frequency: monthly }
+          current:
+            statedSize: 2
+            utilitiesIncludedInRent: true
+            statedMonthlyIncome: 1900
+            statedMonthlyExpenses: 1350
+            members:
+              - { id: client, dateOfBirth: "1990-04-01", isDisabled: false }
+              - { id: partner, dateOfBirth: "1988-08-12", isDisabled: false }
+            jobs:
+              - { id: clinic, memberId: partner, employer: Eastside Clinic }
+            incomes:
+              - { id: salary, memberId: partner, jobId: clinic, source: earned, amount: 950, frequency: semimonthly, paidInCash: false, amountVaries: false }
+            expenses:
+              - { type: rent, amount: 950, frequency: monthly }
+          verified:
+            - { kind: wage_record, memberId: partner, period: 2026-Q3, amount: 5700 }
+            - { kind: pay_stub, memberId: partner, incomeId: salary, period: "2026-09-30", amount: 950, frequency: semimonthly }

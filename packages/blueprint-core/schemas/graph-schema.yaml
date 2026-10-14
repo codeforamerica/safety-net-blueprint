@@ -158,7 +158,7 @@ properties:
       type: array
       items:
         type: string
-        pattern: "^(\\$\\.[a-zA-Z][a-zA-Z0-9]*(\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?)*|[a-zA-Z][a-zA-Z0-9]*)$"
+        pattern: "^(\\$\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?(\\.[a-zA-Z][a-zA-Z0-9]*(\\[\\])?)*|[a-zA-Z][a-zA-Z0-9]*(\\.[a-zA-Z][a-zA-Z0-9]*)*)$"
       minItems: 1
 
 $defs:

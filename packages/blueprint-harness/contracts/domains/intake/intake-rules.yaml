@@ -2,148 +2,209 @@ $schema: "https://blueprint.codeforamerica.org/schemas/rules-schema.yaml"
 domain: intake
 rulesets:
 
-  # Flags for an interview, in one ruleset called once, with its answer in two
-  # trees (see docs/architecture/cross-cutting/ai-services.md):
+  # Flags for an interview, in one ruleset called once, with its answer named
+  # in two groups (see docs/architecture/cross-cutting/ai-services.md):
   #
   #   risks.*            situations where payment errors are common, even when
   #                      this case is right — probe carefully, and verify
   #   inconsistencies.*  two things in this case that don't agree — find out
   #                      which is true
   #
-  # The tree is part of what each answer means, so it's in the answer rather
-  # than in an annotation a caller would have to look up. Questions the
-  # determination needs answered come from the eligibility rules, not from here.
-  # Each fact's annotations in intake-annotations.yaml carry why it matters, the
-  # questions to probe with, the policy behind it and the source it comes from.
-  # The harness is fictional: the situations are drawn from FNS guidance and
-  # published payment error data, but the thresholds are sketches.
+  # They compare what the household is reporting now (`current`, sent by the
+  # client) with what's on record: the household before this interview
+  # (`previous` — as filed on a new application, as last certified on a
+  # renewal) and what outside records show (`verified`). The
+  # interviewFlagsInputs composition translates the data model into everything
+  # but `current`. On a new application there's no certification to compare
+  # against, so "changed since" means since the application was filed.
+  #
+  # Questions the determination needs answered come from the eligibility rules,
+  # not from here. Each fact's annotations in intake-annotations.yaml carry why
+  # it matters, the questions to probe with, the regulation behind it and the
+  # sources it comes from. The harness is fictional: the situations are drawn
+  # from FNS guidance and published payment error data. The choices a state
+  # makes — how pay is converted to a month, how big a difference counts, how
+  # young a child needs care — are `parameters` with defaults, which a state's
+  # overlay changes.
 
   interviewFlags:
     endpoint:
       path: /applications/evaluate-interview-flags
     inputs:
-      application:
-        $ref: './intake-schemas.yaml#/$defs/InterviewApplication'
-      lastCertification:
-        $ref: './intake-schemas.yaml#/$defs/LastCertification'
-      dataMatches:
-        $ref: './intake-schemas.yaml#/$defs/DataMatches'
+      current:
+        $ref: '../../common/schemas/household.yaml#/$defs/Household'
+      previous:
+        $ref: '../../common/schemas/household.yaml#/$defs/Household'
+      verified:
+        type: array
+        description: What outside records show for this application.
+        items:
+          $ref: './intake-openapi.yaml#/components/schemas/IncomeVerificationWritable'
+      asOf:
+        type: string
+        format: date
+        description: The date ages are measured from — the interview date.
+      programsAppliedFor:
+        type: array
+        items: { type: string }
+        description: The programs the household applied for.
+      parameters:
+        type: object
+        description: Choices a state makes, with defaults.
+        properties:
+          weeklyToMonthly:
+            type: number
+            default: 4.3
+            description: What weekly pay is multiplied by for a month. SNAP allows 4.3, or the exact 52 ÷ 12 (7 CFR § 273.10(c)(2)).
+          biweeklyToMonthly:
+            type: number
+            default: 2.15
+            description: What pay every two weeks is multiplied by for a month. SNAP allows 2.15, or the exact 26 ÷ 12 (7 CFR § 273.10(c)(2)).
+          differenceAllowed:
+            type: number
+            default: 0.1
+            description: How far apart two amounts can be, as a fraction, before they count as different.
+          childCareAgeUnder:
+            type: integer
+            default: 13
+            description: The age under which a child is taken to need care while the adults work.
     facts:
+      # ── Shared ─────────────────────────────────────────────────────────────
+      - path: monthlyFactor
+        description: >
+          What one payment is multiplied by for a month's worth, by how often it's
+          paid. Irregular income is taken as the household's monthly figure.
+        expression: >
+          {'weekly': parameters.weeklyToMonthly, 'biweekly': parameters.biweeklyToMonthly,
+           'semimonthly': 2.0, 'monthly': 1.0, 'irregular': 1.0}
+
+      - path: hasElderlyOrDisabledMember
+        type: boolean
+        description: A member is disabled, or 60 or older on the interview date.
+        expression: >
+          current.members.exists(m, (has(m.isDisabled) && m.isDisabled)
+            || asOf.getFullYear() - m.dateOfBirth.getFullYear()
+               - ((asOf.getMonth() < m.dateOfBirth.getMonth()
+                   || (asOf.getMonth() == m.dateOfBirth.getMonth() && asOf.getDate() < m.dateOfBirth.getDate())) ? 1 : 0)
+               >= 60)
+
+      - path: hasChild
+        type: boolean
+        description: A member is younger than the age a child is taken to need care, on the interview date.
+        expression: >
+          current.members.exists(m,
+            asOf.getFullYear() - m.dateOfBirth.getFullYear()
+            - ((asOf.getMonth() < m.dateOfBirth.getMonth()
+                || (asOf.getMonth() == m.dateOfBirth.getMonth() && asOf.getDate() < m.dateOfBirth.getDate())) ? 1 : 0)
+            < parameters.childCareAgeUnder)
+
+      # ── Risks ──────────────────────────────────────────────────────────────
       - path: risks.earnedIncomeVaries
         type: boolean
-        description: A member's wages are hourly with irregular hours, or include tips.
-        expression: "application.incomes.exists(i, i.type == 'earned' && i.payPattern in ['irregular', 'tips'])"
+        description: A member's wages change from one payment to the next, or come irregularly.
+        expression: "current.incomes.exists(i, i.source == 'earned' && ((has(i.amountVaries) && i.amountVaries) || i.frequency == 'irregular'))"
 
       - path: risks.cashOrSelfEmploymentIncome
         type: boolean
         description: A member has self-employment income, or is paid in cash.
-        expression: "application.incomes.exists(i, i.type == 'self_employment' || i.payPattern == 'cash')"
+        expression: "current.incomes.exists(i, i.source == 'self_employment' || (has(i.paidInCash) && i.paidInCash))"
 
-      - path: risks.incomeChangedSinceLastCertification
+      - path: risks.incomeChangedSincePrevious
         type: boolean
-        description: >
-          An income source is new, ended, or a different amount from the last
-          certification.
+        description: An income source is new, ended, or a different amount or frequency from the household on record.
         expression: >
-          application.incomes.exists(i, !lastCertification.incomes.exists(p,
-            p.memberId == i.memberId && p.type == i.type && p.monthlyAmount == i.monthlyAmount))
-          || lastCertification.incomes.exists(p, !application.incomes.exists(i,
-            i.memberId == p.memberId && i.type == p.type))
+          current.incomes.exists(i, !previous.incomes.exists(p,
+            p.memberId == i.memberId && p.source == i.source && p.amount == i.amount && p.frequency == i.frequency))
+          || previous.incomes.exists(p, !current.incomes.exists(i, i.memberId == p.memberId && i.source == p.source))
 
-      - path: risks.householdChangedSinceLastCertification
+      - path: risks.householdChangedSincePrevious
         type: boolean
-        description: Someone has joined or left the household since the last certification.
+        description: Someone has joined or left the household since the household on record.
         expression: >
-          application.members.exists(m, !(m.id in lastCertification.memberIds))
-          || lastCertification.memberIds.exists(id, !application.members.exists(m, m.id == id))
+          current.members.exists(m, !previous.members.exists(p, p.id == m.id))
+          || previous.members.exists(p, !current.members.exists(m, m.id == p.id))
 
       - path: risks.shelterCostsCarriedOver
         type: boolean
-        description: Rent or mortgage is exactly what the last certification recorded.
+        description: Rent or mortgage is exactly what the household on record had.
         expression: >
-          application.expenses.exists(e, e.category in ['rent', 'mortgage']
-            && lastCertification.expenses.exists(p, p.category == e.category && p.monthlyAmount == e.monthlyAmount))
+          current.expenses.exists(e, e.type in ['rent', 'mortgage']
+            && previous.expenses.exists(p, p.type == e.type && p.amount == e.amount && p.frequency == e.frequency))
 
       - path: risks.elderlyOrDisabledWithoutMedicalCosts
         type: boolean
-        description: A member is 60 or older, or disabled, and no medical costs are recorded.
-        expression: >
-          application.members.exists(m, m.age >= 60 || m.isDisabled)
-          && !application.expenses.exists(e, e.category == 'medical')
+        description: A member is 60 or older, or disabled, and no medical costs are reported.
+        expression: "hasElderlyOrDisabledMember && !current.expenses.exists(e, e.type == 'medical')"
 
       - path: risks.childrenAndEarnersWithoutDependentCare
         type: boolean
-        description: >
-          There's a child under 13 and someone earning, and no dependent care is
-          recorded. Under 13 is this sketch's line, not a regulation's.
+        description: There's a child young enough to need care and someone earning, and no dependent care is reported.
         expression: >
-          application.members.exists(m, m.age < 13)
-          && application.incomes.exists(i, i.type == 'earned' || i.type == 'self_employment')
-          && !application.expenses.exists(e, e.category == 'dependent_care')
-
-      - path: risks.circumstancesChangedSinceApplying
-        type: boolean
-        description: The household's circumstances changed between applying and the interview.
-        expression: "application.hasChangedCircumstances"
+          hasChild
+          && current.incomes.exists(i, i.source in ['earned', 'self_employment'])
+          && !current.expenses.exists(e, e.type == 'dependent_care')
 
       - path: risks.multipleProgramsApplied
         type: boolean
         description: The household applied for SNAP and another program, whose reporting rules differ.
-        expression: "'snap' in application.programsAppliedFor && application.programsAppliedFor.exists(p, p != 'snap')"
+        expression: "'snap' in programsAppliedFor && programsAppliedFor.exists(p, p != 'snap')"
 
+      # ── Inconsistencies ────────────────────────────────────────────────────
       - path: inconsistencies.incomeBelowExpenses
         type: boolean
-        description: Reported income doesn't cover reported expenses.
-        expression: "application.reportedMonthlyIncome < application.reportedMonthlyExpenses"
+        description: The household's stated monthly income doesn't cover its stated monthly expenses.
+        expression: "current.statedMonthlyIncome < current.statedMonthlyExpenses"
 
       - path: inconsistencies.wagesDifferFromWageRecords
         type: boolean
         description: >
-          A member's wages in the wage records differ by more than 10% from the
-          earned income recorded for them, or they have no earned income recorded.
+          A member's monthly wages in the wage records differ by more than the allowed
+          difference from their reported earned income, or they report no regular earned income.
         expression: >
-          dataMatches.wageRecords.exists(w, !application.incomes.exists(i,
-            i.memberId == w.memberId && i.type == 'earned'
-            && i.monthlyAmount >= w.monthlyWages * 0.9 && i.monthlyAmount <= w.monthlyWages * 1.1))
+          verified.exists(v, v.kind == 'wage_record' && !current.incomes.exists(i,
+            i.memberId == v.memberId && i.source == 'earned' && i.frequency != 'irregular'
+            && i.amount * monthlyFactor[i.frequency] >= v.amount / 3.0 * (1.0 - parameters.differenceAllowed)
+            && i.amount * monthlyFactor[i.frequency] <= v.amount / 3.0 * (1.0 + parameters.differenceAllowed)))
 
       - path: inconsistencies.incomeDiffersFromPayStub
         type: boolean
-        description: A recorded income differs by more than 10% from what its verified pay stubs show.
+        description: A reported income differs by more than the allowed difference, a month at a time, from its verified pay stub.
         expression: >
-          dataMatches.payStubs.exists(s, application.incomes.exists(i, i.id == s.incomeId
-            && (i.monthlyAmount < s.monthlyAmount * 0.9 || i.monthlyAmount > s.monthlyAmount * 1.1)))
+          verified.exists(v, v.kind == 'pay_stub' && has(v.incomeId) && has(v.frequency)
+            && current.incomes.exists(i, i.id == v.incomeId && i.frequency != 'irregular'
+              && (i.amount * monthlyFactor[i.frequency] < v.amount * monthlyFactor[v.frequency] * (1.0 - parameters.differenceAllowed)
+                  || i.amount * monthlyFactor[i.frequency] > v.amount * monthlyFactor[v.frequency] * (1.0 + parameters.differenceAllowed))))
 
       - path: inconsistencies.householdSizeDiffersFromMembers
         type: boolean
-        description: The stated household size isn't the number of members listed.
-        expression: "application.householdSize != size(application.members)"
+        description: The stated household size isn't the number of members reported.
+        expression: "current.statedSize != size(current.members)"
 
       - path: inconsistencies.jobWithoutEarnedIncome
         type: boolean
-        description: A member has a job with no earned income recorded for it.
-        expression: "application.jobs.exists(j, !application.incomes.exists(i, has(i.jobId) && i.jobId == j.id))"
+        description: A member has a job with no earned income reported for it.
+        expression: "current.jobs.exists(j, !current.incomes.exists(i, has(i.jobId) && i.jobId == j.id))"
 
       - path: inconsistencies.earnedIncomeWithoutJob
         type: boolean
-        description: Earned income is recorded with no job behind it.
+        description: Earned income is reported with no job behind it.
         expression: >
-          application.incomes.exists(i, i.type == 'earned'
-            && !(has(i.jobId) && application.jobs.exists(j, j.id == i.jobId)))
+          current.incomes.exists(i, i.source == 'earned'
+            && !(has(i.jobId) && current.jobs.exists(j, j.id == i.jobId)))
 
-      - path: inconsistencies.utilitiesIncludedButClaimed
+      - path: inconsistencies.utilitiesIncludedButBilled
         type: boolean
-        description: Utilities are included in the rent, but a utility allowance is applied.
-        expression: "application.utilitiesIncludedInRent && application.claimsUtilityAllowance"
+        description: The household says utilities are included in the rent, but reports a utility bill.
+        expression: "current.utilitiesIncludedInRent && current.expenses.exists(e, e.type == 'utilities')"
 
     outputs:
       risks.earnedIncomeVaries: { type: boolean }
       risks.cashOrSelfEmploymentIncome: { type: boolean }
-      risks.incomeChangedSinceLastCertification: { type: boolean }
-      risks.householdChangedSinceLastCertification: { type: boolean }
+      risks.incomeChangedSincePrevious: { type: boolean }
+      risks.householdChangedSincePrevious: { type: boolean }
       risks.shelterCostsCarriedOver: { type: boolean }
       risks.elderlyOrDisabledWithoutMedicalCosts: { type: boolean }
       risks.childrenAndEarnersWithoutDependentCare: { type: boolean }
-      risks.circumstancesChangedSinceApplying: { type: boolean }
       risks.multipleProgramsApplied: { type: boolean }
       inconsistencies.incomeBelowExpenses: { type: boolean }
       inconsistencies.wagesDifferFromWageRecords: { type: boolean }
@@ -151,4 +212,4 @@ rulesets:
       inconsistencies.householdSizeDiffersFromMembers: { type: boolean }
       inconsistencies.jobWithoutEarnedIncome: { type: boolean }
       inconsistencies.earnedIncomeWithoutJob: { type: boolean }
-      inconsistencies.utilitiesIncludedButClaimed: { type: boolean }
+      inconsistencies.utilitiesIncludedButBilled: { type: boolean }

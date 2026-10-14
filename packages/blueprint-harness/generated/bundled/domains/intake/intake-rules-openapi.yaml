@@ -19,34 +19,38 @@ paths:
               type: object
               description: Input data for interviewFlags evaluation. All fields are optional — partial inputs trigger partial evaluation.
               properties:
-                application:
+                current:
                   type: object
-                  description: The application as it stands at the interview.
+                  description: A household's circumstances at one point in time.
                   properties:
-                    programsAppliedFor:
-                      type: array
-                      items:
-                        type: string
-                        enum:
-                          - snap
-                          - medicaid
-                          - tanf
-                          - chip
-                      description: Programs the household applied for.
-                    householdSize:
+                    statedSize:
                       type: integer
-                      description: The household size the application states.
+                      minimum: 1
+                      description: The number of people the household says buy and prepare food together.
+                    utilitiesIncludedInRent:
+                      type: boolean
+                      description: Whether the household says its utilities are included in the rent.
+                    statedMonthlyIncome:
+                      type: number
+                      minimum: 0
+                      description: Total monthly income, as the household states it.
+                    statedMonthlyExpenses:
+                      type: number
+                      minimum: 0
+                      description: Total monthly expenses, as the household states them.
                     members:
                       type: array
                       items:
                         type: object
+                        required:
+                          - id
                         properties:
                           id:
                             type: string
-                            description: The member's id.
-                          age:
-                            type: integer
-                            description: Age in years.
+                            description: The member's key within the household.
+                          dateOfBirth:
+                            type: string
+                            format: date
                           isDisabled:
                             type: boolean
                             description: Whether the member is disabled.
@@ -54,53 +58,72 @@ paths:
                       type: array
                       items:
                         type: object
+                        required:
+                          - id
+                          - memberId
                         properties:
                           id:
                             type: string
-                            description: The job's id.
+                            description: The job's key within the household.
                           memberId:
                             type: string
                             description: The member who holds the job.
+                          employer:
+                            type: string
                     incomes:
                       type: array
                       items:
                         type: object
+                        required:
+                          - id
+                          - memberId
+                          - source
+                          - amount
+                          - frequency
                         properties:
                           id:
                             type: string
-                            description: The income's id.
+                            description: The income's key within the household.
                           memberId:
                             type: string
                             description: The member who receives it.
                           jobId:
                             type: string
-                            description: The job it's paid for
-                            when it's earned income.: null
-                          type:
+                            description: The job it's paid for, when it's earned.
+                          source:
                             type: string
                             enum:
                               - earned
                               - self_employment
                               - unearned
-                            description: Where the money comes from.
-                          payPattern:
+                          amount:
+                            type: number
+                            minimum: 0
+                            description: The amount received each time it's paid, in dollars.
+                          frequency:
                             type: string
                             enum:
-                              - regular
+                              - weekly
+                              - biweekly
+                              - semimonthly
+                              - monthly
                               - irregular
-                              - tips
-                              - cash
-                            description: How it's paid.
-                          monthlyAmount:
-                            type: number
-                            description: Monthly amount
-                            in dollars.: null
+                            description: How often it's paid.
+                          paidInCash:
+                            type: boolean
+                          amountVaries:
+                            type: boolean
+                            description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
                     expenses:
                       type: array
                       items:
                         type: object
+                        required:
+                          - type
+                          - amount
+                          - frequency
                         properties:
-                          category:
+                          type:
                             type: string
                             enum:
                               - rent
@@ -109,75 +132,121 @@ paths:
                               - dependent_care
                               - medical
                               - child_support
-                            description: What it's for.
-                          monthlyAmount:
+                          amount:
                             type: number
-                            description: Monthly amount
-                            in dollars.: null
-                    reportedMonthlyIncome:
-                      type: number
-                      description: Total monthly income, as the household reported it.
-                    reportedMonthlyExpenses:
-                      type: number
-                      description: Total monthly expenses, as the household reported them.
+                            minimum: 0
+                          frequency:
+                            type: string
+                            enum:
+                              - weekly
+                              - biweekly
+                              - semimonthly
+                              - monthly
+                previous:
+                  type: object
+                  description: A household's circumstances at one point in time.
+                  properties:
+                    statedSize:
+                      type: integer
+                      minimum: 1
+                      description: The number of people the household says buy and prepare food together.
                     utilitiesIncludedInRent:
                       type: boolean
                       description: Whether the household says its utilities are included in the rent.
-                    claimsUtilityAllowance:
-                      type: boolean
-                      description: Whether a standard utility allowance is applied to the household.
-                    hasChangedCircumstances:
-                      type: boolean
-                      description: Whether the household reported changes since the application was submitted.
-                lastCertification:
-                  type: object
-                  description: What the household's last certification recorded.
-                  properties:
-                    memberIds:
+                    statedMonthlyIncome:
+                      type: number
+                      minimum: 0
+                      description: Total monthly income, as the household states it.
+                    statedMonthlyExpenses:
+                      type: number
+                      minimum: 0
+                      description: Total monthly expenses, as the household states them.
+                    members:
                       type: array
                       items:
-                        type: string
-                      description: The members certified last time.
+                        type: object
+                        required:
+                          - id
+                        properties:
+                          id:
+                            type: string
+                            description: The member's key within the household.
+                          dateOfBirth:
+                            type: string
+                            format: date
+                          isDisabled:
+                            type: boolean
+                            description: Whether the member is disabled.
+                    jobs:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - id
+                          - memberId
+                        properties:
+                          id:
+                            type: string
+                            description: The job's key within the household.
+                          memberId:
+                            type: string
+                            description: The member who holds the job.
+                          employer:
+                            type: string
                     incomes:
                       type: array
                       items:
                         type: object
+                        required:
+                          - id
+                          - memberId
+                          - source
+                          - amount
+                          - frequency
                         properties:
                           id:
                             type: string
-                            description: The income's id.
+                            description: The income's key within the household.
                           memberId:
                             type: string
                             description: The member who receives it.
                           jobId:
                             type: string
-                            description: The job it's paid for
-                            when it's earned income.: null
-                          type:
+                            description: The job it's paid for, when it's earned.
+                          source:
                             type: string
                             enum:
                               - earned
                               - self_employment
                               - unearned
-                            description: Where the money comes from.
-                          payPattern:
+                          amount:
+                            type: number
+                            minimum: 0
+                            description: The amount received each time it's paid, in dollars.
+                          frequency:
                             type: string
                             enum:
-                              - regular
+                              - weekly
+                              - biweekly
+                              - semimonthly
+                              - monthly
                               - irregular
-                              - tips
-                              - cash
-                            description: How it's paid.
-                          monthlyAmount:
-                            type: number
-                            description: Monthly amount
-                            in dollars.: null
+                            description: How often it's paid.
+                          paidInCash:
+                            type: boolean
+                          amountVaries:
+                            type: boolean
+                            description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
                     expenses:
                       type: array
                       items:
                         type: object
+                        required:
+                          - type
+                          - amount
+                          - frequency
                         properties:
-                          category:
+                          type:
                             type: string
                             enum:
                               - rent
@@ -186,35 +255,79 @@ paths:
                               - dependent_care
                               - medical
                               - child_support
-                            description: What it's for.
-                          monthlyAmount:
+                          amount:
                             type: number
-                            description: Monthly amount
-                            in dollars.: null
-                dataMatches:
+                            minimum: 0
+                          frequency:
+                            type: string
+                            enum:
+                              - weekly
+                              - biweekly
+                              - semimonthly
+                              - monthly
+                verified:
+                  type: array
+                  description: What outside records show for this application.
+                  items:
+                    type: object
+                    properties:
+                      kind:
+                        type: string
+                        enum:
+                          - wage_record
+                          - pay_stub
+                        description: |
+                          Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+                      memberId:
+                        type: string
+                        description: The member it's about, by their key in the household.
+                      incomeId:
+                        type: string
+                        description: For a pay stub, the income it's for, by its key in the household.
+                      period:
+                        type: string
+                        description: For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+                      amount:
+                        type: number
+                        minimum: 0
+                        description: Gross wages for the quarter, or gross pay on the stub.
+                      frequency:
+                        type: string
+                        enum:
+                          - weekly
+                          - biweekly
+                          - semimonthly
+                          - monthly
+                        description: For a pay stub, how often the pay it shows is paid.
+                asOf:
+                  type: string
+                  format: date
+                  description: The date ages are measured from — the interview date.
+                programsAppliedFor:
+                  type: array
+                  items:
+                    type: string
+                  description: The programs the household applied for.
+                parameters:
                   type: object
-                  description: What outside data and verified documents say.
+                  description: Choices a state makes, with defaults.
                   properties:
-                    wageRecords:
-                      type: array
-                      description: Monthly wages from state wage records or IEVS, by member.
-                      items:
-                        type: object
-                        properties:
-                          memberId:
-                            type: string
-                          monthlyWages:
-                            type: number
-                    payStubs:
-                      type: array
-                      description: Monthly amounts worked out from verified pay stubs, by income.
-                      items:
-                        type: object
-                        properties:
-                          incomeId:
-                            type: string
-                          monthlyAmount:
-                            type: number
+                    weeklyToMonthly:
+                      type: number
+                      default: 4.3
+                      description: What weekly pay is multiplied by for a month. SNAP allows 4.3, or the exact 52 ÷ 12 (7 CFR § 273.10(c)(2)).
+                    biweeklyToMonthly:
+                      type: number
+                      default: 2.15
+                      description: What pay every two weeks is multiplied by for a month. SNAP allows 2.15, or the exact 26 ÷ 12 (7 CFR § 273.10(c)(2)).
+                    differenceAllowed:
+                      type: number
+                      default: 0.1
+                      description: How far apart two amounts can be, as a fraction, before they count as different.
+                    childCareAgeUnder:
+                      type: integer
+                      default: 13
+                      description: The age under which a child is taken to need care while the adults work.
       responses:
         "200":
           description: interviewFlags evaluation result.
@@ -352,34 +465,38 @@ components:
       type: object
       description: Input data for interviewFlags evaluation. All fields are optional — partial inputs trigger partial evaluation.
       properties:
-        application:
+        current:
           type: object
-          description: The application as it stands at the interview.
+          description: A household's circumstances at one point in time.
           properties:
-            programsAppliedFor:
-              type: array
-              items:
-                type: string
-                enum:
-                  - snap
-                  - medicaid
-                  - tanf
-                  - chip
-              description: Programs the household applied for.
-            householdSize:
+            statedSize:
               type: integer
-              description: The household size the application states.
+              minimum: 1
+              description: The number of people the household says buy and prepare food together.
+            utilitiesIncludedInRent:
+              type: boolean
+              description: Whether the household says its utilities are included in the rent.
+            statedMonthlyIncome:
+              type: number
+              minimum: 0
+              description: Total monthly income, as the household states it.
+            statedMonthlyExpenses:
+              type: number
+              minimum: 0
+              description: Total monthly expenses, as the household states them.
             members:
               type: array
               items:
                 type: object
+                required:
+                  - id
                 properties:
                   id:
                     type: string
-                    description: The member's id.
-                  age:
-                    type: integer
-                    description: Age in years.
+                    description: The member's key within the household.
+                  dateOfBirth:
+                    type: string
+                    format: date
                   isDisabled:
                     type: boolean
                     description: Whether the member is disabled.
@@ -387,53 +504,72 @@ components:
               type: array
               items:
                 type: object
+                required:
+                  - id
+                  - memberId
                 properties:
                   id:
                     type: string
-                    description: The job's id.
+                    description: The job's key within the household.
                   memberId:
                     type: string
                     description: The member who holds the job.
+                  employer:
+                    type: string
             incomes:
               type: array
               items:
                 type: object
+                required:
+                  - id
+                  - memberId
+                  - source
+                  - amount
+                  - frequency
                 properties:
                   id:
                     type: string
-                    description: The income's id.
+                    description: The income's key within the household.
                   memberId:
                     type: string
                     description: The member who receives it.
                   jobId:
                     type: string
-                    description: The job it's paid for
-                    when it's earned income.: null
-                  type:
+                    description: The job it's paid for, when it's earned.
+                  source:
                     type: string
                     enum:
                       - earned
                       - self_employment
                       - unearned
-                    description: Where the money comes from.
-                  payPattern:
+                  amount:
+                    type: number
+                    minimum: 0
+                    description: The amount received each time it's paid, in dollars.
+                  frequency:
                     type: string
                     enum:
-                      - regular
+                      - weekly
+                      - biweekly
+                      - semimonthly
+                      - monthly
                       - irregular
-                      - tips
-                      - cash
-                    description: How it's paid.
-                  monthlyAmount:
-                    type: number
-                    description: Monthly amount
-                    in dollars.: null
+                    description: How often it's paid.
+                  paidInCash:
+                    type: boolean
+                  amountVaries:
+                    type: boolean
+                    description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
             expenses:
               type: array
               items:
                 type: object
+                required:
+                  - type
+                  - amount
+                  - frequency
                 properties:
-                  category:
+                  type:
                     type: string
                     enum:
                       - rent
@@ -442,75 +578,121 @@ components:
                       - dependent_care
                       - medical
                       - child_support
-                    description: What it's for.
-                  monthlyAmount:
+                  amount:
                     type: number
-                    description: Monthly amount
-                    in dollars.: null
-            reportedMonthlyIncome:
-              type: number
-              description: Total monthly income, as the household reported it.
-            reportedMonthlyExpenses:
-              type: number
-              description: Total monthly expenses, as the household reported them.
+                    minimum: 0
+                  frequency:
+                    type: string
+                    enum:
+                      - weekly
+                      - biweekly
+                      - semimonthly
+                      - monthly
+        previous:
+          type: object
+          description: A household's circumstances at one point in time.
+          properties:
+            statedSize:
+              type: integer
+              minimum: 1
+              description: The number of people the household says buy and prepare food together.
             utilitiesIncludedInRent:
               type: boolean
               description: Whether the household says its utilities are included in the rent.
-            claimsUtilityAllowance:
-              type: boolean
-              description: Whether a standard utility allowance is applied to the household.
-            hasChangedCircumstances:
-              type: boolean
-              description: Whether the household reported changes since the application was submitted.
-        lastCertification:
-          type: object
-          description: What the household's last certification recorded.
-          properties:
-            memberIds:
+            statedMonthlyIncome:
+              type: number
+              minimum: 0
+              description: Total monthly income, as the household states it.
+            statedMonthlyExpenses:
+              type: number
+              minimum: 0
+              description: Total monthly expenses, as the household states them.
+            members:
               type: array
               items:
-                type: string
-              description: The members certified last time.
+                type: object
+                required:
+                  - id
+                properties:
+                  id:
+                    type: string
+                    description: The member's key within the household.
+                  dateOfBirth:
+                    type: string
+                    format: date
+                  isDisabled:
+                    type: boolean
+                    description: Whether the member is disabled.
+            jobs:
+              type: array
+              items:
+                type: object
+                required:
+                  - id
+                  - memberId
+                properties:
+                  id:
+                    type: string
+                    description: The job's key within the household.
+                  memberId:
+                    type: string
+                    description: The member who holds the job.
+                  employer:
+                    type: string
             incomes:
               type: array
               items:
                 type: object
+                required:
+                  - id
+                  - memberId
+                  - source
+                  - amount
+                  - frequency
                 properties:
                   id:
                     type: string
-                    description: The income's id.
+                    description: The income's key within the household.
                   memberId:
                     type: string
                     description: The member who receives it.
                   jobId:
                     type: string
-                    description: The job it's paid for
-                    when it's earned income.: null
-                  type:
+                    description: The job it's paid for, when it's earned.
+                  source:
                     type: string
                     enum:
                       - earned
                       - self_employment
                       - unearned
-                    description: Where the money comes from.
-                  payPattern:
+                  amount:
+                    type: number
+                    minimum: 0
+                    description: The amount received each time it's paid, in dollars.
+                  frequency:
                     type: string
                     enum:
-                      - regular
+                      - weekly
+                      - biweekly
+                      - semimonthly
+                      - monthly
                       - irregular
-                      - tips
-                      - cash
-                    description: How it's paid.
-                  monthlyAmount:
-                    type: number
-                    description: Monthly amount
-                    in dollars.: null
+                    description: How often it's paid.
+                  paidInCash:
+                    type: boolean
+                  amountVaries:
+                    type: boolean
+                    description: Whether the amount changes from one payment to the next, as with irregular hours or tips.
             expenses:
               type: array
               items:
                 type: object
+                required:
+                  - type
+                  - amount
+                  - frequency
                 properties:
-                  category:
+                  type:
                     type: string
                     enum:
                       - rent
@@ -519,35 +701,79 @@ components:
                       - dependent_care
                       - medical
                       - child_support
-                    description: What it's for.
-                  monthlyAmount:
+                  amount:
                     type: number
-                    description: Monthly amount
-                    in dollars.: null
-        dataMatches:
+                    minimum: 0
+                  frequency:
+                    type: string
+                    enum:
+                      - weekly
+                      - biweekly
+                      - semimonthly
+                      - monthly
+        verified:
+          type: array
+          description: What outside records show for this application.
+          items:
+            type: object
+            properties:
+              kind:
+                type: string
+                enum:
+                  - wage_record
+                  - pay_stub
+                description: |
+                  Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+              memberId:
+                type: string
+                description: The member it's about, by their key in the household.
+              incomeId:
+                type: string
+                description: For a pay stub, the income it's for, by its key in the household.
+              period:
+                type: string
+                description: For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+              amount:
+                type: number
+                minimum: 0
+                description: Gross wages for the quarter, or gross pay on the stub.
+              frequency:
+                type: string
+                enum:
+                  - weekly
+                  - biweekly
+                  - semimonthly
+                  - monthly
+                description: For a pay stub, how often the pay it shows is paid.
+        asOf:
+          type: string
+          format: date
+          description: The date ages are measured from — the interview date.
+        programsAppliedFor:
+          type: array
+          items:
+            type: string
+          description: The programs the household applied for.
+        parameters:
           type: object
-          description: What outside data and verified documents say.
+          description: Choices a state makes, with defaults.
           properties:
-            wageRecords:
-              type: array
-              description: Monthly wages from state wage records or IEVS, by member.
-              items:
-                type: object
-                properties:
-                  memberId:
-                    type: string
-                  monthlyWages:
-                    type: number
-            payStubs:
-              type: array
-              description: Monthly amounts worked out from verified pay stubs, by income.
-              items:
-                type: object
-                properties:
-                  incomeId:
-                    type: string
-                  monthlyAmount:
-                    type: number
+            weeklyToMonthly:
+              type: number
+              default: 4.3
+              description: What weekly pay is multiplied by for a month. SNAP allows 4.3, or the exact 52 ÷ 12 (7 CFR § 273.10(c)(2)).
+            biweeklyToMonthly:
+              type: number
+              default: 2.15
+              description: What pay every two weeks is multiplied by for a month. SNAP allows 2.15, or the exact 26 ÷ 12 (7 CFR § 273.10(c)(2)).
+            differenceAllowed:
+              type: number
+              default: 0.1
+              description: How far apart two amounts can be, as a fraction, before they count as different.
+            childCareAgeUnder:
+              type: integer
+              default: 13
+              description: The age under which a child is taken to need care while the adults work.
     InterviewFlagsResponse:
       allOf:
         - type: array

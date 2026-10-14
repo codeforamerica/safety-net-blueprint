@@ -35,7 +35,7 @@ paths:
                     isMigrantFarmworker:
                       type: boolean
                       description: Whether any household member is a migrant or seasonal farmworker.
-                policy:
+                parameters:
                   type: object
                   properties:
                     incomeThreshold:
@@ -199,7 +199,7 @@ components:
             isMigrantFarmworker:
               type: boolean
               description: Whether any household member is a migrant or seasonal farmworker.
-        policy:
+        parameters:
           type: object
           properties:
             incomeThreshold:

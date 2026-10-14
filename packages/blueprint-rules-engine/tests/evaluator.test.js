@@ -491,6 +491,21 @@ describe('evaluator — declared dates reach CEL as timestamps', () => {
     assert.strictEqual(node.value, 'not-a-date');
   });
 
+  it('a date declared as an input of its own binds too', () => {
+    // Its path has one segment, `$.asOf`, and binding cloned the input as if it
+    // were an object holding the date: the string was spread into a map, and
+    // getFullYear() found no overload for it.
+    const graph = {
+      outputs: ['f'],
+      inputs: { '$.asOf': { type: 'string', format: 'date' } },
+      facts: { f: { expression: 'asOf.getFullYear()' } },
+      dependencies: { f: ['$.asOf'] },
+    };
+    const node = evaluate(graph, { asOf: '2026-10-14' }).f;
+    assert.strictEqual(node.state, 'complete');
+    assert.strictEqual(node.value, 2026);
+  });
+
   it('collection sub-fields bind too, without mutating the input', () => {
     const members = [{ dateOfBirth: '1989-03-13' }, { dateOfBirth: '2010-06-01' }];
     const graph = {

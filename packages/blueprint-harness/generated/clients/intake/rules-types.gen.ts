@@ -1,45 +1,94 @@
 import type { FactNode } from '@codeforamerica/blueprint-rules-engine';
 
 export type InterviewFlagsInputs = {
-  application?: {
-    programsAppliedFor?: Array<unknown>;
-    householdSize?: number;
-    members?: Array<unknown>;
-    jobs?: Array<unknown>;
-    incomes?: Array<unknown>;
-    expenses?: Array<unknown>;
-    reportedMonthlyIncome?: number;
-    reportedMonthlyExpenses?: number;
+  current?: {
+    statedSize?: number;
     utilitiesIncludedInRent?: boolean;
-    claimsUtilityAllowance?: boolean;
-    hasChangedCircumstances?: boolean;
-  };
-  lastCertification?: {
-    memberIds?: Array<unknown>;
-    incomes?: Array<unknown>;
-    expenses?: Array<unknown>;
-  };
-  dataMatches?: {
-    wageRecords?: Array<{
+    statedMonthlyIncome?: number;
+    statedMonthlyExpenses?: number;
+    members?: Array<{
+      id?: string;
+      dateOfBirth?: string;
+      isDisabled?: boolean;
+    }>;
+    jobs?: Array<{
+      id?: string;
       memberId?: string;
-      monthlyWages?: number;
+      employer?: string;
     }>;
-    payStubs?: Array<{
-      incomeId?: string;
-      monthlyAmount?: number;
+    incomes?: Array<{
+      id?: string;
+      memberId?: string;
+      jobId?: string;
+      source?: string;
+      amount?: number;
+      frequency?: string;
+      paidInCash?: boolean;
+      amountVaries?: boolean;
     }>;
+    expenses?: Array<{
+      type?: string;
+      amount?: number;
+      frequency?: string;
+    }>;
+  };
+  previous?: {
+    statedSize?: number;
+    utilitiesIncludedInRent?: boolean;
+    statedMonthlyIncome?: number;
+    statedMonthlyExpenses?: number;
+    members?: Array<{
+      id?: string;
+      dateOfBirth?: string;
+      isDisabled?: boolean;
+    }>;
+    jobs?: Array<{
+      id?: string;
+      memberId?: string;
+      employer?: string;
+    }>;
+    incomes?: Array<{
+      id?: string;
+      memberId?: string;
+      jobId?: string;
+      source?: string;
+      amount?: number;
+      frequency?: string;
+      paidInCash?: boolean;
+      amountVaries?: boolean;
+    }>;
+    expenses?: Array<{
+      type?: string;
+      amount?: number;
+      frequency?: string;
+    }>;
+  };
+  verified?: Array<{
+    kind?: string;
+    memberId?: string;
+    incomeId?: string;
+    period?: string;
+    amount?: number;
+    frequency?: string;
+  }>;
+  asOf?: string;
+  programsAppliedFor?: Array<unknown>;
+  parameters?: {
+    weeklyToMonthly?: number;
+    biweeklyToMonthly?: number;
+    differenceAllowed?: number;
+    childCareAgeUnder?: number;
   };
 };
 
 export type InterviewFlagsResult = {
   risks.earnedIncomeVaries: FactNode<boolean>;
   risks.cashOrSelfEmploymentIncome: FactNode<boolean>;
-  risks.incomeChangedSinceLastCertification: FactNode<boolean>;
-  risks.householdChangedSinceLastCertification: FactNode<boolean>;
+  risks.incomeChangedSincePrevious: FactNode<boolean>;
+  risks.householdChangedSincePrevious: FactNode<boolean>;
   risks.shelterCostsCarriedOver: FactNode<boolean>;
   risks.elderlyOrDisabledWithoutMedicalCosts: FactNode<boolean>;
   risks.childrenAndEarnersWithoutDependentCare: FactNode<boolean>;
-  risks.circumstancesChangedSinceApplying: FactNode<boolean>;
   risks.multipleProgramsApplied: FactNode<boolean>;
   inconsistencies.incomeBelowExpenses: FactNode<boolean>;
   inconsistencies.wagesDifferFromWageRecords: FactNode<boolean>;
@@ -47,6 +96,6 @@ export type InterviewFlagsResult = {
   inconsistencies.householdSizeDiffersFromMembers: FactNode<boolean>;
   inconsistencies.jobWithoutEarnedIncome: FactNode<boolean>;
   inconsistencies.earnedIncomeWithoutJob: FactNode<boolean>;
-  inconsistencies.utilitiesIncludedButClaimed: FactNode<boolean>;
+  inconsistencies.utilitiesIncludedButBilled: FactNode<boolean>;
   nodes: Record<string, FactNode<unknown>>;
 };

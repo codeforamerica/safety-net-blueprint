@@ -116,10 +116,11 @@ facts:
       - title: "FRAC: A Backgrounder on SNAP Quality Control, Payment Error Rates, and Cost-Sharing"
         url: https://frac.org/blog/a-backgrounder-on-snap-quality-control-payment-error-rates-and-cost-sharing
 
-  interviewFlags.risks.incomeChangedSinceLastCertification:
+  interviewFlags.risks.incomeChangedSincePrevious:
     reason: >
-      Income changes between certifications — a job gained or lost, a raise, hours cut — are a
-      leading cause of both overpayments and underpayments when they aren't reported.
+      Income that's changed since the household on record — a job gained or lost, a raise,
+      hours cut — is a leading cause of both overpayments and underpayments when it isn't
+      reported. On a new application, that's since the application was filed.
     policies: [snap-reporting-changes, snap-recertification]
     patterns: [ruleset-output-fact]
     probeQuestions:
@@ -131,7 +132,7 @@ facts:
       - title: "FNS SNAP Recertification Toolkit (June 2018)"
         url: https://www.fna.usda.gov/snap/recertification-toolkit
 
-  interviewFlags.risks.householdChangedSinceLastCertification:
+  interviewFlags.risks.householdChangedSincePrevious:
     reason: >
       Who lives in the household and buys food together decides whose income counts. Changes
       are often unreported, and often not asked about at recertification.
@@ -188,18 +189,6 @@ facts:
     sources:
       - title: "NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates"
         url: https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/
-
-  interviewFlags.risks.circumstancesChangedSinceApplying:
-    reason: >
-      Changes between applying and the interview have to be recorded, and some verified,
-      before benefits are worked out. FNS-1104 makes them a probe.
-    policies: [snap-interview-toolkit]
-    patterns: [ruleset-output-fact]
-    probeQuestions:
-      - "Since you applied, has anything changed about who lives with you, your income, or your expenses?"
-    sources:
-      - title: "FNS State SNAP Interview Toolkit (FNS-1104, revised June 2025)"
-        url: https://www.fna.usda.gov/snap/state/interview-toolkit
 
   interviewFlags.risks.multipleProgramsApplied:
     reason: >
@@ -290,10 +279,11 @@ facts:
       - title: "APHSA: Payment Error Rates — Understanding What They Are and How to Support SNAP Agencies in Reducing Them"
         url: https://aphsa.org/resources/payment-error-rates-understanding-what-they-are-and-how-to-support-snap-agencies-in-reducing-them/
 
-  interviewFlags.inconsistencies.utilitiesIncludedButClaimed:
+  interviewFlags.inconsistencies.utilitiesIncludedButBilled:
     reason: >
-      A utility allowance applies only to a household that pays utility costs separately from
-      its rent. What counts as a utility deduction is a common misapplication of policy.
+      A household that pays a utility bill isn't one whose utilities are all included in the
+      rent, and which it is decides whether a utility allowance applies. What counts as a
+      utility deduction is a common misapplication of policy.
     policies: [snap-shelter-utility-deductions]
     patterns: [ruleset-output-fact]
     probeQuestions:

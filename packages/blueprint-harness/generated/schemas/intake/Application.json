@@ -96,6 +96,25 @@
           "format": "uuid",
           "description": "The uploaded document evidencing household income, if one is attached."
         },
+        "type": {
+          "type": "string",
+          "enum": [
+            "new",
+            "renewal"
+          ],
+          "default": "new",
+          "description": "A first application, or an application for recertification — the same kind of request, tied to the household's existing case.\n"
+        },
+        "caseId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet."
+        },
+        "interviewDate": {
+          "type": "string",
+          "format": "date",
+          "description": "The date of the application's interview."
+        },
         "labels": {
           "type": "object",
           "additionalProperties": {
@@ -117,6 +136,11 @@
               "type": "string",
               "format": "uri-reference",
               "description": "Link to the related Document resource."
+            },
+            "case": {
+              "type": "string",
+              "format": "uri-reference",
+              "description": "Link to the related Case resource."
             }
           }
         }
@@ -130,6 +154,173 @@
           "format": "uuid",
           "readOnly": true,
           "description": "Unique identifier (server-generated)."
+        },
+        "previousHousehold": {
+          "readOnly": true,
+          "description": "The household on record before this application's interview: on a new application, the household as filed; on a renewal, the household the case's current determination certified, copied when the renewal is opened so the baseline holds still through the review.\n",
+          "type": "object",
+          "properties": {
+            "statedSize": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The number of people the household says buy and prepare food together."
+            },
+            "utilitiesIncludedInRent": {
+              "type": "boolean",
+              "description": "Whether the household says its utilities are included in the rent."
+            },
+            "statedMonthlyIncome": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Total monthly income, as the household states it."
+            },
+            "statedMonthlyExpenses": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Total monthly expenses, as the household states them."
+            },
+            "members": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "The member's key within the household."
+                  },
+                  "dateOfBirth": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "isDisabled": {
+                    "type": "boolean",
+                    "description": "Whether the member is disabled."
+                  }
+                }
+              }
+            },
+            "jobs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "memberId"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "The job's key within the household."
+                  },
+                  "memberId": {
+                    "type": "string",
+                    "description": "The member who holds the job."
+                  },
+                  "employer": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "incomes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "memberId",
+                  "source",
+                  "amount",
+                  "frequency"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "The income's key within the household."
+                  },
+                  "memberId": {
+                    "type": "string",
+                    "description": "The member who receives it."
+                  },
+                  "jobId": {
+                    "type": "string",
+                    "description": "The job it's paid for, when it's earned."
+                  },
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "earned",
+                      "self_employment",
+                      "unearned"
+                    ]
+                  },
+                  "amount": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "The amount received each time it's paid, in dollars."
+                  },
+                  "frequency": {
+                    "type": "string",
+                    "enum": [
+                      "weekly",
+                      "biweekly",
+                      "semimonthly",
+                      "monthly",
+                      "irregular"
+                    ],
+                    "description": "How often it's paid."
+                  },
+                  "paidInCash": {
+                    "type": "boolean"
+                  },
+                  "amountVaries": {
+                    "type": "boolean",
+                    "description": "Whether the amount changes from one payment to the next, as with irregular hours or tips."
+                  }
+                }
+              }
+            },
+            "expenses": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "type",
+                  "amount",
+                  "frequency"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "rent",
+                      "mortgage",
+                      "utilities",
+                      "dependent_care",
+                      "medical",
+                      "child_support"
+                    ]
+                  },
+                  "amount": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "frequency": {
+                    "type": "string",
+                    "enum": [
+                      "weekly",
+                      "biweekly",
+                      "semimonthly",
+                      "monthly"
+                    ]
+                  }
+                }
+              }
+            }
+          }
         },
         "programCount": {
           "type": "integer",

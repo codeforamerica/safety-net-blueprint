@@ -13,33 +13,31 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import yaml from 'js-yaml';
-import { generate } from '@codeforamerica/blueprint-core';
+import { generate, discover, load } from '@codeforamerica/blueprint-core';
 import { evaluate } from '@codeforamerica/blueprint-rules-engine';
 
-import { contractsDir } from '../../paths.js';
+import { contractsDir, harnessDir } from '../../paths.js';
 
 /**
- * Compile one ruleset through `generate`, the way the pipeline does.
- *
- * Kept local to the test rather than importing a compiler: compiling is a
- * build step core performs, not something consumers call.
+ * The compiled graph for one ruleset, the way the pipeline compiles it.
  */
 function graphFor(rulesDoc, rulesetName) {
   const name = rulesetName ?? Object.keys(rulesDoc.rulesets ?? {})[0];
-  const graphs = generate([{
-    path: 'rules.yaml',
-    relativePath: 'rules.yaml',
-    type: 'rules',
-    domain: rulesDoc.domain ?? null,
-    content: rulesDoc,
-    refs: () => new Map(),
-    model: () => null,
-    resolved: false,
-    provenance: null,
-  }], 'graph');
-  const found = graphs.find(({ graph }) => graph.ruleset === name);
+  const found = compiledGraphs().find(({ graph }) => graph.ruleset === name);
   if (!found) throw new Error(`Ruleset "${name}" produced no graph`);
   return found.graph;
+}
+
+/**
+ * Every graph in the resolved harness, compiled once. Compiled from the whole
+ * set rather than one file, so an input that `$ref`s a shared schema is
+ * followed down to its fields — which is what makes a date inside a `$ref`'d
+ * household a date.
+ */
+let graphs;
+function compiledGraphs() {
+  graphs ??= generate(discover(join(harnessDir, 'generated/resolved')).map(load), 'graph');
+  return graphs;
 }
 
 function loadExamplesAndRules(domain, rulesetName) {
@@ -96,17 +94,16 @@ describe('evaluate — eligibility/expeditedSnap', () => {
 describe('evaluate — intake/interviewFlags', () => {
   const { graph, examples } = loadExamplesAndRules('intake', 'interviewFlags');
 
-  it('a recertification where much has changed and the application doesn\'t agree with itself', () => {
+  it('a renewal where much has changed and the answers don\'t agree', () => {
     const result = outputValues(evaluate(graph, examples[0].inputs));
     assert.deepEqual(result, {
       'risks.earnedIncomeVaries':                     true,
       'risks.cashOrSelfEmploymentIncome':             true,
-      'risks.incomeChangedSinceLastCertification':    true,
-      'risks.householdChangedSinceLastCertification': true,
+      'risks.incomeChangedSincePrevious':             true,
+      'risks.householdChangedSincePrevious':          true,
       'risks.shelterCostsCarriedOver':                false,
       'risks.elderlyOrDisabledWithoutMedicalCosts':   true,
       'risks.childrenAndEarnersWithoutDependentCare': true,
-      'risks.circumstancesChangedSinceApplying':      true,
       'risks.multipleProgramsApplied':                false,
       'inconsistencies.incomeBelowExpenses':             true,
       'inconsistencies.wagesDifferFromWageRecords':      true,
@@ -114,7 +111,7 @@ describe('evaluate — intake/interviewFlags', () => {
       'inconsistencies.householdSizeDiffersFromMembers': true,
       'inconsistencies.jobWithoutEarnedIncome':          false,
       'inconsistencies.earnedIncomeWithoutJob':          false,
-      'inconsistencies.utilitiesIncludedButClaimed':     true,
+      'inconsistencies.utilitiesIncludedButBilled':      true,
     });
   });
 

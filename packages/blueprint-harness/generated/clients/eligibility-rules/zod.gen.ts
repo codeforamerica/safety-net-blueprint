@@ -12,7 +12,7 @@ export const zExpeditedSnapRequest = z.object({
         monthlyShelterCost: z.optional(z.number()),
         isMigrantFarmworker: z.optional(z.boolean())
     })),
-    policy: z.optional(z.object({
+    parameters: z.optional(z.object({
         incomeThreshold: z.optional(z.number()).default(150),
         resourceThreshold: z.optional(z.number()).default(100)
     }))
@@ -53,7 +53,7 @@ export const zEvaluateExpeditedSnapData = z.object({
             monthlyShelterCost: z.optional(z.number()),
             isMigrantFarmworker: z.optional(z.boolean())
         })),
-        policy: z.optional(z.object({
+        parameters: z.optional(z.object({
             incomeThreshold: z.optional(z.number()).default(150),
             resourceThreshold: z.optional(z.number()).default(100)
         }))

@@ -1,0 +1,123 @@
+openapi: 3.1.0
+info:
+  title: Case Management API
+  version: 1.0.0
+  x-domain: case-management
+  x-status: stable
+  x-visibility: public
+  description: >
+    A household's ongoing case, minimally: enough for a renewal application to
+    say which case it recertifies, and for the case to say which determination
+    currently certifies it.
+
+servers:
+  - url: http://localhost:1080/case-management
+    description: Local development server
+
+paths:
+  /cases:
+    get:
+      summary: List cases
+      operationId: listCases
+      tags: [Cases]
+      parameters:
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam'
+      responses:
+        '200':
+          description: A paginated list of cases.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseList'
+        '400':
+          $ref: '../../common/components/responses.yaml#/BadRequest'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+
+  /cases/{caseId}:
+    parameters:
+      - name: caseId
+        in: path
+        required: true
+        description: Unique identifier of the case.
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get a case
+      operationId: getCase
+      tags: [Cases]
+      responses:
+        '200':
+          description: Case retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Case'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+
+components:
+  schemas:
+    Case:
+      type: object
+      description: A household's ongoing case.
+      required: [id, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        status:
+          type: string
+          enum: [open, closed]
+        currentDeterminationId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: >
+            The determination that currently certifies the household. A renewal
+            compares against what it certified, however many recertifications
+            came before.
+          x-relationship:
+            type: fk
+            domain: eligibility
+            resource: Determination
+            style: links-only
+        certificationEndDate:
+          type: string
+          format: date
+          description: When the current certification ends.
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    CaseList:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Case'
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean

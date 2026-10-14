@@ -10,7 +10,7 @@ rulesets:
             liquidResources: 75
             monthlyShelterCost: 800
             isMigrantFarmworker: false
-          policy:
+          parameters:
             incomeThreshold: 150
             resourceThreshold: 100
       - description: Income and resources below shelter cost — qualifies on condition 2
@@ -20,7 +20,7 @@ rulesets:
             liquidResources: 50
             monthlyShelterCost: 650
             isMigrantFarmworker: false
-          policy:
+          parameters:
             incomeThreshold: 150
             resourceThreshold: 100
       - description: Migrant farmworker with low resources — qualifies on condition 3
@@ -30,7 +30,7 @@ rulesets:
             liquidResources: 60
             monthlyShelterCost: 1000
             isMigrantFarmworker: true
-          policy:
+          parameters:
             incomeThreshold: 150
             resourceThreshold: 100
       - description: Above all thresholds — does not qualify
@@ -40,6 +40,6 @@ rulesets:
             liquidResources: 500
             monthlyShelterCost: 1200
             isMigrantFarmworker: false
-          policy:
+          parameters:
             incomeThreshold: 150
             resourceThreshold: 100

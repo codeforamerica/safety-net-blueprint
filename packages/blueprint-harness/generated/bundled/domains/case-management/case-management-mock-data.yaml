@@ -1,0 +1,8 @@
+domain: case-management
+CaseExample1:
+  id: 44444444-4444-4444-8444-444444444444
+  status: open
+  currentDeterminationId: 55555555-5555-4555-8555-555555555555
+  certificationEndDate: "2026-10-31"
+  createdAt: "2025-10-20T09:00:00Z"
+  updatedAt: "2025-10-20T09:00:00Z"

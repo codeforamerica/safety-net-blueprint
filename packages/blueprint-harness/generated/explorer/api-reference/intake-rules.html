@@ -142,29 +142,49 @@
         <details>
           <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
             <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">application</span>
-            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">InterviewApplication</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">current</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Household</span>
             
             
-            <span style="font-size:11px;color:#555;margin-left:2px;">The application as it stands at the interview.</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">A household's circumstances at one point in time.</span>
           </summary>
           <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">programsAppliedFor</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[enum]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Programs the household applied for.</span>
-      </div>
-      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">snap</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">medicaid</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">tanf</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">chip</code></div>
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">householdSize</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">statedSize</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The household size the application states.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The number of people the household says buy and prepare food together.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">utilitiesIncludedInRent</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the household says its utilities are included in the rent.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">statedMonthlyIncome</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Total monthly income, as the household states it.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">statedMonthlyExpenses</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Total monthly expenses, as the household states them.</span>
       </div>
       
     </div>
@@ -182,19 +202,19 @@
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">The member's id.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The member's key within the household.</span>
       </div>
       
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">age</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">dateOfBirth</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date)</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Age in years.</span>
+        
       </div>
       
     </div>
@@ -222,9 +242,9 @@
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">The job's id.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The job's key within the household.</span>
       </div>
       
     </div>
@@ -232,9 +252,19 @@
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">memberId</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
         <span style="font-size:11px;color:#555;margin-left:2px;">The member who holds the job.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">employer</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        
       </div>
       
     </div>
@@ -252,9 +282,9 @@
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">The income's id.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The income's key within the household.</span>
       </div>
       
     </div>
@@ -262,7 +292,7 @@
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">memberId</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
         <span style="font-size:11px;color:#555;margin-left:2px;">The member who receives it.</span>
       </div>
@@ -274,37 +304,57 @@
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The job it's paid for</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The job it's paid for, when it's earned.</span>
       </div>
       
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">type</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Where the money comes from.</span>
       </div>
       <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">earned</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">self_employment</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">unearned</code></div>
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">payPattern</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">amount</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">How it's paid.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The amount received each time it's paid, in dollars.</span>
       </div>
-      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">regular</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">irregular</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">tips</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">cash</code></div>
+      
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">monthlyAmount</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">frequency</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">How often it's paid.</span>
+      </div>
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">weekly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">biweekly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">semimonthly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">monthly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">irregular</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">paidInCash</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Monthly amount</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">amountVaries</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the amount changes from one payment to the next, as with irregular hours or tips.</span>
       </div>
       
     </div>
@@ -320,41 +370,53 @@
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">category</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">type</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">What it's for.</span>
       </div>
       <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">rent</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">mortgage</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">utilities</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">dependent_care</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">medical</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">child_support</code></div>
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">monthlyAmount</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">amount</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Monthly amount</span>
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">reportedMonthlyIncome</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">frequency</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Total monthly income, as the household reported it.</span>
       </div>
-      
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">weekly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">biweekly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">semimonthly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">monthly</code></div>
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    </div>
+        </details>
+      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+        <details>
+          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">previous</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">Household</span>
+            
+            
+            <span style="font-size:11px;color:#555;margin-left:2px;">A household's circumstances at one point in time.</span>
+          </summary>
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">reportedMonthlyExpenses</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">statedSize</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Total monthly expenses, as the household reported them.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The number of people the household says buy and prepare food together.</span>
       </div>
       
     </div>
@@ -370,43 +432,101 @@
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">claimsUtilityAllowance</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">statedMonthlyIncome</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether a standard utility allowance is applied to the household.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Total monthly income, as the household states it.</span>
       </div>
       
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">hasChangedCircumstances</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">statedMonthlyExpenses</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the household reported changes since the application was submitted.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Total monthly expenses, as the household states them.</span>
       </div>
       
     </div>
-    </div>
-        </details>
-      </div><div style="border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
-        <details>
-          <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-            <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">lastCertification</span>
-            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">LastCertification</span>
-            
-            
-            <span style="font-size:11px;color:#555;margin-left:2px;">What the household's last certification recorded.</span>
-          </summary>
-          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">memberIds</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[string]</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">members</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The members certified last time.</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The member's key within the household.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">dateOfBirth</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date)</span>
+        
+        
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">isDisabled</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the member is disabled.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">jobs</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        
+        
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The job's key within the household.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">memberId</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The member who holds the job.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">employer</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        
       </div>
       
     </div>
@@ -424,9 +544,9 @@
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">id</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">The income's id.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The income's key within the household.</span>
       </div>
       
     </div>
@@ -434,7 +554,7 @@
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">memberId</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
-        
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
         <span style="font-size:11px;color:#555;margin-left:2px;">The member who receives it.</span>
       </div>
@@ -446,37 +566,57 @@
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">The job it's paid for</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The job it's paid for, when it's earned.</span>
       </div>
       
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">type</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">source</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Where the money comes from.</span>
       </div>
       <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">earned</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">self_employment</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">unearned</code></div>
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">payPattern</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">amount</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">How it's paid.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">The amount received each time it's paid, in dollars.</span>
       </div>
-      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">regular</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">irregular</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">tips</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">cash</code></div>
+      
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">monthlyAmount</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">frequency</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">How often it's paid.</span>
+      </div>
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">weekly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">biweekly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">semimonthly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">monthly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">irregular</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">paidInCash</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Monthly amount</span>
+        
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">amountVaries</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#FFF3E0;color:#7A4800;font-family:monospace;">boolean</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Whether the amount changes from one payment to the next, as with irregular hours or tips.</span>
       </div>
       
     </div>
@@ -492,23 +632,33 @@
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">category</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">type</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">What it's for.</span>
       </div>
       <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">rent</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">mortgage</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">utilities</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">dependent_care</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">medical</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">child_support</code></div>
     </div>
     <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">monthlyAmount</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">amount</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Monthly amount</span>
       </div>
       
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">frequency</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
+        <span style="font-size:9px;font-weight:700;color:#AF121D;letter-spacing:0.04em;text-transform:uppercase;">required</span>
+        
+        
+      </div>
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">weekly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">biweekly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">semimonthly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">monthly</code></div>
     </div>
     </div>
         </details>
@@ -516,75 +666,146 @@
         <details>
           <summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
             <span class="chevron" style="font-size:9px;color:#aaa;flex-shrink:0;margin-top:2px;">&#x25B6;</span>
-            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">dataMatches</span>
-            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">DataMatches</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">verified</span>
+            <span style="font-family:monospace;font-size:11px;font-weight:600;color:#5650BE;background:#E6EBF9;border:1px solid #C2C0E8;border-radius:4px;padding:1px 6px;">array[IncomeVerificationWritable]</span>
             
             
-            <span style="font-size:11px;color:#555;margin-left:2px;">What outside data and verified documents say.</span>
+            <span style="font-size:11px;color:#555;margin-left:2px;">What outside records show for this application.</span>
           </summary>
-          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
+          <div style="border-top:1px solid #f0f0f0;background:rgba(0,0,0,0.012);"><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">wageRecords</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">kind</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
         
         
-        <span style="font-size:11px;color:#555;margin-left:2px;">Monthly wages from state wage records or IEVS, by member.</span>
+        <span style="font-size:11px;color:#555;margin-left:2px;">Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+</span>
       </div>
-      
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">wage_record</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">pay_stub</code></div>
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">memberId</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
         
         
-        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The member it's about, by their key in the household.</span>
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">monthlyWages</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
-        
-        
-        
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;background:rgba(0,0,0,0.015);">
-      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">payStubs</span>
-        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[object]</span>
-        
-        
-        <span style="font-size:11px;color:#555;margin-left:2px;">Monthly amounts worked out from verified pay stubs, by income.</span>
-      </div>
-      
-    </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
         <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">incomeId</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
         
         
-        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a pay stub, the income it's for, by its key in the household.</span>
       </div>
       
     </div>
-    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 52px;">
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
       <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">monthlyAmount</span>
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">period</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">amount</span>
         <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
         
         
+        <span style="font-size:11px;color:#555;margin-left:2px;">Gross wages for the quarter, or gross pay on the stub.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">frequency</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#f0f0f0;color:#555;font-family:monospace;">enum</span>
         
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">For a pay stub, how often the pay it shows is paid.</span>
+      </div>
+      <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:3px;"><span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;margin-right:4px;">enum</span><code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">weekly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">biweekly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">semimonthly</code> <code style="font-size:10px;background:#f0f0f0;padding:0 3px;border-radius:2px;">monthly</code></div>
+    </div>
+    </div>
+        </details>
+      </div><div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">asOf</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E2F9F6;color:#006152;font-family:monospace;">string</span><span style="font-size:10px;color:#999;font-family:monospace;"> (date)</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The date ages are measured from — the interview date.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">programsAppliedFor</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">array[string]</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The programs the household applied for.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 12px;background:rgba(0,0,0,0.015);">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">parameters</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#F7EDE8;color:#6B3A2A;font-family:monospace;">object</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">Choices a state makes, with defaults.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">weeklyToMonthly</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">What weekly pay is multiplied by for a month. SNAP allows 4.3, or the exact 52 ÷ 12 (7 CFR § 273.10(c)(2)).</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">biweeklyToMonthly</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">What pay every two weeks is multiplied by for a month. SNAP allows 2.15, or the exact 26 ÷ 12 (7 CFR § 273.10(c)(2)).</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">differenceAllowed</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">number</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">How far apart two amounts can be, as a fraction, before they count as different.</span>
+      </div>
+      
+    </div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #f2f2f2;padding:6px 12px 6px 32px;">
+      <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:monospace;font-size:12px;font-weight:600;color:#1a1a1a;">childCareAgeUnder</span>
+        <span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;background:#E6EBF9;color:#2B1A78;font-family:monospace;">integer</span>
+        
+        
+        <span style="font-size:11px;color:#555;margin-left:2px;">The age under which a child is taken to need care while the adults work.</span>
       </div>
       
     </div>
     </div>
-        </details>
-      </div></div>
     </details>
   </div>
       <div style="margin-top:16px;">

@@ -4,6 +4,7 @@
 # ── Application ─────────────────────────────────────────────────────────────────
 
 application.proofOfIncomeDocumentId: { type: uuid, relationship: Document }
+application.caseId: { type: uuid, relationship: Case }
 application.id: { type: uuid }
 application.programsAppliedFor[]: { type: enum, values: [snap, medicaid, chip, tanf] }
 application.channel: { type: enum, values: [online, phone, in_person, mail] }
@@ -16,10 +17,39 @@ application.contactInfo: { type: object }
 application.contactInfo.phone: { type: string }
 application.contactInfo.email: { type: email }
 application.contactInfo.preferredContact: { type: enum, values: [phone, email, mail] }
+application.type: { type: enum, values: [new, renewal] }
+application.interviewDate: { type: date }
 application.labels: { type: object }
 application.countyCode: { type: string }
 application.links: { type: object }
 application.links.proofOfIncomeDocument: { type: string }
+application.links.case: { type: string }
+application.previousHousehold: { type: object }
+application.previousHousehold.statedSize: { type: integer }
+application.previousHousehold.utilitiesIncludedInRent: { type: boolean }
+application.previousHousehold.statedMonthlyIncome: { type: number }
+application.previousHousehold.statedMonthlyExpenses: { type: number }
+application.previousHousehold.members[]: { type: list }
+application.previousHousehold.members[].id: { type: string }
+application.previousHousehold.members[].dateOfBirth: { type: date }
+application.previousHousehold.members[].isDisabled: { type: boolean }
+application.previousHousehold.jobs[]: { type: list }
+application.previousHousehold.jobs[].id: { type: string }
+application.previousHousehold.jobs[].memberId: { type: string }
+application.previousHousehold.jobs[].employer: { type: string }
+application.previousHousehold.incomes[]: { type: list }
+application.previousHousehold.incomes[].id: { type: string }
+application.previousHousehold.incomes[].memberId: { type: string }
+application.previousHousehold.incomes[].jobId: { type: string }
+application.previousHousehold.incomes[].source: { type: enum, values: [earned, self_employment, unearned] }
+application.previousHousehold.incomes[].amount: { type: number }
+application.previousHousehold.incomes[].frequency: { type: enum, values: [weekly, biweekly, semimonthly, monthly, irregular] }
+application.previousHousehold.incomes[].paidInCash: { type: boolean }
+application.previousHousehold.incomes[].amountVaries: { type: boolean }
+application.previousHousehold.expenses[]: { type: list }
+application.previousHousehold.expenses[].type: { type: enum, values: [rent, mortgage, utilities, dependent_care, medical, child_support] }
+application.previousHousehold.expenses[].amount: { type: number }
+application.previousHousehold.expenses[].frequency: { type: enum, values: [weekly, biweekly, semimonthly, monthly] }
 application.programCount: { type: integer }
 application.confirmationNumber: { type: string }
 application.status: { type: enum, values: [draft, submitted, under_review, withdrawn, closed] }
@@ -32,6 +62,20 @@ application.slaInfo[].status: { type: enum, values: [active, warning, paused, br
 application.slaInfo[].clockStartedAt: { type: datetime }
 application.slaInfo[].deadline: { type: datetime }
 application.proofOfIncomeDocument: { type: string, relationship: Document }
+
+# ── IncomeVerification ──────────────────────────────────────────────────────────
+
+application.incomeVerifications[]: { type: list(IncomeVerification) }
+application.incomeVerifications[].id: { type: uuid }
+application.incomeVerifications[].applicationId: { type: uuid, relationship: Application }
+application.incomeVerifications[].kind: { type: enum, values: [wage_record, pay_stub] }
+application.incomeVerifications[].memberId: { type: string }
+application.incomeVerifications[].incomeId: { type: string }
+application.incomeVerifications[].period: { type: string }
+application.incomeVerifications[].amount: { type: number }
+application.incomeVerifications[].frequency: { type: enum, values: [weekly, biweekly, semimonthly, monthly] }
+application.incomeVerifications[].links: { type: object }
+application.incomeVerifications[].links.application: { type: string }
 
 # ── ApplicationMember ───────────────────────────────────────────────────────────
 

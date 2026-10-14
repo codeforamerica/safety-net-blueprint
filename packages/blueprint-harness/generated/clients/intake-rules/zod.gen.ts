@@ -6,97 +6,132 @@ import { z } from 'zod';
  * Input data for interviewFlags evaluation. All fields are optional — partial inputs trigger partial evaluation.
  */
 export const zInterviewFlagsRequest = z.object({
-    application: z.optional(z.object({
-        programsAppliedFor: z.optional(z.array(z.enum([
-            'snap',
-            'medicaid',
-            'tanf',
-            'chip'
-        ]))),
-        householdSize: z.optional(z.int()),
+    current: z.optional(z.object({
+        statedSize: z.optional(z.int().gte(1)),
+        utilitiesIncludedInRent: z.optional(z.boolean()),
+        statedMonthlyIncome: z.optional(z.number().gte(0)),
+        statedMonthlyExpenses: z.optional(z.number().gte(0)),
         members: z.optional(z.array(z.object({
-            id: z.optional(z.string()),
-            age: z.optional(z.int()),
+            id: z.string(),
+            dateOfBirth: z.optional(z.iso.date()),
             isDisabled: z.optional(z.boolean())
         }))),
         jobs: z.optional(z.array(z.object({
-            id: z.optional(z.string()),
-            memberId: z.optional(z.string())
+            id: z.string(),
+            memberId: z.string(),
+            employer: z.optional(z.string())
         }))),
         incomes: z.optional(z.array(z.object({
-            id: z.optional(z.string()),
-            memberId: z.optional(z.string()),
+            id: z.string(),
+            memberId: z.string(),
             jobId: z.optional(z.string()),
-            type: z.optional(z.enum([
+            source: z.enum([
                 'earned',
                 'self_employment',
                 'unearned'
-            ])),
-            payPattern: z.optional(z.enum([
-                'regular',
-                'irregular',
-                'tips',
-                'cash'
-            ])),
-            monthlyAmount: z.optional(z.number())
+            ]),
+            amount: z.number().gte(0),
+            frequency: z.enum([
+                'weekly',
+                'biweekly',
+                'semimonthly',
+                'monthly',
+                'irregular'
+            ]),
+            paidInCash: z.optional(z.boolean()),
+            amountVaries: z.optional(z.boolean())
         }))),
         expenses: z.optional(z.array(z.object({
-            category: z.optional(z.enum([
+            type: z.enum([
                 'rent',
                 'mortgage',
                 'utilities',
                 'dependent_care',
                 'medical',
                 'child_support'
-            ])),
-            monthlyAmount: z.optional(z.number())
-        }))),
-        reportedMonthlyIncome: z.optional(z.number()),
-        reportedMonthlyExpenses: z.optional(z.number()),
+            ]),
+            amount: z.number().gte(0),
+            frequency: z.enum([
+                'weekly',
+                'biweekly',
+                'semimonthly',
+                'monthly'
+            ])
+        })))
+    })),
+    previous: z.optional(z.object({
+        statedSize: z.optional(z.int().gte(1)),
         utilitiesIncludedInRent: z.optional(z.boolean()),
-        claimsUtilityAllowance: z.optional(z.boolean()),
-        hasChangedCircumstances: z.optional(z.boolean())
-    })),
-    lastCertification: z.optional(z.object({
-        memberIds: z.optional(z.array(z.string())),
+        statedMonthlyIncome: z.optional(z.number().gte(0)),
+        statedMonthlyExpenses: z.optional(z.number().gte(0)),
+        members: z.optional(z.array(z.object({
+            id: z.string(),
+            dateOfBirth: z.optional(z.iso.date()),
+            isDisabled: z.optional(z.boolean())
+        }))),
+        jobs: z.optional(z.array(z.object({
+            id: z.string(),
+            memberId: z.string(),
+            employer: z.optional(z.string())
+        }))),
         incomes: z.optional(z.array(z.object({
-            id: z.optional(z.string()),
-            memberId: z.optional(z.string()),
+            id: z.string(),
+            memberId: z.string(),
             jobId: z.optional(z.string()),
-            type: z.optional(z.enum([
+            source: z.enum([
                 'earned',
                 'self_employment',
                 'unearned'
-            ])),
-            payPattern: z.optional(z.enum([
-                'regular',
-                'irregular',
-                'tips',
-                'cash'
-            ])),
-            monthlyAmount: z.optional(z.number())
+            ]),
+            amount: z.number().gte(0),
+            frequency: z.enum([
+                'weekly',
+                'biweekly',
+                'semimonthly',
+                'monthly',
+                'irregular'
+            ]),
+            paidInCash: z.optional(z.boolean()),
+            amountVaries: z.optional(z.boolean())
         }))),
         expenses: z.optional(z.array(z.object({
-            category: z.optional(z.enum([
+            type: z.enum([
                 'rent',
                 'mortgage',
                 'utilities',
                 'dependent_care',
                 'medical',
                 'child_support'
-            ])),
-            monthlyAmount: z.optional(z.number())
+            ]),
+            amount: z.number().gte(0),
+            frequency: z.enum([
+                'weekly',
+                'biweekly',
+                'semimonthly',
+                'monthly'
+            ])
         })))
     })),
-    dataMatches: z.optional(z.object({
-        wageRecords: z.optional(z.array(z.object({
-            memberId: z.optional(z.string()),
-            monthlyWages: z.optional(z.number())
-        }))),
-        payStubs: z.optional(z.array(z.object({
-            incomeId: z.optional(z.string()),
-            monthlyAmount: z.optional(z.number())
-        })))
+    verified: z.optional(z.array(z.object({
+        kind: z.optional(z.enum(['wage_record', 'pay_stub'])),
+        memberId: z.optional(z.string()),
+        incomeId: z.optional(z.string()),
+        period: z.optional(z.string()),
+        amount: z.optional(z.number().gte(0)),
+        frequency: z.optional(z.enum([
+            'weekly',
+            'biweekly',
+            'semimonthly',
+            'monthly'
+        ]))
+    }))),
+    asOf: z.optional(z.iso.date()),
+    programsAppliedFor: z.optional(z.array(z.string())),
+    parameters: z.optional(z.object({
+        weeklyToMonthly: z.optional(z.number()).default(4.3),
+        biweeklyToMonthly: z.optional(z.number()).default(2.15),
+        differenceAllowed: z.optional(z.number()).default(0.1),
+        childCareAgeUnder: z.optional(z.int()).default(13)
     }))
 });
 
@@ -129,97 +164,132 @@ export const zInterviewFlagsResponse = z.array(z.union([
 
 export const zEvaluateInterviewFlagsData = z.object({
     body: z.object({
-        application: z.optional(z.object({
-            programsAppliedFor: z.optional(z.array(z.enum([
-                'snap',
-                'medicaid',
-                'tanf',
-                'chip'
-            ]))),
-            householdSize: z.optional(z.int()),
+        current: z.optional(z.object({
+            statedSize: z.optional(z.int().gte(1)),
+            utilitiesIncludedInRent: z.optional(z.boolean()),
+            statedMonthlyIncome: z.optional(z.number().gte(0)),
+            statedMonthlyExpenses: z.optional(z.number().gte(0)),
             members: z.optional(z.array(z.object({
-                id: z.optional(z.string()),
-                age: z.optional(z.int()),
+                id: z.string(),
+                dateOfBirth: z.optional(z.iso.date()),
                 isDisabled: z.optional(z.boolean())
             }))),
             jobs: z.optional(z.array(z.object({
-                id: z.optional(z.string()),
-                memberId: z.optional(z.string())
+                id: z.string(),
+                memberId: z.string(),
+                employer: z.optional(z.string())
             }))),
             incomes: z.optional(z.array(z.object({
-                id: z.optional(z.string()),
-                memberId: z.optional(z.string()),
+                id: z.string(),
+                memberId: z.string(),
                 jobId: z.optional(z.string()),
-                type: z.optional(z.enum([
+                source: z.enum([
                     'earned',
                     'self_employment',
                     'unearned'
-                ])),
-                payPattern: z.optional(z.enum([
-                    'regular',
-                    'irregular',
-                    'tips',
-                    'cash'
-                ])),
-                monthlyAmount: z.optional(z.number())
+                ]),
+                amount: z.number().gte(0),
+                frequency: z.enum([
+                    'weekly',
+                    'biweekly',
+                    'semimonthly',
+                    'monthly',
+                    'irregular'
+                ]),
+                paidInCash: z.optional(z.boolean()),
+                amountVaries: z.optional(z.boolean())
             }))),
             expenses: z.optional(z.array(z.object({
-                category: z.optional(z.enum([
+                type: z.enum([
                     'rent',
                     'mortgage',
                     'utilities',
                     'dependent_care',
                     'medical',
                     'child_support'
-                ])),
-                monthlyAmount: z.optional(z.number())
-            }))),
-            reportedMonthlyIncome: z.optional(z.number()),
-            reportedMonthlyExpenses: z.optional(z.number()),
+                ]),
+                amount: z.number().gte(0),
+                frequency: z.enum([
+                    'weekly',
+                    'biweekly',
+                    'semimonthly',
+                    'monthly'
+                ])
+            })))
+        })),
+        previous: z.optional(z.object({
+            statedSize: z.optional(z.int().gte(1)),
             utilitiesIncludedInRent: z.optional(z.boolean()),
-            claimsUtilityAllowance: z.optional(z.boolean()),
-            hasChangedCircumstances: z.optional(z.boolean())
-        })),
-        lastCertification: z.optional(z.object({
-            memberIds: z.optional(z.array(z.string())),
+            statedMonthlyIncome: z.optional(z.number().gte(0)),
+            statedMonthlyExpenses: z.optional(z.number().gte(0)),
+            members: z.optional(z.array(z.object({
+                id: z.string(),
+                dateOfBirth: z.optional(z.iso.date()),
+                isDisabled: z.optional(z.boolean())
+            }))),
+            jobs: z.optional(z.array(z.object({
+                id: z.string(),
+                memberId: z.string(),
+                employer: z.optional(z.string())
+            }))),
             incomes: z.optional(z.array(z.object({
-                id: z.optional(z.string()),
-                memberId: z.optional(z.string()),
+                id: z.string(),
+                memberId: z.string(),
                 jobId: z.optional(z.string()),
-                type: z.optional(z.enum([
+                source: z.enum([
                     'earned',
                     'self_employment',
                     'unearned'
-                ])),
-                payPattern: z.optional(z.enum([
-                    'regular',
-                    'irregular',
-                    'tips',
-                    'cash'
-                ])),
-                monthlyAmount: z.optional(z.number())
+                ]),
+                amount: z.number().gte(0),
+                frequency: z.enum([
+                    'weekly',
+                    'biweekly',
+                    'semimonthly',
+                    'monthly',
+                    'irregular'
+                ]),
+                paidInCash: z.optional(z.boolean()),
+                amountVaries: z.optional(z.boolean())
             }))),
             expenses: z.optional(z.array(z.object({
-                category: z.optional(z.enum([
+                type: z.enum([
                     'rent',
                     'mortgage',
                     'utilities',
                     'dependent_care',
                     'medical',
                     'child_support'
-                ])),
-                monthlyAmount: z.optional(z.number())
+                ]),
+                amount: z.number().gte(0),
+                frequency: z.enum([
+                    'weekly',
+                    'biweekly',
+                    'semimonthly',
+                    'monthly'
+                ])
             })))
         })),
-        dataMatches: z.optional(z.object({
-            wageRecords: z.optional(z.array(z.object({
-                memberId: z.optional(z.string()),
-                monthlyWages: z.optional(z.number())
-            }))),
-            payStubs: z.optional(z.array(z.object({
-                incomeId: z.optional(z.string()),
-                monthlyAmount: z.optional(z.number())
-            })))
+        verified: z.optional(z.array(z.object({
+            kind: z.optional(z.enum(['wage_record', 'pay_stub'])),
+            memberId: z.optional(z.string()),
+            incomeId: z.optional(z.string()),
+            period: z.optional(z.string()),
+            amount: z.optional(z.number().gte(0)),
+            frequency: z.optional(z.enum([
+                'weekly',
+                'biweekly',
+                'semimonthly',
+                'monthly'
+            ]))
+        }))),
+        asOf: z.optional(z.iso.date()),
+        programsAppliedFor: z.optional(z.array(z.string())),
+        parameters: z.optional(z.object({
+            weeklyToMonthly: z.optional(z.number()).default(4.3),
+            biweeklyToMonthly: z.optional(z.number()).default(2.15),
+            differenceAllowed: z.optional(z.number()).default(0.1),
+            childCareAgeUnder: z.optional(z.int()).default(13)
         }))
     }),
     path: z.optional(z.never()),

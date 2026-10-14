@@ -6,6 +6,7 @@ $defs:
     description: |
       Blueprint domain identifier. Used as the {domain} path parameter on metadata mutation endpoints and as the value type for x-domain annotations on domain OpenAPI specs. Its values are generated at resolve time: the domains the set's OpenAPI, AsyncAPI and rules documents declare.
     enum:
+      - case-management
       - document-management
       - eligibility
       - intake

@@ -42,6 +42,83 @@ export type Determination = {
      */
     readonly determinedAt?: string | null;
     /**
+     * The household as this determination certified it: what a renewal compares the household's answers against at the next interview.
+     *
+     */
+    readonly certifiedHousehold?: {
+        /**
+         * The number of people the household says buy and prepare food together.
+         */
+        statedSize?: number;
+        /**
+         * Whether the household says its utilities are included in the rent.
+         */
+        utilitiesIncludedInRent?: boolean;
+        /**
+         * Total monthly income, as the household states it.
+         */
+        statedMonthlyIncome?: number;
+        /**
+         * Total monthly expenses, as the household states them.
+         */
+        statedMonthlyExpenses?: number;
+        members?: Array<{
+            /**
+             * The member's key within the household.
+             */
+            id: string;
+            dateOfBirth?: string;
+            /**
+             * Whether the member is disabled.
+             */
+            isDisabled?: boolean;
+        }>;
+        jobs?: Array<{
+            /**
+             * The job's key within the household.
+             */
+            id: string;
+            /**
+             * The member who holds the job.
+             */
+            memberId: string;
+            employer?: string;
+        }>;
+        incomes?: Array<{
+            /**
+             * The income's key within the household.
+             */
+            id: string;
+            /**
+             * The member who receives it.
+             */
+            memberId: string;
+            /**
+             * The job it's paid for, when it's earned.
+             */
+            jobId?: string;
+            source: 'earned' | 'self_employment' | 'unearned';
+            /**
+             * The amount received each time it's paid, in dollars.
+             */
+            amount: number;
+            /**
+             * How often it's paid.
+             */
+            frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+            paidInCash?: boolean;
+            /**
+             * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+             */
+            amountVaries?: boolean;
+        }>;
+        expenses?: Array<{
+            type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+            amount: number;
+            frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+        }>;
+    };
+    /**
      * Timestamp when the determination was created.
      */
     readonly createdAt: string;
@@ -102,6 +179,83 @@ export type DeterminationList = {
          * Timestamp when the determination was finalized. Null until complete.
          */
         readonly determinedAt?: string | null;
+        /**
+         * The household as this determination certified it: what a renewal compares the household's answers against at the next interview.
+         *
+         */
+        readonly certifiedHousehold?: {
+            /**
+             * The number of people the household says buy and prepare food together.
+             */
+            statedSize?: number;
+            /**
+             * Whether the household says its utilities are included in the rent.
+             */
+            utilitiesIncludedInRent?: boolean;
+            /**
+             * Total monthly income, as the household states it.
+             */
+            statedMonthlyIncome?: number;
+            /**
+             * Total monthly expenses, as the household states them.
+             */
+            statedMonthlyExpenses?: number;
+            members?: Array<{
+                /**
+                 * The member's key within the household.
+                 */
+                id: string;
+                dateOfBirth?: string;
+                /**
+                 * Whether the member is disabled.
+                 */
+                isDisabled?: boolean;
+            }>;
+            jobs?: Array<{
+                /**
+                 * The job's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who holds the job.
+                 */
+                memberId: string;
+                employer?: string;
+            }>;
+            incomes?: Array<{
+                /**
+                 * The income's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who receives it.
+                 */
+                memberId: string;
+                /**
+                 * The job it's paid for, when it's earned.
+                 */
+                jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
+                /**
+                 * The amount received each time it's paid, in dollars.
+                 */
+                amount: number;
+                /**
+                 * How often it's paid.
+                 */
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
+                /**
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                 */
+                amountVaries?: boolean;
+            }>;
+            expenses?: Array<{
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+            }>;
+        };
         /**
          * Timestamp when the determination was created.
          */
@@ -477,6 +631,83 @@ export type ListDeterminationsResponses = {
              */
             readonly determinedAt?: string | null;
             /**
+             * The household as this determination certified it: what a renewal compares the household's answers against at the next interview.
+             *
+             */
+            readonly certifiedHousehold?: {
+                /**
+                 * The number of people the household says buy and prepare food together.
+                 */
+                statedSize?: number;
+                /**
+                 * Whether the household says its utilities are included in the rent.
+                 */
+                utilitiesIncludedInRent?: boolean;
+                /**
+                 * Total monthly income, as the household states it.
+                 */
+                statedMonthlyIncome?: number;
+                /**
+                 * Total monthly expenses, as the household states them.
+                 */
+                statedMonthlyExpenses?: number;
+                members?: Array<{
+                    /**
+                     * The member's key within the household.
+                     */
+                    id: string;
+                    dateOfBirth?: string;
+                    /**
+                     * Whether the member is disabled.
+                     */
+                    isDisabled?: boolean;
+                }>;
+                jobs?: Array<{
+                    /**
+                     * The job's key within the household.
+                     */
+                    id: string;
+                    /**
+                     * The member who holds the job.
+                     */
+                    memberId: string;
+                    employer?: string;
+                }>;
+                incomes?: Array<{
+                    /**
+                     * The income's key within the household.
+                     */
+                    id: string;
+                    /**
+                     * The member who receives it.
+                     */
+                    memberId: string;
+                    /**
+                     * The job it's paid for, when it's earned.
+                     */
+                    jobId?: string;
+                    source: 'earned' | 'self_employment' | 'unearned';
+                    /**
+                     * The amount received each time it's paid, in dollars.
+                     */
+                    amount: number;
+                    /**
+                     * How often it's paid.
+                     */
+                    frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                    paidInCash?: boolean;
+                    /**
+                     * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                     */
+                    amountVaries?: boolean;
+                }>;
+                expenses?: Array<{
+                    type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                    amount: number;
+                    frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+                }>;
+            };
+            /**
              * Timestamp when the determination was created.
              */
             readonly createdAt: string;
@@ -575,6 +806,83 @@ export type CreateDeterminationResponses = {
          */
         readonly determinedAt?: string | null;
         /**
+         * The household as this determination certified it: what a renewal compares the household's answers against at the next interview.
+         *
+         */
+        readonly certifiedHousehold?: {
+            /**
+             * The number of people the household says buy and prepare food together.
+             */
+            statedSize?: number;
+            /**
+             * Whether the household says its utilities are included in the rent.
+             */
+            utilitiesIncludedInRent?: boolean;
+            /**
+             * Total monthly income, as the household states it.
+             */
+            statedMonthlyIncome?: number;
+            /**
+             * Total monthly expenses, as the household states them.
+             */
+            statedMonthlyExpenses?: number;
+            members?: Array<{
+                /**
+                 * The member's key within the household.
+                 */
+                id: string;
+                dateOfBirth?: string;
+                /**
+                 * Whether the member is disabled.
+                 */
+                isDisabled?: boolean;
+            }>;
+            jobs?: Array<{
+                /**
+                 * The job's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who holds the job.
+                 */
+                memberId: string;
+                employer?: string;
+            }>;
+            incomes?: Array<{
+                /**
+                 * The income's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who receives it.
+                 */
+                memberId: string;
+                /**
+                 * The job it's paid for, when it's earned.
+                 */
+                jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
+                /**
+                 * The amount received each time it's paid, in dollars.
+                 */
+                amount: number;
+                /**
+                 * How often it's paid.
+                 */
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
+                /**
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                 */
+                amountVaries?: boolean;
+            }>;
+            expenses?: Array<{
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+            }>;
+        };
+        /**
          * Timestamp when the determination was created.
          */
         readonly createdAt: string;
@@ -650,6 +958,83 @@ export type GetDeterminationResponses = {
          * Timestamp when the determination was finalized. Null until complete.
          */
         readonly determinedAt?: string | null;
+        /**
+         * The household as this determination certified it: what a renewal compares the household's answers against at the next interview.
+         *
+         */
+        readonly certifiedHousehold?: {
+            /**
+             * The number of people the household says buy and prepare food together.
+             */
+            statedSize?: number;
+            /**
+             * Whether the household says its utilities are included in the rent.
+             */
+            utilitiesIncludedInRent?: boolean;
+            /**
+             * Total monthly income, as the household states it.
+             */
+            statedMonthlyIncome?: number;
+            /**
+             * Total monthly expenses, as the household states them.
+             */
+            statedMonthlyExpenses?: number;
+            members?: Array<{
+                /**
+                 * The member's key within the household.
+                 */
+                id: string;
+                dateOfBirth?: string;
+                /**
+                 * Whether the member is disabled.
+                 */
+                isDisabled?: boolean;
+            }>;
+            jobs?: Array<{
+                /**
+                 * The job's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who holds the job.
+                 */
+                memberId: string;
+                employer?: string;
+            }>;
+            incomes?: Array<{
+                /**
+                 * The income's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who receives it.
+                 */
+                memberId: string;
+                /**
+                 * The job it's paid for, when it's earned.
+                 */
+                jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
+                /**
+                 * The amount received each time it's paid, in dollars.
+                 */
+                amount: number;
+                /**
+                 * How often it's paid.
+                 */
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
+                /**
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                 */
+                amountVaries?: boolean;
+            }>;
+            expenses?: Array<{
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+            }>;
+        };
         /**
          * Timestamp when the determination was created.
          */
@@ -740,6 +1125,83 @@ export type UpdateDeterminationResponses = {
          * Timestamp when the determination was finalized. Null until complete.
          */
         readonly determinedAt?: string | null;
+        /**
+         * The household as this determination certified it: what a renewal compares the household's answers against at the next interview.
+         *
+         */
+        readonly certifiedHousehold?: {
+            /**
+             * The number of people the household says buy and prepare food together.
+             */
+            statedSize?: number;
+            /**
+             * Whether the household says its utilities are included in the rent.
+             */
+            utilitiesIncludedInRent?: boolean;
+            /**
+             * Total monthly income, as the household states it.
+             */
+            statedMonthlyIncome?: number;
+            /**
+             * Total monthly expenses, as the household states them.
+             */
+            statedMonthlyExpenses?: number;
+            members?: Array<{
+                /**
+                 * The member's key within the household.
+                 */
+                id: string;
+                dateOfBirth?: string;
+                /**
+                 * Whether the member is disabled.
+                 */
+                isDisabled?: boolean;
+            }>;
+            jobs?: Array<{
+                /**
+                 * The job's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who holds the job.
+                 */
+                memberId: string;
+                employer?: string;
+            }>;
+            incomes?: Array<{
+                /**
+                 * The income's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who receives it.
+                 */
+                memberId: string;
+                /**
+                 * The job it's paid for, when it's earned.
+                 */
+                jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
+                /**
+                 * The amount received each time it's paid, in dollars.
+                 */
+                amount: number;
+                /**
+                 * How often it's paid.
+                 */
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
+                /**
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                 */
+                amountVaries?: boolean;
+            }>;
+            expenses?: Array<{
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+            }>;
+        };
         /**
          * Timestamp when the determination was created.
          */
@@ -1047,6 +1509,83 @@ export type CompleteDeterminationResponses = {
          * Timestamp when the determination was finalized. Null until complete.
          */
         readonly determinedAt?: string | null;
+        /**
+         * The household as this determination certified it: what a renewal compares the household's answers against at the next interview.
+         *
+         */
+        readonly certifiedHousehold?: {
+            /**
+             * The number of people the household says buy and prepare food together.
+             */
+            statedSize?: number;
+            /**
+             * Whether the household says its utilities are included in the rent.
+             */
+            utilitiesIncludedInRent?: boolean;
+            /**
+             * Total monthly income, as the household states it.
+             */
+            statedMonthlyIncome?: number;
+            /**
+             * Total monthly expenses, as the household states them.
+             */
+            statedMonthlyExpenses?: number;
+            members?: Array<{
+                /**
+                 * The member's key within the household.
+                 */
+                id: string;
+                dateOfBirth?: string;
+                /**
+                 * Whether the member is disabled.
+                 */
+                isDisabled?: boolean;
+            }>;
+            jobs?: Array<{
+                /**
+                 * The job's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who holds the job.
+                 */
+                memberId: string;
+                employer?: string;
+            }>;
+            incomes?: Array<{
+                /**
+                 * The income's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who receives it.
+                 */
+                memberId: string;
+                /**
+                 * The job it's paid for, when it's earned.
+                 */
+                jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
+                /**
+                 * The amount received each time it's paid, in dollars.
+                 */
+                amount: number;
+                /**
+                 * How often it's paid.
+                 */
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
+                /**
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
+                 */
+                amountVaries?: boolean;
+            }>;
+            expenses?: Array<{
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+            }>;
+        };
         /**
          * Timestamp when the determination was created.
          */

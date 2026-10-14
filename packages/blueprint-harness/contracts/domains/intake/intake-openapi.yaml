@@ -134,6 +134,75 @@ paths:
         '500':
           $ref: '../../common/components/responses.yaml#/InternalError'
 
+  /applications/{applicationId}/income-verifications:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationIdParam'
+    get:
+      summary: List an application's income verifications
+      operationId: listIncomeVerifications
+      tags: [Applications]
+      responses:
+        '200':
+          description: The income verifications gathered for this application.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncomeVerificationList'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+    post:
+      summary: Record an income verification
+      operationId: createIncomeVerification
+      tags: [Applications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncomeVerificationCreate'
+      responses:
+        '201':
+          description: Income verification recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncomeVerification'
+        '400':
+          $ref: '../../common/components/responses.yaml#/BadRequest'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '422':
+          $ref: '../../common/components/responses.yaml#/UnprocessableEntity'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+
+  /applications/{applicationId}/income-verifications/{incomeVerificationId}:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationIdParam'
+      - name: incomeVerificationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get an income verification
+      operationId: getIncomeVerification
+      tags: [Applications]
+      responses:
+        '200':
+          description: Income verification retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncomeVerification'
+        '404':
+          $ref: '../../common/components/responses.yaml#/NotFound'
+        '500':
+          $ref: '../../common/components/responses.yaml#/InternalError'
+
   /applications/{applicationId}/members:
     parameters:
       - $ref: '#/components/parameters/ApplicationIdParam'
@@ -302,6 +371,26 @@ components:
             domain: document-management
             resource: Document
             style: links-only
+        type:
+          type: string
+          enum: [new, renewal]
+          default: new
+          description: >
+            A first application, or an application for recertification — the
+            same kind of request, tied to the household's existing case.
+        caseId:
+          type: string
+          format: uuid
+          description: The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet.
+          x-relationship:
+            type: fk
+            domain: case-management
+            resource: Case
+            style: links-only
+        interviewDate:
+          type: string
+          format: date
+          description: The date of the application's interview.
         labels:
           # additionalProperties map — arbitrary key-value labels for state-specific tagging.
           type: object
@@ -339,6 +428,15 @@ components:
                 domain: document-management
                 resource: Document
                 style: expand
+            previousHousehold:
+              $ref: '../../common/schemas/household.yaml#/$defs/Household'
+              readOnly: true
+              description: >
+                The household on record before this application's interview: on a
+                new application, the household as filed; on a renewal, the
+                household the case's current determination certified, copied
+                when the renewal is opened so the baseline holds still through
+                the review.
             programCount:
               type: integer
               readOnly: true
@@ -420,6 +518,89 @@ components:
         - $ref: '#/components/schemas/ApplicationWritable'
         - type: object
           minProperties: 1
+
+    # ---------------------------------------------------------------------------
+    # IncomeVerification (sub-resource of Application)
+    # ---------------------------------------------------------------------------
+    IncomeVerificationWritable:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [wage_record, pay_stub]
+          description: >
+            Where the figure comes from: state wage records or IEVS, reported
+            by quarter; or a pay stub the household provided and the worker
+            verified.
+        memberId:
+          type: string
+          description: The member it's about, by their key in the household.
+        incomeId:
+          type: string
+          description: For a pay stub, the income it's for, by its key in the household.
+        period:
+          type: string
+          description: For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+        amount:
+          type: number
+          minimum: 0
+          description: Gross wages for the quarter, or gross pay on the stub.
+        frequency:
+          type: string
+          enum: [weekly, biweekly, semimonthly, monthly]
+          description: For a pay stub, how often the pay it shows is paid.
+
+    IncomeVerification:
+      allOf:
+        - $ref: '#/components/schemas/IncomeVerificationWritable'
+        - type: object
+          required: [id, applicationId, kind, memberId, amount, createdAt, updatedAt]
+          properties:
+            id:
+              type: string
+              format: uuid
+              readOnly: true
+            applicationId:
+              type: string
+              format: uuid
+              readOnly: true
+              x-relationship:
+                resource: Application
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            updatedAt:
+              type: string
+              format: date-time
+              readOnly: true
+
+    IncomeVerificationCreate:
+      allOf:
+        - $ref: '#/components/schemas/IncomeVerificationWritable'
+        - type: object
+          required: [kind, memberId, amount]
+
+    IncomeVerificationList:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncomeVerification'
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean
 
     ApplicationList:
       type: object

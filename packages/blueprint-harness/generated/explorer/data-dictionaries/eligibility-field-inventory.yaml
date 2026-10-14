@@ -8,6 +8,32 @@ determination.applicationId: { type: uuid, relationship: Application }
 determination.status: { type: enum, values: [pending, in_progress, complete] }
 determination.expedited: { type: boolean }
 determination.determinedAt: { type: datetime }
+determination.certifiedHousehold: { type: object }
+determination.certifiedHousehold.statedSize: { type: integer }
+determination.certifiedHousehold.utilitiesIncludedInRent: { type: boolean }
+determination.certifiedHousehold.statedMonthlyIncome: { type: number }
+determination.certifiedHousehold.statedMonthlyExpenses: { type: number }
+determination.certifiedHousehold.members[]: { type: list }
+determination.certifiedHousehold.members[].id: { type: string }
+determination.certifiedHousehold.members[].dateOfBirth: { type: date }
+determination.certifiedHousehold.members[].isDisabled: { type: boolean }
+determination.certifiedHousehold.jobs[]: { type: list }
+determination.certifiedHousehold.jobs[].id: { type: string }
+determination.certifiedHousehold.jobs[].memberId: { type: string }
+determination.certifiedHousehold.jobs[].employer: { type: string }
+determination.certifiedHousehold.incomes[]: { type: list }
+determination.certifiedHousehold.incomes[].id: { type: string }
+determination.certifiedHousehold.incomes[].memberId: { type: string }
+determination.certifiedHousehold.incomes[].jobId: { type: string }
+determination.certifiedHousehold.incomes[].source: { type: enum, values: [earned, self_employment, unearned] }
+determination.certifiedHousehold.incomes[].amount: { type: number }
+determination.certifiedHousehold.incomes[].frequency: { type: enum, values: [weekly, biweekly, semimonthly, monthly, irregular] }
+determination.certifiedHousehold.incomes[].paidInCash: { type: boolean }
+determination.certifiedHousehold.incomes[].amountVaries: { type: boolean }
+determination.certifiedHousehold.expenses[]: { type: list }
+determination.certifiedHousehold.expenses[].type: { type: enum, values: [rent, mortgage, utilities, dependent_care, medical, child_support] }
+determination.certifiedHousehold.expenses[].amount: { type: number }
+determination.certifiedHousehold.expenses[].frequency: { type: enum, values: [weekly, biweekly, semimonthly, monthly] }
 determination.links: { type: object }
 determination.links.application: { type: string }
 

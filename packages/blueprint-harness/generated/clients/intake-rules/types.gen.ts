@@ -9,26 +9,31 @@ export type ClientOptions = {
  */
 export type InterviewFlagsRequest = {
     /**
-     * The application as it stands at the interview.
+     * A household's circumstances at one point in time.
      */
-    application?: {
+    current?: {
         /**
-         * Programs the household applied for.
+         * The number of people the household says buy and prepare food together.
          */
-        programsAppliedFor?: Array<'snap' | 'medicaid' | 'tanf' | 'chip'>;
+        statedSize?: number;
         /**
-         * The household size the application states.
+         * Whether the household says its utilities are included in the rent.
          */
-        householdSize?: number;
+        utilitiesIncludedInRent?: boolean;
+        /**
+         * Total monthly income, as the household states it.
+         */
+        statedMonthlyIncome?: number;
+        /**
+         * Total monthly expenses, as the household states them.
+         */
+        statedMonthlyExpenses?: number;
         members?: Array<{
             /**
-             * The member's id.
+             * The member's key within the household.
              */
-            id?: string;
-            /**
-             * Age in years.
-             */
-            age?: number;
+            id: string;
+            dateOfBirth?: string;
             /**
              * Whether the member is disabled.
              */
@@ -36,134 +41,183 @@ export type InterviewFlagsRequest = {
         }>;
         jobs?: Array<{
             /**
-             * The job's id.
+             * The job's key within the household.
              */
-            id?: string;
+            id: string;
             /**
              * The member who holds the job.
              */
-            memberId?: string;
+            memberId: string;
+            employer?: string;
         }>;
         incomes?: Array<{
             /**
-             * The income's id.
+             * The income's key within the household.
              */
-            id?: string;
+            id: string;
             /**
              * The member who receives it.
              */
-            memberId?: string;
+            memberId: string;
             /**
-             * The job it's paid for
+             * The job it's paid for, when it's earned.
              */
             jobId?: string;
+            source: 'earned' | 'self_employment' | 'unearned';
             /**
-             * Where the money comes from.
+             * The amount received each time it's paid, in dollars.
              */
-            type?: 'earned' | 'self_employment' | 'unearned';
+            amount: number;
             /**
-             * How it's paid.
+             * How often it's paid.
              */
-            payPattern?: 'regular' | 'irregular' | 'tips' | 'cash';
+            frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+            paidInCash?: boolean;
             /**
-             * Monthly amount
+             * Whether the amount changes from one payment to the next, as with irregular hours or tips.
              */
-            monthlyAmount?: number;
+            amountVaries?: boolean;
         }>;
         expenses?: Array<{
-            /**
-             * What it's for.
-             */
-            category?: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
-            /**
-             * Monthly amount
-             */
-            monthlyAmount?: number;
+            type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+            amount: number;
+            frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
         }>;
+    };
+    /**
+     * A household's circumstances at one point in time.
+     */
+    previous?: {
         /**
-         * Total monthly income, as the household reported it.
+         * The number of people the household says buy and prepare food together.
          */
-        reportedMonthlyIncome?: number;
-        /**
-         * Total monthly expenses, as the household reported them.
-         */
-        reportedMonthlyExpenses?: number;
+        statedSize?: number;
         /**
          * Whether the household says its utilities are included in the rent.
          */
         utilitiesIncludedInRent?: boolean;
         /**
-         * Whether a standard utility allowance is applied to the household.
+         * Total monthly income, as the household states it.
          */
-        claimsUtilityAllowance?: boolean;
+        statedMonthlyIncome?: number;
         /**
-         * Whether the household reported changes since the application was submitted.
+         * Total monthly expenses, as the household states them.
          */
-        hasChangedCircumstances?: boolean;
-    };
-    /**
-     * What the household's last certification recorded.
-     */
-    lastCertification?: {
-        /**
-         * The members certified last time.
-         */
-        memberIds?: Array<string>;
+        statedMonthlyExpenses?: number;
+        members?: Array<{
+            /**
+             * The member's key within the household.
+             */
+            id: string;
+            dateOfBirth?: string;
+            /**
+             * Whether the member is disabled.
+             */
+            isDisabled?: boolean;
+        }>;
+        jobs?: Array<{
+            /**
+             * The job's key within the household.
+             */
+            id: string;
+            /**
+             * The member who holds the job.
+             */
+            memberId: string;
+            employer?: string;
+        }>;
         incomes?: Array<{
             /**
-             * The income's id.
+             * The income's key within the household.
              */
-            id?: string;
+            id: string;
             /**
              * The member who receives it.
              */
-            memberId?: string;
+            memberId: string;
             /**
-             * The job it's paid for
+             * The job it's paid for, when it's earned.
              */
             jobId?: string;
+            source: 'earned' | 'self_employment' | 'unearned';
             /**
-             * Where the money comes from.
+             * The amount received each time it's paid, in dollars.
              */
-            type?: 'earned' | 'self_employment' | 'unearned';
+            amount: number;
             /**
-             * How it's paid.
+             * How often it's paid.
              */
-            payPattern?: 'regular' | 'irregular' | 'tips' | 'cash';
+            frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+            paidInCash?: boolean;
             /**
-             * Monthly amount
+             * Whether the amount changes from one payment to the next, as with irregular hours or tips.
              */
-            monthlyAmount?: number;
+            amountVaries?: boolean;
         }>;
         expenses?: Array<{
-            /**
-             * What it's for.
-             */
-            category?: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
-            /**
-             * Monthly amount
-             */
-            monthlyAmount?: number;
+            type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+            amount: number;
+            frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
         }>;
     };
     /**
-     * What outside data and verified documents say.
+     * What outside records show for this application.
      */
-    dataMatches?: {
+    verified?: Array<{
         /**
-         * Monthly wages from state wage records or IEVS, by member.
+         * Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+         *
          */
-        wageRecords?: Array<{
-            memberId?: string;
-            monthlyWages?: number;
-        }>;
+        kind?: 'wage_record' | 'pay_stub';
         /**
-         * Monthly amounts worked out from verified pay stubs, by income.
+         * The member it's about, by their key in the household.
          */
-        payStubs?: Array<{
-            incomeId?: string;
-            monthlyAmount?: number;
-        }>;
+        memberId?: string;
+        /**
+         * For a pay stub, the income it's for, by its key in the household.
+         */
+        incomeId?: string;
+        /**
+         * For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+         */
+        period?: string;
+        /**
+         * Gross wages for the quarter, or gross pay on the stub.
+         */
+        amount?: number;
+        /**
+         * For a pay stub, how often the pay it shows is paid.
+         */
+        frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+    }>;
+    /**
+     * The date ages are measured from — the interview date.
+     */
+    asOf?: string;
+    /**
+     * The programs the household applied for.
+     */
+    programsAppliedFor?: Array<string>;
+    /**
+     * Choices a state makes, with defaults.
+     */
+    parameters?: {
+        /**
+         * What weekly pay is multiplied by for a month. SNAP allows 4.3, or the exact 52 ÷ 12 (7 CFR § 273.10(c)(2)).
+         */
+        weeklyToMonthly?: number;
+        /**
+         * What pay every two weeks is multiplied by for a month. SNAP allows 2.15, or the exact 26 ÷ 12 (7 CFR § 273.10(c)(2)).
+         */
+        biweeklyToMonthly?: number;
+        /**
+         * How far apart two amounts can be, as a fraction, before they count as different.
+         */
+        differenceAllowed?: number;
+        /**
+         * The age under which a child is taken to need care while the adults work.
+         */
+        childCareAgeUnder?: number;
     };
 };
 
@@ -219,26 +273,31 @@ export type EvaluateInterviewFlagsData = {
      */
     body: {
         /**
-         * The application as it stands at the interview.
+         * A household's circumstances at one point in time.
          */
-        application?: {
+        current?: {
             /**
-             * Programs the household applied for.
+             * The number of people the household says buy and prepare food together.
              */
-            programsAppliedFor?: Array<'snap' | 'medicaid' | 'tanf' | 'chip'>;
+            statedSize?: number;
             /**
-             * The household size the application states.
+             * Whether the household says its utilities are included in the rent.
              */
-            householdSize?: number;
+            utilitiesIncludedInRent?: boolean;
+            /**
+             * Total monthly income, as the household states it.
+             */
+            statedMonthlyIncome?: number;
+            /**
+             * Total monthly expenses, as the household states them.
+             */
+            statedMonthlyExpenses?: number;
             members?: Array<{
                 /**
-                 * The member's id.
+                 * The member's key within the household.
                  */
-                id?: string;
-                /**
-                 * Age in years.
-                 */
-                age?: number;
+                id: string;
+                dateOfBirth?: string;
                 /**
                  * Whether the member is disabled.
                  */
@@ -246,134 +305,183 @@ export type EvaluateInterviewFlagsData = {
             }>;
             jobs?: Array<{
                 /**
-                 * The job's id.
+                 * The job's key within the household.
                  */
-                id?: string;
+                id: string;
                 /**
                  * The member who holds the job.
                  */
-                memberId?: string;
+                memberId: string;
+                employer?: string;
             }>;
             incomes?: Array<{
                 /**
-                 * The income's id.
+                 * The income's key within the household.
                  */
-                id?: string;
+                id: string;
                 /**
                  * The member who receives it.
                  */
-                memberId?: string;
+                memberId: string;
                 /**
-                 * The job it's paid for
+                 * The job it's paid for, when it's earned.
                  */
                 jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
                 /**
-                 * Where the money comes from.
+                 * The amount received each time it's paid, in dollars.
                  */
-                type?: 'earned' | 'self_employment' | 'unearned';
+                amount: number;
                 /**
-                 * How it's paid.
+                 * How often it's paid.
                  */
-                payPattern?: 'regular' | 'irregular' | 'tips' | 'cash';
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
                 /**
-                 * Monthly amount
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
                  */
-                monthlyAmount?: number;
+                amountVaries?: boolean;
             }>;
             expenses?: Array<{
-                /**
-                 * What it's for.
-                 */
-                category?: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
-                /**
-                 * Monthly amount
-                 */
-                monthlyAmount?: number;
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
             }>;
+        };
+        /**
+         * A household's circumstances at one point in time.
+         */
+        previous?: {
             /**
-             * Total monthly income, as the household reported it.
+             * The number of people the household says buy and prepare food together.
              */
-            reportedMonthlyIncome?: number;
-            /**
-             * Total monthly expenses, as the household reported them.
-             */
-            reportedMonthlyExpenses?: number;
+            statedSize?: number;
             /**
              * Whether the household says its utilities are included in the rent.
              */
             utilitiesIncludedInRent?: boolean;
             /**
-             * Whether a standard utility allowance is applied to the household.
+             * Total monthly income, as the household states it.
              */
-            claimsUtilityAllowance?: boolean;
+            statedMonthlyIncome?: number;
             /**
-             * Whether the household reported changes since the application was submitted.
+             * Total monthly expenses, as the household states them.
              */
-            hasChangedCircumstances?: boolean;
-        };
-        /**
-         * What the household's last certification recorded.
-         */
-        lastCertification?: {
-            /**
-             * The members certified last time.
-             */
-            memberIds?: Array<string>;
+            statedMonthlyExpenses?: number;
+            members?: Array<{
+                /**
+                 * The member's key within the household.
+                 */
+                id: string;
+                dateOfBirth?: string;
+                /**
+                 * Whether the member is disabled.
+                 */
+                isDisabled?: boolean;
+            }>;
+            jobs?: Array<{
+                /**
+                 * The job's key within the household.
+                 */
+                id: string;
+                /**
+                 * The member who holds the job.
+                 */
+                memberId: string;
+                employer?: string;
+            }>;
             incomes?: Array<{
                 /**
-                 * The income's id.
+                 * The income's key within the household.
                  */
-                id?: string;
+                id: string;
                 /**
                  * The member who receives it.
                  */
-                memberId?: string;
+                memberId: string;
                 /**
-                 * The job it's paid for
+                 * The job it's paid for, when it's earned.
                  */
                 jobId?: string;
+                source: 'earned' | 'self_employment' | 'unearned';
                 /**
-                 * Where the money comes from.
+                 * The amount received each time it's paid, in dollars.
                  */
-                type?: 'earned' | 'self_employment' | 'unearned';
+                amount: number;
                 /**
-                 * How it's paid.
+                 * How often it's paid.
                  */
-                payPattern?: 'regular' | 'irregular' | 'tips' | 'cash';
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly' | 'irregular';
+                paidInCash?: boolean;
                 /**
-                 * Monthly amount
+                 * Whether the amount changes from one payment to the next, as with irregular hours or tips.
                  */
-                monthlyAmount?: number;
+                amountVaries?: boolean;
             }>;
             expenses?: Array<{
-                /**
-                 * What it's for.
-                 */
-                category?: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
-                /**
-                 * Monthly amount
-                 */
-                monthlyAmount?: number;
+                type: 'rent' | 'mortgage' | 'utilities' | 'dependent_care' | 'medical' | 'child_support';
+                amount: number;
+                frequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
             }>;
         };
         /**
-         * What outside data and verified documents say.
+         * What outside records show for this application.
          */
-        dataMatches?: {
+        verified?: Array<{
             /**
-             * Monthly wages from state wage records or IEVS, by member.
+             * Where the figure comes from: state wage records or IEVS, reported by quarter; or a pay stub the household provided and the worker verified.
+             *
              */
-            wageRecords?: Array<{
-                memberId?: string;
-                monthlyWages?: number;
-            }>;
+            kind?: 'wage_record' | 'pay_stub';
             /**
-             * Monthly amounts worked out from verified pay stubs, by income.
+             * The member it's about, by their key in the household.
              */
-            payStubs?: Array<{
-                incomeId?: string;
-                monthlyAmount?: number;
-            }>;
+            memberId?: string;
+            /**
+             * For a pay stub, the income it's for, by its key in the household.
+             */
+            incomeId?: string;
+            /**
+             * For a wage record, the quarter it covers, as 2026-Q3; for a pay stub, the pay date.
+             */
+            period?: string;
+            /**
+             * Gross wages for the quarter, or gross pay on the stub.
+             */
+            amount?: number;
+            /**
+             * For a pay stub, how often the pay it shows is paid.
+             */
+            frequency?: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+        }>;
+        /**
+         * The date ages are measured from — the interview date.
+         */
+        asOf?: string;
+        /**
+         * The programs the household applied for.
+         */
+        programsAppliedFor?: Array<string>;
+        /**
+         * Choices a state makes, with defaults.
+         */
+        parameters?: {
+            /**
+             * What weekly pay is multiplied by for a month. SNAP allows 4.3, or the exact 52 ÷ 12 (7 CFR § 273.10(c)(2)).
+             */
+            weeklyToMonthly?: number;
+            /**
+             * What pay every two weeks is multiplied by for a month. SNAP allows 2.15, or the exact 26 ÷ 12 (7 CFR § 273.10(c)(2)).
+             */
+            biweeklyToMonthly?: number;
+            /**
+             * How far apart two amounts can be, as a fraction, before they count as different.
+             */
+            differenceAllowed?: number;
+            /**
+             * The age under which a child is taken to need care while the adults work.
+             */
+            childCareAgeUnder?: number;
         };
     };
     path?: never;

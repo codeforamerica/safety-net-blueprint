@@ -239,8 +239,8 @@ export const Annotations = {
         }
       ]
     },
-    "interviewFlags.risks.incomeChangedSinceLastCertification": {
-      "reason": "Income changes between certifications — a job gained or lost, a raise, hours cut — are a leading cause of both overpayments and underpayments when they aren't reported.\n",
+    "interviewFlags.risks.incomeChangedSincePrevious": {
+      "reason": "Income that's changed since the household on record — a job gained or lost, a raise, hours cut — is a leading cause of both overpayments and underpayments when it isn't reported. On a new application, that's since the application was filed.\n",
       "policies": [
         "snap-reporting-changes",
         "snap-recertification"
@@ -263,7 +263,7 @@ export const Annotations = {
         }
       ]
     },
-    "interviewFlags.risks.householdChangedSinceLastCertification": {
+    "interviewFlags.risks.householdChangedSincePrevious": {
       "reason": "Who lives in the household and buys food together decides whose income counts. Changes are often unreported, and often not asked about at recertification.\n",
       "policies": [
         "snap-household-composition",
@@ -350,24 +350,6 @@ export const Annotations = {
         {
           "title": "NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates",
           "url": "https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"
-        }
-      ]
-    },
-    "interviewFlags.risks.circumstancesChangedSinceApplying": {
-      "reason": "Changes between applying and the interview have to be recorded, and some verified, before benefits are worked out. FNS-1104 makes them a probe.\n",
-      "policies": [
-        "snap-interview-toolkit"
-      ],
-      "patterns": [
-        "ruleset-output-fact"
-      ],
-      "probeQuestions": [
-        "Since you applied, has anything changed about who lives with you, your income, or your expenses?"
-      ],
-      "sources": [
-        {
-          "title": "FNS State SNAP Interview Toolkit (FNS-1104, revised June 2025)",
-          "url": "https://www.fna.usda.gov/snap/state/interview-toolkit"
         }
       ]
     },
@@ -501,8 +483,8 @@ export const Annotations = {
         }
       ]
     },
-    "interviewFlags.inconsistencies.utilitiesIncludedButClaimed": {
-      "reason": "A utility allowance applies only to a household that pays utility costs separately from its rent. What counts as a utility deduction is a common misapplication of policy.\n",
+    "interviewFlags.inconsistencies.utilitiesIncludedButBilled": {
+      "reason": "A household that pays a utility bill isn't one whose utilities are all included in the rent, and which it is decides whether a utility allowance applies. What counts as a utility deduction is a common misapplication of policy.\n",
       "policies": [
         "snap-shelter-utility-deductions"
       ],

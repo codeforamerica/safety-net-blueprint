@@ -77,6 +77,13 @@ function buildNullCollectionPaths(graphInputs, inputs) {
  */
 function setScopePath(scope, inputs, parts, value) {
   const namespace = parts[0];
+  // A top-level input is the value itself, not an object holding it — a date
+  // declared as an input of its own, say. Cloning it as an object spread a
+  // string into a map and left the converted value inside it.
+  if (parts.length === 1) {
+    scope[namespace] = value;
+    return;
+  }
   // Shallow-clone the namespace so we don't mutate the user's object
   if (scope[namespace] === inputs[namespace]) {
     scope[namespace] = { ...inputs[namespace] };

@@ -84,6 +84,25 @@
       "format": "uuid",
       "description": "The uploaded document evidencing household income, if one is attached."
     },
+    "type": {
+      "type": "string",
+      "enum": [
+        "new",
+        "renewal"
+      ],
+      "default": "new",
+      "description": "A first application, or an application for recertification — the same kind of request, tied to the household's existing case.\n"
+    },
+    "caseId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The case a renewal recertifies. Empty on a new application, whose case doesn't exist yet."
+    },
+    "interviewDate": {
+      "type": "string",
+      "format": "date",
+      "description": "The date of the application's interview."
+    },
     "labels": {
       "type": "object",
       "additionalProperties": {
@@ -105,6 +124,11 @@
           "type": "string",
           "format": "uri-reference",
           "description": "Link to the related Document resource."
+        },
+        "case": {
+          "type": "string",
+          "format": "uri-reference",
+          "description": "Link to the related Case resource."
         }
       }
     }

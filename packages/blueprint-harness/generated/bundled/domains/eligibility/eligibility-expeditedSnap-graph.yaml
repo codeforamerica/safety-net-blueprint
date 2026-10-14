@@ -16,21 +16,21 @@ inputs:
   $.household.isMigrantFarmworker:
     type: boolean
     description: Whether any household member is a migrant or seasonal farmworker.
-  $.policy.incomeThreshold:
+  $.parameters.incomeThreshold:
     type: number
     description: Monthly gross income threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
     default: 150
-  $.policy.resourceThreshold:
+  $.parameters.resourceThreshold:
     type: number
     description: Liquid resource threshold for expedited eligibility (7 CFR § 273.2(i)(1)(i)).
     default: 100
 facts:
   isLowIncome:
-    expression: household.monthlyGrossIncome < policy.incomeThreshold
+    expression: household.monthlyGrossIncome < parameters.incomeThreshold
     type: boolean
     description: Monthly gross income is below the expedited income threshold.
   hasLowResources:
-    expression: household.liquidResources < policy.resourceThreshold
+    expression: household.liquidResources < parameters.resourceThreshold
     type: boolean
     description: Liquid resources are below the expedited resource threshold.
   isCombinedUnderShelter:
@@ -38,7 +38,7 @@ facts:
     type: boolean
     description: Combined income and liquid resources are less than monthly shelter cost.
   isMigrantWithLowResources:
-    expression: household.isMigrantFarmworker && household.liquidResources < policy.resourceThreshold
+    expression: household.isMigrantFarmworker && household.liquidResources < parameters.resourceThreshold
     type: boolean
     description: Household includes a migrant or seasonal farmworker with low liquid resources.
   isExpeditedEligible:
@@ -49,10 +49,10 @@ facts:
 dependencies:
   isLowIncome:
     - $.household.monthlyGrossIncome
-    - $.policy.incomeThreshold
+    - $.parameters.incomeThreshold
   hasLowResources:
     - $.household.liquidResources
-    - $.policy.resourceThreshold
+    - $.parameters.resourceThreshold
   isCombinedUnderShelter:
     - $.household.monthlyGrossIncome
     - $.household.liquidResources
@@ -60,7 +60,7 @@ dependencies:
   isMigrantWithLowResources:
     - $.household.liquidResources
     - $.household.isMigrantFarmworker
-    - $.policy.resourceThreshold
+    - $.parameters.resourceThreshold
   isExpeditedEligible:
     - isLowIncome
     - hasLowResources
