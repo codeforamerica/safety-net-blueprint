@@ -174,6 +174,57 @@ describe('unresolved-relationship-resource', () => {
   });
 });
 
+describe('id-without-relationship', () => {
+  const withField = (field, file = 'domains/intake/intake-openapi.yaml') =>
+    setOf({
+      [file]: spec({
+        components: {
+          schemas: {
+            Income: { type: 'object', properties: { memberId: { type: 'string', ...field } } },
+            Member: { type: 'object' },
+          },
+        },
+      }),
+    });
+
+  test('a writable uuid id with no relationship is an error', () => {
+    const found = findings(withField({ format: 'uuid' }), 'id-without-relationship');
+    assert.equal(found.length, 1);
+    assert.match(found[0].message, /"memberId" holds a uuid but declares no x-relationship/);
+  });
+
+  test('the same id declaring what it points at is not', () => {
+    const field = { format: 'uuid', 'x-relationship': { resource: 'Member' } };
+    assert.deepEqual(findings(withField(field), 'id-without-relationship'), []);
+  });
+
+  test('an id that is not a uuid points outside the set and is not checked — a Medicare number, a timer key', () => {
+    assert.deepEqual(findings(withField({}), 'id-without-relationship'), []);
+  });
+
+  test('an id nobody writes is not checked', () => {
+    for (const field of [{ format: 'uuid', readOnly: true }, { format: 'uuid', 'x-derived': 'this.id' }]) {
+      assert.deepEqual(findings(withField(field), 'id-without-relationship'), [], JSON.stringify(field));
+    }
+  });
+
+  test('an id inside an example is data, not a field', () => {
+    const docs = setOf({
+      'domains/intake/intake-openapi.yaml': spec({
+        components: {
+          schemas: {
+            Income: {
+              type: 'object',
+              examples: [{ properties: { memberId: { format: 'uuid' } } }],
+            },
+          },
+        },
+      }),
+    });
+    assert.deepEqual(findings(docs, 'id-without-relationship'), []);
+  });
+});
+
 describe('unresolved-fragment-ref', () => {
   test('a same-document ref pointing nowhere is an error', () => {
     const docs = setOf({
