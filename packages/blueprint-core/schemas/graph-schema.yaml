@@ -135,14 +135,15 @@ properties:
   facts:
     type: object
     description: >
-      Map of camelCase identifiers to derived node definitions. Facts are
-      computed from inputs or other facts via CEL expressions. Keys are
-      camelCase identifiers (e.g. 'eligible', 'incomeInconsistency').
+      Map of fact paths to derived node definitions. Facts are computed from
+      inputs or other facts via CEL expressions. Keys are the paths the rules
+      contract declares: camelCase identifiers (e.g. 'eligible'), which a dot
+      may group (e.g. 'risks.earnedIncomeVaries').
     minProperties: 1
     additionalProperties:
       $ref: "#/$defs/Node"
     propertyNames:
-      pattern: "^[a-zA-Z][a-zA-Z0-9]*$"
+      pattern: "^[a-zA-Z][a-zA-Z0-9]*(\\.[a-zA-Z][a-zA-Z0-9]*)*$"
 
   dependencies:
     type: object

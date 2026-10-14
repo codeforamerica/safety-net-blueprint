@@ -1,0 +1,201 @@
+$schema: https://blueprint.codeforamerica.org/schemas/graph-schema.yaml
+domain: intake
+ruleset: interviewFlags
+outputs:
+  - risks.earnedIncomeVaries
+  - risks.cashOrSelfEmploymentIncome
+  - risks.incomeChangedSinceLastCertification
+  - risks.householdChangedSinceLastCertification
+  - risks.shelterCostsCarriedOver
+  - risks.elderlyOrDisabledWithoutMedicalCosts
+  - risks.childrenAndEarnersWithoutDependentCare
+  - risks.circumstancesChangedSinceApplying
+  - risks.multipleProgramsApplied
+  - inconsistencies.incomeBelowExpenses
+  - inconsistencies.wagesDifferFromWageRecords
+  - inconsistencies.incomeDiffersFromPayStub
+  - inconsistencies.householdSizeDiffersFromMembers
+  - inconsistencies.jobWithoutEarnedIncome
+  - inconsistencies.earnedIncomeWithoutJob
+  - inconsistencies.utilitiesIncludedButClaimed
+inputs:
+  $.application.programsAppliedFor[]:
+    type: array
+    description: Programs the household applied for.
+  $.application.householdSize:
+    type: integer
+    description: The household size the application states.
+  $.application.members[]:
+    type: array
+  $.application.jobs[]:
+    type: array
+  $.application.incomes[]:
+    type: array
+  $.application.expenses[]:
+    type: array
+  $.application.reportedMonthlyIncome:
+    type: number
+    description: Total monthly income, as the household reported it.
+  $.application.reportedMonthlyExpenses:
+    type: number
+    description: Total monthly expenses, as the household reported them.
+  $.application.utilitiesIncludedInRent:
+    type: boolean
+    description: Whether the household says its utilities are included in the rent.
+  $.application.claimsUtilityAllowance:
+    type: boolean
+    description: Whether a standard utility allowance is applied to the household.
+  $.application.hasChangedCircumstances:
+    type: boolean
+    description: Whether the household reported changes since the application was submitted.
+  $.lastCertification.memberIds[]:
+    type: array
+    description: The members certified last time.
+  $.lastCertification.incomes[]:
+    type: array
+  $.lastCertification.expenses[]:
+    type: array
+  $.dataMatches.wageRecords[]:
+    type: array
+    description: Monthly wages from state wage records or IEVS, by member.
+  $.dataMatches.wageRecords[].memberId:
+    type: string
+  $.dataMatches.wageRecords[].monthlyWages:
+    type: number
+  $.dataMatches.payStubs[]:
+    type: array
+    description: Monthly amounts worked out from verified pay stubs, by income.
+  $.dataMatches.payStubs[].incomeId:
+    type: string
+  $.dataMatches.payStubs[].monthlyAmount:
+    type: number
+facts:
+  risks.earnedIncomeVaries:
+    expression: application.incomes.exists(i, i.type == 'earned' && i.payPattern in ['irregular', 'tips'])
+    type: boolean
+    description: A member's wages are hourly with irregular hours, or include tips.
+  risks.cashOrSelfEmploymentIncome:
+    expression: application.incomes.exists(i, i.type == 'self_employment' || i.payPattern == 'cash')
+    type: boolean
+    description: A member has self-employment income, or is paid in cash.
+  risks.incomeChangedSinceLastCertification:
+    expression: |
+      application.incomes.exists(i, !lastCertification.incomes.exists(p,
+        p.memberId == i.memberId && p.type == i.type && p.monthlyAmount == i.monthlyAmount))
+      || lastCertification.incomes.exists(p, !application.incomes.exists(i,
+        i.memberId == p.memberId && i.type == p.type))
+    type: boolean
+    description: |
+      An income source is new, ended, or a different amount from the last certification.
+  risks.householdChangedSinceLastCertification:
+    expression: |
+      application.members.exists(m, !(m.id in lastCertification.memberIds)) || lastCertification.memberIds.exists(id, !application.members.exists(m, m.id == id))
+    type: boolean
+    description: Someone has joined or left the household since the last certification.
+  risks.shelterCostsCarriedOver:
+    expression: |
+      application.expenses.exists(e, e.category in ['rent', 'mortgage']
+        && lastCertification.expenses.exists(p, p.category == e.category && p.monthlyAmount == e.monthlyAmount))
+    type: boolean
+    description: Rent or mortgage is exactly what the last certification recorded.
+  risks.elderlyOrDisabledWithoutMedicalCosts:
+    expression: |
+      application.members.exists(m, m.age >= 60 || m.isDisabled) && !application.expenses.exists(e, e.category == 'medical')
+    type: boolean
+    description: A member is 60 or older, or disabled, and no medical costs are recorded.
+  risks.childrenAndEarnersWithoutDependentCare:
+    expression: |
+      application.members.exists(m, m.age < 13) && application.incomes.exists(i, i.type == 'earned' || i.type == 'self_employment') && !application.expenses.exists(e, e.category == 'dependent_care')
+    type: boolean
+    description: |
+      There's a child under 13 and someone earning, and no dependent care is recorded. Under 13 is this sketch's line, not a regulation's.
+  risks.circumstancesChangedSinceApplying:
+    expression: application.hasChangedCircumstances
+    type: boolean
+    description: The household's circumstances changed between applying and the interview.
+  risks.multipleProgramsApplied:
+    expression: "'snap' in application.programsAppliedFor && application.programsAppliedFor.exists(p, p != 'snap')"
+    type: boolean
+    description: The household applied for SNAP and another program, whose reporting rules differ.
+  inconsistencies.incomeBelowExpenses:
+    expression: application.reportedMonthlyIncome < application.reportedMonthlyExpenses
+    type: boolean
+    description: Reported income doesn't cover reported expenses.
+  inconsistencies.wagesDifferFromWageRecords:
+    expression: |
+      dataMatches.wageRecords.exists(w, !application.incomes.exists(i,
+        i.memberId == w.memberId && i.type == 'earned'
+        && i.monthlyAmount >= w.monthlyWages * 0.9 && i.monthlyAmount <= w.monthlyWages * 1.1))
+    type: boolean
+    description: |
+      A member's wages in the wage records differ by more than 10% from the earned income recorded for them, or they have no earned income recorded.
+  inconsistencies.incomeDiffersFromPayStub:
+    expression: |
+      dataMatches.payStubs.exists(s, application.incomes.exists(i, i.id == s.incomeId
+        && (i.monthlyAmount < s.monthlyAmount * 0.9 || i.monthlyAmount > s.monthlyAmount * 1.1)))
+    type: boolean
+    description: A recorded income differs by more than 10% from what its verified pay stubs show.
+  inconsistencies.householdSizeDiffersFromMembers:
+    expression: application.householdSize != size(application.members)
+    type: boolean
+    description: The stated household size isn't the number of members listed.
+  inconsistencies.jobWithoutEarnedIncome:
+    expression: application.jobs.exists(j, !application.incomes.exists(i, has(i.jobId) && i.jobId == j.id))
+    type: boolean
+    description: A member has a job with no earned income recorded for it.
+  inconsistencies.earnedIncomeWithoutJob:
+    expression: |
+      application.incomes.exists(i, i.type == 'earned'
+        && !(has(i.jobId) && application.jobs.exists(j, j.id == i.jobId)))
+    type: boolean
+    description: Earned income is recorded with no job behind it.
+  inconsistencies.utilitiesIncludedButClaimed:
+    expression: application.utilitiesIncludedInRent && application.claimsUtilityAllowance
+    type: boolean
+    description: Utilities are included in the rent, but a utility allowance is applied.
+dependencies:
+  risks.earnedIncomeVaries:
+    - $.application.incomes[]
+  risks.cashOrSelfEmploymentIncome:
+    - $.application.incomes[]
+  risks.incomeChangedSinceLastCertification:
+    - $.application.incomes[]
+    - $.lastCertification.incomes[]
+  risks.householdChangedSinceLastCertification:
+    - $.application.members[]
+    - $.lastCertification.memberIds[]
+  risks.shelterCostsCarriedOver:
+    - $.application.expenses[]
+    - $.lastCertification.expenses[]
+  risks.elderlyOrDisabledWithoutMedicalCosts:
+    - $.application.members[]
+    - $.application.expenses[]
+  risks.childrenAndEarnersWithoutDependentCare:
+    - $.application.members[]
+    - $.application.incomes[]
+    - $.application.expenses[]
+  risks.circumstancesChangedSinceApplying:
+    - $.application.hasChangedCircumstances
+  risks.multipleProgramsApplied:
+    - $.application.programsAppliedFor[]
+  inconsistencies.incomeBelowExpenses:
+    - $.application.reportedMonthlyIncome
+    - $.application.reportedMonthlyExpenses
+  inconsistencies.wagesDifferFromWageRecords:
+    - $.application.incomes[]
+    - $.dataMatches.wageRecords[]
+  inconsistencies.incomeDiffersFromPayStub:
+    - $.application.incomes[]
+    - $.dataMatches.payStubs[]
+  inconsistencies.householdSizeDiffersFromMembers:
+    - $.application.householdSize
+    - $.application.members[]
+  inconsistencies.jobWithoutEarnedIncome:
+    - $.application.jobs[]
+    - $.application.incomes[]
+  inconsistencies.earnedIncomeWithoutJob:
+    - $.application.jobs[]
+    - $.application.incomes[]
+  inconsistencies.utilitiesIncludedButClaimed:
+    - $.application.utilitiesIncludedInRent
+    - $.application.claimsUtilityAllowance

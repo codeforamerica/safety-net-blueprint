@@ -34,24 +34,25 @@ $schema: "https://blueprint.codeforamerica.org/schemas/rules-schema.yaml"
 domain: intake
 
 rulesets:
-  interviewPrompts:
+  interviewFlags:
     endpoint:
-      path: /applications/evaluate-interview-prompts
+      path: /applications/evaluate-interview-flags
 
     inputs:
       household:
         type: object
         properties:
           monthlyIncome: { type: number }
+          monthlyExpenses: { type: number }
 
     outputs:
-      incomeInconsistencyProbe: { type: boolean }
+      inconsistencies.incomeBelowExpenses: { type: boolean }
 
     facts:
-      - path: incomeGapExists
-        expression: household.monthlyIncome < household.monthlyExpenses
-      - path: incomeInconsistencyProbe
-        expression: incomeGapExists
+      - path: shortfall
+        expression: household.monthlyExpenses - household.monthlyIncome
+      - path: inconsistencies.incomeBelowExpenses
+        expression: shortfall > 0
 ```
 
 `inputs` are values the caller supplies. `facts` are computed. `outputs` names
@@ -137,6 +138,21 @@ what the Explorer's graph view displays, so `abawdScreeningPrompt` reads and
 
 Facts may be declared in any order.
 
+### Grouping facts
+
+A ruleset with many outputs can group them with a dot, the way an input's
+fields are written: `risks.earnedIncomeVaries` is the fact `earnedIncomeVaries`
+in the group `risks`. The fact keeps its whole path everywhere — another
+expression refers to it as `risks.earnedIncomeVaries`, the answer names it
+that way, and an annotation is keyed `interviewFlags.risks.earnedIncomeVaries`
+— so a consumer reads the group from the name, whatever the ruleset.
+
+Every name in an expression's scope means one thing, so a fact can't repeat
+another, start with an input's name, or be a group too: `risks` and
+`risks.earnedIncomeVaries` in one ruleset is refused. An overlay that targets a
+grouped fact's key quotes it, as JSONPath needs for any key with a dot:
+`$.rulesets.interviewFlags.outputs['risks.earnedIncomeVaries']`.
+
 ## Types
 
 Two things about a declared type change the answers a ruleset gives.
@@ -186,7 +202,7 @@ declares:
 
 ```yaml
 endpoint:
-  path: /applications/evaluate-interview-prompts   # → /intake/applications/evaluate-interview-prompts
+  path: /applications/evaluate-interview-flags   # → /intake/applications/evaluate-interview-flags
 ```
 
 The endpoint is required, and there is no default path and no way to have
@@ -220,9 +236,9 @@ $schema: "https://blueprint.codeforamerica.org/schemas/rules-examples-schema.yam
 domain: intake
 
 rulesets:
-  interviewPrompts:
+  interviewFlags:
     examples:
-      - description: Income gap and unemployed members
+      - description: Income below expenses
         inputs:
           household:
             monthlyIncome: 800
@@ -240,8 +256,10 @@ ruleset reports as missing, which is usually the more interesting case.
 ## What validation checks
 
 `blueprint-validate` reports cycles, facts that are never used and not declared
-as outputs, CEL expressions that do not parse, and `$.path` references that do
-not match the declared inputs. It does not check that an expression computes
+as outputs, CEL expressions that do not parse, `$.path` references that do not
+match the declared inputs, and names that would mean two things: a fact
+declared twice, a fact starting with an input's name, and a path that's both a
+fact and a group. It does not check that an expression computes
 the right answer — that is what examples and the conformance corpus are for.
 
 [cel-datetime]: https://github.com/google/cel-spec/blob/master/doc/langdef.md#datetime-functions

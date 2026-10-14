@@ -1,0 +1,276 @@
+{
+  "type": "object",
+  "description": "Input data for interviewFlags evaluation. All fields are optional — partial inputs trigger partial evaluation.",
+  "properties": {
+    "application": {
+      "type": "object",
+      "description": "The application as it stands at the interview.",
+      "properties": {
+        "programsAppliedFor": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "snap",
+              "medicaid",
+              "tanf",
+              "chip"
+            ]
+          },
+          "description": "Programs the household applied for."
+        },
+        "householdSize": {
+          "type": "integer",
+          "description": "The household size the application states."
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The member's id."
+              },
+              "age": {
+                "type": "integer",
+                "description": "Age in years."
+              },
+              "isDisabled": {
+                "type": "boolean",
+                "description": "Whether the member is disabled."
+              }
+            }
+          }
+        },
+        "jobs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The job's id."
+              },
+              "memberId": {
+                "type": "string",
+                "description": "The member who holds the job."
+              }
+            }
+          }
+        },
+        "incomes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The income's id."
+              },
+              "memberId": {
+                "type": "string",
+                "description": "The member who receives it."
+              },
+              "jobId": {
+                "type": "string",
+                "description": "The job it's paid for",
+                "when it's earned income.": null
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "earned",
+                  "self_employment",
+                  "unearned"
+                ],
+                "description": "Where the money comes from."
+              },
+              "payPattern": {
+                "type": "string",
+                "enum": [
+                  "regular",
+                  "irregular",
+                  "tips",
+                  "cash"
+                ],
+                "description": "How it's paid."
+              },
+              "monthlyAmount": {
+                "type": "number",
+                "description": "Monthly amount",
+                "in dollars.": null
+              }
+            }
+          }
+        },
+        "expenses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": [
+                  "rent",
+                  "mortgage",
+                  "utilities",
+                  "dependent_care",
+                  "medical",
+                  "child_support"
+                ],
+                "description": "What it's for."
+              },
+              "monthlyAmount": {
+                "type": "number",
+                "description": "Monthly amount",
+                "in dollars.": null
+              }
+            }
+          }
+        },
+        "reportedMonthlyIncome": {
+          "type": "number",
+          "description": "Total monthly income, as the household reported it."
+        },
+        "reportedMonthlyExpenses": {
+          "type": "number",
+          "description": "Total monthly expenses, as the household reported them."
+        },
+        "utilitiesIncludedInRent": {
+          "type": "boolean",
+          "description": "Whether the household says its utilities are included in the rent."
+        },
+        "claimsUtilityAllowance": {
+          "type": "boolean",
+          "description": "Whether a standard utility allowance is applied to the household."
+        },
+        "hasChangedCircumstances": {
+          "type": "boolean",
+          "description": "Whether the household reported changes since the application was submitted."
+        }
+      }
+    },
+    "lastCertification": {
+      "type": "object",
+      "description": "What the household's last certification recorded.",
+      "properties": {
+        "memberIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The members certified last time."
+        },
+        "incomes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The income's id."
+              },
+              "memberId": {
+                "type": "string",
+                "description": "The member who receives it."
+              },
+              "jobId": {
+                "type": "string",
+                "description": "The job it's paid for",
+                "when it's earned income.": null
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "earned",
+                  "self_employment",
+                  "unearned"
+                ],
+                "description": "Where the money comes from."
+              },
+              "payPattern": {
+                "type": "string",
+                "enum": [
+                  "regular",
+                  "irregular",
+                  "tips",
+                  "cash"
+                ],
+                "description": "How it's paid."
+              },
+              "monthlyAmount": {
+                "type": "number",
+                "description": "Monthly amount",
+                "in dollars.": null
+              }
+            }
+          }
+        },
+        "expenses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": [
+                  "rent",
+                  "mortgage",
+                  "utilities",
+                  "dependent_care",
+                  "medical",
+                  "child_support"
+                ],
+                "description": "What it's for."
+              },
+              "monthlyAmount": {
+                "type": "number",
+                "description": "Monthly amount",
+                "in dollars.": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "dataMatches": {
+      "type": "object",
+      "description": "What outside data and verified documents say.",
+      "properties": {
+        "wageRecords": {
+          "type": "array",
+          "description": "Monthly wages from state wage records or IEVS, by member.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "memberId": {
+                "type": "string"
+              },
+              "monthlyWages": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "payStubs": {
+          "type": "array",
+          "description": "Monthly amounts worked out from verified pay stubs, by income.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "incomeId": {
+                "type": "string"
+              },
+              "monthlyAmount": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#/components/schemas/InterviewFlagsRequest"
+}

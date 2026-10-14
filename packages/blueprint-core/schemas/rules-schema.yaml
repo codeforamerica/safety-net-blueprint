@@ -154,7 +154,14 @@ $defs:
         description: >
           The fact's name within the ruleset graph. Used to reference this fact
           in other expressions. camelCase by convention.
-        pattern: "^[a-zA-Z][a-zA-Z0-9.]*$"
+
+          A dot groups facts: `risks.earnedIncomeVaries` is the fact
+          `earnedIncomeVaries` in the group `risks`. The fact keeps its whole
+          path everywhere — other expressions refer to it by it, and the
+          ruleset's answer names it by it — so a consumer reads the group from
+          the name, whatever the ruleset. A path can't be both a fact and a
+          group: `risks` and `risks.earnedIncomeVaries` in one ruleset is refused.
+        pattern: "^[a-zA-Z][a-zA-Z0-9]*(\\.[a-zA-Z][a-zA-Z0-9]*)*$"
       expression:
         type: string
         description: >
@@ -184,7 +191,7 @@ $defs:
     type: object
     description: >
       Places the ruleset's POST endpoint. The full path is the file-level domain
-      followed by `path` — /intake/applications/evaluate-interview-prompts. The request and
+      followed by `path` — /intake/applications/evaluate-interview-flags. The request and
       response schemas are derived from the ruleset's inputs and outputs, and
       the endpoints are documented in an OpenAPI document resolve generates
       beside the rules file.

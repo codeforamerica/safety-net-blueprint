@@ -115,11 +115,13 @@ $defs:
     description: >
       Map of ruleset fact keys to annotation objects.
       Keys are dot-separated: {ruleset}.{factName}, where ruleset matches
-      the ruleset field in the compiled graph file.
-      (e.g., snapInterviewProbes.incomeInconsistency)
+      the ruleset field in the compiled graph file
+      (e.g., snapInterviewProbes.incomeInconsistency). A fact in a group keeps
+      its whole path (e.g., interviewFlags.risks.earnedIncomeVaries):
+      everything after the first dot is the fact's path.
     minProperties: 1
     propertyNames:
-      pattern: "^[a-z][a-zA-Z0-9]*\\.[a-z][a-zA-Z0-9]*$"
+      pattern: "^[a-z][a-zA-Z0-9]*(\\.[a-zA-Z][a-zA-Z0-9]*)+$"
     additionalProperties:
       $ref: "#/$defs/Annotation"
 

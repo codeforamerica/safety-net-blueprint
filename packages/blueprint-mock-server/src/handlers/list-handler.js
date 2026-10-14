@@ -129,7 +129,7 @@ export function createListHandler(apiMetadata, endpoint, { store } = {}) {
       if (expandFields.length > 0 || linksFields.length > 0 || derivedFields.length > 0) {
         safeResult.items = safeResult.items.map(item => {
           let result = expandFields.length > 0 ? applyExpand(item, expandFields, (c, id) => store.findById(c, id)) : item;
-          if (linksFields.length > 0) result = applyLinks(result, linksFields, apiMetadata.serverBasePath);
+          if (linksFields.length > 0) result = applyLinks(result, linksFields, (c, id) => store.findById(c, id));
           if (derivedFields.length > 0) result = applyDerivedFields(result, derivedFields);
           return result;
         });

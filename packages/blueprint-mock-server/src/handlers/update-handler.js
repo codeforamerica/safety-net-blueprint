@@ -11,6 +11,7 @@ import { emitEvent } from '../emit-event.js';
 import { extractAuthContext, extractCallerRoles, callerHeader, traceparentOf } from '../auth-context.js';
 import { extractExpandFields, applyExpand, extractLinksFields, applyLinks, extractDerivedFields, applyDerivedFields } from './expand-utils.js';
 import { assertFetchShaped, readJsonBody } from '../http/request.js';
+import { missingReferences } from '../references.js';
 
 export function deepEqual(a, b) {
   if (a === b) return true;
@@ -137,6 +138,12 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
         }
       }
 
+      // Only the ids the client sent: one already stored was checked when it was written.
+      const missing = missingReferences(requestBody, endpoint.requestSchema, apiMetadata.resolve?.schema, store);
+      if (missing.length > 0) {
+        return Response.json(createErrorResponse(missing, 422), { status: 422 });
+      }
+
       // Snapshot existing state before any mutations
       const existingSnapshot = { ...existing };
 
@@ -229,7 +236,7 @@ export function createUpdateHandler(apiMetadata, endpoint, stateMachine = null, 
       const linksFields = extractLinksFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
       const derivedFields = extractDerivedFields(endpoint.responseSchema, apiMetadata.resolve?.schema);
       let responseBody = expandFields.length > 0 ? applyExpand(updated, expandFields, store.findById) : updated;
-      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, apiMetadata.serverBasePath);
+      if (linksFields.length > 0) responseBody = applyLinks(responseBody, linksFields, (c, id) => store.findById(c, id));
       if (derivedFields.length > 0) responseBody = applyDerivedFields(responseBody, derivedFields);
       return Response.json(responseBody);
     } catch (error) {

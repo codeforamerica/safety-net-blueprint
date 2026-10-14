@@ -260,11 +260,11 @@ post:
 
 # Operation — generated from a rules contract ruleset
 post:
-  operationId: evaluateInterviewPrompts
+  operationId: evaluateInterviewFlags
   x-relationship:
     type: ruleset
     domain: intake
-    id: interviewPrompts
+    id: interviewFlags
 
 # Operation — generated from a compositions contract
 get:

@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>interviewFlags — Rules Docs</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #F3F3F3; color: #1a1a1a; font-size: 14px; line-height: 1.6; }
+    a { color: #5650BE; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12px; background: #F7EDE8; padding: 1px 5px; border-radius: 3px; border: 1px solid #E9CCBE; color: #2a2a2a; }
+    table { border-collapse: collapse; width: 100%; }
+    th { background: #F7EDE8; color: #1a1a1a; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 8px 12px; text-align: left; border-bottom: 2px solid #E9CCBE; }
+    td { padding: 10px 12px; border-bottom: 1px solid #E9CCBE; vertical-align: top; font-size: 13px; word-break: break-word; overflow-wrap: anywhere; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #F7EDE8; }
+    .content-item { transition: border-color 0.1s; }
+    .content-item:hover { border-color: #5650BE; }
+    .content-item > details > summary:hover { background: #E6EBF9; }
+    details summary { transition: background 0.1s; }
+    details summary:hover { background: #F7EDE8; }
+    [data-expand-id] { transition: opacity 0.1s; }
+    [data-expand-id]:hover { opacity: 0.75; }
+
+    /* Deep-link target highlighting — fades out after arrival so it doesn't persist */
+    @keyframes target-fade { 0%,60% { background: #fff9c4; } 100% { background: transparent; } }
+    [id]:target { scroll-margin-top: 1rem; }
+    tr[id]:target td { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target > details > summary { animation: target-fade 4s ease forwards; }
+    .content-item[id]:target { animation: target-fade 4s ease forwards; }
+
+    /* Permalink anchors — hidden until parent is hovered */
+    .permalink { opacity: 0; font-size: 10px; text-decoration: none; color: inherit; transition: opacity 0.1s; }
+    tr:hover .permalink,
+    .content-item:hover .permalink,
+    summary:hover .permalink { opacity: 0.4; }
+    .ann-chip { display:inline-block; font-size:10px; font-weight:600; padding:2px 6px; border-radius:3px; background:#E6EBF9; color:#2B1A78; border:1px solid #C2C0E8; margin-right:4px; margin-bottom:4px; text-decoration:none; } .ann-chip:hover { background:#d4daf5; }
+  </style>
+</head>
+<body>
+  <div style="background:#2B1A78;padding:0.5rem 1.25rem;display:flex;align-items:center;gap:0.5rem;font-size:12px;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;color:#C2C0E8;"><a href="../index.html" style="color:#C2C0E8;text-decoration:none;">Explorer</a><span style="opacity:0.5;">/</span><a href="index.html" style="color:#C2C0E8;text-decoration:none;">Rules Docs</a><span style="opacity:0.5;">/</span><a href="#" style="color:#FFFFFF;text-decoration:none;">interviewFlags</a></div>
+  <script src="rules-engine.js"></script>
+<div style="max-width:1100px;margin:0 auto;padding:2.5rem 1.5rem 4rem;">
+<div style="margin-bottom:1.5rem">
+  <div style="display:flex;align-items:baseline;gap:0;flex-wrap:wrap;">
+    <h1 style="font-size:1.25rem;font-weight:800;color:#111827;display:inline;margin:0;">interviewFlags</h1><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px;background:#E6EBF9;color:#2B1A78;border:1px solid #C2C0E8;margin-left:8px;">intake</span><a href="../api-reference/intake.html#op-post-applications-evaluate-interview-flags" style="font-size:10px;border:1px solid;border-radius:3px;padding:1px 6px;text-decoration:none;white-space:nowrap;background:#E6EBF9;border-color:#C2C0E8;color:#5650BE;font-size:11px;border-radius:4px;padding:2px 8px;margin-left:10px;">API endpoint →</a>
+  </div>
+  <div style="font-size:12px;color:#6b7280;margin-top:4px;">16 facts &middot; 16 outputs &middot; 20 inputs</div>
+</div>
+
+<div style="display:flex;gap:16px;margin-bottom:12px;align-items:center;">
+  <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#374151;">
+      <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#E2F9F6;border:1.5px solid #00AD93;"></span>Input
+    </span><span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#374151;">
+      <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#FFF8E1;border:1.5px solid #E65100;"></span>Intermediate fact
+    </span><span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#374151;">
+      <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:rgba(43,26,120,0.08);border:1.5px solid #2B1A78;"></span>Output
+    </span>
+  <span style="font-size:11px;color:#9ca3af;margin-left:8px;">Click a node to see its expression and annotations</span>
+</div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;color:#374151;">
+  <label for="graph-output">Show</label>
+  <select id="graph-output" style="font:12px ui-monospace,monospace;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;background:#fff;max-width:100%;">
+    <option value="">every fact</option><option value="inconsistencies.earnedIncomeWithoutJob">inconsistencies.earnedIncomeWithoutJob</option><option value="inconsistencies.householdSizeDiffersFromMembers">inconsistencies.householdSizeDiffersFromMembers</option><option value="inconsistencies.incomeBelowExpenses">inconsistencies.incomeBelowExpenses</option><option value="inconsistencies.incomeDiffersFromPayStub">inconsistencies.incomeDiffersFromPayStub</option><option value="inconsistencies.jobWithoutEarnedIncome">inconsistencies.jobWithoutEarnedIncome</option><option value="inconsistencies.utilitiesIncludedButClaimed">inconsistencies.utilitiesIncludedButClaimed</option><option value="inconsistencies.wagesDifferFromWageRecords">inconsistencies.wagesDifferFromWageRecords</option><option value="risks.cashOrSelfEmploymentIncome">risks.cashOrSelfEmploymentIncome</option><option value="risks.childrenAndEarnersWithoutDependentCare">risks.childrenAndEarnersWithoutDependentCare</option><option value="risks.circumstancesChangedSinceApplying">risks.circumstancesChangedSinceApplying</option><option value="risks.earnedIncomeVaries">risks.earnedIncomeVaries</option><option value="risks.elderlyOrDisabledWithoutMedicalCosts">risks.elderlyOrDisabledWithoutMedicalCosts</option><option value="risks.householdChangedSinceLastCertification">risks.householdChangedSinceLastCertification</option><option value="risks.incomeChangedSinceLastCertification">risks.incomeChangedSinceLastCertification</option><option value="risks.multipleProgramsApplied">risks.multipleProgramsApplied</option><option value="risks.shelterCostsCarriedOver">risks.shelterCostsCarriedOver</option>
+  </select>
+  <span style="color:#9ca3af;">or one output and what it depends on</span>
+</div>
+<div class="graph-viewport" style="position:relative;height:440px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;overflow:hidden;cursor:grab;touch-action:none;">
+  <svg width="100%" data-graph-width="648" height="100%" data-graph-height="984" preserveAspectRatio="xMidYMid meet" style="display:block;" viewBox="0 0 648 984" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow-interviewFlags" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#6b7280"/>
+    </marker>
+  </defs>
+  <path class="sg-edge" data-from="application" data-to="risks.earnedIncomeVaries" d="M160,478.875 C209.5,478.875 209.5,42 259,42" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="application" data-to="risks.cashOrSelfEmploymentIncome" d="M160,478.875 C209.5,478.875 209.5,102 259,102" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="application" data-to="risks.incomeChangedSinceLastCertification" d="M160,478.875 C209.5,478.875 209.5,702 259,702" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="lastCertification" data-to="risks.incomeChangedSinceLastCertification" d="M171,538.875 C215,538.875 215,702 259,702" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="application" data-to="risks.householdChangedSinceLastCertification" d="M160,478.875 C209.5,478.875 209.5,762 259,762" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="lastCertification" data-to="risks.householdChangedSinceLastCertification" d="M171,538.875 C215,538.875 215,762 259,762" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="application" data-to="risks.shelterCostsCarriedOver" d="M160,478.875 C209.5,478.875 209.5,822 259,822" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="lastCertification" data-to="risks.shelterCostsCarriedOver" d="M171,538.875 C215,538.875 215,822 259,822" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="application" data-to="risks.elderlyOrDisabledWithoutMedicalCosts" d="M160,478.875 C209.5,478.875 209.5,162 259,162" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="application" data-to="risks.childrenAndEarnersWithoutDependentCare" d="M160,478.875 C209.5,478.875 209.5,222 259,222" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="application" data-to="risks.circumstancesChangedSinceApplying" d="M160,478.875 C209.5,478.875 209.5,282 259,282" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="application" data-to="risks.multipleProgramsApplied" d="M160,478.875 C209.5,478.875 209.5,342 259,342" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="application" data-to="inconsistencies.incomeBelowExpenses" d="M160,478.875 C209.5,478.875 209.5,402 259,402" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="application" data-to="inconsistencies.wagesDifferFromWageRecords" d="M160,478.875 C209.5,478.875 209.5,882 259,882" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="dataMatches" data-to="inconsistencies.wagesDifferFromWageRecords" d="M160,598.875 C209.5,598.875 209.5,882 259,882" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="application" data-to="inconsistencies.incomeDiffersFromPayStub" d="M160,478.875 C209.5,478.875 209.5,942 259,942" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="dataMatches" data-to="inconsistencies.incomeDiffersFromPayStub" d="M160,598.875 C209.5,598.875 209.5,942 259,942" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="application" data-to="inconsistencies.householdSizeDiffersFromMembers" d="M160,478.875 C209.5,478.875 209.5,462 259,462" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="application" data-to="inconsistencies.jobWithoutEarnedIncome" d="M160,478.875 C209.5,478.875 209.5,522 259,522" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="application" data-to="inconsistencies.earnedIncomeWithoutJob" d="M160,478.875 C209.5,478.875 209.5,582 259,582" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<path class="sg-edge" data-from="application" data-to="inconsistencies.utilitiesIncludedButClaimed" d="M160,478.875 C209.5,478.875 209.5,642 259,642" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow-interviewFlags)"/>
+<g class="sg-node" data-node="application" data-x="20" data-y="456.875" title="application" style="cursor:pointer"><rect x="20" y="456.875" width="140" height="44" rx="6" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
+<text x="32" y="480.875" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">application</text></g>
+<g class="sg-node" data-node="lastCertification" data-x="20" data-y="516.875" title="lastCertification" style="cursor:pointer"><rect x="20" y="516.875" width="151" height="44" rx="6" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
+<text x="32" y="540.875" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">lastCertification</text></g>
+<g class="sg-node" data-node="dataMatches" data-x="20" data-y="576.875" title="dataMatches" style="cursor:pointer"><rect x="20" y="576.875" width="140" height="44" rx="6" fill="#E2F9F6" stroke="#00AD93" stroke-width="1.5"/>
+<text x="32" y="600.875" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">dataMatches</text></g>
+<g class="sg-node" data-node="risks.earnedIncomeVaries" data-x="261" data-y="20" title="risks.earnedIncomeVaries" style="cursor:pointer"><rect x="261" y="20" width="201" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="273" y="44" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">risks.earnedIncomeVaries</text></g>
+<g class="sg-node" data-node="risks.cashOrSelfEmploymentIncome" data-x="261" data-y="80" title="risks.cashOrSelfEmploymentIncome" style="cursor:pointer"><rect x="261" y="80" width="259" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="273" y="104" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">risks.cashOrSelfEmploymentIncome</text></g>
+<g class="sg-node" data-node="risks.incomeChangedSinceLastCertification" data-x="261" data-y="680" title="risks.incomeChangedSinceLastCertification" style="cursor:pointer"><rect x="261" y="680" width="324" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="273" y="704" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">risks.incomeChangedSinceLastCertification</text></g>
+<g class="sg-node" data-node="risks.householdChangedSinceLastCertification" data-x="261" data-y="740" title="risks.householdChangedSinceLastCertification" style="cursor:pointer"><rect x="261" y="740" width="345" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="273" y="764" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">risks.householdChangedSinceLastCertification</text></g>
+<g class="sg-node" data-node="risks.shelterCostsCarriedOver" data-x="261" data-y="800" title="risks.shelterCostsCarriedOver" style="cursor:pointer"><rect x="261" y="800" width="237" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="273" y="824" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">risks.shelterCostsCarriedOver</text></g>
+<g class="sg-node" data-node="risks.elderlyOrDisabledWithoutMedicalCosts" data-x="261" data-y="140" title="risks.elderlyOrDisabledWithoutMedicalCosts" style="cursor:pointer"><rect x="261" y="140" width="331" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="273" y="164" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">risks.elderlyOrDisabledWithoutMedicalCosts</text></g>
+<g class="sg-node" data-node="risks.childrenAndEarnersWithoutDependentCare" data-x="261" data-y="200" title="risks.childrenAndEarnersWithoutDependentCare" style="cursor:pointer"><rect x="261" y="200" width="345" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="273" y="224" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">risks.childrenAndEarnersWithoutDependentCare</text></g>
+<g class="sg-node" data-node="risks.circumstancesChangedSinceApplying" data-x="261" data-y="260" title="risks.circumstancesChangedSinceApplying" style="cursor:pointer"><rect x="261" y="260" width="309" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="273" y="284" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">risks.circumstancesChangedSinceApplying</text></g>
+<g class="sg-node" data-node="risks.multipleProgramsApplied" data-x="261" data-y="320" title="risks.multipleProgramsApplied" style="cursor:pointer"><rect x="261" y="320" width="237" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="273" y="344" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">risks.multipleProgramsApplied</text></g>
+<g class="sg-node" data-node="inconsistencies.incomeBelowExpenses" data-x="261" data-y="380" title="inconsistencies.incomeBelowExpenses" style="cursor:pointer"><rect x="261" y="380" width="280" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="273" y="404" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">inconsistencies.incomeBelowExpenses</text></g>
+<g class="sg-node" data-node="inconsistencies.wagesDifferFromWageRecords" data-x="261" data-y="860" title="inconsistencies.wagesDifferFromWageRecords" style="cursor:pointer"><rect x="261" y="860" width="331" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="273" y="884" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">inconsistencies.wagesDifferFromWageRecords</text></g>
+<g class="sg-node" data-node="inconsistencies.incomeDiffersFromPayStub" data-x="261" data-y="920" title="inconsistencies.incomeDiffersFromPayStub" style="cursor:pointer"><rect x="261" y="920" width="316" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="273" y="944" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">inconsistencies.incomeDiffersFromPayStub</text></g>
+<g class="sg-node" data-node="inconsistencies.householdSizeDiffersFromMembers" data-x="261" data-y="440" title="inconsistencies.householdSizeDiffersFromMembers" style="cursor:pointer"><rect x="261" y="440" width="367" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="273" y="464" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">inconsistencies.householdSizeDiffersFromMembers</text></g>
+<g class="sg-node" data-node="inconsistencies.jobWithoutEarnedIncome" data-x="261" data-y="500" title="inconsistencies.jobWithoutEarnedIncome" style="cursor:pointer"><rect x="261" y="500" width="302" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="273" y="524" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">inconsistencies.jobWithoutEarnedIncome</text></g>
+<g class="sg-node" data-node="inconsistencies.earnedIncomeWithoutJob" data-x="261" data-y="560" title="inconsistencies.earnedIncomeWithoutJob" style="cursor:pointer"><rect x="261" y="560" width="302" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="273" y="584" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">inconsistencies.earnedIncomeWithoutJob</text></g>
+<g class="sg-node" data-node="inconsistencies.utilitiesIncludedButClaimed" data-x="261" data-y="620" title="inconsistencies.utilitiesIncludedButClaimed" style="cursor:pointer"><rect x="261" y="620" width="338" height="44" rx="6" fill="rgba(43,26,120,0.08)" stroke="#2B1A78" stroke-width="1.5"/>
+<text x="273" y="644" font-size="13" font-weight="700" fill="#111827" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">inconsistencies.utilitiesIncludedButClaimed</text></g>
+</svg>
+  <div style="position:absolute;top:8px;right:8px;display:flex;gap:4px;">
+    <button type="button" class="graph-zoom" data-zoom="in" title="Zoom in" style="font:inherit;font-size:12px;min-width:28px;height:26px;padding:0 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;color:#374151;cursor:pointer;">+</button>
+    <button type="button" class="graph-zoom" data-zoom="out" title="Zoom out" style="font:inherit;font-size:12px;min-width:28px;height:26px;padding:0 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;color:#374151;cursor:pointer;">&minus;</button>
+    <button type="button" class="graph-zoom" data-zoom="fit" title="Show the whole graph" style="font:inherit;font-size:12px;min-width:28px;height:26px;padding:0 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;color:#374151;cursor:pointer;">Fit</button>
+  </div>
+  <div style="position:absolute;bottom:6px;left:10px;font-size:11px;color:#9ca3af;pointer-events:none;">Scroll to zoom, drag to move</div>
+</div>
+<div id="detail-strip" style="display:none;border:1px solid #e5e7eb;border-radius:6px;background:#fff;padding:16px;margin-top:8px;">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
+    <div id="detail-strip-content" style="flex:1;min-width:0;"></div>
+    <button onclick="closeDetail()" style="flex-shrink:0;background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;line-height:1;padding:0;">✕</button>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #e5e7eb;border-radius:6px;margin-top:8px;background:#fafafa;">
+
+  <div style="padding:16px;border-right:1px solid #e5e7eb;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;">Inputs</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button id="evaluate-btn" onclick="runEval()" style="display:none;padding:3px 10px;background:#2B1A78;color:#fff;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">Evaluate</button>
+        <button id="experiment-btn" onclick="toggleExperimentMode()" style="padding:3px 10px;background:none;color:#2B1A78;border:1px solid #2B1A78;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">Try it</button>
+      </div>
+    </div>
+    
+  <div id="example-nav" style="display:flex;align-items:flex-start;gap:6px;margin-bottom:8px;">
+    <button onclick="loadExample(-1)" style="flex-shrink:0;padding:2px 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:13px;line-height:1;margin-top:1px;">‹</button>
+    <span id="example-label" style="font-size:11px;color:#374151;flex:1;">A recertification where much has changed and the application doesn't agree with itself</span>
+    <button onclick="loadExample(1)" style="flex-shrink:0;padding:2px 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;cursor:pointer;font-size:13px;line-height:1;margin-top:1px;">›</button>
+  </div>
+    <textarea id="eval-inputs" rows="20"
+      style="width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;padding:6px 8px;border:1px solid #d1d5db;border-radius:4px;resize:vertical;box-sizing:border-box;background:#f9fafb;color:#374151;"
+      readonly>{
+  &quot;application&quot;: {
+    &quot;programsAppliedFor&quot;: [
+      &quot;snap&quot;
+    ],
+    &quot;householdSize&quot;: 3,
+    &quot;members&quot;: [
+      {
+        &quot;id&quot;: &quot;client&quot;,
+        &quot;age&quot;: 41,
+        &quot;isDisabled&quot;: false
+      },
+      {
+        &quot;id&quot;: &quot;daughter&quot;,
+        &quot;age&quot;: 19,
+        &quot;isDisabled&quot;: false
+      },
+      {
+        &quot;id&quot;: &quot;son&quot;,
+        &quot;age&quot;: 8,
+        &quot;isDisabled&quot;: false
+      },
+      {
+        &quot;id&quot;: &quot;mother&quot;,
+        &quot;age&quot;: 68,
+        &quot;isDisabled&quot;: false
+      }
+    ],
+    &quot;jobs&quot;: [
+      {
+        &quot;id&quot;: &quot;warehouse&quot;,
+        &quot;memberId&quot;: &quot;client&quot;
+      }
+    ],
+    &quot;incomes&quot;: [
+      {
+        &quot;id&quot;: &quot;wages&quot;,
+        &quot;memberId&quot;: &quot;client&quot;,
+        &quot;jobId&quot;: &quot;warehouse&quot;,
+        &quot;type&quot;: &quot;earned&quot;,
+        &quot;payPattern&quot;: &quot;irregular&quot;,
+        &quot;monthlyAmount&quot;: 1100
+      },
+      {
+        &quot;id&quot;: &quot;cleaning&quot;,
+        &quot;memberId&quot;: &quot;client&quot;,
+        &quot;type&quot;: &quot;self_employment&quot;,
+        &quot;payPattern&quot;: &quot;cash&quot;,
+        &quot;monthlyAmount&quot;: 200
+      },
+      {
+        &quot;id&quot;: &quot;ss&quot;,
+        &quot;memberId&quot;: &quot;mother&quot;,
+        &quot;type&quot;: &quot;unearned&quot;,
+        &quot;payPattern&quot;: &quot;regular&quot;,
+        &quot;monthlyAmount&quot;: 900
+      }
+    ],
+    &quot;expenses&quot;: [
+      {
+        &quot;category&quot;: &quot;rent&quot;,
+        &quot;monthlyAmount&quot;: 1400
+      }
+    ],
+    &quot;reportedMonthlyIncome&quot;: 2200,
+    &quot;reportedMonthlyExpenses&quot;: 2600,
+    &quot;utilitiesIncludedInRent&quot;: true,
+    &quot;claimsUtilityAllowance&quot;: true,
+    &quot;hasChangedCircumstances&quot;: true
+  },
+  &quot;lastCertification&quot;: {
+    &quot;memberIds&quot;: [
+      &quot;client&quot;,
+      &quot;daughter&quot;,
+      &quot;son&quot;
+    ],
+    &quot;incomes&quot;: [
+      {
+        &quot;id&quot;: &quot;wages&quot;,
+        &quot;memberId&quot;: &quot;client&quot;,
+        &quot;jobId&quot;: &quot;warehouse&quot;,
+        &quot;type&quot;: &quot;earned&quot;,
+        &quot;payPattern&quot;: &quot;regular&quot;,
+        &quot;monthlyAmount&quot;: 2400
+      }
+    ],
+    &quot;expenses&quot;: [
+      {
+        &quot;category&quot;: &quot;rent&quot;,
+        &quot;monthlyAmount&quot;: 1150
+      }
+    ]
+  },
+  &quot;dataMatches&quot;: {
+    &quot;wageRecords&quot;: [
+      {
+        &quot;memberId&quot;: &quot;client&quot;,
+        &quot;monthlyWages&quot;: 1800
+      }
+    ],
+    &quot;payStubs&quot;: [
+      {
+        &quot;incomeId&quot;: &quot;wages&quot;,
+        &quot;monthlyAmount&quot;: 1820
+      }
+    ]
+  }
+}</textarea>
+  </div>
+
+  <div style="padding:16px;">
+    <div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:8px;">Outputs</div>
+    <div id="eval-errors" style="margin-bottom:6px;font-size:10px;color:#991b1b;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;display:none;white-space:pre-wrap;"></div>
+    <div id="eval-results-body" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;color:#9ca3af;">Evaluating…</div>
+  </div>
+
+</div>
+
+<script>
+const GRAPH = {"$schema":"https://blueprint.codeforamerica.org/schemas/graph-schema.yaml","domain":"intake","ruleset":"interviewFlags","outputs":["risks.earnedIncomeVaries","risks.cashOrSelfEmploymentIncome","risks.incomeChangedSinceLastCertification","risks.householdChangedSinceLastCertification","risks.shelterCostsCarriedOver","risks.elderlyOrDisabledWithoutMedicalCosts","risks.childrenAndEarnersWithoutDependentCare","risks.circumstancesChangedSinceApplying","risks.multipleProgramsApplied","inconsistencies.incomeBelowExpenses","inconsistencies.wagesDifferFromWageRecords","inconsistencies.incomeDiffersFromPayStub","inconsistencies.householdSizeDiffersFromMembers","inconsistencies.jobWithoutEarnedIncome","inconsistencies.earnedIncomeWithoutJob","inconsistencies.utilitiesIncludedButClaimed"],"inputs":{"$.application.programsAppliedFor[]":{"type":"array","description":"Programs the household applied for."},"$.application.householdSize":{"type":"integer","description":"The household size the application states."},"$.application.members[]":{"type":"array"},"$.application.jobs[]":{"type":"array"},"$.application.incomes[]":{"type":"array"},"$.application.expenses[]":{"type":"array"},"$.application.reportedMonthlyIncome":{"type":"number","description":"Total monthly income, as the household reported it."},"$.application.reportedMonthlyExpenses":{"type":"number","description":"Total monthly expenses, as the household reported them."},"$.application.utilitiesIncludedInRent":{"type":"boolean","description":"Whether the household says its utilities are included in the rent."},"$.application.claimsUtilityAllowance":{"type":"boolean","description":"Whether a standard utility allowance is applied to the household."},"$.application.hasChangedCircumstances":{"type":"boolean","description":"Whether the household reported changes since the application was submitted."},"$.lastCertification.memberIds[]":{"type":"array","description":"The members certified last time."},"$.lastCertification.incomes[]":{"type":"array"},"$.lastCertification.expenses[]":{"type":"array"},"$.dataMatches.wageRecords[]":{"type":"array","description":"Monthly wages from state wage records or IEVS, by member."},"$.dataMatches.wageRecords[].memberId":{"type":"string"},"$.dataMatches.wageRecords[].monthlyWages":{"type":"number"},"$.dataMatches.payStubs[]":{"type":"array","description":"Monthly amounts worked out from verified pay stubs, by income."},"$.dataMatches.payStubs[].incomeId":{"type":"string"},"$.dataMatches.payStubs[].monthlyAmount":{"type":"number"}},"facts":{"risks.earnedIncomeVaries":{"expression":"application.incomes.exists(i, i.type == 'earned' && i.payPattern in ['irregular', 'tips'])","type":"boolean","description":"A member's wages are hourly with irregular hours, or include tips."},"risks.cashOrSelfEmploymentIncome":{"expression":"application.incomes.exists(i, i.type == 'self_employment' || i.payPattern == 'cash')","type":"boolean","description":"A member has self-employment income, or is paid in cash."},"risks.incomeChangedSinceLastCertification":{"expression":"application.incomes.exists(i, !lastCertification.incomes.exists(p,\n  p.memberId == i.memberId && p.type == i.type && p.monthlyAmount == i.monthlyAmount))\n|| lastCertification.incomes.exists(p, !application.incomes.exists(i,\n  i.memberId == p.memberId && i.type == p.type))\n","type":"boolean","description":"An income source is new, ended, or a different amount from the last certification.\n"},"risks.householdChangedSinceLastCertification":{"expression":"application.members.exists(m, !(m.id in lastCertification.memberIds)) || lastCertification.memberIds.exists(id, !application.members.exists(m, m.id == id))\n","type":"boolean","description":"Someone has joined or left the household since the last certification."},"risks.shelterCostsCarriedOver":{"expression":"application.expenses.exists(e, e.category in ['rent', 'mortgage']\n  && lastCertification.expenses.exists(p, p.category == e.category && p.monthlyAmount == e.monthlyAmount))\n","type":"boolean","description":"Rent or mortgage is exactly what the last certification recorded."},"risks.elderlyOrDisabledWithoutMedicalCosts":{"expression":"application.members.exists(m, m.age >= 60 || m.isDisabled) && !application.expenses.exists(e, e.category == 'medical')\n","type":"boolean","description":"A member is 60 or older, or disabled, and no medical costs are recorded."},"risks.childrenAndEarnersWithoutDependentCare":{"expression":"application.members.exists(m, m.age < 13) && application.incomes.exists(i, i.type == 'earned' || i.type == 'self_employment') && !application.expenses.exists(e, e.category == 'dependent_care')\n","type":"boolean","description":"There's a child under 13 and someone earning, and no dependent care is recorded. Under 13 is this sketch's line, not a regulation's.\n"},"risks.circumstancesChangedSinceApplying":{"expression":"application.hasChangedCircumstances","type":"boolean","description":"The household's circumstances changed between applying and the interview."},"risks.multipleProgramsApplied":{"expression":"'snap' in application.programsAppliedFor && application.programsAppliedFor.exists(p, p != 'snap')","type":"boolean","description":"The household applied for SNAP and another program, whose reporting rules differ."},"inconsistencies.incomeBelowExpenses":{"expression":"application.reportedMonthlyIncome < application.reportedMonthlyExpenses","type":"boolean","description":"Reported income doesn't cover reported expenses."},"inconsistencies.wagesDifferFromWageRecords":{"expression":"dataMatches.wageRecords.exists(w, !application.incomes.exists(i,\n  i.memberId == w.memberId && i.type == 'earned'\n  && i.monthlyAmount >= w.monthlyWages * 0.9 && i.monthlyAmount <= w.monthlyWages * 1.1))\n","type":"boolean","description":"A member's wages in the wage records differ by more than 10% from the earned income recorded for them, or they have no earned income recorded.\n"},"inconsistencies.incomeDiffersFromPayStub":{"expression":"dataMatches.payStubs.exists(s, application.incomes.exists(i, i.id == s.incomeId\n  && (i.monthlyAmount < s.monthlyAmount * 0.9 || i.monthlyAmount > s.monthlyAmount * 1.1)))\n","type":"boolean","description":"A recorded income differs by more than 10% from what its verified pay stubs show."},"inconsistencies.householdSizeDiffersFromMembers":{"expression":"application.householdSize != size(application.members)","type":"boolean","description":"The stated household size isn't the number of members listed."},"inconsistencies.jobWithoutEarnedIncome":{"expression":"application.jobs.exists(j, !application.incomes.exists(i, has(i.jobId) && i.jobId == j.id))","type":"boolean","description":"A member has a job with no earned income recorded for it."},"inconsistencies.earnedIncomeWithoutJob":{"expression":"application.incomes.exists(i, i.type == 'earned'\n  && !(has(i.jobId) && application.jobs.exists(j, j.id == i.jobId)))\n","type":"boolean","description":"Earned income is recorded with no job behind it."},"inconsistencies.utilitiesIncludedButClaimed":{"expression":"application.utilitiesIncludedInRent && application.claimsUtilityAllowance","type":"boolean","description":"Utilities are included in the rent, but a utility allowance is applied."}},"dependencies":{"risks.earnedIncomeVaries":["$.application.incomes[]"],"risks.cashOrSelfEmploymentIncome":["$.application.incomes[]"],"risks.incomeChangedSinceLastCertification":["$.application.incomes[]","$.lastCertification.incomes[]"],"risks.householdChangedSinceLastCertification":["$.application.members[]","$.lastCertification.memberIds[]"],"risks.shelterCostsCarriedOver":["$.application.expenses[]","$.lastCertification.expenses[]"],"risks.elderlyOrDisabledWithoutMedicalCosts":["$.application.members[]","$.application.expenses[]"],"risks.childrenAndEarnersWithoutDependentCare":["$.application.members[]","$.application.incomes[]","$.application.expenses[]"],"risks.circumstancesChangedSinceApplying":["$.application.hasChangedCircumstances"],"risks.multipleProgramsApplied":["$.application.programsAppliedFor[]"],"inconsistencies.incomeBelowExpenses":["$.application.reportedMonthlyIncome","$.application.reportedMonthlyExpenses"],"inconsistencies.wagesDifferFromWageRecords":["$.application.incomes[]","$.dataMatches.wageRecords[]"],"inconsistencies.incomeDiffersFromPayStub":["$.application.incomes[]","$.dataMatches.payStubs[]"],"inconsistencies.householdSizeDiffersFromMembers":["$.application.householdSize","$.application.members[]"],"inconsistencies.jobWithoutEarnedIncome":["$.application.jobs[]","$.application.incomes[]"],"inconsistencies.earnedIncomeWithoutJob":["$.application.jobs[]","$.application.incomes[]"],"inconsistencies.utilitiesIncludedButClaimed":["$.application.utilitiesIncludedInRent","$.application.claimsUtilityAllowance"]}};
+const GRAPH_LAYOUT = {"nodes":["application","lastCertification","dataMatches","risks.earnedIncomeVaries","risks.cashOrSelfEmploymentIncome","risks.incomeChangedSinceLastCertification","risks.householdChangedSinceLastCertification","risks.shelterCostsCarriedOver","risks.elderlyOrDisabledWithoutMedicalCosts","risks.childrenAndEarnersWithoutDependentCare","risks.circumstancesChangedSinceApplying","risks.multipleProgramsApplied","inconsistencies.incomeBelowExpenses","inconsistencies.wagesDifferFromWageRecords","inconsistencies.incomeDiffersFromPayStub","inconsistencies.householdSizeDiffersFromMembers","inconsistencies.jobWithoutEarnedIncome","inconsistencies.earnedIncomeWithoutJob","inconsistencies.utilitiesIncludedButClaimed"],"reads":{"risks.earnedIncomeVaries":["application"],"risks.cashOrSelfEmploymentIncome":["application"],"risks.incomeChangedSinceLastCertification":["application","lastCertification"],"risks.householdChangedSinceLastCertification":["application","lastCertification"],"risks.shelterCostsCarriedOver":["application","lastCertification"],"risks.elderlyOrDisabledWithoutMedicalCosts":["application"],"risks.childrenAndEarnersWithoutDependentCare":["application"],"risks.circumstancesChangedSinceApplying":["application"],"risks.multipleProgramsApplied":["application"],"inconsistencies.incomeBelowExpenses":["application"],"inconsistencies.wagesDifferFromWageRecords":["application","dataMatches"],"inconsistencies.incomeDiffersFromPayStub":["application","dataMatches"],"inconsistencies.householdSizeDiffersFromMembers":["application"],"inconsistencies.jobWithoutEarnedIncome":["application"],"inconsistencies.earnedIncomeWithoutJob":["application"],"inconsistencies.utilitiesIncludedButClaimed":["application"]},"inputs":["application","lastCertification","dataMatches"],"widths":{"application":140,"lastCertification":151,"dataMatches":140,"risks.earnedIncomeVaries":201,"risks.cashOrSelfEmploymentIncome":259,"risks.incomeChangedSinceLastCertification":324,"risks.householdChangedSinceLastCertification":345,"risks.shelterCostsCarriedOver":237,"risks.elderlyOrDisabledWithoutMedicalCosts":331,"risks.childrenAndEarnersWithoutDependentCare":345,"risks.circumstancesChangedSinceApplying":309,"risks.multipleProgramsApplied":237,"inconsistencies.incomeBelowExpenses":280,"inconsistencies.wagesDifferFromWageRecords":331,"inconsistencies.incomeDiffersFromPayStub":316,"inconsistencies.householdSizeDiffersFromMembers":367,"inconsistencies.jobWithoutEarnedIncome":302,"inconsistencies.earnedIncomeWithoutJob":302,"inconsistencies.utilitiesIncludedButClaimed":338}};
+function graphLayout(nodes, reads, inputs, widths) {
+  var NODE_H = 44, V_GAP = 16, COL_GAP = 90, MARGIN = 20, STEP = NODE_H + V_GAP;
+  var present = {};
+  nodes.forEach(function (n) { present[n] = true; });
+  var readsOf = function (n) { return (reads[n] || []).filter(function (m) { return present[m]; }); };
+
+  // Column = longest path from an input. Validation refuses cycles; `visiting`
+  // only keeps a malformed graph from recursing forever.
+  var column = {}, visiting = {};
+  inputs.forEach(function (n) { if (present[n]) column[n] = 0; });
+  function columnOf(n) {
+    if (column[n] !== undefined) return column[n];
+    if (visiting[n]) return 0;
+    visiting[n] = true;
+    var from = readsOf(n);
+    var c = from.length ? 1 + Math.max.apply(null, from.map(columnOf)) : 1;
+    delete visiting[n];
+    column[n] = c;
+    return c;
+  }
+  nodes.forEach(columnOf);
+  var columns = [];
+  nodes.forEach(function (n) { (columns[column[n]] = columns[column[n]] || []).push(n); });
+  columns = columns.filter(Boolean);
+
+  // x: each column as wide as its widest node.
+  var colX = [], x = MARGIN;
+  columns.forEach(function (col) {
+    colX.push(x);
+    x += Math.max.apply(null, col.map(function (n) { return widths[n]; })) + COL_GAP;
+  });
+
+  // y: each node as near as it can get to the middle of what it reads, pushed
+  // down past the one above, then the column shifted back by its average push.
+  var centerY = {};
+  columns.forEach(function (col) {
+    var wanted = col.map(function (n, i) {
+      var from = readsOf(n).filter(function (m) { return centerY[m] !== undefined; });
+      var y = from.length ? from.reduce(function (sum, m) { return sum + centerY[m]; }, 0) / from.length : i * STEP;
+      return { n: n, y: y };
+    }).sort(function (a, b) { return a.y - b.y; });
+    var last = -Infinity;
+    var placed = wanted.map(function (w) { var at = Math.max(w.y, last + STEP); last = at; return { n: w.n, at: at, y: w.y }; });
+    var drift = placed.reduce(function (sum, p) { return sum + (p.at - p.y); }, 0) / placed.length;
+    placed.forEach(function (p) { centerY[p.n] = p.at - drift; });
+  });
+  var top = Math.min.apply(null, Object.keys(centerY).map(function (n) { return centerY[n]; })) - NODE_H / 2;
+  var pos = {}, bottom = 0;
+  columns.forEach(function (col, c) {
+    col.forEach(function (n) {
+      pos[n] = { x: colX[c], y: centerY[n] - NODE_H / 2 - top + MARGIN };
+      bottom = Math.max(bottom, pos[n].y + NODE_H);
+    });
+  });
+  return { pos: pos, width: x - COL_GAP + MARGIN, height: bottom + MARGIN };
+}
+function graphEdgePath(from, to, pos, widths) {
+  var NODE_H = 44;
+  var x1 = pos[from].x + widths[from], y1 = pos[from].y + NODE_H / 2;
+  var x2 = pos[to].x - 2, y2 = pos[to].y + NODE_H / 2;
+  var bend = Math.max(24, (x2 - x1) / 2);
+  return 'M' + x1 + ',' + y1 + ' C' + (x1 + bend) + ',' + y1 + ' ' + (x2 - bend) + ',' + y2 + ' ' + x2 + ',' + y2;
+}
+const ANNOTATIONS = {"risks.earnedIncomeVaries":{"reason":"Earned income is the largest source of payment errors, and wages that change month to month are the hardest to get right: a single pay stub doesn't show what a month of irregular hours or tips comes to.\n","policies":["snap-earned-income","snap-income-verification"],"patterns":["ruleset-output-fact"],"probeQuestions":["How many hours have you worked each week over the last month?","Do you get tips? About how much in a typical week?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"},{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]},"risks.cashOrSelfEmploymentIncome":{"reason":"Cash, gig and self-employment income often isn't on the application at all, and isn't asked about unless someone asks specifically.\n","policies":["snap-earned-income"],"patterns":["ruleset-output-fact"],"probeQuestions":["Does anyone in the household do any work for cash, side jobs, or gig work?","About how much did that bring in over the last 30 days?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"},{"title":"FRAC: A Backgrounder on SNAP Quality Control, Payment Error Rates, and Cost-Sharing","url":"https://frac.org/blog/a-backgrounder-on-snap-quality-control-payment-error-rates-and-cost-sharing"}]},"risks.incomeChangedSinceLastCertification":{"reason":"Income changes between certifications — a job gained or lost, a raise, hours cut — are a leading cause of both overpayments and underpayments when they aren't reported.\n","policies":["snap-reporting-changes","snap-recertification"],"patterns":["ruleset-output-fact"],"probeQuestions":["Has anyone started or stopped a job since your last renewal?","Has anyone's pay or hours changed?"],"sources":[{"title":"FRAC: A Backgrounder on SNAP Quality Control, Payment Error Rates, and Cost-Sharing","url":"https://frac.org/blog/a-backgrounder-on-snap-quality-control-payment-error-rates-and-cost-sharing"},{"title":"FNS SNAP Recertification Toolkit (June 2018)","url":"https://www.fna.usda.gov/snap/recertification-toolkit"}]},"risks.householdChangedSinceLastCertification":{"reason":"Who lives in the household and buys food together decides whose income counts. Changes are often unreported, and often not asked about at recertification.\n","policies":["snap-household-composition","snap-reporting-changes"],"patterns":["ruleset-output-fact"],"probeQuestions":["Has anyone moved in or out since your last renewal?","Does everyone who lives with you buy and prepare food together?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"},{"title":"FNS SNAP Recertification Toolkit (June 2018)","url":"https://www.fna.usda.gov/snap/recertification-toolkit"}]},"risks.shelterCostsCarriedOver":{"reason":"Shelter costs carried forward from the last certification without being asked about can be out of date in either direction: a move or a rent increase that's missed.\n","policies":["snap-shelter-utility-deductions","snap-recertification"],"patterns":["ruleset-output-fact"],"probeQuestions":["Is your rent or mortgage still the same amount?","Have you moved since your last renewal?"],"sources":[{"title":"FNS SNAP Recertification Toolkit (June 2018)","url":"https://www.fna.usda.gov/snap/recertification-toolkit"},{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]},"risks.elderlyOrDisabledWithoutMedicalCosts":{"reason":"A member 60 or older, or disabled, may deduct medical costs. Missed deductions are among the most common fixable errors, and lead to underpayments.\n","policies":["snap-elderly-disabled-deductions"],"patterns":["ruleset-output-fact"],"probeQuestions":["Does [member] pay for any doctor visits, prescriptions, or medical supplies?","About how much a month?"],"sources":[{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"},{"title":"FRAC: A Backgrounder on SNAP Quality Control, Payment Error Rates, and Cost-Sharing","url":"https://frac.org/blog/a-backgrounder-on-snap-quality-control-payment-error-rates-and-cost-sharing"}]},"risks.childrenAndEarnersWithoutDependentCare":{"reason":"Care for a child so a household member can work is deductible. When it's new it often isn't asked about, which leads to an underpayment.\n","policies":["snap-dependent-care-deduction"],"patterns":["ruleset-output-fact"],"probeQuestions":["Does anyone look after the children while you work or go to school?","Do you pay for that care?"],"sources":[{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]},"risks.circumstancesChangedSinceApplying":{"reason":"Changes between applying and the interview have to be recorded, and some verified, before benefits are worked out. FNS-1104 makes them a probe.\n","policies":["snap-interview-toolkit"],"patterns":["ruleset-output-fact"],"probeQuestions":["Since you applied, has anything changed about who lives with you, your income, or your expenses?"],"sources":[{"title":"FNS State SNAP Interview Toolkit (FNS-1104, revised June 2025)","url":"https://www.fna.usda.gov/snap/state/interview-toolkit"}]},"risks.multipleProgramsApplied":{"reason":"Households on several programs face reporting rules that differ between them, which makes it harder to keep each program's information right.\n","patterns":["ruleset-output-fact"],"probeQuestions":["Have you reported this change to [other program] as well?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"}]},"inconsistencies.incomeBelowExpenses":{"reason":"When reported income doesn't cover reported expenses, something the application doesn't show is paying the difference: unreported income, or help from outside the household. FNS-1104 makes it a probe.\n","policies":["snap-interview-toolkit"],"patterns":["ruleset-output-fact"],"probeQuestions":["Your expenses are more than your income. How does the household make up the difference?","Does anyone help with bills — family, friends, or community organizations?"],"sources":[{"title":"FNS State SNAP Interview Toolkit (FNS-1104, revised June 2025)","url":"https://www.fna.usda.gov/snap/state/interview-toolkit"}]},"inconsistencies.wagesDifferFromWageRecords":{"reason":"Income an agency's data systems show but nobody confirms is an error the agency could have caught. A difference from the wage records needs explaining before it's resolved either way.\n","policies":["snap-income-verification"],"patterns":["ruleset-output-fact"],"probeQuestions":["The state's records show [amount] in wages for [member]. Does that sound right?","Did [member] have another job, or more hours, during that time?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"},{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]},"inconsistencies.incomeDiffersFromPayStub":{"reason":"A recorded amount that doesn't match its pay stubs usually means a pay frequency was converted wrongly — weekly, every two weeks, and twice a month are easy to confuse.\n","policies":["snap-income-verification","snap-earned-income"],"patterns":["ruleset-output-fact"],"probeQuestions":["How often is [member] paid — every week, every two weeks, or twice a month?"],"sources":[{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]},"inconsistencies.householdSizeDiffersFromMembers":{"reason":"The household's size decides its benefit. A size that doesn't match the members listed means someone is missing or counted who shouldn't be.\n","policies":["snap-household-composition"],"patterns":["ruleset-output-fact"],"probeQuestions":["Who lives with you and buys and prepares food with you?"],"sources":[{"title":"GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors","url":"https://www.gao.gov/assets/a246247.html"}]},"inconsistencies.jobWithoutEarnedIncome":{"reason":"A job with no income recorded is information that arrived but wasn't applied — the most common kind of agency error.\n","policies":["snap-earned-income"],"patterns":["ruleset-output-fact"],"probeQuestions":["Is [member] still working at [job]? How much are they paid?"],"sources":[{"title":"APHSA: Payment Error Rates — Understanding What They Are and How to Support SNAP Agencies in Reducing Them","url":"https://aphsa.org/resources/payment-error-rates-understanding-what-they-are-and-how-to-support-snap-agencies-in-reducing-them/"}]},"inconsistencies.earnedIncomeWithoutJob":{"reason":"Earned income with no job behind it can't be verified or updated when the job changes, and is often a job that ended but wasn't closed out.\n","policies":["snap-earned-income"],"patterns":["ruleset-output-fact"],"probeQuestions":["Where does [member] work? Are they still working there?"],"sources":[{"title":"APHSA: Payment Error Rates — Understanding What They Are and How to Support SNAP Agencies in Reducing Them","url":"https://aphsa.org/resources/payment-error-rates-understanding-what-they-are-and-how-to-support-snap-agencies-in-reducing-them/"}]},"inconsistencies.utilitiesIncludedButClaimed":{"reason":"A utility allowance applies only to a household that pays utility costs separately from its rent. What counts as a utility deduction is a common misapplication of policy.\n","policies":["snap-shelter-utility-deductions"],"patterns":["ruleset-output-fact"],"probeQuestions":["Do you pay any utility bills yourself, like electric or gas, or are they all included in the rent?"],"sources":[{"title":"NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates","url":"https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"}]}};
+const REGISTRIES = {"patterns":{"oneof-discriminator":{"description":"Inline oneOf with a discriminator property, where all variants are defined within the same file (not via external $ref). Exercises discriminated union rendering, discriminator label resolution, and variant expansion in the explorer.\n"},"anyof":{"description":"anyOf composition — a field that may satisfy more than one schema simultaneously (e.g., a record with both electronic and manual verification on file). Exercises anyOf rendering and the semantic distinction from oneOf.\n"},"additional-properties-map":{"description":"Map type using additionalProperties to allow arbitrary key-value pairs (e.g., labels or metadata). Exercises additionalProperties rendering in the explorer and map validation in the schema validator.\n"},"read-only-field":{"description":"Field marked readOnly: true — server-generated and never accepted in write operations. Common for IDs, computed values, and lifecycle timestamps. Exercises readOnly rendering in the explorer and write-operation filtering.\n"},"deprecated-field":{"description":"Field marked deprecated: true with a migration note pointing to its replacement. Exercises deprecated field rendering in the explorer and tooling warnings.\n"},"string-format":{"description":"String field with a format constraint (uuid, date-time, date, email, etc.). Exercises format rendering in the explorer and format validation.\n"},"polymorphic-base":{"description":"Base schema extended via allOf in Create and Update variants. The Create variant adds required fields; the Update variant applies minProperties: 1 for partial updates. Exercises allOf merging and the Create/Update schema pattern.\n"},"array-of-enum":{"description":"Array of enum values. Exercises array-of-enum rendering in the explorer and array item validation in the schema validator.\n"},"x-enum-source":{"description":"Enum values resolved at build time from an external source (e.g., a state machine's state IDs) via the x-enum-source extension, rather than hardcoded in the OpenAPI spec. Exercises the resolver's x-enum-source injection.\n"},"nullable-state-gated-field":{"description":"Nullable field that is only present after a lifecycle transition (e.g., a timestamp set when an application is submitted). Exercises nullable field rendering and the pattern of state-gated fields.\n"},"nullable-conditional-field":{"description":"Nullable field whose presence depends on another field's value (e.g., a benefit amount present only when eligible is true). Exercises nullable field handling and conditional presence patterns.\n"},"external-ref-shared-defs":{"description":"External $ref to a shared $defs schema in a separate file. Exercises the resolver's cross-file $ref resolution and the explorer's external schema name rendering.\n"},"external-ref-defs-oneof":{"description":"External $ref to a $defs schema that is itself a oneOf with a discriminator. Exercises: (1) cross-file $ref resolution, (2) discriminated union rendering with labeled variants, (3) field inventory handling of oneOf inside an external $defs ref.\n"},"allof-inline-required":{"description":"allOf composition that adds inline required fields without duplicating properties (e.g., a Create variant that adds a required field to a base schema). Exercises the resolver's allOf merging and the explorer's allOf rendering.\n"},"paginated-list":{"description":"Collection endpoint returning items/total/limit/offset/hasNext. The standard blueprint pagination envelope. Exercises paginated list rendering and parameter validation (limit, offset, sort, search).\n"},"sub-resource":{"description":"Resource nested under a parent at a path like /parents/{id}/children. Full CRUD scoped to the parent. Exercises nested routing, parent FK validation, and sub-resource list/detail rendering in the explorer.\n"},"singleton-sub-resource":{"description":"Single resource nested under a parent at a path like /parents/{id}/summary, with no item-level ID. Accessed only through the parent. Exercises singleton sub-resource routing and composition rendering.\n"},"intra-domain-fk":{"description":"Intra-domain x-relationship foreign key linking a sub-resource back to its parent resource within the same domain. Exercises cross-reference rendering in the explorer and FK validation.\n"},"cross-domain-fk":{"description":"Cross-domain x-relationship foreign key linking a resource in one domain to a resource in another. Exercises cross-domain reference rendering and FK validation across domain boundaries.\n"},"rpc-state-machine-action":{"description":"RPC-style state machine action with a generated POST endpoint. Exercises the RPC overlay generator, x-relationship tagging, and state machine → API cross-linking in the explorer.\n"},"state-machine-guard":{"description":"Named boolean condition (CEL expression) attached to a state machine action. The action can only be triggered when all guard conditions pass. Exercises guard evaluation, actor role checking, and guard composition (any/all).\n"},"state-machine-timer":{"description":"Timer declaration on a state machine. The scheduling service emits a callback event ({domain}.{id}) when the timer fires; the machine subscribes to react. Exercises timer declaration rendering and the timer → event subscription link.\n"},"state-machine-subscription":{"description":"State machine subscribing to a domain event emitted by a different domain. The handler runs steps (create, emit, call) automatically when the event arrives. Exercises cross-domain event subscription and handler rendering.\n"},"state-machine-event":{"description":"Domain event emitted on a state machine transition. Exercises AsyncAPI event catalog generation and event → state machine cross-linking.\n"},"cross-domain-event":{"description":"Domain event consumed by downstream domains outside the emitting domain. Exercises event catalog cross-domain consumer rendering.\n"},"composition":{"description":"Read-only singleton resource assembled from fields across multiple resources, generated from a compositions contract. Produces a GET endpoint nested under the parent resource (e.g. /applications/{id}/summary). Exercises the composition generator, x-relationship injection, and singleton rendering in the explorer.\n"},"overlay":{"description":"Field or element added or modified by an adopter overlay. Overlays add state-required fields, tighten enums, and set global configuration (x-casing, x-pagination, x-search, x-relationship, x-event-type-prefix). Exercises the overlay resolver and adopter-level customization patterns.\n"},"ruleset-output-fact":{"description":"Output fact from a ruleset — a fact declared in the outputs list and returned by the REST endpoint. Exercises the rules engine → API endpoint link in the explorer (Rules badge).\n"},"ruleset-intermediate-fact":{"description":"Intermediate fact used internally by other facts but not returned by the REST endpoint. Exercises fact graph dependency rendering in the rules-docs visualizer.\n"},"array-of-oneof":{"description":"Array whose items are a oneOf discriminated union (e.g., EvaluationResult returning EvaluationFact variants). Exercises array-of-oneOf rendering, discriminator label resolution, and schema variant expansion.\n"}},"policies":{"snap-application-acceptance":{"citation":"7 CFR § 273.2(c)","description":"SNAP application acceptance requirements — agencies must accept applications on the day of initial contact and must not discourage or delay submission.\n"},"snap-right-to-apply":{"citation":"7 CFR § 273.2(a)","description":"SNAP right-to-apply — any household wishing to participate must be allowed to file an application, and the filing date establishes the benefit month.\n"},"snap-processing-clock":{"citation":"7 CFR § 273.2(g)","description":"SNAP application processing standards — 30-day processing clock from date of filing; expedited service within 7 days for qualifying households.\n"},"medicaid-processing-clock":{"citation":"42 CFR § 435.912","description":"Medicaid application processing standards — 45-day processing clock for most applicants; 90 days for disability-based applicants.\n"},"snap-notice-of-action":{"citation":"7 CFR § 273.13","description":"SNAP notice of adverse action — agencies must provide timely and adequate written notice before reducing, suspending, or terminating benefits.\n"},"snap-notice-of-eligibility":{"citation":"7 CFR § 273.10(g)","description":"SNAP notice of eligibility determination — written notice of approval or denial with reason, rights, and certification period.\n"},"medicaid-notice-of-eligibility":{"citation":"42 CFR § 435.917","description":"Medicaid notice of eligibility determination — written notice of approval or denial with reason, appeal rights, and effective date.\n"},"snap-fair-hearing-rights":{"citation":"7 CFR § 273.15","description":"SNAP fair hearing rights — households have the right to request a fair hearing within 90 days of any adverse action notice.\n"},"snap-interview-toolkit":{"citation":"FNS-1104 (March 2023, revised June 2025)","description":"FNS SNAP Interview Toolkit — six essential interview functions, probe triggers for inconsistency flags, verification requirements, and interview conclusion standards.\n"},"snap-general-work-requirement":{"citation":"7 CFR § 273.7","description":"SNAP general work requirements — able-bodied adults aged 16–59 must register for work, accept suitable employment, and participate in assigned employment and training programs. Exemptions include physical/mental incapacity, caregiving, school enrollment, and participation in other programs.\n"},"snap-abawd-work-requirement":{"citation":"7 CFR § 273.24","description":"SNAP able-bodied adults without dependents (ABAWD) work requirement — individuals aged 18–54 without dependents are limited to 3 months of benefits in any 36-month period unless they meet work, exemption, or waiver criteria.\n"},"snap-student-eligibility":{"citation":"7 CFR § 273.5","description":"SNAP eligibility rules for students enrolled at least half-time in higher education — generally ineligible unless they meet one of the statutory exceptions (employment, work-study, dependent care, TANF participation, etc.).\n"},"snap-expedited-processing":{"citation":"7 CFR § 273.2(i)","description":"SNAP expedited service — households with gross monthly income below $150 and liquid resources below $100 (or migrant/seasonal farmworkers) must receive benefits within 7 days of application.\n"},"snap-expedited-screening":{"citation":"7 CFR § 273.2(i)(1)","description":"SNAP expedited screening criteria — agencies must screen all applications on the day of receipt and identify households entitled to expedited service.\n"},"qualified-alien-eligibility":{"citation":"7 CFR § 273.4","description":"SNAP eligibility for non-citizens — only qualified aliens are eligible; status categories include LPRs, refugees, asylees, and other federally defined categories with varying waiting periods.\n"},"prwora-sponsor-deeming":{"citation":"8 U.S.C. § 1631","description":"PRWORA sponsor income deeming — income and resources of a sponsor who signed an I-864 Affidavit of Support on or after December 19, 1997 are deemed available to the sponsored non-citizen for SNAP purposes.\n"},"snap-household-composition":{"citation":"7 CFR § 273.1","description":"SNAP household composition rules — defines who must be included in a SNAP household, including mandatory household members, separate household rules, and treatment of boarders, roommates, and institutionalized individuals.\n"},"snap-income-verification":{"citation":"7 CFR § 273.2(f)","description":"SNAP income verification requirements — agencies must verify earned and unearned income at application and recertification, including acceptable documentary evidence and collateral contact standards.\n"},"snap-elderly-disabled-deductions":{"citation":"7 CFR § 273.9(d)","description":"SNAP deductions for elderly and disabled households — households with an elderly or disabled member may claim excess medical expense deductions and are exempt from the gross income test.\n"},"snap-earned-income":{"citation":"7 CFR § 273.9(b)(1)","description":"SNAP earned income — wages, salaries and self-employment income are counted in determining eligibility and benefits.\n"},"snap-dependent-care-deduction":{"citation":"7 CFR § 273.9(d)(4)","description":"SNAP dependent care deduction — care for a child or other dependent, needed so a household member can work, look for work, or attend training or school.\n"},"snap-shelter-utility-deductions":{"citation":"7 CFR § 273.9(d)(6)","description":"SNAP shelter and utility deductions — the excess shelter deduction, and the standard utility allowances for households that pay utility costs separately from rent.\n"},"snap-reporting-changes":{"citation":"7 CFR § 273.12","description":"SNAP reporting requirements — the changes a household must report between certifications, and how the agency acts on them.\n"},"snap-recertification":{"citation":"7 CFR § 273.14","description":"SNAP recertification — the interview, verification and determination a household goes through before its certification period ends.\n"},"snap-benefit-calculation":{"citation":"7 CFR § 273.10","description":"SNAP benefit calculation — net monthly income is used to determine benefit allotment; benefit equals 30% of net income subtracted from the maximum allotment for household size.\n"},"chip-age-eligibility":{"citation":"42 CFR § 457.310","description":"CHIP age eligibility — states must define an upper age limit for CHIP eligibility (up to age 19), and may extend coverage to unborn children and former foster youth up to age 26 under state plan options.\n"},"medicaid-caretaker-relative":{"citation":"42 CFR § 435.110","description":"Medicaid caretaker relative eligibility — states must provide Medicaid to caretaker relatives of dependent children who meet income and resource standards, including parents and other adults who are the primary caregiver.\n"},"medicaid-cost-sharing":{"citation":"42 CFR § 447.50","description":"Medicaid cost sharing — limits on premiums, copayments, and other cost sharing for Medicaid enrollees, including aggregate limits by income level and prohibition on cost sharing for certain populations and services.\n"},"medicaid-determination-documentation":{"citation":"42 CFR § 435.940","description":"Medicaid eligibility verification — agencies must verify eligibility factors through electronic data sources before requesting documentation from applicants; paper documentation may be requested only when electronic verification is unavailable.\n"}},"terms":{"snap":{"description":"The Supplemental Nutrition Assistance Program.","forms":{"en-US":"SNAP","es-US":"SNAP"}},"ebt":{"description":"Electronic Benefits Transfer — the card benefits are paid onto.","forms":{"en-US":"EBT","es-US":"EBT"},"spelled":true},"tanf":{"description":"Temporary Assistance for Needy Families.","forms":{"en-US":"TANF","es-US":"TANF"}},"wic":{"description":"The Special Supplemental Nutrition Program for Women, Infants, and Children.","forms":{"en-US":"WIC","es-US":"WIC"},"spelled":true},"recertification":{"description":"Renewing a household's benefits at the end of a certification period.","forms":{"en-US":"recertification","es-US":"recertificación"}}},"transcription-services":{"aws-transcribe":{"description":"Amazon Transcribe streaming."},"elevenlabs-scribe":{"description":"ElevenLabs Scribe realtime."},"none":{"description":"No transcription service — a chat, or lines a person typed. A transcript naming it has no model."}}};
+const EXAMPLES = [{"description":"A recertification where much has changed and the application doesn't agree with itself","inputs":{"application":{"programsAppliedFor":["snap"],"householdSize":3,"members":[{"id":"client","age":41,"isDisabled":false},{"id":"daughter","age":19,"isDisabled":false},{"id":"son","age":8,"isDisabled":false},{"id":"mother","age":68,"isDisabled":false}],"jobs":[{"id":"warehouse","memberId":"client"}],"incomes":[{"id":"wages","memberId":"client","jobId":"warehouse","type":"earned","payPattern":"irregular","monthlyAmount":1100},{"id":"cleaning","memberId":"client","type":"self_employment","payPattern":"cash","monthlyAmount":200},{"id":"ss","memberId":"mother","type":"unearned","payPattern":"regular","monthlyAmount":900}],"expenses":[{"category":"rent","monthlyAmount":1400}],"reportedMonthlyIncome":2200,"reportedMonthlyExpenses":2600,"utilitiesIncludedInRent":true,"claimsUtilityAllowance":true,"hasChangedCircumstances":true},"lastCertification":{"memberIds":["client","daughter","son"],"incomes":[{"id":"wages","memberId":"client","jobId":"warehouse","type":"earned","payPattern":"regular","monthlyAmount":2400}],"expenses":[{"category":"rent","monthlyAmount":1150}]},"dataMatches":{"wageRecords":[{"memberId":"client","monthlyWages":1800}],"payStubs":[{"incomeId":"wages","monthlyAmount":1820}]}}},{"description":"Nothing changed, nothing error-prone, and everything agrees — no flags raised","inputs":{"application":{"programsAppliedFor":["snap"],"householdSize":2,"members":[{"id":"client","age":34,"isDisabled":false},{"id":"partner","age":36,"isDisabled":false}],"jobs":[{"id":"clinic","memberId":"partner"}],"incomes":[{"id":"salary","memberId":"partner","jobId":"clinic","type":"earned","payPattern":"regular","monthlyAmount":1900}],"expenses":[{"category":"rent","monthlyAmount":950}],"reportedMonthlyIncome":1900,"reportedMonthlyExpenses":1400,"utilitiesIncludedInRent":true,"claimsUtilityAllowance":false,"hasChangedCircumstances":false},"lastCertification":{"memberIds":["client","partner"],"incomes":[{"id":"salary","memberId":"partner","jobId":"clinic","type":"earned","payPattern":"regular","monthlyAmount":1900}],"expenses":[{"category":"rent","monthlyAmount":900}]},"dataMatches":{"wageRecords":[{"memberId":"partner","monthlyWages":1880}],"payStubs":[{"incomeId":"salary","monthlyAmount":1900}]}}}];
+const RULESET_INPUTS = {"application":{"$ref":"./intake-schemas.yaml#/$defs/InterviewApplication"},"lastCertification":{"$ref":"./intake-schemas.yaml#/$defs/LastCertification"},"dataMatches":{"$ref":"./intake-schemas.yaml#/$defs/DataMatches"}};
+const REGISTRY_FIELDS = new Set(["transcription-services","patterns","policies","terms"]);
+let exampleIndex = 0;
+let isExperimentMode = !EXAMPLES.length; // start unlocked when no examples
+
+function loadExample(delta) {
+  if (!EXAMPLES.length || isExperimentMode) return;
+  exampleIndex = (exampleIndex + delta + EXAMPLES.length) % EXAMPLES.length;
+  const ex = EXAMPLES[exampleIndex];
+  document.getElementById('eval-inputs').value = JSON.stringify(ex.inputs, null, 2);
+  const label = document.getElementById('example-label');
+  if (label) { label.textContent = ex.description; label.title = ex.description; }
+  runEval();
+}
+
+function toggleExperimentMode() {
+  if (isExperimentMode) { resetToExample(); } else { enterExperimentMode(); }
+}
+
+function experimentEls() {
+  return {
+    textarea:    document.getElementById('eval-inputs'),
+    nav:         document.getElementById('example-nav'),
+    btn:         document.getElementById('experiment-btn'),
+    evaluateBtn: document.getElementById('evaluate-btn'),
+  };
+}
+
+function enterExperimentMode() {
+  isExperimentMode = true;
+  const { textarea, nav, btn, evaluateBtn } = experimentEls();
+  textarea.removeAttribute('readonly');
+  textarea.style.background    = '#fff';
+  textarea.style.borderColor   = '#2B1A78';
+  if (nav)         nav.style.display         = 'none';
+  if (btn)         btn.textContent            = 'Reset';
+  if (evaluateBtn) evaluateBtn.style.display  = '';
+}
+
+function resetToExample() {
+  isExperimentMode = false;
+  const { textarea, nav, btn, evaluateBtn } = experimentEls();
+  if (EXAMPLES.length) {
+    const ex = EXAMPLES[exampleIndex];
+    textarea.value = JSON.stringify(ex.inputs, null, 2);
+    const label = document.getElementById('example-label');
+    if (label) { label.textContent = ex.description; label.title = ex.description; }
+  }
+  textarea.setAttribute('readonly', '');
+  textarea.style.background  = '#f9fafb';
+  textarea.style.borderColor = '#d1d5db';
+  if (nav)         nav.style.display        = '';
+  if (btn)         btn.textContent          = 'Try it';
+  if (evaluateBtn) evaluateBtn.style.display = 'none';
+  runEval();
+}
+
+// ── Click-to-highlight (ported from spike's visualize-graph-html.js) ──────────
+// Clicking a node dims unconnected nodes/edges, highlights connected ones,
+// adds a selection ring, and scrolls to the corresponding row in the bottom panel.
+function resetHighlight(svg) {
+  svg.querySelectorAll('.sg-node').forEach(n => {
+    n.style.opacity = '';
+    const ring = n.querySelector('.sg-selected-ring');
+    if (ring) ring.remove();
+  });
+  svg.querySelectorAll('.sg-edge').forEach(l => {
+    l.style.opacity = ''; l.setAttribute('stroke', '#6b7280'); l.setAttribute('stroke-width', '1.5');
+  });
+  svg._activeNode = null;
+  closeDetail();
+}
+
+document.addEventListener('click', function (e) {
+  const nodeEl = e.target.closest('.sg-node');
+  const svg = e.target.closest('svg');
+  if (!svg) return;
+  const allNodes = svg.querySelectorAll('.sg-node');
+  const allEdges = svg.querySelectorAll('.sg-edge');
+  if (!nodeEl || !svg.contains(nodeEl)) { resetHighlight(svg); return; }
+  const node = nodeEl.dataset.node;
+  if (svg._activeNode === node) { resetHighlight(svg); return; }
+
+  svg.querySelectorAll('.sg-selected-ring').forEach(r => r.remove());
+  svg._activeNode = node;
+
+  // Build transitive connected set via two separate passes:
+  // upstream (toward inputs) and downstream (toward outputs).
+  // Mixing directions in one BFS causes household's descendants to fan out incorrectly.
+  const upstream = new Set([node]);
+  const upQueue = [node];
+  while (upQueue.length) {
+    const cur = upQueue.shift();
+    allEdges.forEach(l => {
+      if (l.dataset.to === cur && !upstream.has(l.dataset.from)) { upstream.add(l.dataset.from); upQueue.push(l.dataset.from); }
+    });
+  }
+  const downstream = new Set([node]);
+  const downQueue = [node];
+  while (downQueue.length) {
+    const cur = downQueue.shift();
+    allEdges.forEach(l => {
+      if (l.dataset.from === cur && !downstream.has(l.dataset.to)) { downstream.add(l.dataset.to); downQueue.push(l.dataset.to); }
+    });
+  }
+  const connected = new Set([...upstream, ...downstream]);
+
+  allNodes.forEach(n => {
+    const isActive = n.dataset.node === node;
+    n.style.opacity = connected.has(n.dataset.node) ? '1' : '0.15';
+    if (isActive) {
+      const rect = n.querySelector('rect');
+      if (rect) {
+        const ring = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        ring.setAttribute('x', parseFloat(rect.getAttribute('x')) - 3);
+        ring.setAttribute('y', parseFloat(rect.getAttribute('y')) - 3);
+        ring.setAttribute('width', parseFloat(rect.getAttribute('width')) + 6);
+        ring.setAttribute('height', parseFloat(rect.getAttribute('height')) + 6);
+        ring.setAttribute('rx', parseFloat(rect.getAttribute('rx') || 0) + 2);
+        ring.setAttribute('fill', 'none');
+        ring.setAttribute('stroke', '#2B1A78');
+        ring.setAttribute('stroke-width', '2.5');
+        ring.setAttribute('stroke-dasharray', '4 2');
+        ring.classList.add('sg-selected-ring');
+        n.insertBefore(ring, n.firstChild);
+      }
+    }
+  });
+  allEdges.forEach(l => {
+    const hit = connected.has(l.dataset.from) && connected.has(l.dataset.to);
+    l.style.opacity = hit ? '1' : '0.1';
+    l.setAttribute('stroke', hit ? '#2B1A78' : '#6b7280');
+    l.setAttribute('stroke-width', hit ? '2.5' : '1.5');
+  });
+  showDetail(node);
+});
+
+function closeDetail() {
+  document.getElementById('detail-strip').style.display = 'none';
+  activeNode = null;
+}
+
+// ── Annotation field rendering ────────────────────────────────────────────────
+const ANN_EXPLORER = '../annotations-explorer';
+const ANN_LABEL_STYLE = 'font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;';
+
+// A registry entry declares only description; everything else it carries is
+// type-specific. Showing the description plus whatever else is there keeps the
+// tooltip useful without the renderer knowing any registry type or field name.
+function registryTooltip(entry, id) {
+  if (!entry) return id;
+  const extras = Object.entries(entry)
+    .filter(([k]) => k !== 'description' && k !== 'deprecated')
+    .map(([k, v]) => k + ': ' + (Array.isArray(v) ? v.join(', ') : v));
+  return [entry.description, ...extras].filter(Boolean).join('\n');
+}
+
+function renderAnnotFields(annot) {
+  let html = '';
+  for (const [key, val] of Object.entries(annot)) {
+    const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+    html += '<div style="' + ANN_LABEL_STYLE + '">' + escHtml(label) + '</div>';
+    if (REGISTRY_FIELDS.has(key) && Array.isArray(val)) {
+      const typeSlug = key.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+      html += '<div style="margin-bottom:10px;">' + val.map(id => {
+        const entrySlug = String(id).replace(/[^a-z0-9]/gi, '-').toLowerCase();
+        const href = ANN_EXPLORER + '/' + typeSlug + '.html#entry--' + entrySlug;
+        // Registry entries render the same way whatever their type: the ID is
+        // the name, and the tooltip is the description followed by whatever
+        // other fields the entry happens to carry. Naming a type or a field
+        // here would put domain knowledge back into the tooling.
+        return '<a href="' + escHtml(href) + '" title="' + escHtml(registryTooltip(REGISTRIES[key]?.[id], id)) +
+               '" class="ann-chip">' + escHtml(id) + '</a>';
+      }).join('') + '</div>';
+    } else if (Array.isArray(val) && val.length === 1) {
+      html += '<div style="font-size:11px;color:#374151;margin-bottom:10px;">' + escHtml(String(val[0]).trim()) + '</div>';
+    } else if (Array.isArray(val)) {
+      html += '<ol style="margin:0 0 10px;padding-left:16px;">' + val.map(item =>
+        '<li style="font-size:11px;color:#374151;margin-bottom:6px;line-height:1.5;">' + escHtml(String(item).trim()) + '</li>'
+      ).join('') + '</ol>';
+    } else if (typeof val === 'string') {
+      html += '<div style="font-size:11px;color:#374151;margin-bottom:10px;">' + escHtml(val.trim()) + '</div>';
+    }
+  }
+  return html;
+}
+
+// ── Detail strip ──────────────────────────────────────────────────────────────
+// Full-width strip between graph and columns. Shows on node click, hides on
+// close button or clicking empty graph area.
+let lastNodes = null; // plain { factName: { type, state, value, ... } } map
+let activeNode = null;
+
+function showDetail(nodeName) {
+  activeNode = nodeName;
+  const strip = document.getElementById('detail-strip');
+  const panel = document.getElementById('detail-strip-content');
+  const outputSet = new Set(GRAPH.outputs);
+  const fact = GRAPH.facts[nodeName];
+  const annot = ANNOTATIONS[nodeName];
+  const isInput = !fact;
+  const isOutput = outputSet.has(nodeName);
+  const isIntermediate = !isInput && !isOutput;
+  const role = isInput ? 'Input' : isOutput ? 'Output' : 'Intermediate fact';
+  const roleColor = isInput ? '#00AD93' : isOutput ? '#2B1A78' : '#E65100';
+
+  let html = '<div style="font-size:13px;font-weight:700;color:#111827;margin-bottom:3px;font-family:ui-monospace,monospace">' + escHtml(nodeName) + '</div>';
+  html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:' + roleColor + ';margin-bottom:10px;">' + role + '</div>';
+
+  // Current value — only for intermediate facts (outputs shown in panel, inputs have no computed value)
+  if (isIntermediate && lastNodes) {
+    const node = lastNodes[nodeName];
+    if (node && (node.state === 'complete' || node.state === 'placeholder')) {
+      const stateLabel = node.state === 'placeholder' ? ' <span style="font-size:9px;font-weight:600;color:#92400e;background:#fef3c7;padding:1px 4px;border-radius:2px;margin-left:4px;">placeholder</span>' : '';
+      html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">Current value' + stateLabel + '</div>';
+      html += '<code style="display:block;font-size:11px;padding:6px 8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:3px;word-break:break-all;margin-bottom:10px;font-family:ui-monospace,monospace;color:#166534;">' + escHtml(JSON.stringify(node.value)) + '</code>';
+    } else if (node?.state === 'error') {
+      html += '<div style="font-size:10px;color:#991b1b;margin-bottom:10px;font-style:italic;">Error: ' + escHtml(node.message) + '</div>';
+    } else if (node?.state === 'missing') {
+      html += '<div style="font-size:10px;color:#9ca3af;margin-bottom:10px;font-style:italic;">Missing inputs: ' + escHtml((node.missing ?? []).join(', ')) + '</div>';
+    }
+  }
+
+  if (isInput) {
+    const paths = Object.entries(GRAPH.inputs).filter(([p]) => p.slice(2).split('.')[0] === nodeName);
+    html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">Paths</div>';
+    html += '<ul style="margin:0 0 10px;padding-left:14px;">' + paths.map(([p, def]) =>
+      '<li style="font-size:10.5px;font-family:ui-monospace,monospace;color:#374151;margin-bottom:3px;">' + escHtml(p) +
+      (def?.type ? ' <span style="color:#9ca3af;">(' + escHtml(def.type) + ')</span>' : '') +
+      (def?.description ? '<br><span style="font-size:10px;color:#9ca3af;">' + escHtml(def.description) + '</span>' : '') +
+      '</li>'
+    ).join('') + '</ul>';
+  }
+
+  if (fact?.description) {
+    html += '<div style="font-size:11px;color:#374151;margin-bottom:10px;">' + escHtml(fact.description.trim()) + '</div>';
+  }
+
+  if (fact?.expression) {
+    html += '<div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">Expression</div>';
+    html += '<code style="display:block;font-size:10.5px;padding:6px 8px;background:#f3f4f6;border-radius:3px;word-break:break-all;margin-bottom:10px;font-family:ui-monospace,monospace;">' + escHtml(fact.expression) + '</code>';
+  }
+
+  if (annot) {
+    html += renderAnnotFields(annot);
+  }
+
+  panel.innerHTML = html;
+  strip.style.display = '';
+}
+
+// Apply ruleset input schema defaults for any namespace absent from userInputs.
+// Returns { scope, defaultedNamespaces } for use with window.RulesEngine.evaluate(GRAPH, scope).
+function applyDefaults(userInputs) {
+  const scope = Object.assign({}, userInputs);
+  const defaultedNamespaces = new Set();
+  for (const [ns, schema] of Object.entries(RULESET_INPUTS)) {
+    if (userInputs[ns] !== undefined) continue;
+    if (schema.type !== 'object') continue;
+    const defaults = {};
+    for (const [prop, propSchema] of Object.entries(schema.properties ?? {})) {
+      if (propSchema.default !== undefined) defaults[prop] = propSchema.default;
+    }
+    if (Object.keys(defaults).length > 0) {
+      scope[ns] = defaults;
+      defaultedNamespaces.add(ns);
+    }
+  }
+  return { scope, defaultedNamespaces };
+}
+
+// Walk the dependency graph to find facts that transitively depend on any
+// defaulted namespace and promote them from complete → placeholder.
+function reclassifyPlaceholders(nodes, defaultedNamespaces) {
+  if (!defaultedNamespaces.size) return nodes;
+  const deps = GRAPH.dependencies;
+
+  function touchesDefault(factName, visited = new Set()) {
+    if (visited.has(factName)) return false;
+    visited.add(factName);
+    for (const dep of (deps[factName] ?? [])) {
+      if (dep.startsWith('$.')) {
+        if (defaultedNamespaces.has(dep.slice(2).split('.')[0])) return true;
+      } else if (touchesDefault(dep, visited)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  const result = Object.assign({}, nodes);
+  for (const name of Object.keys(result)) {
+    if (result[name].state === 'complete' && touchesDefault(name)) {
+      result[name] = Object.assign({}, result[name], { state: 'placeholder' });
+    }
+  }
+  return result;
+}
+
+// Render output facts into the results panel.
+// prevNodes (optional): previous eval result — rows whose value changed get a flash highlight.
+function renderOutputs(nodes, prevNodes) {
+  const el = document.getElementById('eval-results-body');
+  if (!nodes) { el.textContent = 'Evaluating…'; el.style.color = '#9ca3af'; return; }
+  const outputEntries = GRAPH.outputs.map(name => [name, nodes[name]]).filter(([, node]) => node);
+  if (!outputEntries.length) { el.textContent = 'No outputs.'; el.style.color = '#9ca3af'; return; }
+  const rows = outputEntries.map(([name, node]) => {
+    const stateColor = node.state === 'complete' ? '#111827' : node.state === 'placeholder' ? '#92400e' : node.state === 'error' ? '#991b1b' : '#9ca3af';
+    const indicator  = node.state === 'complete' ? '●' : node.state === 'placeholder' ? '◐' : node.state === 'error' ? '✕' : '○';
+    const valueStr   = node.state === 'error' ? node.message : node.state === 'missing' ? 'missing' : JSON.stringify(node.value);
+    return '<div data-name="' + escHtml(name) + '" style="padding:4px 0;border-bottom:1px solid #f3f4f6;">'
+      + '<div style="color:#374151;margin-bottom:1px;">' + escHtml(name) + '</div>'
+      + '<div style="color:' + stateColor + ';word-break:break-word;">' + indicator + ' ' + escHtml(valueStr) + '</div>'
+      + '</div>';
+  });
+  el.innerHTML = rows.join('');
+  el.style.color = '#111827';
+
+  // Flash rows whose value changed since the previous eval
+  if (prevNodes) {
+    for (const [name, node] of outputEntries) {
+      const prev = prevNodes[name];
+      if (!prev || prev.state !== node.state || JSON.stringify(prev.value) !== JSON.stringify(node.value)) {
+        const row = el.querySelector('[data-name="' + name + '"]');
+        if (row) flashHighlight(row);
+      }
+    }
+  }
+}
+
+function flashHighlight(el) {
+  el.style.transition = 'none';
+  el.style.background = '#fef9c3';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    el.style.transition = 'background 1.5s ease-out';
+    el.style.background = '';
+  }));
+}
+
+function runEval() {
+  if (!window.RulesEngine) return;
+  const errEl = document.getElementById('eval-errors');
+  const inputVal = (document.getElementById('eval-inputs')?.value ?? '').trim();
+  if (!inputVal) return;
+  let userInputs;
+  try { userInputs = JSON.parse(inputVal); } catch (e) {
+    errEl.textContent = 'Invalid JSON: ' + e.message;
+    errEl.style.display = 'block';
+    return;
+  }
+  try {
+    const { scope, defaultedNamespaces } = applyDefaults(userInputs);
+    const nodes = window.RulesEngine.evaluate(GRAPH, scope);
+    const prevNodes = lastNodes;
+    lastNodes = reclassifyPlaceholders(nodes, defaultedNamespaces);
+    errEl.style.display = 'none';
+    renderOutputs(lastNodes, prevNodes);
+    if (activeNode) showDetail(activeNode);
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+runEval();
+
+// ── Zoom and pan ──────────────────────────────────────────────────────────────
+// The graph fills a fixed-height viewport, and the viewBox is the camera: wheel
+// zooms about the cursor, drag moves, + and − zoom about the middle, Fit shows
+// everything. The view keeps the viewport's aspect ratio, so nothing letterboxes,
+// and it opens at actual size when fitting the whole graph would shrink it past
+// reading. A drag doesn't select the node it ends on.
+(function () {
+  const viewport = document.querySelector('.graph-viewport');
+  const svg = viewport && viewport.querySelector('svg');
+  if (!svg) return;
+  let W = Number(svg.dataset.graphWidth), H = Number(svg.dataset.graphHeight);
+  const aspect = () => viewport.clientWidth / viewport.clientHeight;
+  // Never wider than the graph needs to fit, or narrower than actual size: a small
+  // graph shows at its own size, in the middle.
+  const fitWidth = () => Math.max(W, H * aspect(), viewport.clientWidth);
+  const MIN_WIDTH = 200;
+  let view;
+
+  function clamp() {
+    // Never zoomed in past MIN_WIDTH or out past a little more than everything,
+    // and never moved so far that the graph leaves the viewport.
+    view.w = Math.min(Math.max(view.w, MIN_WIDTH), fitWidth() * 1.25);
+    view.h = view.w / aspect();
+    const minX = Math.min(0, W - view.w) - view.w / 2, maxX = Math.max(0, W - view.w) + view.w / 2;
+    const minY = Math.min(0, H - view.h) - view.h / 2, maxY = Math.max(0, H - view.h) + view.h / 2;
+    view.x = Math.min(Math.max(view.x, minX), maxX);
+    view.y = Math.min(Math.max(view.y, minY), maxY);
+    svg.setAttribute('viewBox', [view.x, view.y, view.w, view.h].join(' '));
+  }
+  function fit() {
+    const w = fitWidth();
+    view = { w, h: w / aspect(), x: (W - w) / 2, y: (H - w / aspect()) / 2 };
+    clamp();
+  }
+  function zoomAbout(gx, gy, factor) {
+    const before = view.w;
+    view.w *= factor;
+    view.h = view.w / aspect();
+    const ratio = view.w / before;
+    view.x = gx - (gx - view.x) * ratio;
+    view.y = gy - (gy - view.y) * ratio;
+    clamp();
+  }
+  const toGraph = (clientX, clientY) => {
+    const r = viewport.getBoundingClientRect();
+    return [view.x + (clientX - r.left) / r.width * view.w, view.y + (clientY - r.top) / r.height * view.h];
+  };
+
+  // Open at actual size, against the left edge where the inputs are and centered
+  // top to bottom, when the whole graph would be too small to read; otherwise
+  // show all of it.
+  function open(width, height) {
+    W = width; H = height;
+    if (fitWidth() > viewport.clientWidth * 1.6) {
+      view = { w: viewport.clientWidth, h: viewport.clientHeight, x: 0, y: (H - viewport.clientHeight) / 2 };
+      clamp();
+    } else {
+      fit();
+    }
+  }
+  open(W, H);
+  window.graphViewport = { open };
+
+  viewport.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const [gx, gy] = toGraph(e.clientX, e.clientY);
+    zoomAbout(gx, gy, Math.exp(e.deltaY * 0.0015));
+  }, { passive: false });
+
+  viewport.querySelectorAll('.graph-zoom').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (button.dataset.zoom === 'fit') return fit();
+      zoomAbout(view.x + view.w / 2, view.y + view.h / 2, button.dataset.zoom === 'in' ? 0.8 : 1.25);
+    });
+  });
+
+  // Drag to move. The pointer is only captured once it has moved a few pixels,
+  // so a click still selects a node; the click that ends a drag is swallowed.
+  let drag = null, dragged = false;
+  viewport.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || e.target.closest('button')) return;
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false };
+  });
+  viewport.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+    if (!drag.moved) { drag.moved = true; viewport.setPointerCapture(e.pointerId); viewport.style.cursor = 'grabbing'; }
+    const r = viewport.getBoundingClientRect();
+    view.x = drag.vx - dx / r.width * view.w;
+    view.y = drag.vy - dy / r.height * view.h;
+    clamp();
+  });
+  const endDrag = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    dragged = drag.moved;
+    if (drag.moved) viewport.releasePointerCapture(e.pointerId);
+    viewport.style.cursor = 'grab';
+    drag = null;
+  };
+  viewport.addEventListener('pointerup', endDrag);
+  viewport.addEventListener('pointercancel', endDrag);
+  viewport.addEventListener('click', (e) => {
+    if (dragged) { e.stopPropagation(); e.preventDefault(); dragged = false; }
+  }, true);
+
+  // Keep what's in view centered when the viewport changes width.
+  window.addEventListener('resize', () => {
+    const cx = view.x + view.w / 2, cy = view.y + view.h / 2;
+    view.h = view.w / aspect();
+    view.x = cx - view.w / 2;
+    view.y = cy - view.h / 2;
+    clamp();
+  });
+})();
+
+// ── One output on its own ─────────────────────────────────────────────────────
+// Past a few dozen facts the whole graph is too much to follow, but each output's
+// own graph — the output and everything it transitively reads — stays small. The
+// picker lays that subset out with the same function the build used, moves the
+// nodes there and hides the rest, so clicking, highlighting and the detail panel
+// work as they do on the whole graph.
+(function () {
+  const select = document.getElementById('graph-output');
+  const svg = document.querySelector('.graph-viewport svg');
+  if (!select || !svg || !window.graphViewport) return;
+  const nodes = Array.from(svg.querySelectorAll('.sg-node'));
+  const edges = Array.from(svg.querySelectorAll('.sg-edge'));
+  const whole = { width: Number(svg.dataset.graphWidth), height: Number(svg.dataset.graphHeight) };
+  edges.forEach(e => { e.dataset.d = e.getAttribute('d'); });
+
+  function show(output) {
+    resetHighlight(svg);
+    if (!output) {
+      nodes.forEach(g => { g.removeAttribute('transform'); g.style.display = ''; });
+      edges.forEach(e => { e.setAttribute('d', e.dataset.d); e.style.display = ''; });
+      window.graphViewport.open(whole.width, whole.height);
+      return;
+    }
+    const keep = new Set();
+    (function walk(n) {
+      if (keep.has(n)) return;
+      keep.add(n);
+      (GRAPH_LAYOUT.reads[n] || []).forEach(walk);
+    })(output);
+    const subset = GRAPH_LAYOUT.nodes.filter(n => keep.has(n));
+    const layout = graphLayout(subset, GRAPH_LAYOUT.reads, GRAPH_LAYOUT.inputs, GRAPH_LAYOUT.widths);
+    nodes.forEach(g => {
+      const p = layout.pos[g.dataset.node];
+      if (!p) { g.style.display = 'none'; return; }
+      g.style.display = '';
+      g.setAttribute('transform', 'translate(' + (p.x - Number(g.dataset.x)) + ',' + (p.y - Number(g.dataset.y)) + ')');
+    });
+    edges.forEach(e => {
+      const from = e.dataset.from, to = e.dataset.to;
+      if (!layout.pos[from] || !layout.pos[to]) { e.style.display = 'none'; return; }
+      e.style.display = '';
+      e.setAttribute('d', graphEdgePath(from, to, layout.pos, GRAPH_LAYOUT.widths));
+    });
+    window.graphViewport.open(layout.width, layout.height);
+  }
+  // A link can open one output's view: #output-risks.cashIncome.
+  function fromHash() {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#output-')) return;
+    const output = decodeURIComponent(hash.slice('#output-'.length));
+    if (!GRAPH.outputs.includes(output)) return;
+    select.value = output;
+    show(output);
+  }
+  select.addEventListener('change', () => {
+    show(select.value);
+    history.replaceState(null, '', select.value ? '#output-' + encodeURIComponent(select.value) : location.pathname + location.search);
+  });
+  window.addEventListener('hashchange', fromHash);
+  fromHash();
+})();
+
+// ── Hash-based fact navigation ─────────────────────────────────────────────
+// Navigating to #fact-{factName} simulates a click on that node so the full
+// highlight + detail-strip behavior fires, exactly as if the user clicked it.
+function activateFactFromHash() {
+  const hash = window.location.hash;
+  if (!hash.startsWith('#fact-')) return;
+  const factName = decodeURIComponent(hash.slice('#fact-'.length));
+  const svg = document.querySelector('svg');
+  if (!svg) return;
+  let nodeEl = null;
+  svg.querySelectorAll('.sg-node').forEach(el => {
+    if (el.dataset.node === factName) nodeEl = el;
+  });
+  if (nodeEl) {
+    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    setTimeout(() => {
+      document.getElementById('detail-strip')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
+  }
+}
+document.addEventListener('DOMContentLoaded', activateFactFromHash);
+window.addEventListener('hashchange', activateFactFromHash);
+</script></div>
+  <script>
+    document.querySelectorAll('[data-expand-id]').forEach(btn => {
+      const target = document.getElementById(btn.getAttribute('data-expand-id'));
+      if (!target) return;
+      btn.addEventListener('click', () => {
+        const visible = target.style.display !== 'none';
+        target.style.display = visible ? 'none' : '';
+        const ch = btn.querySelector('.chevron, .chip-arrow');
+        if (ch) ch.textContent = visible ? '▶' : '▼';
+      });
+    });
+    
+  </script>
+</body>
+</html>

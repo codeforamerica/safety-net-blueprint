@@ -179,7 +179,9 @@ export function extractDeps(expression, inputPaths, factPaths) {
   }
 
   for (const factPath of factPaths) {
-    if (new RegExp(`\\b${factPath}\\b`).test(expression)) {
+    // A grouped fact's path has dots, which match literally — `risks.cashIncome`,
+    // not `risksXcashIncome` — and a reference to it is the whole path.
+    if (containsPathRef(expression, factPath)) {
       add(factPath);
     }
   }

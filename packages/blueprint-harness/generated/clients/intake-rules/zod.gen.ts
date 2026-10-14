@@ -3,21 +3,100 @@
 import { z } from 'zod';
 
 /**
- * Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
+ * Input data for interviewFlags evaluation. All fields are optional — partial inputs trigger partial evaluation.
  */
-export const zInterviewPromptsRequest = z.object({
-    household: z.optional(z.object({
-        monthlyIncome: z.optional(z.number()),
-        monthlyExpenses: z.optional(z.number()),
+export const zInterviewFlagsRequest = z.object({
+    application: z.optional(z.object({
+        programsAppliedFor: z.optional(z.array(z.enum([
+            'snap',
+            'medicaid',
+            'tanf',
+            'chip'
+        ]))),
+        householdSize: z.optional(z.int()),
         members: z.optional(z.array(z.object({
+            id: z.optional(z.string()),
             age: z.optional(z.int()),
-            isEmployed: z.optional(z.boolean()),
-            isStudent: z.optional(z.boolean()),
-            isNonCitizen: z.optional(z.boolean())
+            isDisabled: z.optional(z.boolean())
+        }))),
+        jobs: z.optional(z.array(z.object({
+            id: z.optional(z.string()),
+            memberId: z.optional(z.string())
+        }))),
+        incomes: z.optional(z.array(z.object({
+            id: z.optional(z.string()),
+            memberId: z.optional(z.string()),
+            jobId: z.optional(z.string()),
+            type: z.optional(z.enum([
+                'earned',
+                'self_employment',
+                'unearned'
+            ])),
+            payPattern: z.optional(z.enum([
+                'regular',
+                'irregular',
+                'tips',
+                'cash'
+            ])),
+            monthlyAmount: z.optional(z.number())
+        }))),
+        expenses: z.optional(z.array(z.object({
+            category: z.optional(z.enum([
+                'rent',
+                'mortgage',
+                'utilities',
+                'dependent_care',
+                'medical',
+                'child_support'
+            ])),
+            monthlyAmount: z.optional(z.number())
+        }))),
+        reportedMonthlyIncome: z.optional(z.number()),
+        reportedMonthlyExpenses: z.optional(z.number()),
+        utilitiesIncludedInRent: z.optional(z.boolean()),
+        claimsUtilityAllowance: z.optional(z.boolean()),
+        hasChangedCircumstances: z.optional(z.boolean())
+    })),
+    lastCertification: z.optional(z.object({
+        memberIds: z.optional(z.array(z.string())),
+        incomes: z.optional(z.array(z.object({
+            id: z.optional(z.string()),
+            memberId: z.optional(z.string()),
+            jobId: z.optional(z.string()),
+            type: z.optional(z.enum([
+                'earned',
+                'self_employment',
+                'unearned'
+            ])),
+            payPattern: z.optional(z.enum([
+                'regular',
+                'irregular',
+                'tips',
+                'cash'
+            ])),
+            monthlyAmount: z.optional(z.number())
+        }))),
+        expenses: z.optional(z.array(z.object({
+            category: z.optional(z.enum([
+                'rent',
+                'mortgage',
+                'utilities',
+                'dependent_care',
+                'medical',
+                'child_support'
+            ])),
+            monthlyAmount: z.optional(z.number())
         })))
     })),
-    application: z.optional(z.object({
-        hasChangedCircumstances: z.optional(z.boolean())
+    dataMatches: z.optional(z.object({
+        wageRecords: z.optional(z.array(z.object({
+            memberId: z.optional(z.string()),
+            monthlyWages: z.optional(z.number())
+        }))),
+        payStubs: z.optional(z.array(z.object({
+            incomeId: z.optional(z.string()),
+            monthlyAmount: z.optional(z.number())
+        })))
     }))
 });
 
@@ -25,7 +104,7 @@ export const zInterviewPromptsRequest = z.object({
  * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
  *
  */
-export const zInterviewPromptsResponse = z.array(z.union([
+export const zInterviewFlagsResponse = z.array(z.union([
     z.object({
         fact: z.string(),
         state: z.enum(['complete']),
@@ -48,20 +127,99 @@ export const zInterviewPromptsResponse = z.array(z.union([
     })
 ]));
 
-export const zEvaluateInterviewPromptsData = z.object({
+export const zEvaluateInterviewFlagsData = z.object({
     body: z.object({
-        household: z.optional(z.object({
-            monthlyIncome: z.optional(z.number()),
-            monthlyExpenses: z.optional(z.number()),
+        application: z.optional(z.object({
+            programsAppliedFor: z.optional(z.array(z.enum([
+                'snap',
+                'medicaid',
+                'tanf',
+                'chip'
+            ]))),
+            householdSize: z.optional(z.int()),
             members: z.optional(z.array(z.object({
+                id: z.optional(z.string()),
                 age: z.optional(z.int()),
-                isEmployed: z.optional(z.boolean()),
-                isStudent: z.optional(z.boolean()),
-                isNonCitizen: z.optional(z.boolean())
+                isDisabled: z.optional(z.boolean())
+            }))),
+            jobs: z.optional(z.array(z.object({
+                id: z.optional(z.string()),
+                memberId: z.optional(z.string())
+            }))),
+            incomes: z.optional(z.array(z.object({
+                id: z.optional(z.string()),
+                memberId: z.optional(z.string()),
+                jobId: z.optional(z.string()),
+                type: z.optional(z.enum([
+                    'earned',
+                    'self_employment',
+                    'unearned'
+                ])),
+                payPattern: z.optional(z.enum([
+                    'regular',
+                    'irregular',
+                    'tips',
+                    'cash'
+                ])),
+                monthlyAmount: z.optional(z.number())
+            }))),
+            expenses: z.optional(z.array(z.object({
+                category: z.optional(z.enum([
+                    'rent',
+                    'mortgage',
+                    'utilities',
+                    'dependent_care',
+                    'medical',
+                    'child_support'
+                ])),
+                monthlyAmount: z.optional(z.number())
+            }))),
+            reportedMonthlyIncome: z.optional(z.number()),
+            reportedMonthlyExpenses: z.optional(z.number()),
+            utilitiesIncludedInRent: z.optional(z.boolean()),
+            claimsUtilityAllowance: z.optional(z.boolean()),
+            hasChangedCircumstances: z.optional(z.boolean())
+        })),
+        lastCertification: z.optional(z.object({
+            memberIds: z.optional(z.array(z.string())),
+            incomes: z.optional(z.array(z.object({
+                id: z.optional(z.string()),
+                memberId: z.optional(z.string()),
+                jobId: z.optional(z.string()),
+                type: z.optional(z.enum([
+                    'earned',
+                    'self_employment',
+                    'unearned'
+                ])),
+                payPattern: z.optional(z.enum([
+                    'regular',
+                    'irregular',
+                    'tips',
+                    'cash'
+                ])),
+                monthlyAmount: z.optional(z.number())
+            }))),
+            expenses: z.optional(z.array(z.object({
+                category: z.optional(z.enum([
+                    'rent',
+                    'mortgage',
+                    'utilities',
+                    'dependent_care',
+                    'medical',
+                    'child_support'
+                ])),
+                monthlyAmount: z.optional(z.number())
             })))
         })),
-        application: z.optional(z.object({
-            hasChangedCircumstances: z.optional(z.boolean())
+        dataMatches: z.optional(z.object({
+            wageRecords: z.optional(z.array(z.object({
+                memberId: z.optional(z.string()),
+                monthlyWages: z.optional(z.number())
+            }))),
+            payStubs: z.optional(z.array(z.object({
+                incomeId: z.optional(z.string()),
+                monthlyAmount: z.optional(z.number())
+            })))
         }))
     }),
     path: z.optional(z.never()),
@@ -72,7 +230,7 @@ export const zEvaluateInterviewPromptsData = z.object({
  * Ordered list of output fact evaluation results. Only output facts are included; intermediate facts are not returned.
  *
  */
-export const zEvaluateInterviewPromptsResponse = z.array(z.union([
+export const zEvaluateInterviewFlagsResponse = z.array(z.union([
     z.object({
         fact: z.string(),
         state: z.enum(['complete']),

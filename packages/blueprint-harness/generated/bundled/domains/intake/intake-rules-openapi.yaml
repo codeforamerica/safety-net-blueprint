@@ -7,58 +7,217 @@ info:
 servers:
   - url: /intake
 paths:
-  /applications/evaluate-interview-prompts:
+  /applications/evaluate-interview-flags:
     post:
-      summary: Evaluate interviewPrompts
-      operationId: evaluateInterviewPrompts
+      summary: Evaluate interviewFlags
+      operationId: evaluateInterviewFlags
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              description: Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
+              description: Input data for interviewFlags evaluation. All fields are optional — partial inputs trigger partial evaluation.
               properties:
-                household:
-                  type: object
-                  description: Household composition and financial circumstances.
-                  properties:
-                    monthlyIncome:
-                      type: number
-                      description: Total monthly gross income reported by the household.
-                    monthlyExpenses:
-                      type: number
-                      description: Total monthly expenses reported by the household.
-                    members:
-                      type: array
-                      description: All individuals in the household.
-                      items:
-                        type: object
-                        description: |
-                          A person in the household, as the interview rules read them. Shared so a ruleset can reference it rather than restating the shape — the compiler follows the $ref down to individual field paths, which is what keeps missing-input tracking per-field rather than per-object.
-                        properties:
-                          age:
-                            type: integer
-                            description: Member's age in years.
-                          isEmployed:
-                            type: boolean
-                            description: Whether the member is currently employed.
-                          isStudent:
-                            type: boolean
-                            description: Whether the member is enrolled at least half-time in higher education.
-                          isNonCitizen:
-                            type: boolean
-                            description: Whether the member is a non-citizen subject to immigration screening.
                 application:
                   type: object
-                  description: Application-level context relevant to the interview.
+                  description: The application as it stands at the interview.
                   properties:
+                    programsAppliedFor:
+                      type: array
+                      items:
+                        type: string
+                        enum:
+                          - snap
+                          - medicaid
+                          - tanf
+                          - chip
+                      description: Programs the household applied for.
+                    householdSize:
+                      type: integer
+                      description: The household size the application states.
+                    members:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            description: The member's id.
+                          age:
+                            type: integer
+                            description: Age in years.
+                          isDisabled:
+                            type: boolean
+                            description: Whether the member is disabled.
+                    jobs:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            description: The job's id.
+                          memberId:
+                            type: string
+                            description: The member who holds the job.
+                    incomes:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            description: The income's id.
+                          memberId:
+                            type: string
+                            description: The member who receives it.
+                          jobId:
+                            type: string
+                            description: The job it's paid for
+                            when it's earned income.: null
+                          type:
+                            type: string
+                            enum:
+                              - earned
+                              - self_employment
+                              - unearned
+                            description: Where the money comes from.
+                          payPattern:
+                            type: string
+                            enum:
+                              - regular
+                              - irregular
+                              - tips
+                              - cash
+                            description: How it's paid.
+                          monthlyAmount:
+                            type: number
+                            description: Monthly amount
+                            in dollars.: null
+                    expenses:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          category:
+                            type: string
+                            enum:
+                              - rent
+                              - mortgage
+                              - utilities
+                              - dependent_care
+                              - medical
+                              - child_support
+                            description: What it's for.
+                          monthlyAmount:
+                            type: number
+                            description: Monthly amount
+                            in dollars.: null
+                    reportedMonthlyIncome:
+                      type: number
+                      description: Total monthly income, as the household reported it.
+                    reportedMonthlyExpenses:
+                      type: number
+                      description: Total monthly expenses, as the household reported them.
+                    utilitiesIncludedInRent:
+                      type: boolean
+                      description: Whether the household says its utilities are included in the rent.
+                    claimsUtilityAllowance:
+                      type: boolean
+                      description: Whether a standard utility allowance is applied to the household.
                     hasChangedCircumstances:
                       type: boolean
                       description: Whether the household reported changes since the application was submitted.
+                lastCertification:
+                  type: object
+                  description: What the household's last certification recorded.
+                  properties:
+                    memberIds:
+                      type: array
+                      items:
+                        type: string
+                      description: The members certified last time.
+                    incomes:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            description: The income's id.
+                          memberId:
+                            type: string
+                            description: The member who receives it.
+                          jobId:
+                            type: string
+                            description: The job it's paid for
+                            when it's earned income.: null
+                          type:
+                            type: string
+                            enum:
+                              - earned
+                              - self_employment
+                              - unearned
+                            description: Where the money comes from.
+                          payPattern:
+                            type: string
+                            enum:
+                              - regular
+                              - irregular
+                              - tips
+                              - cash
+                            description: How it's paid.
+                          monthlyAmount:
+                            type: number
+                            description: Monthly amount
+                            in dollars.: null
+                    expenses:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          category:
+                            type: string
+                            enum:
+                              - rent
+                              - mortgage
+                              - utilities
+                              - dependent_care
+                              - medical
+                              - child_support
+                            description: What it's for.
+                          monthlyAmount:
+                            type: number
+                            description: Monthly amount
+                            in dollars.: null
+                dataMatches:
+                  type: object
+                  description: What outside data and verified documents say.
+                  properties:
+                    wageRecords:
+                      type: array
+                      description: Monthly wages from state wage records or IEVS, by member.
+                      items:
+                        type: object
+                        properties:
+                          memberId:
+                            type: string
+                          monthlyWages:
+                            type: number
+                    payStubs:
+                      type: array
+                      description: Monthly amounts worked out from verified pay stubs, by income.
+                      items:
+                        type: object
+                        properties:
+                          incomeId:
+                            type: string
+                          monthlyAmount:
+                            type: number
       responses:
         "200":
-          description: interviewPrompts evaluation result.
+          description: interviewFlags evaluation result.
           content:
             application/json:
               schema:
@@ -134,7 +293,7 @@ paths:
                               description: The reason evaluation failed.
                       discriminator:
                         propertyName: state
-                description: Evaluation result for interviewPrompts.
+                description: Evaluation result for interviewFlags.
         "400":
           description: The request is malformed or contains invalid parameters.
           content:
@@ -186,51 +345,210 @@ paths:
       x-relationship:
         type: ruleset
         domain: intake
-        id: interviewPrompts
+        id: interviewFlags
 components:
   schemas:
-    InterviewPromptsRequest:
+    InterviewFlagsRequest:
       type: object
-      description: Input data for interviewPrompts evaluation. All fields are optional — partial inputs trigger partial evaluation.
+      description: Input data for interviewFlags evaluation. All fields are optional — partial inputs trigger partial evaluation.
       properties:
-        household:
-          type: object
-          description: Household composition and financial circumstances.
-          properties:
-            monthlyIncome:
-              type: number
-              description: Total monthly gross income reported by the household.
-            monthlyExpenses:
-              type: number
-              description: Total monthly expenses reported by the household.
-            members:
-              type: array
-              description: All individuals in the household.
-              items:
-                type: object
-                description: |
-                  A person in the household, as the interview rules read them. Shared so a ruleset can reference it rather than restating the shape — the compiler follows the $ref down to individual field paths, which is what keeps missing-input tracking per-field rather than per-object.
-                properties:
-                  age:
-                    type: integer
-                    description: Member's age in years.
-                  isEmployed:
-                    type: boolean
-                    description: Whether the member is currently employed.
-                  isStudent:
-                    type: boolean
-                    description: Whether the member is enrolled at least half-time in higher education.
-                  isNonCitizen:
-                    type: boolean
-                    description: Whether the member is a non-citizen subject to immigration screening.
         application:
           type: object
-          description: Application-level context relevant to the interview.
+          description: The application as it stands at the interview.
           properties:
+            programsAppliedFor:
+              type: array
+              items:
+                type: string
+                enum:
+                  - snap
+                  - medicaid
+                  - tanf
+                  - chip
+              description: Programs the household applied for.
+            householdSize:
+              type: integer
+              description: The household size the application states.
+            members:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The member's id.
+                  age:
+                    type: integer
+                    description: Age in years.
+                  isDisabled:
+                    type: boolean
+                    description: Whether the member is disabled.
+            jobs:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The job's id.
+                  memberId:
+                    type: string
+                    description: The member who holds the job.
+            incomes:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The income's id.
+                  memberId:
+                    type: string
+                    description: The member who receives it.
+                  jobId:
+                    type: string
+                    description: The job it's paid for
+                    when it's earned income.: null
+                  type:
+                    type: string
+                    enum:
+                      - earned
+                      - self_employment
+                      - unearned
+                    description: Where the money comes from.
+                  payPattern:
+                    type: string
+                    enum:
+                      - regular
+                      - irregular
+                      - tips
+                      - cash
+                    description: How it's paid.
+                  monthlyAmount:
+                    type: number
+                    description: Monthly amount
+                    in dollars.: null
+            expenses:
+              type: array
+              items:
+                type: object
+                properties:
+                  category:
+                    type: string
+                    enum:
+                      - rent
+                      - mortgage
+                      - utilities
+                      - dependent_care
+                      - medical
+                      - child_support
+                    description: What it's for.
+                  monthlyAmount:
+                    type: number
+                    description: Monthly amount
+                    in dollars.: null
+            reportedMonthlyIncome:
+              type: number
+              description: Total monthly income, as the household reported it.
+            reportedMonthlyExpenses:
+              type: number
+              description: Total monthly expenses, as the household reported them.
+            utilitiesIncludedInRent:
+              type: boolean
+              description: Whether the household says its utilities are included in the rent.
+            claimsUtilityAllowance:
+              type: boolean
+              description: Whether a standard utility allowance is applied to the household.
             hasChangedCircumstances:
               type: boolean
               description: Whether the household reported changes since the application was submitted.
-    InterviewPromptsResponse:
+        lastCertification:
+          type: object
+          description: What the household's last certification recorded.
+          properties:
+            memberIds:
+              type: array
+              items:
+                type: string
+              description: The members certified last time.
+            incomes:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The income's id.
+                  memberId:
+                    type: string
+                    description: The member who receives it.
+                  jobId:
+                    type: string
+                    description: The job it's paid for
+                    when it's earned income.: null
+                  type:
+                    type: string
+                    enum:
+                      - earned
+                      - self_employment
+                      - unearned
+                    description: Where the money comes from.
+                  payPattern:
+                    type: string
+                    enum:
+                      - regular
+                      - irregular
+                      - tips
+                      - cash
+                    description: How it's paid.
+                  monthlyAmount:
+                    type: number
+                    description: Monthly amount
+                    in dollars.: null
+            expenses:
+              type: array
+              items:
+                type: object
+                properties:
+                  category:
+                    type: string
+                    enum:
+                      - rent
+                      - mortgage
+                      - utilities
+                      - dependent_care
+                      - medical
+                      - child_support
+                    description: What it's for.
+                  monthlyAmount:
+                    type: number
+                    description: Monthly amount
+                    in dollars.: null
+        dataMatches:
+          type: object
+          description: What outside data and verified documents say.
+          properties:
+            wageRecords:
+              type: array
+              description: Monthly wages from state wage records or IEVS, by member.
+              items:
+                type: object
+                properties:
+                  memberId:
+                    type: string
+                  monthlyWages:
+                    type: number
+            payStubs:
+              type: array
+              description: Monthly amounts worked out from verified pay stubs, by income.
+              items:
+                type: object
+                properties:
+                  incomeId:
+                    type: string
+                  monthlyAmount:
+                    type: number
+    InterviewFlagsResponse:
       allOf:
         - type: array
           description: |
@@ -303,4 +621,4 @@ components:
                     description: The reason evaluation failed.
             discriminator:
               propertyName: state
-      description: Evaluation result for interviewPrompts.
+      description: Evaluation result for interviewFlags.

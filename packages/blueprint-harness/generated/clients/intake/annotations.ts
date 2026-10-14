@@ -192,105 +192,331 @@ export const Annotations = {
     }
   },
   "facts": {
-    "interviewPrompts.incomeGapExists": {
-      "interviewPromptRationale": "Flags a potential inconsistency when reported income does not cover reported expenses. Required by FNS-1104 as a probe trigger — workers must probe for undisclosed income sources or assistance.\n",
+    "interviewFlags.risks.earnedIncomeVaries": {
+      "reason": "Earned income is the largest source of payment errors, and wages that change month to month are the hardest to get right: a single pay stub doesn't show what a month of irregular hours or tips comes to.\n",
+      "policies": [
+        "snap-earned-income",
+        "snap-income-verification"
+      ],
+      "patterns": [
+        "ruleset-output-fact"
+      ],
+      "probeQuestions": [
+        "How many hours have you worked each week over the last month?",
+        "Do you get tips? About how much in a typical week?"
+      ],
+      "sources": [
+        {
+          "title": "GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors",
+          "url": "https://www.gao.gov/assets/a246247.html"
+        },
+        {
+          "title": "NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates",
+          "url": "https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"
+        }
+      ]
+    },
+    "interviewFlags.risks.cashOrSelfEmploymentIncome": {
+      "reason": "Cash, gig and self-employment income often isn't on the application at all, and isn't asked about unless someone asks specifically.\n",
+      "policies": [
+        "snap-earned-income"
+      ],
+      "patterns": [
+        "ruleset-output-fact"
+      ],
+      "probeQuestions": [
+        "Does anyone in the household do any work for cash, side jobs, or gig work?",
+        "About how much did that bring in over the last 30 days?"
+      ],
+      "sources": [
+        {
+          "title": "GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors",
+          "url": "https://www.gao.gov/assets/a246247.html"
+        },
+        {
+          "title": "FRAC: A Backgrounder on SNAP Quality Control, Payment Error Rates, and Cost-Sharing",
+          "url": "https://frac.org/blog/a-backgrounder-on-snap-quality-control-payment-error-rates-and-cost-sharing"
+        }
+      ]
+    },
+    "interviewFlags.risks.incomeChangedSinceLastCertification": {
+      "reason": "Income changes between certifications — a job gained or lost, a raise, hours cut — are a leading cause of both overpayments and underpayments when they aren't reported.\n",
+      "policies": [
+        "snap-reporting-changes",
+        "snap-recertification"
+      ],
+      "patterns": [
+        "ruleset-output-fact"
+      ],
+      "probeQuestions": [
+        "Has anyone started or stopped a job since your last renewal?",
+        "Has anyone's pay or hours changed?"
+      ],
+      "sources": [
+        {
+          "title": "FRAC: A Backgrounder on SNAP Quality Control, Payment Error Rates, and Cost-Sharing",
+          "url": "https://frac.org/blog/a-backgrounder-on-snap-quality-control-payment-error-rates-and-cost-sharing"
+        },
+        {
+          "title": "FNS SNAP Recertification Toolkit (June 2018)",
+          "url": "https://www.fna.usda.gov/snap/recertification-toolkit"
+        }
+      ]
+    },
+    "interviewFlags.risks.householdChangedSinceLastCertification": {
+      "reason": "Who lives in the household and buys food together decides whose income counts. Changes are often unreported, and often not asked about at recertification.\n",
+      "policies": [
+        "snap-household-composition",
+        "snap-reporting-changes"
+      ],
+      "patterns": [
+        "ruleset-output-fact"
+      ],
+      "probeQuestions": [
+        "Has anyone moved in or out since your last renewal?",
+        "Does everyone who lives with you buy and prepare food together?"
+      ],
+      "sources": [
+        {
+          "title": "GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors",
+          "url": "https://www.gao.gov/assets/a246247.html"
+        },
+        {
+          "title": "FNS SNAP Recertification Toolkit (June 2018)",
+          "url": "https://www.fna.usda.gov/snap/recertification-toolkit"
+        }
+      ]
+    },
+    "interviewFlags.risks.shelterCostsCarriedOver": {
+      "reason": "Shelter costs carried forward from the last certification without being asked about can be out of date in either direction: a move or a rent increase that's missed.\n",
+      "policies": [
+        "snap-shelter-utility-deductions",
+        "snap-recertification"
+      ],
+      "patterns": [
+        "ruleset-output-fact"
+      ],
+      "probeQuestions": [
+        "Is your rent or mortgage still the same amount?",
+        "Have you moved since your last renewal?"
+      ],
+      "sources": [
+        {
+          "title": "FNS SNAP Recertification Toolkit (June 2018)",
+          "url": "https://www.fna.usda.gov/snap/recertification-toolkit"
+        },
+        {
+          "title": "NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates",
+          "url": "https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"
+        }
+      ]
+    },
+    "interviewFlags.risks.elderlyOrDisabledWithoutMedicalCosts": {
+      "reason": "A member 60 or older, or disabled, may deduct medical costs. Missed deductions are among the most common fixable errors, and lead to underpayments.\n",
+      "policies": [
+        "snap-elderly-disabled-deductions"
+      ],
+      "patterns": [
+        "ruleset-output-fact"
+      ],
+      "probeQuestions": [
+        "Does [member] pay for any doctor visits, prescriptions, or medical supplies?",
+        "About how much a month?"
+      ],
+      "sources": [
+        {
+          "title": "NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates",
+          "url": "https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"
+        },
+        {
+          "title": "FRAC: A Backgrounder on SNAP Quality Control, Payment Error Rates, and Cost-Sharing",
+          "url": "https://frac.org/blog/a-backgrounder-on-snap-quality-control-payment-error-rates-and-cost-sharing"
+        }
+      ]
+    },
+    "interviewFlags.risks.childrenAndEarnersWithoutDependentCare": {
+      "reason": "Care for a child so a household member can work is deductible. When it's new it often isn't asked about, which leads to an underpayment.\n",
+      "policies": [
+        "snap-dependent-care-deduction"
+      ],
+      "patterns": [
+        "ruleset-output-fact"
+      ],
+      "probeQuestions": [
+        "Does anyone look after the children while you work or go to school?",
+        "Do you pay for that care?"
+      ],
+      "sources": [
+        {
+          "title": "NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates",
+          "url": "https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"
+        }
+      ]
+    },
+    "interviewFlags.risks.circumstancesChangedSinceApplying": {
+      "reason": "Changes between applying and the interview have to be recorded, and some verified, before benefits are worked out. FNS-1104 makes them a probe.\n",
       "policies": [
         "snap-interview-toolkit"
+      ],
+      "patterns": [
+        "ruleset-output-fact"
+      ],
+      "probeQuestions": [
+        "Since you applied, has anything changed about who lives with you, your income, or your expenses?"
+      ],
+      "sources": [
+        {
+          "title": "FNS State SNAP Interview Toolkit (FNS-1104, revised June 2025)",
+          "url": "https://www.fna.usda.gov/snap/state/interview-toolkit"
+        }
       ]
     },
-    "interviewPrompts.hasUnemployedWorkEligible": {
-      "interviewPromptRationale": "Identifies household members aged 16–59 who are not employed and have not yet been screened for general work requirement exemptions.\n",
-      "policies": [
-        "snap-general-work-requirement"
+    "interviewFlags.risks.multipleProgramsApplied": {
+      "reason": "Households on several programs face reporting rules that differ between them, which makes it harder to keep each program's information right.\n",
+      "patterns": [
+        "ruleset-output-fact"
+      ],
+      "probeQuestions": [
+        "Have you reported this change to [other program] as well?"
+      ],
+      "sources": [
+        {
+          "title": "GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors",
+          "url": "https://www.gao.gov/assets/a246247.html"
+        }
       ]
     },
-    "interviewPrompts.hasStudentMembers": {
-      "interviewPromptRationale": "Identifies household members enrolled at least half-time in higher education who are subject to student eligibility restrictions.\n",
-      "policies": [
-        "snap-student-eligibility"
-      ]
-    },
-    "interviewPrompts.hasNonCitizenMembers": {
-      "interviewPromptRationale": "Identifies non-citizen household members who must be screened for qualified alien status and sponsor income deeming rules.\n",
-      "policies": [
-        "qualified-alien-eligibility"
-      ]
-    },
-    "interviewPrompts.incomeInconsistencyPrompt": {
-      "interviewPromptRationale": "Probe for undisclosed income sources or assistance when monthly income is less than monthly expenses.\n",
+    "interviewFlags.inconsistencies.incomeBelowExpenses": {
+      "reason": "When reported income doesn't cover reported expenses, something the application doesn't show is paying the difference: unreported income, or help from outside the household. FNS-1104 makes it a probe.\n",
       "policies": [
         "snap-interview-toolkit"
       ],
       "patterns": [
         "ruleset-output-fact"
       ],
-      "interviewQuestions": [
-        "Your application shows monthly income of [income] and monthly expenses of [expenses]. Can you tell me about any other income sources or assistance your household receives?",
-        "Does anyone in the household receive help with expenses from family, friends, or community organizations?"
+      "probeQuestions": [
+        "Your expenses are more than your income. How does the household make up the difference?",
+        "Does anyone help with bills — family, friends, or community organizations?"
+      ],
+      "sources": [
+        {
+          "title": "FNS State SNAP Interview Toolkit (FNS-1104, revised June 2025)",
+          "url": "https://www.fna.usda.gov/snap/state/interview-toolkit"
+        }
       ]
     },
-    "interviewPrompts.workRequirementPrompt": {
-      "interviewPromptRationale": "Screen non-employed household members aged 16–59 for general work requirement exemptions before determining work registration obligations.\n",
+    "interviewFlags.inconsistencies.wagesDifferFromWageRecords": {
+      "reason": "Income an agency's data systems show but nobody confirms is an error the agency could have caught. A difference from the wage records needs explaining before it's resolved either way.\n",
       "policies": [
-        "snap-general-work-requirement",
-        "snap-abawd-work-requirement"
+        "snap-income-verification"
       ],
       "patterns": [
         "ruleset-output-fact"
       ],
-      "interviewQuestions": [
-        "Is [member] currently able to work — are there any physical or mental health conditions that limit their ability to work?",
-        "Is [member] currently caring for a child under 6 or an incapacitated person in the household?",
-        "Is [member] currently enrolled in school, job training, or a work program through another benefit program?",
-        "Is [member] currently working at least 30 hours per week or earning the federal minimum wage equivalent?"
+      "probeQuestions": [
+        "The state's records show [amount] in wages for [member]. Does that sound right?",
+        "Did [member] have another job, or more hours, during that time?"
+      ],
+      "sources": [
+        {
+          "title": "GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors",
+          "url": "https://www.gao.gov/assets/a246247.html"
+        },
+        {
+          "title": "NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates",
+          "url": "https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"
+        }
       ]
     },
-    "interviewPrompts.studentEligibilityPrompt": {
-      "interviewPromptRationale": "Screen higher-education students for SNAP eligibility exceptions — most students enrolled at least half-time are ineligible unless they meet one of the statutory exceptions.\n",
+    "interviewFlags.inconsistencies.incomeDiffersFromPayStub": {
+      "reason": "A recorded amount that doesn't match its pay stubs usually means a pay frequency was converted wrongly — weekly, every two weeks, and twice a month are easy to confuse.\n",
       "policies": [
-        "snap-student-eligibility"
+        "snap-income-verification",
+        "snap-earned-income"
       ],
       "patterns": [
         "ruleset-output-fact"
       ],
-      "interviewQuestions": [
-        "Is [member] currently working at least 20 hours per week?",
-        "Is [member] participating in a state or federally-funded work-study program?",
-        "Is [member] enrolled in a school-sponsored job training or vocational program?",
-        "Is [member] caring for a dependent child under 6, or a child aged 6–11 when adequate childcare is unavailable?",
-        "Is [member] receiving TANF assistance?",
-        "Is [member] a single parent enrolled full-time with a dependent child under 12?"
+      "probeQuestions": [
+        "How often is [member] paid — every week, every two weeks, or twice a month?"
+      ],
+      "sources": [
+        {
+          "title": "NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates",
+          "url": "https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"
+        }
       ]
     },
-    "interviewPrompts.immigrationStatusPrompt": {
-      "interviewPromptRationale": "Determine qualified alien status and apply sponsor income and resource deeming rules for non-citizen household members.\n",
+    "interviewFlags.inconsistencies.householdSizeDiffersFromMembers": {
+      "reason": "The household's size decides its benefit. A size that doesn't match the members listed means someone is missing or counted who shouldn't be.\n",
       "policies": [
-        "qualified-alien-eligibility",
-        "prwora-sponsor-deeming"
+        "snap-household-composition"
       ],
       "patterns": [
         "ruleset-output-fact"
       ],
-      "interviewQuestions": [
-        "What is [member]'s current immigration status?",
-        "When did [member] enter the United States?",
-        "Does [member] have a sponsor who signed an I-864 Affidavit of Support on or after December 19, 1997?",
-        "If yes — what is the sponsor's current income and resources?"
+      "probeQuestions": [
+        "Who lives with you and buys and prepares food with you?"
+      ],
+      "sources": [
+        {
+          "title": "GAO-05-245: Food Stamp Program — States Have Made Progress Reducing Payment Errors",
+          "url": "https://www.gao.gov/assets/a246247.html"
+        }
       ]
     },
-    "interviewPrompts.changeVerificationPrompt": {
-      "interviewPromptRationale": "Identify and document all changes in household circumstances that occurred between the application date and the interview date, and determine what verification is required.\n",
+    "interviewFlags.inconsistencies.jobWithoutEarnedIncome": {
+      "reason": "A job with no income recorded is information that arrived but wasn't applied — the most common kind of agency error.\n",
       "policies": [
-        "snap-interview-toolkit"
+        "snap-earned-income"
       ],
       "patterns": [
         "ruleset-output-fact"
       ],
-      "interviewQuestions": [
-        "Since you submitted your application, have there been any changes to who lives in your household?",
-        "Have there been any changes to income — new jobs, job losses, raises, or changes to other income sources?",
-        "Have there been any changes to your household's expenses — rent, utilities, childcare, or medical costs?",
-        "Have there been any other changes in your household's situation we should know about?"
+      "probeQuestions": [
+        "Is [member] still working at [job]? How much are they paid?"
+      ],
+      "sources": [
+        {
+          "title": "APHSA: Payment Error Rates — Understanding What They Are and How to Support SNAP Agencies in Reducing Them",
+          "url": "https://aphsa.org/resources/payment-error-rates-understanding-what-they-are-and-how-to-support-snap-agencies-in-reducing-them/"
+        }
+      ]
+    },
+    "interviewFlags.inconsistencies.earnedIncomeWithoutJob": {
+      "reason": "Earned income with no job behind it can't be verified or updated when the job changes, and is often a job that ended but wasn't closed out.\n",
+      "policies": [
+        "snap-earned-income"
+      ],
+      "patterns": [
+        "ruleset-output-fact"
+      ],
+      "probeQuestions": [
+        "Where does [member] work? Are they still working there?"
+      ],
+      "sources": [
+        {
+          "title": "APHSA: Payment Error Rates — Understanding What They Are and How to Support SNAP Agencies in Reducing Them",
+          "url": "https://aphsa.org/resources/payment-error-rates-understanding-what-they-are-and-how-to-support-snap-agencies-in-reducing-them/"
+        }
+      ]
+    },
+    "interviewFlags.inconsistencies.utilitiesIncludedButClaimed": {
+      "reason": "A utility allowance applies only to a household that pays utility costs separately from its rent. What counts as a utility deduction is a common misapplication of policy.\n",
+      "policies": [
+        "snap-shelter-utility-deductions"
+      ],
+      "patterns": [
+        "ruleset-output-fact"
+      ],
+      "probeQuestions": [
+        "Do you pay any utility bills yourself, like electric or gas, or are they all included in the rent?"
+      ],
+      "sources": [
+        {
+          "title": "NGA: SNAP Payment Accuracy — Strategies for Reducing Payment Error Rates",
+          "url": "https://www.nga.org/updates/snap-payment-accuracy-strategies-for-reducing-payment-error-rate/"
+        }
       ]
     }
   }

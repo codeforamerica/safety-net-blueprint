@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { EvaluateInterviewPromptsData, EvaluateInterviewPromptsErrors, EvaluateInterviewPromptsResponses } from './types.gen';
-import { zEvaluateInterviewPromptsData, zEvaluateInterviewPromptsResponse } from './zod.gen';
+import type { EvaluateInterviewFlagsData, EvaluateInterviewFlagsErrors, EvaluateInterviewFlagsResponses } from './types.gen';
+import { zEvaluateInterviewFlagsData, zEvaluateInterviewFlagsResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -20,13 +20,13 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 /**
- * Evaluate interviewPrompts
+ * Evaluate interviewFlags
  */
-export const evaluateInterviewPrompts = <ThrowOnError extends boolean = false>(options: Options<EvaluateInterviewPromptsData, ThrowOnError>) => (options.client ?? client).post<EvaluateInterviewPromptsResponses, EvaluateInterviewPromptsErrors, ThrowOnError>({
-    requestValidator: async (data) => await zEvaluateInterviewPromptsData.parseAsync(data),
+export const evaluateInterviewFlags = <ThrowOnError extends boolean = false>(options: Options<EvaluateInterviewFlagsData, ThrowOnError>) => (options.client ?? client).post<EvaluateInterviewFlagsResponses, EvaluateInterviewFlagsErrors, ThrowOnError>({
+    requestValidator: async (data) => await zEvaluateInterviewFlagsData.parseAsync(data),
     responseType: 'json',
-    responseValidator: async (data) => await zEvaluateInterviewPromptsResponse.parseAsync(data),
-    url: '/applications/evaluate-interview-prompts',
+    responseValidator: async (data) => await zEvaluateInterviewFlagsResponse.parseAsync(data),
+    url: '/applications/evaluate-interview-flags',
     ...options,
     headers: {
         'Content-Type': 'application/json',

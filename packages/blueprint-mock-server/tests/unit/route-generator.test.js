@@ -577,6 +577,8 @@ test('Route Generator Tests', async (t) => {
     // ctx rather than by mutating req.body. Assert the outcome instead: the
     // created resource carries the parent FK.
     store.clearAll('application-documents');
+    // The parent has to exist: nothing is created under one that isn't there.
+    if (!store.findById('applications', 'app-456')) store.insertResource('applications', { id: 'app-456' });
     const request = makeRequest('/applications/app-456/documents', { method: 'POST', body: { category: 'income' } });
     const { status, body: created } = await readResponse(
       routes[0].handler(request, { params: { applicationId: 'app-456' } })

@@ -1,52 +1,75 @@
 $schema: "https://blueprint.codeforamerica.org/schemas/rules-examples-schema.yaml"
 domain: intake
 
+# One fictional household at its recertification: the client's mother has moved
+# in with Social Security, the client's warehouse hours were cut, there's cash
+# work cleaning offices, and the rent went up.
+
 rulesets:
-  interviewPrompts:
+  interviewFlags:
     examples:
-      - description: Income gap and unemployed members — multiple prompts triggered
+      - description: A recertification where much has changed and the application doesn't agree with itself
         inputs:
-          household:
-            monthlyIncome: 800
-            monthlyExpenses: 1200
-            members:
-              - age: 35
-                isEmployed: false
-                isStudent: false
-                isNonCitizen: false
-              - age: 8
-                isEmployed: false
-                isStudent: false
-                isNonCitizen: false
           application:
-            hasChangedCircumstances: false
-
-      - description: Non-citizen student with changed circumstances
-        inputs:
-          household:
-            monthlyIncome: 1500
-            monthlyExpenses: 1400
+            programsAppliedFor: [snap]
+            householdSize: 3
             members:
-              - age: 22
-                isEmployed: true
-                isStudent: true
-                isNonCitizen: true
-          application:
+              - { id: client, age: 41, isDisabled: false }
+              - { id: daughter, age: 19, isDisabled: false }
+              - { id: son, age: 8, isDisabled: false }
+              - { id: mother, age: 68, isDisabled: false }
+            jobs:
+              - { id: warehouse, memberId: client }
+            incomes:
+              - { id: wages, memberId: client, jobId: warehouse, type: earned, payPattern: irregular, monthlyAmount: 1100 }
+              - { id: cleaning, memberId: client, type: self_employment, payPattern: cash, monthlyAmount: 200 }
+              - { id: ss, memberId: mother, type: unearned, payPattern: regular, monthlyAmount: 900 }
+            expenses:
+              - { category: rent, monthlyAmount: 1400 }
+            reportedMonthlyIncome: 2200
+            reportedMonthlyExpenses: 2600
+            utilitiesIncludedInRent: true
+            claimsUtilityAllowance: true
             hasChangedCircumstances: true
+          lastCertification:
+            memberIds: [client, daughter, son]
+            incomes:
+              - { id: wages, memberId: client, jobId: warehouse, type: earned, payPattern: regular, monthlyAmount: 2400 }
+            expenses:
+              - { category: rent, monthlyAmount: 1150 }
+          dataMatches:
+            wageRecords:
+              - { memberId: client, monthlyWages: 1800 }
+            payStubs:
+              - { incomeId: wages, monthlyAmount: 1820 }
 
-      - description: All members employed — no work requirement prompt
+      - description: Nothing changed, nothing error-prone, and everything agrees — no flags raised
         inputs:
-          household:
-            monthlyIncome: 3000
-            monthlyExpenses: 2500
-            members:
-              - age: 40
-                isEmployed: true
-                isStudent: false
-                isNonCitizen: false
-              - age: 38
-                isEmployed: true
-                isStudent: false
-                isNonCitizen: false
           application:
+            programsAppliedFor: [snap]
+            householdSize: 2
+            members:
+              - { id: client, age: 34, isDisabled: false }
+              - { id: partner, age: 36, isDisabled: false }
+            jobs:
+              - { id: clinic, memberId: partner }
+            incomes:
+              - { id: salary, memberId: partner, jobId: clinic, type: earned, payPattern: regular, monthlyAmount: 1900 }
+            expenses:
+              - { category: rent, monthlyAmount: 950 }
+            reportedMonthlyIncome: 1900
+            reportedMonthlyExpenses: 1400
+            utilitiesIncludedInRent: true
+            claimsUtilityAllowance: false
             hasChangedCircumstances: false
+          lastCertification:
+            memberIds: [client, partner]
+            incomes:
+              - { id: salary, memberId: partner, jobId: clinic, type: earned, payPattern: regular, monthlyAmount: 1900 }
+            expenses:
+              - { category: rent, monthlyAmount: 900 }
+          dataMatches:
+            wageRecords:
+              - { memberId: partner, monthlyWages: 1880 }
+            payStubs:
+              - { incomeId: salary, monthlyAmount: 1900 }

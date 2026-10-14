@@ -1,21 +1,163 @@
 $defs:
-  HouseholdMember:
+  InterviewApplication:
     type: object
-    description: |
-      A person in the household, as the interview rules read them. Shared so a ruleset can reference it rather than restating the shape — the compiler follows the $ref down to individual field paths, which is what keeps missing-input tracking per-field rather than per-object.
+    description: The application as it stands at the interview.
     properties:
+      programsAppliedFor:
+        type: array
+        items:
+          type: string
+          enum:
+            - snap
+            - medicaid
+            - tanf
+            - chip
+        description: Programs the household applied for.
+      householdSize:
+        type: integer
+        description: The household size the application states.
+      members:
+        type: array
+        items:
+          $ref: "#/$defs/InterviewMember"
+      jobs:
+        type: array
+        items:
+          $ref: "#/$defs/InterviewJob"
+      incomes:
+        type: array
+        items:
+          $ref: "#/$defs/InterviewIncome"
+      expenses:
+        type: array
+        items:
+          $ref: "#/$defs/InterviewExpense"
+      reportedMonthlyIncome:
+        type: number
+        description: Total monthly income, as the household reported it.
+      reportedMonthlyExpenses:
+        type: number
+        description: Total monthly expenses, as the household reported them.
+      utilitiesIncludedInRent:
+        type: boolean
+        description: Whether the household says its utilities are included in the rent.
+      claimsUtilityAllowance:
+        type: boolean
+        description: Whether a standard utility allowance is applied to the household.
+      hasChangedCircumstances:
+        type: boolean
+        description: Whether the household reported changes since the application was submitted.
+  InterviewMember:
+    type: object
+    properties:
+      id:
+        type: string
+        description: The member's id.
       age:
         type: integer
-        description: Member's age in years.
-      isEmployed:
+        description: Age in years.
+      isDisabled:
         type: boolean
-        description: Whether the member is currently employed.
-      isStudent:
-        type: boolean
-        description: Whether the member is enrolled at least half-time in higher education.
-      isNonCitizen:
-        type: boolean
-        description: Whether the member is a non-citizen subject to immigration screening.
+        description: Whether the member is disabled.
+  InterviewJob:
+    type: object
+    properties:
+      id:
+        type: string
+        description: The job's id.
+      memberId:
+        type: string
+        description: The member who holds the job.
+  InterviewIncome:
+    type: object
+    properties:
+      id:
+        type: string
+        description: The income's id.
+      memberId:
+        type: string
+        description: The member who receives it.
+      jobId:
+        type: string
+        description: The job it's paid for
+        when it's earned income.: null
+      type:
+        type: string
+        enum:
+          - earned
+          - self_employment
+          - unearned
+        description: Where the money comes from.
+      payPattern:
+        type: string
+        enum:
+          - regular
+          - irregular
+          - tips
+          - cash
+        description: How it's paid.
+      monthlyAmount:
+        type: number
+        description: Monthly amount
+        in dollars.: null
+  InterviewExpense:
+    type: object
+    properties:
+      category:
+        type: string
+        enum:
+          - rent
+          - mortgage
+          - utilities
+          - dependent_care
+          - medical
+          - child_support
+        description: What it's for.
+      monthlyAmount:
+        type: number
+        description: Monthly amount
+        in dollars.: null
+  LastCertification:
+    type: object
+    description: What the household's last certification recorded.
+    properties:
+      memberIds:
+        type: array
+        items:
+          type: string
+        description: The members certified last time.
+      incomes:
+        type: array
+        items:
+          $ref: "#/$defs/InterviewIncome"
+      expenses:
+        type: array
+        items:
+          $ref: "#/$defs/InterviewExpense"
+  DataMatches:
+    type: object
+    description: What outside data and verified documents say.
+    properties:
+      wageRecords:
+        type: array
+        description: Monthly wages from state wage records or IEVS, by member.
+        items:
+          type: object
+          properties:
+            memberId:
+              type: string
+            monthlyWages:
+              type: number
+      payStubs:
+        type: array
+        description: Monthly amounts worked out from verified pay stubs, by income.
+        items:
+          type: object
+          properties:
+            incomeId:
+              type: string
+            monthlyAmount:
+              type: number
   IncomeSource:
     description: Income reported by a household member. Type discriminator determines the variant.
     oneOf:

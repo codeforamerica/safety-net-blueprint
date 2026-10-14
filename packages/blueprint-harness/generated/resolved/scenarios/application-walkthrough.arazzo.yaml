@@ -86,6 +86,25 @@ workflows:
           - condition: $statusCode == 201
         outputs:
           id: $response.body#/id
+      - stepId: attachADocumentThatIsNotThere
+        description: |
+          Attach a document that isn't there
+
+          - Refused with `422`. `proofOfIncomeDocumentId` declares `x-relationship` to document management's `Document`, so the mock looked for that document and found none.
+          - The refusal names the field and the id, in the same shape as a schema error. The id is a valid uuid, so the schema had nothing to object to.
+          - The check crosses domains, from intake into document management, and nothing was written for it. Every field that declares a relationship is checked the same way, on every create and update.
+        operationId: $sourceDescriptions.intake.updateApplication
+        parameters:
+          - reference: $components.parameters.caller
+          - name: applicationId
+            in: path
+            value: $steps.createApplication.outputs.id
+        requestBody:
+          payload:
+            proofOfIncomeDocumentId: 00000000-0000-4000-8000-000000000000
+        successCriteria:
+          - condition: $statusCode == 422
+          - condition: $response.body#/details/0/field == 'proofOfIncomeDocumentId'
       - stepId: attachTheDocument
         description: |
           Edit and attach the document
@@ -243,31 +262,86 @@ workflows:
               resourceThreshold: 100
         successCriteria:
           - condition: $statusCode == 200
-      - stepId: evaluateInterviewPrompts
+      - stepId: evaluateInterviewFlags
         description: |
-          Evaluate interviewPrompts
+          Evaluate interviewFlags
 
-          - The answer is not one expression but a chain of named facts. The last is `changeVerificationPrompt = application.hasChangedCircumstances` — so the system can say which condition carried, not just what it concluded.
-          - `interviewPrompts.incomeInconsistencyPrompt` carries more than a true or false. The annotations attach `snap-interview-toolkit` to it and 2 interview questions to go with it, so the rule that raises a prompt and the words somebody says out loud are one declaration rather than two that drift apart.
-        operationId: $sourceDescriptions.intakeRules.evaluateInterviewPrompts
+          - A recertification where the household's mother moved in, warehouse hours were cut, there's cash work, and rent went up. One call answers in two trees: `risks`, situations where payment errors are common, and `inconsistencies`, things in this case that don't agree.
+          - Six of the nine risks come back true, among them `risks.householdChangedSinceLastCertification` and `risks.cashOrSelfEmploymentIncome`. A risk isn't a sign this case is wrong. `inconsistencies.wagesDifferFromWageRecords` is: the state's wage records show 1800 a month, and the application 1100.
+          - Every flag is worked out from data — members, incomes, expenses, the last certification and data matches — never from a conclusion the caller sent. `risks.earnedIncomeVaries` reads each income's `payPattern`.
+          - `interviewFlags.risks.elderlyOrDisabledWithoutMedicalCosts` carries more than a true or false. Its annotations give the reason, the questions to probe with, the regulation behind it (`snap-elderly-disabled-deductions`) and the sources the situation comes from, so the rule and what somebody says out loud are one declaration.
+        operationId: $sourceDescriptions.intakeRules.evaluateInterviewFlags
         parameters:
           - reference: $components.parameters.caller
         requestBody:
           payload:
-            household:
-              monthlyIncome: 800
-              monthlyExpenses: 1200
-              members:
-                - age: 35
-                  isEmployed: false
-                  isStudent: false
-                  isNonCitizen: false
-                - age: 8
-                  isEmployed: false
-                  isStudent: false
-                  isNonCitizen: false
             application:
+              programsAppliedFor:
+                - snap
+              householdSize: 4
+              members:
+                - id: client
+                  age: 41
+                  isDisabled: false
+                - id: daughter
+                  age: 19
+                  isDisabled: false
+                - id: son
+                  age: 8
+                  isDisabled: false
+                - id: mother
+                  age: 68
+                  isDisabled: false
+              jobs:
+                - id: warehouse
+                  memberId: client
+              incomes:
+                - id: wages
+                  memberId: client
+                  jobId: warehouse
+                  type: earned
+                  payPattern: irregular
+                  monthlyAmount: 1100
+                - id: cleaning
+                  memberId: client
+                  type: self_employment
+                  payPattern: cash
+                  monthlyAmount: 200
+                - id: ss
+                  memberId: mother
+                  type: unearned
+                  payPattern: regular
+                  monthlyAmount: 900
+              expenses:
+                - category: rent
+                  monthlyAmount: 1400
+              reportedMonthlyIncome: 2200
+              reportedMonthlyExpenses: 2600
+              utilitiesIncludedInRent: false
+              claimsUtilityAllowance: true
               hasChangedCircumstances: false
+            lastCertification:
+              memberIds:
+                - client
+                - daughter
+                - son
+              incomes:
+                - id: wages
+                  memberId: client
+                  jobId: warehouse
+                  type: earned
+                  payPattern: regular
+                  monthlyAmount: 2400
+              expenses:
+                - category: rent
+                  monthlyAmount: 1150
+            dataMatches:
+              wageRecords:
+                - memberId: client
+                  monthlyWages: 1800
+              payStubs:
+                - incomeId: wages
+                  monthlyAmount: 1100
         successCriteria:
           - condition: $statusCode == 200
       - stepId: seeWhatTheWalkEmitted

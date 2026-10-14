@@ -2,116 +2,153 @@ $schema: "https://blueprint.codeforamerica.org/schemas/rules-schema.yaml"
 domain: intake
 rulesets:
 
-  # Determines which interview topics require probing based on household composition.
-  # Uses collection operations (exists, filter, all) over household member arrays.
-  # Implements FNS interview guidance (FNS-1104) and SNAP regulations (7 CFR § 273.2(e)).
-  interviewPrompts:
+  # Flags for an interview, in one ruleset called once, with its answer in two
+  # trees (see docs/architecture/cross-cutting/ai-services.md):
+  #
+  #   risks.*            situations where payment errors are common, even when
+  #                      this case is right — probe carefully, and verify
+  #   inconsistencies.*  two things in this case that don't agree — find out
+  #                      which is true
+  #
+  # The tree is part of what each answer means, so it's in the answer rather
+  # than in an annotation a caller would have to look up. Questions the
+  # determination needs answered come from the eligibility rules, not from here.
+  # Each fact's annotations in intake-annotations.yaml carry why it matters, the
+  # questions to probe with, the policy behind it and the source it comes from.
+  # The harness is fictional: the situations are drawn from FNS guidance and
+  # published payment error data, but the thresholds are sketches.
+
+  interviewFlags:
     endpoint:
-      path: /applications/evaluate-interview-prompts
+      path: /applications/evaluate-interview-flags
     inputs:
-      household:
-        type: object
-        description: Household composition and financial circumstances.
-        properties:
-          monthlyIncome:
-            type: number
-            description: Total monthly gross income reported by the household.
-          monthlyExpenses:
-            type: number
-            description: Total monthly expenses reported by the household.
-          members:
-            type: array
-            description: All individuals in the household.
-            items:
-              $ref: './intake-schemas.yaml#/$defs/HouseholdMember'
       application:
-        type: object
-        description: Application-level context relevant to the interview.
-        properties:
-          hasChangedCircumstances:
-            type: boolean
-            description: Whether the household reported changes since the application was submitted.
+        $ref: './intake-schemas.yaml#/$defs/InterviewApplication'
+      lastCertification:
+        $ref: './intake-schemas.yaml#/$defs/LastCertification'
+      dataMatches:
+        $ref: './intake-schemas.yaml#/$defs/DataMatches'
     facts:
-      - path: incomeGapExists
+      - path: risks.earnedIncomeVaries
+        type: boolean
+        description: A member's wages are hourly with irregular hours, or include tips.
+        expression: "application.incomes.exists(i, i.type == 'earned' && i.payPattern in ['irregular', 'tips'])"
+
+      - path: risks.cashOrSelfEmploymentIncome
+        type: boolean
+        description: A member has self-employment income, or is paid in cash.
+        expression: "application.incomes.exists(i, i.type == 'self_employment' || i.payPattern == 'cash')"
+
+      - path: risks.incomeChangedSinceLastCertification
         type: boolean
         description: >
-          Monthly income is less than monthly expenses — an inconsistency that requires
-          probing for other income sources or assistance (FNS-1104).
-        expression: "household.monthlyIncome < household.monthlyExpenses"
+          An income source is new, ended, or a different amount from the last
+          certification.
+        expression: >
+          application.incomes.exists(i, !lastCertification.incomes.exists(p,
+            p.memberId == i.memberId && p.type == i.type && p.monthlyAmount == i.monthlyAmount))
+          || lastCertification.incomes.exists(p, !application.incomes.exists(i,
+            i.memberId == p.memberId && i.type == p.type))
 
-      - path: workEligibleMembers
-        description: >
-          Members aged 16–59 who are not employed and may be subject to work
-          requirement screening (7 CFR § 273.7).
-        expression: "household.members.filter(m, m.age >= 16 && m.age <= 54 && !m.isEmployed)"
-
-      - path: hasUnemployedWorkEligible
+      - path: risks.householdChangedSinceLastCertification
         type: boolean
-        description: At least one member aged 16–59 is not employed.
-        expression: "household.members.exists(m, m.age >= 16 && m.age <= 59 && !m.isEmployed)"
+        description: Someone has joined or left the household since the last certification.
+        expression: >
+          application.members.exists(m, !(m.id in lastCertification.memberIds))
+          || lastCertification.memberIds.exists(id, !application.members.exists(m, m.id == id))
 
-      - path: hasStudentMembers
+      - path: risks.shelterCostsCarriedOver
         type: boolean
-        description: At least one household member is enrolled in higher education.
-        expression: "household.members.exists(m, m.isStudent)"
+        description: Rent or mortgage is exactly what the last certification recorded.
+        expression: >
+          application.expenses.exists(e, e.category in ['rent', 'mortgage']
+            && lastCertification.expenses.exists(p, p.category == e.category && p.monthlyAmount == e.monthlyAmount))
 
-      - path: hasNonCitizenMembers
+      - path: risks.elderlyOrDisabledWithoutMedicalCosts
         type: boolean
-        description: At least one household member is a non-citizen.
-        expression: "household.members.exists(m, m.isNonCitizen)"
+        description: A member is 60 or older, or disabled, and no medical costs are recorded.
+        expression: >
+          application.members.exists(m, m.age >= 60 || m.isDisabled)
+          && !application.expenses.exists(e, e.category == 'medical')
 
-      - path: allMembersEmployed
-        type: boolean
-        description: Every household member is currently employed.
-        expression: "household.members.all(m, m.isEmployed)"
-
-      - path: incomeInconsistencyPrompt
-        type: boolean
-        description: >
-          Prompt the household for unexplained income sources or assistance that
-          account for the gap between income and expenses.
-        expression: "incomeGapExists"
-
-      - path: workRequirementPrompt
+      - path: risks.childrenAndEarnersWithoutDependentCare
         type: boolean
         description: >
-          Screen non-employed members aged 16–59 for work requirement exemptions
-          (physical/mental fitness, caregiving, education, etc.).
-        expression: "hasUnemployedWorkEligible"
+          There's a child under 13 and someone earning, and no dependent care is
+          recorded. Under 13 is this sketch's line, not a regulation's.
+        expression: >
+          application.members.exists(m, m.age < 13)
+          && application.incomes.exists(i, i.type == 'earned' || i.type == 'self_employment')
+          && !application.expenses.exists(e, e.category == 'dependent_care')
 
-      - path: studentEligibilityPrompt
+      - path: risks.circumstancesChangedSinceApplying
         type: boolean
-        description: >
-          Screen student members for SNAP student eligibility exceptions
-          (employment, dependent care, work-study, etc.).
-        expression: "hasStudentMembers"
-
-      - path: immigrationStatusPrompt
-        type: boolean
-        description: >
-          Screen non-citizen members for immigration status and apply sponsor
-          income deeming rules where applicable.
-        expression: "hasNonCitizenMembers"
-
-      - path: changeVerificationPrompt
-        type: boolean
-        description: >
-          Identify and verify changes in household circumstances that occurred
-          between the application date and the interview date.
+        description: The household's circumstances changed between applying and the interview.
         expression: "application.hasChangedCircumstances"
 
+      - path: risks.multipleProgramsApplied
+        type: boolean
+        description: The household applied for SNAP and another program, whose reporting rules differ.
+        expression: "'snap' in application.programsAppliedFor && application.programsAppliedFor.exists(p, p != 'snap')"
+
+      - path: inconsistencies.incomeBelowExpenses
+        type: boolean
+        description: Reported income doesn't cover reported expenses.
+        expression: "application.reportedMonthlyIncome < application.reportedMonthlyExpenses"
+
+      - path: inconsistencies.wagesDifferFromWageRecords
+        type: boolean
+        description: >
+          A member's wages in the wage records differ by more than 10% from the
+          earned income recorded for them, or they have no earned income recorded.
+        expression: >
+          dataMatches.wageRecords.exists(w, !application.incomes.exists(i,
+            i.memberId == w.memberId && i.type == 'earned'
+            && i.monthlyAmount >= w.monthlyWages * 0.9 && i.monthlyAmount <= w.monthlyWages * 1.1))
+
+      - path: inconsistencies.incomeDiffersFromPayStub
+        type: boolean
+        description: A recorded income differs by more than 10% from what its verified pay stubs show.
+        expression: >
+          dataMatches.payStubs.exists(s, application.incomes.exists(i, i.id == s.incomeId
+            && (i.monthlyAmount < s.monthlyAmount * 0.9 || i.monthlyAmount > s.monthlyAmount * 1.1)))
+
+      - path: inconsistencies.householdSizeDiffersFromMembers
+        type: boolean
+        description: The stated household size isn't the number of members listed.
+        expression: "application.householdSize != size(application.members)"
+
+      - path: inconsistencies.jobWithoutEarnedIncome
+        type: boolean
+        description: A member has a job with no earned income recorded for it.
+        expression: "application.jobs.exists(j, !application.incomes.exists(i, has(i.jobId) && i.jobId == j.id))"
+
+      - path: inconsistencies.earnedIncomeWithoutJob
+        type: boolean
+        description: Earned income is recorded with no job behind it.
+        expression: >
+          application.incomes.exists(i, i.type == 'earned'
+            && !(has(i.jobId) && application.jobs.exists(j, j.id == i.jobId)))
+
+      - path: inconsistencies.utilitiesIncludedButClaimed
+        type: boolean
+        description: Utilities are included in the rent, but a utility allowance is applied.
+        expression: "application.utilitiesIncludedInRent && application.claimsUtilityAllowance"
+
     outputs:
-      incomeInconsistencyPrompt:
-        type: boolean
-      workEligibleMembers:
-        type: array
-      workRequirementPrompt:
-        type: boolean
-      studentEligibilityPrompt:
-        type: boolean
-      immigrationStatusPrompt:
-        type: boolean
-      changeVerificationPrompt:
-        type: boolean
-      allMembersEmployed:
-        type: boolean
+      risks.earnedIncomeVaries: { type: boolean }
+      risks.cashOrSelfEmploymentIncome: { type: boolean }
+      risks.incomeChangedSinceLastCertification: { type: boolean }
+      risks.householdChangedSinceLastCertification: { type: boolean }
+      risks.shelterCostsCarriedOver: { type: boolean }
+      risks.elderlyOrDisabledWithoutMedicalCosts: { type: boolean }
+      risks.childrenAndEarnersWithoutDependentCare: { type: boolean }
+      risks.circumstancesChangedSinceApplying: { type: boolean }
+      risks.multipleProgramsApplied: { type: boolean }
+      inconsistencies.incomeBelowExpenses: { type: boolean }
+      inconsistencies.wagesDifferFromWageRecords: { type: boolean }
+      inconsistencies.incomeDiffersFromPayStub: { type: boolean }
+      inconsistencies.householdSizeDiffersFromMembers: { type: boolean }
+      inconsistencies.jobWithoutEarnedIncome: { type: boolean }
+      inconsistencies.earnedIncomeWithoutJob: { type: boolean }
+      inconsistencies.utilitiesIncludedButClaimed: { type: boolean }

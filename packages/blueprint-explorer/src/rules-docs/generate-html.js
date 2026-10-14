@@ -21,55 +21,128 @@ import { esc, titleCase, breadcrumb, apiReferenceLink, apiReferenceHref } from '
 import { singleColumnPage } from '../lib/layout.js';
 import { PALETTE, MONOSPACE, box, rawSvgElement } from '../lib/diagram.js';
 
+const ZOOM_BUTTON = 'font:inherit;font-size:12px;min-width:28px;height:26px;padding:0 8px;border:1px solid #d1d5db;border-radius:4px;background:#fff;color:#374151;cursor:pointer;';
+
 // ── Data adapter ──────────────────────────────────────────────────────────────
-// Converts a *-graph.yaml document into the { nodes, edges, orderedLayers }
-// format expected by buildCandidateSubgraphSvg (ported from spike).
+// Converts a *-graph.yaml document into nodes and what each one reads: inputs
+// grouped by their top-level binding ("$.household.members[]" → "household"),
+// then every fact.
 
 function buildGraphData(graph) {
   const outputSet = new Set(graph.outputs);
-  const allFactNames = Object.keys(graph.facts);
-  const intermediates = allFactNames.filter(n => !outputSet.has(n));
-  const outputs = [...outputSet];
-
-  // Group inputs by top-level binding name (e.g. "$.household.members[]" → "household")
-  const bindingSet = new Set();
-  for (const path of Object.keys(graph.inputs)) {
-    bindingSet.add(path.slice(2).split('.')[0]);
-  }
-  const inputNodes = [...bindingSet];
-
-  // Build edges, deduplicating and mapping input paths to their top-level binding
-  const edgeSet = new Set();
-  const edges = [];
+  const inputNodes = [...new Set(Object.keys(graph.inputs).map(path => path.slice(2).split('.')[0]))];
+  const reads = {};
   for (const [factName, deps] of Object.entries(graph.dependencies)) {
-    for (const dep of deps) {
-      const from = dep.startsWith('$.') ? dep.slice(2).split('.')[0] : dep;
-      const key = `${from}\u2192${factName}`;
-      if (!edgeSet.has(key)) {
-        edgeSet.add(key);
-        edges.push({ from, to: factName });
-      }
-    }
+    const from = [...new Set(deps.map(dep => dep.startsWith('$.') ? dep.slice(2).split('.')[0] : dep))]
+      .filter(dep => dep !== factName);
+    if (from.length) reads[factName] = from;
   }
-
   return {
-    nodes: [...inputNodes, ...intermediates, ...outputs],
-    edges,
-    // Layer 0 = bottom (outputs), layer N = top (inputs) — matches spike convention
-    orderedLayers: [outputs, intermediates, inputNodes],
-    inputSet:  new Set(inputNodes),
+    nodes: [...inputNodes, ...Object.keys(graph.facts)],
+    reads,
+    inputNodes,
+    inputSet: new Set(inputNodes),
     outputSet,
   };
 }
 
+// ── Layout ────────────────────────────────────────────────────────────────────
+// On its side: inputs in the first column, every fact one column right of the
+// furthest thing it reads (its longest path from an input), each node as level
+// with what it reads as its neighbors allow, and each line from the right edge
+// of what is read to the left edge of what reads it.
+//
+// These two functions are also written into the page, so the per-output view
+// lays out a subset the same way the build laid out the whole. They take plain
+// objects and use no template strings, so their source can be inlined as is.
+
+function graphLayout(nodes, reads, inputs, widths) {
+  var NODE_H = 44, V_GAP = 16, COL_GAP = 90, MARGIN = 20, STEP = NODE_H + V_GAP;
+  var present = {};
+  nodes.forEach(function (n) { present[n] = true; });
+  var readsOf = function (n) { return (reads[n] || []).filter(function (m) { return present[m]; }); };
+
+  // Column = longest path from an input. Validation refuses cycles; `visiting`
+  // only keeps a malformed graph from recursing forever.
+  var column = {}, visiting = {};
+  inputs.forEach(function (n) { if (present[n]) column[n] = 0; });
+  function columnOf(n) {
+    if (column[n] !== undefined) return column[n];
+    if (visiting[n]) return 0;
+    visiting[n] = true;
+    var from = readsOf(n);
+    var c = from.length ? 1 + Math.max.apply(null, from.map(columnOf)) : 1;
+    delete visiting[n];
+    column[n] = c;
+    return c;
+  }
+  nodes.forEach(columnOf);
+  var columns = [];
+  nodes.forEach(function (n) { (columns[column[n]] = columns[column[n]] || []).push(n); });
+  columns = columns.filter(Boolean);
+
+  // x: each column as wide as its widest node.
+  var colX = [], x = MARGIN;
+  columns.forEach(function (col) {
+    colX.push(x);
+    x += Math.max.apply(null, col.map(function (n) { return widths[n]; })) + COL_GAP;
+  });
+
+  // y: each node as near as it can get to the middle of what it reads, pushed
+  // down past the one above, then the column shifted back by its average push.
+  var centerY = {};
+  columns.forEach(function (col) {
+    var wanted = col.map(function (n, i) {
+      var from = readsOf(n).filter(function (m) { return centerY[m] !== undefined; });
+      var y = from.length ? from.reduce(function (sum, m) { return sum + centerY[m]; }, 0) / from.length : i * STEP;
+      return { n: n, y: y };
+    }).sort(function (a, b) { return a.y - b.y; });
+    var last = -Infinity;
+    var placed = wanted.map(function (w) { var at = Math.max(w.y, last + STEP); last = at; return { n: w.n, at: at, y: w.y }; });
+    var drift = placed.reduce(function (sum, p) { return sum + (p.at - p.y); }, 0) / placed.length;
+    placed.forEach(function (p) { centerY[p.n] = p.at - drift; });
+  });
+  var top = Math.min.apply(null, Object.keys(centerY).map(function (n) { return centerY[n]; })) - NODE_H / 2;
+  var pos = {}, bottom = 0;
+  columns.forEach(function (col, c) {
+    col.forEach(function (n) {
+      pos[n] = { x: colX[c], y: centerY[n] - NODE_H / 2 - top + MARGIN };
+      bottom = Math.max(bottom, pos[n].y + NODE_H);
+    });
+  });
+  return { pos: pos, width: x - COL_GAP + MARGIN, height: bottom + MARGIN };
+}
+
+function graphEdgePath(from, to, pos, widths) {
+  var NODE_H = 44;
+  var x1 = pos[from].x + widths[from], y1 = pos[from].y + NODE_H / 2;
+  var x2 = pos[to].x - 2, y2 = pos[to].y + NODE_H / 2;
+  var bend = Math.max(24, (x2 - x1) / 2);
+  return 'M' + x1 + ',' + y1 + ' C' + (x1 + bend) + ',' + y1 + ' ' + (x2 - bend) + ',' + y2 + ' ' + x2 + ',' + y2;
+}
+
 // ── SVG graph ─────────────────────────────────────────────────────────────────
-// Ported verbatim from spike's buildCandidateSubgraphSvg, with two changes:
-//   1. nodeStyle() picks color by input/intermediate/output role
-//   2. data comes from buildGraphData() above, not from Corticon subgraph builder
+// Each node carries where the build put it and its width, so the per-output
+// view can move it, and each line has an arrowhead. The SVG fills a viewport the
+// page zooms and pans (see the script below), so a large ruleset stays readable.
+
+const CHAR_W = 7.2, H_PAD = 28;
+
+function nodeWidths(nodes) {
+  const shortOf = n => n.split('.').slice(-2).join('.');
+  const shortCounts = new Map();
+  for (const n of nodes) shortCounts.set(shortOf(n), (shortCounts.get(shortOf(n)) ?? 0) + 1);
+  const labels = {}, widths = {};
+  for (const n of nodes) {
+    labels[n] = shortCounts.get(shortOf(n)) === 1 ? shortOf(n) : n;
+    widths[n] = Math.max(140, Math.ceil(labels[n].length * CHAR_W) + H_PAD);
+  }
+  return { labels, widths };
+}
 
 function buildGraphSvg(graph, markerId) {
-  const { nodes, edges, orderedLayers, inputSet, outputSet } = buildGraphData(graph);
-  if (!nodes?.length || !orderedLayers?.length) return '';
+  const { nodes, reads, inputNodes, inputSet, outputSet } = buildGraphData(graph);
+  if (!nodes?.length) return '';
 
   const nodeStyle = n => {
     if (inputSet.has(n))  return PALETTE.teal;
@@ -77,52 +150,27 @@ function buildGraphSvg(graph, markerId) {
     return PALETTE.amber;
   };
 
-  const maxL = orderedLayers.length - 1;
-  const CHAR_W = 7.2, H_PAD = 28, NODE_H = 44, V_GAP = 60, H_GAP = 20, MARGIN = 20;
-  const shortOf = n => n.split('.').slice(-2).join('.');
-  const shortCounts = new Map();
-  for (const n of nodes) shortCounts.set(shortOf(n), (shortCounts.get(shortOf(n)) ?? 0) + 1);
-  const label = n => shortCounts.get(shortOf(n)) === 1 ? shortOf(n) : n;
-  const nodeW = n => Math.max(140, Math.ceil(label(n).length * CHAR_W) + H_PAD);
-  const layerY = l => MARGIN + (maxL - l) * (NODE_H + V_GAP);
-  const layerTotalW = l => (orderedLayers[l] ?? []).reduce((s, n) => s + nodeW(n), 0)
-    + Math.max(0, (orderedLayers[l] ?? []).length - 1) * H_GAP;
-  const svgW = Math.max(200, ...orderedLayers.map((_, l) => layerTotalW(l))) + 2 * MARGIN;
-  const svgH = MARGIN + (maxL + 1) * (NODE_H + V_GAP) - V_GAP + MARGIN;
-
-  const pos = {};
-  for (let l = 0; l <= maxL; l++) {
-    let x = (svgW - layerTotalW(l)) / 2;
-    for (const n of (orderedLayers[l] ?? [])) {
-      pos[n] = { x, y: layerY(l) };
-      x += nodeW(n) + H_GAP;
-    }
-  }
-
-  const seen = new Set(), uniqueEdges = [];
-  for (const e of edges) {
-    if (e.from === e.to) continue;
-    const k = `${e.from}\u2192${e.to}`;
-    if (!seen.has(k) && pos[e.from] && pos[e.to]) { seen.add(k); uniqueEdges.push(e); }
-  }
+  const { labels, widths } = nodeWidths(nodes);
+  const { pos, width, height } = graphLayout(nodes, reads, inputNodes, widths);
 
   const parts = [];
-  for (const e of uniqueEdges) {
-    const fp = pos[e.from], tp = pos[e.to];
-    const x1 = fp.x + nodeW(e.from) / 2, y1 = fp.y + NODE_H;
-    const x2 = tp.x + nodeW(e.to)   / 2, y2 = tp.y;
-    parts.push(`<line class="sg-edge" data-from="${esc(e.from)}" data-to="${esc(e.to)}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#6b7280" stroke-width="1.5"/>`);
+  for (const [to, froms] of Object.entries(reads)) {
+    for (const from of froms) {
+      if (!pos[from] || !pos[to]) continue;
+      parts.push(`<path class="sg-edge" data-from="${esc(from)}" data-to="${esc(to)}" d="${graphEdgePath(from, to, pos, widths)}" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arrow)"/>`);
+    }
   }
   for (const n of nodes) {
     const p = pos[n]; if (!p) continue;
-    const { svg: boxSvg } = box(p.x, p.y, nodeW(n), label(n), null, [], nodeStyle(n));
-    parts.push(`<g class="sg-node" data-node="${esc(n)}" title="${esc(n)}" style="cursor:pointer">${boxSvg}</g>`);
+    const { svg: boxSvg } = box(p.x, p.y, widths[n], labels[n], null, [], nodeStyle(n));
+    parts.push(`<g class="sg-node" data-node="${esc(n)}" data-x="${p.x}" data-y="${p.y}" title="${esc(n)}" style="cursor:pointer">${boxSvg}</g>`);
   }
 
-  // width="100%" + height="auto" lets the SVG scale to fill its container
-  // while the viewBox preserves proportions.
-  const svg = rawSvgElement(markerId, svgW, svgH, parts.join('\n'));
-  return svg.replace(`width="${svgW}"`, 'width="100%"').replace(`height="${svgH}"`, 'height="auto" style="display:block;"');
+  // The viewport script sets the viewBox; the SVG fills the viewport.
+  const svg = rawSvgElement(markerId, width, height, parts.join('\n'));
+  return svg
+    .replace(`width="${width}"`, `width="100%" data-graph-width="${width}"`)
+    .replace(`height="${height}"`, `height="100%" data-graph-height="${height}" preserveAspectRatio="xMidYMid meet" style="display:block;"`);
 }
 
 // ── Input template builder ─────────────────────────────────────────────────────
@@ -266,6 +314,15 @@ export function generateRulesetHtml(graph, annotations, registries, examples, ru
   }
 
   const svgHtml = buildGraphSvg(graph, `arrow-${rulesetName}`);
+  const graphData = buildGraphData(graph);
+  const graphLayoutJson = JSON.stringify({
+    nodes: graphData.nodes,
+    reads: graphData.reads,
+    inputs: graphData.inputNodes,
+    widths: nodeWidths(graphData.nodes).widths,
+  });
+  const outputOptions = [...(graph.outputs ?? [])].sort()
+    .map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('');
   const detailStripHtml = renderDetailStrip();
   const bottomHtml = renderBottomPanel(graph, examples);
 
@@ -286,14 +343,30 @@ export function generateRulesetHtml(graph, annotations, registries, examples, ru
 </div>
 
 ${legendHtml()}
-<div style="border:1px solid #e5e7eb;border-radius:6px;background:#fff;padding:16px;">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;color:#374151;">
+  <label for="graph-output">Show</label>
+  <select id="graph-output" style="font:12px ui-monospace,monospace;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;background:#fff;max-width:100%;">
+    <option value="">every fact</option>${outputOptions}
+  </select>
+  <span style="color:#9ca3af;">or one output and what it depends on</span>
+</div>
+<div class="graph-viewport" style="position:relative;height:440px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;overflow:hidden;cursor:grab;touch-action:none;">
   ${svgHtml}
+  <div style="position:absolute;top:8px;right:8px;display:flex;gap:4px;">
+    <button type="button" class="graph-zoom" data-zoom="in" title="Zoom in" style="${ZOOM_BUTTON}">+</button>
+    <button type="button" class="graph-zoom" data-zoom="out" title="Zoom out" style="${ZOOM_BUTTON}">&minus;</button>
+    <button type="button" class="graph-zoom" data-zoom="fit" title="Show the whole graph" style="${ZOOM_BUTTON}">Fit</button>
+  </div>
+  <div style="position:absolute;bottom:6px;left:10px;font-size:11px;color:#9ca3af;pointer-events:none;">Scroll to zoom, drag to move</div>
 </div>
 ${detailStripHtml}
 ${bottomHtml}
 
 <script>
 const GRAPH = ${graphJson};
+const GRAPH_LAYOUT = ${graphLayoutJson};
+${graphLayout.toString()}
+${graphEdgePath.toString()}
 const ANNOTATIONS = ${annotJson};
 const REGISTRIES = ${registriesJson};
 const EXAMPLES = ${examplesJson};
@@ -666,6 +739,184 @@ function escHtml(s) {
 }
 
 runEval();
+
+// ── Zoom and pan ──────────────────────────────────────────────────────────────
+// The graph fills a fixed-height viewport, and the viewBox is the camera: wheel
+// zooms about the cursor, drag moves, + and − zoom about the middle, Fit shows
+// everything. The view keeps the viewport's aspect ratio, so nothing letterboxes,
+// and it opens at actual size when fitting the whole graph would shrink it past
+// reading. A drag doesn't select the node it ends on.
+(function () {
+  const viewport = document.querySelector('.graph-viewport');
+  const svg = viewport && viewport.querySelector('svg');
+  if (!svg) return;
+  let W = Number(svg.dataset.graphWidth), H = Number(svg.dataset.graphHeight);
+  const aspect = () => viewport.clientWidth / viewport.clientHeight;
+  // Never wider than the graph needs to fit, or narrower than actual size: a small
+  // graph shows at its own size, in the middle.
+  const fitWidth = () => Math.max(W, H * aspect(), viewport.clientWidth);
+  const MIN_WIDTH = 200;
+  let view;
+
+  function clamp() {
+    // Never zoomed in past MIN_WIDTH or out past a little more than everything,
+    // and never moved so far that the graph leaves the viewport.
+    view.w = Math.min(Math.max(view.w, MIN_WIDTH), fitWidth() * 1.25);
+    view.h = view.w / aspect();
+    const minX = Math.min(0, W - view.w) - view.w / 2, maxX = Math.max(0, W - view.w) + view.w / 2;
+    const minY = Math.min(0, H - view.h) - view.h / 2, maxY = Math.max(0, H - view.h) + view.h / 2;
+    view.x = Math.min(Math.max(view.x, minX), maxX);
+    view.y = Math.min(Math.max(view.y, minY), maxY);
+    svg.setAttribute('viewBox', [view.x, view.y, view.w, view.h].join(' '));
+  }
+  function fit() {
+    const w = fitWidth();
+    view = { w, h: w / aspect(), x: (W - w) / 2, y: (H - w / aspect()) / 2 };
+    clamp();
+  }
+  function zoomAbout(gx, gy, factor) {
+    const before = view.w;
+    view.w *= factor;
+    view.h = view.w / aspect();
+    const ratio = view.w / before;
+    view.x = gx - (gx - view.x) * ratio;
+    view.y = gy - (gy - view.y) * ratio;
+    clamp();
+  }
+  const toGraph = (clientX, clientY) => {
+    const r = viewport.getBoundingClientRect();
+    return [view.x + (clientX - r.left) / r.width * view.w, view.y + (clientY - r.top) / r.height * view.h];
+  };
+
+  // Open at actual size, against the left edge where the inputs are and centered
+  // top to bottom, when the whole graph would be too small to read; otherwise
+  // show all of it.
+  function open(width, height) {
+    W = width; H = height;
+    if (fitWidth() > viewport.clientWidth * 1.6) {
+      view = { w: viewport.clientWidth, h: viewport.clientHeight, x: 0, y: (H - viewport.clientHeight) / 2 };
+      clamp();
+    } else {
+      fit();
+    }
+  }
+  open(W, H);
+  window.graphViewport = { open };
+
+  viewport.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const [gx, gy] = toGraph(e.clientX, e.clientY);
+    zoomAbout(gx, gy, Math.exp(e.deltaY * 0.0015));
+  }, { passive: false });
+
+  viewport.querySelectorAll('.graph-zoom').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (button.dataset.zoom === 'fit') return fit();
+      zoomAbout(view.x + view.w / 2, view.y + view.h / 2, button.dataset.zoom === 'in' ? 0.8 : 1.25);
+    });
+  });
+
+  // Drag to move. The pointer is only captured once it has moved a few pixels,
+  // so a click still selects a node; the click that ends a drag is swallowed.
+  let drag = null, dragged = false;
+  viewport.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || e.target.closest('button')) return;
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false };
+  });
+  viewport.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+    if (!drag.moved) { drag.moved = true; viewport.setPointerCapture(e.pointerId); viewport.style.cursor = 'grabbing'; }
+    const r = viewport.getBoundingClientRect();
+    view.x = drag.vx - dx / r.width * view.w;
+    view.y = drag.vy - dy / r.height * view.h;
+    clamp();
+  });
+  const endDrag = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    dragged = drag.moved;
+    if (drag.moved) viewport.releasePointerCapture(e.pointerId);
+    viewport.style.cursor = 'grab';
+    drag = null;
+  };
+  viewport.addEventListener('pointerup', endDrag);
+  viewport.addEventListener('pointercancel', endDrag);
+  viewport.addEventListener('click', (e) => {
+    if (dragged) { e.stopPropagation(); e.preventDefault(); dragged = false; }
+  }, true);
+
+  // Keep what's in view centered when the viewport changes width.
+  window.addEventListener('resize', () => {
+    const cx = view.x + view.w / 2, cy = view.y + view.h / 2;
+    view.h = view.w / aspect();
+    view.x = cx - view.w / 2;
+    view.y = cy - view.h / 2;
+    clamp();
+  });
+})();
+
+// ── One output on its own ─────────────────────────────────────────────────────
+// Past a few dozen facts the whole graph is too much to follow, but each output's
+// own graph — the output and everything it transitively reads — stays small. The
+// picker lays that subset out with the same function the build used, moves the
+// nodes there and hides the rest, so clicking, highlighting and the detail panel
+// work as they do on the whole graph.
+(function () {
+  const select = document.getElementById('graph-output');
+  const svg = document.querySelector('.graph-viewport svg');
+  if (!select || !svg || !window.graphViewport) return;
+  const nodes = Array.from(svg.querySelectorAll('.sg-node'));
+  const edges = Array.from(svg.querySelectorAll('.sg-edge'));
+  const whole = { width: Number(svg.dataset.graphWidth), height: Number(svg.dataset.graphHeight) };
+  edges.forEach(e => { e.dataset.d = e.getAttribute('d'); });
+
+  function show(output) {
+    resetHighlight(svg);
+    if (!output) {
+      nodes.forEach(g => { g.removeAttribute('transform'); g.style.display = ''; });
+      edges.forEach(e => { e.setAttribute('d', e.dataset.d); e.style.display = ''; });
+      window.graphViewport.open(whole.width, whole.height);
+      return;
+    }
+    const keep = new Set();
+    (function walk(n) {
+      if (keep.has(n)) return;
+      keep.add(n);
+      (GRAPH_LAYOUT.reads[n] || []).forEach(walk);
+    })(output);
+    const subset = GRAPH_LAYOUT.nodes.filter(n => keep.has(n));
+    const layout = graphLayout(subset, GRAPH_LAYOUT.reads, GRAPH_LAYOUT.inputs, GRAPH_LAYOUT.widths);
+    nodes.forEach(g => {
+      const p = layout.pos[g.dataset.node];
+      if (!p) { g.style.display = 'none'; return; }
+      g.style.display = '';
+      g.setAttribute('transform', 'translate(' + (p.x - Number(g.dataset.x)) + ',' + (p.y - Number(g.dataset.y)) + ')');
+    });
+    edges.forEach(e => {
+      const from = e.dataset.from, to = e.dataset.to;
+      if (!layout.pos[from] || !layout.pos[to]) { e.style.display = 'none'; return; }
+      e.style.display = '';
+      e.setAttribute('d', graphEdgePath(from, to, layout.pos, GRAPH_LAYOUT.widths));
+    });
+    window.graphViewport.open(layout.width, layout.height);
+  }
+  // A link can open one output's view: #output-risks.cashIncome.
+  function fromHash() {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#output-')) return;
+    const output = decodeURIComponent(hash.slice('#output-'.length));
+    if (!GRAPH.outputs.includes(output)) return;
+    select.value = output;
+    show(output);
+  }
+  select.addEventListener('change', () => {
+    show(select.value);
+    history.replaceState(null, '', select.value ? '#output-' + encodeURIComponent(select.value) : location.pathname + location.search);
+  });
+  window.addEventListener('hashchange', fromHash);
+  fromHash();
+})();
 
 // ── Hash-based fact navigation ─────────────────────────────────────────────
 // Navigating to #fact-{factName} simulates a click on that node so the full

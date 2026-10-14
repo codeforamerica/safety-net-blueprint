@@ -7,7 +7,8 @@ import { createListHandler } from './handlers/list-handler.js';
 import { extractExpandFields, applyExpand, getItemSchema } from './handlers/expand-utils.js';
 import { createGetHandler } from './handlers/get-handler.js';
 import { jsonBody, readJsonBody, queryOf } from './http/request.js';
-import { addRoute, routesFrom, tagRoutesAddedBy } from './http/route-table.js';
+import { addRoute, routesFrom, tagRoutesAddedBy, routeKey, templateOf } from './http/route-table.js';
+import { registerReadRoute, clearReadRoutes, heldHere } from './references.js';
 import { createCurrentUserHandler } from './handlers/current-user-handler.js';
 import { createCreateHandler } from './handlers/create-handler.js';
 import { createUpdateHandler, buildChanges } from './handlers/update-handler.js';
@@ -111,6 +112,24 @@ function deriveParentCollection(path, basePath) {
   const lastSlash = path.lastIndexOf('/');
   const parentPath = path.slice(0, lastSlash);
   return deriveCollectionName(parentPath, basePath);
+}
+
+/**
+ * A 404 when the parent a nested path names isn't there, else null. Only the
+ * immediate parent is looked up, as a nested list always has.
+ *
+ * @param {object} store
+ * @param {string|null} parentCollection
+ * @param {string} parentId
+ * @returns {Response|null}
+ */
+function parentNotFound(store, parentCollection, parentId) {
+  // A parent forwarded to a real service has its records there, not here.
+  if (!parentCollection || !heldHere(parentCollection)) return null;
+  const { items } = store.findAll(parentCollection, { id: parentId }, { limit: 1 });
+  if (items.length > 0) return null;
+  const label = capitalize(parentCollection.replace(/s$/, ''));
+  return Response.json({ code: 'NOT_FOUND', message: `${label} not found` }, { status: 404 });
 }
 
 /**
@@ -423,14 +442,8 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
           const pagination = apiMetadata.pagination || {};
           handler = (request, { params }) => {
             const parentId = params[parentParam];
-            // Verify parent exists before listing sub-resources
-            if (parentCollection) {
-              const { items: parentCheck } = store.findAll(parentCollection, { id: parentId }, { limit: 1 });
-              if (parentCheck.length === 0) {
-                const label = capitalize(parentCollection.replace(/s$/, ''));
-                return Response.json({ code: 'NOT_FOUND', message: `${label} not found` }, { status: 404 });
-              }
-            }
+            const noParent = parentNotFound(store, parentCollection, parentId);
+            if (noParent) return noParent;
             // List sub-resources filtered by parent ID plus any extra query field filters,
             // calling findAll directly rather than routing through createListHandler.
             const query = queryOf(request);
@@ -482,7 +495,11 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
           const relativePath = endpoint.path.slice(apiMetadata.serverBasePath?.length ?? 0);
           const createGovernors = governors.get(`create ${apiMetadata.domain} ${relativePath}`) ?? [];
           const checkCreateBody = bodyCheckFor(endpoint, apiMetadata, `${collectionName}-create`);
+          const parentCollection = deriveParentCollection(endpoint.path, apiMetadata.serverBasePath);
           handler = async (request, ctx) => {
+            // Nothing is created under a parent that isn't there, as nothing is listed under one.
+            const noParent = parentNotFound(store, parentCollection, ctx.params[parentParam]);
+            if (noParent) return noParent;
             // Spread ALL path params, not just the last one — sub-sub-resource
             // routes (e.g. /applications/{applicationId}/members/{memberId}/incomes)
             // need every parent FK on the persisted record. See mergePathParamsIntoBody.
@@ -592,6 +609,12 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
       description,
     });
 
+    // Where this collection's records are read, so an id pointing into it can
+    // be checked here unless the route is later forwarded to a real service.
+    if (method === 'get' && /\}$/.test(endpoint.path) && !endpoint.path.endsWith('/me')) {
+      registerReadRoute(collectionName, routes, routeKey('GET', templateOf(expressPath)));
+    }
+
     registeredEndpoints.push({
       method: method.toUpperCase(),
       path: endpoint.path,
@@ -616,6 +639,10 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
  */
 export function registerAllRoutes(routes, apiSpecs, baseUrl, stateMachines = [], slaTypes = [], metrics = [], deps = {}) {
   console.log('\nRegistering API routes...');
+
+  // This server's collections replace the last one's, so an id into a
+  // collection only that server held isn't checked here.
+  clearReadRoutes();
 
   const allEndpoints = [];
 
