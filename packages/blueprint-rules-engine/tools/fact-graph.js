@@ -24,6 +24,7 @@ import {
   GraphFactory,
   CollectionFactory,
   DayFactory,
+  Rational,
 } from '../vendor/fg.js';
 
 // ── CEL Tokenizer ─────────────────────────────────────────────────────────────
@@ -47,6 +48,10 @@ function tokenize(expr) {
     if (ch === ')') { tokens.push({ type: 'rparen' }); i++; continue; }
     if (ch === ',') { tokens.push({ type: 'comma' }); i++; continue; }
     if (ch === '.') { tokens.push({ type: 'dot' }); i++; continue; }
+    if (ch === '?') { tokens.push({ type: 'question' }); i++; continue; }
+    if (ch === ':') { tokens.push({ type: 'colon' }); i++; continue; }
+    if (ch === '[') { tokens.push({ type: 'lbracket' }); i++; continue; }
+    if (ch === ']') { tokens.push({ type: 'rbracket' }); i++; continue; }
 
     if (/[0-9]/.test(ch)) {
       let num = '';
@@ -127,8 +132,10 @@ function timestampLiteralToDay(arg) {
  *   { type: 'binary', op, left, right }        op: '&&'|'||'|'<'|'>'|'<='|'>='|'=='|'!='
  *   { type: 'call', method, receiver, var, body }  filter/all/exists
  *   { type: 'call', method: 'contains', receiver, arg }
- *   { type: 'call', method: 'size', receiver }
+ *   { type: 'call', method: 'size', receiver }    receiver.size() or size(receiver)
  *   { type: 'has', operand }
+ *   { type: 'ternary', cond, then, else }
+ *   { type: 'list', items }
  */
 function parse(expr) {
   const tokens = tokenize(expr);
@@ -143,7 +150,18 @@ function parse(expr) {
   };
   const matchOp = (v) => peek().type === 'op' && peek().value === v;
 
-  function parseExpr() { return parseOr(); }
+  function parseExpr() { return parseTernary(); }
+
+  // The conditional binds loosest, and is right-associative: a ? b : c ? d : e
+  // is a ? b : (c ? d : e), as in CEL.
+  function parseTernary() {
+    const cond = parseOr();
+    if (peek().type !== 'question') return cond;
+    consume();
+    const then = parseExpr();
+    expectType('colon');
+    return { type: 'ternary', cond, then, else: parseExpr() };
+  }
 
   function parseOr() {
     let left = parseAnd();
@@ -163,6 +181,11 @@ function parse(expr) {
     if (t.type === 'op' && ['<', '>', '<=', '>=', '==', '!='].includes(t.value)) {
       consume();
       return { type: 'binary', op: t.value, left, right: parseAdd() };
+    }
+    // `in` is a relation in CEL, at the same precedence as the comparisons.
+    if (t.type === 'ident' && t.value === 'in') {
+      consume();
+      return { type: 'binary', op: 'in', left, right: parseAdd() };
     }
     return left;
   }
@@ -266,6 +289,9 @@ function parse(expr) {
         const arg = parseExpr();
         expectType('rparen');
         if (t.value === 'timestamp') return timestampLiteralToDay(arg);
+        // size(x) is CEL's function form of x.size(); the method form already
+        // translated, so this one was refused only for how it was written.
+        if (t.value === 'size') return { type: 'call', method: 'size', receiver: arg };
         throw new Error(`FactGraph has no equivalent for '${t.value}()'`);
       }
       return { type: 'prop', chain: [t.value] };
@@ -276,10 +302,28 @@ function parse(expr) {
       expectType('rparen');
       return node;
     }
+    if (t.type === 'lbracket') {
+      consume();
+      const items = [];
+      while (peek().type !== 'rbracket') {
+        items.push(parseExpr());
+        if (peek().type === 'comma') consume();
+      }
+      expectType('rbracket');
+      return { type: 'list', items };
+    }
     throw new Error(`Unexpected token '${t.type}' at pos ${pos} in: ${expr}`);
   }
 
-  return parseExpr();
+  const ast = parseExpr();
+  // Everything has to be consumed. Stopping early translated a prefix of the
+  // expression as though it were the whole — `h.n in [1, 2, 3]` became `h.n`,
+  // and FactGraph answered 3 where the rule says true. A wrong answer that
+  // looks like a disagreement is worse than one that cannot be translated.
+  if (peek().type !== 'eof') {
+    throw new Error(`Unexpected '${peek().value ?? peek().type}' at pos ${pos} in: ${expr}`);
+  }
+  return ast;
 }
 
 // ── Path utilities ─────────────────────────────────────────────────────────────
@@ -347,7 +391,12 @@ function schemaTypeToFgType(spec) {
 
   switch (schemaType) {
     case 'integer': return 'Int';
-    case 'number':  return 'Int';
+    // Rational, not Int: a `number` keeps its fraction. As Int, a value like
+    // 217.5 could be neither seeded nor written as a default — the default
+    // failed the whole dictionary import ("For input string") — and arithmetic
+    // on a fractional input errored. Decimal literals in expressions were
+    // already Rationals, so the two now meet as the same type.
+    case 'number':  return 'Rational';
     case 'boolean': return 'Boolean';
     case 'string':  return 'String';
     case 'array':   return 'Collection';
@@ -363,6 +412,46 @@ function schemaTypeToFgType(spec) {
  * answers a different question. Blocking the facts that read it is the honest
  * result — a wrong answer that agrees is worse than a case that cannot run.
  */
+/**
+ * The XML for a declared default, inside a <Placeholder>.
+ *
+ * FactGraph writes most literals as a typed element holding text — `<Int>5</Int>`
+ * — but a boolean as one of two empty elements, `<True/>` or `<False/>`. There
+ * is no `<Boolean>` value node: `<Boolean>` names the type only, inside
+ * `<Writable>`. Emitting `<Boolean>false</Boolean>` here made FactGraph reject
+ * the whole dictionary ("Boolean is not a registered CompNode"), so a single
+ * boolean default anywhere stopped every fact from evaluating.
+ */
+function placeholderValueXml(fgType, value) {
+  if (fgType === 'Boolean') return value ? '<True/>' : '<False/>';
+  if (fgType === 'Rational') return `<Rational>${numberToFraction(value)}</Rational>`;
+  return `<${fgType}>${escapeXml(value)}</${fgType}>`;
+}
+
+/**
+ * A JavaScript number as the exact fraction FactGraph's Rational holds.
+ *
+ * `decimalToFraction` serves literals, whose source text never carries a sign —
+ * CEL's minus is an operator. A declared default or a supplied value can be
+ * negative, so the sign is taken off first and put back on the numerator.
+ * FactGraph's Rational holds 32-bit integers; a value too precise for that is
+ * refused rather than rounded.
+ *
+ * @returns {string} "numerator/denominator"
+ */
+function numberToFraction(value) {
+  const text = String(value);
+  if (!/^-?\d+(\.\d+)?$/.test(text)) {
+    throw new Error(`'${text}' cannot be written as a FactGraph Rational`);
+  }
+  const negative = text.startsWith('-');
+  const [n, d] = decimalToFraction(negative ? text.slice(1) : text).split('/').map(Number);
+  if (!Number.isSafeInteger(n) || Math.abs(n) > 2 ** 31 - 1 || d > 2 ** 31 - 1) {
+    throw new Error(`'${text}' is too precise for a FactGraph Rational`);
+  }
+  return `${negative ? -n : n}/${d}`;
+}
+
 function untranslatableInput(spec) {
   if (spec?.type === 'string' && spec.format === 'date-time') {
     return 'FactGraph has no timestamp type; its Day type is date-granular';
@@ -495,6 +584,17 @@ function astToXml(node, ctx) {
         // No modulo CompNode exists in the FactGraph dictionary.
         throw new Error("FactGraph has no modulo operator, so '%' cannot be translated");
       }
+      if (node.op === 'in') {
+        // x in [a, b] → Any(Equal(x, a), Equal(x, b)). Membership in a list
+        // written out in the expression is a disjunction of equalities, which
+        // FactGraph has; membership in anything else would need a list value.
+        if (node.right.type !== 'list') {
+          throw new Error("FactGraph has no list value, so 'in' is translatable only against a list written in the expression");
+        }
+        const left = astToXml(node.left, ctx);
+        const eqs = node.right.items.map((item) => `<Equal><Left>${left}</Left><Right>${astToXml(item, ctx)}</Right></Equal>`);
+        return `<Any>${eqs.join('')}</Any>`;
+      }
 
       const tag = binaryOpTag(node.op);
       const left = astToXml(node.left, ctx);
@@ -548,6 +648,26 @@ function astToXml(node, ctx) {
       const inner = astToXml(node.operand, ctx);
       return `<IsComplete>${inner}</IsComplete>`;
     }
+
+    case 'ternary': {
+      // c ? a : b → Switch: a Case per condition, then a final Case on <True/>
+      // for the else. A chain of conditionals becomes one Switch with a Case
+      // each, rather than a Switch nested in every else.
+      const cases = [];
+      let n = node;
+      while (n.type === 'ternary') {
+        cases.push(`<Case><When>${astToXml(n.cond, ctx)}</When><Then>${astToXml(n.then, ctx)}</Then></Case>`);
+        n = n.else;
+      }
+      cases.push(`<Case><When><True/></When><Then>${astToXml(n, ctx)}</Then></Case>`);
+      return `<Switch>${cases.join('')}</Switch>`;
+    }
+
+    case 'list':
+      // FactGraph's values are scalars, Collections of items written as input,
+      // and enum sets drawn from fixed options. Nothing builds a list — or a set
+      // — from values computed in an expression.
+      throw new Error('FactGraph has no list value, so a list built in an expression cannot be translated');
 
     default:
       throw new Error(`Unknown AST node type: ${node.type}`);
@@ -650,19 +770,20 @@ export function toFactGraph(graph, untranslated = new Map()) {
     const fgType = schemaTypeToFgType(spec);
     const placeholder = spec.default === undefined
       ? ''
-      : `<Placeholder><${fgType}>${spec.default}</${fgType}></Placeholder>`;
+      : `<Placeholder>${placeholderValueXml(fgType, spec.default)}</Placeholder>`;
     lines.push(`  <Fact path="${fgp}"><Writable><${fgType}/></Writable>${placeholder}</Fact>`);
   }
 
-  // Derived output facts
+  // Derived output facts — translated first, emitted after, because whether a
+  // fact can be emitted depends on whether everything it reads was.
+  const derived = new Map();
   for (const [factName, factDecl] of Object.entries(graph.facts)) {
     const expr = factDecl?.expression;
     if (!expr) continue;
 
-    let derivedXml;
     try {
       const ast = parse(expr);
-      derivedXml = astToXml(ast, { ...ctx, filterVar: null, filterCollPath: null });
+      derived.set(factName, astToXml(ast, { ...ctx, filterVar: null, filterCollPath: null }));
     } catch (err) {
       // Not every CEL construct has a FactGraph equivalent, and skipping keeps
       // the rest of the graph comparable. But a silent skip surfaces later as
@@ -670,9 +791,28 @@ export function toFactGraph(graph, untranslated = new Map()) {
       // that is how a decimal literal in an expression presented for a while.
       // Record the reason so the caller can report it instead.
       untranslated.set(factName, err.message ?? String(err));
-      continue;
     }
+  }
 
+  // A fact that reads an untranslated fact has to go too. Emitted, it refers to
+  // a path the dictionary does not have, FactGraph rejects the whole dictionary
+  // on import, and every fact is lost — including ones that read nothing
+  // untranslated. Dropped, it is one more fact that cannot run, with its reason.
+  // Repeats until nothing changes, so a drop propagates down a chain.
+  let dropped = true;
+  while (dropped) {
+    dropped = false;
+    for (const factName of derived.keys()) {
+      const blocker = (graph.dependencies?.[factName] ?? []).find((d) => untranslated.has(d));
+      if (blocker === undefined) continue;
+      untranslated.set(factName,
+        `reads '${blocker}', which has no FactGraph translation: ${untranslated.get(blocker)}`);
+      derived.delete(factName);
+      dropped = true;
+    }
+  }
+
+  for (const [factName, derivedXml] of derived) {
     lines.push(`  <Fact path="/${factName}"><Derived>${derivedXml}</Derived></Fact>`);
   }
 
@@ -759,7 +899,16 @@ function findAffectedFacts(failedPaths, graph) {
  * @returns {{ value: * } | { error: string }}
  */
 function toFgValue(spec, val) {
-  if (schemaTypeToFgType(spec) !== 'Day') return { value: val };
+  const fgType = schemaTypeToFgType(spec);
+  if (fgType === 'Rational') {
+    try {
+      const [n, d] = numberToFraction(val).split('/').map(Number);
+      return { value: Rational(n, d) };
+    } catch (err) {
+      return { error: err.message };
+    }
+  }
+  if (fgType !== 'Day') return { value: val };
 
   // A rejected date sets `right` to null rather than leaving it undefined, so
   // `isRight` is the only reliable check — reading `right` alone seeds null and
@@ -986,6 +1135,14 @@ function extractResult(result, uuidToItem) {
       if (original !== undefined) items.push(original);
     }
     return { value: items, state };
+  }
+
+  // A Rational comes back as FactGraph's own object; its toString is the exact
+  // fraction, "435/2", which is what turns back into a number.
+  if (rawValue != null && typeof rawValue === 'object'
+      && typeof rawValue.simplify__Lgov_irs_factgraph_types_Rational === 'function') {
+    const [n, d] = rawValue.toString().split('/').map(Number);
+    return { value: n / d, state };
   }
 
   return { value: rawValue, state };

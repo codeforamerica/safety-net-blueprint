@@ -497,3 +497,185 @@ describe('temporal inputs — Day, and what has no FactGraph type at all', () =>
     assert.strictEqual(result.bornBefore2009.state, 'error');
   });
 });
+
+describe('boolean defaults', () => {
+  // `<Boolean>` names FactGraph's type, inside <Writable>; its values are
+  // `<True/>` and `<False/>`. The translator used to write a boolean default as
+  // `<Boolean>false</Boolean>`, which FactGraph rejected as an unregistered node
+  // — and since that fails the dictionary import, no fact in the graph
+  // evaluated. No fixture declared a boolean default, so nothing caught it.
+  const flagGraph = (dflt) => ({
+    outputs: ['answer'],
+    inputs: { '$.p.flag': { type: 'boolean', default: dflt }, '$.p.n': { type: 'integer' } },
+    facts: { answer: { expression: '!p.flag && p.n > 1' } },
+    dependencies: { answer: ['$.p.flag', '$.p.n'] },
+  });
+
+  it('a boolean default is written as <True/> or <False/>', () => {
+    assert.match(toFactGraph(flagGraph(false)), /<Placeholder>\s*<False\/>\s*<\/Placeholder>/);
+    assert.match(toFactGraph(flagGraph(true)), /<Placeholder>\s*<True\/>\s*<\/Placeholder>/);
+  });
+
+  for (const dflt of [false, true]) {
+    it(`a default of ${dflt}, unsupplied: agrees, as a placeholder`, () => {
+      const inputs = { p: { n: 5 } };
+      assertOutputParity(
+        toGraph(flagGraph(dflt)).evaluate(inputs),
+        toGraphWithFactGraph(flagGraph(dflt)).evaluate(inputs),
+        `default ${dflt}`,
+      );
+      assert.strictEqual(toGraphWithFactGraph(flagGraph(dflt)).evaluate(inputs).toJSON().answer.state, 'placeholder');
+    });
+  }
+
+  it('a supplied value overrides the default: agrees, and is complete', () => {
+    const inputs = { p: { flag: true, n: 5 } };
+    assertOutputParity(
+      toGraph(flagGraph(false)).evaluate(inputs),
+      toGraphWithFactGraph(flagGraph(false)).evaluate(inputs),
+      'supplied',
+    );
+    const fg = toGraphWithFactGraph(flagGraph(false)).evaluate(inputs).toJSON();
+    assert.deepStrictEqual([fg.answer.state, fg.answer.value], ['complete', false]);
+  });
+});
+
+describe('facts that read an untranslated fact', () => {
+  // `odd` has no FactGraph translation — FactGraph has no modulo — so it is
+  // left out of the dictionary.
+  // `big` reads it; `unrelated` does not. Emitting `big` anyway made it refer to
+  // a path the dictionary lacks, FactGraph rejected the import, and `unrelated`
+  // was lost with it. Now `big` is left out too, with the reason, and the rest
+  // of the graph evaluates.
+  const graph = {
+    outputs: ['big', 'unrelated'],
+    inputs: { '$.p.m': { type: 'integer' }, '$.p.n': { type: 'integer' } },
+    facts: {
+      odd: { expression: 'p.m % 2' },
+      big: { expression: 'odd > 0' },
+      bigger: { expression: 'big && p.n > 1' },
+      unrelated: { expression: 'p.n > 1' },
+    },
+    dependencies: {
+      odd: ['$.p.m'],
+      big: ['odd'],
+      bigger: ['big', '$.p.n'],
+      unrelated: ['$.p.n'],
+    },
+  };
+  const inputs = { p: { m: 3, n: 5 } };
+
+  it('the dependents are left out of the dictionary, down the chain, each with its reason', () => {
+    const untranslated = new Map();
+    const xml = toFactGraph(graph, untranslated);
+    assert.deepStrictEqual([...untranslated.keys()].sort(), ['big', 'bigger', 'odd']);
+    assert.match(untranslated.get('big'), /reads 'odd'/);
+    assert.match(untranslated.get('bigger'), /reads 'big'/);
+    assert.doesNotMatch(xml, /path="\/(big|bigger)"/);
+    assert.match(xml, /path="\/unrelated"/);
+  });
+
+  it('a fact that reads nothing untranslated still evaluates', () => {
+    const fg = toGraphWithFactGraph(graph).evaluate(inputs).toJSON();
+    assert.deepStrictEqual([fg.unrelated.state, fg.unrelated.value], ['complete', true]);
+  });
+
+  it('a dependent reports why it cannot run, rather than failing the whole graph', () => {
+    const fg = toGraphWithFactGraph(graph).evaluate(inputs).toJSON();
+    assert.strictEqual(fg.big.state, 'error');
+    assert.match(fg.big.message, /reads 'odd', which has no FactGraph translation/);
+  });
+});
+
+describe('number inputs keep their fraction', () => {
+  // A `number` used to become FactGraph's Int. A fractional default could not
+  // be written ("For input string: \"217.5\"" failed the whole dictionary
+  // import), and a fractional value could not be used. It is a Rational now,
+  // the type decimal literals in expressions already were.
+  const earningsGraph = (dflt) => ({
+    outputs: ['aboveMinimum', 'doubled'],
+    inputs: {
+      '$.w.weekly': { type: 'number' },
+      '$.policy.minimum': { type: 'number', default: dflt },
+    },
+    facts: {
+      aboveMinimum: { expression: 'w.weekly >= policy.minimum' },
+      doubled: { expression: 'w.weekly * 2.0' },
+    },
+    dependencies: { aboveMinimum: ['$.w.weekly', '$.policy.minimum'], doubled: ['$.w.weekly'] },
+  });
+
+  it('a number is a Rational, and a fractional default an exact fraction', () => {
+    const xml = toFactGraph(earningsGraph(217.5));
+    assert.match(xml, /<Writable>\s*<Rational\/>\s*<\/Writable>/);
+    assert.match(xml, /<Placeholder>\s*<Rational>435\/2<\/Rational>\s*<\/Placeholder>/);
+  });
+
+  it('a negative default keeps its sign', () => {
+    assert.match(toFactGraph(earningsGraph(-2.5)), /<Rational>-5\/2<\/Rational>/);
+  });
+
+  for (const weekly of [217.5, 217.49, 300, 0]) {
+    it(`a supplied ${weekly} against a fractional default: agrees fact for fact`, () => {
+      const inputs = { w: { weekly } };
+      assertOutputParity(
+        toGraph(earningsGraph(217.5)).evaluate(inputs),
+        toGraphWithFactGraph(earningsGraph(217.5)).evaluate(inputs),
+        `weekly ${weekly}`,
+      );
+    });
+  }
+
+  it('a fractional result comes back as a number', () => {
+    const fg = toGraphWithFactGraph(earningsGraph(217.5)).evaluate({ w: { weekly: 108.75 } }).toJSON();
+    assert.deepStrictEqual([fg.doubled.state, fg.doubled.value], ['complete', 217.5]);
+  });
+});
+
+describe('conditionals, size(), and membership', () => {
+  const g = (facts, inputs) => ({
+    outputs: Object.keys(facts),
+    inputs,
+    facts: Object.fromEntries(Object.entries(facts).map(([k, expression]) => [k, { expression }])),
+    dependencies: Object.fromEntries(Object.keys(facts).map((k) => [k, Object.keys(inputs)])),
+  });
+  const parity = (graph, inputs, label) => assertOutputParity(
+    toGraph(graph).evaluate(inputs), toGraphWithFactGraph(graph).evaluate(inputs), label);
+
+  it('a chain of conditionals becomes one Switch with a Case each, and an else', () => {
+    const graph = g({ band: "h.n > 10 ? 'high' : h.n > 5 ? 'mid' : 'low'" }, { '$.h.n': { type: 'integer' } });
+    const xml = toFactGraph(graph);
+    assert.strictEqual((xml.match(/<Switch>/g) ?? []).length, 1);
+    assert.strictEqual((xml.match(/<Case>/g) ?? []).length, 3);
+    for (const n of [12, 7, 1]) parity(graph, { h: { n } }, `n=${n}`);
+  });
+
+  it('size(x) translates the same as x.size()', () => {
+    // Counting reads the collection, not its members' fields.
+    const inputs = { '$.h.people[]': { type: 'array' } };
+    const fn = g({ many: 'size(h.people) > 1' }, inputs);
+    const method = g({ many: 'h.people.size() > 1' }, inputs);
+    assert.strictEqual(toFactGraph(fn), toFactGraph(method));
+    parity(fn, { h: { people: [{}, {}] } }, 'two people');
+    parity(fn, { h: { people: [{}] } }, 'one person');
+  });
+
+  it('membership in a written-out list is a disjunction of equalities', () => {
+    const graph = g({ inSet: 'h.n in [1, 3, 5]' }, { '$.h.n': { type: 'integer' } });
+    for (const n of [3, 4]) parity(graph, { h: { n } }, `n=${n}`);
+  });
+
+  it('a list built in an expression is refused, with the reason', () => {
+    const untranslated = new Map();
+    toFactGraph(g({ codes: "h.n > 1 ? ['big'] : []" }, { '$.h.n': { type: 'integer' } }), untranslated);
+    assert.match(untranslated.get('codes'), /no list value/);
+  });
+
+  it('an expression is translated whole or not at all', () => {
+    // A parser that stopped at the first thing it did not understand used to
+    // translate `h.n` out of `h.n in [...]` and answer with the number.
+    const untranslated = new Map();
+    toFactGraph(g({ weird: 'h.n h.n' }, { '$.h.n': { type: 'integer' } }), untranslated);
+    assert.match(untranslated.get('weird'), /Unexpected/);
+  });
+});
