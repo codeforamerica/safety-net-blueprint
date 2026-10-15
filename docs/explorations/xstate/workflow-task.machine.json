@@ -1,0 +1,2188 @@
+{
+  "id": "task",
+  "type": "parallel",
+  "description": "A workflow task. One actor per stored task; `status` is the task's status field.",
+  "entry": [
+    {
+      "type": "call",
+      "params": {
+        "procedure": "assignToQueue"
+      }
+    },
+    {
+      "type": "call",
+      "params": {
+        "procedure": "setPriority"
+      }
+    }
+  ],
+  "states": {
+    "status": {
+      "initial": "pending",
+      "on": {
+        "workflow.task.updated": {
+          "actions": [
+            {
+              "type": "if",
+              "params": {
+                "condition": "$this.data.changes.exists(c, c.field == \"isExpedited\" || c.field == \"programType\")",
+                "then": [
+                  {
+                    "type": "call",
+                    "params": {
+                      "procedure": "setPriority"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "if",
+              "params": {
+                "condition": "$this.data.changes.exists(c, c.field == \"programType\" || c.field == \"queueId\")",
+                "then": [
+                  {
+                    "type": "call",
+                    "params": {
+                      "procedure": "assignToQueue"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "description": "Re-evaluate priority and queue assignment when relevant fields change; reschedule SLA timers when the SLA deadline is set"
+        }
+      },
+      "states": {
+        "pending": {
+          "description": "Unassigned task awaiting a caseworker to claim it",
+          "meta": {
+            "slaClock": "running"
+          },
+          "on": {
+            "claim": {
+              "target": "in_progress",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "case_worker",
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "taskIsUnassigned"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "assignedToId",
+                    "value": "$caller.id",
+                    "description": "Assign task to the claiming worker"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.claimed",
+                    "data": {
+                      "assignedToId": "$caller.id"
+                    },
+                    "description": "Emit a domain event recording the claim and who claimed the task"
+                  }
+                }
+              ],
+              "description": "Caseworker takes ownership of an unassigned pending task",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/claim"
+              }
+            },
+            "escalate": {
+              "target": "escalated",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "case_worker",
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsAssignedWorker"
+                      ]
+                    },
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "escalatedAt",
+                    "value": "$now",
+                    "description": "Record when the task was escalated"
+                  }
+                },
+                {
+                  "type": "call",
+                  "params": {
+                    "procedure": "setPriority"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.escalated",
+                    "data": {
+                      "reason": "$request.reason"
+                    },
+                    "description": "Emit a domain event recording the escalation"
+                  }
+                }
+              ],
+              "description": "Escalate a task; assigned workers can escalate in-progress tasks, supervisors can escalate from any state",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/escalate",
+                "request": {
+                  "$ref": "#/$defs/EscalateTaskRequest"
+                }
+              }
+            },
+            "cancel": {
+              "target": "cancelled",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    },
+                    {
+                      "actors": [
+                        "system"
+                      ],
+                      "conditions": [
+                        "callerIsSystem"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "cancelledAt",
+                    "value": "$now",
+                    "description": "Record when the task was cancelled"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.cancelled",
+                    "data": {
+                      "reason": "$request.reason"
+                    },
+                    "description": "Emit a domain event recording the cancellation"
+                  }
+                }
+              ],
+              "description": "Supervisor cancels a task from any active state",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/cancel",
+                "request": {
+                  "$ref": "#/$defs/CancelTaskRequest"
+                }
+              }
+            },
+            "sla-escalate": {
+              "target": "escalated",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "system"
+                      ],
+                      "conditions": [
+                        "callerIsSystem"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "if",
+                  "params": {
+                    "condition": "$object.escalatedAt == null",
+                    "then": [
+                      {
+                        "type": "set",
+                        "params": {
+                          "field": "escalatedAt",
+                          "value": "$now",
+                          "description": "Record first escalation time; not overwritten on subsequent timer-triggered escalations"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "call",
+                  "params": {
+                    "procedure": "setPriority"
+                  }
+                },
+                {
+                  "type": "if",
+                  "params": {
+                    "condition": "$request.reason == \"sla_deadline_exceeded\"",
+                    "then": [
+                      {
+                        "type": "emit",
+                        "params": {
+                          "type": "workflow.task.sla_breached",
+                          "data": {
+                            "reason": "$request.reason"
+                          },
+                          "description": "Emit a domain event recording the SLA deadline breach for federal compliance reporting"
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "type": "emit",
+                        "params": {
+                          "type": "workflow.task.escalated",
+                          "data": {
+                            "reason": "$request.reason"
+                          },
+                          "description": "Emit a domain event recording the automatic escalation"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ],
+              "description": "System escalates a task when an SLA timer fires (creation deadline, warning, or breach)",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/sla-escalate",
+                "request": {
+                  "$ref": "#/$defs/SystemEscalateTaskRequest"
+                }
+              }
+            },
+            "assign": {
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "assignedToId",
+                    "value": "$request.assignedToId",
+                    "description": "Assign the task to the specified caseworker"
+                  }
+                },
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "queueId",
+                    "value": "$request.queueId",
+                    "description": "Optionally move the task to a different queue"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.assigned",
+                    "data": {
+                      "assignedToId": "$request.assignedToId",
+                      "queueId": "$request.queueId"
+                    },
+                    "description": "Emit a domain event recording the assignment"
+                  }
+                }
+              ],
+              "description": "Supervisor reassigns a task to a specific caseworker or moves it to a different queue",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/assign",
+                "request": {
+                  "$ref": "#/$defs/AssignTaskRequest"
+                }
+              }
+            },
+            "set-priority": {
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "priority",
+                    "value": "$request.priority",
+                    "description": "Override the task priority"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.priority_changed",
+                    "data": {
+                      "priority": "$request.priority",
+                      "reason": "$request.reason"
+                    },
+                    "description": "Emit a domain event recording the priority change"
+                  }
+                }
+              ],
+              "description": "Supervisor manually overrides the task priority",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/set-priority",
+                "request": {
+                  "$ref": "#/$defs/SetPriorityRequest"
+                }
+              }
+            }
+          }
+        },
+        "in_progress": {
+          "description": "Task claimed and actively being worked by an assigned caseworker",
+          "meta": {
+            "slaClock": "running"
+          },
+          "on": {
+            "complete": {
+              "target": "completed",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "case_worker",
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsAssignedWorker"
+                      ]
+                    },
+                    {
+                      "actors": [
+                        "system"
+                      ],
+                      "conditions": [
+                        "callerIsSystem"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "completedAt",
+                    "value": "$now",
+                    "description": "Record when work finished"
+                  }
+                },
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "outcome",
+                    "value": "$request.outcome",
+                    "description": "Store the completion outcome from the request"
+                  }
+                },
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "completionNotes",
+                    "value": "$request.notes",
+                    "description": "Store optional completion notes from the request"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.completed",
+                    "data": {
+                      "outcome": "$request.outcome"
+                    },
+                    "description": "Emit a domain event recording the completion and its outcome"
+                  }
+                },
+                {
+                  "type": "if",
+                  "params": {
+                    "condition": "$request.createFollowUp == true",
+                    "then": [
+                      {
+                        "type": "request",
+                        "params": {
+                          "method": "POST",
+                          "path": "workflow/tasks",
+                          "body": {
+                            "$merge": "$object",
+                            "status": "pending"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ],
+              "description": "Marks an in-progress task done with an outcome and optional notes",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/complete",
+                "request": {
+                  "$ref": "#/$defs/CompleteTaskRequest"
+                }
+              }
+            },
+            "release": {
+              "target": "pending",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "case_worker",
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsAssignedWorker"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "assignedToId",
+                    "value": null,
+                    "description": "Clear assignment so task returns to queue"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.released",
+                    "data": {
+                      "reason": "$request.reason"
+                    },
+                    "description": "Emit a domain event recording the release and its reason"
+                  }
+                },
+                {
+                  "type": "call",
+                  "params": {
+                    "procedure": "assignToQueue"
+                  }
+                },
+                {
+                  "type": "call",
+                  "params": {
+                    "procedure": "setPriority"
+                  }
+                }
+              ],
+              "description": "Returns an in-progress task to the queue, clearing the assignment",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/release",
+                "request": {
+                  "$ref": "#/$defs/ReleaseTaskRequest"
+                }
+              }
+            },
+            "escalate": {
+              "target": "escalated",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "case_worker",
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsAssignedWorker"
+                      ]
+                    },
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "escalatedAt",
+                    "value": "$now",
+                    "description": "Record when the task was escalated"
+                  }
+                },
+                {
+                  "type": "call",
+                  "params": {
+                    "procedure": "setPriority"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.escalated",
+                    "data": {
+                      "reason": "$request.reason"
+                    },
+                    "description": "Emit a domain event recording the escalation"
+                  }
+                }
+              ],
+              "description": "Escalate a task; assigned workers can escalate in-progress tasks, supervisors can escalate from any state",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/escalate",
+                "request": {
+                  "$ref": "#/$defs/EscalateTaskRequest"
+                }
+              }
+            },
+            "cancel": {
+              "target": "cancelled",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    },
+                    {
+                      "actors": [
+                        "system"
+                      ],
+                      "conditions": [
+                        "callerIsSystem"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "cancelledAt",
+                    "value": "$now",
+                    "description": "Record when the task was cancelled"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.cancelled",
+                    "data": {
+                      "reason": "$request.reason"
+                    },
+                    "description": "Emit a domain event recording the cancellation"
+                  }
+                }
+              ],
+              "description": "Supervisor cancels a task from any active state",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/cancel",
+                "request": {
+                  "$ref": "#/$defs/CancelTaskRequest"
+                }
+              }
+            },
+            "await-client": {
+              "target": "awaiting_client",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "case_worker",
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsAssignedWorker"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "blockedAt",
+                    "value": "$now",
+                    "description": "Record when the task entered a waiting state"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.awaiting_client",
+                    "description": "Emit a domain event recording the block"
+                  }
+                }
+              ],
+              "description": "Pauses an in-progress task while waiting for a client response",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/await-client",
+                "request": {
+                  "$ref": "#/$defs/AwaitClientRequest"
+                }
+              }
+            },
+            "await-verification": {
+              "target": "awaiting_verification",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "case_worker",
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsAssignedWorker"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "blockedAt",
+                    "value": "$now",
+                    "description": "Record when the task entered a waiting state"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.awaiting_verification",
+                    "description": "Emit a domain event recording the block"
+                  }
+                }
+              ],
+              "description": "Pauses an in-progress task while waiting for a verification result",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/await-verification",
+                "request": {
+                  "$ref": "#/$defs/AwaitVerificationRequest"
+                }
+              }
+            },
+            "sla-escalate": {
+              "target": "escalated",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "system"
+                      ],
+                      "conditions": [
+                        "callerIsSystem"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "if",
+                  "params": {
+                    "condition": "$object.escalatedAt == null",
+                    "then": [
+                      {
+                        "type": "set",
+                        "params": {
+                          "field": "escalatedAt",
+                          "value": "$now",
+                          "description": "Record first escalation time; not overwritten on subsequent timer-triggered escalations"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "call",
+                  "params": {
+                    "procedure": "setPriority"
+                  }
+                },
+                {
+                  "type": "if",
+                  "params": {
+                    "condition": "$request.reason == \"sla_deadline_exceeded\"",
+                    "then": [
+                      {
+                        "type": "emit",
+                        "params": {
+                          "type": "workflow.task.sla_breached",
+                          "data": {
+                            "reason": "$request.reason"
+                          },
+                          "description": "Emit a domain event recording the SLA deadline breach for federal compliance reporting"
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "type": "emit",
+                        "params": {
+                          "type": "workflow.task.escalated",
+                          "data": {
+                            "reason": "$request.reason"
+                          },
+                          "description": "Emit a domain event recording the automatic escalation"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ],
+              "description": "System escalates a task when an SLA timer fires (creation deadline, warning, or breach)",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/sla-escalate",
+                "request": {
+                  "$ref": "#/$defs/SystemEscalateTaskRequest"
+                }
+              }
+            },
+            "submit-for-review": {
+              "target": "pending_review",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "case_worker",
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsAssignedWorker"
+                      ]
+                    },
+                    {
+                      "actors": [
+                        "system"
+                      ],
+                      "conditions": [
+                        "callerIsSystem"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.submitted_for_review",
+                    "description": "Emit a domain event recording the submission for review"
+                  }
+                }
+              ],
+              "description": "Worker submits a completed task to a supervisor for review and approval",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/submit-for-review"
+              }
+            },
+            "assign": {
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "assignedToId",
+                    "value": "$request.assignedToId",
+                    "description": "Assign the task to the specified caseworker"
+                  }
+                },
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "queueId",
+                    "value": "$request.queueId",
+                    "description": "Optionally move the task to a different queue"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.assigned",
+                    "data": {
+                      "assignedToId": "$request.assignedToId",
+                      "queueId": "$request.queueId"
+                    },
+                    "description": "Emit a domain event recording the assignment"
+                  }
+                }
+              ],
+              "description": "Supervisor reassigns a task to a specific caseworker or moves it to a different queue",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/assign",
+                "request": {
+                  "$ref": "#/$defs/AssignTaskRequest"
+                }
+              }
+            },
+            "set-priority": {
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "priority",
+                    "value": "$request.priority",
+                    "description": "Override the task priority"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.priority_changed",
+                    "data": {
+                      "priority": "$request.priority",
+                      "reason": "$request.reason"
+                    },
+                    "description": "Emit a domain event recording the priority change"
+                  }
+                }
+              ],
+              "description": "Supervisor manually overrides the task priority",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/set-priority",
+                "request": {
+                  "$ref": "#/$defs/SetPriorityRequest"
+                }
+              }
+            }
+          }
+        },
+        "completed": {
+          "description": "Task finished with an outcome recorded",
+          "meta": {
+            "slaClock": "stopped"
+          },
+          "on": {}
+        },
+        "escalated": {
+          "description": "Task flagged for supervisor attention due to complexity or urgency",
+          "meta": {
+            "slaClock": "running"
+          },
+          "on": {
+            "de-escalate": {
+              "target": "pending",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "call",
+                  "params": {
+                    "procedure": "assignToQueue"
+                  }
+                },
+                {
+                  "type": "call",
+                  "params": {
+                    "procedure": "setPriority"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.de-escalated",
+                    "description": "Emit a domain event recording the de-escalation"
+                  }
+                }
+              ],
+              "description": "Returns an escalated task to the pending queue",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/de-escalate",
+                "request": {
+                  "$ref": "#/$defs/DeEscalateTaskRequest"
+                }
+              }
+            },
+            "cancel": {
+              "target": "cancelled",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    },
+                    {
+                      "actors": [
+                        "system"
+                      ],
+                      "conditions": [
+                        "callerIsSystem"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "cancelledAt",
+                    "value": "$now",
+                    "description": "Record when the task was cancelled"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.cancelled",
+                    "data": {
+                      "reason": "$request.reason"
+                    },
+                    "description": "Emit a domain event recording the cancellation"
+                  }
+                }
+              ],
+              "description": "Supervisor cancels a task from any active state",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/cancel",
+                "request": {
+                  "$ref": "#/$defs/CancelTaskRequest"
+                }
+              }
+            },
+            "sla-escalate": {
+              "target": "escalated",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "system"
+                      ],
+                      "conditions": [
+                        "callerIsSystem"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "if",
+                  "params": {
+                    "condition": "$object.escalatedAt == null",
+                    "then": [
+                      {
+                        "type": "set",
+                        "params": {
+                          "field": "escalatedAt",
+                          "value": "$now",
+                          "description": "Record first escalation time; not overwritten on subsequent timer-triggered escalations"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "call",
+                  "params": {
+                    "procedure": "setPriority"
+                  }
+                },
+                {
+                  "type": "if",
+                  "params": {
+                    "condition": "$request.reason == \"sla_deadline_exceeded\"",
+                    "then": [
+                      {
+                        "type": "emit",
+                        "params": {
+                          "type": "workflow.task.sla_breached",
+                          "data": {
+                            "reason": "$request.reason"
+                          },
+                          "description": "Emit a domain event recording the SLA deadline breach for federal compliance reporting"
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "type": "emit",
+                        "params": {
+                          "type": "workflow.task.escalated",
+                          "data": {
+                            "reason": "$request.reason"
+                          },
+                          "description": "Emit a domain event recording the automatic escalation"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ],
+              "description": "System escalates a task when an SLA timer fires (creation deadline, warning, or breach)",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/sla-escalate",
+                "request": {
+                  "$ref": "#/$defs/SystemEscalateTaskRequest"
+                }
+              }
+            },
+            "submit-for-review": {
+              "target": "pending_review",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "case_worker",
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsAssignedWorker"
+                      ]
+                    },
+                    {
+                      "actors": [
+                        "system"
+                      ],
+                      "conditions": [
+                        "callerIsSystem"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.submitted_for_review",
+                    "description": "Emit a domain event recording the submission for review"
+                  }
+                }
+              ],
+              "description": "Worker submits a completed task to a supervisor for review and approval",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/submit-for-review"
+              }
+            },
+            "assign": {
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "assignedToId",
+                    "value": "$request.assignedToId",
+                    "description": "Assign the task to the specified caseworker"
+                  }
+                },
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "queueId",
+                    "value": "$request.queueId",
+                    "description": "Optionally move the task to a different queue"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.assigned",
+                    "data": {
+                      "assignedToId": "$request.assignedToId",
+                      "queueId": "$request.queueId"
+                    },
+                    "description": "Emit a domain event recording the assignment"
+                  }
+                }
+              ],
+              "description": "Supervisor reassigns a task to a specific caseworker or moves it to a different queue",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/assign",
+                "request": {
+                  "$ref": "#/$defs/AssignTaskRequest"
+                }
+              }
+            },
+            "set-priority": {
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "priority",
+                    "value": "$request.priority",
+                    "description": "Override the task priority"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.priority_changed",
+                    "data": {
+                      "priority": "$request.priority",
+                      "reason": "$request.reason"
+                    },
+                    "description": "Emit a domain event recording the priority change"
+                  }
+                }
+              ],
+              "description": "Supervisor manually overrides the task priority",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/set-priority",
+                "request": {
+                  "$ref": "#/$defs/SetPriorityRequest"
+                }
+              }
+            }
+          }
+        },
+        "cancelled": {
+          "description": "Task terminated before completion by a supervisor",
+          "meta": {
+            "slaClock": "stopped"
+          },
+          "on": {
+            "reopen": {
+              "target": "pending",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "cancelledAt",
+                    "value": null,
+                    "description": "Clear the cancellation timestamp on reopen"
+                  }
+                },
+                {
+                  "type": "call",
+                  "params": {
+                    "procedure": "assignToQueue"
+                  }
+                },
+                {
+                  "type": "call",
+                  "params": {
+                    "procedure": "setPriority"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.reopened",
+                    "data": {
+                      "reason": "$request.reason"
+                    },
+                    "description": "Emit a domain event recording the reopen"
+                  }
+                }
+              ],
+              "description": "Supervisor returns a cancelled task to the pending queue",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/reopen",
+                "request": {
+                  "$ref": "#/$defs/ReopenTaskRequest"
+                }
+              }
+            }
+          }
+        },
+        "awaiting_client": {
+          "description": "Task paused while waiting for a response from the client",
+          "meta": {
+            "slaClock": "paused"
+          },
+          "on": {
+            "resume": {
+              "target": "in_progress",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "case_worker",
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        {
+                          "any": [
+                            "callerIsAssignedWorker",
+                            "callerIsSupervisor"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "blockedAt",
+                    "value": null,
+                    "description": "Clear the block timestamp on resume"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.resumed",
+                    "description": "Emit a domain event recording the resumption"
+                  }
+                }
+              ],
+              "description": "Resumes a blocked task, cancelling any active wait timers",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/resume"
+              }
+            },
+            "assign": {
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "assignedToId",
+                    "value": "$request.assignedToId",
+                    "description": "Assign the task to the specified caseworker"
+                  }
+                },
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "queueId",
+                    "value": "$request.queueId",
+                    "description": "Optionally move the task to a different queue"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.assigned",
+                    "data": {
+                      "assignedToId": "$request.assignedToId",
+                      "queueId": "$request.queueId"
+                    },
+                    "description": "Emit a domain event recording the assignment"
+                  }
+                }
+              ],
+              "description": "Supervisor reassigns a task to a specific caseworker or moves it to a different queue",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/assign",
+                "request": {
+                  "$ref": "#/$defs/AssignTaskRequest"
+                }
+              }
+            },
+            "set-priority": {
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "priority",
+                    "value": "$request.priority",
+                    "description": "Override the task priority"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.priority_changed",
+                    "data": {
+                      "priority": "$request.priority",
+                      "reason": "$request.reason"
+                    },
+                    "description": "Emit a domain event recording the priority change"
+                  }
+                }
+              ],
+              "description": "Supervisor manually overrides the task priority",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/set-priority",
+                "request": {
+                  "$ref": "#/$defs/SetPriorityRequest"
+                }
+              }
+            }
+          },
+          "after": {
+            "clientTimeout": {
+              "target": "cancelled",
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "cancelledAt",
+                    "value": "$now",
+                    "description": "Record when the task was automatically cancelled"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.cancelled",
+                    "data": {
+                      "reason": "client_unresponsive"
+                    },
+                    "description": "Emit a domain event recording the automatic cancellation"
+                  }
+                }
+              ],
+              "description": "Cancel after 30 calendar days without a response from the client"
+            }
+          }
+        },
+        "awaiting_verification": {
+          "description": "Task paused while waiting for a verification result",
+          "meta": {
+            "slaClock": "paused"
+          },
+          "on": {
+            "resume": {
+              "target": "in_progress",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "case_worker",
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        {
+                          "any": [
+                            "callerIsAssignedWorker",
+                            "callerIsSupervisor"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "blockedAt",
+                    "value": null,
+                    "description": "Clear the block timestamp on resume"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.resumed",
+                    "description": "Emit a domain event recording the resumption"
+                  }
+                }
+              ],
+              "description": "Resumes a blocked task, cancelling any active wait timers",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/resume"
+              }
+            },
+            "auto-resume": {
+              "target": "in_progress",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "system"
+                      ],
+                      "conditions": [
+                        "callerIsSystem"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "blockedAt",
+                    "value": null,
+                    "description": "Clear the block timestamp on system resume"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.resumed",
+                    "causationid": "$request.causationid",
+                    "description": "Emit a domain event recording the automated resumption; causationid links to the triggering event"
+                  }
+                }
+              ],
+              "description": "System resumes a verification-blocked task when the timeout fires or a verification result arrives",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/auto-resume",
+                "request": {
+                  "$ref": "#/$defs/SystemResumeTaskRequest"
+                }
+              }
+            },
+            "assign": {
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "assignedToId",
+                    "value": "$request.assignedToId",
+                    "description": "Assign the task to the specified caseworker"
+                  }
+                },
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "queueId",
+                    "value": "$request.queueId",
+                    "description": "Optionally move the task to a different queue"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.assigned",
+                    "data": {
+                      "assignedToId": "$request.assignedToId",
+                      "queueId": "$request.queueId"
+                    },
+                    "description": "Emit a domain event recording the assignment"
+                  }
+                }
+              ],
+              "description": "Supervisor reassigns a task to a specific caseworker or moves it to a different queue",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/assign",
+                "request": {
+                  "$ref": "#/$defs/AssignTaskRequest"
+                }
+              }
+            },
+            "set-priority": {
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "priority",
+                    "value": "$request.priority",
+                    "description": "Override the task priority"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.priority_changed",
+                    "data": {
+                      "priority": "$request.priority",
+                      "reason": "$request.reason"
+                    },
+                    "description": "Emit a domain event recording the priority change"
+                  }
+                }
+              ],
+              "description": "Supervisor manually overrides the task priority",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/set-priority",
+                "request": {
+                  "$ref": "#/$defs/SetPriorityRequest"
+                }
+              }
+            }
+          },
+          "after": {
+            "verificationTimeout": {
+              "target": "in_progress",
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "blockedAt",
+                    "value": null,
+                    "description": "Clear the block timestamp on system resume"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.resumed",
+                    "description": "Emit a domain event recording the automated resumption"
+                  }
+                }
+              ],
+              "description": "Resume after 7 calendar days waiting on a verification result"
+            }
+          }
+        },
+        "pending_review": {
+          "description": "Task submitted for supervisor review before completion",
+          "meta": {
+            "slaClock": "running"
+          },
+          "on": {
+            "approve": {
+              "target": "completed",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    },
+                    {
+                      "actors": [
+                        "system"
+                      ],
+                      "conditions": [
+                        "callerIsSystem"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "completedAt",
+                    "value": "$now",
+                    "description": "Record when work was approved and completed"
+                  }
+                },
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "outcome",
+                    "value": "$request.outcome",
+                    "description": "Store the outcome from the supervisor's approval"
+                  }
+                },
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "completionNotes",
+                    "value": "$request.notes",
+                    "description": "Store optional notes from the supervisor"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.approved",
+                    "data": {
+                      "outcome": "$request.outcome"
+                    },
+                    "description": "Emit a domain event recording the approval"
+                  }
+                }
+              ],
+              "description": "Supervisor approves a submitted task and records the final outcome",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/approve",
+                "request": {
+                  "$ref": "#/$defs/ApproveTaskRequest"
+                }
+              }
+            },
+            "return-to-worker": {
+              "target": "in_progress",
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    },
+                    {
+                      "actors": [
+                        "system"
+                      ],
+                      "conditions": [
+                        "callerIsSystem"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.returned_to_worker",
+                    "data": {
+                      "reason": "$request.reason"
+                    },
+                    "description": "Emit a domain event recording the return for revision"
+                  }
+                }
+              ],
+              "description": "Supervisor sends a review-pending task back to the worker with feedback",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/return-to-worker",
+                "request": {
+                  "$ref": "#/$defs/ReturnToWorkerRequest"
+                }
+              }
+            },
+            "assign": {
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "assignedToId",
+                    "value": "$request.assignedToId",
+                    "description": "Assign the task to the specified caseworker"
+                  }
+                },
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "queueId",
+                    "value": "$request.queueId",
+                    "description": "Optionally move the task to a different queue"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.assigned",
+                    "data": {
+                      "assignedToId": "$request.assignedToId",
+                      "queueId": "$request.queueId"
+                    },
+                    "description": "Emit a domain event recording the assignment"
+                  }
+                }
+              ],
+              "description": "Supervisor reassigns a task to a specific caseworker or moves it to a different queue",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/assign",
+                "request": {
+                  "$ref": "#/$defs/AssignTaskRequest"
+                }
+              }
+            },
+            "set-priority": {
+              "guard": {
+                "type": "authorized",
+                "params": {
+                  "any": [
+                    {
+                      "actors": [
+                        "supervisor"
+                      ],
+                      "conditions": [
+                        "callerIsSupervisor"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "actions": [
+                {
+                  "type": "set",
+                  "params": {
+                    "field": "priority",
+                    "value": "$request.priority",
+                    "description": "Override the task priority"
+                  }
+                },
+                {
+                  "type": "emit",
+                  "params": {
+                    "type": "workflow.task.priority_changed",
+                    "data": {
+                      "priority": "$request.priority",
+                      "reason": "$request.reason"
+                    },
+                    "description": "Emit a domain event recording the priority change"
+                  }
+                }
+              ],
+              "description": "Supervisor manually overrides the task priority",
+              "meta": {
+                "endpoint": "POST /tasks/{taskId}/set-priority",
+                "request": {
+                  "$ref": "#/$defs/SetPriorityRequest"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "deadlines": {
+      "type": "parallel",
+      "description": "Deadlines that run across statuses",
+      "states": {
+        "creation": {
+          "initial": "running",
+          "states": {
+            "running": {
+              "after": {
+                "creationDeadline": {
+                  "target": "passed",
+                  "actions": [
+                    {
+                      "type": "raise",
+                      "params": {
+                        "event": {
+                          "type": "sla-escalate",
+                          "request": {
+                            "reason": "deadline_exceeded"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "description": "Escalate 72 business hours after creation"
+                }
+              }
+            },
+            "passed": {}
+          }
+        },
+        "sla": {
+          "initial": "unset",
+          "on": {
+            "workflow.task.updated": {
+              "guard": {
+                "type": "condition",
+                "params": {
+                  "condition": "event.data.changes.exists(c, c.field == \"slaDeadline\") && object.slaDeadline != null"
+                }
+              },
+              "target": ".tracking",
+              "reenter": true,
+              "description": "Restart the SLA timers when the SLA deadline is set or changes"
+            }
+          },
+          "states": {
+            "unset": {},
+            "tracking": {
+              "after": {
+                "slaWarning": {
+                  "target": "warned",
+                  "actions": [
+                    {
+                      "type": "raise",
+                      "params": {
+                        "event": {
+                          "type": "sla-escalate",
+                          "request": {
+                            "reason": "sla_deadline_approaching"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "description": "Escalate 48 hours before the SLA deadline"
+                }
+              }
+            },
+            "warned": {
+              "after": {
+                "slaBreach": {
+                  "target": "breached",
+                  "actions": [
+                    {
+                      "type": "raise",
+                      "params": {
+                        "event": {
+                          "type": "sla-escalate",
+                          "request": {
+                            "reason": "sla_deadline_exceeded"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "description": "Escalate and record the breach at the SLA deadline"
+                }
+              }
+            },
+            "breached": {}
+          }
+        }
+      }
+    }
+  },
+  "meta": {
+    "object": "Task",
+    "domain": "workflow",
+    "apiSpec": "workflow-openapi.yaml",
+    "eventsSpec": "workflow-asyncapi.yaml",
+    "conditions": {
+      "callerIsApplicant": "\"applicant\" in caller.roles",
+      "callerIsCaseworker": "\"case_worker\" in caller.roles",
+      "callerIsSupervisor": "\"supervisor\" in caller.roles",
+      "callerIsSystem": "\"system\" in caller.roles",
+      "taskIsUnassigned": "object.assignedToId == null",
+      "callerIsAssignedWorker": "object.assignedToId == caller.id"
+    },
+    "procedures": {
+      "assignToQueue": {
+        "description": "Route SNAP-only tasks to the SNAP intake queue; falls through to the general queue for multi-program or non-SNAP tasks. For tasks linked to an application, SNAP is determined by the application's program list; for standalone tasks, it is determined by the task's programType field.",
+        "context": [
+          {
+            "application": {
+              "from": "intake/applications",
+              "where": {
+                "id": "$object.subjectId"
+              }
+            }
+          },
+          {
+            "snapQueue": {
+              "from": "workflow/queues",
+              "where": {
+                "name": "snap-intake"
+              }
+            }
+          },
+          {
+            "generalQueue": {
+              "from": "workflow/queues",
+              "where": {
+                "name": "general-intake"
+              }
+            }
+          }
+        ],
+        "if": "$snapQueue != null && (($application != null && $application.programsAppliedFor.size() == 1 && \"snap\" in $application.programsAppliedFor) || ($application == null && $object.programType == \"snap\"))",
+        "then": [
+          {
+            "type": "set",
+            "params": {
+              "field": "queueId",
+              "value": "$snapQueue.id"
+            }
+          }
+        ],
+        "else": [
+          {
+            "type": "set",
+            "params": {
+              "field": "queueId",
+              "value": "$generalQueue.id"
+            }
+          }
+        ]
+      },
+      "setPriority": {
+        "description": "Set expedited priority (1) when the task is flagged as expedited; otherwise set normal priority (3).",
+        "if": "$object.isExpedited == true",
+        "then": [
+          {
+            "type": "set",
+            "params": {
+              "field": "priority",
+              "value": 1
+            }
+          }
+        ],
+        "else": [
+          {
+            "type": "set",
+            "params": {
+              "field": "priority",
+              "value": 3
+            }
+          }
+        ]
+      }
+    },
+    "delays": {
+      "creationDeadline": {
+        "after": "PT72H",
+        "calendar": "business"
+      },
+      "clientTimeout": {
+        "after": "P30D",
+        "calendar": "calendar"
+      },
+      "verificationTimeout": {
+        "after": "P7D",
+        "calendar": "calendar"
+      },
+      "slaWarning": {
+        "at": "object.slaDeadline",
+        "offset": "-PT48H",
+        "calendar": "calendar"
+      },
+      "slaBreach": {
+        "at": "object.slaDeadline",
+        "calendar": "calendar"
+      }
+    },
+    "schemas": "workflow-state-machine.yaml#/$defs"
+  }
+}
