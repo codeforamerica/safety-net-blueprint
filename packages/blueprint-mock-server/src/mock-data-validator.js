@@ -4,6 +4,7 @@
 
 import { extract } from '@codeforamerica/blueprint-core';
 import { errorsFrom } from './example-validator.js';
+import { extractExpandFields, applyExpand } from './handlers/expand-utils.js';
 import { createAjv, registerDocuments, validatorFor } from './schema-registry.js';
 
 /**
@@ -64,11 +65,18 @@ function derivedProperties(schema) {
 /**
  * Check every seeded record against the schema it claims to exemplify.
  *
+ * A seed is stored the way the server stores it: a relationship styled
+ * `expand` stays under its key (`profileId`), and the related record is
+ * inlined (`profile`) only when the record is read. So given `lookup`, the
+ * seeded store's, a record is expanded the way a GET expands it, and what's
+ * checked is what a client would get.
+ *
  * @param {import('@codeforamerica/blueprint-core').Doc[]} docs - The contract set
  * @param {object[]} apiSpecs - From `apiSpecsFromDocs`
+ * @param {{ lookup?: (collection: string, id: string) => object|null }} [options]
  * @returns {{ api: string, key: string|null, message: string }[]}
  */
-export function validateMockData(docs, apiSpecs) {
+export function validateMockData(docs, apiSpecs, { lookup } = {}) {
   const errors = [];
 
   // Where each schema is declared, rather than the schema object. A record is
@@ -77,12 +85,14 @@ export function validateMockData(docs, apiSpecs) {
   // base to resolve one against (#448).
   const declaredIn = new Map();
   const derivedIn = new Map();
+  const expandIn = new Map();
   for (const api of apiSpecs) {
     if (!api.relativePath) continue;
     for (const [name, schema] of Object.entries(api.schemas ?? {})) {
       if (declaredIn.has(name)) continue;
       declaredIn.set(name, api.relativePath);
       derivedIn.set(name, derivedProperties(schema));
+      expandIn.set(name, extractExpandFields(schema, api.resolve?.schema));
     }
   }
 
@@ -126,7 +136,21 @@ export function validateMockData(docs, apiSpecs) {
 
       const derived = derivedIn.get(schemaName) ?? new Set();
 
-      for (const { instancePath, message, missingProperty } of errorsFrom(validateFn, value)) {
+      // A key that points at nothing can't be expanded, so it stays a bare
+      // key the read schema doesn't have, and the error would call it an
+      // unknown property. Say what's actually wrong instead.
+      const expand = lookup ? expandIn.get(schemaName) ?? [] : [];
+      const dangling = new Set();
+      for (const { fkField, collection, resource } of expand) {
+        if (value[fkField] && !lookup(collection, value[fkField])) {
+          dangling.add(fkField);
+          errors.push({ api: apiName, key, message: `/${fkField}: points at no seeded ${resource} (${value[fkField]})` });
+        }
+      }
+      const served = expand.length > 0 ? applyExpand(value, expand, lookup) : value;
+
+      for (const { instancePath, message, missingProperty, unevaluatedProperty } of errorsFrom(validateFn, served)) {
+        if (unevaluatedProperty && dangling.has(unevaluatedProperty)) continue;
         // The seed is input; a derived field is output. Requiring one of a
         // record that stores it nowhere fails every seed in the set, which is
         // how the Node server stopped booting on this contract set at all.

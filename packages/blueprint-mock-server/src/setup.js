@@ -163,22 +163,14 @@ export async function performSetup({ specsDir, seedDir, docs: providedDocs = nul
 
   // Validate seed data against schemas
   if (!skipValidation) {
-    const seedErrors = validateMockData(docs, apiSpecs);
+    // Checked after seeding, against the store, so a record is checked the
+    // way it's served: an expanded relationship inlined, as a GET does.
+    const seedErrors = validateMockData(docs, apiSpecs, { lookup: (collection, id) => store.findById(collection, id) });
     if (seedErrors.length > 0) {
       const msg = seedErrors
         .map(e => `  ${e.api}${e.key ? ` [${e.key}]` : ''}: ${e.message}`)
         .join('\n');
-      const looksLikeExpandMismatch = seedErrors.some(e =>
-        e.message.includes("must have required property") ||
-        e.message.includes("must NOT have additional properties")
-      );
-      const hint = looksLikeExpandMismatch
-        ? '\n\nHint: If you are using an overlay with x-relationship.style: expand, ' +
-          'your seed data must use the post-expansion field names (e.g., "person" not "personId"). ' +
-          'Regenerate seed data from your resolved specs:\n' +
-          `  npm run mock:seed -- --spec=${specsDir} --out=<seed-dir>`
-        : '';
-      throw new Error(`Seed data validation failed:\n${msg}${hint}`);
+      throw new Error(`Seed data validation failed:\n${msg}`);
     }
     if (verbose) {
       console.log('✓ Seed data valid');

@@ -71,6 +71,7 @@ export function errorsFrom(validateFn, value) {
       instancePath: err.instancePath || '',
       message: extra ? `${err.message}: ${extra}` : err.message,
       missingProperty: err.params?.missingProperty,
+      unevaluatedProperty: extra,
     };
   });
 }
