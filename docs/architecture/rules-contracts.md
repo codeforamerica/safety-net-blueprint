@@ -35,8 +35,9 @@ That only works if "we haven't asked yet" is distinguishable from "we asked, and
 | absent | not yet asked | `missing`, naming the path |
 | `null` | asked; none | resolves — an empty collection, `placeholder` |
 | `[]` | asked; none | resolves — `complete` |
+| a field one list item doesn't have | not yet asked, for that item | `missing`, naming the item path (`$.household.members[].age`) — unless the answer is settled without it: `exists` with another item true, `all` with another item false, or a predicate decided by its other operands |
 
-The distinction is deliberate, and it is the one an engine is most likely to collapse. Reading an uncollected list as empty makes `exists(m, m.age >= 18)` answer `false` for a household whose members were never asked about — a confident wrong answer, and one that leaves a progressive interview with nothing to ask for. Absent is a question; null is an answer.
+The distinction is deliberate, and it is the one an engine is most likely to collapse. Reading an uncollected list as empty makes `exists(m, m.age >= 18)` answer `false` for a household whose members were never asked about — a confident wrong answer, and one that leaves a progressive interview with nothing to ask for. Absent is a question; null is an answer. The same holds inside a list: a member added before their age is known leaves "is anyone an adult" unanswered, not "no", until another member settles it.
 
 An engine that does not draw this distinction will produce different determinations from the same inputs, so it is part of the evaluation contract rather than an implementation detail. The executable form lives in `packages/blueprint-rules-engine/tests/conformance/cases.json` — a graph, inputs, and the nodes any engine must produce — which is what a replacement engine checks itself against (see [Decision 4](#decision-4-reference-implementation-not-a-mandated-engine)).
 

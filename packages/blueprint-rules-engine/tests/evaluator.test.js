@@ -610,3 +610,45 @@ describe('evaluator — what the date accessors actually return', () => {
     assert.strictEqual(on("h.d.getDate('America/Denver')"), 12);
   });
 });
+
+describe('evaluator — a list item missing a field', () => {
+  // The corpus pins the contract; these cover what it doesn't: a macro inside
+  // a macro, dates on list items, and a complete list unchanged.
+  const graph = (facts, inputs) => ({
+    outputs: Object.keys(facts),
+    inputs,
+    facts: Object.fromEntries(Object.entries(facts).map(([k, expression]) => [k, { expression }])),
+    dependencies: Object.fromEntries(Object.keys(facts).map((k) => [k, Object.keys(inputs).filter((p) => p.endsWith('[]'))])),
+  });
+
+  it('is found by a macro inside a macro, naming the inner item\'s path', () => {
+    // Each wage record against the incomes of the same member, as the
+    // interview flags compare them.
+    const g = graph(
+      { unmatched: 'h.records.exists(r, !h.incomes.exists(i, i.memberId == r.memberId && i.amount == r.amount))' },
+      {
+        '$.h.records[]': { type: 'array' }, '$.h.records[].memberId': { type: 'string' }, '$.h.records[].amount': { type: 'number' },
+        '$.h.incomes[]': { type: 'array' }, '$.h.incomes[].memberId': { type: 'string' }, '$.h.incomes[].amount': { type: 'number' },
+      },
+    );
+    const nodes = evaluate(g, { h: { records: [{ memberId: 'a', amount: 100 }], incomes: [{ memberId: 'a' }] } });
+    assert.strictEqual(nodes.unmatched.state, 'missing');
+    assert.deepStrictEqual(nodes.unmatched.missing, ['$.h.incomes[].amount']);
+  });
+
+  it('is missing for a date an item doesn\'t have, and settled by another item\'s date', () => {
+    const g = graph(
+      { anyBornBefore2000: "h.people.exists(p, p.born < timestamp('2000-01-01T00:00:00Z'))" },
+      { '$.h.people[]': { type: 'array' }, '$.h.people[].born': { type: 'string', format: 'date' } },
+    );
+    assert.strictEqual(evaluate(g, { h: { people: [{ born: '2010-05-01' }, {}] } }).anyBornBefore2000.state, 'missing');
+    const settled = evaluate(g, { h: { people: [{}, { born: '1950-05-01' }] } }).anyBornBefore2000;
+    assert.deepStrictEqual([settled.state, settled.value], ['complete', true]);
+  });
+
+  it('leaves a complete list answered exactly as before', () => {
+    const g = graph({ adults: 'h.people.filter(p, p.age >= 18).map(p, p.age)' }, { '$.h.people[]': { type: 'array' }, '$.h.people[].age': { type: 'integer' } });
+    const nodes = evaluate(g, { h: { people: [{ age: 30 }, { age: 10 }, { age: 40 }] } });
+    assert.deepStrictEqual([nodes.adults.state, nodes.adults.value], ['complete', [30, 40]]);
+  });
+});
