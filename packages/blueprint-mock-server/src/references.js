@@ -18,7 +18,7 @@
  * business, not this one's.
  */
 
-import { propertiesOf, resourceToCollection } from './handlers/expand-utils.js';
+import { propertiesOf, resourceToCollection, extractExpandFields } from './handlers/expand-utils.js';
 
 const NOTHING_TO_FIND = new Set(['External', 'Polymorphic']);
 
@@ -62,26 +62,58 @@ function target(definition) {
 }
 
 /**
- * The ids a write sends that name no record this mock holds.
+ * The records a write is made under, by resource name.
+ *
+ * Read from the API model's parent links and the route's parameters, so a
+ * write to an application's incomes under application B is under
+ * `{ Application: 'B' }`. Empty for a write that isn't nested.
+ *
+ * @param {{ name: string|null, parent: object|null, item: { parameter: string|null } }|undefined} resource - The model resource written
+ * @param {Object<string, string>} params - The route's parameters, by name
+ * @returns {Object<string, string>}
+ */
+export function parentsOf(resource, params) {
+  const parents = {};
+  for (let parent = resource?.parent; parent; parent = parent.parent) {
+    const id = params[parent.item.parameter];
+    if (parent.name && id !== undefined) parents[parent.name] = id;
+  }
+  return parents;
+}
+
+/**
+ * The ids a write sends that name no record this mock holds, or a record that
+ * belongs to a different parent than the write.
  *
  * Walks the schema and the body together, so an id inside a nested object or
  * array is checked as well as one at the top — `roomers[0].memberId` as much
  * as `memberId`. It only goes where the body has values, so a schema that
  * refers to itself can't send it round forever.
  *
+ * A record the id points at must share the write's parent when both are
+ * nested under it: an income under application B can't name a member of
+ * application A. Which parent a record belongs to is the field its schema
+ * declares with `x-relationship` to the parent resource. A record whose schema
+ * declares none is left alone rather than guessed at.
+ *
  * @param {*} body - What the client sent
  * @param {object} schema - The request schema
  * @param {(schema: *) => *} follow - Resolves a ref, as `api.resolve.schema` does
  * @param {{ findById(collection: string, id: string): object|null }} store
- * @param {string} [at] - Where in the body this is, for the field it names
+ * @param {object} [context]
+ * @param {Object<string, string>} [context.parents] - From `parentsOf`
+ * @param {object[]} [context.resources] - The API model's resources, to find what a record is nested under
+ * @param {Object<string, object>} [context.schemas] - The API's schemas, by name
+ * @param {string} [context.at] - Where in the body this is, for the field it names
  * @returns {Array<{ field: string, message: string }>} Details for a 422, empty when every id is found
  */
-export function missingReferences(body, schema, follow = (x) => x, store, at = '') {
+export function missingReferences(body, schema, follow = (x) => x, store, context = {}) {
+  const { at = '' } = context;
   if (!schema || body === null || typeof body !== 'object') return [];
 
   if (Array.isArray(body)) {
     const items = follow(schema)?.items;
-    return body.flatMap((value, i) => missingReferences(value, items, follow, store, `${at}[${i}]`));
+    return body.flatMap((value, i) => missingReferences(value, items, follow, store, { ...context, at: `${at}[${i}]` }));
   }
 
   const missing = [];
@@ -92,14 +124,49 @@ export function missingReferences(body, schema, follow = (x) => x, store, at = '
       const field = at ? `${at}.${name}` : name;
       const resource = target(definition);
       if (!resource) {
-        missing.push(...missingReferences(value, definition, follow, store, field));
+        missing.push(...missingReferences(value, definition, follow, store, { ...context, at: field }));
         continue;
       }
       const collection = resourceToCollection(resource);
-      if (heldHere(collection) && !store.findById(collection, value)) {
+      if (!heldHere(collection)) continue;
+      const record = store.findById(collection, value);
+      if (!record) {
         missing.push({ field, message: `No ${resource} has the id "${value}".` });
+        continue;
       }
+      const other = otherParent(record, resource, follow, context);
+      if (other) missing.push({ field, message: `${resource} "${value}" belongs to a different ${other}.` });
     }
   }
   return missing;
+}
+
+/**
+ * The parent resource a record belongs to a different one of than the write,
+ * or null when they agree or there's nothing declared to compare.
+ *
+ * @param {object} record - The record an id points at
+ * @param {string} resource - Its resource name
+ * @param {(schema: *) => *} follow
+ * @param {{ parents?: Object<string, string>, resources?: object[], schemas?: Object<string, object> }} context
+ * @returns {string|null}
+ */
+function otherParent(record, resource, follow, { parents = {}, resources = [], schemas = {} }) {
+  const nested = resources.find((r) => r.name === resource);
+  const schema = schemas[resource];
+  if (!nested || !schema) return null;
+  // A relationship resolve expanded is read as the related record, but the
+  // record is stored under its key.
+  const storedAs = new Map(extractExpandFields(schema, follow).map(({ fieldName, fkField }) => [fieldName, fkField]));
+  for (let parent = nested.parent; parent; parent = parent.parent) {
+    if (!(parent.name in parents)) continue;
+    for (const props of propertiesOf(schema, follow)) {
+      for (const [name, definition] of Object.entries(props)) {
+        if (target(definition) !== parent.name) continue;
+        const value = record[storedAs.get(name) ?? name];
+        if (value !== undefined && value !== null && value !== parents[parent.name]) return parent.name;
+      }
+    }
+  }
+  return null;
 }

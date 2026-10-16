@@ -202,6 +202,107 @@ describe('a link', () => {
   });
 });
 
+// Households, the people in each, their earnings and their pets — all nested
+// under the household. A person declares the household it belongs to with
+// x-relationship; a pet doesn't, so there's nothing declared to compare for it.
+const id = (name) => ({ name, in: 'path', required: true, schema: { type: 'string' } });
+const nestedContracts = {
+  artifactVersion: 1,
+  docs: [{
+    path: '/x/domains/homes/homes-openapi.yaml', relativePath: 'domains/homes/homes-openapi.yaml', domain: 'homes', type: 'openapi', provenance: null,
+    content: {
+      openapi: '3.1.0',
+      info: { title: 'Households', version: '1.0.0', 'x-domain': 'homes' },
+      servers: [{ url: 'http://localhost:1080/homes' }],
+      paths: {
+        '/households': { post: { operationId: 'createHousehold', requestBody: body('HouseholdCreate'), responses: ok('Household', 201) } },
+        '/households/{householdId}': { parameters: [id('householdId')], get: { operationId: 'getHousehold', responses: ok('Household') } },
+        '/households/{householdId}/residents': { parameters: [id('householdId')], post: { operationId: 'createPerson', requestBody: body('PersonCreate'), responses: ok('Person', 201) } },
+        '/households/{householdId}/residents/{personId}': { parameters: [id('householdId'), id('personId')], get: { operationId: 'getPerson', responses: ok('Person') } },
+        '/households/{householdId}/pets': { parameters: [id('householdId')], post: { operationId: 'createPet', requestBody: body('PetCreate'), responses: ok('Pet', 201) } },
+        '/households/{householdId}/pets/{petId}': { parameters: [id('householdId'), id('petId')], get: { operationId: 'getPet', responses: ok('Pet') } },
+        '/households/{householdId}/vehicles': { parameters: [id('householdId')], post: { operationId: 'createVehicle', requestBody: body('VehicleCreate'), responses: ok('Vehicle', 201) } },
+        '/households/{householdId}/vehicles/{vehicleId}': { parameters: [id('householdId'), id('vehicleId')], get: { operationId: 'getVehicle', responses: ok('Vehicle') } },
+        '/households/{householdId}/earnings': { parameters: [id('householdId')], post: { operationId: 'createEarning', requestBody: body('EarningWrite'), responses: ok('Earning', 201) } },
+        '/households/{householdId}/earnings/{earningId}': {
+          parameters: [id('householdId'), id('earningId')],
+          get: { operationId: 'getEarning', responses: ok('Earning') },
+          patch: { operationId: 'updateEarning', requestBody: body('EarningWrite'), responses: ok('Earning') },
+        },
+      },
+      components: {
+        schemas: {
+          HouseholdCreate: { type: 'object', properties: { name: { type: 'string' } } },
+          Household: { type: 'object', properties: { id: uuid, name: { type: 'string' } } },
+          PersonCreate: { type: 'object', properties: { name: { type: 'string' } } },
+          Person: { type: 'object', properties: { id: uuid, householdId: { ...uuid, readOnly: true, 'x-relationship': { resource: 'Household' } }, name: { type: 'string' } } },
+          PetCreate: { type: 'object', properties: { name: { type: 'string' } } },
+          Pet: { type: 'object', properties: { id: uuid, householdId: { ...uuid, readOnly: true }, name: { type: 'string' } } },
+          VehicleCreate: { type: 'object', properties: { make: { type: 'string' } } },
+          // As resolve leaves a relationship it expanded: read as the household
+          // itself, while the record is stored under householdId.
+          Vehicle: { type: 'object', properties: { id: uuid, household: { type: 'object', 'x-relationship': { resource: 'Household', style: 'expand' } }, make: { type: 'string' } } },
+          EarningWrite: {
+            type: 'object',
+            properties: {
+              personId: { ...uuid, 'x-relationship': { resource: 'Person', style: 'links-only' } },
+              petId: { ...uuid, 'x-relationship': { resource: 'Pet', style: 'links-only' } },
+              vehicleId: { ...uuid, 'x-relationship': { resource: 'Vehicle', style: 'links-only' } },
+              amount: { type: 'number' },
+            },
+          },
+          Earning: { allOf: [{ $ref: '#/components/schemas/EarningWrite' }, { type: 'object', properties: { id: uuid } }] },
+        },
+      },
+    },
+  }],
+};
+
+describe('a record under another parent', () => {
+  let first;
+  let second;
+  let person;
+
+  beforeEach(async () => {
+    mock = await boot({ contracts: nestedContracts });
+    first = (await send('POST', '/homes/households', { name: 'Lopez' })).body;
+    second = (await send('POST', '/homes/households', { name: 'Chen' })).body;
+    person = (await send('POST', `/homes/households/${first.id}/residents`, { name: 'Rosa' })).body;
+  });
+
+  test('named in a create under the same parent is kept', async () => {
+    assert.strictEqual((await send('POST', `/homes/households/${first.id}/earnings`, { personId: person.id, amount: 900 })).status, 201);
+  });
+
+  test('named in a create under a different parent is refused', async () => {
+    // The mistake a tool proposing changes is most likely to make: an id from
+    // the wrong household, which exists, so only this check catches it.
+    const { status, body: answer } = await send('POST', `/homes/households/${second.id}/earnings`, { personId: person.id, amount: 900 });
+    assert.strictEqual(status, 422);
+    assert.deepStrictEqual(answer.details, [{ field: 'personId', message: `Person "${person.id}" belongs to a different Household.` }]);
+  });
+
+  test('named in an update under a different parent is refused, and the record is unchanged', async () => {
+    const other = (await send('POST', `/homes/households/${second.id}/residents`, { name: 'Wei' })).body;
+    const earning = (await send('POST', `/homes/households/${second.id}/earnings`, { personId: other.id, amount: 900 })).body;
+    const { status } = await send('PATCH', `/homes/households/${second.id}/earnings/${earning.id}`, { personId: person.id });
+    assert.strictEqual(status, 422);
+    assert.strictEqual((await send('GET', `/homes/households/${second.id}/earnings/${earning.id}`)).body.personId, other.id);
+  });
+
+  test('whose parent is read expanded is compared by the key it is stored under', async () => {
+    const vehicle = (await send('POST', `/homes/households/${first.id}/vehicles`, { make: 'Ford' })).body;
+    const { status, body: answer } = await send('POST', `/homes/households/${second.id}/earnings`, { vehicleId: vehicle.id });
+    assert.strictEqual(status, 422);
+    assert.strictEqual(answer.details[0].message, `Vehicle "${vehicle.id}" belongs to a different Household.`);
+  });
+
+  test('whose schema declares no parent is left alone, not guessed at', async () => {
+    const pet = (await send('POST', `/homes/households/${first.id}/pets`, { name: 'Bean' })).body;
+    assert.strictEqual((await send('POST', `/homes/households/${second.id}/earnings`, { petId: pet.id })).status, 201);
+  });
+});
+
 describe('a collection forwarded to a real service', () => {
   test('isn\'t checked here, since its records live there', async () => {
     mock = await boot({ forwarding: [{ endpoint: 'GET /demo/members/{memberId}', to: 'http://127.0.0.1:9' }] });
