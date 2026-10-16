@@ -39,7 +39,7 @@ function bodyCheckFor(endpoint, apiMetadata, key) {
 }
 import { idempotencyOf, withIdempotency } from './idempotency.js';
 import { deriveCollectionName, isSingletonSubResource, extractPrimaryParam, capitalize, toKebabCase } from './collection-utils.js';
-import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX, sortItems } from './search-engine.js';
+import { PAGINATION_DEFAULTS, STATE_RECORDS_LIMIT_MAX, sortItems, filterItems } from './search-engine.js';
 import { extractCallerRoles, callerHeader, traceparentOf } from './auth-context.js';
 
 /**
@@ -445,17 +445,22 @@ export function registerRoutes(routes, apiMetadata, baseUrl, stateMachines, slaT
             const filters = { [parentField]: parentId, ...extraFilters };
             let items;
             let total;
-            if (endpoint.sortable || query.sort) {
-              // Ordered as the operation's x-sortable says, the same as a
-              // top-level list: every record under the parent, sorted, then paged.
-              const all = store.findAll(endpointWithCollection.collectionName, filters, { limit: null }).items;
-              const sorted = sortItems(all, query, endpoint.sortable);
-              if (sorted.error) {
-                const details = sorted.error.field !== undefined ? [{ field: sorted.error.field, message: sorted.error.message }] : [];
-                return Response.json({ code: sorted.error.code, message: sorted.error.message, details }, { status: 400 });
+            if (endpoint.sortable || query.sort || query.q) {
+              // Searched and ordered the same as a top-level list: every record
+              // under the parent, matched against `q`, sorted as the operation's
+              // x-sortable says, then paged.
+              let all = store.findAll(endpointWithCollection.collectionName, filters, { limit: null }).items;
+              if (query.q) all = filterItems(all, { q: query.q });
+              if (endpoint.sortable || query.sort) {
+                const sorted = sortItems(all, query, endpoint.sortable);
+                if (sorted.error) {
+                  const details = sorted.error.field !== undefined ? [{ field: sorted.error.field, message: sorted.error.message }] : [];
+                  return Response.json({ code: sorted.error.code, message: sorted.error.message, details }, { status: 400 });
+                }
+                all = sorted.items;
               }
-              total = sorted.items.length;
-              items = sorted.items.slice(offset, offset + limit);
+              total = all.length;
+              items = all.slice(offset, offset + limit);
             } else {
               ({ items, total } = store.findAll(endpointWithCollection.collectionName, filters, { limit, offset }));
             }
