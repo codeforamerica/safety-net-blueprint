@@ -14,13 +14,13 @@ const returns = (schema) => ({
 });
 
 const transcripts = toDoc({
-  path: '/set/domains/transcription/transcription-openapi.yaml',
-  relativePath: 'domains/transcription/transcription-openapi.yaml',
+  path: '/set/domains/communication/communication-openapi.yaml',
+  relativePath: 'domains/communication/communication-openapi.yaml',
   type: 'openapi',
   content: {
     openapi: '3.1.0',
-    info: { title: 'Transcripts', version: '1.0.0', 'x-domain': 'transcription' },
-    servers: [{ url: '/transcription' }],
+    info: { title: 'Transcripts', version: '1.0.0', 'x-domain': 'communication' },
+    servers: [{ url: '/communication' }],
     paths: {
       '/transcripts/{transcriptId}': returns('Transcript'),
       '/transcripts/{transcriptId}/entries/{entryId}': returns('TranscriptEntry'),
@@ -38,13 +38,13 @@ const roles = toDoc({
 });
 
 const machine = (resources, guards = [{ id: 'recording', condition: 'object.status == "recording"' }]) => toDoc({
-  path: '/set/domains/transcription/transcription-state-machine.yaml',
-  relativePath: 'domains/transcription/transcription-state-machine.yaml',
+  path: '/set/domains/communication/communication-state-machine.yaml',
+  relativePath: 'domains/communication/communication-state-machine.yaml',
   type: 'state-machine',
   content: {
     $schema: 'state-machine-schema.yaml',
     version: '1.0',
-    domain: 'transcription',
+    domain: 'communication',
     machines: [{ object: 'Transcript', states: [{ id: 'recording', slaClock: 'running' }], initialState: 'recording', guards, resources }],
   },
 });
@@ -88,7 +88,7 @@ describe('the state machine schema', () => {
   const withBinding = (where) => machine({
     TranscriptEntry: {
       create: {
-        context: [{ openPause: { from: 'transcription/transcripts/entries', where } }],
+        context: [{ openPause: { from: 'communication/transcripts/entries', where } }],
         guards: [{ conditions: ['recording'] }],
       },
     },

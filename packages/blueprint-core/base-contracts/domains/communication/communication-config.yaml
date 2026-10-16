@@ -1,0 +1,29 @@
+$schema: communication-config-schema.yaml
+version: "1.0"
+domain: communication
+
+# Profile catalog — the transcription service and languages for each kind of
+# conversation. A starting point: states overlay this file to choose their own
+# services and languages, or add and change profiles through the API. A deploy
+# seeds only the profiles not already there, so a change made through the API
+# is kept; profiles are never deleted.
+profiles:
+  resource: TranscriptionProfile
+  entries:
+    - id: 7a1e0c2d-0000-4000-8000-0000000000b1
+      name: english
+      description: An interview in English.
+      provider: aws-transcribe
+      languages: [en-US]
+      idleTimeout: PT30M
+    - id: 7a1e0c2d-0000-4000-8000-0000000000b2
+      name: english-or-spanish
+      description: An interview in English, Spanish, or both — the service tells which is being spoken.
+      provider: aws-transcribe
+      languages: [en-US, es-US]
+      idleTimeout: PT30M
+    - id: 7a1e0c2d-0000-4000-8000-0000000000b3
+      name: typed
+      description: A chat, or notes a person types. No transcription service.
+      provider: none
+      idleTimeout: PT30M

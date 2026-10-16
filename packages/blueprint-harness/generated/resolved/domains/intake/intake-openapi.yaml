@@ -145,6 +145,10 @@ paths:
       operationId: listIncomeVerifications
       tags:
         - Applications
+      parameters:
+        - $ref: ../../base/components/parameters.yaml#/SearchQueryParam
+        - $ref: ../../base/components/parameters.yaml#/LimitParam
+        - $ref: ../../base/components/parameters.yaml#/OffsetParam
       responses:
         "200":
           description: The income verifications gathered for this application.

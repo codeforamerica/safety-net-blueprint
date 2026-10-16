@@ -565,6 +565,30 @@ test('Route Generator Tests', async (t) => {
     console.log('  ✓ Sub-collection GET returns 404 when parent does not exist');
   });
 
+  await t.test('registerRoutes - sub-collection GET searches with q, as a top-level list does', async () => {
+    // A nested list declares `q` like any other, and the handler used to drop
+    // it, answering every search with the whole list.
+    const table = new Map();
+    const metadata = createTestMetadata([
+      { path: '/applications/{applicationId}/documents', method: 'get', operationId: 'listDocuments' }
+    ]);
+    registerRoutes(table, metadata, 'http://localhost:1080', [], [], DEPS);
+    store.clearAll('applications');
+    store.clearAll('application-documents');
+    store.insertResource('applications', { id: 'app-q' });
+    store.insertResource('application-documents', { id: 'd1', applicationId: 'app-q', category: 'income', receivedAt: '2026-10-01T09:00:00.000Z' });
+    store.insertResource('application-documents', { id: 'd2', applicationId: 'app-q', category: 'identity', receivedAt: '2026-10-01T10:00:00.000Z' });
+
+    const list = async (q) => (await readResponse(listRoutes(table)[0].handler(
+      makeRequest(`/applications/app-q/documents?q=${encodeURIComponent(q)}`), { params: { applicationId: 'app-q' } }
+    ))).body;
+
+    assert.deepStrictEqual((await list('category:income')).items.map(d => d.id), ['d1']);
+    const since = await list('receivedAt:>=2026-10-01T09:30:00.000Z');
+    assert.deepStrictEqual(since.items.map(d => d.id), ['d2']);
+    assert.strictEqual(since.total, 1, 'total counts the matches, not every record under the parent');
+  });
+
   await t.test('registerRoutes - sub-collection POST injects parent ID into body', async () => {
     const table = new Map();
     const metadata = createTestMetadata([

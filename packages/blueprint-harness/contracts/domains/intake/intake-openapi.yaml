@@ -141,6 +141,10 @@ paths:
       summary: List an application's income verifications
       operationId: listIncomeVerifications
       tags: [Applications]
+      parameters:
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam'
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam'
       responses:
         '200':
           description: The income verifications gathered for this application.

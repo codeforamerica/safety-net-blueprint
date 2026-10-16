@@ -611,6 +611,50 @@ test('Pattern Validator Tests', async (t) => {
     console.log('  ✓ Validates complete spec structure');
   });
 
+  // A nested list has a path parameter, and judging lists by "no { in the
+  // path" let every one of them skip the list rules — a transcript's entries
+  // and a determination's decisions were served without `q`.
+  const nestedList = (parameters) => ({
+    paths: {
+      '/transcripts/{transcriptId}/entries': {
+        get: {
+          parameters,
+          responses: { '200': { content: { 'application/json': { schema: { $ref: '#/components/schemas/EntryList' } } } } },
+        },
+      },
+    },
+    components: {
+      schemas: {
+        EntryList: {
+          allOf: [
+            { $ref: './components/common-schemas.yaml#/Pagination' },
+            { type: 'object', properties: { items: { type: 'array', items: { $ref: '#/components/schemas/Entry' } } } },
+          ],
+        },
+        Entry: { type: 'object', properties: { id: { type: 'string' } } },
+      },
+    },
+  });
+
+  await t.test('validateSpec - a nested list is held to the list rules', () => {
+    const errors = validateSpec(nestedList([
+      { $ref: './components/common-parameters.yaml#/LimitParam' },
+      { $ref: './components/common-parameters.yaml#/OffsetParam' },
+    ]), 'test.yaml');
+
+    assert.ok(errors.some(e => e.rule === 'list-endpoint-search-param'), JSON.stringify(errors));
+  });
+
+  await t.test('validateSpec - a nested list with the list parameters passes them', () => {
+    const errors = validateSpec(nestedList([
+      { $ref: './components/common-parameters.yaml#/SearchQueryParam' },
+      { $ref: './components/common-parameters.yaml#/LimitParam' },
+      { $ref: './components/common-parameters.yaml#/OffsetParam' },
+    ]), 'test.yaml');
+
+    assert.ok(!errors.some(e => e.rule?.startsWith('list-endpoint-')), JSON.stringify(errors));
+  });
+
   await t.test('validateSpec - returns empty array for spec without paths', () => {
     const spec = {
       info: { title: 'Test', version: '1.0' }

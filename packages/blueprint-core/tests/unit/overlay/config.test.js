@@ -197,7 +197,7 @@ test('config tests', async (t) => {
 
 test('validateConfig — x-capabilities is a list of names', async () => {
   const { validateConfig } = await import('../../../src/overlay/config.js');
-  assert.deepStrictEqual(validateConfig({ 'x-capabilities': ['transcription'] }), { errors: [], warnings: [] });
-  assert.deepStrictEqual(validateConfig({ 'x-capabilities': 'transcription' }).errors, ['"x-capabilities" must be a list of names']);
+  assert.deepStrictEqual(validateConfig({ 'x-capabilities': ['communication'] }), { errors: [], warnings: [] });
+  assert.deepStrictEqual(validateConfig({ 'x-capabilities': 'communication' }).errors, ['"x-capabilities" must be a list of names']);
   assert.deepStrictEqual(validateConfig({ 'x-capabilities': [42] }).errors, ['"x-capabilities" must be a list of names']);
 });

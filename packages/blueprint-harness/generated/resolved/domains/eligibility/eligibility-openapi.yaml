@@ -133,6 +133,7 @@ paths:
       tags:
         - Decisions
       parameters:
+        - $ref: ../../base/components/parameters.yaml#/SearchQueryParam
         - $ref: ../../base/components/parameters.yaml#/LimitParam
         - $ref: ../../base/components/parameters.yaml#/OffsetParam
       responses:

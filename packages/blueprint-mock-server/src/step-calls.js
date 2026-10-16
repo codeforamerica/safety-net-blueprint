@@ -2,7 +2,7 @@
  * What a step's `call:` means, and doing it.
  *
  * A step writes a call the way a client sends a request — a method and a path,
- * `POST: transcription/transcripts/$object.id/entries` — and it means what the
+ * `POST: communication/transcripts/$object.id/entries` — and it means what the
  * API's route at that method and path means. The path is read against core's
  * model of each API document: a POST to a nested collection the document
  * declares a create for is a create there; a POST to a word after an item is
@@ -48,7 +48,7 @@ export function createStepCalls({ apiSpecs, stateMachines, slaTypes = [], store 
    * What a call means.
    *
    * @param {string} method - POST, PATCH
-   * @param {string} path   - Interpolated, e.g. "transcription/transcripts/7a1e…/entries"
+   * @param {string} path   - Interpolated, e.g. "communication/transcripts/7a1e…/entries"
    * @returns {Object} `{ kind: 'create'|'action'|'update', api, resource, params, ... }`
    * @throws {Error} When the path means nothing in any API document
    */

@@ -175,7 +175,7 @@ $defs:
         description: >
           The events this machine's resource sends, beside the created, updated
           and deleted events every resource sends. Each is named here once, and
-          its full name is `{domain}.{resource}.{id}` — `transcription.transcript.paused`.
+          its full name is `{domain}.{resource}.{id}` — `communication.transcript.paused`.
           A step sends one by its id: `emit: paused`.
         items:
           $ref: "#/$defs/EmittedEvent"
@@ -1104,7 +1104,7 @@ $defs:
   #
   #       context:
   #         - openPause:
-  #             from: transcription/transcripts/entries
+  #             from: communication/transcripts/entries
   #             where: item.kind == "pause" && item.transcriptId == object.id && item.endedAt == null
   #
   # CHAINING

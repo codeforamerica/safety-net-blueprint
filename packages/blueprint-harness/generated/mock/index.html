@@ -683,7 +683,7 @@ const deref = (node, doc, seen = 0) => {
 
   // Another one. A relative reference resolves against the document it is
   // written in — `../../components/parameters.yaml` from
-  // base/domains/transcription/ is base/components/parameters.yaml. One written
+  // base/domains/communication/ is base/components/parameters.yaml. One written
   // as a URL is matched on its tail, since the set is keyed by relative path.
   const relative = !/^[a-z]+:/i.test(file) && doc.relativePath
     ? resolveRelative(doc.relativePath, file)

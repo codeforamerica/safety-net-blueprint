@@ -120,7 +120,7 @@ export function readConfigs(docs) {
  *   action `$ref`s    `schema.request` and `schema.response` are replaced by
  *                     what they point at.
  *   short emits       `emit: paused` gets its full type,
- *                     `transcription.transcript.paused` (event-names.js).
+ *                     `communication.transcript.paused` (event-names.js).
  *
  * @param {import('../types.js').Doc[]} docs
  * Each entry also carries what its machine governs: `api`, the OpenAPI

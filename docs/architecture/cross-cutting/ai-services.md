@@ -59,7 +59,7 @@ The work splits by layer, not by feature:
 
 | Layer | What goes there |
 |---|---|
-| **The framework** — `blueprint-core` and `blueprint-mock-server` | The general mechanisms, which know nothing about benefits: the Transcript (in a `transcription` domain of its own) and Suggestion (in platform, as infrastructure every domain contributes categories to), request and response templates and their schema, the toolsets contract type, the extension saying whether a model may use an operation, and the mock acting as the Data Exchange adapter. Any contract set built on the blueprint gets them. |
+| **The framework** — `blueprint-core` and `blueprint-mock-server` | The general mechanisms, which know nothing about benefits: the Transcript (in a `communication` domain of its own) and Suggestion (in platform, as infrastructure every domain contributes categories to), request and response templates and their schema, the toolsets contract type, the extension saying whether a model may use an operation, and the mock acting as the Data Exchange adapter. Any contract set built on the blueprint gets them. |
 | **`safety-net-contracts`** | The interview assistant, the first use of those mechanisms: the interview's conduct and its transcript, the SNAP interview requirements, the risk ruleset, the eligibility ruleset the guidance evaluates, and the `fact_extraction` service and its catalog entry. This is program policy, and belongs with the real domain contracts. |
 | **The application** | What speaks a provider's protocol — the transcription client — and the page code that captures audio. Neither is a contract, and neither belongs in the framework, which stays vendor-neutral. |
 | **The harness** | Fictional fixtures that test the framework mechanisms in isolation, as it already exercises forwarding and stubs. Not policy. |
@@ -227,6 +227,11 @@ mom" a model can propose four members and their relationships, but not names or
 birth dates, because nobody said them — and partial evaluation then reports
 those as missing.
 
+The inputs and results in the table are a first guess, not a decision. What a
+call receives — one turn, the conversation so far, the current application —
+and what it returns — values, a patch to the application, flags for the worker
+to ask about — are open; see [Open questions](#open-questions).
+
 ### How a service call reaches a provider
 
 The catalog entry for each AI service declares how to call its provider: a
@@ -296,7 +301,7 @@ template schema is written.
 
 ### Transcripts
 
-The written record of a conversation, in a `transcription` domain the framework
+The written record of a conversation, in a `communication` domain the framework
 provides. Built: its lifecycle, its timeline of lines, lost stretches and
 pauses, and the rules for accepting them. Its design, and what is still to
 come, is in [Transcripts](transcripts.md).
@@ -401,10 +406,11 @@ entry — see [How a service call reaches a provider](#how-a-service-call-reache
 
 - **Transcription** streams continuously; lines appear as people speak and are
   replaced as they firm up.
-- **An assistant's suggestions** follow finished *turns* — everything one
-  person said before the other spoke. A few seconds is fine, since the worker is
-  mid-conversation and glances at them. One model call per turn, rather than per
-  line, keeps the number of calls and their cost down.
+- **An assistant's suggestions** need only arrive within a few seconds, since
+  the worker is mid-conversation and glances at them. When they are made is
+  open: after each finished *turn* — everything one person said before the other
+  spoke — on a timer, or when the worker asks. Any of them keeps the number of
+  calls, and their cost, well below one per line.
 - **An agent's conversation loop** — speech in, model, speech out — has to
   answer in about a second, and stays inside the speech model's session.
 
@@ -441,6 +447,11 @@ declared in a state machine.
 
 A worker interviews an applicant. The page holds the worker's UI, audio capture,
 sign-in, and the mock.
+
+The walk-through picks one answer to each open question about AI calls — a call
+after each finished turn, sending that turn, returning values — to have
+something concrete to follow. Calls made on a timer, sending the whole
+conversation, or returning a patch or flags would travel the same path.
 
 1. **The worker starts the interview.** The page calls `record-consent`, then
    `start`, on the `Interview`. The interview requirements that apply to this household
@@ -881,7 +892,7 @@ reviewed once and enforced everywhere, rather than trusted to each service.
 None of this is decided. Each is something to try as soon as it exists, since
 the mock serves a contract the moment it is declared.
 
-1. **The transcript**, in a `transcription` domain the framework provides: its
+1. **The transcript**, in a `communication` domain the framework provides: its
    states, lines and gaps, the rules a client is held to, its settings, and a
    recorded transcript replayed with no live call. Then an application's client
    streaming to Transcribe from a page and writing to it — the first proof that
@@ -916,6 +927,13 @@ Larger and later:
 
 ## Open questions
 
+- For an AI call: when it is made (after each finished turn, on a timer, when
+  the worker asks), what it receives (one turn, the conversation so far, the
+  current application), and what it returns (values, a patch to the
+  application, flags for the worker to ask about). Tools being prototyped send
+  the conversation so far, on a timer and on demand, because contradictions and
+  repeated facts cannot be seen in one turn; one returns a patch whose changes
+  cite the transcript lines they came from, the other returns flags.
 - Where the recertification interview lives, which waits on case management
   modeling recertification.
 - Where the transcription client lives: with the application that uses it, or

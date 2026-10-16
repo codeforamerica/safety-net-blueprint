@@ -35,13 +35,13 @@ The machine-readable catalog is in [`docs/conventions/`](../conventions/) under 
 
 **File type:** `overlays/config.yaml` — `config:` section.
 
-The capabilities a contract set includes. A capability is a domain the framework provides beyond platform — today, `transcription`. Platform is infrastructure every set needs (the event log, registries) and always comes along; a capability comes along only when it is listed, so a set that does not use one has none of its endpoints in its API, clients or docs.
+The capabilities a contract set includes. A capability is a domain the framework provides beyond platform — today, `communication`, which holds transcripts. Platform is infrastructure every set needs (the event log, registries) and always comes along; a capability comes along only when it is listed, so a set that does not use one has none of its endpoints in its API, clients or docs.
 
 ```yaml
 # overlays/config.yaml
 config:
   x-capabilities:
-    - transcription
+    - communication
 ```
 
 A name the framework does not provide stops resolve, listing the ones it does.
@@ -192,7 +192,7 @@ status:
 **Registry form** — the entry ids of every registry of a type in the set, pooled and sorted, so a list several files contribute to is written nowhere as one:
 
 ```yaml
-# transcription-transcripts-openapi.yaml
+# communication-transcripts-openapi.yaml
 provider:
   type: string
   x-enum-source:

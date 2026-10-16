@@ -24,7 +24,7 @@ import { deriveCollectionName } from './collection-utils.js';
  * @param {Array} stateMachines - From `extract(docs, 'state-machines')`
  * @returns {Map<string, Array<{ entry: object, name: string, operation: object, owner: object }>>}
  *   Keyed `${operation} ${domain} ${path}`: a create by its collection path, an
- *   update by its item path, e.g. `create transcription /transcripts/{transcriptId}/entries`
+ *   update by its item path, e.g. `create communication /transcripts/{transcriptId}/entries`
  */
 export function governorsByRoute(stateMachines) {
   const governors = new Map();

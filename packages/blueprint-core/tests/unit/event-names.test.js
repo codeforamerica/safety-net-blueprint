@@ -23,10 +23,10 @@ describe('event names', () => {
       actions: [{ id: 'a', steps: [{ emit: 'paused' }, { if: 'x', then: [{ emit: { event: 'closed', data: { at: '$now' } } }] }] }],
       on: [{ type: 'other.thing.happened', steps: [{ emit: 'noted' }] }],
     };
-    const out = expandEmits(machine, 'transcription');
-    assert.deepEqual(out.actions[0].steps[0].emit, { event: 'paused', type: 'transcription.transcript_entry.paused' });
-    assert.deepEqual(out.actions[0].steps[1].then[0].emit, { event: 'closed', data: { at: '$now' }, type: 'transcription.transcript_entry.closed' });
-    assert.equal(out.on[0].steps[0].emit.type, 'transcription.transcript_entry.noted');
+    const out = expandEmits(machine, 'communication');
+    assert.deepEqual(out.actions[0].steps[0].emit, { event: 'paused', type: 'communication.transcript_entry.paused' });
+    assert.deepEqual(out.actions[0].steps[1].then[0].emit, { event: 'closed', data: { at: '$now' }, type: 'communication.transcript_entry.closed' });
+    assert.equal(out.on[0].steps[0].emit.type, 'communication.transcript_entry.noted');
   });
 
   test('a machine with nothing to expand comes back as it was', () => {

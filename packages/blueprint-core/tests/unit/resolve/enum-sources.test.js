@@ -311,13 +311,13 @@ describe('injectEnumSources — states named without a machine', () => {
 
 describe('injectEnumSources — registry source', () => {
   const registry = (relativePath, type, ids) => doc(
-    { type, domain: 'transcription', entries: Object.fromEntries(ids.map((id) => [id, { description: id }])) },
+    { type, domain: 'communication', entries: Object.fromEntries(ids.map((id) => [id, { description: id }])) },
     { relativePath, type: 'registry' }
   );
 
   const api = doc(
     { components: { schemas: { TranscriptWritable: { properties: { provider: { type: 'string', 'x-enum-source': { registry: 'transcription-services' } } } } } } },
-    { relativePath: 'base/domains/transcription/transcription-transcripts-openapi.yaml', type: 'openapi' }
+    { relativePath: 'base/domains/communication/communication-transcripts-openapi.yaml', type: 'openapi' }
   );
 
   const providers = (result) => result.docs
@@ -326,8 +326,8 @@ describe('injectEnumSources — registry source', () => {
   test('pools the entry ids of every registry of the type, sorted', () => {
     // The framework's providers, and a state's own in a file of its own.
     const result = injectEnumSources([
-      registry('base/domains/transcription/transcription-registry-transcription-services.yaml', 'transcription-services', ['elevenlabs-scribe', 'aws-transcribe']),
-      registry('domains/transcription/state-registry-transcription-services.yaml', 'transcription-services', ['state-vendor']),
+      registry('base/domains/communication/communication-registry-transcription-services.yaml', 'transcription-services', ['elevenlabs-scribe', 'aws-transcribe']),
+      registry('domains/communication/state-registry-transcription-services.yaml', 'transcription-services', ['state-vendor']),
       api,
     ]);
 

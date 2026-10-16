@@ -14,7 +14,7 @@ The platform domain is the infrastructure every contract set shares, whatever
 its programs and domains: one log of every event every domain sends, and the
 named, citable entries — regulatory policies, design patterns — the contracts
 declare. It owns no business process and no lifecycle. A capability with
-business meaning, such as transcription, is a domain of its own that a set opts
+business meaning, such as communication, is a domain of its own that a set opts
 into, not part of the platform; the platform is what is left when every domain
 is taken away.
 
@@ -112,7 +112,7 @@ an API written for it.
 
 **Status:** Decided: B
 
-**What's being decided:** Shared capabilities like transcription are used by
+**What's being decided:** Shared capabilities like communication are used by
 several domains, and putting them on the platform would make every set carry
 them.
 
@@ -151,7 +151,7 @@ of its own, in whichever domain the entries belong to.
 - **Search** — a contract set's own concern; see [Search](search.md).
 - **Identity and access** — see [Identity & Access](identity-access.md).
 - **Timers** — see [Scheduling Service](scheduling-service.md).
-- **Capabilities such as transcription** — framework domains of their own; see
+- **Capabilities such as communication** — framework domains of their own; see
   [Transcripts](transcripts.md).
 
 ## Capability coverage

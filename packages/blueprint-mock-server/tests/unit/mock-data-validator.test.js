@@ -122,6 +122,41 @@ test('Mock Data Validator Tests', async (t) => {
     assert.match(errors[0].message, /required property 'tags'/);
   });
 
+  // A read schema after resolve has expanded a relationship: `userId` became
+  // `user`, the related record. The seed is stored the way the server stores
+  // it, under the key, and the record is inlined only when read. Checking the
+  // stored record against this schema failed the harness's transcripts, whose
+  // profileId the harness overlay expands.
+  const EXPANDED_EVENT = {
+    type: 'object',
+    unevaluatedProperties: false,
+    required: ['id', 'user'],
+    properties: {
+      id: { type: 'string' },
+      user: {
+        type: 'object',
+        properties: { id: { type: 'string' }, name: { type: 'string' } },
+        'x-relationship': { resource: 'User', style: 'expand' },
+      },
+    },
+  };
+  const USERS = { u1: { id: 'u1', name: 'Ada' } };
+  const lookup = (_collection, id) => USERS[id] ?? null;
+
+  await t.test('validateMockData - an expanded relationship is checked as it is served', async () => {
+    const { docs, apiSpecs } = await contractSet({ EventExample1: { id: 'e1', userId: 'u1' } }, EXPANDED_EVENT);
+    assert.deepStrictEqual(validateMockData(docs, apiSpecs, { lookup }), []);
+  });
+
+  await t.test('validateMockData - a key pointing at no seeded record says so', async () => {
+    const { docs, apiSpecs } = await contractSet({ EventExample1: { id: 'e1', userId: 'nobody' } }, EXPANDED_EVENT);
+    const errors = validateMockData(docs, apiSpecs, { lookup });
+
+    assert.ok(errors.some((e) => /\/userId: points at no seeded User \(nobody\)/.test(e.message)), JSON.stringify(errors));
+    assert.ok(!errors.some((e) => /unevaluated properties: userId/.test(e.message)),
+      'the dangling key must not also be reported as an unknown property');
+  });
+
   await t.test('validateMockData - returns no errors when no mock data files exist', () => {
     const api = makeApiSpec('test-api', {
       Widget: {

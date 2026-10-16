@@ -2,7 +2,7 @@ arazzo: 1.0.1
 info:
   title: A transcript, from start to close
   version: 1.0.0
-  x-domain: transcription
+  x-domain: communication
   description: |
     A caseworker's interview software transcribes an interview from start to close, then abandons a second transcript, exercising the transcription domain end to end:
 
@@ -12,7 +12,7 @@ info:
     - closing, and the idle timeout, with the mock standing in for the scheduler
 sourceDescriptions:
   - name: transcripts
-    url: ../base/domains/transcription/transcription-transcripts-openapi.yaml
+    url: ../base/domains/communication/communication-transcripts-openapi.yaml
     type: openapi
   - name: mock
     url: https://blueprint.codeforamerica.org/mock/mock-openapi.yaml
@@ -165,7 +165,7 @@ workflows:
           Go off the record
 
           - `pause` is an action of the transcript's state machine, from `recording` to `paused`, guarded by `atAfterStart`.
-          - Its steps write a `pause` entry with no `endedAt`, and emit `paused`, which resolve names `transcription.transcript.paused`.
+          - Its steps write a `pause` entry with no `endedAt`, and emit `paused`, which resolve names `communication.transcript.paused`.
           - `at` is by the software's clock too. `AtRequest` declares it, for pausing, resuming and closing alike.
         operationId: $sourceDescriptions.transcripts.pauseTranscript
         parameters:
@@ -319,7 +319,7 @@ workflows:
           Close the transcript
 
           - `close` goes from `recording` or `paused` to `closed`, and sets `closedAt` to the `at` sent.
-          - `lastActivityAt` is when the last line or gap ended, kept up to date by the machine's subscription to `transcription.transcript_entry.created`. A pause doesn't count: it is the transcript's own entry, not the software's.
+          - `lastActivityAt` is when the last line or gap ended, kept up to date by the machine's subscription to `communication.transcript_entry.created`. A pause doesn't count: it is the transcript's own entry, not the software's.
         operationId: $sourceDescriptions.transcripts.closeTranscript
         parameters:
           - reference: $components.parameters.caller
@@ -384,14 +384,14 @@ workflows:
           payload:
             "on": scheduling.timer.requested
             match:
-              data.callback.event: transcription.idle_check
+              data.callback.event: communication.idle_check
         successCriteria:
           - condition: $statusCode == 201
       - stepId: startAndGoQuiet
         description: |
           Start a transcript and go quiet
 
-          - Creating it asks for the first idle check: the machine's subscription to `transcription.transcript.created` calls `requestIdleCheck`.
+          - Creating it asks for the first idle check: the machine's subscription to `communication.transcript.created` calls `requestIdleCheck`.
           - No line or gap ever arrives.
         operationId: $sourceDescriptions.transcripts.createTranscript
         parameters:

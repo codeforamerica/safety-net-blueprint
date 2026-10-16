@@ -58,29 +58,29 @@ describe('x-capabilities', () => {
       const { out, status, stderr } = resolveSet(dir);
       assert.equal(status, 0, stderr);
       assert.ok(existsSync(join(out, 'base/domains/platform/platform-events-openapi.yaml')), 'platform always comes along');
-      assert.ok(!existsSync(join(out, 'base/domains/transcription')), 'transcription was not asked for');
+      assert.ok(!existsSync(join(out, 'base/domains/communication')), 'communication was not asked for');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  test('a set listing transcription gets it', () => {
-    const dir = contractSet(['transcription']);
+  test('a set listing communication gets it', () => {
+    const dir = contractSet(['communication']);
     try {
       const { out, status, stderr } = resolveSet(dir);
       assert.equal(status, 0, stderr);
-      assert.ok(existsSync(join(out, 'base/domains/transcription/transcription-transcripts-openapi.yaml')));
+      assert.ok(existsSync(join(out, 'base/domains/communication/communication-transcripts-openapi.yaml')));
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
   test('a name the framework does not provide is refused, with the ones it does', () => {
-    const dir = contractSet(['transcriptoin']);
+    const dir = contractSet(['communicaton']);
     try {
       const { status, stderr } = resolveSet(dir);
       assert.notEqual(status, 0);
-      assert.match(stderr, /x-capabilities names "transcriptoin", which the framework does not provide\. Available: transcription\./);
+      assert.match(stderr, /x-capabilities names "communicaton", which the framework does not provide\. Available: communication\./);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

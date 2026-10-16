@@ -360,7 +360,7 @@ workflows:
           See what the walk emitted
 
           - Every change you made emitted one of these, and nothing asked for them. Uploading a document wrote to this log; so did submitting, opening and closing.
-          - The types are declared as channels in the contract set — `transcription.transcript.created`, `transcription.transcript.updated`, `transcription.transcript.deleted`, `transcription.transcript_entry.created`, and the rest.
+          - The types are declared as channels in the contract set — `communication.transcript.created`, `communication.transcript.updated`, `communication.transcript.deleted`, `communication.transcript_entry.created`, and the rest.
           - One log, every domain. Nothing wired them together.
         operationId: $sourceDescriptions.events.listEvents
         parameters:

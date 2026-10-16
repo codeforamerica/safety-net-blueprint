@@ -7,4 +7,4 @@ info:
 # tests and the standalone page exercise them.
 config:
   x-capabilities:
-    - transcription
+    - communication

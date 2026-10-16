@@ -1,17 +1,20 @@
 /**
  * Build a Postman collection from a contract set.
  *
- * Requests are derived from each spec's endpoints and seeded with the example
- * data the contracts ship, so an imported collection exercises a running mock
- * server without anyone hand-writing bodies. State machines contribute an
- * ordered sequence of RPC calls that walks an object through its lifecycle.
+ * Requests are derived from each spec's endpoints and filled with the records
+ * a mock server seeds from the same set — its mock data and config catalogs —
+ * so an imported collection exercises a running mock without anyone
+ * hand-writing bodies, and its ids name records the mock holds. State
+ * machines contribute an ordered sequence of RPC calls that walks an object
+ * through its lifecycle.
  *
  * Nothing here reads the filesystem: every document it needs — specs, seed
  * examples, state machines — is in the set it is given.
  */
 
 import { fileNameOf } from '../contract-types.js';
-import { collectionToSchemaPrefix, extractIndividualResources } from '../openapi/utils.js';
+import { buildExamples } from '../examples.js';
+import { readConfigs } from '../contract-readers.js';
 
 /**
  * The contract set, keyed by filename, for the duration of one build.
@@ -33,12 +36,91 @@ let contracts = new Map();
  */
 export function buildPostman(docs, { baseUrl = 'http://localhost:1080', collectionId = null } = {}) {
   contracts = new Map(docs.map((doc) => [fileNameOf(doc.path), doc.content]));
+  records = seededRecords(docs);
 
   const apiSpecs = docs
     .filter((doc) => doc.type === 'openapi')
     .map((doc) => apiMetadataOf(doc, docs));
 
   return assembleCollection(apiSpecs, { baseUrl, collectionId });
+}
+
+/**
+ * The records a mock server seeds from the set, by the schema each one is.
+ *
+ * The same two sources the mock seeds from: example records, grouped by the
+ * schema their key names — the grouping the seeder uses — and config catalog
+ * entries, which name their resource. A request built from one names a record
+ * the mock holds, in the shape its API takes. Catalog entries are marked
+ * `system`: the mock refuses to delete them.
+ *
+ * Module-level for the same reason as `contracts`.
+ *
+ * @type {Record<string, Array<{ name: string, data: object, system?: boolean }>>}
+ */
+let records = {};
+
+/**
+ * @param {import('../../types.js').Doc[]} docs
+ * @returns {Record<string, Array<{ name: string, data: object, system?: boolean }>>}
+ */
+function seededRecords(docs) {
+  const bySchema = {};
+  for (const [schema, examples] of Object.entries(buildExamples(docs))) {
+    if (examples.length) bySchema[schema] = examples.map(({ name, data }) => ({ name, data }));
+  }
+  for (const config of readConfigs(docs)) {
+    for (const { resourceName, entries } of Object.values(config.catalogs)) {
+      const seeded = (bySchema[resourceName] ??= []);
+      for (const entry of entries.filter((e) => e?.id)) {
+        // The mock keeps a seeded record of the same id, but still treats it
+        // as config-managed.
+        const existing = seeded.find((record) => record.data.id === entry.id);
+        if (existing) {
+          existing.system = true;
+          continue;
+        }
+        seeded.push({
+          name: `${resourceName} ${entry.name ?? entry.id}`,
+          // `x-` fields annotate an entry and aren't seeded.
+          data: Object.fromEntries(Object.entries(entry).filter(([field]) => !field.startsWith('x-'))),
+          system: true,
+        });
+      }
+    }
+  }
+  return bySchema;
+}
+
+/**
+ * The schema a response holds records of, by name: the one it names, or for a
+ * list, the one its items name. A list wraps its items in `allOf` alongside
+ * the shared pagination schema, so they are not always a direct property.
+ *
+ * @param {object} spec - The OpenAPI document
+ * @param {object|null} responseSchema
+ * @returns {string|null}
+ */
+function recordSchemaOf(spec, responseSchema) {
+  const name = responseSchema?.$ref?.match(/^#\/components\/schemas\/([^/]+)$/)?.[1];
+  if (!name) return null;
+  return listItemsOf(spec, name) ?? name;
+}
+
+/**
+ * The schema a list schema's items name, or null when it isn't a list.
+ *
+ * @param {object} spec
+ * @param {string} name - A schema in `components.schemas`
+ * @returns {string|null}
+ */
+function listItemsOf(spec, name) {
+  const schema = spec.components?.schemas?.[name];
+  for (const candidate of [schema, ...(schema?.allOf ?? [])]) {
+    const items = candidate?.properties?.items?.items?.$ref?.match(/^#\/components\/schemas\/([^/]+)$/)?.[1];
+    if (items) return items;
+  }
+  return null;
 }
 
 /**
@@ -80,6 +162,17 @@ function apiMetadataOf(doc, docs) {
     }
   }
 
+  const responseOf = (operation, method) =>
+    operation?.responses?.[method === 'post' ? '201' : '200']?.content?.['application/json']?.schema ?? null;
+
+  // The schema a path's records are. An operation that returns none — a
+  // delete, a transition — acts on the record its path's GET returns, or for
+  // a transition, its parent path's.
+  const schemaAt = (path) => {
+    const item = spec.paths?.[path];
+    return recordSchemaOf(spec, responseOf(item?.get, 'get')) ?? recordSchemaOf(spec, responseOf(item?.patch, 'patch'));
+  };
+
   const endpoints = [];
   for (const [path, pathItem] of Object.entries(spec.paths ?? {})) {
     const pathParameters = pathItem?.parameters ?? [];
@@ -91,6 +184,15 @@ function apiMetadataOf(doc, docs) {
       const success = method === 'post' ? '201' : '200';
       endpoints.push({
         path: base && !path.startsWith(base) ? `${base}${path}` : path,
+        // The resource is the spec's own top-level path, not the URL's: the
+        // base path every endpoint in the API shares is not a resource.
+        resource: path.split('/').filter(Boolean)[0],
+        // Whether it returns a page of records. A path parameter doesn't make
+        // an endpoint an item: `/transcripts/{transcriptId}/entries` is a list.
+        list: Boolean(listItemsOf(spec, responseOf(operation, method)?.$ref?.split('/').pop())),
+        schema: recordSchemaOf(spec, responseOf(operation, method))
+          ?? schemaAt(path)
+          ?? (/\}\/[^/{}]+$/.test(path) ? schemaAt(path.replace(/\/[^/{}]+$/, '')) : null),
         method: method.toUpperCase(),
         operationId: operation.operationId,
         summary: operation.summary,
@@ -147,13 +249,8 @@ function assembleCollection(apiSpecs, { baseUrl, collectionId }) {
       });
 
       // Add resource ID variables
-      const rawExamples = loadExamples(api.name);
-      const schemaPrefix = collectionToSchemaPrefix(resourceName);
-      const filtered = {};
-      for (const [key, value] of Object.entries(rawExamples)) {
-        if (key.startsWith(schemaPrefix)) filtered[key] = value;
-      }
-      const examples = extractIndividualResources(filtered);
+      const schema = api.endpoints.find((e) => e.resource === resourceName && e.schema)?.schema;
+      const examples = records[schema] ?? [];
       if (examples.length > 0) {
         const varName = `${singularize(resourceName)}Id`;
         collection.variable.push({
@@ -191,44 +288,24 @@ function uuid() {
 }
 
 // =============================================================================
-// Examples
-// =============================================================================
-
-/**
- * Load examples for a resource. Checks for a seed file first, then falls
- * back to inline examples embedded in the OpenAPI spec.
- */
-function loadExamples(resourceName) {
-  // A dedicated seed file (e.g., persons.yaml) wins over inline examples.
-  const seed = contracts.get(`${resourceName}.yaml`);
-  if (seed) return seed;
-
-  const spec = contracts.get(`${resourceName}-openapi.yaml`);
-  if (!spec) return {};
-
-  const componentExamples = spec?.components?.examples || {};
-  const flat = {};
-  for (const [key, ex] of Object.entries(componentExamples)) {
-    if (ex?.value) flat[key] = ex.value;
-  }
-  return flat;
-}
-
-
-// =============================================================================
 // State Machine Support
 // =============================================================================
 
 /**
- * Load and normalize a state machine definition for an API (if one exists).
+ * Load and normalize the state machine an API declares for an object (if one
+ * exists). A document can declare one machine per object — an application and
+ * its verifications — so the object picks which.
  * Returns a flat object with domain, object, initialState, actions, guards.
+ *
+ * @param {string} apiName
+ * @param {string|null} object - The schema the transitions act on
  */
-function loadStateMachine(apiName) {
+function loadStateMachine(apiName, object) {
   const doc = contracts.get(`${apiName}-state-machine.yaml`);
   if (!doc) return null;
   try {
-    if (Array.isArray(doc.machines) && doc.machines.length > 0) {
-      const machine = doc.machines[0];
+    const machine = Array.isArray(doc.machines) ? doc.machines.find((m) => m.object === object) : null;
+    if (machine) {
       return {
         domain: doc.domain,
         object: machine.object,
@@ -341,7 +418,7 @@ function generateTestScript(method, endpoint) {
     tests.push(`});`);
 
     // List endpoint tests
-    if (!endpoint.path.includes('{')) {
+    if (endpoint.list) {
       tests.push(``);
       tests.push(`pm.test("Response has required list properties", function () {`);
       tests.push(`    const jsonData = pm.response.json();`);
@@ -481,15 +558,28 @@ function createPostmanUrl(path, baseUrl = '{{baseUrl}}') {
 }
 
 /**
- * Substitute a concrete ID into a Postman URL's path parameter placeholder.
+ * Fill a Postman URL's path parameters from a record.
+ *
+ * On an item path the last parameter is the record's id. A parent parameter
+ * is the record's own field of that name — an entry's `transcriptId` — so a
+ * nested record is addressed under the parent it belongs to. A parameter the
+ * record doesn't carry stays a variable.
+ *
+ * @param {object} url - From createPostmanUrl
+ * @param {object|undefined} record
+ * @param {{ item?: boolean }} [options] - `item: false` for a collection path,
+ *   whose parameters are all parents
  */
-function substituteId(url, id) {
-  const paramName = url.variables[0];
-  return {
-    ...url,
-    raw: url.raw.replace(`{{${paramName}}}`, id),
-    path: url.path.map(seg => seg === `{{${paramName}}}` ? id : seg)
+function fillPath(url, record, { item = true } = {}) {
+  const values = Object.fromEntries(url.variables.map((name) => [name, record?.[name]]));
+  if (item && url.variables.length > 0) values[url.variables.at(-1)] = record?.id;
+
+  const fill = (segment) => {
+    const name = segment.match(/^\{\{(.+)\}\}$/)?.[1];
+    return name && values[name] != null ? String(values[name]) : segment;
   };
+  const path = url.path.map(fill);
+  return { ...url, raw: `${url.host[0]}/${path.join('/')}`, path };
 }
 
 /**
@@ -515,7 +605,7 @@ function singularize(str) {
  */
 function generateListRequests(apiMetadata, endpoint, examples) {
   const requests = [];
-  const url = createPostmanUrl(endpoint.path);
+  const url = fillPath(createPostmanUrl(endpoint.path), examples[0]?.data, { item: false });
 
   // 1. List all (default pagination)
   requests.push({
@@ -626,7 +716,7 @@ function generateGetByIdRequests(apiMetadata, endpoint, examples) {
 
   // Create one request per example
   for (const example of examples) {
-    const urlWithId = substituteId(createPostmanUrl(endpoint.path), example.data.id);
+    const urlWithId = fillPath(createPostmanUrl(endpoint.path), example.data);
 
     requests.push({
       name: `Get ${example.name}`,
@@ -641,7 +731,8 @@ function generateGetByIdRequests(apiMetadata, endpoint, examples) {
   }
 
   // Add 404 test example
-  const notFoundUrl = substituteId(createPostmanUrl(endpoint.path), '00000000-0000-0000-0000-000000000000');
+  const notFoundUrl = fillPath(createPostmanUrl(endpoint.path),
+    { ...examples[0]?.data, id: '00000000-0000-0000-0000-000000000000' });
 
   requests.push({
     name: `Get Non-Existent ${capitalize(singularize(apiMetadata.name))} (404)`,
@@ -672,7 +763,7 @@ function generateGetByIdRequests(apiMetadata, endpoint, examples) {
  */
 function generateCreateRequests(apiMetadata, endpoint, examples) {
   const requests = [];
-  const url = createPostmanUrl(endpoint.path);
+  const url = fillPath(createPostmanUrl(endpoint.path), examples[0]?.data, { item: false });
 
   if (examples.length === 0) {
     return requests;
@@ -730,7 +821,7 @@ function generateUpdateRequests(apiMetadata, endpoint, examples) {
   }
 
   const example = examples[0];
-  const urlWithId = substituteId(createPostmanUrl(endpoint.path), example.data.id);
+  const urlWithId = fillPath(createPostmanUrl(endpoint.path), example.data);
 
   // 1. Update single field
   const singleFieldUpdate = {};
@@ -813,12 +904,14 @@ function generateUpdateRequests(apiMetadata, endpoint, examples) {
 function generateDeleteRequests(apiMetadata, endpoint, examples) {
   const requests = [];
 
-  if (examples.length === 0) {
+  // A config catalog entry can't be deleted: the mock refuses with 409.
+  const deletable = examples.filter((example) => !example.system);
+  if (deletable.length === 0) {
     return requests;
   }
 
-  const example = examples[examples.length - 1]; // Use last example for delete
-  const urlWithId = substituteId(createPostmanUrl(endpoint.path), example.data.id);
+  const example = deletable[deletable.length - 1]; // Use last example for delete
+  const urlWithId = fillPath(createPostmanUrl(endpoint.path), example.data);
 
   requests.push({
     name: `Delete ${capitalize(singularize(apiMetadata.name))}`,
@@ -877,10 +970,7 @@ function generateRpcRequest(apiMetadata, endpoint, rpcContext, { expectConflict 
   const url = createPostmanUrl(endpoint.path);
 
   // Substitute the chosen example's ID into the path parameter
-  let urlWithId = url;
-  if (rpcContext.example && url.variables.length > 0) {
-    urlWithId = substituteId(url, rpcContext.example.data.id);
-  }
+  const urlWithId = rpcContext.example ? fillPath(url, rpcContext.example.data) : url;
 
   const body = generateExampleBody(endpoint.requestSchema);
 
@@ -953,8 +1043,6 @@ function generateOrderedRpcRequests(apiMetadata, rpcEndpoints, examples, stateMa
  * Generate all requests for an API
  */
 function generateApiRequests(apiMetadata) {
-  const rawExamples = loadExamples(apiMetadata.name);
-
   // Group endpoints by their top-level resource path (e.g., /tasks, /queues, /events)
   // This ensures multi-resource specs like workflow get separate folders per resource.
   const resourceGroups = new Map();
@@ -985,14 +1073,13 @@ function generateApiRequests(apiMetadata) {
       continue;
     }
 
-    const endpointCollection = endpoint.path.split('/').filter(s => s)[0];
-    if (!resourceGroups.has(endpointCollection)) {
-      resourceGroups.set(endpointCollection, { items: [], rpcEndpoints: [] });
+    const resource = endpoint.resource;
+    if (!resourceGroups.has(resource)) {
+      resourceGroups.set(resource, { items: [], rpcEndpoints: [] });
     }
-    const group = resourceGroups.get(endpointCollection);
+    const group = resourceGroups.get(resource);
 
-    const displayMeta = { ...apiMetadata, name: endpointCollection };
-    const isCollection = !endpoint.path.includes('{');
+    const displayMeta = { ...apiMetadata, name: resource };
     const isItem = endpoint.path.includes('{');
     // Sub-collection POSTs (path ends with a plural noun after a {param}) are CRUD creates,
     // not state machine transitions. Only classify POST as RPC when the last segment is singular
@@ -1000,21 +1087,17 @@ function generateApiRequests(apiMetadata) {
     const endsWithPluralNoun = /\/[a-z][a-z0-9_-]*s$/.test(endpoint.path.trimEnd());
     const isRpc = endpoint.method === 'POST' && isItem && !endsWithPluralNoun;
 
-    // Match examples to endpoints by resource type
-    const schemaPrefix = collectionToSchemaPrefix(endpointCollection);
-    const filtered = {};
-    for (const [key, value] of Object.entries(rawExamples)) {
-      if (key.startsWith(schemaPrefix)) filtered[key] = value;
-    }
-    const examples = extractIndividualResources(filtered);
+    // The records of the schema this endpoint returns or acts on
+    const examples = records[endpoint.schema] ?? [];
 
     let requests = [];
 
-    if (endpoint.method === 'GET' && isCollection) {
+    if (endpoint.method === 'GET' && endpoint.list) {
       requests = generateListRequests(displayMeta, endpoint, examples);
-    } else if (endpoint.method === 'GET' && isItem) {
+    } else if (endpoint.method === 'GET') {
       requests = generateGetByIdRequests(displayMeta, endpoint, examples);
-    } else if (endpoint.method === 'POST' && isCollection) {
+    } else if (endpoint.method === 'POST' && !isRpc) {
+      // A collection or a sub-collection: `/transcripts/{transcriptId}/entries`
       requests = generateCreateRequests(displayMeta, endpoint, examples);
     } else if (isRpc) {
       group.rpcEndpoints.push(endpoint);
@@ -1035,22 +1118,19 @@ function generateApiRequests(apiMetadata) {
   for (const [resourceName, group] of resourceGroups) {
     const displayMeta = { ...apiMetadata, name: resourceName };
 
-    if (group.rpcEndpoints.length > 0) {
-      const stateMachine = loadStateMachine(apiMetadata.name);
+    // Transitions by the object they act on: a resource's own, and a nested
+    // resource's, each walked with its own machine and records.
+    const rpcBySchema = Map.groupBy(group.rpcEndpoints, (ep) => ep.schema);
+    for (const [schema, rpcEndpoints] of rpcBySchema) {
+      const stateMachine = loadStateMachine(apiMetadata.name, schema);
+      const rpcExamples = records[schema] ?? [];
       if (stateMachine) {
-        const smPrefix = stateMachine.object || collectionToSchemaPrefix(resourceName);
-        const smFiltered = {};
-        for (const [key, value] of Object.entries(rawExamples)) {
-          if (key.startsWith(smPrefix)) smFiltered[key] = value;
-        }
-        const smExamples = extractIndividualResources(smFiltered);
-        const result = generateOrderedRpcRequests(displayMeta, group.rpcEndpoints, smExamples, stateMachine);
+        const result = generateOrderedRpcRequests(displayMeta, rpcEndpoints, rpcExamples, stateMachine);
         group.items.push(...result.requests);
         callerId = result.callerId;
       } else {
-        const primaryExamples = extractIndividualResources(rawExamples);
-        const rpcContext = { example: primaryExamples[0], callerId: 'postman-test-user' };
-        for (const ep of group.rpcEndpoints) {
+        const rpcContext = { example: rpcExamples[0], callerId: 'postman-test-user' };
+        for (const ep of rpcEndpoints) {
           group.items.push(generateRpcRequest(displayMeta, ep, rpcContext));
         }
       }

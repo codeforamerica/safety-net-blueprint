@@ -756,6 +756,29 @@ export function isCollectionPath(path) {
 }
 
 /**
+ * Whether a GET is held to the list rules: a collection path, or one whose
+ * 200 response is a list schema, with an `items` array directly or in an
+ * `allOf` branch beside the shared pagination schema.
+ *
+ * The response is what catches a nested list. A path parameter doesn't make
+ * an endpoint a single record — `/transcripts/{transcriptId}/entries` is a
+ * list — and judging by the path alone let every nested list skip the list
+ * rules. A collection path stays a list whatever it returns, so a list
+ * response missing its `items` is still reported.
+ *
+ * @param {Object} spec - The OpenAPI spec object
+ * @param {string} path - The endpoint path
+ * @param {Object} operation - The GET operation
+ * @returns {boolean}
+ */
+export function isListOperation(spec, path, operation) {
+  if (isCollectionPath(path)) return true;
+  let schema = operation.responses?.['200']?.content?.['application/json']?.schema;
+  if (schema?.$ref) schema = resolveLocalRef(spec, schema.$ref);
+  return [schema, ...(schema?.allOf ?? [])].some((candidate) => candidate?.properties?.items?.type === 'array');
+}
+
+/**
  * Check if path is a single resource endpoint (has {id} parameter or is a named singleton like /me)
  * @param {string} path - The endpoint path
  * @returns {boolean}
@@ -854,7 +877,7 @@ export function validateSpec(spec, specName, sameDomainSchemas = new Set()) {
   for (const [path, methods] of Object.entries(spec.paths)) {
     // Validate GET endpoints (skip non-JSON endpoints like SSE streams)
     if (methods.get && hasJsonResponse(methods.get)) {
-      if (isCollectionPath(path)) {
+      if (isListOperation(spec, path, methods.get)) {
         // List endpoint validations
         validateListEndpointParameters(path, methods.get, errors);
         validateListResponseSchema(path, methods.get, errors);
