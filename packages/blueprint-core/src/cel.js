@@ -10,10 +10,12 @@
  * parse, a regex transpiler to JavaScript, and the real thing.
  *
  * Its own subpath export, `@codeforamerica/blueprint-core/cel`, so a consumer
- * that never evaluates an expression does not load it.
+ * that never evaluates an expression does not load it. The rules engine
+ * evaluates rulesets with it too, so a ruleset and a state machine guard are
+ * the same language.
  */
 
-import { run, parse, isCelError, isCelList, isCelMap } from '@bufbuild/cel';
+import { run, parse, plan, celEnv, celError, isCelError, isCelList, isCelMap } from '@bufbuild/cel';
 import { toJson } from '@bufbuild/protobuf';
 import { TimestampSchema, DurationSchema } from '@bufbuild/protobuf/wkt';
 
@@ -42,25 +44,42 @@ function celToJs(val) {
 }
 
 /**
- * Evaluate a CEL expression.
+ * Evaluate a CEL expression, as text or already parsed.
+ *
+ * A parsed expression is for a caller that takes one apart: the rules engine
+ * splits `&&`, `||` and `? :` to give each operand its own state. Turning a
+ * piece back into text does not work in general — the parser expands
+ * `exists`, `all` and `filter` into comprehensions, which have no text form —
+ * so it is planned directly, which is what evaluating the text does with the
+ * expression it parses.
  *
  * A JavaScript `undefined` is bound as CEL `null`, which is what an absent
  * value is in the data the blueprint evaluates against. A field a record does
  * not have is still an error — CEL's "no such key" — and `has()` is how an
  * expression asks.
  *
- * @param {string} expr
+ * @param {string|import('@bufbuild/cel').Expr} expr
  * @param {Object<string, unknown>} [context] - Variables, by name
  * @returns {unknown} The result, as plain JavaScript
  * @throws {Error} With CEL's own message, when the expression does not evaluate
  */
 export function evaluateCEL(expr, context = {}) {
-  if (!expr || typeof expr !== 'string') {
+  const parsed = typeof expr === 'object' && expr !== null;
+  if (!parsed && (!expr || typeof expr !== 'string')) {
     throw new Error(`Not a CEL expression: ${JSON.stringify(expr)}`);
   }
   const bindings = {};
   for (const [name, value] of Object.entries(context)) bindings[name] = value === undefined ? null : value;
-  const result = run(expr, bindings);
+  let result;
+  if (parsed) {
+    try {
+      result = plan(celEnv(), expr)(bindings);
+    } catch (e) {
+      result = celError(e);
+    }
+  } else {
+    result = run(expr, bindings);
+  }
   if (isCelError(result)) throw new Error(result.message);
   return celToJs(result);
 }

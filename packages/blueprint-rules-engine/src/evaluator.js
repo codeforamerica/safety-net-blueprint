@@ -32,7 +32,7 @@ import { timestampFromDate, TimestampSchema } from '@bufbuild/protobuf/wkt';
 import { reflect } from '@bufbuild/protobuf/reflect';
 
 import { parse } from '@bufbuild/cel';
-import { evaluateCELNode } from './cel.js';
+import { evaluateCEL } from '@codeforamerica/blueprint-core/cel';
 
 // ── Type checking ─────────────────────────────────────────────────────────────
 
@@ -593,7 +593,7 @@ function leafStates(node, deps, depState, scope) {
     else state = lessSettled(state, s.state);
   }
   if (missing.length) return { state: 'missing', missing };
-  return { state, value: evaluateCELNode(node, scope) };
+  return { state, value: evaluateCEL(node, scope) };
 }
 
 // ── Internal fluent API (intra-package use only; not exported from index.js) ──
