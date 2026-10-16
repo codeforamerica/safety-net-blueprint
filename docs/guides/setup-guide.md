@@ -136,7 +136,7 @@ See [Resolve Pipeline Architecture](../architecture/resolve-pipeline.md) for how
 
 ## Building the Explorer
 
-The Explorer generates visual and reference documentation from your resolved specs — state machine docs, event catalog, API reference, data dictionaries, sequence diagrams, and more. Run it after resolving your overlays:
+The Explorer generates visual and reference documentation from your resolved specs — state machine docs, event catalog, API reference, data dictionaries, and more. Run it after resolving your overlays:
 
 ```bash
 node packages/explorer/build.js \

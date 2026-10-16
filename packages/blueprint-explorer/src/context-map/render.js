@@ -283,9 +283,7 @@ function renderDetail(domainId) {
   const center = config.domains.find(d => d.id === domainId);
   if (!center) throw new Error(`Unknown domain: ${domainId}`);
 
-  const domainFlows = (config.flows || []).filter(f => f.domain === domainId);
-  const hasFlows    = domainFlows.length > 0;
-  const HEADER_H    = hasFlows ? 76 : 44;
+  const HEADER_H    = 44;
 
   const domainMap = Object.fromEntries(config.domains.map(d => [d.id, d]));
   const allFlows  = groupIntoFlows(config);
@@ -461,8 +459,6 @@ export function renderContextMap(pkgConfig, mapConfig, outDir) {
     cross_cutting: pkgConfig.cross_cutting,
     events:        pkgConfig.events,
     apis:          pkgConfig.apis,
-    actors:        pkgConfig.actors,
-    flows:         pkgConfig.flows,
     domains:       pkgConfig.domains || [],
   };
 

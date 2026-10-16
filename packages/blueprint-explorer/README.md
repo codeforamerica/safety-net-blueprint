@@ -24,7 +24,6 @@ Generates a set of static HTML reference tools from resolved Blueprint contract 
 | **State Machine Docs** | Full state machine reference — states, transitions, guard conditions, actor restrictions, and event subscriptions per resource |
 | **Event Catalog** | Cross-domain event index — every emitted event with its publisher, payload schema, and known subscribers |
 | **Data Dictionaries** | Field-level reference derived from writable schemas — field names, types, policy citations, and data classifications |
-| **Sequence Diagrams** | Key workflow sequences showing cross-domain interactions |
 | **Context Map** | Domain relationship diagram showing cross-domain data dependencies |
 
 ## Usage

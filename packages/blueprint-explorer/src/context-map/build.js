@@ -16,7 +16,6 @@ import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
 import yaml from 'js-yaml';
 import { resolveConfig } from './resolve-config.js';
-import { scanGaps } from './scan-gaps.js';
 import { renderContextMap } from './render.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -44,7 +43,6 @@ export function build({ contentDir, resolvedDir }) {
   } finally {
     rmSync(fragDir, { recursive: true, force: true });
   }
-  scanGaps(enrichedConfig, resolvedDir);
 }
 
 // CLI entry point

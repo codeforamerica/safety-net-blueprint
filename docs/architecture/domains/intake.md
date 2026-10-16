@@ -236,8 +236,6 @@ Based on regulatory requirements and vendor consensus:
 
 ## Domain events
 
-See [`docs/architecture/diagrams/intake-flow.mmd`](../diagrams/intake-flow.mmd) for a sequence diagram of the full intake flow across all domains.
-
 ### Event types
 
 The intake domain emits two kinds of events:
