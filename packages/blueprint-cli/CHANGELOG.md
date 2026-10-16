@@ -1,5 +1,46 @@
 # @codeforamerica/blueprint-cli
 
+## 0.5.0
+
+### Minor Changes
+
+- 9b934ac: **Breaking:** Resolve now writes `<name>-events-asyncapi.yaml` beside each OpenAPI document, documenting every event its resources and their state machines send, so `x-events` and a state machine's `eventsSpec` are ignored, with a warning, and a hand-written channel for a generated event is a validation error. (#470)
+- adfa5e1: A contract set can now include the framework's `communication` capability by listing it in `x-capabilities`: `/communication/transcripts` records transcripts under a profile from `/communication/profiles`, with their timeline at `/transcripts/{id}/entries`. A new `x-enum-source: { registry: <type> }` form draws an enum from a registry. (#470)
+
+### Patch Changes
+
+- 2da51d3: Before, `blueprint-resolve --bundle` failed on a schema that refers to a `https://blueprint.codeforamerica.org/schemas/...` URL. Now those URLs are read from the installed blueprint. (#470)
+- adfa5e1: Before, an overlay file carrying only a `config:` block, with no `actions:`, was skipped, so its settings had no effect. Now resolve reads it. (#470)
+- d833585: **Breaking:** Before, a state machine subscribed under `events:` and emitted full event names. Now it subscribes under `on:`, declares its resource's events once under `emits:` and sends them by name (`emit: claimed`), which resolve expands to `{domain}.{resource}.{event}`. (#470)
+- Updated dependencies [685f4ea]
+- Updated dependencies [3d96fc4]
+- Updated dependencies [fcd12bf]
+- Updated dependencies [685f4ea]
+- Updated dependencies [f6e9cd2]
+- Updated dependencies [3335c89]
+- Updated dependencies [2da51d3]
+- Updated dependencies [685f4ea]
+- Updated dependencies [adfa5e1]
+- Updated dependencies [d833585]
+- Updated dependencies [9b934ac]
+- Updated dependencies [f6e9cd2]
+- Updated dependencies [f6e9cd2]
+- Updated dependencies [4cc6217]
+- Updated dependencies [9b19339]
+- Updated dependencies [e5fe094]
+- Updated dependencies [e5fe094]
+- Updated dependencies [09aa7f4]
+- Updated dependencies [c2df909]
+- Updated dependencies [274c4e4]
+- Updated dependencies [685f4ea]
+- Updated dependencies [adfa5e1]
+- Updated dependencies [6007c55]
+- Updated dependencies [f031c70]
+- Updated dependencies [9268474]
+  - @codeforamerica/blueprint-core@0.4.0
+  - @codeforamerica/blueprint-explorer@0.2.2
+  - @codeforamerica/blueprint-rules-engine@0.2.0
+
 ## 0.4.0
 
 ### Minor Changes

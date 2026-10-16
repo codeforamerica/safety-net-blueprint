@@ -1,5 +1,71 @@
 # Changelog
 
+## 0.4.0
+
+### Minor Changes
+
+- 2da51d3: **Breaking:** Where a config catalog was `queues: [...]`, write `queues: { resource: Queue, entries: [...] }`. Validation now fails when a seeded resource does not declare `source`, which the new shared `ConfigSource` in `base/schemas/enums.yaml` defines. (#470)
+- e5fe094: **Breaking:** Before, a route two contract documents declared was served from one of them silently, and an operation written by hand where a state machine transition or composition endpoint is generated was silently replaced by the generated one. Now the mock refuses to start and resolve refuses to generate, each naming both sources. (#470)
+- 9b19339: **Breaking:** The mock now validates in JSON Schema 2020-12, the dialect OpenAPI 3.1 contracts declare, so a request with a field a closed schema does not declare gets a 422 naming the field, where before `unevaluatedProperties: false` was ignored. (#461)
+- 3d96fc4: `runScenario` and `operationIndex`, from `./browser`, run an Arazzo scenario against the mock's `fetch` — or any fetch — step by step, returning each request, response and check, and refusing any Arazzo feature they do not support by name. (#470)
+- 6007c55: A scenario can now call the mock's own routes, such as registering a stub, by the operationIds in `contracts/mock-openapi.yaml` (`controlOperations(mock)` gives them to `runScenario`), with each step qualified as `$sourceDescriptions.<name>.<operationId>` when it names more than one source. (#470)
+- 590199a: **Breaking:** before, an event with no `traceparent`, `causationid`, `authid`, `authtype` or `data` carried each as `null`, and every event carried the store's `createdAt` and `updatedAt`. Now each absent attribute is left out, and an event's only timestamp is its `time`. (#470)
+- d833585: **Breaking:** Before, create, update and delete events were named from the path, as `intake.application_income.created` or `data_exchange.…`. Now they are named for the resource and the domain as declared: `intake.income.created`, `data-exchange.…`. (#470)
+- b482e18: Before, reaching a real service meant leaving the mock entirely. Now `blueprint-mock --forwarding=<file>`, or `createMockServer({ forwarding })`, sends a whole domain or a single endpoint to a real service while everything else stays mocked, passing credentials along only where `includeHeaders` names them; `schemas/forwarding-schema.json` describes the file. (#283)
+- f6e9cd2: Before, a create or update outside an action ran no guards. Now it runs the guards of every state machine that governs the resource under `resources:`, answering 403 or 409. (#470)
+- f6e9cd2: An operation that declares the `Idempotency-Key` header now honors it: a repeat with the same key gets the stored response marked `Idempotent-Replayed: true`, the same key with a different request gets 422 `IDEMPOTENCY_KEY_REUSED`, a missing required key gets 400 `IDEMPOTENCY_KEY_MISSING`, and keys are scoped to the caller. (#470)
+- b42da85: **Breaking:** Event stubs take `response` where they took `respond`, and both kinds of stub now answer `422` naming any key they do not recognize — before, a misspelled key registered, listed and then did nothing. `schemas/stubs-schema.json` describes both. (#283)
+- 276470d: **Breaking:** Before, a POST to a path with no list and no item stored a record. Now it answers 501 unless an HTTP stub stands in. (#470)
+- 274c4e4: **Breaking:** guard conditions, `if:` and `match:` steps, composition filters and `x-derived` fields are now evaluated as CEL by a spec-compliant implementation, where a regex translation to JavaScript ran them before. Write names without `$` (`object.status`, `reviewTask != null`), list membership as `x in list`, and test a field that may be absent with `has()`. (#445)
+- 1bda33d: `startScenario` runs an Arazzo scenario a step at a time on the same server, and a step can upload a file as `multipart/form-data`, with each part the operation declares as a file given as `{ fileName, contentType, content }`. (#470)
+- f6e9cd2: Before, a step's `call:` to a path with an id always ran an action, and an action's update steps were dropped. Now a call means what the API's route at that method and path means — a nested create, an update, or an action — and a path that means nothing is an error naming it. (#470)
+- 33a5fe1: Before, a store could only save a record through `create` or `insertResource`, both of which add `createdAt` and `updatedAt`, and `restore()` added them to snapshotted records that had none. Now a store implements `append(collection, record)`, which saves a record exactly as given, and `restore()` writes each record as the snapshot has it; a custom store without `append` keeps working. (#470)
+- b482e18: `blueprint-swagger` now accepts `--spec` more than once, and the package ships `contracts/mock-openapi.yaml` describing the mock's own endpoints — health, stubs, reset and reseed — to show beside a contract set with `--spec=node_modules/@codeforamerica/blueprint-mock-server/contracts`. (#283)
+
+### Patch Changes
+
+- 685f4ea: Before, a state machine's transitions were documented under its first machine's item path in the API its `apiSpec` named. Now each attaches to the resource it names, in whichever OpenAPI document of its domain declares it, so intake's Verification transitions appear under the verification. (#470)
+- 685f4ea: **Breaking:** Before, a document's domain could come from its folder, its filename prefix or the `Domain` enum, which each contract set extended by overlay. Now every document that belongs to a domain declares it (`info.x-domain` on OpenAPI and AsyncAPI, a top-level `domain` elsewhere, mock data included), `Domain` is generated from the domains OpenAPI, AsyncAPI and rules documents declare, and validation reports a document that declares none or names one nothing defines. (#470)
+- 09aa7f4: **Breaking:** Every registry type a contract set declares is now served at `/platform/registry/{type}` and `/platform/registry/{type}/{entryId}`, with `/platform/registry` listing the types, read from the registry files themselves — files of a type combine, and an entry id two of them define fails, naming both. `safety-net-contracts` no longer declares `/registry/policies`, which the generic endpoint serves at the same URL. (#470)
+- 685f4ea: **Breaking:** before, a ruleset had an endpoint only if it declared one, and the endpoints were merged into the domain's OpenAPI document. Now every ruleset must declare `endpoint: {path}`, and a rules file's endpoints are documented in an OpenAPI document resolve generates beside it (`intake-rules-openapi.yaml`, from `generate(docs, 'rules-api')`), so clients generated from the domain's document no longer include them. (#470)
+- 99f630d: Before, a mock that failed spec validation at boot said only "Validation failed" and pointed at `npm run validate`. Now the error lists each failure with its API.
+- b817b8e: Before, a request that failed validation in a browser came back as `500 INTERNAL_ERROR: process is not defined`. Now it returns the `422` naming the field, as it already did in Node. (#460)
+- 590199a: Before, events from a request with no `traceparent` shared no trace, and state machine transitions recorded no `authid` or `authtype`. Now such a request starts a trace that every event it causes carries, and transition events record who acted, with `authtype` set whenever `authid` is. (#470)
+- 6007c55: Before, an expanded relationship kept a foreign key the resolved schema drops, and a related record served at a path not named for it was never found. Now the response follows the resolved schema and the record is found wherever its API serves it. (#470)
+- f031c70: Before, a guarded action or create whose body was missing a field its condition read answered `409 No guard clause passed`, naming nothing. Now the body is checked against its schema first and answers 422, and a 409 reads as a sentence naming each unmet condition by the guard's new optional `description` or its id, or the states an action needs: `Can't pause this transcript. It requires that the transcript is recording, and it is closed.` (#470)
+- 33a5fe1: Before, `/workflow/metrics` reported `0` for every count and ratio metric whatever the store held, and `groupBy` failed for a metric over any collection but tasks and events. Now it counts every matching record, windows events by their `time`, and pairs a duration's events by `subject` unless `pairBy` names another field. (#470)
+- f6e9cd2: Before, a nested list ignored its `x-sortable`, a nested create was validated with its parent ids already in the body so a create schema allowing no extra fields refused it, and a JSON Logic binding searched only the first 25 records. Now a nested list is ordered as declared, the body is validated as sent, and a binding searches every record. (#470)
+- 1b9e684: Before, a nested list such as `/applications/{applicationId}/members` ignored `q` and returned every record under its parent. Now it searches with `q` the same way a top-level list does.
+- b482e18: Before, a contract declaring a path the mock serves itself, such as `/health` or `/mock/stubs/http`, was never reached. Now the mock refuses to start and names the route. (#283)
+- 276470d: Before, stubs registered on one mock server were still in place on the next one created in the same process. Now each server starts with none. (#470)
+- Updated dependencies [685f4ea]
+- Updated dependencies [3d96fc4]
+- Updated dependencies [fcd12bf]
+- Updated dependencies [685f4ea]
+- Updated dependencies [f6e9cd2]
+- Updated dependencies [3335c89]
+- Updated dependencies [2da51d3]
+- Updated dependencies [685f4ea]
+- Updated dependencies [adfa5e1]
+- Updated dependencies [d833585]
+- Updated dependencies [9b934ac]
+- Updated dependencies [f6e9cd2]
+- Updated dependencies [f6e9cd2]
+- Updated dependencies [4cc6217]
+- Updated dependencies [9b19339]
+- Updated dependencies [e5fe094]
+- Updated dependencies [e5fe094]
+- Updated dependencies [09aa7f4]
+- Updated dependencies [c2df909]
+- Updated dependencies [274c4e4]
+- Updated dependencies [685f4ea]
+- Updated dependencies [adfa5e1]
+- Updated dependencies [6007c55]
+- Updated dependencies [f031c70]
+- Updated dependencies [9268474]
+  - @codeforamerica/blueprint-core@0.4.0
+  - @codeforamerica/blueprint-rules-engine@0.2.0
+
 ## 0.3.0
 
 ### Minor Changes
