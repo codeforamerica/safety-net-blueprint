@@ -168,6 +168,24 @@ what the Explorer's graph view displays, so `abawdScreeningPrompt` reads and
 
 Facts may be declared in any order.
 
+### Functions Blueprint adds
+
+Standard CEL can test every item of a list but can't total one, and benefits
+rules total things all the time. Blueprint adds one function for it, defined
+the way [Kubernetes' CEL list library][k8s-cel-lists] defines it, so it is a
+known function rather than an invented one:
+
+| Function | Result |
+|---|---|
+| `list.sum()` | The total of a list of ints, uints or doubles, as the same type. An empty list sums to 0. A list mixing types is an error, not a promotion. |
+
+It composes with CEL's own macros — a member's earned income across all their
+jobs is
+`incomes.filter(i, i.memberId == m.id && i.source == 'earned').map(i, i.amount).sum()`.
+
+A ruleset that uses an added function can't be evaluated by an engine that has
+only standard CEL; see [Decision 4](../architecture/rules-contracts.md#decision-4-reference-implementation-not-a-mandated-engine).
+
 ### Grouping facts
 
 A ruleset with many outputs can group them with a dot, the way an input's
@@ -295,3 +313,4 @@ the right answer — that is what examples and the conformance corpus are for.
 [cel-datetime]: https://github.com/google/cel-spec/blob/master/doc/langdef.md#datetime-functions
 [cel]: https://cel.dev/
 [cel-langdef]: https://github.com/google/cel-spec/blob/master/doc/langdef.md
+[k8s-cel-lists]: https://kubernetes.io/docs/reference/using-api/cel/#kubernetes-list-library

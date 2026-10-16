@@ -15,7 +15,7 @@
  * the same language.
  */
 
-import { run, parse, plan, celEnv, celError, isCelError, isCelList, isCelMap } from '@bufbuild/cel';
+import { run, parse, plan, celEnv, celError, celMethod, celUint, isCelUint, listType, CelScalar, isCelError, isCelList, isCelMap } from '@bufbuild/cel';
 import { toJson } from '@bufbuild/protobuf';
 import { TimestampSchema, DurationSchema } from '@bufbuild/protobuf/wkt';
 
@@ -32,9 +32,46 @@ function protoMessage(val) {
   return val.$typeName ? val : (val.message?.$typeName ? val.message : null);
 }
 
+/**
+ * `list.sum()`: the total of a list of numbers.
+ *
+ * Standard CEL has no way to total a list, and benefits rules total things
+ * all the time — a member's earned income across jobs. Defined as Kubernetes
+ * defines it in its CEL list library, so it is a known function rather than
+ * one of ours: a list of ints sums to an int, of uints to a uint, of doubles
+ * to a double, and an empty list to 0. A list mixing types is an error, not a
+ * promotion, as CEL's own arithmetic is.
+ *
+ * Lists from JSON carry no element type, so the type is read from the
+ * elements, and an empty list's 0 is an int; comparing it with a double is
+ * still well defined in CEL.
+ *
+ * @this {Iterable<unknown>}
+ */
+function sum() {
+  let total = null;
+  let kind = null;
+  for (const item of this) {
+    const itemKind = typeof item === 'bigint' ? 'int' : isCelUint(item) ? 'uint' : typeof item === 'number' ? 'double' : null;
+    if (!itemKind) throw new Error(`sum() takes a list of numbers; found ${typeof item}`);
+    if (kind && itemKind !== kind) throw new Error(`sum() takes a list of one numeric type; found ${kind} and ${itemKind}`);
+    kind = itemKind;
+    const value = itemKind === 'uint' ? item.value : item;
+    total = total === null ? value : total + value;
+  }
+  if (kind === null) return 0n;
+  return kind === 'uint' ? celUint(total) : total;
+}
+
+/** Functions the blueprint adds to standard CEL. Documented in docs/guides/rules-guide.md. */
+const EXTENSIONS = [
+  celMethod('sum', listType(CelScalar.DYN), [], CelScalar.DYN, sum),
+];
+
 /** CEL's values as plain JavaScript: lists, maps, integers, timestamps and durations. */
 function celToJs(val) {
   if (typeof val === 'bigint') return Number(val);
+  if (isCelUint(val)) return Number(val.value);
   const message = protoMessage(val);
   const schema = message && WELL_KNOWN_JSON[message.$typeName];
   if (schema) return toJson(schema, message);
@@ -73,12 +110,12 @@ export function evaluateCEL(expr, context = {}) {
   let result;
   if (parsed) {
     try {
-      result = plan(celEnv(), expr)(bindings);
+      result = plan(celEnv({ funcs: EXTENSIONS }), expr)(bindings);
     } catch (e) {
       result = celError(e);
     }
   } else {
-    result = run(expr, bindings);
+    result = run(expr, bindings, { funcs: EXTENSIONS });
   }
   if (isCelError(result)) throw new Error(result.message);
   return celToJs(result);

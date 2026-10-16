@@ -209,6 +209,7 @@ The Explorer makes rules reviewable by non-engineers. A policy analyst can load 
 - Several states already have Corticon or IBM Cúram licenses. Mandating a different engine would block adoption.
 - The dependency graph model and evaluation contract (flat nodes map output shape — each fact keyed by name with `state`, `value`, and optional `missing` or `message` fields — and `$.path` input format) are the stable interfaces. The evaluator is an implementation of those interfaces. A state that uses Corticon in production can still use the reference evaluator in the browser and in development.
 - The reference implementation proves the model is sound and provides a working evaluator for development, testing, and browser-side use cases where a vendor engine isn't available.
+- Standard CEL is what any engine can be expected to evaluate, so baseline contracts use only standard CEL. Where it can't express something rules routinely need, Blueprint adds a function — today `list.sum()`, defined as Kubernetes defines it, since standard CEL can't total a list. Using an added function in an expression is what declares the dependency; a graph carries no separate flag. An engine that doesn't implement a function a graph uses must refuse the graph rather than approximate it, which standard CEL already does for an unknown function. Each added function is documented in the [Rules Guide](../guides/rules-guide.md#functions-blueprint-adds) precisely enough to implement elsewhere.
 
 **Options:**
 - **(A)** Mandate `blueprint-rules-engine` as the production evaluator
