@@ -16,7 +16,7 @@ import { executeTransition } from './state-machine-runner.js';
 import { applySteps, evaluateGuards } from './state-machine-engine.js';
 import { executeProcedures, resolveContextLayers } from './handlers/procedure-runner.js';
 import { emitEvent, emitEventEnvelope, authContext } from './emit-event.js';
-import { deriveCollectionName, mergeByPrecedence, buildInlineRules, toKebabCase } from './collection-utils.js';
+import { deriveCollectionName, mergeByPrecedence, buildInlineRules } from './collection-utils.js';
 
 /**
  * Test whether a CloudEvents type matches the `on:` field value.
@@ -24,6 +24,21 @@ import { deriveCollectionName, mergeByPrecedence, buildInlineRules, toKebabCase 
 function eventTypeMatches(eventType, onValue) {
   if (!onValue || !eventType) return false;
   return eventType === onValue;
+}
+
+/**
+ * The collection a machine's records are stored in, from the contracts' model:
+ * its resource's collection path, named the way the mock names it when it
+ * registers that resource's routes — a nested resource under its parent
+ * (`determination-decisions`). Null when the model has no resource for the
+ * machine; then there is no record to find, and none is guessed.
+ *
+ * @param {{ resource?: { path(part: string): string|null } | null }} smEntry
+ * @returns {string|null}
+ */
+function collectionOf(smEntry) {
+  const path = smEntry.resource?.path?.('collection');
+  return path ? deriveCollectionName(path, '') : null;
 }
 
 /**
@@ -35,9 +50,7 @@ function eventTypeMatches(eventType, onValue) {
 function findSmEntryForCollection(allStateMachines, domain, collection) {
   return allStateMachines.find(sm => {
     if (sm.domain !== domain) return false;
-    const kebabPlural = toKebabCase(sm.object) + 's';
-    // Also match sub-collection names like "application-verifications" → "verifications"
-    return kebabPlural === collection || collection.endsWith(`-${kebabPlural}`);
+    return collectionOf(sm) === collection;
   }) || null;
 }
 
@@ -233,7 +246,11 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
         let targetCollection = null;
         let originalSnapshot = null;
         if (entry.transition) {
-          targetCollection = toKebabCase(smEntry.machine.object) + 's';
+          targetCollection = collectionOf(smEntry);
+          if (!targetCollection) {
+            console.error(`Machine onEvent "${entry.type}": the contracts' model has no resource for ${smEntry.machine.object} — skipping`);
+            continue;
+          }
           const found = store.findById(targetCollection, event.subject);
           if (!found) {
             console.error(`Machine onEvent "${entry.type}": resource "${event.subject}" not found in ${targetCollection} — skipping`);
@@ -254,7 +271,8 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
           // machine no record of its own, and no $object: it reads the record's
           // id from this.subject and what the event carries from this.data.
           // The payload is never taken for the record.
-          const found = store.findById(toKebabCase(smEntry.machine.object) + 's', event.subject);
+          const collection = collectionOf(smEntry);
+          const found = collection && store.findById(collection, event.subject);
           if (found) resource = { ...found };
         }
 
