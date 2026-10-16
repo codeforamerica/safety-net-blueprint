@@ -7,10 +7,10 @@
   },
   "item": [
     {
-      "name": "Platform",
+      "name": "Events",
       "item": [
         {
-          "name": "List All Platform",
+          "name": "List All Events",
           "request": {
             "method": "GET",
             "header": [],
@@ -65,7 +65,7 @@
           ]
         },
         {
-          "name": "List Platform (Paginated)",
+          "name": "List Events (Paginated)",
           "request": {
             "method": "GET",
             "header": [],
@@ -470,7 +470,7 @@
           ]
         },
         {
-          "name": "Get Non-Existent Platform (404)",
+          "name": "Get Non-Existent Event (404)",
           "request": {
             "method": "GET",
             "header": [],
@@ -512,10 +512,10 @@
       "description": "Events"
     },
     {
-      "name": "Platform",
+      "name": "Registry",
       "item": [
         {
-          "name": "List All Platform",
+          "name": "List All Registry",
           "request": {
             "method": "GET",
             "header": [],
@@ -570,7 +570,7 @@
           ]
         },
         {
-          "name": "List Platform (Paginated)",
+          "name": "List Registry (Paginated)",
           "request": {
             "method": "GET",
             "header": [],
@@ -625,22 +625,34 @@
           ]
         },
         {
-          "name": "Get Non-Existent Platform (404)",
+          "name": "List All Registry",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/platform/registry/00000000-0000-0000-0000-000000000000",
+              "raw": "{{baseUrl}}/platform/registry/{{type}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "platform",
                 "registry",
-                "00000000-0000-0000-0000-000000000000"
+                "{{type}}"
               ],
               "variables": [
                 "type"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Maximum number of items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of items to skip"
+                }
               ]
             }
           },
@@ -649,14 +661,21 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 404\", function () {",
-                  "    pm.response.to.have.status(404);",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Error response has code and message\", function () {",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
                   "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('code');",
-                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
                   "});"
                 ]
               }
@@ -664,20 +683,131 @@
           ]
         },
         {
-          "name": "Get Non-Existent Platform (404)",
+          "name": "List Registry (Paginated)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/platform/registry/00000000-0000-0000-0000-000000000000/{{entryId}}",
+              "raw": "{{baseUrl}}/platform/registry/{{type}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "platform",
                 "registry",
-                "00000000-0000-0000-0000-000000000000",
-                "{{entryId}}"
+                "{{type}}"
+              ],
+              "variables": [
+                "type"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "Get only 2 items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter by type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/platform/registry/{{type}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "registry",
+                "{{type}}"
+              ],
+              "variables": [
+                "type"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "example",
+                  "description": "A registry type the contracts declare, e.g. `policies`."
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Registry (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/platform/registry/{{type}}/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "platform",
+                "registry",
+                "{{type}}",
+                "00000000-0000-0000-0000-000000000000"
               ],
               "variables": [
                 "type",
@@ -708,10 +838,10 @@
       "description": "Registries"
     },
     {
-      "name": "Transcription",
+      "name": "Profiles",
       "item": [
         {
-          "name": "List All Transcription",
+          "name": "List All Profiles",
           "request": {
             "method": "GET",
             "header": [],
@@ -766,7 +896,7 @@
           ]
         },
         {
-          "name": "List Transcription (Paginated)",
+          "name": "List Profiles (Paginated)",
           "request": {
             "method": "GET",
             "header": [],
@@ -821,30 +951,30 @@
           ]
         },
         {
-          "name": "List All Transcription",
+          "name": "Search Profiles",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/transcription/transcripts",
+              "raw": "{{baseUrl}}/transcription/profiles",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "transcription",
-                "transcripts"
+                "profiles"
               ],
               "variables": [],
               "query": [
                 {
-                  "key": "limit",
-                  "value": "25",
-                  "description": "Maximum number of items"
+                  "key": "q",
+                  "value": "*english*",
+                  "description": "Search query (contains match)"
                 },
                 {
-                  "key": "offset",
-                  "value": "0",
-                  "description": "Number of items to skip"
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Maximum results"
                 }
               ]
             }
@@ -876,31 +1006,22 @@
           ]
         },
         {
-          "name": "List Transcription (Paginated)",
+          "name": "Get TranscriptionProfile english",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/transcription/transcripts",
+              "raw": "{{baseUrl}}/transcription/profiles/7a1e0c2d-0000-4000-8000-0000000000b1",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "transcription",
-                "transcripts"
+                "profiles",
+                "7a1e0c2d-0000-4000-8000-0000000000b1"
               ],
-              "variables": [],
-              "query": [
-                {
-                  "key": "limit",
-                  "value": "2",
-                  "description": "Get only 2 items"
-                },
-                {
-                  "key": "offset",
-                  "value": "0",
-                  "description": "Start from beginning"
-                }
+              "variables": [
+                "profileId"
               ]
             }
           },
@@ -917,13 +1038,9 @@
                   "    pm.response.to.be.json;",
                   "});",
                   "",
-                  "pm.test(\"Response has required list properties\", function () {",
+                  "pm.test(\"Response has id property\", function () {",
                   "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('items');",
-                  "    pm.expect(jsonData).to.have.property('total');",
-                  "    pm.expect(jsonData).to.have.property('limit');",
-                  "    pm.expect(jsonData).to.have.property('offset');",
-                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "    pm.expect(jsonData).to.have.property('id');",
                   "});"
                 ]
               }
@@ -931,22 +1048,22 @@
           ]
         },
         {
-          "name": "Get Non-Existent Transcription (404)",
+          "name": "Get TranscriptionProfile english-or-spanish",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/transcription/transcripts/00000000-0000-0000-0000-000000000000",
+              "raw": "{{baseUrl}}/transcription/profiles/7a1e0c2d-0000-4000-8000-0000000000b2",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "transcription",
-                "transcripts",
-                "00000000-0000-0000-0000-000000000000"
+                "profiles",
+                "7a1e0c2d-0000-4000-8000-0000000000b2"
               ],
               "variables": [
-                "transcriptId"
+                "profileId"
               ]
             }
           },
@@ -955,14 +1072,17 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 404\", function () {",
-                  "    pm.response.to.have.status(404);",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Error response has code and message\", function () {",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
                   "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('code');",
-                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData).to.have.property('id');",
                   "});"
                 ]
               }
@@ -970,23 +1090,22 @@
           ]
         },
         {
-          "name": "Get Non-Existent Transcription (404)",
+          "name": "Get TranscriptionProfile typed",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/transcription/transcripts/00000000-0000-0000-0000-000000000000/entries",
+              "raw": "{{baseUrl}}/transcription/profiles/7a1e0c2d-0000-4000-8000-0000000000b3",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "transcription",
-                "transcripts",
-                "00000000-0000-0000-0000-000000000000",
-                "entries"
+                "profiles",
+                "7a1e0c2d-0000-4000-8000-0000000000b3"
               ],
               "variables": [
-                "transcriptId"
+                "profileId"
               ]
             }
           },
@@ -995,14 +1114,17 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 404\", function () {",
-                  "    pm.response.to.have.status(404);",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Error response has code and message\", function () {",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
                   "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('code');",
-                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData).to.have.property('id');",
                   "});"
                 ]
               }
@@ -1010,49 +1132,7 @@
           ]
         },
         {
-          "name": "Get Non-Existent Transcription (404)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/transcription/transcripts/00000000-0000-0000-0000-000000000000/entries/{{entryId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "transcription",
-                "transcripts",
-                "00000000-0000-0000-0000-000000000000",
-                "entries",
-                "{{entryId}}"
-              ],
-              "variables": [
-                "transcriptId",
-                "entryId"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 404\", function () {",
-                  "    pm.response.to.have.status(404);",
-                  "});",
-                  "",
-                  "pm.test(\"Error response has code and message\", function () {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('code');",
-                  "    pm.expect(jsonData).to.have.property('message');",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Get Non-Existent Transcription (404)",
+          "name": "Get Non-Existent Profile (404)",
           "request": {
             "method": "GET",
             "header": [],
@@ -1091,7 +1171,1355 @@
           ]
         },
         {
-          "name": "Pause Transcription",
+          "name": "Create Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/profiles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "profiles"
+              ],
+              "variables": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"english\",\n  \"description\": \"An interview in English.\",\n  \"provider\": \"aws-transcribe\",\n  \"languages\": [\n    \"en-US\"\n  ],\n  \"idleTimeout\": \"PT30M\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create a new profile with example data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Profile (Alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/profiles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "profiles"
+              ],
+              "variables": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"english-or-spanish\",\n  \"description\": \"An interview in English, Spanish, or both — the service tells which is being spoken.\",\n  \"provider\": \"aws-transcribe\",\n  \"languages\": [\n    \"en-US\",\n    \"es-US\"\n  ],\n  \"idleTimeout\": \"PT30M\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create another profile with different data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Profile - Multiple Fields",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/profiles/7a1e0c2d-0000-4000-8000-0000000000b1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "profiles",
+                "7a1e0c2d-0000-4000-8000-0000000000b1"
+              ],
+              "variables": [
+                "profileId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"english\",\n  \"description\": \"An interview in English.\",\n  \"provider\": \"aws-transcribe\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Update multiple fields of TranscriptionProfile english"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has updatedAt timestamp\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Transcripts"
+    },
+    {
+      "name": "Transcripts",
+      "item": [
+        {
+          "name": "List All Transcripts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Maximum number of items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of items to skip"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Transcripts (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "Get only 2 items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search Transcripts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "*test*",
+                  "description": "Search query (contains match)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Maximum results"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get TranscriptExample1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000001"
+              ],
+              "variables": [
+                "transcriptId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get TranscriptExample2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000002",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000002"
+              ],
+              "variables": [
+                "transcriptId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Transcript (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "00000000-0000-0000-0000-000000000000"
+              ],
+              "variables": [
+                "transcriptId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Error response has code and message\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('code');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List All Transcripts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001/entries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000001",
+                "entries"
+              ],
+              "variables": [
+                "transcriptId"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Maximum number of items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of items to skip"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Transcripts (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001/entries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000001",
+                "entries"
+              ],
+              "variables": [
+                "transcriptId"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "Get only 2 items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter by transcriptId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001/entries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000001",
+                "entries"
+              ],
+              "variables": [
+                "transcriptId"
+              ],
+              "query": [
+                {
+                  "key": "transcriptId",
+                  "value": "example",
+                  "description": "Unique identifier of the transcript."
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter by kind",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001/entries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000001",
+                "entries"
+              ],
+              "variables": [
+                "transcriptId"
+              ],
+              "query": [
+                {
+                  "key": "kind",
+                  "value": "example",
+                  "description": "Only entries of this kind."
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get TranscriptEntryExample1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001/entries/7a1e0c2d-0000-4000-8000-0000000000e1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000001",
+                "entries",
+                "7a1e0c2d-0000-4000-8000-0000000000e1"
+              ],
+              "variables": [
+                "transcriptId",
+                "entryId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get TranscriptEntryExample2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001/entries/7a1e0c2d-0000-4000-8000-0000000000e2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000001",
+                "entries",
+                "7a1e0c2d-0000-4000-8000-0000000000e2"
+              ],
+              "variables": [
+                "transcriptId",
+                "entryId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get TranscriptEntryExample3",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001/entries/7a1e0c2d-0000-4000-8000-0000000000e3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000001",
+                "entries",
+                "7a1e0c2d-0000-4000-8000-0000000000e3"
+              ],
+              "variables": [
+                "transcriptId",
+                "entryId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get TranscriptEntryExample4",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001/entries/7a1e0c2d-0000-4000-8000-0000000000e4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000001",
+                "entries",
+                "7a1e0c2d-0000-4000-8000-0000000000e4"
+              ],
+              "variables": [
+                "transcriptId",
+                "entryId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Transcript (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001/entries/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000001",
+                "entries",
+                "00000000-0000-0000-0000-000000000000"
+              ],
+              "variables": [
+                "transcriptId",
+                "entryId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Error response has code and message\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('code');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Transcript",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts"
+              ],
+              "variables": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectType\": \"interview\",\n  \"subjectId\": \"7a1e0c2d-0000-4000-8000-0000000000a1\",\n  \"profileId\": \"7a1e0c2d-0000-4000-8000-0000000000b1\",\n  \"model\": \"standard\",\n  \"client\": \"interview-assistant/0.1.0\",\n  \"status\": \"recording\",\n  \"startedAt\": \"2026-10-11T14:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create a new transcript with example data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Transcript (Alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts"
+              ],
+              "variables": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectType\": \"chat\",\n  \"subjectId\": \"7a1e0c2d-0000-4000-8000-0000000000a2\",\n  \"profileId\": \"7a1e0c2d-0000-4000-8000-0000000000b3\",\n  \"client\": \"webchat/2.1.0\",\n  \"status\": \"closed\",\n  \"startedAt\": \"2026-10-09T09:50:00Z\",\n  \"closedAt\": \"2026-10-09T10:12:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create another transcript with different data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Transcript",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001/entries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000001",
+                "entries"
+              ],
+              "variables": [
+                "transcriptId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transcriptId\": \"7a1e0c2d-0000-4000-8000-000000000001\",\n  \"kind\": \"line\",\n  \"startedAt\": \"2026-10-11T14:00:05Z\",\n  \"endedAt\": \"2026-10-11T14:00:09Z\",\n  \"text\": \"Thanks for coming in. Can you tell me who lives in your household?\",\n  \"speaker\": \"staff\",\n  \"speakerLabel\": \"spk_0\",\n  \"confidence\": 0.96\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create a new transcript with example data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Transcript (Alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001/entries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000001",
+                "entries"
+              ],
+              "variables": [
+                "transcriptId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transcriptId\": \"7a1e0c2d-0000-4000-8000-000000000001\",\n  \"kind\": \"line\",\n  \"startedAt\": \"2026-10-11T14:00:11Z\",\n  \"endedAt\": \"2026-10-11T14:00:16Z\",\n  \"text\": \"It's me and my two kids, and my mother stays with us most weeks.\",\n  \"speaker\": \"client\",\n  \"speakerLabel\": \"spk_1\",\n  \"confidence\": 0.91\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create another transcript with different data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Transcript - Multiple Fields",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000001"
+              ],
+              "variables": [
+                "transcriptId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectType\": \"interview\",\n  \"subjectId\": \"7a1e0c2d-0000-4000-8000-0000000000a1\",\n  \"profileId\": \"7a1e0c2d-0000-4000-8000-0000000000b1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Update multiple fields of TranscriptExample1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has updatedAt timestamp\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Transcript - Single Field",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001/entries/7a1e0c2d-0000-4000-8000-0000000000e1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000001",
+                "entries",
+                "7a1e0c2d-0000-4000-8000-0000000000e1"
+              ],
+              "variables": [
+                "transcriptId",
+                "entryId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confidence\": 100.96\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Update a single field of TranscriptEntryExample1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has updatedAt timestamp\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Transcript - Multiple Fields",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001/entries/7a1e0c2d-0000-4000-8000-0000000000e1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000001",
+                "entries",
+                "7a1e0c2d-0000-4000-8000-0000000000e1"
+              ],
+              "variables": [
+                "transcriptId",
+                "entryId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transcriptId\": \"7a1e0c2d-0000-4000-8000-000000000001\",\n  \"kind\": \"line\",\n  \"startedAt\": \"2026-10-11T14:00:05Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Update multiple fields of TranscriptEntryExample1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has updatedAt timestamp\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Transcript",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000002",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transcription",
+                "transcripts",
+                "7a1e0c2d-0000-4000-8000-000000000002"
+              ],
+              "variables": [
+                "transcriptId"
+              ]
+            },
+            "description": "Delete TranscriptExample2"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pause Transcript",
           "request": {
             "method": "POST",
             "header": [
@@ -1102,14 +2530,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/transcription/transcripts/a1b2c3d4-e5f6-7890-abcd-ef1234567890/pause",
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001/pause",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "transcription",
                 "transcripts",
-                "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                "7a1e0c2d-0000-4000-8000-000000000001",
                 "pause"
               ],
               "variables": [
@@ -1137,7 +2565,7 @@
           ]
         },
         {
-          "name": "Resume Transcription",
+          "name": "Resume Transcript",
           "request": {
             "method": "POST",
             "header": [
@@ -1148,14 +2576,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/transcription/transcripts/a1b2c3d4-e5f6-7890-abcd-ef1234567890/resume",
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001/resume",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "transcription",
                 "transcripts",
-                "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                "7a1e0c2d-0000-4000-8000-000000000001",
                 "resume"
               ],
               "variables": [
@@ -1183,7 +2611,7 @@
           ]
         },
         {
-          "name": "Close Transcription",
+          "name": "Close Transcript",
           "request": {
             "method": "POST",
             "header": [
@@ -1194,14 +2622,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/transcription/transcripts/a1b2c3d4-e5f6-7890-abcd-ef1234567890/close",
+              "raw": "{{baseUrl}}/transcription/transcripts/7a1e0c2d-0000-4000-8000-000000000001/close",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "transcription",
                 "transcripts",
-                "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                "7a1e0c2d-0000-4000-8000-000000000001",
                 "close"
               ],
               "variables": [
@@ -1232,10 +2660,10 @@
       "description": "Transcripts"
     },
     {
-      "name": "Document-management",
+      "name": "Documents",
       "item": [
         {
-          "name": "List All Document-management",
+          "name": "List All Documents",
           "request": {
             "method": "GET",
             "header": [],
@@ -1290,7 +2718,7 @@
           ]
         },
         {
-          "name": "List Document-management (Paginated)",
+          "name": "List Documents (Paginated)",
           "request": {
             "method": "GET",
             "header": [],
@@ -1345,7 +2773,7 @@
           ]
         },
         {
-          "name": "Get Non-Existent Document-management (404)",
+          "name": "Get Non-Existent Document (404)",
           "request": {
             "method": "GET",
             "header": [],
@@ -1387,10 +2815,10 @@
       "description": "Document Management API"
     },
     {
-      "name": "Eligibility",
+      "name": "Determinations",
       "item": [
         {
-          "name": "List All Eligibility",
+          "name": "List All Determinations",
           "request": {
             "method": "GET",
             "header": [],
@@ -1445,7 +2873,7 @@
           ]
         },
         {
-          "name": "List Eligibility (Paginated)",
+          "name": "List Determinations (Paginated)",
           "request": {
             "method": "GET",
             "header": [],
@@ -1469,6 +2897,61 @@
                   "key": "offset",
                   "value": "0",
                   "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search Determinations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/eligibility/determinations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "eligibility",
+                "determinations"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "*test*",
+                  "description": "Search query (contains match)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Maximum results"
                 }
               ]
             }
@@ -1600,7 +3083,49 @@
           ]
         },
         {
-          "name": "Get Non-Existent Eligibility (404)",
+          "name": "Get DeterminationExample1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/eligibility/determinations/33333333-3333-4333-8333-333333333333",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "eligibility",
+                "determinations",
+                "33333333-3333-4333-8333-333333333333"
+              ],
+              "variables": [
+                "determinationId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Determination (404)",
           "request": {
             "method": "GET",
             "header": [],
@@ -1639,23 +3164,35 @@
           ]
         },
         {
-          "name": "Get Non-Existent Eligibility (404)",
+          "name": "List All Determinations",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/eligibility/determinations/00000000-0000-0000-0000-000000000000/decisions",
+              "raw": "{{baseUrl}}/eligibility/determinations/{{determinationId}}/decisions",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "eligibility",
                 "determinations",
-                "00000000-0000-0000-0000-000000000000",
+                "{{determinationId}}",
                 "decisions"
               ],
               "variables": [
                 "determinationId"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Maximum number of items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of items to skip"
+                }
               ]
             }
           },
@@ -1664,14 +3201,21 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 404\", function () {",
-                  "    pm.response.to.have.status(404);",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Error response has code and message\", function () {",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
                   "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('code');",
-                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
                   "});"
                 ]
               }
@@ -1679,21 +3223,134 @@
           ]
         },
         {
-          "name": "Get Non-Existent Eligibility (404)",
+          "name": "List Determinations (Paginated)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/eligibility/determinations/00000000-0000-0000-0000-000000000000/decisions/{{decisionId}}",
+              "raw": "{{baseUrl}}/eligibility/determinations/{{determinationId}}/decisions",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "eligibility",
                 "determinations",
-                "00000000-0000-0000-0000-000000000000",
+                "{{determinationId}}",
+                "decisions"
+              ],
+              "variables": [
+                "determinationId"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "Get only 2 items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter by determinationId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/eligibility/determinations/{{determinationId}}/decisions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "eligibility",
+                "determinations",
+                "{{determinationId}}",
+                "decisions"
+              ],
+              "variables": [
+                "determinationId"
+              ],
+              "query": [
+                {
+                  "key": "determinationId",
+                  "value": "example",
+                  "description": "Unique identifier of the determination."
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Determination (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/eligibility/determinations/{{determinationId}}/decisions/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "eligibility",
+                "determinations",
+                "{{determinationId}}",
                 "decisions",
-                "{{decisionId}}"
+                "00000000-0000-0000-0000-000000000000"
               ],
               "variables": [
                 "determinationId",
@@ -1721,7 +3378,118 @@
           ]
         },
         {
-          "name": "Complete Eligibility",
+          "name": "Create Determination",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/eligibility/determinations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "eligibility",
+                "determinations"
+              ],
+              "variables": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"11111111-1111-4111-8111-111111111111\",\n  \"status\": \"pending\",\n  \"expedited\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create a new determination with example data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Determination - Multiple Fields",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/eligibility/determinations/33333333-3333-4333-8333-333333333333",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "eligibility",
+                "determinations",
+                "33333333-3333-4333-8333-333333333333"
+              ],
+              "variables": [
+                "determinationId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"11111111-1111-4111-8111-111111111111\",\n  \"status\": \"pending\",\n  \"expedited\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Update multiple fields of DeterminationExample1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has updatedAt timestamp\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete Determination",
           "request": {
             "method": "POST",
             "header": [
@@ -1732,14 +3500,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/eligibility/determinations/{{determinationId}}/complete",
+              "raw": "{{baseUrl}}/eligibility/determinations/33333333-3333-4333-8333-333333333333/complete",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "eligibility",
                 "determinations",
-                "{{determinationId}}",
+                "33333333-3333-4333-8333-333333333333",
                 "complete"
               ],
               "variables": [
@@ -1775,10 +3543,10 @@
       "description": "Eligibility rules"
     },
     {
-      "name": "Intake",
+      "name": "Applications",
       "item": [
         {
-          "name": "List All Intake",
+          "name": "List All Applications",
           "request": {
             "method": "GET",
             "header": [],
@@ -1833,7 +3601,7 @@
           ]
         },
         {
-          "name": "List Intake (Paginated)",
+          "name": "List Applications (Paginated)",
           "request": {
             "method": "GET",
             "header": [],
@@ -1857,6 +3625,61 @@
                   "key": "offset",
                   "value": "0",
                   "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search Applications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications"
+              ],
+              "variables": [],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "*test*",
+                  "description": "Search query (contains match)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Maximum results"
                 }
               ]
             }
@@ -1988,7 +3811,91 @@
           ]
         },
         {
-          "name": "Get Non-Existent Intake (404)",
+          "name": "Get ApplicationExample1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111"
+              ],
+              "variables": [
+                "applicationId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get ApplicationExample2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/22222222-2222-4222-8222-222222222222",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "22222222-2222-4222-8222-222222222222"
+              ],
+              "variables": [
+                "applicationId"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id property\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Application (404)",
           "request": {
             "method": "GET",
             "header": [],
@@ -2027,23 +3934,35 @@
           ]
         },
         {
-          "name": "Get Non-Existent Intake (404)",
+          "name": "List All Applications",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/00000000-0000-0000-0000-000000000000/members",
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/members",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "intake",
                 "applications",
-                "00000000-0000-0000-0000-000000000000",
+                "{{applicationId}}",
                 "members"
               ],
               "variables": [
                 "applicationId"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Maximum number of items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of items to skip"
+                }
               ]
             }
           },
@@ -2052,14 +3971,21 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 404\", function () {",
-                  "    pm.response.to.have.status(404);",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Error response has code and message\", function () {",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
                   "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('code');",
-                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
                   "});"
                 ]
               }
@@ -2067,21 +3993,134 @@
           ]
         },
         {
-          "name": "Get Non-Existent Intake (404)",
+          "name": "List Applications (Paginated)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/00000000-0000-0000-0000-000000000000/members/{{memberId}}",
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/members",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "intake",
                 "applications",
-                "00000000-0000-0000-0000-000000000000",
+                "{{applicationId}}",
+                "members"
+              ],
+              "variables": [
+                "applicationId"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "Get only 2 items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter by applicationId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{applicationId}}",
+                "members"
+              ],
+              "variables": [
+                "applicationId"
+              ],
+              "query": [
+                {
+                  "key": "applicationId",
+                  "value": "example",
+                  "description": "Unique identifier of the application."
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Application (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/members/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{applicationId}}",
                 "members",
-                "{{memberId}}"
+                "00000000-0000-0000-0000-000000000000"
               ],
               "variables": [
                 "applicationId",
@@ -2109,7 +4148,7 @@
           ]
         },
         {
-          "name": "Get Non-Existent Intake (404)",
+          "name": "Get Non-Existent Application (404)",
           "request": {
             "method": "GET",
             "header": [],
@@ -2149,7 +4188,7 @@
           ]
         },
         {
-          "name": "Get Non-Existent Intake (404)",
+          "name": "Get Non-Existent Application (404)",
           "request": {
             "method": "GET",
             "header": [],
@@ -2189,7 +4228,7 @@
           ]
         },
         {
-          "name": "Get Non-Existent Intake (404)",
+          "name": "Get Non-Existent Application (404)",
           "request": {
             "method": "GET",
             "header": [],
@@ -2230,7 +4269,7 @@
           ]
         },
         {
-          "name": "Get Non-Existent Intake (404)",
+          "name": "Get Non-Existent Application (404)",
           "request": {
             "method": "GET",
             "header": [],
@@ -2271,25 +4310,37 @@
           ]
         },
         {
-          "name": "Get Non-Existent Intake (404)",
+          "name": "List All Applications",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/00000000-0000-0000-0000-000000000000/review-progress/{{section}}",
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/review-progress/{{section}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "intake",
                 "applications",
-                "00000000-0000-0000-0000-000000000000",
+                "{{applicationId}}",
                 "review-progress",
                 "{{section}}"
               ],
               "variables": [
                 "applicationId",
                 "section"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "25",
+                  "description": "Maximum number of items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Number of items to skip"
+                }
               ]
             }
           },
@@ -2298,14 +4349,21 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 404\", function () {",
-                  "    pm.response.to.have.status(404);",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Error response has code and message\", function () {",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
                   "    const jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('code');",
-                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
                   "});"
                 ]
               }
@@ -2313,22 +4371,195 @@
           ]
         },
         {
-          "name": "Get Non-Existent Intake (404)",
+          "name": "List Applications (Paginated)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/00000000-0000-0000-0000-000000000000/review-progress/{{section}}/{{itemId}}",
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/review-progress/{{section}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "intake",
                 "applications",
-                "00000000-0000-0000-0000-000000000000",
+                "{{applicationId}}",
+                "review-progress",
+                "{{section}}"
+              ],
+              "variables": [
+                "applicationId",
+                "section"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2",
+                  "description": "Get only 2 items"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Start from beginning"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter by applicationId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/review-progress/{{section}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{applicationId}}",
+                "review-progress",
+                "{{section}}"
+              ],
+              "variables": [
+                "applicationId",
+                "section"
+              ],
+              "query": [
+                {
+                  "key": "applicationId",
+                  "value": "example",
+                  "description": "Unique identifier of the application."
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter by section",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/review-progress/{{section}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{applicationId}}",
+                "review-progress",
+                "{{section}}"
+              ],
+              "variables": [
+                "applicationId",
+                "section"
+              ],
+              "query": [
+                {
+                  "key": "section",
+                  "value": "example",
+                  "description": "Section name within the sectionView composition."
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required list properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('items');",
+                  "    pm.expect(jsonData).to.have.property('total');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('offset');",
+                  "    pm.expect(jsonData.items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Non-Existent Application (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/review-progress/{{section}}/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "{{applicationId}}",
                 "review-progress",
                 "{{section}}",
-                "{{itemId}}"
+                "00000000-0000-0000-0000-000000000000"
               ],
               "variables": [
                 "applicationId",
@@ -2357,7 +4588,209 @@
           ]
         },
         {
-          "name": "Submit Intake",
+          "name": "Create Application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications"
+              ],
+              "variables": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"submitted\",\n  \"programsAppliedFor\": [\n    \"snap\"\n  ],\n  \"channel\": \"online\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create a new application with example data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Application (Alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications"
+              ],
+              "variables": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"draft\",\n  \"programsAppliedFor\": [\n    \"snap\",\n    \"medicaid\"\n  ],\n  \"channel\": \"phone\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Create another application with different data"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has id and timestamps\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Location header is present\", function () {",
+                  "    pm.response.to.have.header(\"Location\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Application - Multiple Fields",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/11111111-1111-4111-8111-111111111111",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "11111111-1111-4111-8111-111111111111"
+              ],
+              "variables": [
+                "applicationId"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"submitted\",\n  \"channel\": \"online\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Update multiple fields of ApplicationExample1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has updatedAt timestamp\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Application",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/intake/applications/22222222-2222-4222-8222-222222222222",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "intake",
+                "applications",
+                "22222222-2222-4222-8222-222222222222"
+              ],
+              "variables": [
+                "applicationId"
+              ]
+            },
+            "description": "Delete ApplicationExample2"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit Application",
           "request": {
             "method": "POST",
             "header": [
@@ -2368,14 +4801,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/submit",
+              "raw": "{{baseUrl}}/intake/applications/22222222-2222-4222-8222-222222222222/submit",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "intake",
                 "applications",
-                "{{applicationId}}",
+                "22222222-2222-4222-8222-222222222222",
                 "submit"
               ],
               "variables": [
@@ -2403,7 +4836,7 @@
           ]
         },
         {
-          "name": "Open Intake",
+          "name": "Open Application",
           "request": {
             "method": "POST",
             "header": [
@@ -2414,14 +4847,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/open",
+              "raw": "{{baseUrl}}/intake/applications/22222222-2222-4222-8222-222222222222/open",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "intake",
                 "applications",
-                "{{applicationId}}",
+                "22222222-2222-4222-8222-222222222222",
                 "open"
               ],
               "variables": [
@@ -2449,7 +4882,7 @@
           ]
         },
         {
-          "name": "Close Intake",
+          "name": "Close Application",
           "request": {
             "method": "POST",
             "header": [
@@ -2460,14 +4893,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/close",
+              "raw": "{{baseUrl}}/intake/applications/22222222-2222-4222-8222-222222222222/close",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "intake",
                 "applications",
-                "{{applicationId}}",
+                "22222222-2222-4222-8222-222222222222",
                 "close"
               ],
               "variables": [
@@ -2495,7 +4928,7 @@
           ]
         },
         {
-          "name": "Withdraw Intake (409 Conflict)",
+          "name": "Withdraw Application (409 Conflict)",
           "request": {
             "method": "POST",
             "header": [
@@ -2506,14 +4939,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/intake/applications/{{applicationId}}/withdraw",
+              "raw": "{{baseUrl}}/intake/applications/22222222-2222-4222-8222-222222222222/withdraw",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "intake",
                 "applications",
-                "{{applicationId}}",
+                "22222222-2222-4222-8222-222222222222",
                 "withdraw"
               ],
               "variables": [
@@ -2551,13 +4984,33 @@
       "type": "string"
     },
     {
-      "key": "callerId",
-      "value": "postman-test-user",
+      "key": "profileId",
+      "value": "7a1e0c2d-0000-4000-8000-0000000000b1",
+      "type": "string"
+    },
+    {
+      "key": "transcriptId",
+      "value": "7a1e0c2d-0000-4000-8000-000000000001",
       "type": "string"
     },
     {
       "key": "callerId",
       "value": "postman-test-user",
+      "type": "string"
+    },
+    {
+      "key": "determinationId",
+      "value": "33333333-3333-4333-8333-333333333333",
+      "type": "string"
+    },
+    {
+      "key": "callerId",
+      "value": "postman-test-user",
+      "type": "string"
+    },
+    {
+      "key": "applicationId",
+      "value": "11111111-1111-4111-8111-111111111111",
       "type": "string"
     },
     {

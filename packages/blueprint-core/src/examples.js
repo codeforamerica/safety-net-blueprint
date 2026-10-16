@@ -17,7 +17,7 @@
  */
 
 import { fileNameOf } from './contract-types.js';
-import { collectionToSchemaPrefix, extractIndividualResources } from './openapi/utils.js';
+import { extractIndividualResources } from './openapi/utils.js';
 
 /**
  * @param {import('../../types.js').Doc[]} docs
@@ -65,25 +65,6 @@ export function examplesForSchema(examples, schema, schemas) {
   }
 
   return extractIndividualResources(filtered);
-}
-
-/**
- * The examples belonging to one collection.
- *
- * Kept for the Postman builder, which works in collections and asks per
- * endpoint rather than taking the whole grouping.
- *
- * @param {Record<string, unknown>} examples - Every example for the API
- * @param {string} collection - The collection to select for
- * @param {string[]} collections - Every collection on the API, for disambiguation
- * @returns {Array<{ key: string, name: string, data: object }>}
- */
-export function examplesForCollection(examples, collection, collections) {
-  return examplesForSchema(
-    examples,
-    collectionToSchemaPrefix(collection),
-    collections.map(collectionToSchemaPrefix)
-  );
 }
 
 /**
