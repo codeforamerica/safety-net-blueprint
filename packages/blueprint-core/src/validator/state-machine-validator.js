@@ -313,7 +313,14 @@ function checkGuardClauses(guards, path, validRoles, guardIds) {
   for (const guard of (guards || [])) {
     for (const actor of (guard.actors || [])) {
       if (!validRoles.has(actor)) {
-        errors.push({ rule: 'invalid-actor-role', message: `Invalid actor role "${actor}" (valid: ${[...validRoles].join(', ')})`, path });
+        // Usually a missing overlay, not a broken contract: a contract set adds
+        // its roles by overlaying RoleType, and a package's contracts need the
+        // package's own overlays applied.
+        errors.push({
+          rule: 'invalid-actor-role',
+          message: `Actor role "${actor}" isn't in RoleType, which has: ${[...validRoles].join(', ')}. Roles beyond these are added by an overlay on RoleType in base/schemas/enums.yaml; contracts from a package need that package's own overlays applied (--overlay=<package>/src/overlays, before your own).`,
+          path,
+        });
       }
     }
     for (const condId of extractConditionIds(guard.conditions)) {

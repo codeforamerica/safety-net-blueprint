@@ -57,15 +57,17 @@ resolved/
 ```json
 {
   "scripts": {
-    "resolve": "blueprint-resolve --spec=./node_modules/@codeforamerica/blueprint-safety-net-contracts --overlay=./overlays --out=./resolved",
-    "resolve:prod": "blueprint-resolve --spec=./node_modules/@codeforamerica/blueprint-safety-net-contracts --overlay=./overlays --out=./resolved --env-target=production --env-variables=.env",
-    "validate": "blueprint-validate --spec=./resolved --skip-examples",
+    "resolve": "blueprint-resolve --spec=./node_modules/@codeforamerica/blueprint-safety-net-contracts/src --overlay=./node_modules/@codeforamerica/blueprint-safety-net-contracts/src/overlays --overlay=./overlays --out=./resolved",
+    "resolve:prod": "blueprint-resolve --spec=./node_modules/@codeforamerica/blueprint-safety-net-contracts/src --overlay=./node_modules/@codeforamerica/blueprint-safety-net-contracts/src/overlays --overlay=./overlays --out=./resolved --env-target=production --env-variables=.env",
+    "validate": "blueprint-validate --resolved=./resolved",
     "mock:start": "blueprint-mock --spec=./resolved",
     "swagger": "blueprint-swagger --spec=./resolved",
     "build": "npm run resolve && npm run validate"
   }
 }
 ```
+
+`--overlay` is given twice, and the order matters: the package's own overlays first — they add its roles and settings, and its contracts don't validate without them — then yours.
 
 ### 5. Pin the base specs version
 

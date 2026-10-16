@@ -51,7 +51,7 @@ function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
     spec: null,
-    overlay: null,
+    overlays: [],
     out: null,
     envTarget: null,
     envVariables: null,
@@ -72,9 +72,16 @@ function parseArgs() {
     } else if (arg === '--verbose') {
       options.verbose = true;
     } else if (arg.startsWith('--spec=')) {
+      // One contract set. A second --spec used to replace the first without a word.
+      if (options.spec) {
+        console.error('Error: --spec is given more than once; resolve takes one contract set');
+        process.exit(1);
+      }
       options.spec = arg.split('=')[1];
     } else if (arg.startsWith('--overlay=')) {
-      options.overlay = arg.split('=')[1];
+      // Repeatable, applied in the order given: a package's own overlays,
+      // then a state's, without copying one into the other's folder.
+      options.overlays.push(arg.split('=')[1]);
     } else if (arg.startsWith('--out=')) {
       options.out = arg.split('=')[1];
     } else if (arg.startsWith('--env-target=')) {
@@ -101,7 +108,8 @@ Usage:
 
 Flags:
   --spec=<path>      Path to base spec file or directory (default: packages/contracts)
-  --overlay=<path>   Path to overlay file or directory (optional)
+  --overlay=<path>   Path to overlay file or directory (optional; repeatable,
+                     applied in the order given)
   --out=<dir>        Output directory for resolved specs (default: resolved)
   --bundle           Inline all external $refs to produce self-contained specs
   --resolve          Run relationship resolution even without an overlay
@@ -109,6 +117,10 @@ Flags:
   --env-variables=<file>  File of key=value pairs for \${VAR} substitution (optional)
   --verbose          Print a per-schema relationship-resolution summary
   -h, --help         Show this help message
+
+Overlays apply in the order given. Contracts from a package can need the
+package's own overlays — safety-net-contracts adds its roles that way — so
+pass the package's overlays first, then your own.
 
 Without --overlay, base specs are copied to --out unchanged (unless --resolve is specified).
 With --bundle, all external $ref references are dereferenced inline.
@@ -120,6 +132,7 @@ Examples:
   npm run resolve -- --bundle --out=/tmp/demo
   npm run resolve -- --overlay=packages/contracts/overlays/california --out=./resolved
   npm run resolve -- --spec=eligibility-openapi.yaml --overlay=my-overlay.yaml --out=./resolved
+  npm run resolve -- --spec=<package>/src --overlay=<package>/src/overlays --overlay=./overlays --out=./resolved
   npm run resolve -- --bundle --overlay=packages/contracts/overlays/california --out=./resolved
 `);
 }
@@ -369,7 +382,7 @@ async function main() {
   const hasCompositions = !specIsFile && readdirSync(specPath, { recursive: true }).filter(f => typeof f === 'string').some(f => f.endsWith('-compositions.yaml'));
   const hasRules = !specIsFile && readdirSync(specPath, { recursive: true }).filter(f => typeof f === 'string').some(f => f.endsWith('-rules.yaml'));
 
-  if (!options.overlay && !options.envTarget && !options.envVariables && !options.bundle && !options.reconcileExamples && !options.resolve && !hasStateMachines && !hasCompositions && !hasRules) {
+  if (options.overlays.length === 0 && !options.envTarget && !options.envVariables && !options.bundle && !options.reconcileExamples && !options.resolve && !hasStateMachines && !hasCompositions && !hasRules) {
     // No processing needed - copy base specs as-is
     console.log('No flags specified, copying base specs unchanged');
     if (specIsFile) {
@@ -404,8 +417,8 @@ async function main() {
   // reimplement contract transformation.
   const authoredOverlays = [];
 
-  if (options.overlay) {
-    const overlayInput = resolve(options.overlay);
+  for (const overlayPath of options.overlays) {
+    const overlayInput = resolve(overlayPath);
 
     if (!existsSync(overlayInput)) {
       console.error(`Error: Overlay path does not exist: ${overlayInput}`);
@@ -415,14 +428,18 @@ async function main() {
     const overlayIsFile = statSync(overlayInput).isFile();
     const overlayFiles = overlayIsFile ? [overlayInput] : discoverOverlayFiles(overlayInput);
 
+    let count = 0;
     for (const file of overlayFiles) {
       const doc = load({ path: file, relativePath: relative(overlayIsFile ? dirname(overlayInput) : overlayInput, file) });
       // A file carrying only a `config:` block is an overlay too: skipping it
       // dropped its settings without a word.
-      if (Array.isArray(doc.content?.actions) || doc.content?.config) authoredOverlays.push(doc.content);
+      if (Array.isArray(doc.content?.actions) || doc.content?.config) {
+        authoredOverlays.push(doc.content);
+        count++;
+      }
     }
 
-    console.log(`Overlay: ${overlayInput} (${authoredOverlays.length} document(s))`);
+    console.log(`Overlay: ${overlayInput} (${count} document(s))`);
   }
 
   // blueprint-core's base contracts. Shared schemas, components and the

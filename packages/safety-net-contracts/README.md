@@ -45,19 +45,21 @@ Each domain includes:
 
 ## Adopting the Blueprint
 
-Install the package alongside the CLI and resolve the base contracts with your state-specific overlays:
+Install the package alongside the CLI and resolve its contracts with its own overlays, then yours:
 
 ```bash
 npm install @codeforamerica/blueprint-safety-net-contracts @codeforamerica/blueprint-cli
 
-# Resolve base contracts with your overlays
+# The package's overlays first: they add its roles and settings, and its
+# contracts don't validate without them. Then your state's overlays.
 npx blueprint-resolve \
-  --spec ./node_modules/@codeforamerica/blueprint-safety-net-contracts/src \
-  --overlay ./overlays/config.yaml \
-  --out ./resolved
+  --spec=./node_modules/@codeforamerica/blueprint-safety-net-contracts/src \
+  --overlay=./node_modules/@codeforamerica/blueprint-safety-net-contracts/src/overlays \
+  --overlay=./overlays \
+  --out=./resolved
 
 # Validate resolved output
-npx blueprint-validate --resolved ./resolved
+npx blueprint-validate --resolved=./resolved
 
 # Start the mock server for frontend development
 npx blueprint-mock --spec=./resolved
