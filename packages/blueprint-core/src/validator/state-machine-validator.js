@@ -12,6 +12,7 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import yaml from 'js-yaml';
 import { resolveSchemaRefs, resolveRef, collectTopLevelProperties, getPropertyAtPath } from '../json-schema/index.js';
+import { snakeCase } from '../event-names.js';
 
 // Generic base roles. Domain packages (e.g. safety-net) pass their own validRoles
 // to validateWithinFile to extend or replace this set.
@@ -265,6 +266,34 @@ function* walkAllStrings(node) {
   }
 }
 
+/**
+ * Whether an event is about a machine's own resource: its type ends
+ * `{domain}.{resource}.{event}` with the machine's domain and object, which is
+ * how every event is named. A state's type prefix, if any, comes before.
+ *
+ * @param {string} type - The event type a subscription names
+ * @param {string} domain - The machine's domain
+ * @param {string} object - The machine's object, a schema name
+ * @returns {boolean}
+ */
+function aboutOwnResource(type, domain, object) {
+  const parts = String(type ?? '').split('.');
+  if (parts.length < 3 || !domain || !object) return false;
+  const [eventDomain, resource] = parts.slice(-3);
+  return eventDomain === domain && resource === snakeCase(object);
+}
+
+/**
+ * Whether a value expression or CEL condition reads the record a step acts
+ * on: `$object…` in a value expression, `object.…` in CEL.
+ *
+ * @param {string} str
+ * @returns {boolean}
+ */
+function readsObject(str) {
+  return /\$object\b/.test(str) || /(^|[^$\w.])object\./.test(str);
+}
+
 // =============================================================================
 // Within-file validation (no resolved specs needed)
 // =============================================================================
@@ -436,6 +465,18 @@ export function validateWithinFile(filePath, doc, { validRoles = VALID_ACTOR_ROL
         if (!callableIds.has(callId)) {
           errors.push({ rule: 'unknown-callable', message: `call: "${callId}" references undeclared procedure or action`, path: ep });
         }
+      }
+      // With transition:, the event's subject is one of this machine's records,
+      // looked up as $object. Without it, an event about another resource gives
+      // the machine no record of its own, so there is no $object: the record
+      // the event is about is its subject, and what it carries is its data.
+      if (!event.transition && !aboutOwnResource(event.type, doc.domain, machine.object)
+          && [...walkAllStrings([event.steps, event.context])].some(readsObject)) {
+        errors.push({
+          rule: 'object-from-another-resource',
+          message: `${event.type} is about another resource, so this machine has no $object here. Read the id of the record the event is about from $this.subject, and what the event carries from $this.data.`,
+          path: ep,
+        });
       }
     }
 

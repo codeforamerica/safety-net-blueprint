@@ -628,6 +628,47 @@ describe('validateWithinFile — string call references', () => {
 });
 
 // ---------------------------------------------------------------------------
+// validateWithinFile — rule: $object in a subscription to another resource's event
+// ---------------------------------------------------------------------------
+
+describe('validateWithinFile — $object comes only with the machine\'s own resource', () => {
+  // The harness's eligibility machine read $object.id when intake announced
+  // a submitted application. An application isn't one of its records, so it
+  // had none; it worked only because the mock took the event's payload for
+  // the record.
+  const machine = (on) => makeDoc({ object: 'Application', on });
+
+  test('refuses $object in a subscription to another resource\'s event', () => {
+    const doc = machine([{ type: 'eligibility.determination.completed', steps: [{ call: { POST: 'intake/notes', body: { applicationId: '$object.id' } } }] }]);
+    const errors = validateWithinFile('/fake/path.yaml', doc);
+    assert.ok(hasRule(errors, 'object-from-another-resource'), JSON.stringify(errors));
+    assert.match(errors.find((e) => e.rule === 'object-from-another-resource').message, /\$this\.subject/);
+  });
+
+  test('refuses object. in a CEL condition there too', () => {
+    const doc = machine([{ type: 'eligibility.determination.completed', steps: [{ if: 'object.status == "submitted"', then: [] }] }]);
+    assert.ok(hasRule(validateWithinFile('/fake/path.yaml', doc), 'object-from-another-resource'));
+  });
+
+  test('accepts $this.subject and $this.data in a subscription to another resource\'s event', () => {
+    const doc = machine([{ type: 'eligibility.determination.completed', steps: [{ call: { POST: 'intake/notes', body: { applicationId: '$this.subject', outcome: '$this.data.outcome' } } }] }]);
+    assert.ok(!hasRule(validateWithinFile('/fake/path.yaml', doc), 'object-from-another-resource'));
+  });
+
+  test('accepts $object with transition:, which looks the record up by the event\'s subject', () => {
+    // A timer callback is named {domain}.{callback}, with no resource in it.
+    const doc = machine([{ type: 'intake.idle_check', transition: { from: 'draft' }, steps: [{ if: 'object.status == "draft"', then: [] }] }]);
+    assert.ok(!hasRule(validateWithinFile('/fake/path.yaml', doc), 'object-from-another-resource'));
+  });
+
+  test('accepts $object in a subscription to its own resource\'s event, with or without transition:', () => {
+    // A machine hearing that one of its own records was created has that record.
+    const doc = machine([{ type: 'intake.application.created', steps: [{ match: 'object.channel', when: { online: [] } }] }]);
+    assert.ok(!hasRule(validateWithinFile('/fake/path.yaml', doc), 'object-from-another-resource'));
+  });
+});
+
+// ---------------------------------------------------------------------------
 // validateWithinFile — rule: $params.field references
 // ---------------------------------------------------------------------------
 

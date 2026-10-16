@@ -49,14 +49,10 @@ machines:
               description: Record the submission timestamp (regulatory clock start).
           - emit:
               event: submitted
-              # Carries the application, not just a type. A subscriber in
-              # another domain cannot act on an empty payload, and eligibility
-              # declares a subscription to this event below in
-              # eligibility-state-machine.yaml. `id` matching `subject` is what
-              # binds the payload to `$object` in the subscriber's steps.
-              subject: $object.id
+              # A subscriber finds the application by the event's subject; the
+              # data is what else it may need. Eligibility subscribes to this
+              # event in eligibility-state-machine.yaml.
               data:
-                id: $object.id
                 programsAppliedFor: $object.programsAppliedFor
               description: Triggers eligibility screening, caseworker task creation, and confirmation notice.
           # The regulatory clock starts here, so the escalation deadline is set

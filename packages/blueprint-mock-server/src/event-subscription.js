@@ -169,6 +169,24 @@ function applyThroughRoutes(call, { now, caller, traceparent = null, causationid
   }
 }
 
+/**
+ * Whether an event is about a machine's own resource: its type ends
+ * `{domain}.{resource}.{event}` with the machine's domain and its resource's
+ * event name, which is how every event is named. A state's type prefix, if
+ * any, comes before.
+ *
+ * @param {string} type
+ * @param {string} domain - The machine's domain
+ * @param {string|undefined} eventName - Its resource's name in events, from core's model
+ * @returns {boolean}
+ */
+function aboutOwnResource(type, domain, eventName) {
+  const parts = String(type ?? '').split('.');
+  if (parts.length < 3 || !domain || !eventName) return false;
+  const [eventDomain, resource] = parts.slice(-3);
+  return eventDomain === domain && resource === eventName;
+}
+
 export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], apiSpecs = [], store, stepCalls = null) {
   currentStepCalls = stepCalls;
   // Replace rather than accumulate. Registering twice — a second server in
@@ -228,12 +246,16 @@ export function registerEventSubscriptions(allStateMachines, allSlaTypes = [], a
           }
           resource = { ...found };
           originalSnapshot = { ...found };
-        } else if (event.data && typeof event.data === 'object' && !Array.isArray(event.data)
-            && event.data.id != null && event.data.id === event.subject) {
-          // No transition, but the event carries the full resource as its data payload
-          // (e.g. *.resource.created events where data: { ...created }). Use it as the
-          // primary resource so $object resolves correctly in subscription steps.
-          resource = { ...event.data };
+        } else if (aboutOwnResource(event.type, smEntry.domain, smEntry.resource?.eventName)) {
+          // No transition, but the event is about one of this machine's own
+          // records — a decision's machine hearing that a decision was created
+          // — so $object is that record, found by the event's subject as a
+          // transition finds it. An event about another resource gives the
+          // machine no record of its own, and no $object: it reads the record's
+          // id from this.subject and what the event carries from this.data.
+          // The payload is never taken for the record.
+          const found = store.findById(toKebabCase(smEntry.machine.object) + 's', event.subject);
+          if (found) resource = { ...found };
         }
 
         const baseContext = {
