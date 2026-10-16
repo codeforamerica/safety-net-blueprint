@@ -1,5 +1,39 @@
 # @codeforamerica/blueprint-explorer
 
+## 0.2.2
+
+### Patch Changes
+
+- 685f4ea: Before, a state machine's transitions were documented under its first machine's item path in the API its `apiSpec` named. Now each attaches to the resource it names, in whichever OpenAPI document of its domain declares it, so intake's Verification transitions appear under the verification. (#470)
+- d833585: **Breaking:** Before, a state machine subscribed under `events:` and emitted full event names. Now it subscribes under `on:`, declares its resource's events once under `emits:` and sends them by name (`emit: claimed`), which resolve expands to `{domain}.{resource}.{event}`. (#470)
+- Updated dependencies [685f4ea]
+- Updated dependencies [3d96fc4]
+- Updated dependencies [fcd12bf]
+- Updated dependencies [685f4ea]
+- Updated dependencies [f6e9cd2]
+- Updated dependencies [3335c89]
+- Updated dependencies [2da51d3]
+- Updated dependencies [685f4ea]
+- Updated dependencies [adfa5e1]
+- Updated dependencies [d833585]
+- Updated dependencies [9b934ac]
+- Updated dependencies [f6e9cd2]
+- Updated dependencies [f6e9cd2]
+- Updated dependencies [4cc6217]
+- Updated dependencies [9b19339]
+- Updated dependencies [e5fe094]
+- Updated dependencies [e5fe094]
+- Updated dependencies [09aa7f4]
+- Updated dependencies [c2df909]
+- Updated dependencies [274c4e4]
+- Updated dependencies [685f4ea]
+- Updated dependencies [adfa5e1]
+- Updated dependencies [6007c55]
+- Updated dependencies [f031c70]
+- Updated dependencies [9268474]
+  - @codeforamerica/blueprint-core@0.4.0
+  - @codeforamerica/blueprint-rules-engine@0.2.0
+
 ## 0.2.1
 
 ### Patch Changes

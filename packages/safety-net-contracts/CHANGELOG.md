@@ -1,5 +1,55 @@
 # Changelog
 
+## 0.2.0
+
+### Minor Changes
+
+- 2da51d3: **Breaking:** An overlay that targeted `$.queues[...]`, `$.services[...]` or `$.document-types[...]` in a safety-net config file now targets `.entries[...]` under it. (#470)
+- d833585: **Breaking:** Events are named for the resource that sends them, with hyphenated domains as declared: for example `eligibility.decision.completed` where it was `eligibility.application.decision_completed`, and `data-exchange.call.completed` where it was `data_exchange.call.completed`. (#470)
+- 9b934ac: **Breaking:** The intake and workflow AsyncAPI documents are gone, and the others hold only events sent from outside the contracts; every other event is in the `*-events-asyncapi.yaml` that resolve generates beside each API. (#470)
+
+### Patch Changes
+
+- 4cc6217: `GET /eligibility/determinations/{determinationId}/decisions` now takes `q`, like every other list.
+- 9b19339: Before, fields that may be null were marked `nullable: true`, which validators implementing OpenAPI 3.1 ignore, so they refused the null. Now those fields are typed `[<type>, "null"]`. (#461)
+- 274c4e4: The contracts' conditions are now written as CEL with no dialect — names without `$`, `has()` for fields that may be absent — so any CEL implementation evaluates them the way the mock server does. (#445)
+- 33a5fe1: Before, the workflow metrics other than `tasks_in_queue` could never count anything: they named event types no event has, paired by a `resourceId` events do not carry, and matched SLA status with a path wildcard JSON Logic does not support. Now they name the `workflow.task.*` event types, pair by `subject`, and match SLA status with `some`. (#470)
+- 685f4ea: **Breaking:** Before, a document's domain could come from its folder, its filename prefix or the `Domain` enum, which each contract set extended by overlay. Now every document that belongs to a domain declares it (`info.x-domain` on OpenAPI and AsyncAPI, a top-level `domain` elsewhere, mock data included), `Domain` is generated from the domains OpenAPI, AsyncAPI and rules documents declare, and validation reports a document that declares none or names one nothing defines. (#470)
+- e5fe094: **Breaking:** The event log's API (`/platform/events`, its stream, single events and publishing) now comes with the framework in every resolved contract set, and `safety-net-contracts` no longer declares its own. A contract set that declares `/platform/events` itself must remove it. (#470)
+- 09aa7f4: **Breaking:** Every registry type a contract set declares is now served at `/platform/registry/{type}` and `/platform/registry/{type}/{entryId}`, with `/platform/registry` listing the types, read from the registry files themselves — files of a type combine, and an entry id two of them define fails, naming both. `safety-net-contracts` no longer declares `/registry/policies`, which the generic endpoint serves at the same URL. (#470)
+- Updated dependencies [685f4ea]
+- Updated dependencies [2da51d3]
+- Updated dependencies [685f4ea]
+- Updated dependencies [e5fe094]
+- Updated dependencies [09aa7f4]
+- Updated dependencies [685f4ea]
+- Updated dependencies [9b19339]
+- Updated dependencies [3d96fc4]
+- Updated dependencies [99f630d]
+- Updated dependencies [b817b8e]
+- Updated dependencies [6007c55]
+- Updated dependencies [590199a]
+- Updated dependencies [d833585]
+- Updated dependencies [590199a]
+- Updated dependencies [6007c55]
+- Updated dependencies [b482e18]
+- Updated dependencies [f6e9cd2]
+- Updated dependencies [f031c70]
+- Updated dependencies [f6e9cd2]
+- Updated dependencies [33a5fe1]
+- Updated dependencies [f6e9cd2]
+- Updated dependencies [1b9e684]
+- Updated dependencies [b42da85]
+- Updated dependencies [b482e18]
+- Updated dependencies [276470d]
+- Updated dependencies [274c4e4]
+- Updated dependencies [1bda33d]
+- Updated dependencies [f6e9cd2]
+- Updated dependencies [33a5fe1]
+- Updated dependencies [276470d]
+- Updated dependencies [b482e18]
+  - @codeforamerica/blueprint-mock-server@0.4.0
+
 ## 0.1.2
 
 ### Patch Changes
