@@ -757,6 +757,7 @@ export const zListTranscriptEntriesData = z.object({
         transcriptId: z.uuid()
     }),
     query: z.optional(z.object({
+        q: z.optional(z.string()),
         limit: z.optional(z.int().gte(1).lte(100)).default(25),
         offset: z.optional(z.int().gte(0)).default(0),
         sort: z.optional(z.string()),

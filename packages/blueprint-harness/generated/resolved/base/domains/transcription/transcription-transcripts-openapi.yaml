@@ -184,15 +184,23 @@ paths:
       description: |
         A transcript's timeline, in the order things happened — by `startedAt`.
         Filter by `kind` for only its lines, gaps or pauses.
+
+        To fetch only entries added since the last read, search on `createdAt`,
+        which the server sets when it stores an entry: `q=createdAt:>=<the
+        newest createdAt already read>`, skipping ids already read. `startedAt`
+        is the client's clock, so a line can arrive after one that started
+        later than it; `createdAt` still puts it after the last read.
       operationId: listTranscriptEntries
       tags:
         - Transcript entries
       x-sortable:
         fields:
           - startedAt
+          - createdAt
         default: startedAt
         tieBreaker: id
       parameters:
+        - $ref: ../../components/parameters.yaml#/SearchQueryParam
         - $ref: ../../components/parameters.yaml#/LimitParam
         - $ref: ../../components/parameters.yaml#/OffsetParam
         - $ref: ../../components/parameters.yaml#/SortParam

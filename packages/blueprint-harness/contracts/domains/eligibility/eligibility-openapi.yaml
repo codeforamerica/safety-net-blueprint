@@ -132,6 +132,7 @@ paths:
       operationId: listDecisions
       tags: [Decisions]
       parameters:
+        - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/SearchQueryParam'
         - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/LimitParam'
         - $ref: 'https://blueprint.codeforamerica.org/base/components/parameters.yaml#/OffsetParam'
       responses:

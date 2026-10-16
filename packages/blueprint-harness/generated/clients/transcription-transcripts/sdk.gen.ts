@@ -107,6 +107,12 @@ export const updateTranscript = <ThrowOnError extends boolean = false>(options: 
  * A transcript's timeline, in the order things happened — by `startedAt`.
  * Filter by `kind` for only its lines, gaps or pauses.
  *
+ * To fetch only entries added since the last read, search on `createdAt`,
+ * which the server sets when it stores an entry: `q=createdAt:>=<the
+ * newest createdAt already read>`, skipping ids already read. `startedAt`
+ * is the client's clock, so a line can arrive after one that started
+ * later than it; `createdAt` still puts it after the last read.
+ *
  */
 export const listTranscriptEntries = <ThrowOnError extends boolean = false>(options: Options<ListTranscriptEntriesData, ThrowOnError>) => (options.client ?? client).get<ListTranscriptEntriesResponses, ListTranscriptEntriesErrors, ThrowOnError>({
     requestValidator: async (data) => await zListTranscriptEntriesData.parseAsync(data),
